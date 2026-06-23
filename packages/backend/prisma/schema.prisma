@@ -1,0 +1,362 @@
+// Salon Booking System — Prisma schema
+// PostgreSQL datasource with UUID primary keys.
+// Money fields are BigInt (Iranian Rial). Exclusion constraints and
+// btree_gist are applied via raw SQL migration in task 2.2.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ─────────────────────────────────────────────────────────────────────
+
+enum StaffRole {
+  Owner
+  Admin
+  Stylist
+}
+
+enum ApptStatus {
+  held
+  confirmed
+  cancelled
+  completed
+  no_show
+  expired
+}
+
+enum ApptSource {
+  web
+  mobile
+  walkin
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  refunded
+  retained
+  failed
+}
+
+// ─── Salon ─────────────────────────────────────────────────────────────────────
+
+model Salon {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  qrToken   String   @unique @map("qr_token")
+  timezone  String   @default("Asia/Tehran")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  staffMembers    StaffMember[]
+  chairs          Chair[]
+  equipment       Equipment[]
+  services        Service[]
+  holidays        Holiday[]
+  appointments    Appointment[]
+  waitlistEntries WaitlistEntry[]
+
+  @@map("salon")
+}
+
+// ─── Staff Member ──────────────────────────────────────────────────────────────
+
+model StaffMember {
+  id       String    @id @default(uuid()) @db.Uuid
+  salonId  String    @map("salon_id") @db.Uuid
+  fullName String    @map("full_name")
+  role     StaffRole
+  active   Boolean   @default(true)
+
+  salon               Salon          @relation(fields: [salonId], references: [id])
+  serviceStaff        ServiceStaff[]
+  daysOff             DayOff[]
+  appointments        Appointment[]
+  customerNotes       CustomerNote[] @relation("NoteAuthor")
+  customersPreferring Customer[]     @relation("PreferredStaff")
+
+  @@map("staff_member")
+}
+
+// ─── Chair ─────────────────────────────────────────────────────────────────────
+
+model Chair {
+  id      String  @id @default(uuid()) @db.Uuid
+  salonId String  @map("salon_id") @db.Uuid
+  name    String
+  active  Boolean @default(true)
+
+  salon              Salon              @relation(fields: [salonId], references: [id])
+  chairEquipment     ChairEquipment[]
+  unavailablePeriods ChairUnavailable[]
+  appointments       Appointment[]
+
+  @@map("chair")
+}
+
+// ─── Equipment ─────────────────────────────────────────────────────────────────
+
+model Equipment {
+  id      String @id @default(uuid()) @db.Uuid
+  salonId String @map("salon_id") @db.Uuid
+  name    String
+
+  salon            Salon              @relation(fields: [salonId], references: [id])
+  chairEquipment   ChairEquipment[]
+  serviceEquipment ServiceEquipment[]
+
+  @@map("equipment")
+}
+
+// ─── Chair ↔ Equipment (many-to-many) ──────────────────────────────────────────
+
+model ChairEquipment {
+  chairId     String @map("chair_id") @db.Uuid
+  equipmentId String @map("equipment_id") @db.Uuid
+
+  chair     Chair     @relation(fields: [chairId], references: [id])
+  equipment Equipment @relation(fields: [equipmentId], references: [id])
+
+  @@id([chairId, equipmentId])
+  @@map("chair_equipment")
+}
+
+// ─── Service ───────────────────────────────────────────────────────────────────
+
+model Service {
+  id              String  @id @default(uuid()) @db.Uuid
+  salonId         String  @map("salon_id") @db.Uuid
+  name            String
+  durationMin     Int     @map("duration_min")
+  bufferMin       Int     @map("buffer_min")
+  priceRial       BigInt  @map("price_rial")
+  requiresDeposit Boolean @default(false) @map("requires_deposit")
+  depositRial     BigInt? @map("deposit_rial")
+
+  salon            Salon              @relation(fields: [salonId], references: [id])
+  serviceStaff     ServiceStaff[]
+  serviceEquipment ServiceEquipment[]
+  appointments     Appointment[]
+  waitlistEntries  WaitlistEntry[]
+
+  @@map("service")
+}
+
+// ─── Service ↔ Staff (many-to-many) ────────────────────────────────────────────
+
+model ServiceStaff {
+  serviceId     String @map("service_id") @db.Uuid
+  staffMemberId String @map("staff_member_id") @db.Uuid
+
+  service     Service     @relation(fields: [serviceId], references: [id])
+  staffMember StaffMember @relation(fields: [staffMemberId], references: [id])
+
+  @@id([serviceId, staffMemberId])
+  @@map("service_staff")
+}
+
+// ─── Service ↔ Equipment (many-to-many) ────────────────────────────────────────
+
+model ServiceEquipment {
+  serviceId   String @map("service_id") @db.Uuid
+  equipmentId String @map("equipment_id") @db.Uuid
+
+  service   Service   @relation(fields: [serviceId], references: [id])
+  equipment Equipment @relation(fields: [equipmentId], references: [id])
+
+  @@id([serviceId, equipmentId])
+  @@map("service_equipment")
+}
+
+// ─── Working Hours ─────────────────────────────────────────────────────────────
+
+model WorkingHours {
+  id        String   @id @default(uuid()) @db.Uuid
+  ownerKind String   @map("owner_kind") // 'staff' | 'chair'
+  ownerId   String   @map("owner_id") @db.Uuid
+  weekday   Int // 0 (Sunday) – 6 (Saturday)
+  startTime DateTime @map("start_time") @db.Time
+  endTime   DateTime @map("end_time") @db.Time
+
+  @@map("working_hours")
+}
+
+// ─── Day Off ───────────────────────────────────────────────────────────────────
+
+model DayOff {
+  id            String   @id @default(uuid()) @db.Uuid
+  staffMemberId String   @map("staff_member_id") @db.Uuid
+  onDate        DateTime @map("on_date") @db.Date
+
+  staffMember StaffMember @relation(fields: [staffMemberId], references: [id])
+
+  @@map("day_off")
+}
+
+// ─── Chair Unavailable ─────────────────────────────────────────────────────────
+
+model ChairUnavailable {
+  id          String   @id @default(uuid()) @db.Uuid
+  chairId     String   @map("chair_id") @db.Uuid
+  periodStart DateTime @map("period_start") @db.Timestamptz
+  periodEnd   DateTime @map("period_end") @db.Timestamptz
+
+  chair Chair @relation(fields: [chairId], references: [id])
+
+  @@map("chair_unavailable")
+}
+
+// ─── Holiday ───────────────────────────────────────────────────────────────────
+
+model Holiday {
+  id      String   @id @default(uuid()) @db.Uuid
+  salonId String   @map("salon_id") @db.Uuid
+  onDate  DateTime @map("on_date") @db.Date
+
+  salon Salon @relation(fields: [salonId], references: [id])
+
+  @@map("holiday")
+}
+
+// ─── Customer ──────────────────────────────────────────────────────────────────
+
+model Customer {
+  id               String  @id @default(uuid()) @db.Uuid
+  phone            String  @unique
+  fullName         String? @map("full_name")
+  preferredStaffId String? @map("preferred_staff_id") @db.Uuid
+  noShowCount      Int     @default(0) @map("no_show_count")
+
+  preferredStaff  StaffMember?    @relation("PreferredStaff", fields: [preferredStaffId], references: [id])
+  appointments    Appointment[]
+  customerNotes   CustomerNote[]
+  waitlistEntries WaitlistEntry[]
+  deviceTokens    DeviceToken[]
+
+  @@map("customer")
+}
+
+// ─── Customer Note ─────────────────────────────────────────────────────────────
+
+model CustomerNote {
+  id         String   @id @default(uuid()) @db.Uuid
+  customerId String   @map("customer_id") @db.Uuid
+  authorId   String?  @map("author_id") @db.Uuid
+  body       String
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  customer Customer     @relation(fields: [customerId], references: [id])
+  author   StaffMember? @relation("NoteAuthor", fields: [authorId], references: [id])
+
+  @@map("customer_note")
+}
+
+// ─── Appointment ───────────────────────────────────────────────────────────────
+
+model Appointment {
+  id            String     @id @default(uuid()) @db.Uuid
+  salonId       String     @map("salon_id") @db.Uuid
+  customerId    String     @map("customer_id") @db.Uuid
+  staffMemberId String     @map("staff_member_id") @db.Uuid
+  chairId       String     @map("chair_id") @db.Uuid
+  serviceId     String     @map("service_id") @db.Uuid
+  startAt       DateTime   @map("start_at") @db.Timestamptz
+  endAt         DateTime   @map("end_at") @db.Timestamptz
+  status        ApptStatus
+  source        ApptSource
+  holdExpiresAt DateTime?  @map("hold_expires_at") @db.Timestamptz
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz
+
+  salon            Salon             @relation(fields: [salonId], references: [id])
+  customer         Customer          @relation(fields: [customerId], references: [id])
+  staffMember      StaffMember       @relation(fields: [staffMemberId], references: [id])
+  chair            Chair             @relation(fields: [chairId], references: [id])
+  service          Service           @relation(fields: [serviceId], references: [id])
+  payments         Payment[]
+  notificationLogs NotificationLog[]
+
+  @@map("appointment")
+}
+
+// ─── Payment ───────────────────────────────────────────────────────────────────
+
+model Payment {
+  id            String        @id @default(uuid()) @db.Uuid
+  appointmentId String        @map("appointment_id") @db.Uuid
+  amountRial    BigInt        @map("amount_rial")
+  status        PaymentStatus @default(pending)
+  gateway       String // 'zarinpal' | 'idpay'
+  authority     String?
+  refId         String?       @map("ref_id")
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+
+  @@map("payment")
+}
+
+// ─── Waitlist Entry ────────────────────────────────────────────────────────────
+
+model WaitlistEntry {
+  id          String   @id @default(uuid()) @db.Uuid
+  salonId     String   @map("salon_id") @db.Uuid
+  customerId  String   @map("customer_id") @db.Uuid
+  serviceId   String   @map("service_id") @db.Uuid
+  windowStart DateTime @map("window_start") @db.Timestamptz
+  windowEnd   DateTime @map("window_end") @db.Timestamptz
+  status      String   @default("waiting") // waiting | notified | fulfilled | cancelled
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  salon    Salon    @relation(fields: [salonId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+  service  Service  @relation(fields: [serviceId], references: [id])
+
+  @@map("waitlist_entry")
+}
+
+// ─── OTP ───────────────────────────────────────────────────────────────────────
+
+model Otp {
+  id          String    @id @default(uuid()) @db.Uuid
+  phone       String
+  codeHash    String    @map("code_hash")
+  issuedAt    DateTime  @default(now()) @map("issued_at") @db.Timestamptz
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz
+  consumedAt  DateTime? @map("consumed_at") @db.Timestamptz
+  invalidated Boolean   @default(false)
+
+  @@map("otp")
+}
+
+// ─── Device Token ──────────────────────────────────────────────────────────────
+
+model DeviceToken {
+  id          String  @id @default(uuid()) @db.Uuid
+  customerId  String  @map("customer_id") @db.Uuid
+  token       String
+  platform    String
+  pushEnabled Boolean @default(true) @map("push_enabled")
+
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  @@map("device_token")
+}
+
+// ─── Notification Log ──────────────────────────────────────────────────────────
+
+model NotificationLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  appointmentId String?  @map("appointment_id") @db.Uuid
+  channel       String // 'sms' | 'push'
+  status        String // 'sent' | 'failed'
+  error         String?
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+
+  @@map("notification_log")
+}

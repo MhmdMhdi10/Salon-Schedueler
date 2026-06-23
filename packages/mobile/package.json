@@ -1,0 +1,26 @@
+{
+  "name": "@salon/mobile",
+  "version": "0.0.1",
+  "private": true,
+  "description": "React Native mobile app for the Salon Booking System",
+  "main": "src/App.tsx",
+  "scripts": {
+    "start": "react-native start",
+    "build": "tsc -p tsconfig.json --noEmit",
+    "test": "jest --passWithNoTests",
+    "test:watch": "jest --watch"
+  },
+  "dependencies": {
+    "@salon/shared": "*",
+    "i18next": "^26.3.1",
+    "react-i18next": "^17.0.8"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/react": "^18.3.0",
+    "fast-check": "^4.8.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.4.0"
+  }
+}

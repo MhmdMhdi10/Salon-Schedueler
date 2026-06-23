@@ -1,0 +1,38 @@
+{
+  "app": {
+    "title": "سامانه رزرو سالن",
+    "loading": "در حال بارگذاری..."
+  },
+  "auth": {
+    "phoneLabel": "شماره موبایل",
+    "phonePlaceholder": "09xxxxxxxxx",
+    "requestOtp": "دریافت کد",
+    "otpLabel": "کد تایید",
+    "otpPlaceholder": "کد ۶ رقمی",
+    "verify": "تایید"
+  },
+  "booking": {
+    "selectService": "انتخاب خدمت",
+    "selectDate": "انتخاب تاریخ",
+    "selectTime": "انتخاب زمان",
+    "confirm": "تایید رزرو",
+    "success": "رزرو شما با موفقیت ثبت شد",
+    "failed": "خطا در ثبت رزرو",
+    "noSlots": "زمان خالی یافت نشد",
+    "offlineSaved": "رزرو در صف ارسال ذخیره شد"
+  },
+  "salon": {
+    "scanQr": "اسکن QR سالن",
+    "notFound": "سالن یافت نشد",
+    "malformedQr": "کد QR نامعتبر است"
+  },
+  "offline": {
+    "noData": "اطلاعاتی برای نمایش وجود ندارد",
+    "pendingSubmissions": "ارسال‌های در انتظار"
+  },
+  "common": {
+    "back": "بازگشت",
+    "cancel": "انصراف",
+    "retry": "تلاش مجدد"
+  }
+}

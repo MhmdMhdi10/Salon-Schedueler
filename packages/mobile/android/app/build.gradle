@@ -1,0 +1,72 @@
+/**
+ * App-level build configuration with Cafe Bazaar and Myket product flavors.
+ * Requirement: 18.2 - Distribution through Cafe Bazaar and Myket
+ */
+
+apply plugin: "com.android.application"
+apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "com.facebook.react"
+
+android {
+    namespace "app.salon.booking"
+    compileSdkVersion rootProject.ext.compileSdkVersion
+
+    defaultConfig {
+        applicationId "app.salon.booking"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file(System.getenv("KEYSTORE_PATH") ?: "release.keystore")
+            storePassword System.getenv("KEYSTORE_PASSWORD") ?: ""
+            keyAlias System.getenv("KEY_ALIAS") ?: "salon-booking"
+            keyPassword System.getenv("KEY_PASSWORD") ?: ""
+        }
+    }
+
+    /**
+     * Product flavors for Iranian app stores.
+     * Each flavor can have store-specific metadata and update URLs.
+     */
+    flavorDimensions "store"
+
+    productFlavors {
+        cafebazaar {
+            dimension "store"
+            applicationIdSuffix ".cafebazaar"
+            buildConfigField "String", "STORE_NAME", '"cafebazaar"'
+            buildConfigField "String", "UPDATE_URL", '"https://cafebazaar.ir/app/app.salon.booking"'
+            // Cafe Bazaar uses their own in-app billing and update mechanism
+            buildConfigField "String", "STORE_PACKAGE", '"com.farsitel.bazaar"'
+        }
+
+        myket {
+            dimension "store"
+            applicationIdSuffix ".myket"
+            buildConfigField "String", "STORE_NAME", '"myket"'
+            buildConfigField "String", "UPDATE_URL", '"https://myket.ir/app/app.salon.booking"'
+            // Myket uses their own in-app billing and update mechanism
+            buildConfigField "String", "STORE_PACKAGE", '"ir.mservices.market"'
+        }
+    }
+
+    buildTypes {
+        debug {
+            debuggable true
+        }
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+            signingConfig signingConfigs.release
+        }
+    }
+}
+
+dependencies {
+    implementation("com.facebook.react:react-android")
+    implementation("com.facebook.react:hermes-android")
+}

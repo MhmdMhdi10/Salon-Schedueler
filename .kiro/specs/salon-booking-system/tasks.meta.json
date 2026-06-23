@@ -1,0 +1,780 @@
+{
+  "pbtResults": {
+    "3.2 Write property test for QR round-trip and malformed detection": {
+      "status": "passed",
+      "lastRunTimestamp": 1782163852024
+    },
+    "3.4 Write property test for Jalali round-trip": {
+      "status": "passed",
+      "lastRunTimestamp": 1782164664925
+    },
+    "4.2 Write property test for OTP validity window and latest-only": {
+      "status": "passed",
+      "lastRunTimestamp": 1782165527413
+    },
+    "4.5 Write property test for the authorization matrix": {
+      "status": "passed",
+      "lastRunTimestamp": 1782165912367
+    },
+    "5.2 Write property test for service-definition validation": {
+      "status": "passed",
+      "lastRunTimestamp": 1782166310075
+    },
+    "7.2 Write property test for availability soundness": {
+      "status": "passed",
+      "lastRunTimestamp": 1782171114464
+    },
+    "8.2 Write property test for booking validity / double-resource reservation": {
+      "status": "passed",
+      "lastRunTimestamp": 1782171640613
+    },
+    "8.3 Write property test for the no-double-booking invariant": {
+      "status": "passed",
+      "lastRunTimestamp": 1782171805003
+    },
+    "8.4 Write property test for availability–booking consistency": {
+      "status": "passed",
+      "lastRunTimestamp": 1782172179633
+    },
+    "8.5 Write property test for booking race safety (concurrency harness)": {
+      "status": "passed",
+      "lastRunTimestamp": 1782172184343
+    },
+    "10.2 Write property test for atomic hold and release": {
+      "status": "passed",
+      "lastRunTimestamp": 1782172714355
+    },
+    "10.5 Write property test for late-deposit re-verification": {
+      "status": "passed",
+      "lastRunTimestamp": 1782173594363
+    },
+    "11.2 Write property test for cancellation/no-show resource release": {
+      "status": "passed",
+      "lastRunTimestamp": 1782174134387
+    },
+    "11.4 Write property test for the deposit refund policy": {
+      "status": "passed",
+      "lastRunTimestamp": 1782174135244
+    },
+    "12.3 Write property test for reminder channel selection": {
+      "status": "passed",
+      "lastRunTimestamp": 1782174446426
+    },
+    "13.2 Write property test for waitlist FIFO ordering": {
+      "status": "passed",
+      "lastRunTimestamp": 1782175265021
+    },
+    "14.2 Write property test for preferred-staff preselection": {
+      "status": "passed",
+      "lastRunTimestamp": 1782175589112
+    },
+    "15.3 Write property test for utilization and revenue correctness": {
+      "status": "passed",
+      "lastRunTimestamp": 1782175932987
+    },
+    "18.3 Write property test for offline submission preservation": {
+      "status": "passed",
+      "lastRunTimestamp": 1782176854204
+    }
+  },
+  "executionHistory": {
+    "1. Scaffold the monorepo and shared foundation": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162050562
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162103640
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162682942
+      }
+    ],
+    "2.1 Author the Prisma schema for all core entities": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162050894
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162699669
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782163048581
+      }
+    ],
+    "2.2 Add raw SQL migration for occupancy ranges and exclusion constraints": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162051010
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782163061202
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782163231366
+      }
+    ],
+    "2.3 Write database-constraint tests": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162051102
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782163251553
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782163443642
+      }
+    ],
+    "3.1 Implement the QR payload codec in `shared`": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162051149
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782163456511
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782163670052
+      }
+    ],
+    "3.2 Write property test for QR round-trip and malformed detection": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162051198
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782163678370
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782163864484
+      }
+    ],
+    "3.3 Implement Jalali conversions in `shared`": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162051333
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782163876725
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782164442959
+      }
+    ],
+    "3.4 Write property test for Jalali round-trip": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162051405
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782164448515
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782164677481
+      }
+    ],
+    "3.5 Implement time-slot and interval helpers in `shared`": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162051448
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782164684688
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782164837216
+      }
+    ],
+    "4.1 Implement OTP issuance and verification": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162051494
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782164848686
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782165284547
+      }
+    ],
+    "4.2 Write property test for OTP validity window and latest-only": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162051541
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782165300045
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782165540159
+      }
+    ],
+    "4.3 Write unit test for OTP generation and dispatch": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162051706
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782165545251
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782165618502
+      }
+    ],
+    "4.4 Implement the RBAC authorizer and route guards": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162051752
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782165623205
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782165818848
+      }
+    ],
+    "4.5 Write property test for the authorization matrix": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162051812
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782165823944
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782165931915
+      }
+    ],
+    "5.1 Implement service creation with validation": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162051856
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782165941769
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782166208932
+      }
+    ],
+    "5.2 Write property test for service-definition validation": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162051902
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782166218879
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782166328985
+      }
+    ],
+    "5.3 Implement service-to-staff and service-to-equipment mapping": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162051956
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782166339663
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782166513184
+      }
+    ],
+    "5.4 Implement salon, staff, chair, and equipment registration with QR token": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162052043
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782166520289
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782166746304
+      }
+    ],
+    "5.5 Implement working hours, breaks, days off, chair unavailability, and holidays": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162052110
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782166750842
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782166918880
+      }
+    ],
+    "6. Checkpoint - foundation and configuration": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162052192
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782166924651
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782167024819
+      }
+    ],
+    "7.1 Implement `getAvailability`": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162052246
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782167034766
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782167335674
+      }
+    ],
+    "7.2 Write property test for availability soundness": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162052318
+      },
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782167340368
+      }
+    ],
+    "8.1 Implement `book` for non-deposit services": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162052384
+      }
+    ],
+    "8.2 Write property test for booking validity / double-resource reservation": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162052498
+      }
+    ],
+    "8.3 Write property test for the no-double-booking invariant": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162052551
+      }
+    ],
+    "8.4 Write property test for availability–booking consistency": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162052598
+      }
+    ],
+    "8.5 Write property test for booking race safety (concurrency harness)": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162052645
+      }
+    ],
+    "9. Checkpoint - core scheduling correctness": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162052689
+      }
+    ],
+    "10.1 Implement the held-booking path and hold-expiry release": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162052731
+      }
+    ],
+    "10.2 Write property test for atomic hold and release": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162052822
+      }
+    ],
+    "10.3 Implement the `PaymentGateway` port with Zarinpal and IDPay adapters": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162052885
+      }
+    ],
+    "10.4 Implement late-deposit re-verification": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162052931
+      }
+    ],
+    "10.5 Write property test for late-deposit re-verification": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162053005
+      }
+    ],
+    "10.6 Write integration tests for gateway adapters": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162053080
+      }
+    ],
+    "11.1 Implement cancel and mark-no-show": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162053131
+      }
+    ],
+    "11.2 Write property test for cancellation/no-show resource release": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162053235
+      }
+    ],
+    "11.3 Implement deposit refund/retain policy around the Cancellation_Window": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162053283
+      }
+    ],
+    "11.4 Write property test for the deposit refund policy": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162053332
+      }
+    ],
+    "12.1 Implement `SmsProvider`/`PushProvider` ports with local adapters": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162053393
+      }
+    ],
+    "12.2 Implement confirmation, reminder dispatch, and failure logging": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162053461
+      }
+    ],
+    "12.3 Write property test for reminder channel selection": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162053527
+      }
+    ],
+    "12.4 Write unit test for SMS-failure logging": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162053646
+      }
+    ],
+    "13.1 Implement waitlist join, full-window offer, and notify-on-free": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162053713
+      }
+    ],
+    "13.2 Write property test for waitlist FIFO ordering": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162053828
+      }
+    ],
+    "13.3 Write unit test for walk-in double-resource enforcement": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162053878
+      }
+    ],
+    "14.1 Implement history, notes, and preferred-staff preselection": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162053943
+      }
+    ],
+    "14.2 Write property test for preferred-staff preselection": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162054082
+      }
+    ],
+    "15.1 Implement per-chair and per-staff day/week calendar endpoints": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162054142
+      }
+    ],
+    "15.2 Implement utilization, revenue, and busiest-window analytics": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162054198
+      }
+    ],
+    "15.3 Write property test for utilization and revenue correctness": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162054267
+      }
+    ],
+    "16. Checkpoint - backend feature-complete": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162054443
+      }
+    ],
+    "17.1 Implement auth, QR landing, availability, and booking flows": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162054508
+      }
+    ],
+    "17.2 Implement admin configuration, calendar, and analytics screens": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162054564
+      }
+    ],
+    "17.3 Configure PWA shell with Workbox service worker": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162054629
+      }
+    ],
+    "17.4 Write smoke test for PWA manifest and service-worker registration": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162054709
+      }
+    ],
+    "18.1 Implement auth, QR scan, availability, and booking": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162054773
+      }
+    ],
+    "18.2 Implement the offline cache and submission outbox": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162054931
+      }
+    ],
+    "18.3 Write property test for offline submission preservation": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162055007
+      }
+    ],
+    "18.4 Configure release builds for Cafe Bazaar and Myket": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162055065
+      }
+    ],
+    "18.5 Write smoke test for the release build configuration": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162055129
+      }
+    ],
+    "19.1 Wire i18next Persian default, RTL root direction, and Jalali date formatting": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162055271
+      }
+    ],
+    "19.2 Write smoke tests for Persian default bundle and RTL direction": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162055376
+      }
+    ],
+    "20.1 Wire clients to the full API and confirm end-to-end flows in automated tests": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162055433
+      }
+    ],
+    "20.2 Write integration tests for the QR-to-booking-to-confirmation path": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162055494
+      }
+    ],
+    "21. Final checkpoint - ensure all tests pass": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782162055557
+      }
+    ],
+    "2. Define the data model and database constraints": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782163443751
+      }
+    ],
+    "3. Implement shared pure utilities (QR codec, Jalali, time-slot math)": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782164837312
+      }
+    ],
+    "4. Implement Authentication_Service (OTP) and authorization": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782165931972
+      }
+    ],
+    "5. Implement Service_Catalog and resource configuration": [
+      {
+        "executionId": "9deedcd8-c997-4843-9c7c-281794a6b239",
+        "chatSessionId": "sess_5109df63-4f51-4127-96fd-4879e1485dd4",
+        "timestamp": 1782166918938
+      }
+    ]
+  }
+}
