@@ -21,8 +21,12 @@ done
 echo "[backend] Postgres is ready."
 
 # 2. Generate the Prisma client (no DB connection required).
+#    The prisma CLI and @prisma/client are backend-workspace dependencies and are
+#    NOT hoisted to the root node_modules, so run prisma FROM packages/backend
+#    (npx searches that dir's node_modules/.bin and up). Running it from /app would
+#    fail with "prisma: not found". The default prisma/schema.prisma resolves there.
 echo "[backend] generating Prisma client..."
-npx prisma generate --schema packages/backend/prisma/schema.prisma
+( cd packages/backend && npx prisma generate )
 
 # 3. Create the schema on first run only (when the 'salon' table is absent).
 #    There is no table-creating Prisma migration, so we use `db push`. psql uses
@@ -30,7 +34,7 @@ npx prisma generate --schema packages/backend/prisma/schema.prisma
 SALON_TABLE="$(psql -tAc "SELECT to_regclass('public.salon')" || true)"
 if [ -z "${SALON_TABLE//[[:space:]]/}" ]; then
   echo "[backend] no schema detected — pushing Prisma schema (creates tables)..."
-  npx prisma db push --schema packages/backend/prisma/schema.prisma --skip-generate
+  ( cd packages/backend && npx prisma db push --skip-generate )
 else
   echo "[backend] schema already present — skipping db push."
 fi

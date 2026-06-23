@@ -23,6 +23,7 @@ import { salonRouter } from './routes/salon.routes.js';
 import { appointmentRouter } from './routes/appointment.routes.js';
 import { paymentInitiateRouter, paymentCallbackRouter } from './routes/payment.routes.js';
 import { adminRouter } from './routes/admin.routes.js';
+import { deviceRouter } from './routes/device.routes.js';
 import { errorHandler } from './middleware/error-handler.js';
 
 /**
@@ -99,6 +100,7 @@ export function buildApp(opts: BuildAppOptions): Express {
   protectedRouter.use(appointmentRouter(services, requireRole));
   protectedRouter.use(paymentInitiateRouter(services));
   protectedRouter.use(adminRouter(services, requireRole));
+  protectedRouter.use(deviceRouter(services));
   app.use('/api', protectedRouter);
 
   app.use(errorHandler);
