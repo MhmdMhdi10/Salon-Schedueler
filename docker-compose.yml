@@ -1,0 +1,110 @@
+name: salon-booking
+
+# Development environment for the Salon Booking System.
+#
+#   docker compose up                 # postgres + backend API + web PWA
+#   docker compose --profile tools up # also start Adminer (DB UI) on :8080
+#
+# Source is bind-mounted for live edits; node_modules live in named volumes so
+# the host's (possibly different-platform) modules never shadow the container's.
+
+services:
+  postgres:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_USER: salon
+      POSTGRES_PASSWORD: salon
+      POSTGRES_DB: salon_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U salon -d salon_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  backend:
+    image: salon-booking-dev
+    build:
+      context: .
+      dockerfile: docker/dev.Dockerfile
+    command: ["bash", "docker/backend-entrypoint.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: "3000"
+      DATABASE_URL: "postgresql://salon:salon@postgres:5432/salon_dev?schema=public"
+      JWT_ACCESS_SECRET: dev-access-secret
+      JWT_REFRESH_SECRET: dev-refresh-secret
+      PAYMENT_CALLBACK_BASE_URL: "http://localhost:3000"
+      # Consumed by pg_isready + psql in the dev entrypoint.
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: salon
+      PGPASSWORD: salon
+      PGDATABASE: salon_dev
+      # SMS/push provider keys are intentionally unset -> dev/log adapters are used.
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./:/app
+      - backend-root-node-modules:/app/node_modules
+      - backend-backend-node-modules:/app/packages/backend/node_modules
+      - backend-shared-node-modules:/app/packages/shared/node_modules
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - node -e "fetch('http://localhost:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    restart: unless-stopped
+
+  web:
+    image: salon-booking-dev
+    build:
+      context: .
+      dockerfile: docker/dev.Dockerfile
+    command: ["bash", "docker/web-entrypoint.sh"]
+    depends_on:
+      - backend
+    environment:
+      # The browser calls same-origin /api; the Vite dev server proxies it to the
+      # backend over the compose network (see packages/web/vite.config.ts).
+      VITE_PROXY_TARGET: "http://backend:3000"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./:/app
+      - web-root-node-modules:/app/node_modules
+      - web-web-node-modules:/app/packages/web/node_modules
+      - web-shared-node-modules:/app/packages/shared/node_modules
+    restart: unless-stopped
+
+  # Optional lightweight DB UI: `docker compose --profile tools up`.
+  adminer:
+    image: adminer:4
+    profiles: ["tools"]
+    depends_on:
+      - postgres
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  backend-root-node-modules:
+  backend-backend-node-modules:
+  backend-shared-node-modules:
+  web-root-node-modules:
+  web-web-node-modules:
+  web-shared-node-modules:

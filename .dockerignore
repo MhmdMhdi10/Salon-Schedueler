@@ -1,0 +1,17 @@
+# Keep the build context small and force a clean, platform-correct install
+# inside the image (host node_modules / Prisma engines must never be copied in).
+node_modules
+**/node_modules
+dist
+**/dist
+coverage
+**/coverage
+*.tsbuildinfo
+.git
+.gitignore
+.kiro
+*.log
+# Never bake local secrets into the image.
+.env
+.env.*
+!.env.example
