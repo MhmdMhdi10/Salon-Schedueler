@@ -1,9 +1,11 @@
 /**
  * API client for the Salon Booking System backend (React Native).
  * Handles auth tokens, request/response, and error mapping.
+ *
+ * The base URL is configuration-driven (Requirement 6.1) and read from
+ * `src/config.ts` rather than being hard-coded to a production host.
  */
-
-const API_BASE = 'https://api.salon.app';
+import { API_BASE_URL } from '../config';
 
 interface RequestOptions {
   method?: string;
@@ -31,7 +33,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
     method: options.method || 'GET',
     headers,
     body: options.body ? JSON.stringify(options.body) : undefined,

@@ -75,4 +75,26 @@ export class ResourceRegistration {
 
     return equipment;
   }
+
+  /**
+   * List all staff members for a salon (read-only). Used by the RBAC-guarded
+   * `GET /salons/:id/staff` route (Requirement 2.2).
+   */
+  async listStaff(salonId: string): Promise<StaffMember[]> {
+    return this.prisma.staffMember.findMany({
+      where: { salonId },
+      orderBy: { fullName: 'asc' },
+    });
+  }
+
+  /**
+   * List all chairs for a salon (read-only). Used by the RBAC-guarded
+   * `GET /salons/:id/chairs` route (Requirement 2.2).
+   */
+  async listChairs(salonId: string): Promise<Chair[]> {
+    return this.prisma.chair.findMany({
+      where: { salonId },
+      orderBy: { name: 'asc' },
+    });
+  }
 }

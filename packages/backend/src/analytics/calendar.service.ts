@@ -54,4 +54,22 @@ export class CalendarService {
       orderBy: { startAt: 'asc' },
     });
   }
+
+  /**
+   * Get all appointments for a whole salon within a date range (R15.1, R15.2).
+   * Used by the RBAC-guarded `GET /salons/:id/calendar` route. Includes held,
+   * confirmed, and completed appointments; excludes statuses that no longer occupy
+   * a (staff, chair) pair.
+   */
+  async getSalonCalendar(salonId: string, from: Date, to: Date): Promise<Appointment[]> {
+    return this.prisma.appointment.findMany({
+      where: {
+        salonId,
+        status: { in: ['held', 'confirmed', 'completed'] },
+        startAt: { lt: to },
+        endAt: { gt: from },
+      },
+      orderBy: { startAt: 'asc' },
+    });
+  }
 }

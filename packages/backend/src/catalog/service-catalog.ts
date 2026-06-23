@@ -57,6 +57,18 @@ export class ServiceCatalog {
   }
 
   /**
+   * List all services for a salon (read-only). Used by the public
+   * `GET /salons/:id/services` route (Requirement 2.2). Returns the persisted
+   * Service rows; the HTTP layer maps them to the client-facing shape.
+   */
+  async listServices(salonId: string): Promise<Service[]> {
+    return this.prisma.service.findMany({
+      where: { salonId },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  /**
    * Replace the set of qualified staff members for a service (R6.1).
    *
    * Atomically deletes all existing service_staff entries for the service
