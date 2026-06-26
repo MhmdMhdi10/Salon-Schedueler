@@ -17,6 +17,8 @@
     "format:check": "prettier --check 'packages/*/src/**/*.{ts,tsx}'"
   },
   "devDependencies": {
+    "@types/react": "18.3.31",
+    "@types/react-dom": "18.3.7",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
     "eslint": "^8.57.0",
@@ -25,6 +27,7 @@
     "prettier": "^3.2.0",
     "typescript": "^5.4.0"
   },
+  "//react-hoist": "Mixed React across workspaces: web PWA is React 18, the Expo (SDK 54) mobile app is React 19 + react-native 0.81. npm hoists one @types/react to the root. Pin v18 at the root so the web package (which relies on the hoisted copy) type-checks against React 18; the mobile package carries its own nested @types/react@19 and resolves react-native (also at root) against it via Metro/TS local resolution.",
   "engines": {
     "node": ">=20.0.0"
   }

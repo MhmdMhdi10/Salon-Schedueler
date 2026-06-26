@@ -303,9 +303,41 @@ export class PaymentService {
   }
 
   /**
+   * Request a gateway payment for a non-deposit flow (e.g. subscriptions),
+   * reusing the same gateway integration as deposits — no second gateway is
+   * created. Returns the gateway `authority` and the customer `redirectUrl`.
+   *
+   * The caller owns its own payment record (e.g. `SubscriptionPayment`); this
+   * method only talks to the shared gateway.
+   *
+   * Requirements: R3.6 (subscription purchase reuses PaymentService).
+   */
+  async requestGatewayPayment(
+    amountRial: number,
+    callbackPath: string,
+    description: string,
+  ): Promise<{ authority: string; redirectUrl: string }> {
+    const callbackUrl = `${this.callbackBaseUrl}${callbackPath}`;
+    return this.gateway.request(amountRial, callbackUrl, { description });
+  }
+
+  /**
+   * Verify a previously requested gateway payment, reusing the shared gateway.
+   * Returns `ok=true` and a `refId` on success.
+   *
+   * Requirements: R3.7 (subscription activation on verified payment).
+   */
+  async verifyGatewayPayment(
+    authority: string,
+    amountRial: number,
+  ): Promise<{ ok: boolean; refId?: string }> {
+    return this.gateway.verify(authority, amountRial);
+  }
+
+  /**
    * Get the gateway name for the current adapter (used in payment records).
    */
-  private getGatewayName(): string {
+  getGatewayName(): string {
     // Determine from the adapter constructor name
     const name = this.gateway.constructor.name;
     if (name.toLowerCase().includes('zarinpal')) return 'zarinpal';

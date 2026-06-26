@@ -4,6 +4,8 @@ import type { CancellationService } from '../scheduling/cancellation.js';
 import type { AuthService, Authorizer } from '../auth/index.js';
 import type { PaymentService } from '../payment/payment.service.js';
 import type { NotificationService } from '../notifications/notification.service.js';
+import type { BotChannel } from '../notifications/bot-channel.js';
+import type { BotService } from '../bots/index.js';
 import type { WaitlistService } from '../waitlist/waitlist.service.js';
 import type { CustomerService } from '../customer/customer.service.js';
 import type { AnalyticsService, CalendarService } from '../analytics/index.js';
@@ -13,6 +15,7 @@ import type {
   ResourceRegistration,
 } from '../registration/index.js';
 import type { AvailabilityConfig } from '../availability-config/index.js';
+import type { QrService } from '../qr/index.js';
 import type { BookingFlow } from '../app/booking-flow.js';
 import type { CancellationFlow } from '../app/cancellation-flow.js';
 import { makeAuth } from './middleware/auth.js';
@@ -22,6 +25,7 @@ import { authRouter } from './routes/auth.routes.js';
 import { salonRouter } from './routes/salon.routes.js';
 import { appointmentRouter } from './routes/appointment.routes.js';
 import { paymentInitiateRouter, paymentCallbackRouter } from './routes/payment.routes.js';
+import { botRouter } from './routes/bot.routes.js';
 import { adminRouter } from './routes/admin.routes.js';
 import { deviceRouter } from './routes/device.routes.js';
 import { errorHandler } from './middleware/error-handler.js';
@@ -37,6 +41,10 @@ export interface Services {
   authService: AuthService;
   paymentService: PaymentService;
   notificationService: NotificationService;
+  /** Bot-based notification channel sitting behind notifications (Requirement 1.8). */
+  botChannel: BotChannel;
+  /** Inbound bot webhook dispatch / conversational entry point (Requirements 1.1, 1.6). */
+  botService: BotService;
   waitlistService: WaitlistService;
   customerService: CustomerService;
   analyticsService: AnalyticsService;
@@ -45,6 +53,8 @@ export interface Services {
   salonRegistration: SalonRegistration;
   resourceRegistration: ResourceRegistration;
   availabilityConfig: AvailabilityConfig;
+  /** Stable per-salon QR generation + scan counting (Requirement 4.1, 4.4, 4.5). */
+  qrService: QrService;
   authorizer: Authorizer;
   /** Application-layer flow: booking + confirmation notification (Requirement 4.1). */
   bookingFlow: BookingFlow;
@@ -56,6 +66,8 @@ export interface Services {
 export interface BuildAppOptions {
   services: Services;
   jwtAccessSecret: string;
+  /** Shared secret guarding the public bot webhook routes (Requirement 8.1). */
+  botWebhookSecret?: string;
 }
 
 /**
@@ -67,8 +79,52 @@ export interface BuildAppOptions {
  * later availability/QR/auth/payment-callback) are mounted explicitly without it.
  */
 export function buildApp(opts: BuildAppOptions): Express {
-  const { services, jwtAccessSecret } = opts;
+  const { services, jwtAccessSecret, botWebhookSecret } = opts;
   const app = express();
+
+  // ── CORS (dev / explicit origins only) ──────────────────────────────────────
+  // The browser-based clients (the Vite web app via its dev proxy, and the
+  // Expo "react-native-web" dev server on a different port) make cross-origin
+  // XHR/fetch calls to this API. Without CORS headers the browser blocks the
+  // response ("Failed to fetch"). Native apps and same-origin requests are
+  // unaffected. This is enabled only outside production, or when CORS_ALLOW_ORIGIN
+  // is explicitly set, so production stays locked down by default.
+  //   CORS_ALLOW_ORIGIN unset + dev  -> reflect the request Origin (allow all)
+  //   CORS_ALLOW_ORIGIN="a,b"        -> allow only those origins
+  const corsConfigured = typeof process.env.CORS_ALLOW_ORIGIN === 'string';
+  const corsEnabled = corsConfigured || process.env.NODE_ENV !== 'production';
+  if (corsEnabled) {
+    const allowList = corsConfigured
+      ? process.env
+          .CORS_ALLOW_ORIGIN!.split(',')
+          .map((o) => o.trim())
+          .filter(Boolean)
+      : null; // null => reflect any origin (dev convenience)
+    app.use((req, res, next) => {
+      const origin = req.headers.origin;
+      if (origin && (allowList === null || allowList.includes(origin))) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Vary', 'Origin');
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        res.setHeader(
+          'Access-Control-Allow-Methods',
+          'GET,POST,PUT,PATCH,DELETE,OPTIONS',
+        );
+        res.setHeader(
+          'Access-Control-Allow-Headers',
+          req.headers['access-control-request-headers'] ??
+            'Content-Type,Authorization',
+        );
+        res.setHeader('Access-Control-Max-Age', '600');
+      }
+      // Short-circuit CORS preflight so it never falls through to a 404.
+      if (req.method === 'OPTIONS') {
+        res.status(204).end();
+        return;
+      }
+      next();
+    });
+  }
 
   app.use(express.json());
 
@@ -83,6 +139,10 @@ export function buildApp(opts: BuildAppOptions): Express {
   app.use('/api', authRouter(services));
   app.use('/api', salonRouter(services, optionalAuth));
   app.use('/api', paymentCallbackRouter(services));
+  // Bot webhooks: public (no requireAuth), guarded by a webhook-secret path
+  // segment; always answer 200 on a valid secret to avoid retry storms
+  // (Requirements 1.1, 1.6, 8.1).
+  app.use('/api', botRouter(services, botWebhookSecret));
 
   // ── Protected routes (requireAuth applied by default for the whole router) ──
   // Auth is applied before any protected sub-router is mounted, so no protected

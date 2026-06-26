@@ -29,7 +29,11 @@ export interface DeviceTokenInfo {
 export interface NotificationLogEntry {
   id: string;
   appointmentId: string | null;
-  channel: 'sms' | 'push';
+  /**
+   * Delivery channel. `sms`/`push` are the original channels; `telegram`/`bale`
+   * are the bot channels added by `Bot_Channel` (Requirements 1.9, 1.10).
+   */
+  channel: 'sms' | 'push' | 'telegram' | 'bale';
   status: 'sent' | 'failed';
   error: string | null;
   createdAt: Date;

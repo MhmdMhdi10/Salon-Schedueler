@@ -50,6 +50,31 @@ export interface AppConfig {
   najvaApiKey?: string;
   /** Najva API base URL override (optional). */
   najvaBaseUrl?: string;
+  /** Telegram bot token (optional — absence disables the Telegram channel). */
+  telegramBotToken?: string;
+  /** Bale bot token (optional — absence disables the Bale channel). */
+  baleBotToken?: string;
+  /** Shared secret guarding the public bot webhook routes (optional in dev). */
+  botWebhookSecret?: string;
+  /** Monthly subscription price in IRR (configurable; optional). */
+  subMonthlyRial?: string;
+  /** Quarterly subscription price in IRR (configurable; optional). */
+  subQuarterlyRial?: string;
+  /** Annual subscription price in IRR (configurable; optional). */
+  subAnnualRial?: string;
+  /** Free trial length in days. Defaults to 14. */
+  subTrialDays: number;
+  /**
+   * OTP validity window in seconds. Defaults to 120 (the domain default). Can be
+   * raised in development (via OTP_WINDOW_SECONDS) so manual testing isn't rushed
+   * by the 2-minute expiry; production should leave it at the secure default.
+   */
+  otpWindowSeconds: number;
+  /**
+   * Public origin (scheme + host) for salon profile links / QR destinations.
+   * Optional; QR_Service falls back to its own documented default when absent.
+   */
+  publicBaseUrl?: string;
   /** HTTP port the server listens on. Defaults to 3000. */
   port: number;
   /** Node environment. */
@@ -118,6 +143,17 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     pusheAppId: env.PUSHE_APP_ID,
     najvaApiKey: env.NAJVA_API_KEY,
     najvaBaseUrl: env.NAJVA_BASE_URL,
+    telegramBotToken: env.TELEGRAM_BOT_TOKEN,
+    baleBotToken: env.BALE_BOT_TOKEN,
+    botWebhookSecret: env.BOT_WEBHOOK_SECRET,
+    subMonthlyRial: env.SUB_MONTHLY_RIAL,
+    subQuarterlyRial: env.SUB_QUARTERLY_RIAL,
+    subAnnualRial: env.SUB_ANNUAL_RIAL,
+    subTrialDays: env.SUB_TRIAL_DAYS ? Number(env.SUB_TRIAL_DAYS) : 14,
+    otpWindowSeconds: env.OTP_WINDOW_SECONDS
+      ? Number(env.OTP_WINDOW_SECONDS)
+      : 120,
+    publicBaseUrl: env.PUBLIC_BASE_URL,
     port: env.PORT ? Number(env.PORT) : 3000,
     nodeEnv,
   };

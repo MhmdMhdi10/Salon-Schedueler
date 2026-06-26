@@ -1,0 +1,11 @@
+{
+  "_comment": "Build-time list of public, indexable discovery pages for sitemap.xml + prerender (seo §1, §7). Each city yields a /city/:slug URL and each service a /services/:slug URL. Slugs are ASCII and MUST mirror data/discovery.ts so the page is both crawlable and renderable. `lastmod` is an optional W3C date (YYYY-MM-DD); when omitted the build date is used.",
+  "cities": [
+    { "slug": "tehran", "name": "تهران", "lastmod": "2025-01-15" }
+  ],
+  "serviceTypes": [
+    { "slug": "haircut", "name": "کوتاهی مو", "lastmod": "2025-01-15" },
+    { "slug": "color", "name": "رنگ مو", "lastmod": "2025-01-15" },
+    { "slug": "makeup", "name": "میکاپ", "lastmod": "2025-01-15" }
+  ]
+}

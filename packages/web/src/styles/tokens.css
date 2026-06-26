@@ -1,0 +1,304 @@
+/*
+ * Global token stylesheet — Salon Booking PWA (Persian, RTL).
+ *
+ * Single source of truth for design tokens, declared once as CSS custom
+ * properties on `:root` (light) and overridden under `[data-theme="dark"]`.
+ * Components consume ONLY these tokens (via Tailwind classes that resolve to
+ * the variables, or `var(--token)` directly) — never raw hex/px/ms literals.
+ *
+ * Token values are taken verbatim from `.kiro/steering/ui-ux-skills.md`
+ * (the governing standard). See also the spec design.md token tables.
+ *
+ * Imported once in `main.tsx`.
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------ *
+ * Self-hosted Vazirmatn (variable woff2), subset to the Arabic/Latin
+ * ranges in use. Served from `/fonts/*` (public/) so the URLs are stable
+ * and the <link rel="preload"> in index.html resolves to the same asset.
+ *
+ *  - `font-display: swap` avoids FOIT on the OTP/booking screens.
+ *  - Variable face (`font-weight: 100 900`) covers every weight in one file.
+ *  - unicode-range values are taken verbatim from the @fontsource-variable
+ *    Vazirmatn subsets so the browser only fetches the file a glyph needs.
+ *  - A metrics-matched fallback ("Vazirmatn Fallback", built on Tahoma)
+ *    uses size-adjust/ascent/descent overrides to limit CLS while the web
+ *    font loads (ui-ux §12, R9.6).
+ * ------------------------------------------------------------------ */
+
+/* Arabic / Persian range */
+@font-face {
+  font-family: 'Vazirmatn';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/fonts/vazirmatn-arabic-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1,
+    U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74,
+    U+FE76-FEFC, U+102E0-102FB, U+10E60-10E7E, U+10EC2-10EC4, U+10EFC-10EFF,
+    U+1EE00-1EE03, U+1EE05-1EE1F, U+1EE21-1EE22, U+1EE24, U+1EE27, U+1EE29-1EE32,
+    U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42, U+1EE47, U+1EE49, U+1EE4B,
+    U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B, U+1EE5D,
+    U+1EE5F, U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77,
+    U+1EE79-1EE7C, U+1EE7E, U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3,
+    U+1EEA5-1EEA9, U+1EEAB-1EEBB, U+1EEF0-1EEF1;
+}
+
+/* Basic Latin range (numerals, Latin runs, punctuation) */
+@font-face {
+  font-family: 'Vazirmatn';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/fonts/vazirmatn-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/*
+ * Metrics-matched fallback: Tahoma re-shaped to approximate Vazirmatn's
+ * vertical metrics so swapping from fallback → web font does not reflow
+ * (protects CLS). Referenced in the font stack as "Vazirmatn Fallback".
+ */
+@font-face {
+  font-family: 'Vazirmatn Fallback';
+  src: local('Tahoma'), local('Arial');
+  font-display: swap;
+  ascent-override: 90%;
+  descent-override: 35%;
+  line-gap-override: 0%;
+  size-adjust: 105%;
+}
+
+/* ------------------------------------------------------------------ *
+ * Design tokens
+ * ------------------------------------------------------------------ */
+
+:root {
+  color-scheme: light;
+
+  /* Color — semantic roles (light) */
+  --color-bg: #ffffff;
+  --color-surface: #f7f8fa;
+  --color-elevated: #ffffff;
+  --color-text: #16181d;
+  --color-text-muted: #5b6472;
+  --color-border: #e3e6eb;
+  --color-primary: #5457e6;
+  --color-primary-contrast: #ffffff;
+  --color-secondary: #0ea5a4;
+  --color-accent: #d946ef;
+  --color-success: #15803d;
+  --color-warning: #b45309;
+  --color-danger: #b91c1c;
+  --color-info: #1d4ed8;
+  --color-focus-ring: #5457e6;
+
+  /* Typography scale (rem, base 16px) */
+  --font-2xs: 0.75rem;
+  --font-xs: 0.875rem;
+  --font-sm: 1rem;
+  --font-md: 1.125rem;
+  --font-lg: 1.375rem;
+  --font-xl: 1.75rem;
+  --font-2xl: 2.25rem;
+
+  /* Font stack (Persian-first); metrics-matched fallback limits CLS */
+  --font-family-sans: 'Vazirmatn', 'Vazirmatn Fallback', system-ui, 'Segoe UI',
+    Tahoma, sans-serif;
+
+  /* Spacing — 8pt grid */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-8: 48px;
+  --space-10: 64px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* Elevation — low-contrast shadows for light mode */
+  --shadow-1: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.1);
+  --shadow-2: 0 4px 8px rgba(16, 24, 40, 0.08), 0 2px 4px rgba(16, 24, 40, 0.06);
+  --shadow-3: 0 12px 24px rgba(16, 24, 40, 0.12), 0 4px 8px rgba(16, 24, 40, 0.08);
+
+  /* Z-index ladder */
+  --z-base: 0;
+  --z-sticky: 100;
+  --z-nav: 200;
+  --z-overlay: 1000;
+  --z-dialog: 1100;
+  --z-toast: 1200;
+
+  /* Motion */
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-slow: 300ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1.2);
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Color — semantic roles (dark) */
+  --color-bg: #0b0f1a;
+  --color-surface: #121826;
+  --color-elevated: #1b2233;
+  --color-text: #eef1f6;
+  --color-text-muted: #9aa4b2;
+  --color-border: #2a3344;
+  --color-primary: #818cf8;
+  --color-primary-contrast: #0b0f1a;
+  --color-secondary: #2dd4bf;
+  --color-accent: #e879f9;
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+  --color-info: #60a5fa;
+  --color-focus-ring: #a5b4fc;
+
+  /*
+   * Dark mode prefers border + subtle shadow; heavy shadows read poorly on
+   * dark surfaces (ui-ux-skills §2 elevation guidance).
+   */
+  --shadow-1: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-2: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 4px 8px rgba(0, 0, 0, 0.55);
+  --shadow-3: 0 0 0 1px rgba(0, 0, 0, 0.5), 0 12px 24px rgba(0, 0, 0, 0.6);
+}
+
+/* ------------------------------------------------------------------ *
+ * Base layer: reset / normalize + document defaults
+ * ------------------------------------------------------------------ */
+
+@layer base {
+  /* Box-sizing reset */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  /* Remove default margins on common flow elements */
+  html,
+  body,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  figure,
+  blockquote,
+  dl,
+  dd,
+  ul,
+  ol {
+    margin: 0;
+  }
+
+  /* Strip list styling on lists that carry a role (set by authors) */
+  ul[role='list'],
+  ol[role='list'] {
+    list-style: none;
+    padding: 0;
+  }
+
+  html {
+    /* Honor notch/home-indicator insets at the root */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    min-height: 100vh;
+    margin: 0;
+    /* Persian-first font stack + taller line height for Farsi runs */
+    font-family: var(--font-family-sans);
+    font-size: var(--font-sm);
+    line-height: 1.75;
+    color: var(--color-text);
+    background-color: var(--color-bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Headings inherit the body font; weight-driven hierarchy */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: 700;
+  }
+
+  /* Media defaults — block + responsive, prevents inline-gap + overflow */
+  img,
+  picture,
+  video,
+  canvas,
+  svg {
+    display: block;
+    max-width: 100%;
+  }
+
+  /* Form controls inherit typography rather than UA defaults */
+  input,
+  button,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+
+  /* Avoid orphaned words breaking awkwardly */
+  p,
+  li,
+  figcaption {
+    overflow-wrap: break-word;
+  }
+
+  /* Visible focus ring using the focus token (never remove outlines) */
+  :focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* Anchors use logical color token; inherit by default */
+  a {
+    color: inherit;
+    text-decoration-thickness: from-font;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Reduced-motion: drop transforms/parallax, keep opacity crossfades,
+ * never block completion of an action on an animation (ui-ux §9).
+ * ------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

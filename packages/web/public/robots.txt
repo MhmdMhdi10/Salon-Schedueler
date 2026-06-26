@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /auth
+Disallow: /admin/
+Disallow: /salon/*/book
+Disallow: /booking/
+Disallow: /qr/
+Disallow: /api/
+Sitemap: https://example.ir/sitemap.xml

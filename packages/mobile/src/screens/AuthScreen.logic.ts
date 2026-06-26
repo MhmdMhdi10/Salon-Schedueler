@@ -7,15 +7,19 @@
  *
  * Requirement: 7.4, 7.5 (orig R1)
  */
-import { authApi, setAccessToken } from '../api/client';
+import { authApi, setAccessToken, ApiError } from '../api/client';
 
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
 }
 
-export type RequestOtpResult = { ok: true } | { ok: false; error: string };
-export type VerifyOtpResult = { ok: true; tokens: AuthTokens } | { ok: false; error: string };
+export type RequestOtpResult =
+  | { ok: true }
+  | { ok: false; error: string; code?: string };
+export type VerifyOtpResult =
+  | { ok: true; tokens: AuthTokens }
+  | { ok: false; error: string; code?: string };
 
 /** Persist tokens (e.g. to secure storage). Abstracted so the flow stays testable. */
 export type PersistTokens = (tokens: AuthTokens) => void | Promise<void>;
@@ -28,13 +32,26 @@ function errorMessage(err: unknown): string {
   return 'خطای ناشناخته';
 }
 
+/**
+ * Extract a stable error code so the screen can show a localized message.
+ * - `ApiError` carries the backend's error `code` (e.g. OTP_EXPIRED).
+ * - A thrown `TypeError` from fetch (no response) is a network failure.
+ */
+function errorCode(err: unknown): string | undefined {
+  if (err instanceof ApiError) return err.code;
+  // fetch() rejects with a TypeError when the request never reaches the server
+  // (offline, DNS, connection refused, CORS-blocked). Surface as NETWORK.
+  if (err instanceof TypeError) return 'NETWORK';
+  return undefined;
+}
+
 /** Step 1: request an OTP for the given phone number. Never throws. */
 export async function requestOtp(phone: string): Promise<RequestOtpResult> {
   try {
     await authApi.requestOtp(phone);
     return { ok: true };
   } catch (err) {
-    return { ok: false, error: errorMessage(err) };
+    return { ok: false, error: errorMessage(err), code: errorCode(err) };
   }
 }
 
@@ -55,6 +72,6 @@ export async function verifyOtp(
     }
     return { ok: true, tokens };
   } catch (err) {
-    return { ok: false, error: errorMessage(err) };
+    return { ok: false, error: errorMessage(err), code: errorCode(err) };
   }
 }

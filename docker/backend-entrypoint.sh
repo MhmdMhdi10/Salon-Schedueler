@@ -43,6 +43,11 @@ fi
 echo "[backend] applying exclusion constraints (idempotent)..."
 psql -v ON_ERROR_STOP=1 -f docker/db/dev-constraints.sql
 
+# 4b. Seed dev-only sample data (idempotent): one bookable salon + service +
+#     staff + chair + working hours, with fixed UUIDs the web funnel targets.
+echo "[backend] applying dev seed data (idempotent)..."
+psql -v ON_ERROR_STOP=1 -f docker/db/dev-seed.sql
+
 # 5. Initial build of shared + backend, then start with watch reload.
 echo "[backend] building @salon/shared + @salon/backend..."
 npx tsc -b packages/shared packages/backend

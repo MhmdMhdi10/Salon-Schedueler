@@ -79,6 +79,18 @@ The mock-based concurrency test and the rest of the property-based tests run on 
 offline `npm test`. When `DATABASE_URL` points at a reachable PostgreSQL instance with
 migrations applied, the gated tests execute and exercise the real database behavior.
 
+### Accessibility checks (web)
+
+The web PWA gates accessibility in CI two ways: axe assertions baked into the
+component/page suites (`npm run test --workspace @salon/web`, fail on serious/critical
+violations) and a Lighthouse accessibility audit of the prerendered public pages
+(`packages/web/lighthouserc.json`, wired in `.github/workflows/web-a11y.yml`). These
+automated checks are a **floor, not a certificate** — full WCAG 2.2 AA conformance also
+requires manual assistive-technology testing (VoiceOver/TalkBack/NVDA in RTL/Farsi),
+keyboard-only runs, and expert review. See
+[`packages/web/docs/accessibility.md`](packages/web/docs/accessibility.md) for the full
+note and how to run the checks locally.
+
 ## Database migrations
 
 The backend uses Prisma. Generate the client and apply migrations against the database

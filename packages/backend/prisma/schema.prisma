@@ -33,6 +33,30 @@ enum ApptSource {
   web
   mobile
   walkin
+  bot
+}
+
+// ─── Bot platform ────────────────────────────────────────────────────────────
+
+enum BotPlatform {
+  telegram
+  bale
+}
+
+// ─── Subscription enums ──────────────────────────────────────────────────────
+
+enum SubscriptionStatus {
+  trial
+  active
+  grace
+  expired
+}
+
+enum SubscriptionPlanKind {
+  trial
+  monthly
+  quarterly
+  annual
 }
 
 enum PaymentStatus {
@@ -59,6 +83,8 @@ model Salon {
   holidays        Holiday[]
   appointments    Appointment[]
   waitlistEntries WaitlistEntry[]
+  subscription    Subscription?
+  qrScanEvents    QrScanEvent[]
 
   @@map("salon")
 }
@@ -78,6 +104,7 @@ model StaffMember {
   appointments        Appointment[]
   customerNotes       CustomerNote[] @relation("NoteAuthor")
   customersPreferring Customer[]     @relation("PreferredStaff")
+  botChats            BotChat[]
 
   @@map("staff_member")
 }
@@ -236,6 +263,7 @@ model Customer {
   customerNotes   CustomerNote[]
   waitlistEntries WaitlistEntry[]
   deviceTokens    DeviceToken[]
+  botChats        BotChat[]
 
   @@map("customer")
 }
@@ -359,4 +387,88 @@ model NotificationLog {
   appointment Appointment? @relation(fields: [appointmentId], references: [id])
 
   @@map("notification_log")
+}
+
+// ─── Bot Chat ──────────────────────────────────────────────────────────────────
+// شناسهٔ گفت‌وگوی ربات برای یک مشتری یا یک عضو staff (صاحب سالن).
+// یکی از customerId یا staffMemberId پر است.
+
+model BotChat {
+  id            String      @id @default(uuid()) @db.Uuid
+  platform      BotPlatform
+  chatId        String      @map("chat_id")
+  customerId    String?     @map("customer_id") @db.Uuid
+  staffMemberId String?     @map("staff_member_id") @db.Uuid
+  linkedAt      DateTime    @default(now()) @map("linked_at") @db.Timestamptz
+
+  customer    Customer?    @relation(fields: [customerId], references: [id])
+  staffMember StaffMember? @relation(fields: [staffMemberId], references: [id])
+
+  @@unique([platform, chatId])
+  @@map("bot_chat")
+}
+
+// ─── Bot Session ───────────────────────────────────────────────────────────────
+// وضعیت گفت‌وگوی رزرو داخل ربات (ماشین حالت، سروری نگه‌داری می‌شود).
+
+model BotSession {
+  id        String      @id @default(uuid()) @db.Uuid
+  platform  BotPlatform
+  chatId    String      @map("chat_id")
+  step      String // service|date|slot|confirm|otp|done
+  draftJson Json        @map("draft_json") // {salonId, serviceId, date, startAt}
+  updatedAt DateTime    @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([platform, chatId])
+  @@map("bot_session")
+}
+
+// ─── Subscription ────────────────────────────────────────────────────────────────
+
+model Subscription {
+  id         String               @id @default(uuid()) @db.Uuid
+  salonId    String               @unique @map("salon_id") @db.Uuid
+  status     SubscriptionStatus   @default(trial)
+  planKind   SubscriptionPlanKind @default(trial) @map("plan_kind")
+  startedAt  DateTime             @default(now()) @map("started_at") @db.Timestamptz
+  expiresAt  DateTime             @map("expires_at") @db.Timestamptz
+  graceUntil DateTime?            @map("grace_until") @db.Timestamptz
+  createdAt  DateTime             @default(now()) @map("created_at") @db.Timestamptz
+
+  salon    Salon                 @relation(fields: [salonId], references: [id])
+  payments SubscriptionPayment[]
+
+  @@map("subscription")
+}
+
+// ─── Subscription Payment ──────────────────────────────────────────────────────
+// پرداخت اشتراک — جدا از Payment رزرو، اما از همان PaymentService استفاده می‌کند.
+
+model SubscriptionPayment {
+  id             String               @id @default(uuid()) @db.Uuid
+  subscriptionId String               @map("subscription_id") @db.Uuid
+  planKind       SubscriptionPlanKind @map("plan_kind")
+  amountRial     BigInt               @map("amount_rial")
+  status         PaymentStatus        @default(pending)
+  gateway        String
+  authority      String?
+  refId          String?              @map("ref_id")
+  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+
+  @@map("subscription_payment")
+}
+
+// ─── QR Scan Event ─────────────────────────────────────────────────────────────
+
+model QrScanEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  salonId   String   @map("salon_id") @db.Uuid
+  source    String // utm_source, e.g. "qr"
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  salon Salon @relation(fields: [salonId], references: [id])
+
+  @@map("qr_scan_event")
 }

@@ -33,7 +33,7 @@ export interface BookingRequest {
   startAt: string; // ISO datetime
   customerId: string;
   preferredStaffId?: string; // R14.3
-  source: 'web' | 'mobile' | 'walkin'; // R13.1
+  source: 'web' | 'mobile' | 'walkin' | 'bot'; // R13.1 (+ 'bot' for in-chat booking, Requirement 1.6)
 }
 
 /**
@@ -568,7 +568,12 @@ export class SchedulingEngine {
             startAt,
             endAt,
             status: appointmentStatus,
-            source,
+            // The checked-in generated Prisma client can be stale and may not
+            // yet include the additive `bot` value in its `ApptSource` type even
+            // though the DB enum has it (migration 00000002). Cast through
+            // `unknown` so this compiles against a stale client while still
+            // persisting the real runtime value (e.g. 'bot').
+            source: source as unknown as 'web',
             holdExpiresAt,
           },
         });

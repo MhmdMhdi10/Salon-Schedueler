@@ -5,3 +5,26 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# Generated at build time by packages/web/scripts/generate-sitemap.mjs
+packages/web/public/sitemap.xml
+
+# Test artifacts / temp output
+.tmp-test/
+**/.tmp-test/
+node-compile-cache/
+
+# Expo local cache (per-machine; not source)
+.expo/
+**/.expo/
+
+# Stale build output
+dist.stale/
+**/dist.stale/
+
+# Logs
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db

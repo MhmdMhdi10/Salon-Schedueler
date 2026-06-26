@@ -12,6 +12,14 @@ export type {
   PushPayload,
   PushDeliveryResult,
 } from './push-provider.interface';
+export { BotChannel } from './bot-channel';
+export type {
+  BotChatRef,
+  BotRecipient,
+  BotChannelRepository,
+  BotChannelDeliveryResult,
+  BotChannelSendOptions,
+} from './bot-channel';
 export { KavenegarSmsAdapter } from './kavenegar.adapter';
 export { SmsIrAdapter } from './smsir.adapter';
 export { PusheAdapter } from './pushe.adapter';

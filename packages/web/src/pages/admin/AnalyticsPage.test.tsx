@@ -1,15 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import '../../i18n';
 import { AnalyticsPage } from './AnalyticsPage';
 import { adminApi, ApiError } from '../../api/client';
 
 /**
  * Component tests for the admin AnalyticsPage.
- * Verifies utilization/revenue/busiest-window figures are fetched via the
- * analytics endpoint and rendered, with loading/error states.
- * Requirements: 7.3, 7.5
+ *
+ * Verifies the redesigned dashboard fetches utilization/revenue/busiest-window
+ * figures via the analytics endpoint (wire contract unchanged) and renders them
+ * as KPI cards + a busiest-windows table, with loading and error states. The
+ * `admin-analytics` root testID and the `analytics-*` figure/state testIDs are
+ * preserved so existing hooks stay green.
+ *
+ * Requirements: 5.3, 5.4, 7.5, 2.3
  */
 
 vi.mock('../../api/client', () => {
@@ -50,14 +56,16 @@ afterEach(() => {
 });
 
 describe('AnalyticsPage', () => {
-  it('shows loading then renders utilization, revenue, and busiest windows', async () => {
+  it('shows loading then renders utilization, revenue, and busiest-window KPI cards', async () => {
     const analyticsD = deferred<{ utilization: unknown; revenue: unknown; busiestWindows: unknown }>();
     vi.mocked(adminApi.getAnalytics).mockReturnValue(analyticsD.promise);
 
     render(
-      <MemoryRouter>
-        <AnalyticsPage salonId="salon-3" />
-      </MemoryRouter>
+      <HelmetProvider>
+        <MemoryRouter>
+          <AnalyticsPage salonId="salon-3" />
+        </MemoryRouter>
+      </HelmetProvider>
     );
 
     expect(screen.getByTestId('analytics-loading')).toBeTruthy();
@@ -67,17 +75,49 @@ describe('AnalyticsPage', () => {
       expect.any(String)
     );
 
+    // The wire contract: utilization report, revenue { totalRial, count },
+    // busiestWindows[]. The page localizes these for display only.
     analyticsD.resolve({
-      utilization: { chair: 0.82, staff: 0.61 },
-      revenue: 1234000,
-      busiestWindows: [{ window: '09:00-12:00', count: 12 }],
+      utilization: { utilization: 0.82, bookedMinutes: 100, availableMinutes: 122 },
+      revenue: { totalRial: 1234000, appointmentCount: 7 },
+      busiestWindows: [
+        { startAt: '2024-03-15T09:00:00Z', endAt: '2024-03-15T12:00:00Z', concurrentCount: 12 },
+      ],
     });
 
     await waitFor(() => expect(screen.getByTestId('analytics-utilization')).toBeTruthy());
     expect(screen.getByTestId('analytics-revenue')).toBeTruthy();
     expect(screen.getByTestId('analytics-busiest')).toBeTruthy();
-    expect(screen.getByText('0.82')).toBeTruthy();
-    expect(screen.getByText('1234000')).toBeTruthy();
+
+    // Utilization renders as a Persian-digit percentage (0.82 → ۸۲٪).
+    expect(screen.getByTestId('analytics-utilization').textContent).toContain('۸۲');
+    // Revenue renders as grouped Persian-digit Rial (1234000 → ۱٬۲۳۴٬۰۰۰).
+    expect(screen.getByTestId('analytics-revenue').textContent).toContain('۱٬۲۳۴٬۰۰۰');
+    // The busiest-windows table renders the numeric concurrent-count column.
+    expect(screen.getByTestId('analytics-table')).toBeTruthy();
+    expect(screen.getByTestId('analytics-table').textContent).toContain('۱۲');
+  });
+
+  it('renders empty figures and an empty table when there is no data', async () => {
+    const analyticsD = deferred<{ utilization: unknown; revenue: unknown; busiestWindows: unknown }>();
+    vi.mocked(adminApi.getAnalytics).mockReturnValue(analyticsD.promise);
+
+    render(
+      <HelmetProvider>
+        <MemoryRouter>
+          <AnalyticsPage salonId="salon-3" />
+        </MemoryRouter>
+      </HelmetProvider>
+    );
+
+    analyticsD.resolve({
+      utilization: { utilization: 0, bookedMinutes: 0, availableMinutes: 0 },
+      revenue: { totalRial: 0, appointmentCount: 0 },
+      busiestWindows: [],
+    });
+
+    await waitFor(() => expect(screen.getByTestId('analytics-busiest')).toBeTruthy());
+    expect(screen.getByTestId('analytics-table-empty')).toBeTruthy();
   });
 
   it('shows an error state when analytics fails to load', async () => {
@@ -85,9 +125,11 @@ describe('AnalyticsPage', () => {
     vi.mocked(adminApi.getAnalytics).mockReturnValue(analyticsD.promise);
 
     render(
-      <MemoryRouter>
-        <AnalyticsPage salonId="salon-3" />
-      </MemoryRouter>
+      <HelmetProvider>
+        <MemoryRouter>
+          <AnalyticsPage salonId="salon-3" />
+        </MemoryRouter>
+      </HelmetProvider>
     );
 
     expect(screen.getByTestId('analytics-loading')).toBeTruthy();

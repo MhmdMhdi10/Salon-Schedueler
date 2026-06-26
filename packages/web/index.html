@@ -7,6 +7,39 @@
   <meta name="theme-color" content="#6366f1" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/icons/icon-192.png" />
+  <!-- Apply the persisted/OS theme before first paint so there is no flash of
+       the wrong theme (matches src/components/theme/ThemeProvider.tsx:
+       localStorage 'salon-theme' → prefers-color-scheme → light). Kept inline
+       and dependency-free so it runs before the module bundle loads. -->
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem('salon-theme');
+        var theme =
+          stored === 'light' || stored === 'dark'
+            ? stored
+            : window.matchMedia &&
+                window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', theme === 'dark' ? '#0b0f1a' : '#ffffff');
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
+  <!-- Preload the above-the-fold Vazirmatn weight (Persian/Arabic subset) to
+       avoid FOIT on the OTP/booking screens; matches the @font-face src in
+       src/styles/tokens.css. crossorigin is required for font preloads. -->
+  <link
+    rel="preload"
+    as="font"
+    type="font/woff2"
+    href="/fonts/vazirmatn-arabic-wght-normal.woff2"
+    crossorigin
+  />
   <title>سامانه رزرو سالن</title>
 </head>
 

@@ -5,6 +5,11 @@ import type {
   AppointmentInfo,
   DeviceTokenInfo,
 } from '../notifications/notification.service.js';
+import type {
+  BotChannelRepository,
+  BotChatRef,
+  BotRecipient,
+} from '../notifications/bot-channel.js';
 import type { SmsProvider } from '../auth/sms-provider.interface.js';
 import type {
   WaitlistRepository,
@@ -118,8 +123,68 @@ export class PrismaNotificationRepository implements NotificationRepository {
   }
 }
 
-// ─── WaitlistRepository ──────────────────────────────────────────────────────
+// ─── BotChannelRepository ────────────────────────────────────────────────────
 
+/**
+ * Prisma-backed `BotChannelRepository`. Resolves a recipient's linked `BotChat`
+ * (keyed by customer or staff member) and persists `NotificationLog` rows for
+ * bot/SMS delivery attempts (Requirements 1.9, 1.10).
+ */
+export class PrismaBotChannelRepository implements BotChannelRepository {
+  constructor(private readonly prisma: PrismaClient) {}
+
+  async findBotChat(recipient: BotRecipient): Promise<BotChatRef | null> {
+    const where =
+      recipient.kind === 'customer'
+        ? { customerId: recipient.customerId }
+        : { staffMemberId: recipient.staffMemberId };
+    // The generated client may lag the schema; cast through unknown so this
+    // compiles against a stale client while still hitting the real delegate
+    // (mirrors the narrow-cast pattern in qr.service.ts / subscription.service.ts).
+    const chat = await (
+      this.prisma as unknown as {
+        botChat: {
+          findFirst(args: {
+            where: { customerId: string } | { staffMemberId: string };
+            orderBy: { linkedAt: 'desc' };
+            select: { platform: true; chatId: true };
+          }): Promise<{ platform: string; chatId: string } | null>;
+        };
+      }
+    ).botChat.findFirst({
+      where,
+      orderBy: { linkedAt: 'desc' },
+      select: { platform: true, chatId: true },
+    });
+    if (!chat) {
+      return null;
+    }
+    return { platform: chat.platform as BotChatRef['platform'], chatId: chat.chatId };
+  }
+
+  async logNotification(
+    entry: Omit<NotificationLogEntry, 'id' | 'createdAt'>,
+  ): Promise<NotificationLogEntry> {
+    const row = await this.prisma.notificationLog.create({
+      data: {
+        appointmentId: entry.appointmentId,
+        channel: entry.channel,
+        status: entry.status,
+        error: entry.error,
+      },
+    });
+    return {
+      id: row.id,
+      appointmentId: row.appointmentId,
+      channel: row.channel as NotificationLogEntry['channel'],
+      status: row.status as NotificationLogEntry['status'],
+      error: row.error,
+      createdAt: row.createdAt,
+    };
+  }
+}
+
+// ─── WaitlistRepository ──────────────────────────────────────────────────────
 function toWaitlistEntry(row: {
   id: string;
   salonId: string;

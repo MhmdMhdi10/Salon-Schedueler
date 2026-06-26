@@ -1,0 +1,169 @@
+import { useTranslation } from 'react-i18next';
+import { ChevronRight } from 'lucide-react';
+import { IconButton } from '../ui/IconButton';
+import { Num } from '../ui/Num';
+import { cn } from '../ui/cn';
+
+/** Stable id the funnel `<main>` exposes (skip-link target / focus). */
+export const FUNNEL_CONTENT_ID = 'funnel-content';
+
+/** The four ordered steps of the booking funnel (ui-ux §8). */
+export const FUNNEL_STEPS = ['service', 'date', 'time', 'confirm'] as const;
+
+/** A single funnel step key. */
+export type FunnelStep = (typeof FUNNEL_STEPS)[number];
+
+export interface FunnelShellProps {
+  /** Routed funnel step content rendered inside the centered card. */
+  children: React.ReactNode;
+  /**
+   * The active step (1-based index into {@link FUNNEL_STEPS}) — drives the
+   * stepper's current/complete styling and the `aria-current` marker.
+   */
+  currentStep: FunnelStep;
+  /** Salon name shown in the minimal top bar. Falls back to the app title. */
+  salonName?: string;
+  /**
+   * Optional back handler. When provided a back affordance is shown in the top
+   * bar. In RTL the chevron points inline-start (visually right), per ui-ux §8.
+   */
+  onBack?: () => void;
+  /**
+   * Sticky bottom CTA content (e.g. the funnel's primary action). Rendered in a
+   * bar pinned to the thumb zone that clears `env(safe-area-inset-bottom)`.
+   */
+  cta?: React.ReactNode;
+  /** Optional className applied to the outermost shell element. */
+  className?: string;
+}
+
+/**
+ * Customer **funnel shell** (R3.1, R3.2, R3.6; ui-ux §5, §8).
+ *
+ * The booking funnel (QR → book → confirm → success) is the revenue path, so
+ * this shell is deliberately minimal and distinct from both the public and the
+ * admin shells:
+ *
+ *  - a **minimal top bar** with the salon name and an optional back affordance
+ *    (no global nav, no theme clutter competing with the primary action);
+ *  - a **stepper** progress indicator (۱ خدمت · ۲ تاریخ · ۳ زمان · ۴ تایید) that
+ *    shows where the user is without losing state on back;
+ *  - a **centered content card** capped at ≈480px (`max-w-funnel`) so the form
+ *    never stretches uncomfortably wide;
+ *  - a **sticky bottom CTA bar** in the thumb zone that clears the device safe
+ *    area inset so the primary action is always reachable one-handed.
+ *
+ * Layout is RTL-first (logical properties only). The `dir="rtl"`/`lang="fa"`
+ * document contract lives on the app root wrapper.
+ */
+export function FunnelShell({
+  children,
+  currentStep,
+  salonName,
+  onBack,
+  cta,
+  className,
+}: FunnelShellProps) {
+  const { t } = useTranslation();
+  const currentIndex = FUNNEL_STEPS.indexOf(currentStep);
+  const total = FUNNEL_STEPS.length;
+
+  return (
+    <div
+      data-shell="funnel"
+      className={cn(
+        'flex min-h-screen flex-col overflow-x-hidden bg-bg text-text',
+        className,
+      )}
+    >
+      {/* Minimal top bar: back affordance (inline-start) + salon name. */}
+      <header className="border-b border-border bg-surface">
+        <div className="mx-auto flex w-full max-w-funnel items-center gap-3 px-4 py-3">
+          {onBack ? (
+            <IconButton aria-label={t('funnel.back')} onClick={onBack}>
+              {/* Directional icon: mirrors automatically under dir="rtl". */}
+              <ChevronRight className="h-5 w-5 rtl:-scale-x-100" />
+            </IconButton>
+          ) : null}
+          <span className="truncate text-md font-bold text-text">
+            {salonName ?? t('app.title')}
+          </span>
+        </div>
+      </header>
+
+      {/* Stepper progress indicator (ui-ux §8). An ordered list communicates
+          sequence; aria-current marks the active step for AT. */}
+      <nav aria-label={t('funnel.progress')} className="bg-surface">
+        <ol className="mx-auto flex w-full max-w-funnel items-center gap-1 px-4 py-3">
+          {FUNNEL_STEPS.map((step, index) => {
+            const isComplete = index < currentIndex;
+            const isCurrent = index === currentIndex;
+            return (
+              <li
+                key={step}
+                aria-current={isCurrent ? 'step' : undefined}
+                className="flex flex-1 items-center gap-2"
+              >
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-pill text-xs font-bold',
+                    isCurrent && 'bg-primary text-primary-contrast',
+                    isComplete && 'bg-secondary text-primary-contrast',
+                    !isCurrent &&
+                      !isComplete &&
+                      'border border-border bg-bg text-muted',
+                  )}
+                >
+                  <Num value={index + 1} />
+                </span>
+                <span
+                  className={cn(
+                    'truncate text-xs',
+                    isCurrent ? 'font-bold text-text' : 'text-muted',
+                  )}
+                >
+                  {t(`funnel.steps.${step}`)}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+        {/* A concise textual position for screen readers / small viewports. */}
+        <p className="sr-only">
+          {t('funnel.stepLabel', { current: currentIndex + 1, total })}
+        </p>
+      </nav>
+
+      {/* Centered content card, capped at the funnel width (≈480px). */}
+      <main
+        id={FUNNEL_CONTENT_ID}
+        tabIndex={-1}
+        className={cn(
+          'mx-auto w-full max-w-funnel flex-1 px-4 py-5',
+          // Reserve room so the sticky CTA never covers the card's tail.
+          cta && 'pb-[calc(var(--space-10)+env(safe-area-inset-bottom))]',
+        )}
+      >
+        <div className="rounded-lg border border-border bg-surface p-4 shadow-1">
+          {children}
+        </div>
+      </main>
+
+      {/* Sticky bottom CTA bar in the thumb zone, clearing the safe-area. */}
+      {cta ? (
+        <div
+          data-testid="funnel-cta-bar"
+          className={cn(
+            'sticky bottom-0 z-sticky border-t border-border bg-surface',
+            'pb-[env(safe-area-inset-bottom)]',
+          )}
+        >
+          <div className="mx-auto w-full max-w-funnel px-4 py-3">{cta}</div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export default FunnelShell;

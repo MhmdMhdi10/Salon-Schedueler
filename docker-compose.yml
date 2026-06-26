@@ -31,7 +31,7 @@ services:
     restart: unless-stopped
 
   backend:
-    image: salon-booking-dev
+    image: salon-booking-backend-dev
     build:
       context: .
       dockerfile: docker/dev.Dockerfile
@@ -46,6 +46,10 @@ services:
       JWT_ACCESS_SECRET: dev-access-secret
       JWT_REFRESH_SECRET: dev-refresh-secret
       PAYMENT_CALLBACK_BASE_URL: "http://localhost:3000"
+      # Dev convenience: widen the OTP validity window to 10 minutes so manual
+      # testing (read code from logs → type it) isn't rushed by the 2-minute
+      # production default. Do NOT carry this into production.
+      OTP_WINDOW_SECONDS: "600"
       # Consumed by pg_isready + psql in the dev entrypoint.
       PGHOST: postgres
       PGPORT: "5432"
@@ -71,7 +75,7 @@ services:
     restart: unless-stopped
 
   web:
-    image: salon-booking-dev
+    image: salon-booking-web-dev
     build:
       context: .
       dockerfile: docker/dev.Dockerfile
@@ -89,6 +93,43 @@ services:
       - web-root-node-modules:/app/node_modules
       - web-web-node-modules:/app/packages/web/node_modules
       - web-shared-node-modules:/app/packages/shared/node_modules
+    restart: unless-stopped
+
+  # Expo / React Native dev server (Metro). Start it with the `mobile` profile:
+  #   HOST_LAN_IP=192.168.1.199 docker compose --profile mobile up
+  #
+  # IMPORTANT: a physical phone running Expo Go connects back to the dev machine
+  # over the LAN, so Metro must advertise the HOST's IP (not the container IP).
+  # Set HOST_LAN_IP to your machine's Wi-Fi IP (see .env). The app's API base URL
+  # is derived from the same IP so the phone reaches the backend too.
+  mobile:
+    image: salon-booking-mobile-dev
+    build:
+      context: .
+      dockerfile: docker/dev.Dockerfile
+    profiles: [ "mobile" ]
+    command: [ "bash", "docker/mobile-entrypoint.sh" ]
+    depends_on:
+      - backend
+    environment:
+      # Metro advertises this host so the QR / exp:// URL is reachable from the
+      # phone. Defaults to localhost (only works for an emulator on the host).
+      REACT_NATIVE_PACKAGER_HOSTNAME: "${HOST_LAN_IP:-localhost}"
+      # The app (Expo Go on the phone) calls the backend at the host IP:3000.
+      EXPO_PUBLIC_API_BASE_URL: "http://${HOST_LAN_IP:-localhost}:3000"
+      # Expo in a container: poll for file changes (bind-mount fs events are
+      # unreliable across the host boundary) and skip interactive prompts.
+      CHOKIDAR_USEPOLLING: "1"
+      EXPO_NO_TELEMETRY: "1"
+    ports:
+      - "8081:8081"      # Metro bundler
+      - "19000:19000"    # Expo dev server
+      - "19001:19001"    # Expo dev server (legacy/manifest)
+    volumes:
+      - ./:/app
+      - mobile-root-node-modules:/app/node_modules
+      - mobile-mobile-node-modules:/app/packages/mobile/node_modules
+      - mobile-shared-node-modules:/app/packages/shared/node_modules
     restart: unless-stopped
 
   # Optional lightweight DB UI: `docker compose --profile tools up`.
@@ -111,3 +152,6 @@ volumes:
   web-root-node-modules:
   web-web-node-modules:
   web-shared-node-modules:
+  mobile-root-node-modules:
+  mobile-mobile-node-modules:
+  mobile-shared-node-modules:

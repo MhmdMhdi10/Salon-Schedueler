@@ -1,0 +1,73 @@
+# Accessibility (a11y) + Core Web Vitals CI gate for the web PWA.
+#
+# Tasks 10.3 + 11.3 (UI/UX redesign): wire the automated accessibility AND Core
+# Web Vitals checks into CI as a build gate. Two complementary gates run here,
+# and either failing fails the build:
+#
+#   1. axe in the component/page suites — `vitest run` executes the Testing
+#      Library component tests and page smoke tests, which assert (via
+#      `expectNoSeriousA11yViolations`, vitest-axe) that there are NO serious or
+#      critical axe violations in RTL (R10.4).
+#   2. Lighthouse a11y + CWV — `@lhci/cli` audits the PRERENDERED public URLs
+#      built by `scripts/prerender.mjs` (home, salon profiles, discovery, legal)
+#      on a mid-range MOBILE profile and fails on (a) an accessibility-category
+#      regression (seo §12; R10.1) and (b) a Core Web Vitals budget breach —
+#      LCP < 2.5s, CLS < 0.1, and total-blocking-time as the lab proxy for the
+#      field-only INP < 200ms target (seo §9; R9.4). Config:
+#      packages/web/lighthouserc.json.
+#
+# FIELD INP: INP cannot be measured in the lab, so the real-user INP < 200ms
+# budget is observed in production via the consent-aware, PII-free `web-vitals`
+# field reporting wired in packages/web/src/utils/webVitals.ts (seo §12).
+#
+# HONESTY NOTE (R10.7, ui-ux §10): these automated checks are a FLOOR, not a
+# certificate. Full WCAG 2.2 AA conformance still requires manual testing with
+# assistive technologies (VoiceOver / TalkBack / NVDA — all in RTL/Farsi),
+# keyboard-only runs, and expert accessibility review. See
+# packages/web/docs/accessibility.md.
+
+name: Web Accessibility and Core Web Vitals
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/web/**'
+      - '.github/workflows/web-a11y.yml'
+  pull_request:
+    paths:
+      - 'packages/web/**'
+      - '.github/workflows/web-a11y.yml'
+
+jobs:
+  a11y:
+    name: axe suite + Lighthouse a11y/CWV gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Gate 1 — axe assertions baked into the component/page suites.
+      - name: Run web test suite (axe a11y gate)
+        run: npm run test --workspace @salon/web
+
+      # Build the public, indexable pages so Lighthouse audits the prerendered
+      # HTML (content + landmarks present without running app JS), matching the
+      # SEO/prerender + sitemap source of truth.
+      - name: Build web (prerenders public routes)
+        run: npm run build --workspace @salon/web
+
+      # Gate 2 — Lighthouse a11y + Core Web Vitals against the prerendered
+      # URLs on a mid-range mobile profile. Config lives in
+      # packages/web/lighthouserc.json (staticDistDir ./dist).
+      - name: Run Lighthouse accessibility + CWV gate
+        run: npx --yes @lhci/cli@0.13.x autorun --config=packages/web/lighthouserc.json

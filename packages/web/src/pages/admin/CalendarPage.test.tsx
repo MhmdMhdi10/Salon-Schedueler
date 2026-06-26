@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import '../../i18n';
 import { CalendarPage } from './CalendarPage';
 import { adminApi, ApiError } from '../../api/client';
@@ -49,16 +50,22 @@ afterEach(() => {
   cleanup();
 });
 
+function renderPage() {
+  return render(
+    <HelmetProvider>
+      <MemoryRouter>
+        <CalendarPage salonId="salon-2" />
+      </MemoryRouter>
+    </HelmetProvider>
+  );
+}
+
 describe('CalendarPage', () => {
   it('shows loading then renders appointments fetched for the day view', async () => {
     const calD = deferred<{ appointments: unknown[] }>();
     vi.mocked(adminApi.getCalendar).mockReturnValue(calD.promise);
 
-    render(
-      <MemoryRouter>
-        <CalendarPage salonId="salon-2" />
-      </MemoryRouter>
-    );
+    renderPage();
 
     expect(screen.getByTestId('calendar-loading')).toBeTruthy();
     expect(adminApi.getCalendar).toHaveBeenCalledWith(
@@ -81,15 +88,15 @@ describe('CalendarPage', () => {
   it('refetches with the week view when the week tab is selected', async () => {
     vi.mocked(adminApi.getCalendar).mockResolvedValue({ appointments: [] });
 
-    render(
-      <MemoryRouter>
-        <CalendarPage salonId="salon-2" />
-      </MemoryRouter>
-    );
+    renderPage();
 
     await waitFor(() => expect(screen.getByTestId('calendar-appointments')).toBeTruthy());
 
-    fireEvent.click(screen.getByText('هفته'));
+    // The day/week toggle is a Radix Tabs trigger, which activates on
+    // mousedown/keyboard/focus (not a bare click). Fire mousedown to select the
+    // week tab — the original intent (selecting "هفته" refetches the week view)
+    // is preserved.
+    fireEvent.mouseDown(screen.getByText('هفته'));
 
     await waitFor(() =>
       expect(adminApi.getCalendar).toHaveBeenCalledWith(
@@ -105,11 +112,7 @@ describe('CalendarPage', () => {
     const calD = deferred<{ appointments: unknown[] }>();
     vi.mocked(adminApi.getCalendar).mockReturnValue(calD.promise);
 
-    render(
-      <MemoryRouter>
-        <CalendarPage salonId="salon-2" />
-      </MemoryRouter>
-    );
+    renderPage();
 
     expect(screen.getByTestId('calendar-loading')).toBeTruthy();
 

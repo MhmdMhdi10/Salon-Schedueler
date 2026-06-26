@@ -1,26 +1,144 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { bookingApi } from '../api/client';
+import { CalendarClock, Clock, CreditCard, Scissors } from 'lucide-react';
+import { bookingApi, salonApi } from '../api/client';
+import { SeoHead } from '../components/seo';
+import { readSalonName } from '../utils/salonName';
+import {
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  JalaliDate,
+  Money,
+  Skeleton,
+  Spinner,
+  toPersianDigits,
+} from '../components/ui';
+
+/** Funnel selection handed over from the availability step via router state. */
+interface ConfirmSelection {
+  serviceId: string;
+  startAt: string;
+}
+
+/** A bookable service as returned by the salon services endpoint (unchanged contract). */
+interface Service {
+  id: string;
+  name: string;
+  durationMinutes: number;
+  priceRial: number;
+}
+
+/** Async status for loading the chosen service's summary details. */
+type DetailsStatus = 'loading' | 'error' | 'ready';
 
 /**
- * Booking confirmation with payment redirect handling.
- * Requirements: 9.7, 10.2
+ * The confirm/pay action's state machine (ui-ux §6 interactive states, §12):
+ *   idle → submitting (in-button spinner) → redirecting (explicit
+ *   "going to the payment gateway" surface) before `window.location` hands off;
+ *   any failure lands in `error` with a retry. There is no "success" member —
+ *   success is owned by the server: a `confirmed` response navigates to the
+ *   success receipt, a `held` response redirects to the gateway. We never fake
+ *   it (ui-ux §12 "Do not fake payment success").
+ */
+type ConfirmStatus = 'idle' | 'submitting' | 'redirecting' | 'error';
+
+/** Formats an ISO instant to an `HH:mm` label; digits are localized for display. */
+function timeLabel(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/** Performs the gateway hand-off. Extracted so it can be stubbed in tests. */
+function redirectToGateway(url: string): void {
+  window.location.href = url;
+}
+
+/**
+ * Customer **booking-confirm** step at `/salon/:salonId/book/confirm`
+ * (R4.5, R7.2, R7.5; ui-ux Booking-Confirm recipe, §6, §8, §12).
+ *
+ * The last gate before money moves. The redesign composes design-system
+ * primitives instead of bare HTML:
+ *
+ *  - **Summary card** — the chosen service, the **Jalali** date and time
+ *    (`<JalaliDate>` + Persian-digit time), and the **Rial** price (`<Money>`),
+ *    plus a deposit/payment notice (R4.5, R7.2, R7.5). The card carries its own
+ *    loading (skeleton) / error (retry) states while the service detail loads.
+ *  - **Sticky bottom CTA** «تایید رزرو» in the thumb zone, clearing the device
+ *    safe-area inset so it is always reachable one-handed (ui-ux §5).
+ *  - **Confirm states** — idle → in-button loading → an explicit
+ *    **payment-redirect** surface («در حال انتقال به درگاه پرداخت...») shown
+ *    before the gateway hand-off → error with retry (ui-ux §6).
+ *  - **Abandon warning** — while a booking/payment is in flight a `beforeunload`
+ *    guard warns the customer before they drop a partially completed/paid
+ *    booking (ui-ux §8 "warn before abandoning a partially completed/paid
+ *    booking").
+ *
+ * The `booking-confirm` testID is preserved and the `bookingApi`/`salonApi`
+ * calls are unchanged — this is presentation only. A booking-funnel step is
+ * thin/duplicate content and must never be indexed; `<SeoHead>` (noindex
+ * default) emits `noindex,follow` (seo §1, R8.7).
  */
 export function BookingConfirmPage() {
   const { t } = useTranslation();
   const { salonId } = useParams<{ salonId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
-  const state = location.state as { serviceId: string; startAt: string } | undefined;
+  const state = location.state as ConfirmSelection | undefined;
+
+  const [service, setService] = useState<Service | null>(null);
+  const [detailsStatus, setDetailsStatus] = useState<DetailsStatus>('loading');
+  const [confirmStatus, setConfirmStatus] = useState<ConfirmStatus>('idle');
+
+  // A booking is "in flight" once the customer commits and until the gateway
+  // hand-off / success navigation takes over. During this window leaving the
+  // page risks a partially completed/paid booking, so we arm an unload guard.
+  const isPending = confirmStatus === 'submitting' || confirmStatus === 'redirecting';
+
+  useEffect(() => {
+    if (!isPending) return undefined;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      // Modern browsers show their own generic copy; a non-empty returnValue
+      // is what actually triggers the native confirm dialog.
+      event.returnValue = t('booking.abandonWarning');
+      return event.returnValue;
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [isPending, t]);
+
+  // Resolve the chosen service so the summary can show its name + Rial price.
+  // The selection only carries the service id; we look it up via the unchanged
+  // services endpoint (presentation adaptation only).
+  const loadDetails = useCallback(() => {
+    if (!salonId || !state) return;
+    setDetailsStatus('loading');
+    salonApi
+      .getServices(salonId)
+      .then((res) => {
+        const found = res.services.find((s) => s.id === state.serviceId);
+        if (!found) {
+          setDetailsStatus('error');
+          return;
+        }
+        setService(found);
+        setDetailsStatus('ready');
+      })
+      .catch(() => setDetailsStatus('error'));
+  }, [salonId, state]);
+
+  useEffect(() => {
+    loadDetails();
+  }, [loadDetails]);
 
   const handleConfirm = async () => {
     if (!salonId || !state) return;
-    setLoading(true);
-    setError('');
+    setConfirmStatus('submitting');
     try {
       const result = await bookingApi.create({
         salonId,
@@ -29,32 +147,174 @@ export function BookingConfirmPage() {
       });
 
       if (result.status === 'held' && result.paymentRedirectUrl) {
-        // Redirect to payment gateway
-        window.location.href = result.paymentRedirectUrl;
+        // Money is confirmed by the server; show the explicit redirect surface
+        // and hand off to the payment gateway. Keep the pending guard armed.
+        setConfirmStatus('redirecting');
+        redirectToGateway(result.paymentRedirectUrl);
       } else if (result.status === 'confirmed') {
-        navigate('/booking/success');
+        // The only path that declares success — and only because the server did.
+        // Hand the what/when/where details to the success receipt (R4.6); this
+        // is display-only state, the wire contract is unchanged.
+        navigate('/booking/success', {
+          state: {
+            serviceName: service?.name,
+            startAt: state.startAt,
+            salonName: readSalonName(salonId) ?? undefined,
+          },
+        });
       } else {
-        setError(t('booking.failed'));
+        setConfirmStatus('error');
       }
     } catch {
-      setError(t('booking.failed'));
-    } finally {
-      setLoading(false);
+      setConfirmStatus('error');
     }
   };
 
+  const backToBooking = () => navigate(`/salon/${salonId}/book`);
+
+  // Guard: arriving here without a selection (e.g. a direct deep link) can't
+  // confirm anything. Offer a clear way back into the funnel. Still emit the
+  // noindex head so the route never leaks.
   if (!state) {
-    return <p>{t('booking.failed')}</p>;
+    return (
+      <div
+        data-testid="booking-confirm"
+        className="mx-auto flex w-full max-w-funnel flex-col gap-6 py-6"
+      >
+        <SeoHead title={t('seo.titles.confirm')} />
+        <h1 className="text-xl font-bold text-text">{t('booking.confirmHeading')}</h1>
+        <EmptyState
+          icon={<CalendarClock className="h-8 w-8" />}
+          title={t('booking.missingSelectionTitle')}
+          description={t('booking.missingSelectionBody')}
+          action={
+            <Button variant="secondary" onClick={backToBooking}>
+              {t('booking.backToBooking')}
+            </Button>
+          }
+        />
+      </div>
+    );
   }
 
+  const time = toPersianDigits(timeLabel(state.startAt));
+
   return (
-    <div data-testid="booking-confirm">
-      <h1>{t('booking.confirm')}</h1>
-      <p>{state.startAt}</p>
-      <button onClick={handleConfirm} disabled={loading}>
-        {loading ? t('booking.paymentRedirect') : t('booking.confirm')}
-      </button>
-      {error && <p role="alert">{error}</p>}
+    <div
+      data-testid="booking-confirm"
+      className="mx-auto flex w-full max-w-funnel flex-col gap-6 py-6"
+    >
+      <SeoHead title={t('seo.titles.confirm')} />
+      <h1 className="text-xl font-bold text-text">{t('booking.confirmHeading')}</h1>
+
+      {/* Summary card: service · Jalali date/time · Rial price · deposit notice. */}
+      <section aria-labelledby="summary-title" className="flex flex-col gap-3">
+        <h2 id="summary-title" className="sr-only">
+          {t('booking.summaryTitle')}
+        </h2>
+
+        {detailsStatus === 'loading' && (
+          <Card loading loadingLabel={t('booking.detailsLoadingLabel')}>
+            <Skeleton variant="text" />
+          </Card>
+        )}
+
+        {detailsStatus === 'error' && (
+          <ErrorState
+            title={t('booking.detailsErrorTitle')}
+            description={t('booking.detailsErrorBody')}
+            retryLabel={t('common.retry')}
+            onRetry={loadDetails}
+          />
+        )}
+
+        {detailsStatus === 'ready' && service && (
+          <Card as="section">
+            <dl className="flex flex-col divide-y divide-border">
+              <div className="flex items-center justify-between gap-4 py-2 first:pt-0">
+                <dt className="flex items-center gap-2 text-sm text-muted">
+                  <Scissors className="h-4 w-4" aria-hidden="true" />
+                  {t('booking.serviceLabel')}
+                </dt>
+                <dd className="text-sm font-medium text-text">{service.name}</dd>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 py-2">
+                <dt className="flex items-center gap-2 text-sm text-muted">
+                  <CalendarClock className="h-4 w-4" aria-hidden="true" />
+                  {t('booking.dateLabel')}
+                </dt>
+                <dd className="text-sm font-medium text-text">
+                  <JalaliDate value={state.startAt} withWeekday />
+                </dd>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 py-2">
+                <dt className="flex items-center gap-2 text-sm text-muted">
+                  <Clock className="h-4 w-4" aria-hidden="true" />
+                  {t('booking.timeLabel')}
+                </dt>
+                <dd className="text-sm font-medium text-text">
+                  {t('booking.timeAt', { time })}
+                </dd>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 py-2 last:pb-0">
+                <dt className="flex items-center gap-2 text-sm text-muted">
+                  <CreditCard className="h-4 w-4" aria-hidden="true" />
+                  {t('booking.priceLabel')}
+                </dt>
+                <dd className="text-sm font-bold text-text">
+                  <Money amountRial={service.priceRial} />
+                </dd>
+              </div>
+            </dl>
+
+            <p className="mt-4 rounded-md bg-bg p-3 text-xs text-muted">
+              {t('booking.depositNotice')}
+            </p>
+          </Card>
+        )}
+      </section>
+
+      {/* Explicit payment-redirect surface, shown before the gateway hand-off. */}
+      {confirmStatus === 'redirecting' && (
+        <p
+          role="status"
+          aria-live="polite"
+          className="flex items-center justify-center gap-2 text-sm font-medium text-text"
+        >
+          <Spinner size="sm" />
+          {t('booking.paymentRedirect')}
+        </p>
+      )}
+
+      {/* Confirm failure: friendly cause + retry (never a raw error). */}
+      {confirmStatus === 'error' && (
+        <ErrorState
+          title={t('booking.confirmErrorTitle')}
+          description={t('booking.confirmErrorBody')}
+          retryLabel={t('common.retry')}
+          onRetry={handleConfirm}
+        />
+      )}
+
+      {/* Sticky bottom CTA «تایید رزرو» in the thumb zone, clearing safe-area. */}
+      <div
+        data-testid="booking-confirm-cta"
+        className="sticky bottom-0 z-sticky -mx-4 border-t border-border bg-surface px-4 pb-[env(safe-area-inset-bottom)] pt-3"
+      >
+        <Button
+          fullWidth
+          size="lg"
+          onClick={handleConfirm}
+          loading={confirmStatus === 'submitting' || confirmStatus === 'redirecting'}
+          disabled={detailsStatus !== 'ready'}
+          startIcon={<CreditCard className="h-5 w-5" />}
+        >
+          {t('booking.confirm')}
+        </Button>
+      </div>
     </div>
   );
 }

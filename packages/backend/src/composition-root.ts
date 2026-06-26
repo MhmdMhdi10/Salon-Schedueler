@@ -19,13 +19,23 @@ import {
   SmsIrAdapter,
   PusheAdapter,
   NajvaAdapter,
+  BotChannel,
 } from './notifications/index.js';
+import {
+  TelegramAdapter,
+  BaleAdapter,
+  BotService,
+  BotBookingStateMachine,
+  DefaultBookingOutcomePresenter,
+} from './bots/index.js';
+import type { BotAdapter } from './bots/index.js';
 import { WaitlistService } from './waitlist/waitlist.service.js';
 import { CustomerService } from './customer/index.js';
 import { AnalyticsService, CalendarService } from './analytics/index.js';
 import { ServiceCatalog } from './catalog/index.js';
 import { SalonRegistration, ResourceRegistration } from './registration/index.js';
 import { AvailabilityConfig } from './availability-config/index.js';
+import { QrService } from './qr/index.js';
 
 // Application-layer flows (cross-service wiring — Requirement 4.5).
 import { BookingFlow } from './app/booking-flow.js';
@@ -40,6 +50,7 @@ import {
   PrismaWaitlistRepository,
   PrismaWaitlistNotifier,
   PrismaCustomerRepository,
+  PrismaBotChannelRepository,
 } from './http/prisma-adapters.js';
 
 /**
@@ -117,6 +128,23 @@ function selectPushProvider(config: AppConfig): PushProvider {
 }
 
 /**
+ * Construct the messaging-bot adapters from configuration, mirroring
+ * `selectSmsProvider`: when a platform's bot token is present the real adapter
+ * is constructed (and reports `enabled = true`); when the token is absent the
+ * adapter is still constructed but disabled (no-op) so the bot channel keeps
+ * working and falls back to SMS without any error (Requirements 1.8, 8.1).
+ *
+ * Tokens are read only from configuration (environment) and never hard-coded
+ * (Requirement 8.1).
+ */
+function selectBotAdapters(config: AppConfig): BotAdapter[] {
+  return [
+    new TelegramAdapter({ token: config.telegramBotToken }),
+    new BaleAdapter({ token: config.baleBotToken }),
+  ];
+}
+
+/**
  * Construct the Prisma client and every domain service with their dependencies.
  *
  * The Prisma datasource URL is supplied programmatically so the client can be
@@ -134,6 +162,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
   // External providers / gateways.
   const smsProvider = selectSmsProvider(config);
   const pushProvider = selectPushProvider(config);
+  const botAdapters = selectBotAdapters(config);
   const gateway = selectGateway(config);
 
   // Scheduling + payment + cancellation (ordered by dependency).
@@ -147,6 +176,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
   const authService = new AuthService(prisma, smsProvider, {
     jwtAccessSecret: config.jwtAccessSecret,
     jwtRefreshSecret: config.jwtRefreshSecret,
+    otpWindowSeconds: config.otpWindowSeconds,
   });
 
   // Port-based services with Prisma-backed adapters.
@@ -155,6 +185,18 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     pushProvider,
     new PrismaNotificationRepository(prisma),
   );
+  // Bot-based notification channel: routes OTP/reminders/owner notices through a
+  // messaging bot when a `BotChat` exists, falling back to SMS otherwise
+  // (Requirements 1.8, 8.1). Disabled adapters (no token) are treated as absent.
+  const botChannel = new BotChannel(
+    botAdapters,
+    smsProvider,
+    new PrismaBotChannelRepository(prisma),
+  );
+  // Bot_Service: inbound webhook dispatch entry point. Task 7.1 wires routing +
+  // dispatch; the conversational booking state machine (task 7.2) plugs in as
+  // the update handler behind this same seam (Requirements 1.1, 1.6). The
+  // handler is constructed below once `bookingFlow` exists, then injected.
   const waitlistService = new WaitlistService(
     new PrismaWaitlistRepository(prisma),
     new PrismaWaitlistNotifier(smsProvider),
@@ -169,6 +211,11 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
   const resourceRegistration = new ResourceRegistration(prisma);
   const availabilityConfig = new AvailabilityConfig(prisma);
 
+  // QR_Service: stable per-salon QR generation + campaign-arrival scan counting
+  // (Requirements 4.1, 4.4, 4.5). Inject Prisma; pass the configured public base
+  // URL when present, else the service falls back to its documented default.
+  const qrService = new QrService(prisma, { publicBaseUrl: config.publicBaseUrl });
+
   const authorizer = new Authorizer();
 
   // Application-layer flows wire the framework-agnostic domain services together:
@@ -180,12 +227,31 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     waitlistService,
   });
 
+  // Conversational in-chat booking (task 7.2): a BotSession-backed state machine
+  // (service → date → slot → confirm, with an in-chat OTP sub-flow when the chat
+  // is not yet linked to a customer). It REUSES the scheduling engine for
+  // availability and BookingFlow for the actual booking with `source: 'bot'`,
+  // so the bot never re-implements scheduling rules (Requirements 1.6, 6.6).
+  const botBookingHandler = new BotBookingStateMachine({
+    adapters: botAdapters,
+    scheduling: schedulingEngine,
+    booking: bookingFlow,
+    auth: authService,
+    prisma,
+    // Task 7.3: present the booking result back in chat — held → gateway link,
+    // confirmed → details, rejected → failure. Never fabricates success.
+    outcome: new DefaultBookingOutcomePresenter(),
+  });
+  const botService = new BotService(botAdapters, botBookingHandler);
+
   const services: Services = {
     schedulingEngine,
     cancellationService,
     authService,
     paymentService,
     notificationService,
+    botChannel,
+    botService,
     waitlistService,
     customerService,
     analyticsService,
@@ -194,6 +260,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     salonRegistration,
     resourceRegistration,
     availabilityConfig,
+    qrService,
     authorizer,
     bookingFlow,
     cancellationFlow,
@@ -215,6 +282,7 @@ export function createApp(overrides: Partial<AppConfig> = {}): CreatedApp {
   const app = buildApp({
     services: container.services,
     jwtAccessSecret: container.config.jwtAccessSecret,
+    botWebhookSecret: container.config.botWebhookSecret,
   });
   return { ...container, app };
 }

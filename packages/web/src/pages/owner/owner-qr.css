@@ -1,0 +1,66 @@
+/**
+ * «QR و استند» screen + print styles (task 5.4; R4.3; ui-ux §2 tokens-only,
+ * §11 logical properties).
+ *
+ * Two mutually-exclusive surfaces share the same page:
+ *  - The interactive screen surface (preview, campaign URL, actions) is shown on
+ *    screen and HIDDEN in print.
+ *  - The printable standee (large QR + salon name + scan invitation) is HIDDEN
+ *    on screen and shown only in `@media print`, laid out for a physical card.
+ *
+ * Tokens only — no raw hex/px/ms — and logical properties so the RTL layout
+ * carries into print.
+ */
+
+/* The standee is print-only; hide it on screen. */
+.owner-qr-standee {
+  display: none;
+}
+
+@media print {
+  /* In print, hide the interactive screen surface and reveal the standee. */
+  .owner-qr-screen-only {
+    display: none !important;
+  }
+
+  .owner-qr-standee {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-6);
+    min-block-size: 100vh;
+    padding-block: var(--space-10);
+    padding-inline: var(--space-6);
+    text-align: center;
+    color: #000000;
+    background-color: #ffffff;
+  }
+
+  /* Avoid breaking the card across printed pages. */
+  .owner-qr-standee {
+    break-inside: avoid;
+  }
+}
+
+.owner-qr-standee__salon {
+  margin: 0;
+  font-size: var(--font-2xl);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.owner-qr-standee__qr {
+  inline-size: 60mm;
+  block-size: 60mm;
+  /* A quiet white margin around the code keeps it scannable in print. */
+  padding: var(--space-3);
+  background-color: #ffffff;
+}
+
+.owner-qr-standee__invite {
+  margin: 0;
+  font-size: var(--font-xl);
+  font-weight: 500;
+  line-height: 1.35;
+}

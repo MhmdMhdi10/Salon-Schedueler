@@ -62,5 +62,29 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
     }),
   );
 
+  // Record a campaign arrival when a visitor lands on the public profile via a
+  // URL carrying the campaign source param (e.g. `utm_source=qr`) so scans are
+  // countable (Requirements 4.4, 4.5). The event is recorded ONLY when a source
+  // is present — the campaign arrival is what we count. Plain visits without a
+  // source param are a no-op (204). Accepts the source via `utm_source` (or
+  // `source`) from the query string or JSON body.
+  router.post(
+    '/salons/:id/scan',
+    asyncRoute(async (req, res) => {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const raw =
+        req.query.utm_source ??
+        req.query.source ??
+        body.utm_source ??
+        body.source;
+      const source =
+        raw === undefined || raw === null ? '' : String(raw).trim();
+      if (source !== '') {
+        await services.qrService.recordScan(req.params.id, source);
+      }
+      res.status(204).end();
+    }),
+  );
+
   return router;
 }
