@@ -79,6 +79,8 @@ describe('owner routes are code-split off the main bundle', () => {
       await screen.findByTestId('owner-calendar-page'),
     ).toBeInTheDocument();
     expect(bootstrapAuth).not.toHaveBeenCalled(); // in-memory token reused
-    expect(getMe).toHaveBeenCalledTimes(1);
+    // `/me` is fetched to derive the principal: once by the app-wide
+    // AuthProvider (drives the header) and once by the OwnerLayout guard.
+    expect(getMe).toHaveBeenCalled();
   });
 });

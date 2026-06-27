@@ -97,6 +97,11 @@ model StaffMember {
   fullName String    @map("full_name")
   role     StaffRole
   active   Boolean   @default(true)
+  // Optional login phone. When a staff member's phone matches the phone used in
+  // OTP login, the issued JWT carries their role + staffMemberId so the RBAC
+  // matrix (Authorizer) applies. Nullable + unique: most staff rows may have no
+  // login yet, and a phone identifies at most one staff member.
+  phone    String?   @unique
 
   salon               Salon          @relation(fields: [salonId], references: [id])
   serviceStaff        ServiceStaff[]

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Phone, ShieldCheck } from 'lucide-react';
 import { authApi, setAccessToken, setRefreshToken } from '../api/client';
+import { useAuth } from '../auth/AuthContext';
 import { SeoHead } from '../components/seo';
 import { normalizeDigits } from '@salon/shared';
 import {
@@ -39,6 +40,30 @@ function formatCountdown(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return toPersianDigits(`${minutes}:${String(seconds).padStart(2, '0')}`);
+}
+
+/** Staff roles that route into the management panel after login. */
+const STAFF_ROLES = new Set(['Owner', 'Admin', 'Stylist']);
+
+/**
+ * Best-effort decode of the `role` claim from a JWT access token, for routing
+ * only (the server still enforces authorization). Returns the role string when
+ * the token carries a recognised staff role, otherwise undefined (customers).
+ * Never throws — a malformed/opaque token simply yields undefined.
+ */
+function roleFromAccessToken(token: string): string | undefined {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return undefined;
+    const json = JSON.parse(
+      atob(payload.replace(/-/g, '+').replace(/_/g, '/')),
+    ) as { role?: unknown };
+    return typeof json.role === 'string' && STAFF_ROLES.has(json.role)
+      ? json.role
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -82,6 +107,7 @@ function AuthPageContent() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { success } = useToast();
+  const { refresh: refreshAuth } = useAuth();
 
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState<string[]>(() => Array(OTP_LENGTH).fill(''));
@@ -145,7 +171,11 @@ function AuthPageContent() {
       const result = await authApi.verifyOtp(normalizedPhone, codeValue);
       setAccessToken(result.accessToken);
       setRefreshToken(result.refreshToken);
-      navigate('/');
+      // Update the app-wide session in the background (drives the header), and
+      // route by the token's role without blocking on a /me round-trip: staff
+      // land in the management panel, customers in the public/booking app.
+      void refreshAuth();
+      navigate(roleFromAccessToken(result.accessToken) ? '/owner' : '/');
     } catch {
       setError(t('auth.invalidOtp'));
     } finally {

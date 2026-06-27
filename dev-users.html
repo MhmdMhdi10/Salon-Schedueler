@@ -418,11 +418,11 @@
       <div class="url-grid">
         <div class="url-card">
           <div class="label">صفحه رزرو مشتری</div>
-          <div class="url">http://localhost:5173/salon/11111111-1111-1111-1111-111111111111/book</div>
+          <div class="url">http://localhost:5273/salon/11111111-1111-1111-1111-111111111111/book</div>
         </div>
         <div class="url-card">
-          <div class="label">پنل ادمین — تقویم</div>
-          <div class="url">http://localhost:5173/admin/calendar</div>
+          <div class="label">پنل مدیریت — تقویم</div>
+          <div class="url">http://localhost:5273/owner/calendar</div>
         </div>
         <div class="url-card">
           <div class="label">اپلیکیشن موبایل (Expo)</div>
@@ -430,9 +430,12 @@
         </div>
         <div class="url-card">
           <div class="label">API بک‌اند</div>
-          <div class="url">http://localhost:3000</div>
+          <div class="url">http://localhost:3100</div>
         </div>
       </div>
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.75rem;">
+        &#128161; پورت‌های میزبان به دلیل تداخل با پروژه‌های دیگر نگاشت شده‌اند (وب ۵۲۷۳، بک‌اند ۳۱۰۰). مسیرهای قدیمی <code style="direction: ltr; display: inline-block;">/admin/*</code> اکنون به پنل مدیریت <code style="direction: ltr; display: inline-block;">/owner/*</code> هدایت می‌شوند. ناوبری بالای صفحه بر اساس نقش کاربر نمایش داده می‌شود.
+      </p>
     </div>
 
     <!-- Role Flows -->
@@ -461,7 +464,7 @@
         </h3>
         <ol>
           <li>ورود با OTP</li>
-          <li>دسترسی کامل به پنل ادمین (<code>/admin/calendar</code>, <code>/admin/analytics</code>, <code>/admin/config</code>)</li>
+          <li>دسترسی کامل به پنل مدیریت (<code>/owner/calendar</code>, <code>/owner/analytics</code>, <code>/owner/config</code>)</li>
           <li>مدیریت خدمات، کارکنان، صندلی‌ها، تعطیلات</li>
           <li>مشاهده و مدیریت تمام نوبت‌ها</li>
           <li>مشاهده آمار و گزارش‌ها</li>
@@ -476,7 +479,7 @@
         </h3>
         <ol>
           <li>ورود با OTP</li>
-          <li>دسترسی به تقویم نوبت‌ها (<code>/admin/calendar</code>)</li>
+          <li>دسترسی به تقویم نوبت‌ها (<code>/owner/calendar</code>)</li>
           <li>ایجاد، ویرایش و لغو نوبت‌ها</li>
           <li>مشاهده یادداشت‌های مشتریان</li>
           <li class="no-access">&#10060; بدون دسترسی به تنظیمات سالن</li>
@@ -491,7 +494,7 @@
         </h3>
         <ol>
           <li>ورود با OTP</li>
-          <li>مشاهده فقط نوبت‌های خود (<code>/admin/calendar</code>)</li>
+          <li>مشاهده فقط نوبت‌های خود (<code>/owner/calendar</code>)</li>
           <li>مشاهده یادداشت‌های مشتریان</li>
           <li class="no-access">&#10060; بدون دسترسی به مدیریت نوبت‌ها</li>
           <li class="no-access">&#10060; بدون دسترسی به تنظیمات سالن</li>

@@ -22,7 +22,12 @@ function crc32(input: string): number {
 
 // ---------- Constants ----------
 
-const QR_BASE_URL = 'https://book.salon.app/s/';
+/**
+ * Default deep-link base for salon QR payloads. Used when no explicit base is
+ * supplied to {@link encodeSalonQr} / {@link parseSalonQr}. Deployments (or dev)
+ * can override the base (e.g. to a LAN IP origin) by passing it explicitly.
+ */
+export const QR_BASE_URL = 'https://book.salon.app/s/';
 const QR_VERSION = 'v1';
 
 // ---------- Public API ----------
@@ -30,26 +35,30 @@ const QR_VERSION = 'v1';
 /**
  * Encodes a salon token into a versioned deep link with CRC32 checksum.
  *
- * Format: https://book.salon.app/s/v1.<token>.<hex-checksum>
+ * Format: `<baseUrl>v1.<token>.<hex-checksum>` (default base
+ * `https://book.salon.app/s/`). The base is configurable so non-production
+ * environments can issue scannable links pointing at a LAN IP / dev origin;
+ * `parseSalonQr` must be called with the same base to round-trip.
  */
-export function encodeSalonQr(salonToken: string): string {
+export function encodeSalonQr(salonToken: string, baseUrl: string = QR_BASE_URL): string {
   const body = `${QR_VERSION}.${salonToken}`;
   const checksum = crc32(body).toString(16).padStart(8, '0');
-  return `${QR_BASE_URL}${body}.${checksum}`;
+  return `${baseUrl}${body}.${checksum}`;
 }
 
 /**
  * Parses a QR payload, returning the salon token or a malformed result.
  *
- * Validates the URL prefix, version, and CRC32 checksum.
+ * Validates the URL prefix (`baseUrl`, default `https://book.salon.app/s/`),
+ * version, and CRC32 checksum. Pass the same base that was used to encode.
  */
-export function parseSalonQr(payload: string): QrParseResult {
+export function parseSalonQr(payload: string, baseUrl: string = QR_BASE_URL): QrParseResult {
   // Must start with the expected base URL
-  if (!payload.startsWith(QR_BASE_URL)) {
+  if (!payload.startsWith(baseUrl)) {
     return { kind: 'malformed' };
   }
 
-  const path = payload.slice(QR_BASE_URL.length);
+  const path = payload.slice(baseUrl.length);
 
   // Expected structure: v1.<token>.<8-hex-checksum>
   // The checksum is always the last 8 hex characters after the final dot.

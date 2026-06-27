@@ -13,7 +13,9 @@
 BEGIN;
 
 -- Fixed UUIDs so the funnel + QR can target this salon deterministically.
--- salon   : 11111111-1111-1111-1111-111111111111
+-- salon   : 11111111-1111-1111-1111-111111111111  (qr_token "salon-rose" =
+--           the public profile slug in web data/salons.ts, so the QR campaign
+--           URL /s/salon-rose resolves to a real profile)
 -- staff   : 22222222-2222-2222-2222-222222222222
 -- chair   : 33333333-3333-3333-3333-333333333333
 -- services: 44444444-... (cut), 55555555-... (color)
@@ -22,21 +24,22 @@ INSERT INTO salon (id, name, qr_token, timezone, created_at)
 VALUES (
   '11111111-1111-1111-1111-111111111111'::uuid,
   'سالن رز',
-  'dev-salon-rose',
+  'salon-rose',
   'Asia/Tehran',
   NOW()
 )
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET qr_token = EXCLUDED.qr_token;
 
-INSERT INTO staff_member (id, salon_id, full_name, role, active)
+INSERT INTO staff_member (id, salon_id, full_name, role, active, phone)
 VALUES (
   '22222222-2222-2222-2222-222222222222'::uuid,
   '11111111-1111-1111-1111-111111111111'::uuid,
   'سارا محمدی',
   'Owner',
-  true
+  true,
+  '09120000001'
 )
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET phone = EXCLUDED.phone;
 
 INSERT INTO chair (id, salon_id, name, active)
 VALUES (
@@ -110,15 +113,16 @@ VALUES (
 ON CONFLICT (id) DO NOTHING;
 
 -- Admin staff member + customer record
-INSERT INTO staff_member (id, salon_id, full_name, role, active)
+INSERT INTO staff_member (id, salon_id, full_name, role, active, phone)
 VALUES (
   'dddddddd-2222-2222-2222-222222222222'::uuid,
   '11111111-1111-1111-1111-111111111111'::uuid,
   'مریم احمدی',
   'Admin',
-  true
+  true,
+  '09120000002'
 )
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET phone = EXCLUDED.phone;
 
 INSERT INTO customer (id, phone, full_name)
 VALUES (
@@ -129,15 +133,16 @@ VALUES (
 ON CONFLICT (id) DO NOTHING;
 
 -- Stylist staff member + customer record
-INSERT INTO staff_member (id, salon_id, full_name, role, active)
+INSERT INTO staff_member (id, salon_id, full_name, role, active, phone)
 VALUES (
   'dddddddd-3333-3333-3333-333333333333'::uuid,
   '11111111-1111-1111-1111-111111111111'::uuid,
   'زهرا رضایی',
   'Stylist',
-  true
+  true,
+  '09120000003'
 )
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET phone = EXCLUDED.phone;
 
 INSERT INTO customer (id, phone, full_name)
 VALUES (
@@ -174,5 +179,27 @@ VALUES (
   'نازنین کریمی'
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- ─── Subscription ────────────────────────────────────────────────────────────
+-- An ACTIVE annual subscription for the dev salon so the owner panel's «اشتراک»
+-- surface shows real data (status + expiry + plan). expires_at is set ~1 year
+-- out and grace_until a week after, so it reads as `active`. Idempotent on the
+-- salon_id unique key.
+INSERT INTO subscription (id, salon_id, status, plan_kind, started_at, expires_at, grace_until, created_at)
+VALUES (
+  'eeeeeeee-1111-1111-1111-111111111111'::uuid,
+  '11111111-1111-1111-1111-111111111111'::uuid,
+  'active',
+  'annual',
+  NOW(),
+  NOW() + INTERVAL '365 days',
+  NOW() + INTERVAL '372 days',
+  NOW()
+)
+ON CONFLICT (salon_id) DO UPDATE SET
+  status = EXCLUDED.status,
+  plan_kind = EXCLUDED.plan_kind,
+  expires_at = EXCLUDED.expires_at,
+  grace_until = EXCLUDED.grace_until;
 
 COMMIT;

@@ -12,6 +12,16 @@ export interface AuthTokens {
 }
 
 /**
+ * Staff identity claims embedded in a token when the authenticated phone maps
+ * to an active staff member. `role` drives the RBAC matrix; `staffMemberId` is
+ * used for Stylist "own only" ownership checks.
+ */
+interface StaffClaims {
+  role: string;
+  staffMemberId: string;
+}
+
+/**
  * Configuration for the AuthService.
  */
 export interface AuthServiceConfig {
@@ -172,13 +182,20 @@ export class AuthService {
     // Find or create customer
     const customer = await this.findOrCreateCustomer(phone);
 
+    // If this phone also belongs to an active staff member, mint a staff token
+    // carrying their role + staffMemberId so the RBAC matrix applies; otherwise
+    // a plain customer token (no role) is issued.
+    const staff = await this.findStaffClaimsByPhone(phone);
+
     // Issue tokens
-    return this.issueTokens(customer.id);
+    return this.issueTokens(customer.id, staff);
   }
 
   /**
    * Refresh authentication tokens using a valid refresh token.
-   * Verifies the refresh token and issues a new access + refresh token pair.
+   * Verifies the refresh token and issues a new access + refresh token pair,
+   * carrying forward any staff role/staffMemberId claims it holds so a staff
+   * session keeps its RBAC role across refreshes.
    */
   async refresh(refreshToken: string): Promise<AuthTokens> {
     try {
@@ -186,7 +203,11 @@ export class AuthService {
       if (!payload.sub) {
         throw new AuthError('INVALID_TOKEN', 'Invalid refresh token');
       }
-      return this.issueTokens(payload.sub);
+      const role = typeof payload.role === 'string' ? payload.role : undefined;
+      const staffMemberId =
+        typeof payload.staffMemberId === 'string' ? payload.staffMemberId : undefined;
+      const staff = role && staffMemberId ? { role, staffMemberId } : undefined;
+      return this.issueTokens(payload.sub, staff);
     } catch (err) {
       if (err instanceof AuthError) {
         throw err;
@@ -213,17 +234,44 @@ export class AuthService {
   }
 
   /**
-   * Issue a JWT access token (15min) and refresh token (7d).
+   * Resolve the staff claims for a phone, or undefined when the phone does not
+   * belong to an active staff member. These claims (role + staffMemberId) are
+   * embedded in the issued JWTs so the RBAC layer can authorize staff actions.
    */
-  private issueTokens(customerId: string): AuthTokens {
+  private async findStaffClaimsByPhone(
+    phone: string,
+  ): Promise<StaffClaims | undefined> {
+    const staff = await this.prisma.staffMember.findFirst({
+      where: { phone, active: true },
+      select: { id: true, role: true },
+    });
+    if (!staff) {
+      return undefined;
+    }
+    return { role: staff.role, staffMemberId: staff.id };
+  }
+
+  /**
+   * Issue a JWT access token (15min) and refresh token (7d).
+   *
+   * When `staff` claims are supplied (the phone belongs to an active staff
+   * member), both tokens carry `role` + `staffMemberId` so the principal built
+   * by the auth middleware is subject to the RBAC matrix. Plain customers get a
+   * roleless token.
+   */
+  private issueTokens(customerId: string, staff?: StaffClaims): AuthTokens {
+    const staffClaims = staff
+      ? { role: staff.role, staffMemberId: staff.staffMemberId }
+      : {};
+
     const accessToken = jwt.sign(
-      { sub: customerId, type: 'access' },
+      { sub: customerId, type: 'access', ...staffClaims },
       this.config.jwtAccessSecret,
       { expiresIn: this.config.accessExpirySeconds },
     );
 
     const refreshToken = jwt.sign(
-      { sub: customerId, type: 'refresh' },
+      { sub: customerId, type: 'refresh', ...staffClaims },
       this.config.jwtRefreshSecret,
       { expiresIn: this.config.refreshExpirySeconds },
     );

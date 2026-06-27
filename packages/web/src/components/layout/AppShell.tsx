@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ThemeToggle } from '../theme';
+import { HeaderAuthNav } from './HeaderAuthNav';
 import { cn } from '../ui/cn';
 
 /** Stable id the skip link targets and the `<main>` exposes. */
@@ -66,7 +67,10 @@ export function AppShell({ children, className }: AppShellProps) {
               {t('app.title')}
             </Link>
           </nav>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <HeaderAuthNav />
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 

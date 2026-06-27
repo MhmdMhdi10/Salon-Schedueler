@@ -16,6 +16,7 @@ import type {
 } from '../registration/index.js';
 import type { AvailabilityConfig } from '../availability-config/index.js';
 import type { QrService } from '../qr/index.js';
+import type { SubscriptionService } from '../subscription/index.js';
 import type { BookingFlow } from '../app/booking-flow.js';
 import type { CancellationFlow } from '../app/cancellation-flow.js';
 import { makeAuth } from './middleware/auth.js';
@@ -27,6 +28,8 @@ import { appointmentRouter } from './routes/appointment.routes.js';
 import { paymentInitiateRouter, paymentCallbackRouter } from './routes/payment.routes.js';
 import { botRouter } from './routes/bot.routes.js';
 import { adminRouter } from './routes/admin.routes.js';
+import { subscriptionRouter } from './routes/subscription.routes.js';
+import { qrRouter } from './routes/qr.routes.js';
 import { deviceRouter } from './routes/device.routes.js';
 import { errorHandler } from './middleware/error-handler.js';
 
@@ -55,6 +58,8 @@ export interface Services {
   availabilityConfig: AvailabilityConfig;
   /** Stable per-salon QR generation + scan counting (Requirement 4.1, 4.4, 4.5). */
   qrService: QrService;
+  /** Subscription lifecycle: status, configurable plans, purchase hand-off (R3.x). */
+  subscriptionService: SubscriptionService;
   authorizer: Authorizer;
   /** Application-layer flow: booking + confirmation notification (Requirement 4.1). */
   bookingFlow: BookingFlow;
@@ -160,6 +165,8 @@ export function buildApp(opts: BuildAppOptions): Express {
   protectedRouter.use(appointmentRouter(services, requireRole));
   protectedRouter.use(paymentInitiateRouter(services));
   protectedRouter.use(adminRouter(services, requireRole));
+  protectedRouter.use(subscriptionRouter(services, requireRole));
+  protectedRouter.use(qrRouter(services, requireRole));
   protectedRouter.use(deviceRouter(services));
   app.use('/api', protectedRouter);
 

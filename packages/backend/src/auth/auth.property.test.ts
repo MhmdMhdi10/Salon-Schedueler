@@ -74,6 +74,11 @@ function createMockPrisma() {
         return record;
       },
     },
+    // No staff seeded in these OTP-window properties, so a phone never maps to a
+    // staff member: logins resolve to a plain (roleless) customer token.
+    staffMember: {
+      findFirst: async () => null,
+    },
   } as any;
 }
 

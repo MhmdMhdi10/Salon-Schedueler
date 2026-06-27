@@ -9,6 +9,7 @@ import {
 } from 'react-router-dom';
 import { ThemeProvider } from './components/theme';
 import { AppShell, RouteLoader } from './components/layout';
+import { AuthProvider } from './auth/AuthContext';
 
 /**
  * Root component for the Salon Booking PWA.
@@ -99,22 +100,9 @@ const BookingSuccessPage = lazy(() =>
   })),
 );
 
-// Admin pages — heavy surfaces kept off the customer/public bundles.
-const ConfigurationPage = lazy(() =>
-  import('./pages/admin/ConfigurationPage').then((m) => ({
-    default: m.ConfigurationPage,
-  })),
-);
-const CalendarPage = lazy(() =>
-  import('./pages/admin/CalendarPage').then((m) => ({
-    default: m.CalendarPage,
-  })),
-);
-const AnalyticsPage = lazy(() =>
-  import('./pages/admin/AnalyticsPage').then((m) => ({
-    default: m.AnalyticsPage,
-  })),
-);
+// Admin surfaces are served by the owner panel (see pages/owner), which adds
+// auth bootstrap + per-role route guards. The legacy `/admin/*` paths redirect
+// there, so they are not imported standalone here anymore.
 
 // Owner panel — its own code-split group, kept off the public/customer bundle
 // (R2.1, R6.4; ui-ux §12, seo §9). The layout owns auth bootstrap + RBAC; the
@@ -143,6 +131,7 @@ export function App() {
     <HelmetProvider>
       <ThemeProvider>
         <BrowserRouter>
+          <AuthProvider>
           <div dir="rtl" lang="fa" className="app-root">
             <Suspense fallback={<RouteLoader />}>
               <Routes>
@@ -211,14 +200,29 @@ export function App() {
                     element={<BookingSuccessPage />}
                   />
 
-                  {/* Admin flows */}
-                  <Route path="/admin/config" element={<ConfigurationPage />} />
-                  <Route path="/admin/calendar" element={<CalendarPage />} />
-                  <Route path="/admin/analytics" element={<AnalyticsPage />} />
+                  {/* Legacy admin paths → consolidated into the owner panel,
+                      which bootstraps auth and guards by role. */}
+                  <Route
+                    path="/admin"
+                    element={<Navigate to="/owner" replace />}
+                  />
+                  <Route
+                    path="/admin/config"
+                    element={<Navigate to="/owner/config" replace />}
+                  />
+                  <Route
+                    path="/admin/calendar"
+                    element={<Navigate to="/owner/calendar" replace />}
+                  />
+                  <Route
+                    path="/admin/analytics"
+                    element={<Navigate to="/owner/analytics" replace />}
+                  />
                 </Route>
               </Routes>
             </Suspense>
           </div>
+          </AuthProvider>
         </BrowserRouter>
       </ThemeProvider>
     </HelmetProvider>

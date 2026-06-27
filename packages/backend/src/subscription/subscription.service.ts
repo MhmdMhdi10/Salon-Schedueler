@@ -191,6 +191,26 @@ export class SubscriptionService {
   }
 
   /**
+   * Effective status plus the fields the owner panel needs to render the
+   * subscription card: the current plan and the expiry instant. Returns null
+   * when the salon has no subscription row at all (callers decide the default).
+   */
+  async getStatusResponse(
+    salonId: string,
+    now: Date = new Date(),
+  ): Promise<{ status: SubscriptionStatus; planKind: SubscriptionPlanKind; expiresAt: Date } | null> {
+    const sub = await this.subscriptions.findUnique({ where: { salonId } });
+    if (!sub) {
+      return null;
+    }
+    return {
+      status: computeEffectiveStatus(sub, now),
+      planKind: sub.planKind,
+      expiresAt: sub.expiresAt,
+    };
+  }
+
+  /**
    * Begin purchasing a paid plan (Requirements 3.4, 3.6).
    *
    * Creates a `SubscriptionPayment` row in `pending` status with the amount

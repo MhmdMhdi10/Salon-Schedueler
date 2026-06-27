@@ -45,11 +45,14 @@ interface QrScanEventDelegate {
 export class QrService {
   private readonly prisma: PrismaClient;
   private readonly publicBaseUrl: string;
+  /** Deep-link base (`<publicBaseUrl>/s/`) used to encode QR payloads. */
+  private readonly qrDeepLinkBase: string;
 
   constructor(prisma: PrismaClient, options: QrServiceOptions = {}) {
     this.prisma = prisma;
     // Strip any trailing slash so URL concatenation stays well-formed.
     this.publicBaseUrl = (options.publicBaseUrl ?? DEFAULT_PUBLIC_BASE_URL).replace(/\/+$/, '');
+    this.qrDeepLinkBase = `${this.publicBaseUrl}/s/`;
   }
 
   /** Access the `qrScanEvent` delegate through the narrow local shape. */
@@ -73,7 +76,7 @@ export class QrService {
     if (!salon) {
       throw new Error(`Salon not found: ${salonId}`);
     }
-    return encodeSalonQr(salon.qrToken);
+    return encodeSalonQr(salon.qrToken, this.qrDeepLinkBase);
   }
 
   /**
@@ -86,6 +89,31 @@ export class QrService {
   buildSalonQrUrl(slug: string, source: string = DEFAULT_QR_SOURCE): string {
     const query = new URLSearchParams({ utm_source: source }).toString();
     return `${this.publicBaseUrl}/s/${encodeURIComponent(slug)}?${query}`;
+  }
+
+  /**
+   * Build the full QR surface for the owner panel standee (Requirements 4.1–4.4):
+   * the stable QR payload, the campaign destination URL, and the salon name.
+   *
+   * The salon's `qrToken` doubles as its stable public profile slug (`/s/:slug`),
+   * so the payload (encoded token) and the campaign URL stay consistent and
+   * reproducible for as long as the token is unchanged (Property 7).
+   *
+   * @throws if the salon does not exist.
+   */
+  async buildSalonQrResponse(
+    salonId: string,
+    source: string = DEFAULT_QR_SOURCE,
+  ): Promise<{ payload: string; url: string; salonName: string }> {
+    const salon = await this.prisma.salon.findUnique({ where: { id: salonId } });
+    if (!salon) {
+      throw new Error(`Salon not found: ${salonId}`);
+    }
+    return {
+      payload: encodeSalonQr(salon.qrToken, this.qrDeepLinkBase),
+      url: this.buildSalonQrUrl(salon.qrToken, source),
+      salonName: salon.name,
+    };
   }
 
   /**

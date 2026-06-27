@@ -116,6 +116,21 @@ export interface SalonGeo {
   longitude: number;
 }
 
+/**
+ * Off-page booking/contact channels a customer can use besides the on-page
+ * funnel: the platform web app/site and the salon's chat bots (Bale + Telegram,
+ * the two Iranian-market messengers this platform integrates). All optional and
+ * presentation-only; rendered as external links on the profile.
+ */
+export interface SalonChannels {
+  /** The platform web app / marketing site (internal route or absolute URL). */
+  website?: string;
+  /** Bale bot deep link (Iranian messenger). */
+  bale?: string;
+  /** Telegram bot deep link. */
+  telegram?: string;
+}
+
 /** A full public salon profile. */
 export interface SalonProfile {
   /** ASCII / transliterated slug — the `/s/:slug` path segment. */
@@ -162,6 +177,8 @@ export interface SalonProfile {
   mapEmbedUrl: string;
   /** Absolute OG/Twitter image for this salon (1200×630). */
   ogImage?: string;
+  /** Off-page booking channels (web app/site, Bale + Telegram bots). */
+  channels?: SalonChannels;
 }
 
 /**
@@ -227,6 +244,13 @@ const SALON_PROFILES: Record<string, SalonProfile> = {
     // Neshan map embed (Iranian map platform, seo §11), lazy-loaded on the page.
     mapEmbedUrl: 'https://neshan.org/maps/iframe/@35.8,51.4,15z',
     ogImage: '/og/default.jpg',
+    // Off-page booking channels. Replace the bot handles with the salon's real
+    // Bale/Telegram bots; `website` points at the platform home (the public app).
+    channels: {
+      website: '/',
+      bale: 'https://ble.ir/salon_rose_bot',
+      telegram: 'https://t.me/salon_rose_bot',
+    },
   },
 };
 

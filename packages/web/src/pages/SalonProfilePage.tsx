@@ -1,10 +1,23 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { MapPin, Phone, Clock, Scissors } from 'lucide-react';
+import {
+  MapPin,
+  Phone,
+  Clock,
+  Scissors,
+  Globe,
+  Send,
+  MessageCircle,
+  Smartphone,
+  Plus,
+  CalendarDays,
+} from 'lucide-react';
 import i18n from '../i18n';
 import { SeoHead, JsonLd, SITE_URL } from '../components/seo';
 import type { JsonLdNode } from '../components/seo';
 import {
+  Button,
   Card,
   CardContent,
   CardTitle,
@@ -12,6 +25,7 @@ import {
   Num,
   DirText,
   Picture,
+  cn,
   toPersianDigits,
 } from '../components/ui';
 import {
@@ -19,7 +33,17 @@ import {
   IRANIAN_WEEK_ORDER,
   PERSIAN_DAY_LABEL,
   type SalonProfile,
+  type SchemaDay,
 } from '../data/salons';
+import { usePwaInstall } from '../pwa/usePwaInstall';
+
+/**
+ * Shared styling for an off-page booking-channel link (web app/site, bots):
+ * a token-driven, ≥48px, RTL-safe tappable card with the full focus-visible
+ * ring and hover affordance.
+ */
+const CHANNEL_CARD =
+  'flex min-h-[48px] items-center justify-center gap-2 rounded-md border border-border bg-surface px-4 py-3 text-sm font-medium text-text no-underline transition-colors duration-fast ease-standard hover:bg-elevated hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
 
 /**
  * Public salon profile at `/s/:slug` (task 5.2; R8.1, R8.3, R8.4, R8.8, R9.1).
@@ -58,6 +82,8 @@ export function SalonProfilePage() {
   const { t } = useTranslation();
   const { slug } = useParams<{ slug: string }>();
   const salon = getSalonProfile(slug);
+  const { installed, promptInstall } = usePwaInstall();
+  const [showInstallHelp, setShowInstallHelp] = useState(false);
 
   // Unknown slug → a noindex "not found" surface (no canonical into the index).
   if (!salon) {
@@ -86,9 +112,22 @@ export function SalonProfilePage() {
   })}`;
   const path = `/s/${salon.slug}`;
   const ogImage = salon.ogImage ? `${SITE_URL}${salon.ogImage}` : undefined;
+  const bookHref = `/salon/${salon.bookingSalonId}/book`;
+  const today = tehranToday();
+  const channels = salon.channels ?? {};
+
+  const handleInstall = async () => {
+    const outcome = await promptInstall();
+    // Browsers without `beforeinstallprompt` (e.g. iOS Safari) need the manual
+    // "Add to Home Screen" flow — reveal the instructions instead.
+    if (outcome === 'unavailable') setShowInstallHelp(true);
+  };
 
   return (
-    <div data-testid="salon-profile">
+    <div
+      data-testid="salon-profile"
+      className="mx-auto w-full max-w-container pb-28 md:pb-10"
+    >
       <SeoHead
         title={salon.name}
         description={salon.tagline}
@@ -112,18 +151,140 @@ export function SalonProfilePage() {
         </ol>
       </nav>
 
-      {/* Hero: single <h1> + lead + the one primary CTA into the funnel. */}
-      <header className="flex flex-col items-start gap-4 py-4">
-        <h1 className="max-w-prose text-xl font-bold text-text">{heading}</h1>
-        <p className="max-w-prose text-md text-muted">{salon.tagline}</p>
-        <p className="max-w-prose text-sm text-muted">{salon.description}</p>
-        <Link
-          to={`/salon/${salon.bookingSalonId}/book`}
-          className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-md bg-primary px-5 py-3 text-md font-medium text-primary-contrast no-underline shadow-1 transition-colors duration-fast ease-standard hover:brightness-110 active:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-        >
-          {t('salon.profile.bookCta')}
-        </Link>
+      {/* Hero — single <h1>, key facts as chips, and the one primary CTA. */}
+      <header className="relative mt-2 overflow-hidden rounded-lg bg-gradient-to-bl from-primary to-accent px-5 py-8 text-primary-contrast shadow-2 sm:px-8 sm:py-10">
+        <div className="flex flex-col items-start gap-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-pill bg-white/15 px-3 py-1 text-sm">
+              <MapPin aria-hidden="true" size={14} />
+              {salon.neighborhood}، {salon.address.addressLocality}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-pill bg-white/15 px-3 py-1 text-sm">
+              <Scissors aria-hidden="true" size={14} />
+              {t('salon.profile.servicesCount', { count: salon.services.length })}
+            </span>
+          </div>
+          <h1 className="max-w-prose text-2xl font-bold leading-tight">{heading}</h1>
+          <p className="max-w-prose text-md opacity-90">{salon.tagline}</p>
+          <Link
+            to={bookHref}
+            className="mt-1 inline-flex min-h-[48px] items-center justify-center gap-2 rounded-md bg-primary-contrast px-6 py-3 text-md font-bold text-primary no-underline shadow-1 transition-transform duration-fast ease-emphasized hover:scale-[1.02] active:scale-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          >
+            <CalendarDays aria-hidden="true" size={20} />
+            {t('salon.profile.bookCtaLong')}
+          </Link>
+          <p className="text-xs opacity-90">{t('salon.profile.bookCtaHint')}</p>
+        </div>
       </header>
+
+      {/* Longer description at a readable measure. */}
+      <p className="max-w-prose py-4 text-md leading-loose text-muted">
+        {salon.description}
+      </p>
+
+      {/* Other booking channels — web app/site + Bale/Telegram bots. */}
+      <section className="py-6" aria-labelledby="salon-channels-title">
+        <h2 id="salon-channels-title" className="mb-1 text-lg font-bold text-text">
+          {t('salon.profile.channelsTitle')}
+        </h2>
+        <p className="mb-4 max-w-prose text-sm text-muted">
+          {t('salon.profile.channelsHint')}
+        </p>
+        <ul className="grid gap-3 sm:grid-cols-3" role="list">
+          {channels.website && (
+            <li>
+              <Link to={channels.website} className={CHANNEL_CARD}>
+                <Globe aria-hidden="true" size={20} className="text-primary" />
+                <span>{t('salon.profile.channelWebsite')}</span>
+              </Link>
+            </li>
+          )}
+          {channels.bale && (
+            <li>
+              <a
+                href={channels.bale}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={CHANNEL_CARD}
+              >
+                <MessageCircle aria-hidden="true" size={20} className="text-primary" />
+                <span>{t('salon.profile.channelBale')}</span>
+                <span className="sr-only">
+                  {' '}
+                  ({t('salon.profile.channelNewTab')})
+                </span>
+              </a>
+            </li>
+          )}
+          {channels.telegram && (
+            <li>
+              <a
+                href={channels.telegram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={CHANNEL_CARD}
+              >
+                <Send aria-hidden="true" size={20} className="text-primary" />
+                <span>{t('salon.profile.channelTelegram')}</span>
+                <span className="sr-only">
+                  {' '}
+                  ({t('salon.profile.channelNewTab')})
+                </span>
+              </a>
+            </li>
+          )}
+        </ul>
+      </section>
+
+      {/* Add as web app (PWA install) — "save it to book faster next time". */}
+      {installed ? (
+        <p className="py-2 text-sm font-medium text-success">
+          {t('salon.profile.installedNote')}
+        </p>
+      ) : (
+        <section className="py-6" aria-labelledby="salon-install-title">
+          <Card className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <span
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-primary text-primary-contrast"
+                aria-hidden="true"
+              >
+                <Smartphone size={22} />
+              </span>
+              <div className="flex flex-col gap-1">
+                <h2
+                  id="salon-install-title"
+                  className="text-md font-bold text-text"
+                >
+                  {t('salon.profile.installTitle')}
+                </h2>
+                <p className="max-w-prose text-sm text-muted">
+                  {t('salon.profile.installBody')}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="primary"
+              onClick={handleInstall}
+              startIcon={<Plus size={18} />}
+              className="sm:shrink-0"
+            >
+              {t('salon.profile.installCta')}
+            </Button>
+          </Card>
+          {showInstallHelp && (
+            <p
+              role="note"
+              className="mt-3 max-w-prose rounded-md border border-border bg-surface p-3 text-sm text-muted"
+            >
+              <span className="font-bold text-text">
+                {t('salon.profile.installManualTitle')}:{' '}
+              </span>
+              {t('salon.profile.installManualBody')}
+            </p>
+          )}
+        </section>
+      )}
 
       {/* Services — one card list; price in Rial via <Money>. */}
       <section className="py-6" aria-labelledby="salon-services-title">
@@ -169,9 +330,19 @@ export function SalonProfilePage() {
             {orderedHours(salon).map((entry) => (
               <li
                 key={entry.day}
-                className="flex items-center justify-between gap-4 text-sm"
+                className={cn(
+                  'flex items-center justify-between gap-4 rounded-md px-2 py-1.5 text-sm',
+                  entry.day === today && 'bg-elevated font-bold',
+                )}
               >
-                <span className="text-text">{PERSIAN_DAY_LABEL[entry.day]}</span>
+                <span className="flex items-center gap-2 text-text">
+                  {PERSIAN_DAY_LABEL[entry.day]}
+                  {entry.day === today && (
+                    <span className="rounded-pill bg-primary px-2 py-0.5 text-2xs font-medium text-primary-contrast">
+                      {t('salon.profile.todayBadge')}
+                    </span>
+                  )}
+                </span>
                 {entry.closed || !entry.opens || !entry.closes ? (
                   <span className="text-muted">
                     {t('salon.profile.hoursClosed')}
@@ -260,8 +431,31 @@ export function SalonProfilePage() {
               <DirText dir="ltr">{salon.telephone}</DirText>
             </a>
           </p>
+          <a
+            href={`tel:${salon.telephone}`}
+            className="inline-flex min-h-[44px] items-center justify-center gap-2 self-start rounded-md border border-border bg-surface px-4 py-2 text-sm font-medium text-text no-underline transition-colors duration-fast ease-standard hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          >
+            <Phone aria-hidden="true" size={16} />
+            {t('salon.profile.callCta')}
+          </a>
         </Card>
       </section>
+
+      {/* Sticky mobile booking bar — keeps the primary CTA in thumb reach
+          (ui-ux §5) and clears the home-indicator safe area. Hidden on ≥md,
+          where the hero CTA stays visible. */}
+      <div
+        className="fixed inset-x-0 bottom-0 z-sticky border-t border-border bg-elevated px-4 py-3 shadow-2 md:hidden"
+        style={{ paddingBottom: 'calc(var(--space-3) + env(safe-area-inset-bottom))' }}
+      >
+        <Link
+          to={bookHref}
+          className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-md bg-primary px-5 py-3 text-md font-bold text-primary-contrast no-underline shadow-1 transition-colors duration-fast ease-standard hover:brightness-110 active:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        >
+          <CalendarDays aria-hidden="true" size={20} />
+          {t('salon.profile.bookCta')}
+        </Link>
+      </div>
     </div>
   );
 }
@@ -271,6 +465,25 @@ function orderedHours(salon: SalonProfile) {
   return IRANIAN_WEEK_ORDER.map(
     (day) => salon.openingHours.find((h) => h.day === day) ?? { day, closed: true },
   );
+}
+
+/**
+ * Today's schema.org weekday in the salon's locale (Asia/Tehran) for the "امروز"
+ * hours highlight, or null if the runtime can't resolve the time zone. Display-
+ * only — never affects the JSON-LD.
+ */
+function tehranToday(): SchemaDay | null {
+  try {
+    const weekday = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Tehran',
+      weekday: 'long',
+    }).format(new Date());
+    return (IRANIAN_WEEK_ORDER as readonly string[]).includes(weekday)
+      ? (weekday as SchemaDay)
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 /**

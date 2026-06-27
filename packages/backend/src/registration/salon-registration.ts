@@ -14,9 +14,19 @@ import { RegistrationError } from './registration-error';
  */
 export class SalonRegistration {
   private readonly prisma: PrismaClient;
+  /**
+   * Optional deep-link base (`<publicBaseUrl>/s/`) for QR encode/parse. When
+   * undefined the shared codec default (`https://book.salon.app/s/`) is used.
+   * Kept in sync with {@link QrService} so payloads encode and resolve against
+   * the same base (e.g. a LAN IP origin in dev).
+   */
+  private readonly qrDeepLinkBase?: string;
 
-  constructor(prisma: PrismaClient) {
+  constructor(prisma: PrismaClient, options: { publicBaseUrl?: string } = {}) {
     this.prisma = prisma;
+    this.qrDeepLinkBase = options.publicBaseUrl
+      ? `${options.publicBaseUrl.replace(/\/+$/, '')}/s/`
+      : undefined;
   }
 
   /**
@@ -53,7 +63,7 @@ export class SalonRegistration {
       throw new Error(`Salon not found: ${salonId}`);
     }
 
-    return encodeSalonQr(salon.qrToken);
+    return encodeSalonQr(salon.qrToken, this.qrDeepLinkBase);
   }
 
   /**
@@ -66,7 +76,7 @@ export class SalonRegistration {
    * 5. If found → return the salon (R7.2).
    */
   async resolveSalonByQr(qrPayload: string): Promise<Salon> {
-    const parseResult = parseSalonQr(qrPayload);
+    const parseResult = parseSalonQr(qrPayload, this.qrDeepLinkBase);
 
     if (parseResult.kind === 'malformed') {
       throw new RegistrationError('QR_MALFORMED');

@@ -36,6 +36,7 @@ import { ServiceCatalog } from './catalog/index.js';
 import { SalonRegistration, ResourceRegistration } from './registration/index.js';
 import { AvailabilityConfig } from './availability-config/index.js';
 import { QrService } from './qr/index.js';
+import { SubscriptionService, DEFAULT_SUBSCRIPTION_PRICES } from './subscription/index.js';
 
 // Application-layer flows (cross-service wiring — Requirement 4.5).
 import { BookingFlow } from './app/booking-flow.js';
@@ -207,7 +208,9 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
   const analyticsService = new AnalyticsService(prisma);
   const calendarService = new CalendarService(prisma);
   const serviceCatalog = new ServiceCatalog(prisma);
-  const salonRegistration = new SalonRegistration(prisma);
+  const salonRegistration = new SalonRegistration(prisma, {
+    publicBaseUrl: config.publicBaseUrl,
+  });
   const resourceRegistration = new ResourceRegistration(prisma);
   const availabilityConfig = new AvailabilityConfig(prisma);
 
@@ -215,6 +218,24 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
   // (Requirements 4.1, 4.4, 4.5). Inject Prisma; pass the configured public base
   // URL when present, else the service falls back to its documented default.
   const qrService = new QrService(prisma, { publicBaseUrl: config.publicBaseUrl });
+
+  // Subscription_Service: subscription lifecycle + configurable IRR plan prices
+  // (Requirements 3.1–3.12). Prices come from config (env), falling back to the
+  // documented defaults; it reuses the shared PaymentService for purchase/renew.
+  const subscriptionService = new SubscriptionService(prisma, paymentService, {
+    trialDays: config.subTrialDays,
+    prices: {
+      monthlyRial: config.subMonthlyRial
+        ? BigInt(config.subMonthlyRial)
+        : DEFAULT_SUBSCRIPTION_PRICES.monthlyRial,
+      quarterlyRial: config.subQuarterlyRial
+        ? BigInt(config.subQuarterlyRial)
+        : DEFAULT_SUBSCRIPTION_PRICES.quarterlyRial,
+      annualRial: config.subAnnualRial
+        ? BigInt(config.subAnnualRial)
+        : DEFAULT_SUBSCRIPTION_PRICES.annualRial,
+    },
+  });
 
   const authorizer = new Authorizer();
 
@@ -261,6 +282,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     resourceRegistration,
     availabilityConfig,
     qrService,
+    subscriptionService,
     authorizer,
     bookingFlow,
     cancellationFlow,

@@ -5,6 +5,18 @@
     "routeLoading": "در حال بارگذاری صفحه...",
     "skipToContent": "رفتن به محتوای اصلی",
     "primaryNav": "ناوبری اصلی",
+    "account": "حساب کاربری",
+    "signIn": "ورود به حساب",
+    "signOut": "خروج",
+    "nav": {
+      "home": "خانه"
+    },
+    "role": {
+      "Owner": "صاحب سالن",
+      "Admin": "ادمین",
+      "Stylist": "آرایشگر",
+      "Customer": "مشتری"
+    },
     "footer": "© {{year}} سامانه رزرو سالن"
   },
   "seo": {
@@ -209,10 +221,14 @@
     "profile": {
       "headingSuffix": "آرایشگاه زنانه در {{city}}، {{neighborhood}}",
       "bookCta": "رزرو نوبت",
+      "bookCtaLong": "رزرو آنلاین نوبت",
+      "bookCtaHint": "انتخاب خدمت، تاریخ و زمان تنها در چند ثانیه",
+      "todayBadge": "امروز",
       "servicesTitle": "خدمات",
       "servicePrice": "قیمت",
       "serviceDuration": "مدت زمان",
       "durationMinutes": "{{count}} دقیقه",
+      "servicesCount": "{{count}} خدمت",
       "hoursTitle": "ساعات کاری",
       "hoursClosed": "تعطیل",
       "hoursRange": "{{opens}} تا {{closes}}",
@@ -222,8 +238,21 @@
       "contactTitle": "آدرس و تماس",
       "addressLabel": "آدرس",
       "phoneLabel": "تلفن",
+      "callCta": "تماس با سالن",
       "breadcrumb": "مسیر صفحه",
       "crumbHome": "خانه",
+      "channelsTitle": "راه‌های دیگر رزرو",
+      "channelsHint": "از طریق وب‌سایت یا ربات‌های پیام‌رسان هم می‌توانید نوبت بگیرید.",
+      "channelWebsite": "وب‌سایت رزرو سالن",
+      "channelBale": "ربات بله",
+      "channelTelegram": "ربات تلگرام",
+      "channelNewTab": "در زبانهٔ جدید باز می‌شود",
+      "installTitle": "افزودن به‌عنوان وب‌اپ",
+      "installBody": "این صفحه را ذخیره کنید تا دفعهٔ بعد سریع‌تر و بدون جست‌وجو نوبت بگیرید.",
+      "installCta": "افزودن به صفحهٔ اصلی",
+      "installManualTitle": "نصب دستی",
+      "installManualBody": "در آیفون از دکمهٔ هم‌رسانی Safari گزینهٔ «Add to Home Screen» و در اندروید از منوی مرورگر گزینهٔ «افزودن به صفحهٔ اصلی» را انتخاب کنید.",
+      "installedNote": "این وب‌اپ روی دستگاه شما نصب شده است.",
       "notFoundTitle": "سالن یافت نشد",
       "notFoundBody": "این سالن وجود ندارد یا آدرس را اشتباه وارد کرده‌اید.",
       "backHome": "بازگشت به خانه"

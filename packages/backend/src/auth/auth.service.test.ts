@@ -7,6 +7,7 @@ import * as jwt from 'jsonwebtoken';
 function createMockPrisma() {
   const otpStore: any[] = [];
   const customerStore: any[] = [];
+  const staffStore: any[] = [];
 
   /**
    * Helper to match Prisma-style where clauses against a record.
@@ -28,6 +29,7 @@ function createMockPrisma() {
   return {
     _otpStore: otpStore,
     _customerStore: customerStore,
+    _staffStore: staffStore,
     otp: {
       updateMany: jest.fn(async ({ where, data }: any) => {
         let count = 0;
@@ -66,6 +68,20 @@ function createMockPrisma() {
         const record = { id: `cust-${Date.now()}`, ...data, noShowCount: 0 };
         customerStore.push(record);
         return record;
+      }),
+    },
+    staffMember: {
+      // Returns the first active staff member matching the phone, mirroring
+      // `findFirst({ where: { phone, active: true } })`. Default store is empty
+      // so plain-customer logins resolve to no staff (roleless token).
+      findFirst: jest.fn(async ({ where }: any) => {
+        return (
+          staffStore.find(
+            (s) =>
+              s.phone === where.phone &&
+              (where.active === undefined || s.active === where.active),
+          ) || null
+        );
       }),
     },
   } as any;

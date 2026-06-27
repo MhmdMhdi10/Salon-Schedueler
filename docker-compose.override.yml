@@ -1,0 +1,39 @@
+# Local dev override: the default host ports (3000 backend, 5173 web) collide
+# with other Docker projects already running on this machine. Remap only the
+# HOST-side ports here; container ports and the internal compose network are
+# unchanged, so the web -> backend proxy (backend:3000) still works.
+#
+# The `!override` tag REPLACES the base `ports` list instead of appending to it
+# (Compose concatenates sequence fields by default). This file is auto-merged by
+# `docker compose`; delete it to restore the documented default ports.
+services:
+  postgres:
+    # Host 5432 is taken by a native PostgreSQL on this machine. Remap the host
+    # side only; backend still reaches the DB internally at postgres:5432.
+    ports: !override
+      - "5532:5432"
+
+  backend:
+    ports: !override
+      - "3100:3000"
+    # Dev-only: issue QR payloads + campaign URLs against the local web dev
+    # server so the QR/links are testable on this machine. Change to a LAN IP
+    # (e.g. http://192.168.x.x:5273) to scan from a phone on the network, or
+    # remove to fall back to the codec default (https://book.salon.app).
+    environment:
+      PUBLIC_BASE_URL: "http://localhost:5273"
+
+  web:
+    ports: !override
+      - "5273:5173"
+
+  mobile:
+    # Bring the Expo/Metro container into the running stack. Metro must advertise
+    # this machine's LAN IP so a physical phone (Expo Go) can reach it, and the
+    # app must call the backend on its remapped host port (3100, not the default
+    # 3000). Update REACT_NATIVE_PACKAGER_HOSTNAME if this machine's LAN IP
+    # changes. Start with: docker compose --profile mobile up -d
+    environment:
+      REACT_NATIVE_PACKAGER_HOSTNAME: "192.168.10.185"
+      EXPO_PUBLIC_API_BASE_URL: "http://192.168.10.185:3100"
+
