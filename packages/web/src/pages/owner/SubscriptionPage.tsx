@@ -64,7 +64,7 @@ import {
  */
 
 /** Default salon scope (mirrors the other owner/admin sections). */
-const DEFAULT_SALON_ID = 'salon-1';
+const DEFAULT_SALON_ID = '11111111-1111-1111-1111-111111111111';
 
 /** The paid plans the owner can buy/renew with, in ascending duration order. */
 const PAID_PLAN_ORDER: SubscriptionPlanKind[] = ['monthly', 'quarterly', 'annual'];

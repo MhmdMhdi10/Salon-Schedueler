@@ -286,12 +286,13 @@ function AuthPageContent() {
               <legend className="mb-1 block text-xs font-medium text-text">
                 {t('auth.otpLabel')}
               </legend>
-              {/* Six single-digit boxes; LTR so digits read left-to-right while
-                  the surrounding layout stays RTL. Boxes lay out in array order
-                  (index 0 leftmost) so the entered value matches what is shown
-                  — do NOT reverse them, or `code.join('')` submits the reverse
-                  of the displayed code. */}
-              <div className="flex flex-row justify-center gap-2" dir="ltr">
+              {/* Six single-digit boxes — the EXPLICIT inline `direction: ltr`
+                  (not the `dir` attribute alone) is what cascade-proofs this row
+                  against inherited RTL from `<html dir="rtl">`. This guarantees
+                  reading order == index order (index 0 = leftmost box), so
+                  `code.join('')` submits digits in the order the user sees them.
+                  Do NOT remove the inline style or reverse the join. */}
+              <div className="flex flex-row justify-center gap-2" dir="ltr" style={{ direction: 'ltr' }}>
                 {code.map((digit, index) => (
                   <input
                     // eslint-disable-next-line react/no-array-index-key

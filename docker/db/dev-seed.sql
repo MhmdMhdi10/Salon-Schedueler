@@ -96,4 +96,83 @@ SELECT
   d, TIME '09:00', TIME '20:00'
 FROM generate_series(0, 6) AS d;
 
+-- ─── Dev Test Users ────────────────────────────────────────────────────────────
+-- Customer records linked to staff and a standalone customer for testing all
+-- roles through OTP-based auth. Phone numbers are deterministic for dev docs.
+
+-- Owner customer record (links phone 09120000001 to the Owner staff member)
+INSERT INTO customer (id, phone, full_name)
+VALUES (
+  'cccccccc-1111-1111-1111-111111111111'::uuid,
+  '09120000001',
+  'سارا محمدی'
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- Admin staff member + customer record
+INSERT INTO staff_member (id, salon_id, full_name, role, active)
+VALUES (
+  'dddddddd-2222-2222-2222-222222222222'::uuid,
+  '11111111-1111-1111-1111-111111111111'::uuid,
+  'مریم احمدی',
+  'Admin',
+  true
+)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO customer (id, phone, full_name)
+VALUES (
+  'cccccccc-2222-2222-2222-222222222222'::uuid,
+  '09120000002',
+  'مریم احمدی'
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- Stylist staff member + customer record
+INSERT INTO staff_member (id, salon_id, full_name, role, active)
+VALUES (
+  'dddddddd-3333-3333-3333-333333333333'::uuid,
+  '11111111-1111-1111-1111-111111111111'::uuid,
+  'زهرا رضایی',
+  'Stylist',
+  true
+)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO customer (id, phone, full_name)
+VALUES (
+  'cccccccc-3333-3333-3333-333333333333'::uuid,
+  '09120000003',
+  'زهرا رضایی'
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- Link services to the new stylist so she has bookable appointments
+INSERT INTO service_staff (service_id, staff_member_id)
+VALUES
+  ('44444444-4444-4444-4444-444444444444'::uuid, 'dddddddd-3333-3333-3333-333333333333'::uuid),
+  ('55555555-5555-5555-5555-555555555555'::uuid, 'dddddddd-3333-3333-3333-333333333333'::uuid)
+ON CONFLICT (service_id, staff_member_id) DO NOTHING;
+
+-- Working hours for the new stylist (same schedule as the owner for simplicity)
+DELETE FROM working_hours
+WHERE owner_id = 'dddddddd-3333-3333-3333-333333333333'::uuid;
+
+INSERT INTO working_hours (id, owner_kind, owner_id, weekday, start_time, end_time)
+SELECT
+  ('eeeeeeee-0000-0000-0000-00000000000' || d::text)::uuid,
+  'staff',
+  'dddddddd-3333-3333-3333-333333333333'::uuid,
+  d, TIME '09:00', TIME '20:00'
+FROM generate_series(0, 6) AS d;
+
+-- Regular customer (no staff role)
+INSERT INTO customer (id, phone, full_name)
+VALUES (
+  'cccccccc-4444-4444-4444-444444444444'::uuid,
+  '09120000004',
+  'نازنین کریمی'
+)
+ON CONFLICT (id) DO NOTHING;
+
 COMMIT;

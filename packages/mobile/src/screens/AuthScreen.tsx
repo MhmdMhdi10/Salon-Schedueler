@@ -384,18 +384,15 @@ function createStyles(theme: RnTheme) {
       borderColor: colors.danger,
     },
     otpRow: {
-      // The OTP code is an inherently LTR number: box index 0 MUST be the
-      // leftmost so visual entry order matches `code.join('')`. Layout flow
-      // differs by platform:
-      //   • native — the RN layout engine is LTR, so `flexDirection: 'row'`
-      //     already puts index 0 on the left. ✓
-      //   • web (react-native-web) — the app document is dir="rtl", and a plain
-      //     `row` flows right-to-left there, putting index 0 on the RIGHT and
-      //     sending the code REVERSED to the API. `row-reverse` cancels the
-      //     document flip so index 0 is on the left again.
-      flexDirection: Platform.OS === 'web' ? 'row-reverse' : 'row',
+      flexDirection: 'row',
       justifyContent: 'center',
       gap: spacing[2],
+      // On web (react-native-web), the document is dir="rtl" which flips
+      // flexDirection:'row' to flow right-to-left, putting index 0 on the
+      // right. Setting direction:'ltr' on this container forces LTR layout
+      // so index 0 is always the leftmost box — matching reading order and
+      // ensuring code.join('') produces digits in the L→R visual order.
+      ...(Platform.OS === 'web' ? { direction: 'ltr' as const } : {}),
     },
     otpBox: {
       width: 48,

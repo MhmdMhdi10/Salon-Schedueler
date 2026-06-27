@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>کاربران تست — محیط توسعه</title>
+  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-hover: #334155;
+      --border: #334155;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --owner: #a78bfa;
+      --admin: #34d399;
+      --stylist: #fb923c;
+      --customer: #60a5fa;
+      --danger: #f87171;
+      --success: #4ade80;
+      --radius: 12px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Vazirmatn', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .dev-warning {
+      background: linear-gradient(135deg, #7c2d12, #451a03);
+      border: 1px solid #f97316;
+      border-radius: var(--radius);
+      padding: 1rem 1.5rem;
+      margin-bottom: 2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .dev-warning .icon {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .dev-warning p {
+      font-size: 0.9rem;
+      color: #fed7aa;
+    }
+
+    .dev-warning code {
+      background: rgba(0,0,0,0.3);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      direction: ltr;
+      display: inline-block;
+    }
+
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .section h2 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Users Table */
+    .users-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.5rem;
+    }
+
+    .users-table th {
+      text-align: right;
+      padding: 0.75rem 1rem;
+      background: var(--bg);
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .users-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    .users-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .users-table tr:hover td {
+      background: var(--surface-hover);
+    }
+
+    .role-badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .role-owner { background: rgba(167, 139, 250, 0.15); color: var(--owner); border: 1px solid rgba(167, 139, 250, 0.3); }
+    .role-admin { background: rgba(52, 211, 153, 0.15); color: var(--admin); border: 1px solid rgba(52, 211, 153, 0.3); }
+    .role-stylist { background: rgba(251, 146, 60, 0.15); color: var(--stylist); border: 1px solid rgba(251, 146, 60, 0.3); }
+    .role-customer { background: rgba(96, 165, 250, 0.15); color: var(--customer); border: 1px solid rgba(96, 165, 250, 0.3); }
+
+    .phone-cell {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      direction: ltr;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.9rem;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 6px;
+      padding: 0.25rem 0.5rem;
+      cursor: pointer;
+      font-size: 0.7rem;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .copy-btn:hover {
+      background: var(--surface-hover);
+      color: var(--text);
+      border-color: var(--accent);
+    }
+
+    .copy-btn.copied {
+      background: rgba(74, 222, 128, 0.1);
+      border-color: var(--success);
+      color: var(--success);
+    }
+
+    /* Role flows */
+    .role-flow {
+      margin-bottom: 1.5rem;
+      padding: 1.25rem;
+      background: var(--bg);
+      border-radius: var(--radius);
+      border-right: 3px solid var(--border);
+    }
+
+    .role-flow:last-child {
+      margin-bottom: 0;
+    }
+
+    .role-flow.flow-owner { border-right-color: var(--owner); }
+    .role-flow.flow-admin { border-right-color: var(--admin); }
+    .role-flow.flow-stylist { border-right-color: var(--stylist); }
+    .role-flow.flow-customer { border-right-color: var(--customer); }
+
+    .role-flow h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .role-flow ol {
+      padding-right: 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .role-flow ol li {
+      margin-bottom: 0.35rem;
+    }
+
+    .role-flow ol li code {
+      background: rgba(56, 189, 248, 0.1);
+      color: var(--accent);
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      direction: ltr;
+      display: inline-block;
+    }
+
+    .no-access {
+      color: var(--danger);
+      font-size: 0.85rem;
+    }
+
+    /* URLs section */
+    .url-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+
+    @media (max-width: 600px) {
+      .url-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .url-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+    }
+
+    .url-card .label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+    }
+
+    .url-card .url {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      color: var(--accent);
+      direction: ltr;
+      text-align: left;
+      word-break: break-all;
+    }
+
+    /* OTP Info */
+    .otp-info {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 0.5rem;
+    }
+
+    .otp-info .command {
+      background: rgba(0,0,0,0.4);
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      margin-top: 0.5rem;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      color: var(--success);
+      direction: ltr;
+      text-align: left;
+      overflow-x: auto;
+    }
+
+    .otp-info .output-example {
+      background: rgba(0,0,0,0.3);
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      margin-top: 0.5rem;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      direction: ltr;
+      text-align: left;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>&#128218; کاربران تست — سالن رز</h1>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">مستندات محیط توسعه — اطلاعات ورود و جریان‌های کاربری</p>
+    </header>
+
+    <!-- Dev Warning -->
+    <div class="dev-warning">
+      <span class="icon">&#9888;&#65039;</span>
+      <div>
+        <p><strong>فقط محیط توسعه (DEV)</strong> — این اطلاعات هرگز نباید در محیط پروداکشن استفاده شود.</p>
+        <p style="margin-top: 0.3rem;">احراز هویت فقط با OTP انجام می‌شود. کد OTP در لاگ بک‌اند چاپ می‌شود. پنجره اعتبار OTP: <code>600 ثانیه (۱۰ دقیقه)</code></p>
+      </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="section">
+      <h2>&#128101; کاربران تست</h2>
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th>نام</th>
+            <th>شماره تلفن</th>
+            <th>نقش</th>
+            <th>توضیحات</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>سارا محمدی</td>
+            <td>
+              <div class="phone-cell">
+                <span>09120000001</span>
+                <button class="copy-btn" onclick="copyPhone(this, '09120000001')">
+                  <span>&#128203;</span> کپی
+                </button>
+              </div>
+            </td>
+            <td><span class="role-badge role-owner">صاحب سالن</span></td>
+            <td style="font-size: 0.85rem; color: var(--text-muted);">دسترسی کامل به پنل ادمین و تنظیمات</td>
+          </tr>
+          <tr>
+            <td>مریم احمدی</td>
+            <td>
+              <div class="phone-cell">
+                <span>09120000002</span>
+                <button class="copy-btn" onclick="copyPhone(this, '09120000002')">
+                  <span>&#128203;</span> کپی
+                </button>
+              </div>
+            </td>
+            <td><span class="role-badge role-admin">ادمین</span></td>
+            <td style="font-size: 0.85rem; color: var(--text-muted);">مدیریت نوبت‌ها، بدون دسترسی به تنظیمات</td>
+          </tr>
+          <tr>
+            <td>زهرا رضایی</td>
+            <td>
+              <div class="phone-cell">
+                <span>09120000003</span>
+                <button class="copy-btn" onclick="copyPhone(this, '09120000003')">
+                  <span>&#128203;</span> کپی
+                </button>
+              </div>
+            </td>
+            <td><span class="role-badge role-stylist">آرایشگر</span></td>
+            <td style="font-size: 0.85rem; color: var(--text-muted);">فقط مشاهده نوبت‌های خود</td>
+          </tr>
+          <tr>
+            <td>نازنین کریمی</td>
+            <td>
+              <div class="phone-cell">
+                <span>09120000004</span>
+                <button class="copy-btn" onclick="copyPhone(this, '09120000004')">
+                  <span>&#128203;</span> کپی
+                </button>
+              </div>
+            </td>
+            <td><span class="role-badge role-customer">مشتری</span></td>
+            <td style="font-size: 0.85rem; color: var(--text-muted);">رزرو نوبت از وب یا موبایل</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- OTP Info -->
+    <div class="section">
+      <h2>&#128273; نحوه دریافت کد OTP</h2>
+      <div class="otp-info">
+        <p style="font-size: 0.9rem; color: var(--text-muted);">پس از وارد کردن شماره تلفن، کد OTP در لاگ سرویس بک‌اند چاپ می‌شود:</p>
+        <div class="command">docker compose logs backend --tail=5</div>
+        <div class="output-example">[dev-sms] -> 09120000001: Your verification code is: 483921</div>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.75rem;">
+          &#128161; نکته: اعتبار کد <strong>۱۰ دقیقه</strong> است (متغیر <code style="background: rgba(56, 189, 248, 0.1); color: var(--accent); padding: 0.1rem 0.4rem; border-radius: 4px; font-family: monospace; font-size: 0.8rem; direction: ltr; display: inline-block;">OTP_WINDOW_SECONDS=600</code>)
+        </p>
+      </div>
+    </div>
+
+    <!-- URLs -->
+    <div class="section">
+      <h2>&#128279; آدرس‌های محیط توسعه</h2>
+      <div class="url-grid">
+        <div class="url-card">
+          <div class="label">صفحه رزرو مشتری</div>
+          <div class="url">http://localhost:5173/salon/11111111-1111-1111-1111-111111111111/book</div>
+        </div>
+        <div class="url-card">
+          <div class="label">پنل ادمین — تقویم</div>
+          <div class="url">http://localhost:5173/admin/calendar</div>
+        </div>
+        <div class="url-card">
+          <div class="label">اپلیکیشن موبایل (Expo)</div>
+          <div class="url">http://&lt;HOST_LAN_IP&gt;:8081</div>
+        </div>
+        <div class="url-card">
+          <div class="label">API بک‌اند</div>
+          <div class="url">http://localhost:3000</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Role Flows -->
+    <div class="section">
+      <h2>&#128736;&#65039; جریان‌های کاربری هر نقش</h2>
+
+      <!-- Customer Flow -->
+      <div class="role-flow flow-customer">
+        <h3>
+          <span class="role-badge role-customer">مشتری</span>
+          نازنین کریمی — 09120000004
+        </h3>
+        <ol>
+          <li>اسکن QR یا ورود مستقیم به <code>/salon/:salonId/book</code></li>
+          <li>انتخاب خدمت &larr; تاریخ &larr; زمان &larr; تایید</li>
+          <li>پرداخت (زرین‌پال / آیدی‌پی)</li>
+          <li>دریافت رسید رزرو در <code>/booking/success</code></li>
+        </ol>
+      </div>
+
+      <!-- Owner Flow -->
+      <div class="role-flow flow-owner">
+        <h3>
+          <span class="role-badge role-owner">صاحب سالن</span>
+          سارا محمدی — 09120000001
+        </h3>
+        <ol>
+          <li>ورود با OTP</li>
+          <li>دسترسی کامل به پنل ادمین (<code>/admin/calendar</code>, <code>/admin/analytics</code>, <code>/admin/config</code>)</li>
+          <li>مدیریت خدمات، کارکنان، صندلی‌ها، تعطیلات</li>
+          <li>مشاهده و مدیریت تمام نوبت‌ها</li>
+          <li>مشاهده آمار و گزارش‌ها</li>
+        </ol>
+      </div>
+
+      <!-- Admin Flow -->
+      <div class="role-flow flow-admin">
+        <h3>
+          <span class="role-badge role-admin">ادمین</span>
+          مریم احمدی — 09120000002
+        </h3>
+        <ol>
+          <li>ورود با OTP</li>
+          <li>دسترسی به تقویم نوبت‌ها (<code>/admin/calendar</code>)</li>
+          <li>ایجاد، ویرایش و لغو نوبت‌ها</li>
+          <li>مشاهده یادداشت‌های مشتریان</li>
+          <li class="no-access">&#10060; بدون دسترسی به تنظیمات سالن</li>
+        </ol>
+      </div>
+
+      <!-- Stylist Flow -->
+      <div class="role-flow flow-stylist">
+        <h3>
+          <span class="role-badge role-stylist">آرایشگر</span>
+          زهرا رضایی — 09120000003
+        </h3>
+        <ol>
+          <li>ورود با OTP</li>
+          <li>مشاهده فقط نوبت‌های خود (<code>/admin/calendar</code>)</li>
+          <li>مشاهده یادداشت‌های مشتریان</li>
+          <li class="no-access">&#10060; بدون دسترسی به مدیریت نوبت‌ها</li>
+          <li class="no-access">&#10060; بدون دسترسی به تنظیمات سالن</li>
+        </ol>
+      </div>
+    </div>
+
+    <footer>
+      سالن رز — سیستم رزرو نوبت | محیط توسعه
+    </footer>
+  </div>
+
+  <script>
+    function copyPhone(btn, phone) {
+      navigator.clipboard.writeText(phone).then(() => {
+        btn.classList.add('copied');
+        btn.innerHTML = '<span>&#10003;</span> کپی شد';
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.innerHTML = '<span>&#128203;</span> کپی';
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>

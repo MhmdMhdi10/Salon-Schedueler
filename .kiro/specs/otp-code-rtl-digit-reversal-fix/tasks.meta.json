@@ -1,0 +1,145 @@
+{
+  "pbtResults": {
+    "1. Write bug condition exploration test (reading-order reversal)": {
+      "status": "passed",
+      "failingExample": "Test case 4 (direction guard) FAILED as expected on unfixed code:\n\nAssertionError: expected '' to be 'ltr' // Object.is equality\n- Expected: 'ltr'\n+ Received: ''\n\nat src/pages/__tests__/AuthPage.otp-order.test.tsx:173:36\n  expect(otpRow.style.direction).toBe('ltr');\n\nCounterexample: The OTP boxes flex container has `dir=\"ltr\"` attribute but does NOT have inline `style.direction = 'ltr'`. This confirms the cascade vulnerability — in a real RTL browser, the inherited document direction (`<html dir=\"rtl\">`) can defeat the `dir` attribute via CSS cascade, flipping the flex layout so `code[0]` renders at the right (not the left), causing `code.join('')` to submit the reverse of the user's reading order.\n\nTests 1-3 (digit order assertions) PASSED in jsdom as documented — jsdom does not compute direction-based flex layout, so DOM source order and \"visual\" order coincide. The reversal only manifests in a real browser with RTL layout computation.\n\nFull results: 3 passed | 1 failed (4 total)",
+      "lastRunTimestamp": 1782524780132
+    },
+    "2. Write preservation tests for non-reversal behaviors (BEFORE implementing fix)": {
+      "status": "passed",
+      "lastRunTimestamp": 1782524955388
+    },
+    "3.2 Verify the bug condition exploration test now passes": {
+      "status": "passed",
+      "lastRunTimestamp": 1782525751985
+    }
+  },
+  "executionHistory": {
+    "1. Write bug condition exploration test (reading-order reversal)": [
+      {
+        "executionId": "ddae846e-dbc2-468a-978c-b9946286bb53",
+        "chatSessionId": "sess_2192f2f9-3ab4-43db-b34c-27b57ec48a35",
+        "timestamp": 1782524184452
+      },
+      {
+        "executionId": "db2b81eb-e781-4ffd-bf7b-7415afdb437e",
+        "chatSessionId": "sess_736a3044-786d-4731-83c7-5116461f3ad7",
+        "timestamp": 1782524212629
+      },
+      {
+        "executionId": "db2b81eb-e781-4ffd-bf7b-7415afdb437e",
+        "chatSessionId": "sess_736a3044-786d-4731-83c7-5116461f3ad7",
+        "timestamp": 1782524794530
+      }
+    ],
+    "2. Write preservation tests for non-reversal behaviors (BEFORE implementing fix)": [
+      {
+        "executionId": "ddae846e-dbc2-468a-978c-b9946286bb53",
+        "chatSessionId": "sess_2192f2f9-3ab4-43db-b34c-27b57ec48a35",
+        "timestamp": 1782524184527
+      },
+      {
+        "executionId": "db2b81eb-e781-4ffd-bf7b-7415afdb437e",
+        "chatSessionId": "sess_736a3044-786d-4731-83c7-5116461f3ad7",
+        "timestamp": 1782524803576
+      },
+      {
+        "executionId": "db2b81eb-e781-4ffd-bf7b-7415afdb437e",
+        "chatSessionId": "sess_736a3044-786d-4731-83c7-5116461f3ad7",
+        "timestamp": 1782524969410
+      }
+    ],
+    "3.1 Pin the OTP boxes row to a cascade-proof left-to-right direction": [
+      {
+        "executionId": "ddae846e-dbc2-468a-978c-b9946286bb53",
+        "chatSessionId": "sess_2192f2f9-3ab4-43db-b34c-27b57ec48a35",
+        "timestamp": 1782524184587
+      },
+      {
+        "executionId": "db2b81eb-e781-4ffd-bf7b-7415afdb437e",
+        "chatSessionId": "sess_736a3044-786d-4731-83c7-5116461f3ad7",
+        "timestamp": 1782524977105
+      },
+      {
+        "executionId": "db2b81eb-e781-4ffd-bf7b-7415afdb437e",
+        "chatSessionId": "sess_736a3044-786d-4731-83c7-5116461f3ad7",
+        "timestamp": 1782525607041
+      }
+    ],
+    "3.2 Verify the bug condition exploration test now passes": [
+      {
+        "executionId": "ddae846e-dbc2-468a-978c-b9946286bb53",
+        "chatSessionId": "sess_2192f2f9-3ab4-43db-b34c-27b57ec48a35",
+        "timestamp": 1782524184629
+      },
+      {
+        "executionId": "db2b81eb-e781-4ffd-bf7b-7415afdb437e",
+        "chatSessionId": "sess_736a3044-786d-4731-83c7-5116461f3ad7",
+        "timestamp": 1782525615954
+      },
+      {
+        "executionId": "db2b81eb-e781-4ffd-bf7b-7415afdb437e",
+        "chatSessionId": "sess_736a3044-786d-4731-83c7-5116461f3ad7",
+        "timestamp": 1782525763506
+      }
+    ],
+    "3.3 Verify preservation tests still pass": [
+      {
+        "executionId": "ddae846e-dbc2-468a-978c-b9946286bb53",
+        "chatSessionId": "sess_2192f2f9-3ab4-43db-b34c-27b57ec48a35",
+        "timestamp": 1782524184672
+      },
+      {
+        "executionId": "db2b81eb-e781-4ffd-bf7b-7415afdb437e",
+        "chatSessionId": "sess_736a3044-786d-4731-83c7-5116461f3ad7",
+        "timestamp": 1782525767659
+      },
+      {
+        "executionId": "db2b81eb-e781-4ffd-bf7b-7415afdb437e",
+        "chatSessionId": "sess_736a3044-786d-4731-83c7-5116461f3ad7",
+        "timestamp": 1782525853914
+      }
+    ],
+    "4. Add property-based tests with fast-check": [
+      {
+        "executionId": "ddae846e-dbc2-468a-978c-b9946286bb53",
+        "chatSessionId": "sess_2192f2f9-3ab4-43db-b34c-27b57ec48a35",
+        "timestamp": 1782524184723
+      },
+      {
+        "executionId": "db2b81eb-e781-4ffd-bf7b-7415afdb437e",
+        "chatSessionId": "sess_736a3044-786d-4731-83c7-5116461f3ad7",
+        "timestamp": 1782525858119
+      },
+      {
+        "executionId": "db2b81eb-e781-4ffd-bf7b-7415afdb437e",
+        "chatSessionId": "sess_736a3044-786d-4731-83c7-5116461f3ad7",
+        "timestamp": 1782526162907
+      }
+    ],
+    "5. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "ddae846e-dbc2-468a-978c-b9946286bb53",
+        "chatSessionId": "sess_2192f2f9-3ab4-43db-b34c-27b57ec48a35",
+        "timestamp": 1782524184771
+      },
+      {
+        "executionId": "db2b81eb-e781-4ffd-bf7b-7415afdb437e",
+        "chatSessionId": "sess_736a3044-786d-4731-83c7-5116461f3ad7",
+        "timestamp": 1782526166789
+      },
+      {
+        "executionId": "db2b81eb-e781-4ffd-bf7b-7415afdb437e",
+        "chatSessionId": "sess_736a3044-786d-4731-83c7-5116461f3ad7",
+        "timestamp": 1782526407795
+      }
+    ],
+    "3. Fix the RTL digit-reversal in the OTP boxes row": [
+      {
+        "executionId": "db2b81eb-e781-4ffd-bf7b-7415afdb437e",
+        "chatSessionId": "sess_736a3044-786d-4731-83c7-5116461f3ad7",
+        "timestamp": 1782525853996
+      }
+    ]
+  }
+}

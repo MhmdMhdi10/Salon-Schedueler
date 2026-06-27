@@ -43,7 +43,7 @@ import { buildQrSvg } from './qr-svg';
 import './owner-qr.css';
 
 /** Default salon scope (mirrors the other owner/admin sections). */
-const DEFAULT_SALON_ID = 'salon-1';
+const DEFAULT_SALON_ID = '11111111-1111-1111-1111-111111111111';
 
 type LoadStatus = 'loading' | 'success' | 'error';
 
