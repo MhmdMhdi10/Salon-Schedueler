@@ -18,7 +18,7 @@ import type { BookingResult } from '../scheduling/scheduling-engine';
  * Unit tests for the task 7.3 booking-outcome presenter.
  *
  * They verify the three result branches map to the right outbound message:
- *  - confirmed → confirmation details, no fabrication beyond the server status,
+ *  - pending   → "request submitted, awaiting approval" details, no fabricated success,
  *  - held      → the gateway redirect link present, NOT claiming confirmation,
  *  - rejected  → a clear failure message.
  *
@@ -33,8 +33,8 @@ const DRAFT: BookingDraft = {
   startAt: '2024-03-16T09:00:00Z',
 };
 
-const CONFIRMED: BookingResult = {
-  status: 'confirmed',
+const PENDING: BookingResult = {
+  status: 'pending',
   appointment: { id: 'appt-1' } as never,
 };
 
@@ -57,18 +57,17 @@ const REJECTED_SLOT: BookingResult = {
   reason: 'slot_unavailable',
 };
 
-/** Phrases that would amount to fabricating a confirmed booking. */
+/** Phrases that would amount to fabricating a confirmed/successful booking. */
 const CONFIRMATION_PHRASES = [
-  OUTCOME_MSG.confirmedHeading,
   'با موفقیت ثبت شد',
   'رزرو شما با موفقیت',
 ];
 
-describe('formatOutcomeText — confirmed', () => {
-  it('renders the confirmation heading and Jalali/Persian-digit details', () => {
-    const text = formatOutcomeText(CONFIRMED, DRAFT);
+describe('formatOutcomeText — pending', () => {
+  it('renders the pending heading and Jalali/Persian-digit details', () => {
+    const text = formatOutcomeText(PENDING, DRAFT);
 
-    expect(text).toContain(OUTCOME_MSG.confirmedHeading);
+    expect(text).toContain(OUTCOME_MSG.pendingHeading);
     expect(text).toContain('کوتاهی مو');
     // Time rendered with Persian digits, no Latin digits in the time label.
     expect(text).toContain(toPersianDigits('09:00'));
@@ -77,11 +76,18 @@ describe('formatOutcomeText — confirmed', () => {
   });
 
   it('omits detail lines for missing draft fields', () => {
-    const text = formatOutcomeText(CONFIRMED, { salonId: 'salon-1' });
-    expect(text).toBe(OUTCOME_MSG.confirmedHeading);
+    const text = formatOutcomeText(PENDING, { salonId: 'salon-1' });
+    expect(text).toBe(OUTCOME_MSG.pendingHeading);
     expect(text).not.toContain('خدمت:');
     expect(text).not.toContain('تاریخ:');
     expect(text).not.toContain('ساعت:');
+  });
+
+  it('does NOT claim the booking is confirmed (awaiting approval, no fabricated success)', () => {
+    const text = formatOutcomeText(PENDING, DRAFT);
+    for (const phrase of CONFIRMATION_PHRASES) {
+      expect(text).not.toContain(phrase);
+    }
   });
 });
 
@@ -152,13 +158,13 @@ describe('DefaultBookingOutcomePresenter', () => {
     return { outcome, sent };
   }
 
-  it('sends the confirmation message to the originating chat on confirmed', async () => {
-    const { outcome, sent } = makeOutcome(CONFIRMED);
+  it('sends the pending message to the originating chat on pending', async () => {
+    const { outcome, sent } = makeOutcome(PENDING);
     await new DefaultBookingOutcomePresenter().present(outcome);
 
     expect(sent).toHaveLength(1);
     expect(sent[0].chatId).toBe('chat-1');
-    expect(sent[0].text).toContain(OUTCOME_MSG.confirmedHeading);
+    expect(sent[0].text).toContain(OUTCOME_MSG.pendingHeading);
   });
 
   it('sends the gateway link and no confirmation on held', async () => {
@@ -167,7 +173,7 @@ describe('DefaultBookingOutcomePresenter', () => {
 
     expect(sent).toHaveLength(1);
     expect(sent[0].text).toContain('https://gateway.example/pay/pay-1');
-    expect(sent[0].text).not.toContain(OUTCOME_MSG.confirmedHeading);
+    expect(sent[0].text).not.toContain(OUTCOME_MSG.pendingHeading);
   });
 
   it('sends a failure message on rejected', async () => {

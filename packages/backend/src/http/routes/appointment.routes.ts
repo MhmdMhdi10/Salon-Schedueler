@@ -13,12 +13,16 @@ export type RequireRole = (action: Action) => RequestHandler;
  * Protected appointment routes (Requirement 2.2, 2.5 / original R9, R11). Mounted
  * behind `requireAuth`, so `req.principal` is always present here.
  *
- * - POST /appointments                 -> booking result via BookingFlow.book
+ * - POST /appointments                 -> booking result via BookingFlow.book (status 'pending')
  * - POST /appointments/:id/cancel       -> cancellation via CancellationFlow.cancel
  * - POST /appointments/:id/no-show      -> markNoShow (RBAC: manage_appointments)
+ * - POST /appointments/:id/approve      -> approve pending booking -> 'confirmed' + notify (RBAC: manage_appointments)
+ * - POST /appointments/:id/reject       -> reject pending booking -> 'cancelled' + notify (RBAC: manage_appointments)
  *
  * Booking customerId is taken from the authenticated principal; source defaults to
- * 'web'. Rejected bookings map to 409 BOOKING_NO_AVAILABILITY / BOOKING_SLOT_UNAVAILABLE.
+ * 'web'. A new booking is 'pending' (awaiting admin approval) — the customer is NOT
+ * notified until an admin approves. Rejected bookings (no slot) map to 409
+ * BOOKING_NO_AVAILABILITY / BOOKING_SLOT_UNAVAILABLE.
  */
 export function appointmentRouter(services: Services, requireRole: RequireRole): Router {
   const router = Router();
@@ -57,7 +61,9 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
         return;
       }
 
-      res.status(200).json({ status: 'confirmed', appointment: result.appointment });
+      // A new booking is created as 'pending' — it awaits salon admin approval
+      // before it is confirmed and the customer is notified (no auto-confirm).
+      res.status(200).json({ status: 'pending', appointment: result.appointment });
     }),
   );
 
@@ -75,6 +81,28 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
     asyncRoute(async (req, res) => {
       const appointment = await services.cancellationService.markNoShow(req.params.id);
       res.status(200).json({ status: 'no_show', appointment });
+    }),
+  );
+
+  // Salon admin approves a pending booking -> 'confirmed' + customer confirmation
+  // notification (sent by BookingFlow.approve). RBAC: manage_appointments.
+  router.post(
+    '/appointments/:id/approve',
+    requireRole('manage_appointments'),
+    asyncRoute(async (req, res) => {
+      const appointment = await services.bookingFlow.approve(req.params.id);
+      res.status(200).json({ status: 'confirmed', appointment });
+    }),
+  );
+
+  // Salon admin rejects a pending booking -> 'cancelled' + customer rejection
+  // notice (sent by BookingFlow.reject). RBAC: manage_appointments.
+  router.post(
+    '/appointments/:id/reject',
+    requireRole('manage_appointments'),
+    asyncRoute(async (req, res) => {
+      const appointment = await services.bookingFlow.reject(req.params.id);
+      res.status(200).json({ status: 'cancelled', appointment });
     }),
   );
 

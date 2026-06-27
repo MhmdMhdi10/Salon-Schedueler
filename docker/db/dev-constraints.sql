@@ -10,32 +10,45 @@
 -- Required for EXCLUDE constraints that combine equality with range overlap.
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 
+-- Booking approval workflow: ensure the 'pending' appointment status exists on an
+-- already-provisioned dev DB (db push only runs on a fresh volume, so a running
+-- DB won't pick up the new enum value from schema.prisma otherwise). This is a
+-- top-level statement (not inside the DO block below) so psql autocommits it
+-- before the exclusion constraints reference 'pending' — PostgreSQL forbids using
+-- a new enum value in the same transaction that adds it. Idempotent.
+ALTER TYPE "ApptStatus" ADD VALUE IF NOT EXISTS 'pending';
+
 -- Generated occupancy interval [start_at, end_at). ADD COLUMN IF NOT EXISTS is
 -- supported by PostgreSQL, so this is idempotent on its own.
 ALTER TABLE appointment
   ADD COLUMN IF NOT EXISTS time_range tstzrange
   GENERATED ALWAYS AS (tstzrange(start_at, end_at, '[)')) STORED;
 
--- PostgreSQL has no "ADD CONSTRAINT IF NOT EXISTS", so each constraint is
+-- Overlap constraints: a held/confirmed appointment reserves staff + chair, and
+-- so does a 'pending' (awaiting-admin-approval) booking — otherwise two customers
+-- could hold the same slot and an admin could approve both. The status set has
+-- changed over time, so DROP + recreate unconditionally (idempotent) rather than
+-- guarding with IF NOT EXISTS, which would keep a stale definition on an existing
+-- dev DB. ADD COLUMN IF NOT EXISTS above keeps time_range idempotent on its own.
+ALTER TABLE appointment DROP CONSTRAINT IF EXISTS no_staff_overlap;
+ALTER TABLE appointment DROP CONSTRAINT IF EXISTS no_chair_overlap;
+
+-- No two pending/held/confirmed appointments may overlap for the same staff member.
+ALTER TABLE appointment
+  ADD CONSTRAINT no_staff_overlap
+  EXCLUDE USING gist (staff_member_id WITH =, time_range WITH &&)
+  WHERE (status IN ('pending', 'held', 'confirmed'));
+
+-- No two pending/held/confirmed appointments may overlap for the same chair.
+ALTER TABLE appointment
+  ADD CONSTRAINT no_chair_overlap
+  EXCLUDE USING gist (chair_id WITH =, time_range WITH &&)
+  WHERE (status IN ('pending', 'held', 'confirmed'));
+
+-- PostgreSQL has no "ADD CONSTRAINT IF NOT EXISTS", so each CHECK constraint is
 -- guarded by a pg_constraint existence check inside a DO block.
 DO $$
 BEGIN
-  -- No two held/confirmed appointments may overlap for the same staff member.
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'no_staff_overlap') THEN
-    ALTER TABLE appointment
-      ADD CONSTRAINT no_staff_overlap
-      EXCLUDE USING gist (staff_member_id WITH =, time_range WITH &&)
-      WHERE (status IN ('held', 'confirmed'));
-  END IF;
-
-  -- No two held/confirmed appointments may overlap for the same chair.
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'no_chair_overlap') THEN
-    ALTER TABLE appointment
-      ADD CONSTRAINT no_chair_overlap
-      EXCLUDE USING gist (chair_id WITH =, time_range WITH &&)
-      WHERE (status IN ('held', 'confirmed'));
-  END IF;
-
   -- Service field sanity checks (mirror the Zod validation).
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_duration_positive') THEN
     ALTER TABLE service ADD CONSTRAINT chk_duration_positive CHECK (duration_min > 0);

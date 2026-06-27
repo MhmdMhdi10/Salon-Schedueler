@@ -222,8 +222,8 @@ const SLOTS: TimeSlot[] = [
   { startAt: '2024-03-16T10:00:00Z', endAt: '2024-03-16T10:30:00Z' },
 ];
 
-const CONFIRMED_RESULT: BookingResult = {
-  status: 'confirmed',
+const PENDING_RESULT: BookingResult = {
+  status: 'pending',
   // The state machine never reads appointment fields; a minimal stub is enough.
   appointment: { id: 'appt-1' } as never,
 };
@@ -239,7 +239,7 @@ interface HarnessOptions {
 function makeHarness(opts: HarnessOptions = {}) {
   const adapter = new CapturingAdapter();
   const scheduling = new FakeScheduling(opts.slots ?? SLOTS);
-  const booking = new FakeBooking(opts.bookingResult ?? CONFIRMED_RESULT);
+  const booking = new FakeBooking(opts.bookingResult ?? PENDING_RESULT);
   const auth = new FakeAuth(opts.verifyOk ?? true);
   const presenter = new RecordingPresenter();
   const db = new InMemoryDb(
@@ -343,7 +343,7 @@ describe('BotBookingStateMachine — linked chat happy path', () => {
 
     // The result is handed to the (task 7.3) presenter seam.
     expect(h.presenter.outcomes).toHaveLength(1);
-    expect(h.presenter.outcomes[0].result.status).toBe('confirmed');
+    expect(h.presenter.outcomes[0].result.status).toBe('pending');
   });
 
   it('cancels and clears the session on confirm:no', async () => {
@@ -495,7 +495,7 @@ describe('BotBookingStateMachine — robustness', () => {
     const machine = new BotBookingStateMachine({
       adapters: [adapter],
       scheduling: new FakeScheduling([]),
-      booking: new FakeBooking(CONFIRMED_RESULT),
+      booking: new FakeBooking(PENDING_RESULT),
       auth: new FakeAuth(),
       prisma: db as unknown as PrismaClient,
     });

@@ -357,8 +357,8 @@ describe('Feature: salon-booking-system, Property 6: Atomic hold and release', (
           source: 'web',
         });
 
-        // The booking should succeed (confirmed) since resources are freed
-        expect(result.status).toBe('confirmed');
+        // The booking should succeed (created as pending) since resources are freed
+        expect(result.status).toBe('pending');
       }),
       { numRuns: 100 },
     );

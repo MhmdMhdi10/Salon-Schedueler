@@ -113,7 +113,7 @@ describe('Walk-in double-resource enforcement (R13.1)', () => {
       serviceId: SERVICE_ID,
       startAt: new Date(START_AT),
       endAt: new Date('2024-03-15T10:45:00.000Z'),
-      status: 'confirmed',
+      status: 'pending',
       source: 'walkin',
       holdExpiresAt: null,
       createdAt: new Date(),
@@ -129,8 +129,8 @@ describe('Walk-in double-resource enforcement (R13.1)', () => {
       source: 'walkin',
     });
 
-    expect(result.status).toBe('confirmed');
-    if (result.status === 'confirmed') {
+    expect(result.status).toBe('pending');
+    if (result.status === 'pending') {
       expect(result.appointment.source).toBe('walkin');
     }
 
@@ -143,7 +143,7 @@ describe('Walk-in double-resource enforcement (R13.1)', () => {
         chairId: CHAIR_ID,
         serviceId: SERVICE_ID,
         source: 'walkin',
-        status: 'confirmed',
+        status: 'pending',
         startAt: new Date(START_AT),
         endAt: new Date('2024-03-15T10:45:00.000Z'), // 30min + 15min buffer
       }),
@@ -254,7 +254,7 @@ describe('Walk-in double-resource enforcement (R13.1)', () => {
       serviceId: SERVICE_ID,
       startAt: new Date(START_AT),
       endAt: new Date('2024-03-15T10:45:00.000Z'),
-      status: 'confirmed',
+      status: 'pending',
       source: 'walkin',
       holdExpiresAt: null,
       createdAt: new Date(),
@@ -272,8 +272,8 @@ describe('Walk-in double-resource enforcement (R13.1)', () => {
       source: 'walkin',
     });
 
-    expect(result.status).toBe('confirmed');
-    if (result.status === 'confirmed') {
+    expect(result.status).toBe('pending');
+    if (result.status === 'pending') {
       expect(result.appointment.source).toBe('walkin');
     }
     // Retried with a different staff member

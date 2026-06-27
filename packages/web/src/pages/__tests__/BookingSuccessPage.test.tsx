@@ -52,13 +52,13 @@ describe('BookingSuccessPage — success moment', () => {
     expect(screen.getByTestId('booking-success')).toBeInTheDocument();
   });
 
-  it('shows a confident success confirmation with a labelled success icon', () => {
+  it('shows a "request submitted, awaiting approval" confirmation with a labelled pending icon', () => {
     renderPage();
     expect(
-      screen.getByRole('heading', { name: 'رزرو شما با موفقیت ثبت شد' }),
+      screen.getByRole('heading', { name: 'درخواست رزرو شما ثبت شد' }),
     ).toBeInTheDocument();
-    // The animated success mark is exposed to assistive tech with a label.
-    expect(screen.getByRole('img', { name: 'رزرو تایید شد' })).toBeInTheDocument();
+    // The animated pending mark is exposed to assistive tech with a label.
+    expect(screen.getByRole('img', { name: 'در انتظار تایید سالن' })).toBeInTheDocument();
   });
 });
 

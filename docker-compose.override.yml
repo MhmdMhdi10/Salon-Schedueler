@@ -34,6 +34,6 @@ services:
     # 3000). Update REACT_NATIVE_PACKAGER_HOSTNAME if this machine's LAN IP
     # changes. Start with: docker compose --profile mobile up -d
     environment:
-      REACT_NATIVE_PACKAGER_HOSTNAME: "192.168.10.185"
-      EXPO_PUBLIC_API_BASE_URL: "http://192.168.10.185:3100"
+      REACT_NATIVE_PACKAGER_HOSTNAME: "192.168.10.216"
+      EXPO_PUBLIC_API_BASE_URL: "http://192.168.10.216:3100"
 

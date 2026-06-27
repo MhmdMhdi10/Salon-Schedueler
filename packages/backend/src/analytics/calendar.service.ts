@@ -30,7 +30,7 @@ export class CalendarService {
     return this.prisma.appointment.findMany({
       where: {
         chairId,
-        status: { in: ['held', 'confirmed', 'completed'] },
+        status: { in: ['pending', 'held', 'confirmed', 'completed'] },
         startAt: { lt: to },
         endAt: { gt: from },
       },
@@ -47,7 +47,7 @@ export class CalendarService {
     return this.prisma.appointment.findMany({
       where: {
         staffMemberId: staffId,
-        status: { in: ['held', 'confirmed', 'completed'] },
+        status: { in: ['pending', 'held', 'confirmed', 'completed'] },
         startAt: { lt: to },
         endAt: { gt: from },
       },
@@ -65,11 +65,27 @@ export class CalendarService {
     return this.prisma.appointment.findMany({
       where: {
         salonId,
-        status: { in: ['held', 'confirmed', 'completed'] },
+        status: { in: ['pending', 'held', 'confirmed', 'completed'] },
         startAt: { lt: to },
         endAt: { gt: from },
       },
       orderBy: { startAt: 'asc' },
+    });
+  }
+
+  /**
+   * Get the salon's bookings awaiting admin approval (status 'pending'), oldest
+   * request first. Backs the admin approval queue (`GET /salons/:id/pending`)
+   * from which an admin approves or rejects each request. Not date-bounded — the
+   * queue should surface every outstanding request regardless of appointment time.
+   */
+  async getPendingAppointments(salonId: string): Promise<Appointment[]> {
+    return this.prisma.appointment.findMany({
+      where: {
+        salonId,
+        status: 'pending',
+      },
+      orderBy: { createdAt: 'asc' },
     });
   }
 }

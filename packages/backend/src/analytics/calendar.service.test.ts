@@ -53,7 +53,7 @@ describe('CalendarService', () => {
       expect(mockPrisma.appointment.findMany).toHaveBeenCalledWith({
         where: {
           chairId: 'chair-1',
-          status: { in: ['held', 'confirmed', 'completed'] },
+          status: { in: ['pending', 'held', 'confirmed', 'completed'] },
           startAt: { lt: new Date('2024-03-16T00:00:00Z') },
           endAt: { gt: new Date('2024-03-15T00:00:00Z') },
         },
@@ -76,7 +76,7 @@ describe('CalendarService', () => {
       );
 
       const call = mockPrisma.appointment.findMany.mock.calls[0][0];
-      expect(call.where.status.in).toEqual(['held', 'confirmed', 'completed']);
+      expect(call.where.status.in).toEqual(['pending', 'held', 'confirmed', 'completed']);
       expect(call.where.status.in).not.toContain('cancelled');
       expect(call.where.status.in).not.toContain('no_show');
       expect(call.where.status.in).not.toContain('expired');
@@ -143,7 +143,7 @@ describe('CalendarService', () => {
       expect(mockPrisma.appointment.findMany).toHaveBeenCalledWith({
         where: {
           staffMemberId: 'staff-1',
-          status: { in: ['held', 'confirmed', 'completed'] },
+          status: { in: ['pending', 'held', 'confirmed', 'completed'] },
           startAt: { lt: new Date('2024-03-16T00:00:00Z') },
           endAt: { gt: new Date('2024-03-15T00:00:00Z') },
         },
@@ -166,7 +166,7 @@ describe('CalendarService', () => {
       );
 
       const call = mockPrisma.appointment.findMany.mock.calls[0][0];
-      expect(call.where.status.in).toEqual(['held', 'confirmed', 'completed']);
+      expect(call.where.status.in).toEqual(['pending', 'held', 'confirmed', 'completed']);
     });
 
     it('returns empty array when no appointments exist in range', async () => {

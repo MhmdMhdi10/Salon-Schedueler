@@ -151,10 +151,11 @@ export function BookingConfirmPage() {
         // and hand off to the payment gateway. Keep the pending guard armed.
         setConfirmStatus('redirecting');
         redirectToGateway(result.paymentRedirectUrl);
-      } else if (result.status === 'confirmed') {
-        // The only path that declares success — and only because the server did.
-        // Hand the what/when/where details to the success receipt (R4.6); this
-        // is display-only state, the wire contract is unchanged.
+      } else if (result.status === 'pending') {
+        // The booking request was accepted and now awaits salon approval — the
+        // customer is NOT confirmed yet and is notified only once an admin
+        // approves. Hand the what/when/where details to the receipt (R4.6),
+        // which presents the "awaiting approval" state, not a success claim.
         navigate('/booking/success', {
           state: {
             serviceName: service?.name,

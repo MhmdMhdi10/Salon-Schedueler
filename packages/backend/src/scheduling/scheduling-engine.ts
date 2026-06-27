@@ -40,7 +40,7 @@ export interface BookingRequest {
  * Result of a booking attempt.
  */
 export type BookingResult =
-  | { status: 'confirmed'; appointment: Appointment } // R9.1, R9.7
+  | { status: 'pending'; appointment: Appointment } // R9.1, R9.7 — awaiting admin approval
   | { status: 'held'; appointment: Appointment; payment: { paymentId: string; redirectUrl: string } } // R10.1, R10.2
   | { status: 'rejected'; reason: 'no_availability' | 'slot_unavailable' }; // R9.2, R9.6
 
@@ -235,7 +235,10 @@ export class SchedulingEngine {
     const existingAppointments = await this.prisma.appointment.findMany({
       where: {
         salonId,
-        status: { in: ['held', 'confirmed'] },
+        // 'pending' (awaiting admin approval) reserves the slot just like 'held'
+        // (awaiting payment) and 'confirmed', so it must hide the slot from
+        // availability — mirroring the DB exclusion constraints.
+        status: { in: ['pending', 'held', 'confirmed'] },
         startAt: { lt: dayEnd },
         endAt: { gt: dayStart },
         OR: [
@@ -550,13 +553,16 @@ export class SchedulingEngine {
       const { staffId, chairId } = candidatePairs[attempt];
 
       try {
-        // R10.1: If service requires deposit, create as 'held' with hold_expires_at
+        // R10.1: If service requires deposit, create as 'held' with hold_expires_at.
+        // Otherwise create as 'pending' — the booking awaits salon admin approval
+        // before it becomes 'confirmed' and the customer is notified. Both states
+        // reserve the slot via the no-overlap exclusion constraints.
         const requiresDeposit = service.requiresDeposit === true;
         const now = new Date();
         const holdExpiresAt = requiresDeposit
           ? new Date(now.getTime() + this.holdPeriodSeconds * 1000)
           : null;
-        const appointmentStatus = requiresDeposit ? 'held' : 'confirmed';
+        const appointmentStatus = requiresDeposit ? 'held' : 'pending';
 
         const appointment = await this.prisma.appointment.create({
           data: {
@@ -590,8 +596,8 @@ export class SchedulingEngine {
           };
         }
 
-        // R9.7: Return the confirmed appointment
-        return { status: 'confirmed', appointment };
+        // R9.7: Return the pending appointment awaiting admin approval
+        return { status: 'pending', appointment };
       } catch (error: any) {
         // Check if this is a PostgreSQL exclusion constraint violation
         // Prisma wraps it as a unique constraint violation (P2002) or raw database error
@@ -669,6 +675,79 @@ export class SchedulingEngine {
   }
 
   /**
+   * Approve a pending appointment (salon admin action). Transitions the
+   * appointment from 'pending' to 'confirmed'. The slot was already reserved at
+   * booking time (the exclusion constraints cover 'pending'), so approval cannot
+   * introduce a double-booking. The customer confirmation notification is sent by
+   * the application-layer BookingFlow.approve, not here.
+   *
+   * @param appointmentId - The ID of the pending appointment to approve
+   * @returns The confirmed appointment
+   * @throws Error if appointment not found or not in 'pending' status
+   */
+  async approve(appointmentId: string): Promise<Appointment> {
+    const appointment = await this.prisma.appointment.findUnique({
+      where: { id: appointmentId },
+    });
+
+    if (!appointment) {
+      throw new Error(`Appointment ${appointmentId} not found`);
+    }
+
+    if (appointment.status !== 'pending') {
+      throw new Error(
+        `Appointment ${appointmentId} cannot be approved: current status is '${appointment.status}', expected 'pending'`,
+      );
+    }
+
+    const confirmed = await this.prisma.appointment.update({
+      where: { id: appointmentId },
+      data: {
+        status: 'confirmed',
+        holdExpiresAt: null,
+      },
+    });
+
+    return confirmed;
+  }
+
+  /**
+   * Reject a pending appointment (salon admin action). Transitions the
+   * appointment from 'pending' to 'cancelled', which drops it from the exclusion
+   * constraints and frees the staff member and chair for the time window. The
+   * customer rejection notification is sent by BookingFlow.reject, not here.
+   *
+   * @param appointmentId - The ID of the pending appointment to reject
+   * @returns The cancelled appointment
+   * @throws Error if appointment not found or not in 'pending' status
+   */
+  async reject(appointmentId: string): Promise<Appointment> {
+    const appointment = await this.prisma.appointment.findUnique({
+      where: { id: appointmentId },
+    });
+
+    if (!appointment) {
+      throw new Error(`Appointment ${appointmentId} not found`);
+    }
+
+    if (appointment.status !== 'pending') {
+      throw new Error(
+        `Appointment ${appointmentId} cannot be rejected: current status is '${appointment.status}', expected 'pending'`,
+      );
+    }
+
+    const cancelled = await this.prisma.appointment.update({
+      where: { id: appointmentId },
+      data: {
+        status: 'cancelled',
+        holdExpiresAt: null,
+      },
+    });
+
+    return cancelled;
+  }
+
+  /**
    * Determine if a Prisma error represents a PostgreSQL exclusion constraint violation.
    * Prisma maps exclusion violations to P2002 (unique constraint) errors.
    */
@@ -684,6 +763,20 @@ export class SchedulingEngine {
     // Check nested meta for constraint names
     if (error?.meta?.target?.includes('no_staff_overlap') ||
       error?.meta?.target?.includes('no_chair_overlap')) {
+      return true;
+    }
+    // Prisma surfaces a PostgreSQL exclusion violation (e.g. a lost booking race)
+    // as a PrismaClientUnknownRequestError: there is no top-level `code`, and the
+    // PostgreSQL error code (23P01) / constraint name appear only in the message.
+    // Detect those so the loser of a race retries and ultimately returns
+    // 'rejected' instead of throwing. These constraints now also cover 'pending'.
+    const message = typeof error?.message === 'string' ? error.message : '';
+    if (
+      message.includes('23P01') ||
+      message.includes('no_staff_overlap') ||
+      message.includes('no_chair_overlap') ||
+      message.toLowerCase().includes('exclusion constraint')
+    ) {
       return true;
     }
     return false;

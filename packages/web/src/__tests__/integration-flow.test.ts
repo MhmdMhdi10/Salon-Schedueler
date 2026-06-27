@@ -59,17 +59,17 @@ describe('QR-to-Booking-to-Confirmation Integration', () => {
     expect(result.slots[0].startAt).toBe('2024-03-15T09:00:00Z');
   });
 
-  it('books a slot and receives confirmation', async () => {
+  it('books a slot and receives a pending (awaiting-approval) response', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        status: 'confirmed',
+        status: 'pending',
         appointment: {
           id: 'appt-789',
           salonId,
           serviceId,
           startAt: '2024-03-15T09:00:00Z',
-          status: 'confirmed',
+          status: 'pending',
         },
       }),
     });
@@ -81,7 +81,7 @@ describe('QR-to-Booking-to-Confirmation Integration', () => {
       startAt: '2024-03-15T09:00:00Z',
     });
 
-    expect(result.status).toBe('confirmed');
+    expect(result.status).toBe('pending');
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining('/appointments'),
       expect.objectContaining({ method: 'POST' })

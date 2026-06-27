@@ -19,6 +19,7 @@ function parseDateParam(value: unknown): Date | null {
  * Admin routes behind RBAC (Requirement 2.2, 2.4 / original R15, R16).
  *
  * - GET /salons/:id/calendar?from=&to=&view= -> { appointments }  (view_own_appointments)
+ * - GET /salons/:id/pending                   -> { appointments }  (manage_appointments) — approval queue
  * - GET /salons/:id/analytics?from=&to=      -> { utilization, revenue, busiestWindows } (configure_salon — Owner-only)
  * - GET /salons/:id/staff                     -> { staff }   (manage_appointments)
  * - GET /salons/:id/chairs                    -> { chairs }  (manage_appointments)
@@ -46,6 +47,19 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         req.params.id,
         from,
         to,
+      );
+      res.status(200).json({ appointments });
+    }),
+  );
+
+  // Approval queue: bookings awaiting admin approval (status 'pending'), oldest
+  // first. An admin approves/rejects each via POST /appointments/:id/approve|reject.
+  router.get(
+    '/salons/:id/pending',
+    requireRole('manage_appointments'),
+    asyncRoute(async (req, res) => {
+      const appointments = await services.calendarService.getPendingAppointments(
+        req.params.id,
       );
       res.status(200).json({ appointments });
     }),

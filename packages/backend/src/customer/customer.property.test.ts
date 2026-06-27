@@ -164,7 +164,7 @@ describe('Feature: salon-booking-system, Property 18: Preferred-staff preselecti
           });
 
           // Property: when preferred staff is qualified and free, they are preselected
-          expect(result.status).toBe('confirmed');
+          expect(result.status).toBe('pending');
           expect(createdStaffId).toBe(preferredStaffId);
         },
       ),
@@ -285,7 +285,7 @@ describe('Feature: salon-booking-system, Property 18: Preferred-staff preselecti
           });
 
           // Property: booking still succeeds but with one of the qualified staff
-          expect(result.status).toBe('confirmed');
+          expect(result.status).toBe('pending');
           // The selected staff must be one of the qualified staff, NOT the unqualified preferred
           expect(staffIds).toContain(createdStaffId);
           expect(createdStaffId).not.toBe(unmappedPreferredId);
@@ -419,7 +419,7 @@ describe('Feature: salon-booking-system, Property 18: Preferred-staff preselecti
           });
 
           // Property: when preferred is busy, another qualified staff is selected
-          expect(result.status).toBe('confirmed');
+          expect(result.status).toBe('pending');
           expect(createdStaffId).not.toBe(preferredStaffId);
           expect(staffIds).toContain(createdStaffId);
         },

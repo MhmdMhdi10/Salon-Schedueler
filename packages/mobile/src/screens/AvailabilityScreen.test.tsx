@@ -79,8 +79,8 @@ describe('AvailabilityScreen booking flow logic', () => {
     expect(String(url)).toContain('date=2025-05-07');
   });
 
-  it('createBooking reports a confirmed booking', async () => {
-    mockFetch.mockResolvedValueOnce(okResponse({ status: 'confirmed', appointment: { id: 'a-1' } }));
+  it('createBooking reports a pending booking (awaiting admin approval)', async () => {
+    mockFetch.mockResolvedValueOnce(okResponse({ status: 'pending', appointment: { id: 'a-1' } }));
 
     const result = await createBooking({
       salonId: 'salon-1',
@@ -90,7 +90,7 @@ describe('AvailabilityScreen booking flow logic', () => {
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.status).toBe('confirmed');
+      expect(result.status).toBe('pending');
     }
     const [url, options] = mockFetch.mock.calls[0];
     expect(String(url)).toContain('/appointments');

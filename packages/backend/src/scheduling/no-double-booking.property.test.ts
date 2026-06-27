@@ -234,7 +234,7 @@ function buildMockPrisma(scenario: NoDoubleBookingScenario) {
           salonId: SALON_ID,
           customerId: data.customerId,
           serviceId: data.serviceId,
-          status: 'confirmed',
+          status: 'pending',
           source: data.source,
           holdExpiresAt: null,
           createdAt: new Date(),

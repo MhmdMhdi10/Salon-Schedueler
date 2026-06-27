@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import { CalendarClock, CheckCircle2, Clock, Scissors, Store } from 'lucide-react';
+import { CalendarClock, Clock, Scissors, Store } from 'lucide-react';
 import { SeoHead } from '../components/seo';
 import { Button, Card, JalaliDate, toPersianDigits } from '../components/ui';
 
@@ -31,13 +31,13 @@ function timeLabel(iso: string): string {
  * Customer **booking-success** receipt at `/booking/success` (R4.6, R1.6;
  * ui-ux Booking-Success recipe, §6 states, §9 motion).
  *
- * The one screen where emphasized motion is allowed: a confident success
- * moment — a success icon + «رزرو شما با موفقیت ثبت شد» — that is
- * **reduced-motion-aware**. The icon springs/scales in by default; under
- * `prefers-reduced-motion` we drop the transform and keep a plain opacity
- * crossfade, and the animation never gates the content or the next action
- * (ui-ux §9, R1.6). `useReducedMotion()` reads the live media query so the
- * choice is honored without a reload.
+ * The one screen where emphasized motion is allowed: a reassuring "request
+ * submitted" moment — a clock icon + «درخواست رزرو شما ثبت شد» announcing the
+ * booking now awaits salon approval — that is **reduced-motion-aware**. The icon
+ * springs/scales in by default; under `prefers-reduced-motion` we drop the
+ * transform and keep a plain opacity crossfade, and the animation never gates the
+ * content or the next action (ui-ux §9, R1.6). `useReducedMotion()` reads the live
+ * media query so the choice is honored without a reload.
  *
  * Below the moment, a **what / when / where** summary card confirms the booking
  * details (service · Jalali date + time · salon), composed from the design-system
@@ -76,18 +76,21 @@ export function BookingSuccessPage() {
     >
       <SeoHead title={t('seo.titles.success')} />
 
-      {/* The success moment: animated check + confident confirmation copy. */}
+      {/* The submitted moment: the request is in and now awaits salon approval —
+          this is NOT a success claim. Pending uses the warning palette + a clock
+          icon (never the success-green check) so the state reads honestly and is
+          distinguishable without relying on color alone (ui-ux §3, §6). */}
       <div className="flex flex-col items-center gap-3">
         <motion.span
           {...iconMotion}
-          className="inline-flex h-16 w-16 items-center justify-center rounded-pill bg-success/10 text-success"
+          className="inline-flex h-16 w-16 items-center justify-center rounded-pill bg-warning/10 text-warning"
           role="img"
-          aria-label={t('booking.successIconLabel')}
+          aria-label={t('booking.pendingIconLabel')}
         >
-          <CheckCircle2 className="h-9 w-9" aria-hidden="true" />
+          <Clock className="h-9 w-9" aria-hidden="true" />
         </motion.span>
-        <h1 className="text-xl font-bold text-text">{t('booking.success')}</h1>
-        <p className="max-w-[40ch] text-sm text-muted">{t('booking.successSubtitle')}</p>
+        <h1 className="text-xl font-bold text-text">{t('booking.pendingTitle')}</h1>
+        <p className="max-w-[40ch] text-sm text-muted">{t('booking.pendingSubtitle')}</p>
       </div>
 
       {/* What / when / where summary — omitted entirely when no details arrived. */}

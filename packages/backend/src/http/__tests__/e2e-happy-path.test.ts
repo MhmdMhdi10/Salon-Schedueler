@@ -8,8 +8,9 @@
  *   1. resolve QR        GET  /api/salons/by-qr/:payload
  *   2. list availability GET  /api/salons/:id/availability?serviceId=&date=
  *   3. authenticate      (mint a customer access token signed with the test secret)
- *   4. create booking    POST /api/appointments  -> 200 { status: 'confirmed' }
- *   5. confirmation      a notification_log row is written for the appointment
+ *   4. create booking    POST /api/appointments  -> 200 { status: 'pending' } (no notification yet)
+ *   5. admin approval    POST /api/appointments/:id/approve -> 200 { status: 'confirmed' }
+ *   6. confirmation      a notification_log row is written for the appointment
  *
  * Gating: runs only when DATABASE_URL is set; otherwise the whole suite is
  * reported as skipped (not errored) so the default offline suite stays green
@@ -80,7 +81,7 @@ describeIfDb('E2E happy path (real app + PostgreSQL) [opt-in: requires DATABASE_
     });
     chairId = chair.id;
 
-    // Deposit-free service (books straight to 'confirmed'), no required equipment.
+    // Deposit-free service (books to 'pending', awaiting admin approval), no required equipment.
     const service = await prisma.service.create({
       data: {
         salonId,
@@ -147,7 +148,7 @@ describeIfDb('E2E happy path (real app + PostgreSQL) [opt-in: requires DATABASE_
     await prisma.$disconnect();
   }, 30000);
 
-  it('resolves QR, lists availability, books, and dispatches a confirmation (R6.2, R6.3)', async () => {
+  it('resolves QR, lists availability, books (pending), then confirms on admin approval (R6.2, R6.3)', async () => {
     const { app, prisma } = created;
 
     // 1. Resolve the salon by its encoded QR payload. The payload is a full deep
@@ -173,26 +174,50 @@ describeIfDb('E2E happy path (real app + PostgreSQL) [opt-in: requires DATABASE_
       expiresIn: 300,
     });
 
-    // 4. Create the appointment for the first available slot.
+    // 4. Create the appointment for the first available slot — it is created as
+    //    'pending' (awaiting admin approval) and the customer is NOT notified yet.
     const bookRes = await request(app)
       .post('/api/appointments')
       .set('Authorization', `Bearer ${accessToken}`)
       .send({ salonId, serviceId, startAt: firstSlot.startAt });
 
     expect(bookRes.status).toBe(200);
-    expect(bookRes.body.status).toBe('confirmed');
+    expect(bookRes.body.status).toBe('pending');
     expect(typeof bookRes.body.appointment.id).toBe('string');
     const appointmentId: string = bookRes.body.appointment.id;
 
-    // The confirmed appointment is persisted as 'confirmed' for the customer.
+    // The new appointment is persisted as 'pending' for the customer.
     const persisted = await prisma.appointment.findUnique({ where: { id: appointmentId } });
     expect(persisted).not.toBeNull();
-    expect(persisted?.status).toBe('confirmed');
+    expect(persisted?.status).toBe('pending');
     expect(persisted?.customerId).toBe(customerId);
 
-    // 5. A confirmation was dispatched: the notification repository logs the
-    //    confirmation SMS, so a notification_log row exists for the appointment
-    //    (BookingFlow awaits the notification before responding) (R6.3).
+    // No confirmation is dispatched on creation — the customer is notified only
+    // after an admin approves, so no notification_log row exists yet.
+    const preApprovalLogs = await prisma.notificationLog.findMany({ where: { appointmentId } });
+    expect(preApprovalLogs).toHaveLength(0);
+
+    // 5. A salon admin approves the pending booking. RBAC reads the role claim
+    //    from the access token, so mint an Admin token (manage_appointments).
+    const adminToken = jwt.sign(
+      { sub: `e2e-admin-${RUN}`, type: 'access', role: 'Admin' },
+      JWT_ACCESS_SECRET,
+      { expiresIn: 300 },
+    );
+    const approveRes = await request(app)
+      .post(`/api/appointments/${appointmentId}/approve`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send();
+
+    expect(approveRes.status).toBe(200);
+    expect(approveRes.body.status).toBe('confirmed');
+
+    // The appointment is now persisted as 'confirmed'.
+    const confirmedAppt = await prisma.appointment.findUnique({ where: { id: appointmentId } });
+    expect(confirmedAppt?.status).toBe('confirmed');
+
+    // 6. Approval dispatched the confirmation: the notification repository logs
+    //    the confirmation SMS, so a notification_log row now exists (R6.3).
     const logs = await prisma.notificationLog.findMany({ where: { appointmentId } });
     expect(logs.length).toBeGreaterThan(0);
     expect(logs.some((l) => l.channel === 'sms')).toBe(true);

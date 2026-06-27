@@ -125,6 +125,28 @@ export class NotificationService {
   }
 
   /**
+   * Send a rejection notice after a salon admin declines a pending booking.
+   * Sends via SMS only and logs success or failure. Best-effort, mirroring
+   * {@link sendConfirmation}.
+   */
+  async sendRejection(appointmentId: string): Promise<void> {
+    const appointment = await this.repository.findAppointment(appointmentId);
+    if (!appointment) {
+      return;
+    }
+
+    const message = this.buildRejectionMessage(appointment);
+    const result = await this.smsProvider.send(appointment.customerPhone, message);
+
+    await this.repository.logNotification({
+      appointmentId,
+      channel: 'sms',
+      status: result.ok ? 'sent' : 'failed',
+      error: result.ok ? null : result.error,
+    });
+  }
+
+  /**
    * Send a reminder for a specific appointment.
    * Always sends SMS (R12.2). Additionally sends push if customer has push
    * enabled with a registered device (R12.3).
@@ -219,6 +241,15 @@ export class NotificationService {
       minute: '2-digit',
     });
     return `نوبت شما برای ${appointment.serviceName} در تاریخ ${dateStr} ساعت ${timeStr} تأیید شد.`;
+  }
+
+  private buildRejectionMessage(appointment: AppointmentInfo): string {
+    const dateStr = appointment.startAt.toLocaleDateString('fa-IR');
+    const timeStr = appointment.startAt.toLocaleTimeString('fa-IR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    return `متأسفانه درخواست نوبت شما برای ${appointment.serviceName} در تاریخ ${dateStr} ساعت ${timeStr} تأیید نشد. لطفاً زمان دیگری را انتخاب کنید.`;
   }
 
   private buildReminderMessage(appointment: AppointmentInfo): string {

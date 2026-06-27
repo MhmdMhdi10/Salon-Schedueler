@@ -20,9 +20,9 @@ import type { ResolvedSalon } from './screens/QrScanScreen.logic';
  * navigation between the three existing screens — Auth → QrScan → Availability
  * — wrapped in the shared `ThemeProvider` and i18n (Persian / RTL default).
  *
- * The QR scan camera is abstracted behind `onScan` in `QrScanScreen`; a real
- * `expo-camera` wiring can be added later. For now QrScan resolves a salon via
- * its own logic and hands the id forward to the availability/booking screen.
+ * `QrScanScreen` now mounts a real `expo-camera` scanner (no `onScan` override is
+ * passed), resolves the scanned salon via its own logic, and hands the salon id
+ * forward to the availability/booking screen.
  */
 
 type Route = 'auth' | 'qr' | 'availability';

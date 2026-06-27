@@ -57,8 +57,8 @@ const VALID_DATES = [
   '2024-03-19',
 ];
 
-const CONFIRMED_RESULT: BookingResult = {
-  status: 'confirmed',
+const PENDING_RESULT: BookingResult = {
+  status: 'pending',
   appointment: { id: 'appt-1' } as never,
 };
 
@@ -257,7 +257,7 @@ function makeHarness(opts: HarnessOptions = {}) {
   const telegram = new CapturingAdapter('telegram', opts.token ?? '');
   const bale = new CapturingAdapter('bale', opts.token ?? '');
   const scheduling = new FakeScheduling(SLOTS);
-  const booking = new FakeBooking(CONFIRMED_RESULT);
+  const booking = new FakeBooking(PENDING_RESULT);
   const auth = new FakeAuth(opts.expectedCode);
   const presenter = new RecordingPresenter();
   const db = new InMemoryDb(

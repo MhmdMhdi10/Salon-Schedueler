@@ -36,12 +36,13 @@ export type LoadSlotsResult =
   | { ok: false; error: string };
 
 /**
- * Outcome of a booking attempt. `confirmed` is an immediate booking; `held`
- * carries a `paymentRedirectUrl` the host hands off to the gateway; `error`
- * never exposes a raw stack/HTTP code.
+ * Outcome of a booking attempt. `pending` is a submitted booking awaiting salon
+ * admin approval (the customer is notified only once approved); `held` carries a
+ * `paymentRedirectUrl` the host hands off to the gateway; `error` never exposes a
+ * raw stack/HTTP code.
  */
 export type BookingResult =
-  | { ok: true; status: 'confirmed' }
+  | { ok: true; status: 'pending' }
   | { ok: true; status: 'held'; paymentRedirectUrl: string }
   | { ok: false; error: string };
 
@@ -82,7 +83,8 @@ export async function loadSlots(
 
 /**
  * Create a booking for the selected service/slot. Maps the `held` status to a
- * payment-redirect outcome (the server confirms money — never faked here).
+ * payment-redirect outcome (the server confirms money — never faked here); a
+ * deposit-free booking comes back `pending` (awaiting salon admin approval).
  * Never throws.
  */
 export async function createBooking(body: {
@@ -96,7 +98,7 @@ export async function createBooking(body: {
     if (res.status === 'held' && typeof res.paymentRedirectUrl === 'string') {
       return { ok: true, status: 'held', paymentRedirectUrl: res.paymentRedirectUrl };
     }
-    return { ok: true, status: 'confirmed' };
+    return { ok: true, status: 'pending' };
   } catch (err) {
     return { ok: false, error: errorMessage(err) };
   }

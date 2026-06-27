@@ -16,10 +16,24 @@ module.exports = ({ config }) => ({
   ios: {
     supportsTablet: true,
     bundleIdentifier: 'app.salon.booking',
+    infoPlist: {
+      NSCameraUsageDescription:
+        'برای اسکن کد QR سالن به دوربین دسترسی لازم است.',
+    },
   },
   android: {
     package: 'app.salon.booking',
+    permissions: ['android.permission.CAMERA'],
   },
+  plugins: [
+    [
+      'expo-camera',
+      {
+        cameraPermission: 'برای اسکن کد QR سالن به دوربین دسترسی لازم است.',
+        recordAudioAndroid: false,
+      },
+    ],
+  ],
   extra: {
     apiBaseUrl:
       process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000',

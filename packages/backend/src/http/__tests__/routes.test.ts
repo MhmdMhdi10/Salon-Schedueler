@@ -226,9 +226,9 @@ describe('HTTP routes', () => {
       expect(fake.bookingFlow.book).not.toHaveBeenCalled();
     });
 
-    it('returns 200 confirmed and calls bookingFlow.book with principal + source', async () => {
+    it('returns 200 pending and calls bookingFlow.book with principal + source', async () => {
       fake.bookingFlow.book.mockResolvedValue({
-        status: 'confirmed',
+        status: 'pending',
         appointment: { id: 'appt-1' },
       });
       const res = await request(app)
@@ -236,7 +236,7 @@ describe('HTTP routes', () => {
         .set('Authorization', `Bearer ${customerToken('cust-9')}`)
         .send(body);
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ status: 'confirmed', appointment: { id: 'appt-1' } });
+      expect(res.body).toEqual({ status: 'pending', appointment: { id: 'appt-1' } });
       expect(fake.bookingFlow.book).toHaveBeenCalledWith({
         salonId: 'salon-1',
         serviceId: 'svc-1',

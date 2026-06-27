@@ -299,7 +299,7 @@ describe('Property 2: Booking validity / double-resource reservation', () => {
 
         const result = await engine.book(request);
 
-        if (result.status === 'confirmed') {
+        if (result.status === 'pending') {
           // The appointed staff must be in the qualified staff set (service_staff mapping)
           const qualifiedStaffIds = scenario.staff
             .filter((s) => s.qualifiedForService)
@@ -334,7 +334,7 @@ describe('Property 2: Booking validity / double-resource reservation', () => {
 
         const result = await engine.book(request);
 
-        if (result.status === 'confirmed') {
+        if (result.status === 'pending') {
           const appointedChairId = result.appointment.chairId;
 
           // Find the chair definition
@@ -371,7 +371,7 @@ describe('Property 2: Booking validity / double-resource reservation', () => {
 
         const result = await engine.book(request);
 
-        if (result.status === 'confirmed') {
+        if (result.status === 'pending') {
           const apptStartAt = new Date(result.appointment.startAt).getTime();
           const apptEndAt = new Date(result.appointment.endAt).getTime();
           const intervalMs = apptEndAt - apptStartAt;

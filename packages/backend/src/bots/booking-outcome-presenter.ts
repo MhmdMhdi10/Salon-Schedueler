@@ -29,8 +29,8 @@ import { toPersianDigits } from './persian-digits.js';
 
 // ─── Persian outcome copy ────────────────────────────────────────────────────
 export const OUTCOME_MSG = {
-  /** Heading for the confirmed-booking details message. */
-  confirmedHeading: 'رزرو شما با موفقیت ثبت شد ✅',
+  /** Heading shown when a booking request is submitted and awaits salon approval. */
+  pendingHeading: 'درخواست رزرو شما ثبت شد و در انتظار تایید سالن است ⏳',
   /** Heading shown before the payment link when the booking is held. */
   heldHeading:
     'برای نهایی‌شدن رزرو لطفاً پرداخت را تکمیل کنید. این رزرو هنوز قطعی نشده است.',
@@ -67,8 +67,8 @@ export function formatOutcomeText(
   draft: BookingDraft,
 ): string {
   switch (result.status) {
-    case 'confirmed':
-      return [OUTCOME_MSG.confirmedHeading, ...detailLines(draft)].join('\n');
+    case 'pending':
+      return [OUTCOME_MSG.pendingHeading, ...detailLines(draft)].join('\n');
 
     case 'held': {
       const url = result.payment.redirectUrl;

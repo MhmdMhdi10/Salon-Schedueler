@@ -17,6 +17,7 @@
     "@expo/metro-runtime": "~6.1.2",
     "@salon/shared": "*",
     "expo": "~54.0.0",
+    "expo-camera": "~17.0.10",
     "expo-constants": "~18.0.13",
     "expo-status-bar": "~3.0.9",
     "i18next": "^26.3.1",

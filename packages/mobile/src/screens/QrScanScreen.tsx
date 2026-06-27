@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -6,20 +6,24 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
+import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { useTranslation } from 'react-i18next';
 import { resolveScannedQr, ResolvedSalon } from './QrScanScreen.logic';
 import { useTheme } from '../theme';
 import type { RnTheme } from '../theme';
 
 /**
- * Camera QR scan screen (React Native), re-skinned to the shared design
+ * Camera QR scan screen (React Native + Expo), re-skinned to the shared design
  * language (R6.3; ui-ux QrScan recipe, §6 states, §11 RTL).
  *
- * The device camera is abstracted behind the `onScan` prop: a real camera
- * component wires the provided handler and invokes it with each decoded
- * payload (tests/hosts can drive it without a camera). That abstraction and the
- * resolve flow in `QrScanScreen.logic.ts` are **unchanged** — this is
- * presentation only.
+ * Scanning is powered by `expo-camera`'s `CameraView`: when camera permission is
+ * granted the live preview mounts inside the viewfinder and decodes QR codes via
+ * `onBarcodeScanned`, forwarding each payload to the resolve flow. Permission is
+ * requested on first mount; an explicit "grant access" affordance is shown if it
+ * is missing. The optional `onScan` prop remains as a test/host override — when
+ * provided, the screen wires that handler instead of mounting the camera, so the
+ * Node test suites (which never mount a camera) stay unchanged. The resolve flow
+ * in `QrScanScreen.logic.ts` is untouched.
  *
  * The screen renders a themed scan frame plus a status surface that carries the
  * full data-state set:
@@ -89,6 +93,35 @@ export function QrScanScreen({ onScan, onResolved }: QrScanScreenProps) {
     onScan?.(handlePayload);
   }, [onScan, handlePayload]);
 
+  // Real device scanning via expo-camera, used unless a host/test supplies its
+  // own `onScan` driver. Permission is requested once on first mount.
+  const useCamera = !onScan;
+  const [permission, requestPermission] = useCameraPermissions();
+  const askedRef = useRef(false);
+
+  useEffect(() => {
+    if (
+      useCamera &&
+      !askedRef.current &&
+      permission &&
+      !permission.granted &&
+      permission.canAskAgain
+    ) {
+      askedRef.current = true;
+      void requestPermission();
+    }
+  }, [useCamera, permission, requestPermission]);
+
+  // Only decode while idle so a code resolves exactly once: `active`/`onBarcodeScanned`
+  // are cleared the moment the resolve flow starts and re-armed on "rescan".
+  const scanning = status === 'idle';
+  const handleBarcode = useCallback(
+    (result: BarcodeScanningResult) => {
+      handlePayload(result.data);
+    },
+    [handlePayload]
+  );
+
   // Distinct title/hint per failure category (R7.5): malformed vs unregistered
   // are clearly different, with a generic fallback for transport errors.
   const errorTitle =
@@ -108,14 +141,61 @@ export function QrScanScreen({ onScan, onResolved }: QrScanScreenProps) {
     <View testID="qr-scan-screen" style={styles.screen}>
       <Text style={styles.title}>{t('salon.scanQr')}</Text>
 
-      {/* Themed viewfinder: a square frame with corner accents. The camera
-          preview mounts behind this in a real device build; here it is the
-          idle/scanning affordance. */}
+      {/* Themed viewfinder: a square frame with corner accents. The live camera
+          preview mounts behind the accents when permission is granted; the
+          permission gate / loading state render as overlays otherwise. */}
       <View style={styles.frame} accessibilityRole="image" accessibilityLabel={t('salon.scanQr')}>
+        {useCamera && permission?.granted ? (
+          <View style={styles.cameraContainer}>
+            <CameraView
+              testID="qr-camera"
+              style={styles.camera}
+              facing="back"
+              active={scanning}
+              barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+              onBarcodeScanned={scanning ? handleBarcode : undefined}
+            />
+          </View>
+        ) : null}
+
         <View style={[styles.corner, styles.cornerTopStart]} />
         <View style={[styles.corner, styles.cornerTopEnd]} />
         <View style={[styles.corner, styles.cornerBottomStart]} />
         <View style={[styles.corner, styles.cornerBottomEnd]} />
+
+        {/* Camera permission still being resolved. */}
+        {useCamera && !permission ? (
+          <View style={styles.frameOverlay}>
+            <ActivityIndicator color={theme.colors.primary} />
+            <Text style={styles.overlayText}>{t('salon.cameraLoading')}</Text>
+          </View>
+        ) : null}
+
+        {/* Permission not granted: explain + offer to grant (or guide to Settings). */}
+        {useCamera && permission && !permission.granted ? (
+          <View style={styles.frameOverlay}>
+            <Text style={styles.overlayText}>{t('salon.cameraPermissionHint')}</Text>
+            {permission.canAskAgain ? (
+              <Pressable
+                testID="qr-grant-permission"
+                accessibilityRole="button"
+                accessibilityLabel={t('salon.grantCameraAccess')}
+                onPress={() => {
+                  void requestPermission();
+                }}
+                style={({ pressed }: { pressed: boolean }) => [
+                  styles.permissionButton,
+                  pressed ? styles.rescanButtonPressed : null,
+                ]}
+              >
+                <Text style={styles.permissionButtonText}>{t('salon.grantCameraAccess')}</Text>
+              </Pressable>
+            ) : (
+              <Text style={styles.overlayText}>{t('salon.cameraDeniedHint')}</Text>
+            )}
+          </View>
+        ) : null}
+
         {status === 'resolving' ? (
           <View style={styles.frameOverlay}>
             <ActivityIndicator testID="qr-loading" color={theme.colors.primary} />
@@ -253,6 +333,37 @@ function createStyles(theme: RnTheme) {
       fontSize: typography.variants.sm.fontSize,
       lineHeight: typography.variants.sm.lineHeight,
       color: colors.textMuted,
+      textAlign: 'center',
+    },
+    // Live camera preview fills the frame and is clipped to its rounded corners.
+    cameraContainer: {
+      position: 'absolute',
+      insetBlockStart: 0,
+      insetBlockEnd: 0,
+      insetInlineStart: 0,
+      insetInlineEnd: 0,
+      borderRadius: radius.lg,
+      overflow: 'hidden',
+      backgroundColor: colors.text,
+    },
+    camera: {
+      flex: 1,
+    },
+    permissionButton: {
+      backgroundColor: colors.primary,
+      borderRadius: radius.md,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: spacing[4],
+      marginBlockStart: spacing[1],
+    },
+    permissionButtonText: {
+      ...base,
+      fontSize: typography.variants.sm.fontSize,
+      lineHeight: typography.variants.sm.lineHeight,
+      fontWeight: '700',
+      color: colors.primaryContrast,
     },
     hint: {
       ...base,

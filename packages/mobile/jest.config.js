@@ -8,6 +8,7 @@ module.exports = {
   moduleNameMapper: {
     '^@salon/shared$': '<rootDir>/../shared/src/index.ts',
     '^react-native$': '<rootDir>/src/test-utils/react-native.ts',
+    '^expo-camera$': '<rootDir>/src/test-utils/expo-camera.ts',
     // The shared package's barrel uses ESM-style `.js` specifiers in its
     // relative re-exports; under ts-jest we resolve them to the TS sources.
     '^(\\.{1,2}/.*)\\.js$': '$1',

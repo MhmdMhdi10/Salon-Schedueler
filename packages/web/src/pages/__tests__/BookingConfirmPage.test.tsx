@@ -127,8 +127,8 @@ describe('BookingConfirmPage — missing selection guard', () => {
 });
 
 describe('BookingConfirmPage — confirm states', () => {
-  it('navigates to success only when the server confirms', async () => {
-    createBooking.mockResolvedValue({ status: 'confirmed' });
+  it('navigates to success when the booking is accepted (pending, awaiting approval)', async () => {
+    createBooking.mockResolvedValue({ status: 'pending' });
     renderPage();
     const cta = await screen.findByRole('button', { name: 'تایید رزرو' });
     await waitFor(() => expect(cta).not.toBeDisabled());
@@ -185,7 +185,7 @@ describe('BookingConfirmPage — confirm states', () => {
 
   it('shows a retry error state when booking creation fails', async () => {
     createBooking.mockRejectedValueOnce({}).mockResolvedValueOnce({
-      status: 'confirmed',
+      status: 'pending',
     });
     renderPage();
     const cta = await screen.findByRole('button', { name: 'تایید رزرو' });
@@ -229,7 +229,7 @@ describe('BookingConfirmPage — abandon warning', () => {
     await waitFor(() =>
       expect(addSpy).toHaveBeenCalledWith('beforeunload', expect.any(Function)),
     );
-    resolveCreate({ status: 'confirmed' });
+    resolveCreate({ status: 'pending' });
     addSpy.mockRestore();
   });
 });

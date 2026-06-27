@@ -21,6 +21,11 @@ enum StaffRole {
 }
 
 enum ApptStatus {
+  // Awaiting salon admin approval. Reserves the slot (participates in the
+  // no-overlap exclusion constraints) but is NOT yet a confirmed booking and
+  // the customer has NOT been notified. An admin moves it to `confirmed`
+  // (approve) or `cancelled` (reject).
+  pending
   held
   confirmed
   cancelled

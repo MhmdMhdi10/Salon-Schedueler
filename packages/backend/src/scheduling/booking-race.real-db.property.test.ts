@@ -195,11 +195,11 @@ describeIfDb(
           throw new Error(`book() threw unexpectedly: ${reason}`);
         });
 
-        const confirmed = outcomes.filter((o) => o.status === 'confirmed');
+        const accepted = outcomes.filter((o) => o.status === 'pending');
         const rejected = outcomes.filter((o) => o.status === 'rejected');
 
-        // Exactly one confirmation; everyone else is rejected (R9.1, original R9.5).
-        expect(confirmed).toHaveLength(1);
+        // Exactly one acceptance (created as pending); everyone else is rejected (R9.1, original R9.5).
+        expect(accepted).toHaveLength(1);
         expect(rejected).toHaveLength(n - 1);
 
         // Rejections carry a booking-domain reason (lost the race or no pair free).
@@ -209,16 +209,16 @@ describeIfDb(
           }
         }
 
-        // The single confirmation reserves the only available staff + chair.
-        if (confirmed[0].status === 'confirmed') {
-          expect(confirmed[0].appointment.staffMemberId).toBe(staffId);
-          expect(confirmed[0].appointment.chairId).toBe(chairId);
+        // The single acceptance reserves the only available staff + chair.
+        if (accepted[0].status === 'pending') {
+          expect(accepted[0].appointment.staffMemberId).toBe(staffId);
+          expect(accepted[0].appointment.chairId).toBe(chairId);
         }
 
-        // The real exclusion constraints leave exactly one held/confirmed row for
-        // the pair over the overlapping interval (R9.3, R9.4).
+        // The real exclusion constraints leave exactly one reserving row (pending/
+        // held/confirmed) for the pair over the overlapping interval (R9.3, R9.4).
         const persisted = await prisma.appointment.findMany({
-          where: { salonId, status: { in: ['held', 'confirmed'] } },
+          where: { salonId, status: { in: ['pending', 'held', 'confirmed'] } },
         });
         expect(persisted).toHaveLength(1);
       },

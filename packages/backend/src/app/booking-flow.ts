@@ -10,14 +10,17 @@ import { safelyNotify, type Logger } from './safely-notify.js';
 export interface BookingEngine {
   book(req: BookingRequest): Promise<BookingResult>;
   confirmHeld(appointmentId: string): Promise<Appointment>;
+  approve(appointmentId: string): Promise<Appointment>;
+  reject(appointmentId: string): Promise<Appointment>;
 }
 
 /**
- * The confirmation capability BookingFlow needs. `NotificationService` satisfies
- * this structurally.
+ * The customer-notification capability BookingFlow needs. `NotificationService`
+ * satisfies this structurally.
  */
 export interface ConfirmationNotifier {
   sendConfirmation(appointmentId: string): Promise<void>;
+  sendRejection(appointmentId: string): Promise<void>;
 }
 
 /** Constructor dependencies for {@link BookingFlow}. */
@@ -29,12 +32,15 @@ export interface BookingFlowDeps {
 
 /**
  * BookingFlow — the cross-service orchestration the domain intentionally does not
- * own: "after a booking is confirmed, send a confirmation" (Requirement 4.1,
- * original R12.1).
+ * own. A new booking is created as `pending` (awaiting salon admin approval) and
+ * the customer is NOT notified yet. The confirmation notification is dispatched
+ * only when an admin approves the booking ({@link approve}); a rejection
+ * dispatches a rejection notice ({@link reject}). Deposit bookings are still
+ * confirmed via {@link confirm} from the payment path.
  *
  * It wraps `SchedulingEngine` so the engine stays framework-agnostic and its
- * existing unit/property tests remain valid (Requirement 4.5). A confirmation
- * delivery failure is logged but never rolls back the confirmed appointment
+ * existing unit/property tests remain valid (Requirement 4.5). A notification
+ * delivery failure is logged but never rolls back the appointment state change
  * (Requirement 4.4).
  */
 export class BookingFlow {
@@ -49,20 +55,42 @@ export class BookingFlow {
   }
 
   /**
-   * Book an appointment. On a deposit-free confirmation, dispatch a confirmation
-   * notification (best-effort). Held and rejected results are returned unchanged;
-   * held bookings are confirmed later via {@link confirm} from the payment path.
+   * Book an appointment. The result is returned unchanged and NO customer
+   * notification is sent here: a deposit-free booking is created as `pending`
+   * (awaiting admin approval, notified on {@link approve}); a deposit booking is
+   * `held` (confirmed later via {@link confirm} from the payment path); a
+   * rejected booking found no slot.
    *
    * Requirements: 4.1, 4.4 (original R12.1)
    */
   async book(req: BookingRequest): Promise<BookingResult> {
-    const result = await this.schedulingEngine.book(req);
-    if (result.status === 'confirmed') {
-      await this.safelyNotify(() =>
-        this.notificationService.sendConfirmation(result.appointment.id),
-      );
-    }
-    return result;
+    return this.schedulingEngine.book(req);
+  }
+
+  /**
+   * Approve a pending booking (salon admin action): transition it to `confirmed`
+   * and dispatch the customer confirmation notification (best-effort). A delivery
+   * failure is logged but never rolls back the approval (Requirement 4.4).
+   */
+  async approve(appointmentId: string): Promise<Appointment> {
+    const appointment = await this.schedulingEngine.approve(appointmentId);
+    await this.safelyNotify(() =>
+      this.notificationService.sendConfirmation(appointment.id),
+    );
+    return appointment;
+  }
+
+  /**
+   * Reject a pending booking (salon admin action): transition it to `cancelled`
+   * and notify the customer that the request was declined (best-effort). A
+   * delivery failure is logged but never rolls back the rejection (Requirement 4.4).
+   */
+  async reject(appointmentId: string): Promise<Appointment> {
+    const appointment = await this.schedulingEngine.reject(appointmentId);
+    await this.safelyNotify(() =>
+      this.notificationService.sendRejection(appointment.id),
+    );
+    return appointment;
   }
 
   /**

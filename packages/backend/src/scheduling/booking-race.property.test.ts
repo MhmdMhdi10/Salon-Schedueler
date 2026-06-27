@@ -213,7 +213,7 @@ function buildRaceMockPrisma(scenario: RaceScenario) {
           serviceId: data.serviceId,
           startAt: newStart,
           endAt: newEnd,
-          status: 'confirmed',
+          status: 'pending',
           source: data.source,
           holdExpiresAt: null,
           createdAt: new Date(),
@@ -261,12 +261,12 @@ describe('Property 5: Booking race safety (concurrency)', () => {
           throw new Error(`Unexpected rejection: ${r.reason}`);
         });
 
-        // Count confirmed and rejected
-        const confirmed = outcomes.filter((o) => o.status === 'confirmed');
+        // Count accepted (pending, awaiting approval) and rejected
+        const pending = outcomes.filter((o) => o.status === 'pending');
         const rejected = outcomes.filter((o) => o.status === 'rejected');
 
-        // Exactly one must be confirmed
-        expect(confirmed.length).toBe(1);
+        // Exactly one must be accepted (created as pending)
+        expect(pending.length).toBe(1);
 
         // All others must be rejected
         expect(rejected.length).toBe(scenario.numConcurrentRequests - 1);
@@ -312,13 +312,13 @@ describe('Property 5: Booking race safety (concurrency)', () => {
           throw new Error(`Unexpected rejection: ${r.reason}`);
         });
 
-        const confirmed = outcomes.filter((o) => o.status === 'confirmed');
-        expect(confirmed.length).toBe(1);
+        const pending = outcomes.filter((o) => o.status === 'pending');
+        expect(pending.length).toBe(1);
 
-        // The confirmed booking must use the only available staff and chair
-        if (confirmed[0].status === 'confirmed') {
-          expect(confirmed[0].appointment.staffMemberId).toBe(STAFF_ID);
-          expect(confirmed[0].appointment.chairId).toBe(CHAIR_ID);
+        // The accepted booking must use the only available staff and chair
+        if (pending[0].status === 'pending') {
+          expect(pending[0].appointment.staffMemberId).toBe(STAFF_ID);
+          expect(pending[0].appointment.chairId).toBe(CHAIR_ID);
         }
 
         return true;

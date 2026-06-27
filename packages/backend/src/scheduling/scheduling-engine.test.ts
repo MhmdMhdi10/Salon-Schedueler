@@ -687,7 +687,7 @@ describe('SchedulingEngine.book', () => {
       serviceId: SERVICE_ID,
       startAt: new Date(START_AT),
       endAt: new Date('2024-03-15T10:45:00.000Z'),
-      status: 'confirmed',
+      status: 'pending',
       source: 'web',
       holdExpiresAt: null,
       createdAt: new Date(),
@@ -711,8 +711,8 @@ describe('SchedulingEngine.book', () => {
         source: 'web',
       });
 
-      expect(result.status).toBe('confirmed');
-      if (result.status === 'confirmed') {
+      expect(result.status).toBe('pending');
+      if (result.status === 'pending') {
         expect(result.appointment).toEqual(expectedAppt);
       }
 
@@ -724,7 +724,7 @@ describe('SchedulingEngine.book', () => {
           staffMemberId: STAFF_ID,
           chairId: CHAIR_ID,
           serviceId: SERVICE_ID,
-          status: 'confirmed',
+          status: 'pending',
           source: 'web',
         }),
       });
@@ -770,7 +770,7 @@ describe('SchedulingEngine.book', () => {
       expect(prisma.appointment.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           source: 'walkin',
-          status: 'confirmed',
+          status: 'pending',
         }),
       });
     });
@@ -964,7 +964,7 @@ describe('SchedulingEngine.book', () => {
         serviceId: SERVICE_ID,
         startAt: new Date(START_AT),
         endAt: new Date('2024-03-15T10:45:00.000Z'),
-        status: 'confirmed',
+        status: 'pending',
         source: 'web',
         holdExpiresAt: null,
         createdAt: new Date(),
@@ -982,7 +982,7 @@ describe('SchedulingEngine.book', () => {
         source: 'web',
       });
 
-      expect(result.status).toBe('confirmed');
+      expect(result.status).toBe('pending');
       expect(prisma.appointment.create).toHaveBeenCalledTimes(2);
     });
 
@@ -1145,7 +1145,7 @@ describe('SchedulingEngine.book', () => {
         source: 'mobile',
       });
 
-      expect(result.status).toBe('confirmed');
+      expect(result.status).toBe('pending');
       expect(prisma.appointment.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ source: 'mobile' }),
       });
@@ -1352,7 +1352,7 @@ describe('SchedulingEngine.book - held booking path (R10.1)', () => {
       serviceId: SERVICE_ID,
       startAt: new Date(START_AT),
       endAt: new Date('2024-03-15T10:45:00.000Z'),
-      status: 'confirmed',
+      status: 'pending',
       source: 'web',
       holdExpiresAt: null,
       createdAt: new Date(),
@@ -1368,9 +1368,9 @@ describe('SchedulingEngine.book - held booking path (R10.1)', () => {
       source: 'web',
     });
 
-    expect(result.status).toBe('confirmed');
+    expect(result.status).toBe('pending');
     const createCall = prisma.appointment.create.mock.calls[0][0];
-    expect(createCall.data.status).toBe('confirmed');
+    expect(createCall.data.status).toBe('pending');
     expect(createCall.data.holdExpiresAt).toBeNull();
   });
 });

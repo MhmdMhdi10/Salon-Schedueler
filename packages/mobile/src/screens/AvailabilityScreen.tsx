@@ -593,8 +593,8 @@ export function AvailabilityScreen({
       {/* ---- Success ------------------------------------------------- */}
       {bookingStatus === 'success' ? (
         <View testID="booking-success" style={styles.successCard} accessibilityRole="alert">
-          <Text style={styles.successTitle}>{t('booking.success')}</Text>
-          <Text style={styles.successBody}>{t('booking.successBody')}</Text>
+          <Text style={styles.successTitle}>{t('booking.pending')}</Text>
+          <Text style={styles.successBody}>{t('booking.pendingBody')}</Text>
         </View>
       ) : null}
     </View>

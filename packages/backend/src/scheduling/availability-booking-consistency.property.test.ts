@@ -370,7 +370,7 @@ function buildMockPrisma(scenario: ConsistencyScenario) {
           salonId: SALON_ID,
           customerId: data.customerId,
           serviceId: data.serviceId,
-          status: 'confirmed',
+          status: 'pending',
           source: data.source,
           holdExpiresAt: null,
           createdAt: new Date(),
@@ -427,7 +427,7 @@ describe('Property 4: Availability–booking consistency', () => {
         const result = await bookingEngine.book(bookingRequest);
 
         // The slot was returned by getAvailability, so booking in isolation must succeed
-        expect(result.status).toBe('confirmed');
+        expect(result.status).toBe('pending');
         return true;
       }),
       { numRuns: 100 },
