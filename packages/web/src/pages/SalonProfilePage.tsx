@@ -19,7 +19,6 @@ import type { JsonLdNode } from '../components/seo';
 import {
   Button,
   Card,
-  CardContent,
   CardTitle,
   Money,
   Num,
@@ -106,14 +105,15 @@ export function SalonProfilePage() {
     );
   }
 
-  const heading = `${salon.name} — ${t('salon.profile.headingSuffix', {
+  const headingSuffix = t('salon.profile.headingSuffix', {
     city: salon.address.addressLocality,
     neighborhood: salon.neighborhood,
-  })}`;
+  });
   const path = `/s/${salon.slug}`;
   const ogImage = salon.ogImage ? `${SITE_URL}${salon.ogImage}` : undefined;
   const bookHref = `/salon/${salon.bookingSalonId}/book`;
   const today = tehranToday();
+  const openNow = isOpenNow(salon);
   const channels = salon.channels ?? {};
 
   const handleInstall = async () => {
@@ -151,31 +151,71 @@ export function SalonProfilePage() {
         </ol>
       </nav>
 
-      {/* Hero — single <h1>, key facts as chips, and the one primary CTA. */}
-      <header className="relative mt-2 overflow-hidden rounded-lg bg-gradient-to-bl from-primary to-accent px-5 py-8 text-primary-contrast shadow-2 sm:px-8 sm:py-10">
-        <div className="flex flex-col items-start gap-4">
+      {/* Hero — photographic backdrop with a brand color-blend + a bottom
+          legibility scrim, a single descriptive <h1>, a live open/closed pill,
+          and a decorative glow. The photo is a decorative CSS background (no
+          <img>, CLS-safe and off the lazy-image budget); the same imagery is
+          presented accessibly with alt text in the gallery below. */}
+      <header className="relative mt-2 flex min-h-[320px] flex-col justify-end overflow-hidden rounded-lg shadow-2 sm:min-h-[400px]">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${salon.gallery[0]?.src ?? '/og/default.jpg'})` }}
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-gradient-to-tr from-primary to-accent opacity-60 mix-blend-multiply"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -end-12 -top-12 h-44 w-44 rounded-pill bg-accent opacity-30 blur-3xl"
+        />
+        <div className="relative flex flex-col items-start gap-3 p-5 text-white sm:p-8">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-pill bg-white/15 px-3 py-1 text-sm">
+            {openNow !== null && (
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-pill px-3 py-1 text-sm font-medium backdrop-blur',
+                  openNow ? 'bg-success text-white' : 'bg-black/40 text-white',
+                )}
+              >
+                <span
+                  aria-hidden="true"
+                  className="h-2 w-2 rounded-pill bg-white"
+                />
+                {openNow ? t('salon.profile.openNow') : t('salon.profile.closedNow')}
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1 rounded-pill bg-white/15 px-3 py-1 text-sm backdrop-blur">
               <MapPin aria-hidden="true" size={14} />
               {salon.neighborhood}، {salon.address.addressLocality}
             </span>
-            <span className="inline-flex items-center gap-1 rounded-pill bg-white/15 px-3 py-1 text-sm">
-              <Scissors aria-hidden="true" size={14} />
-              {t('salon.profile.servicesCount', { count: salon.services.length })}
-            </span>
           </div>
-          <h1 className="max-w-prose text-2xl font-bold leading-tight">{heading}</h1>
-          <p className="max-w-prose text-md opacity-90">{salon.tagline}</p>
-          <Link
-            to={bookHref}
-            className="mt-1 inline-flex min-h-[48px] items-center justify-center gap-2 rounded-md bg-primary-contrast px-6 py-3 text-md font-bold text-primary no-underline shadow-1 transition-transform duration-fast ease-emphasized hover:scale-[1.02] active:scale-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-          >
-            <CalendarDays aria-hidden="true" size={20} />
-            {t('salon.profile.bookCtaLong')}
-          </Link>
-          <p className="text-xs opacity-90">{t('salon.profile.bookCtaHint')}</p>
+          <h1 className="max-w-prose text-2xl font-bold leading-tight sm:text-[2.1rem]">
+            {salon.name}
+            <span className="mt-1 block text-md font-normal opacity-90">
+              {headingSuffix}
+            </span>
+          </h1>
         </div>
       </header>
+
+      {/* Overlapping action card — the single primary CTA + lead, lifted over
+          the hero for a focused, premium entry (ui-ux §1: one primary action). */}
+      <div className="relative mx-3 -mt-8 flex flex-col gap-4 rounded-lg border border-border bg-elevated p-5 shadow-3 sm:mx-6 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <p className="max-w-prose text-sm text-muted">{salon.tagline}</p>
+        <Link
+          to={bookHref}
+          className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-md bg-primary px-6 py-3 text-md font-bold text-primary-contrast no-underline shadow-1 transition-transform duration-fast ease-emphasized hover:scale-[1.02] active:scale-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus motion-reduce:transition-none sm:shrink-0"
+        >
+          <CalendarDays aria-hidden="true" size={20} />
+          {t('salon.profile.bookCtaLong')}
+        </Link>
+      </div>
 
       {/* Longer description at a readable measure. */}
       <p className="max-w-prose py-4 text-md leading-loose text-muted">
@@ -286,30 +326,51 @@ export function SalonProfilePage() {
         </section>
       )}
 
-      {/* Services — one card list; price in Rial via <Money>. */}
+      {/* Services — medallion + name + duration chip + emphasized price, with a
+          hover lift and a "most popular" badge on the lead service. */}
       <section className="py-6" aria-labelledby="salon-services-title">
         <h2
           id="salon-services-title"
           className="mb-4 flex items-center gap-2 text-lg font-bold text-text"
         >
-          <Scissors aria-hidden="true" size={20} />
+          <Scissors aria-hidden="true" size={20} className="text-primary" />
           {t('salon.profile.servicesTitle')}
         </h2>
-        <ul className="grid gap-3 md:grid-cols-2" role="list">
-          {salon.services.map((service) => (
+        <ul className="grid gap-3 sm:grid-cols-2" role="list">
+          {salon.services.map((service, index) => (
             <li key={service.id}>
-              <Card as="article" className="flex flex-col gap-2">
-                <CardTitle as="h3">{service.name}</CardTitle>
-                <CardContent className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-muted">
-                    {t('salon.profile.serviceDuration')}:{' '}
+              <Card
+                as="article"
+                className="group flex h-full items-center gap-4 transition-shadow duration-fast ease-standard hover:shadow-2"
+              >
+                <span
+                  aria-hidden="true"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-gradient-to-bl from-primary to-accent text-primary-contrast"
+                >
+                  <Scissors size={22} />
+                </span>
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CardTitle as="h3" className="text-md">
+                      {service.name}
+                    </CardTitle>
+                    {index === 0 && (
+                      <span className="rounded-pill bg-accent px-2 py-0.5 text-2xs font-medium text-primary-contrast">
+                        {t('salon.profile.popular')}
+                      </span>
+                    )}
+                  </div>
+                  <span className="inline-flex items-center gap-1 text-xs text-muted">
+                    <Clock aria-hidden="true" size={13} />
                     <Num value={service.durationMinutes} />{' '}
                     {t('salon.profile.durationMinutes', {
                       count: service.durationMinutes,
                     })}
                   </span>
+                </div>
+                <span className="shrink-0 text-md font-bold text-text">
                   <Money amountRial={service.priceRial} />
-                </CardContent>
+                </span>
               </Card>
             </li>
           ))}
@@ -361,12 +422,13 @@ export function SalonProfilePage() {
         </Card>
       </section>
 
-      {/* Gallery — sized, lazy, Persian alt (CLS-safe). */}
+      {/* Gallery — uniform aspect tiles with a subtle hover-zoom; images stay
+          sized + lazy + Persian alt (CLS-safe, motion-reduce friendly). */}
       <section className="py-6" aria-labelledby="salon-gallery-title">
         <h2 id="salon-gallery-title" className="mb-4 text-lg font-bold text-text">
           {t('salon.profile.galleryTitle')}
         </h2>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {salon.gallery.map((image) => {
             const sources = [
               image.avifSrcSet && { type: 'image/avif', srcSet: image.avifSrcSet },
@@ -375,7 +437,7 @@ export function SalonProfilePage() {
             return (
               <div
                 key={image.src}
-                className="overflow-hidden rounded-lg border border-border bg-surface"
+                className="group aspect-[4/3] overflow-hidden rounded-lg border border-border bg-surface"
               >
                 <Picture
                   sources={sources}
@@ -386,7 +448,7 @@ export function SalonProfilePage() {
                   height={image.height}
                   alt={image.alt}
                   loading="lazy"
-                  className="h-auto w-full"
+                  className="h-full w-full object-cover transition-transform duration-slow ease-standard group-hover:scale-105 motion-reduce:transform-none"
                 />
               </div>
             );
@@ -458,6 +520,34 @@ export function SalonProfilePage() {
       </div>
     </div>
   );
+}
+
+/**
+ * Whether the salon is open right now in its locale (Asia/Tehran): looks up
+ * today's hours and compares the current `HH:mm` against them. Returns null if
+ * the time zone can't be resolved. Display-only — never affects the JSON-LD.
+ */
+function isOpenNow(salon: SalonProfile): boolean | null {
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Tehran',
+      weekday: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(new Date());
+    const weekday = parts.find((p) => p.type === 'weekday')?.value;
+    const hour = parts.find((p) => p.type === 'hour')?.value;
+    const minute = parts.find((p) => p.type === 'minute')?.value;
+    if (!weekday || !hour || !minute) return null;
+    const day = salon.openingHours.find((h) => h.day === weekday);
+    if (!day || day.closed || !day.opens || !day.closes) return false;
+    // Zero-padded HH:mm compares correctly as strings.
+    const now = `${hour}:${minute}`;
+    return day.opens <= now && now < day.closes;
+  } catch {
+    return null;
+  }
 }
 
 /** Orders a salon's hours into Iranian-week display order (Saturday first). */
