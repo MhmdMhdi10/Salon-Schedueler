@@ -5,8 +5,11 @@ import './i18n';
 import './styles/tokens.css';
 import { reportWebVitals } from './utils/webVitals';
 
-// Register service worker for PWA
-if ('serviceWorker' in navigator) {
+// Register service worker for PWA — production only. In dev, vite-plugin-pwa
+// does not build `/sw.js` (devOptions.enabled = false), so the raw Workbox
+// source (an ES module) would be served and fail to register as a classic
+// worker ("Cannot use import statement outside a module"). Skip it in dev.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch((err) => {
       console.warn('Service worker registration failed:', err);
