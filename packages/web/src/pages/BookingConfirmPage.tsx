@@ -21,6 +21,8 @@ import {
 interface ConfirmSelection {
   serviceId: string;
   startAt: string;
+  /** Preferred stylist carried from the availability step (optional). */
+  preferredStaffId?: string;
 }
 
 /** A bookable service as returned by the salon services endpoint (unchanged contract). */
@@ -144,6 +146,7 @@ export function BookingConfirmPage() {
         salonId,
         serviceId: state.serviceId,
         startAt: state.startAt,
+        preferredStaffId: state.preferredStaffId,
       });
 
       if (result.status === 'held' && result.paymentRedirectUrl) {
@@ -151,13 +154,13 @@ export function BookingConfirmPage() {
         // and hand off to the payment gateway. Keep the pending guard armed.
         setConfirmStatus('redirecting');
         redirectToGateway(result.paymentRedirectUrl);
-      } else if (result.status === 'pending') {
-        // The booking request was accepted and now awaits salon approval — the
-        // customer is NOT confirmed yet and is notified only once an admin
-        // approves. Hand the what/when/where details to the receipt (R4.6),
-        // which presents the "awaiting approval" state, not a success claim.
+      } else if (result.status === 'pending' || result.status === 'confirmed') {
+        // pending = awaiting admin approval; confirmed = auto-approved by the
+        // salon/stylist policy. Both reach the receipt, which presents the right
+        // state from `status` (no fabricated success — the server decided).
         navigate('/booking/success', {
           state: {
+            status: result.status,
             serviceName: service?.name,
             startAt: state.startAt,
             salonName: readSalonName(salonId) ?? undefined,

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { lightColors, darkColors, type ColorPalette } from '@salon/shared';
+import { contrastRatio, AA_TEXT, AA_LARGE_OR_NONTEXT } from './contrast';
 
 /**
  * Token contrast verification — WCAG 2.2 AA (task 10.2; R1.3, R10.x; ui-ux §3).
@@ -13,8 +14,12 @@ import { lightColors, darkColors, type ColorPalette } from '@salon/shared';
  * and asserting every foreground/background pairing the UI actually ships, in
  * **both** the light and dark themes.
  *
+ * The relative-luminance / contrast-ratio math lives in `./contrast` (the single
+ * implementation shared with the tenant-theming color derivation); this file
+ * imports it so there is no duplicate copy to drift.
+ *
  * Thresholds (WCAG 2.1/2.2 §1.4.3 + §1.4.11):
- *  - **4.5:1** — normal body / UI text.
+ *  - **4.5:1** — normal body / UI text ({@link AA_TEXT}).
  *  - **3:1** — large text (≥ 24px or 18.66px bold) and meaningful non-text
  *    (focus ring, decorative status fills that are paired with a text label).
  *
@@ -23,39 +28,6 @@ import { lightColors, darkColors, type ColorPalette } from '@salon/shared';
  * grep when this test was written. If a component starts using a token pair in
  * a way that drops below its threshold, this test fails before it ships.
  */
-
-// --- WCAG relative-luminance / contrast-ratio math (sRGB) -------------------
-
-function channelToLinear(value8bit: number): number {
-  const c = value8bit / 255;
-  return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-}
-
-function relativeLuminance(hex: string): number {
-  const m = /^#([0-9a-f]{6})$/i.exec(hex);
-  if (!m) throw new Error(`expected a #rrggbb hex color, got "${hex}"`);
-  const int = parseInt(m[1], 16);
-  const r = (int >> 16) & 0xff;
-  const g = (int >> 8) & 0xff;
-  const b = int & 0xff;
-  return (
-    0.2126 * channelToLinear(r) +
-    0.7152 * channelToLinear(g) +
-    0.0722 * channelToLinear(b)
-  );
-}
-
-/** WCAG contrast ratio (1..21) between two opaque hex colors. */
-export function contrastRatio(fg: string, bg: string): number {
-  const l1 = relativeLuminance(fg);
-  const l2 = relativeLuminance(bg);
-  const lighter = Math.max(l1, l2);
-  const darker = Math.min(l1, l2);
-  return (lighter + 0.05) / (darker + 0.05);
-}
-
-const AA_TEXT = 4.5;
-const AA_LARGE_OR_NONTEXT = 3;
 
 /** Round for readable failure messages without hiding a near-miss. */
 function ratio(fg: string, bg: string): number {

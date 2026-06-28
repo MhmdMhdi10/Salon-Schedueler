@@ -88,6 +88,19 @@ export class ResourceRegistration {
   }
 
   /**
+   * List a salon's bookable staff — the people a customer can pick as their
+   * stylist in the public booking funnel. Limited to service-performing roles
+   * (Owner, Stylist); back-office Admins are excluded. Public (no RBAC), so the
+   * funnel can offer a stylist picker after a salon QR scan.
+   */
+  async listBookableStaff(salonId: string): Promise<StaffMember[]> {
+    return this.prisma.staffMember.findMany({
+      where: { salonId, role: { in: ['Owner', 'Stylist'] } },
+      orderBy: { fullName: 'asc' },
+    });
+  }
+
+  /**
    * List all chairs for a salon (read-only). Used by the RBAC-guarded
    * `GET /salons/:id/chairs` route (Requirement 2.2).
    */

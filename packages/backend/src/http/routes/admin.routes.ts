@@ -112,5 +112,56 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     }),
   );
 
+  // Read the salon's approval policy (salon default + per-stylist overrides) for
+  // the owner configuration UI (Owner only).
+  router.get(
+    '/salons/:id/approval-policy',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const policy = await services.availabilityConfig.getApprovalPolicy(req.params.id);
+      res.status(200).json(policy);
+    }),
+  );
+
+  // Set the salon's default approval policy (Owner only). Body: { autoApprove }.
+  router.post(
+    '/salons/:id/auto-approve',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const autoApprove = req.body?.autoApprove === true || req.body?.autoApprove === 'true';
+      await services.availabilityConfig.setSalonAutoApprove(req.params.id, autoApprove);
+      res.status(200).json({ ok: true, autoApprove });
+    }),
+  );
+
+  // Set/clear a stylist's approval-policy override (Owner only). Body:
+  // { autoApprove: true | false | null } — null inherits the salon default.
+  router.post(
+    '/staff/:id/auto-approve',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const raw = req.body?.autoApprove;
+      const autoApprove = raw === null ? null : raw === true || raw === 'true';
+      await services.availabilityConfig.setStaffAutoApprove(req.params.id, autoApprove);
+      res.status(200).json({ ok: true, autoApprove });
+    }),
+  );
+
+  // Set/clear the salon's storefront Brand_Accent (Owner only). Body:
+  // { brandAccent: string | null } — null (or empty/missing) clears the accent so
+  // the storefront falls back to the signature default palette. A non-null value
+  // is stored as an opaque accent key (resolved client-side). Mirrors the
+  // /salons/:id/auto-approve handler (signature-ui-system R4.1).
+  router.post(
+    '/salons/:id/brand-accent',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const raw = req.body?.brandAccent;
+      const brandAccent = typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : null;
+      await services.availabilityConfig.setSalonBrandAccent(req.params.id, brandAccent);
+      res.status(200).json({ ok: true, brandAccent });
+    }),
+  );
+
   return router;
 }

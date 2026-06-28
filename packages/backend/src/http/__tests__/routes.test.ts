@@ -25,7 +25,8 @@ function makeServices() {
       refresh: jest.fn(),
     },
     salonRegistration: {
-      resolveSalonByQr: jest.fn(),
+      resolveQr: jest.fn(),
+      getSalonBrandAccent: jest.fn().mockResolvedValue(null),
     },
     serviceCatalog: {
       listServices: jest.fn().mockResolvedValue([]),
@@ -62,6 +63,10 @@ function makeServices() {
     resourceRegistration: {
       listStaff: jest.fn().mockResolvedValue([]),
       listChairs: jest.fn().mockResolvedValue([]),
+      listBookableStaff: jest.fn().mockResolvedValue([]),
+    },
+    availabilityConfig: {
+      setSalonBrandAccent: jest.fn().mockResolvedValue(undefined),
     },
     authorizer: new Authorizer(),
   };
@@ -155,21 +160,45 @@ describe('HTTP routes', () => {
 
   // ── Salon QR resolve (public) ────────────────────────────────────────────────
   describe('GET /api/salons/by-qr/:payload', () => {
-    it('returns 200 { salon: { id, name } } on success', async () => {
-      fake.salonRegistration.resolveSalonByQr.mockResolvedValue({
-        id: 'salon-1',
-        name: 'Test Salon',
-        qrToken: 'tok',
-        timezone: 'Asia/Tehran',
-        createdAt: new Date(),
+    it('returns 200 { salon: { id, name, brandAccent } } on success', async () => {
+      fake.salonRegistration.resolveQr.mockResolvedValue({
+        salon: {
+          id: 'salon-1',
+          name: 'Test Salon',
+          qrToken: 'tok',
+          timezone: 'Asia/Tehran',
+          brandAccent: 'rose',
+          createdAt: new Date(),
+        },
       });
       const res = await request(app).get('/api/salons/by-qr/some-payload');
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ salon: { id: 'salon-1', name: 'Test Salon' } });
+      expect(res.body).toEqual({
+        salon: { id: 'salon-1', name: 'Test Salon', brandAccent: 'rose' },
+      });
+    });
+
+    it('includes the staff member for a stylist QR payload', async () => {
+      fake.salonRegistration.resolveQr.mockResolvedValue({
+        salon: {
+          id: 'salon-1',
+          name: 'Test Salon',
+          qrToken: 'tok',
+          timezone: 'Asia/Tehran',
+          createdAt: new Date(),
+        },
+        staff: { id: 'staff-9', fullName: 'زهرا' },
+      });
+      const res = await request(app).get('/api/salons/by-qr/stylist-payload');
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        salon: { id: 'salon-1', name: 'Test Salon', brandAccent: null },
+        staff: { id: 'staff-9', fullName: 'زهرا' },
+      });
     });
 
     it('maps QR_MALFORMED to 400', async () => {
-      fake.salonRegistration.resolveSalonByQr.mockRejectedValue(
+      fake.salonRegistration.resolveQr.mockRejectedValue(
         new RegistrationError('QR_MALFORMED'),
       );
       const res = await request(app).get('/api/salons/by-qr/bad');
@@ -178,7 +207,7 @@ describe('HTTP routes', () => {
     });
 
     it('maps QR_UNREGISTERED to 404 (distinct from malformed)', async () => {
-      fake.salonRegistration.resolveSalonByQr.mockRejectedValue(
+      fake.salonRegistration.resolveQr.mockRejectedValue(
         new RegistrationError('QR_UNREGISTERED'),
       );
       const res = await request(app).get('/api/salons/by-qr/unknown');
@@ -208,6 +237,85 @@ describe('HTTP routes', () => {
       const res = await request(app).get('/api/salons/salon-1/availability');
       expect(res.status).toBe(400);
       expect(res.body.code).toBe('VALIDATION_ERROR');
+    });
+  });
+
+  // ── Salon Brand_Accent read (public) ─────────────────────────────────────────
+  describe('GET /api/salons/:id/brand', () => {
+    it('returns 200 { brandAccent } from the salon registration read', async () => {
+      fake.salonRegistration.getSalonBrandAccent.mockResolvedValue('rose');
+      const res = await request(app).get('/api/salons/salon-1/brand');
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ brandAccent: 'rose' });
+      expect(fake.salonRegistration.getSalonBrandAccent).toHaveBeenCalledWith('salon-1');
+    });
+
+    it('returns 200 { brandAccent: null } when the salon has no configured accent', async () => {
+      fake.salonRegistration.getSalonBrandAccent.mockResolvedValue(null);
+      const res = await request(app).get('/api/salons/salon-2/brand');
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ brandAccent: null });
+    });
+  });
+
+  // ── Brand_Accent write (protected, RBAC configure_salon — Owner only) ─────────
+  // signature-ui-system R4.1: configure_salon succeeds; other roles 403 with no
+  // state change; null clears the accent to the signature default.
+  describe('POST /api/salons/:id/brand-accent', () => {
+    it('allows an Owner (configure_salon) and persists the accent', async () => {
+      const res = await request(app)
+        .post('/api/salons/salon-1/brand-accent')
+        .set('Authorization', `Bearer ${staffToken('Owner')}`)
+        .send({ brandAccent: 'rose' });
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ ok: true, brandAccent: 'rose' });
+      expect(fake.availabilityConfig.setSalonBrandAccent).toHaveBeenCalledWith(
+        'salon-1',
+        'rose',
+      );
+    });
+
+    it('returns 403 FORBIDDEN for an Admin with no state change', async () => {
+      const res = await request(app)
+        .post('/api/salons/salon-1/brand-accent')
+        .set('Authorization', `Bearer ${staffToken('Admin')}`)
+        .send({ brandAccent: 'rose' });
+      expect(res.status).toBe(403);
+      expect(res.body).toEqual({ code: 'FORBIDDEN' });
+      expect(fake.availabilityConfig.setSalonBrandAccent).not.toHaveBeenCalled();
+    });
+
+    it('returns 403 FORBIDDEN for a Stylist with no state change', async () => {
+      const res = await request(app)
+        .post('/api/salons/salon-1/brand-accent')
+        .set('Authorization', `Bearer ${staffToken('Stylist')}`)
+        .send({ brandAccent: 'rose' });
+      expect(res.status).toBe(403);
+      expect(res.body).toEqual({ code: 'FORBIDDEN' });
+      expect(fake.availabilityConfig.setSalonBrandAccent).not.toHaveBeenCalled();
+    });
+
+    it('returns 403 FORBIDDEN for a customer (no staff role) with no state change', async () => {
+      const res = await request(app)
+        .post('/api/salons/salon-1/brand-accent')
+        .set('Authorization', `Bearer ${customerToken()}`)
+        .send({ brandAccent: 'rose' });
+      expect(res.status).toBe(403);
+      expect(res.body).toEqual({ code: 'FORBIDDEN' });
+      expect(fake.availabilityConfig.setSalonBrandAccent).not.toHaveBeenCalled();
+    });
+
+    it('clears the accent to the signature default when brandAccent is null', async () => {
+      const res = await request(app)
+        .post('/api/salons/salon-1/brand-accent')
+        .set('Authorization', `Bearer ${staffToken('Owner')}`)
+        .send({ brandAccent: null });
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ ok: true, brandAccent: null });
+      expect(fake.availabilityConfig.setSalonBrandAccent).toHaveBeenCalledWith(
+        'salon-1',
+        null,
+      );
     });
   });
 

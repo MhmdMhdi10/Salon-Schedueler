@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CalendarClock, Clock, Scissors } from 'lucide-react';
+import { CalendarClock, Clock, Scissors, Users } from 'lucide-react';
 import { salonApi } from '../api/client';
 import { SeoHead } from '../components/seo';
 import {
@@ -24,6 +24,13 @@ interface Service {
   priceRial: number;
 }
 
+/** A bookable stylist as returned by the public stylists endpoint. */
+interface Stylist {
+  id: string;
+  fullName: string | null;
+  role: string;
+}
+
 /** A free time slot as returned by the availability endpoint (unchanged contract). */
 interface Slot {
   startAt: string;
@@ -35,13 +42,16 @@ type Status = 'idle' | 'loading' | 'error' | 'ready';
 
 /**
  * Persisted funnel selection so a customer who advances to confirm and then
- * navigates **back** lands on the availability step with their service and date
- * still chosen (ui-ux §8 "back returns without losing state"). Scoped per salon
- * in `sessionStorage` so it never bleeds across salons or survives the session.
+ * navigates **back** lands on the availability step with their service, date,
+ * and chosen stylist still selected (ui-ux §8 "back returns without losing
+ * state"). Scoped per salon in `sessionStorage` so it never bleeds across
+ * salons or survives the session.
  */
 interface PersistedSelection {
   serviceId: string;
   date: string;
+  /** Preferred stylist id; '' (or absent) means "any stylist". */
+  staffId?: string;
 }
 
 function selectionKey(salonId: string): string {
@@ -57,7 +67,11 @@ function readSelection(salonId: string | undefined): PersistedSelection | null {
     if (typeof parsed.serviceId !== 'string' || typeof parsed.date !== 'string') {
       return null;
     }
-    return { serviceId: parsed.serviceId, date: parsed.date };
+    return {
+      serviceId: parsed.serviceId,
+      date: parsed.date,
+      staffId: typeof parsed.staffId === 'string' ? parsed.staffId : undefined,
+    };
   } catch {
     return null;
   }
@@ -140,11 +154,15 @@ export function AvailabilityPage() {
   const { t } = useTranslation();
   const { salonId } = useParams<{ salonId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const isMobile = useIsMobile();
   const minDate = useMemo(() => todayISO(), []);
 
   // Restore any persisted selection so back-navigation keeps the user's place.
   const restored = useMemo(() => readSelection(salonId), [salonId]);
+  // A stylist-scoped QR deep-links here with `?staff=<id>` so that stylist is
+  // pre-selected; otherwise fall back to any persisted choice, else "any".
+  const initialStaff = searchParams.get('staff') ?? restored?.staffId ?? '';
 
   const [services, setServices] = useState<Service[]>([]);
   const [servicesStatus, setServicesStatus] = useState<Status>('idle');
@@ -152,6 +170,11 @@ export function AvailabilityPage() {
   const [date, setDate] = useState(restored?.date ?? '');
   const [slots, setSlots] = useState<Slot[]>([]);
   const [slotsStatus, setSlotsStatus] = useState<Status>('idle');
+  // Stylist picker: '' means "any stylist" (the default). A specific id is a
+  // soft preference passed to booking as `preferredStaffId`.
+  const [stylists, setStylists] = useState<Stylist[]>([]);
+  const [stylistsStatus, setStylistsStatus] = useState<Status>('idle');
+  const [selectedStaff, setSelectedStaff] = useState(initialStaff);
 
   // Load the salon's services (with loading + error states).
   const loadServices = useCallback(() => {
@@ -169,6 +192,24 @@ export function AvailabilityPage() {
   useEffect(() => {
     loadServices();
   }, [loadServices]);
+
+  // Load the salon's bookable stylists for the picker. Best-effort: a failure
+  // simply omits the picker so booking still works with "any stylist".
+  const loadStylists = useCallback(() => {
+    if (!salonId) return;
+    setStylistsStatus('loading');
+    salonApi
+      .getStylists(salonId)
+      .then((res) => {
+        setStylists(res.stylists);
+        setStylistsStatus('ready');
+      })
+      .catch(() => setStylistsStatus('error'));
+  }, [salonId]);
+
+  useEffect(() => {
+    loadStylists();
+  }, [loadStylists]);
 
   // Load availability whenever a service + date are both chosen.
   const loadSlots = useCallback(() => {
@@ -193,20 +234,41 @@ export function AvailabilityPage() {
 
   const handleServiceChange = (value: string) => {
     setSelectedService(value);
-    if (salonId && date) writeSelection(salonId, { serviceId: value, date });
+    if (salonId && date) {
+      writeSelection(salonId, { serviceId: value, date, staffId: selectedStaff });
+    }
   };
 
   const handleDateChange = (value: string) => {
     setDate(value);
     if (salonId && selectedService) {
-      writeSelection(salonId, { serviceId: selectedService, date: value });
+      writeSelection(salonId, {
+        serviceId: selectedService,
+        date: value,
+        staffId: selectedStaff,
+      });
+    }
+  };
+
+  const handleStaffChange = (value: string) => {
+    setSelectedStaff(value);
+    if (salonId && selectedService && date) {
+      writeSelection(salonId, { serviceId: selectedService, date, staffId: value });
     }
   };
 
   const handleSlotSelect = (startAt: string) => {
-    if (salonId) writeSelection(salonId, { serviceId: selectedService, date });
+    if (salonId) {
+      writeSelection(salonId, { serviceId: selectedService, date, staffId: selectedStaff });
+    }
     navigate(`/salon/${salonId}/book/confirm`, {
-      state: { serviceId: selectedService, startAt },
+      state: {
+        serviceId: selectedService,
+        startAt,
+        // Pass the stylist preference through to confirm → booking (omit when
+        // "any" so the scheduler is free to assign).
+        preferredStaffId: selectedStaff || undefined,
+      },
     });
   };
 
@@ -234,6 +296,16 @@ export function AvailabilityPage() {
       </span>
     ),
   }));
+
+  // Stylist options: an explicit "any stylist" choice first (sentinel `any` so
+  // the radio value is never empty), then each bookable stylist by name.
+  const stylistOptions = [
+    { value: 'any', label: t('booking.anyStylist'), helperText: t('booking.anyStylistHint') },
+    ...stylists.map((s) => ({
+      value: s.id,
+      label: s.fullName ?? t('booking.stylistFallback'),
+    })),
+  ];
 
   return (
     <div
@@ -293,6 +365,43 @@ export function AvailabilityPage() {
           />
         )}
       </section>
+
+      {/* Stylist picker — appears after a salon QR scan so the customer can
+          choose their stylist (or "any"). A stylist-scoped QR pre-selects one.
+          Best-effort: hidden while loading fails or no stylists exist. */}
+      {(stylistsStatus === 'loading' || (stylistsStatus === 'ready' && stylists.length > 0)) && (
+        <section aria-labelledby="stylist-section-title" className="flex flex-col gap-3">
+          <h2
+            id="stylist-section-title"
+            className="flex items-center gap-2 text-lg font-bold text-text"
+          >
+            <Users className="h-5 w-5" aria-hidden="true" />
+            {t('booking.selectStylist')}
+          </h2>
+
+          {stylistsStatus === 'loading' && (
+            <div
+              className="flex flex-col gap-2"
+              role="status"
+              aria-busy="true"
+              aria-label={t('booking.stylistsLoadingLabel')}
+            >
+              <Skeleton variant="rect" className="h-11" />
+              <Skeleton variant="rect" className="h-11" />
+            </div>
+          )}
+
+          {stylistsStatus === 'ready' && stylists.length > 0 && (
+            <RadioGroup
+              label={t('booking.selectStylist')}
+              labelHidden
+              value={selectedStaff === '' ? 'any' : selectedStaff}
+              onValueChange={(v) => handleStaffChange(v === 'any' ? '' : v)}
+              options={stylistOptions}
+            />
+          )}
+        </section>
+      )}
 
       {/* Date — Jalali picker (bottom sheet on mobile), past dates disabled. */}
       <section aria-labelledby="date-section-title" className="flex flex-col gap-3">

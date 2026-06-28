@@ -27,5 +27,19 @@ export function qrRouter(services: Services, requireRole: RequireRole): Router {
     }),
   );
 
+  // Stylist-scoped QR for the owner panel: a per-staff QR that opens that
+  // stylist's booking page pre-selected. Gated like the salon QR.
+  router.get(
+    '/salons/:id/staff/:staffId/qr',
+    requireRole('manage_appointments'),
+    asyncRoute(async (req, res) => {
+      const qr = await services.qrService.buildStaffQrResponse(
+        req.params.id,
+        req.params.staffId,
+      );
+      res.status(200).json(qr);
+    }),
+  );
+
   return router;
 }

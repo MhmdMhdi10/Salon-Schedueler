@@ -55,16 +55,23 @@ export class BookingFlow {
   }
 
   /**
-   * Book an appointment. The result is returned unchanged and NO customer
-   * notification is sent here: a deposit-free booking is created as `pending`
-   * (awaiting admin approval, notified on {@link approve}); a deposit booking is
-   * `held` (confirmed later via {@link confirm} from the payment path); a
-   * rejected booking found no slot.
+   * Book an appointment. A deposit-free booking is created as `pending`
+   * (awaiting admin approval — the customer is notified on {@link approve}) UNLESS
+   * the salon/stylist approval policy auto-approves it, in which case it is
+   * `confirmed` and the customer is notified immediately here (best-effort). A
+   * deposit booking is `held` (confirmed later via {@link confirm} from the
+   * payment path); a rejected booking found no slot.
    *
    * Requirements: 4.1, 4.4 (original R12.1)
    */
   async book(req: BookingRequest): Promise<BookingResult> {
-    return this.schedulingEngine.book(req);
+    const result = await this.schedulingEngine.book(req);
+    if (result.status === 'confirmed') {
+      await this.safelyNotify(() =>
+        this.notificationService.sendConfirmation(result.appointment.id),
+      );
+    }
+    return result;
   }
 
   /**

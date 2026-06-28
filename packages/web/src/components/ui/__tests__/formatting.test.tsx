@@ -24,6 +24,20 @@ describe('Num', () => {
     expect(toPersianDigits('09:30')).toBe('۰۹:۳۰');
     expect(toPersianDigits(3)).toBe('۳');
   });
+
+  it('applies tabular numerals so figures share a consistent advance width', () => {
+    const { container } = render(<Num value={1234} />);
+    const bdi = container.querySelector('bdi')!;
+    // Baseline alignment everywhere, not only in aligned columns (R8.3).
+    expect(bdi).toHaveClass('tabular-nums');
+  });
+
+  it('merges caller className with the tabular-nums default', () => {
+    const { container } = render(<Num value={5} className="text-muted" />);
+    const bdi = container.querySelector('bdi')!;
+    expect(bdi).toHaveClass('tabular-nums');
+    expect(bdi).toHaveClass('text-muted');
+  });
 });
 
 describe('Money', () => {
@@ -86,5 +100,70 @@ describe('DirText', () => {
     const bdi = container.querySelector('bdi')!;
     expect(bdi).toHaveAttribute('dir', 'ltr');
     expect(bdi).toHaveTextContent('zarinpal.com');
+  });
+
+  it('defaults to dir="auto" so the run base direction is detected per content', () => {
+    const { container } = render(<DirText>support@salon.ir</DirText>);
+    const bdi = container.querySelector('bdi')!;
+    expect(bdi.tagName.toLowerCase()).toBe('bdi');
+    expect(bdi).toHaveAttribute('dir', 'auto');
+  });
+});
+
+/**
+ * R8.4 — mixed LTR/RTL runs (a URL or email embedded in Persian copy, a
+ * localized number next to Latin text) are isolated in a `<bdi>` so the
+ * surrounding RTL layout cannot reorder them and adjacent punctuation does not
+ * jump (ui-ux §11 bidi handling). `<bdi>` carries `unicode-bidi: isolate`
+ * natively, so wrapping the Latin/numeric run is the isolation contract.
+ */
+describe('bidi isolation of mixed runs (R8.4)', () => {
+  it('wraps a Latin URL embedded in a Persian sentence in its own <bdi>', () => {
+    const { container } = render(
+      <p>
+        درگاه پرداخت <DirText>zarinpal.com</DirText> را باز می‌کند
+      </p>,
+    );
+    // The Latin run lives in its own isolation boundary, separate from the
+    // surrounding Persian text nodes.
+    const bdi = container.querySelector('bdi')!;
+    expect(bdi).toBeInTheDocument();
+    expect(bdi).toHaveTextContent('zarinpal.com');
+    // The Persian copy stays outside the isolated run.
+    expect(bdi.textContent).not.toContain('درگاه');
+  });
+
+  it('isolates a forced-LTR phone fragment inside RTL copy', () => {
+    const { container } = render(
+      <p>
+        شماره تماس <DirText dir="ltr">+98 912 000 0000</DirText>
+      </p>,
+    );
+    const bdi = container.querySelector('bdi')!;
+    expect(bdi).toHaveAttribute('dir', 'ltr');
+    expect(bdi).toHaveTextContent('+98 912 000 0000');
+  });
+
+  it('Num isolates a localized number sitting next to Latin/Persian text', () => {
+    const { container } = render(
+      <p>
+        نسخه <Num value={1404} /> build
+      </p>,
+    );
+    const bdi = container.querySelector('bdi')!;
+    expect(bdi).toBeInTheDocument();
+    expect(bdi).toHaveTextContent('۱۴۰۴');
+  });
+
+  it('Money isolates the grouped amount + unit pair from surrounding copy', () => {
+    const { container } = render(
+      <p>
+        مبلغ <Money amountRial={2500000n} /> است
+      </p>,
+    );
+    const bdi = container.querySelector('bdi')!;
+    expect(bdi).toBeInTheDocument();
+    expect(bdi).toHaveTextContent('۲٬۵۰۰٬۰۰۰');
+    expect(bdi).toHaveTextContent('ریال');
   });
 });

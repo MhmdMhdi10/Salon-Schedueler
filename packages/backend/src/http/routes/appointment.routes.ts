@@ -61,9 +61,10 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
         return;
       }
 
-      // A new booking is created as 'pending' — it awaits salon admin approval
-      // before it is confirmed and the customer is notified (no auto-confirm).
-      res.status(200).json({ status: 'pending', appointment: result.appointment });
+      // A deposit-free booking is 'pending' (awaiting admin approval) unless the
+      // salon/stylist approval policy auto-approves it, in which case it is
+      // already 'confirmed' here and the customer has been notified.
+      res.status(200).json({ status: result.status, appointment: result.appointment });
     }),
   );
 

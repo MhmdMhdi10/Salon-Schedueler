@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import type { PrismaClient, Salon } from '@prisma/client';
+import type { PrismaClient, Salon, StaffMember } from '@prisma/client';
 import { encodeSalonQr, parseSalonQr } from '@salon/shared';
 import { RegistrationError } from './registration-error';
 
@@ -76,6 +76,22 @@ export class SalonRegistration {
    * 5. If found → return the salon (R7.2).
    */
   async resolveSalonByQr(qrPayload: string): Promise<Salon> {
+    const { salon } = await this.resolveQr(qrPayload);
+    return salon;
+  }
+
+  /**
+   * Resolve a scanned QR payload to a salon and, when the payload is a
+   * stylist-scoped QR (`encodeStaffQr`), the named staff member too.
+   *
+   * Mirrors {@link resolveSalonByQr} for malformed/unregistered handling. The
+   * staff hint is honored only when the staff member exists and belongs to the
+   * resolved salon; otherwise it is ignored and the result is a plain salon
+   * resolution (so a stale/foreign staff id degrades gracefully to the salon).
+   */
+  async resolveQr(
+    qrPayload: string,
+  ): Promise<{ salon: Salon; staff?: StaffMember }> {
     const parseResult = parseSalonQr(qrPayload, this.qrDeepLinkBase);
 
     if (parseResult.kind === 'malformed') {
@@ -90,6 +106,31 @@ export class SalonRegistration {
       throw new RegistrationError('QR_UNREGISTERED');
     }
 
-    return salon;
+    if (parseResult.staffId) {
+      const member = await this.prisma.staffMember.findUnique({
+        where: { id: parseResult.staffId },
+      });
+      if (member && member.salonId === salon.id) {
+        return { salon, staff: member };
+      }
+    }
+
+    return { salon };
+  }
+
+  /**
+   * Read a salon's storefront Brand_Accent key (signature-ui-system R4.1, R4.2).
+   *
+   * Public/anonymous-safe: the booking funnel resolves a salon by id and needs
+   * the accent to theme the storefront for any visitor. Returns `null` when the
+   * salon has no configured accent (signature default) or does not exist, so the
+   * Tenant_Theming_System falls back to the default palette rather than erroring.
+   */
+  async getSalonBrandAccent(salonId: string): Promise<string | null> {
+    const salon = await this.prisma.salon.findUnique({
+      where: { id: salonId },
+      select: { brandAccent: true },
+    });
+    return salon?.brandAccent ?? null;
   }
 }

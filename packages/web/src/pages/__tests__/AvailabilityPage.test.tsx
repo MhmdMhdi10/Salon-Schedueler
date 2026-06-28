@@ -15,12 +15,14 @@ import { expectNoSeriousA11yViolations } from '../../test/a11y';
 
 const getServices = vi.fn();
 const getAvailability = vi.fn();
+const getStylists = vi.fn();
 
 vi.mock('../../api/client', () => ({
   salonApi: {
     getServices: (salonId: string) => getServices(salonId),
     getAvailability: (salonId: string, serviceId: string, date: string) =>
       getAvailability(salonId, serviceId, date),
+    getStylists: (salonId: string) => getStylists(salonId),
   },
 }));
 
@@ -74,6 +76,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   lastConfirmState = undefined;
   window.sessionStorage.clear();
+  // Default: no stylists configured, so the optional picker stays hidden and
+  // existing assertions are unaffected. Tests that exercise it override this.
+  getStylists.mockResolvedValue({ stylists: [] });
 });
 
 afterEach(() => {

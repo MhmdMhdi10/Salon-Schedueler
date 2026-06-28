@@ -16,41 +16,41 @@ describe('Shared design tokens', () => {
   describe('color palettes (verbatim from ui-ux-skills.md)', () => {
     it('light palette matches the authoritative hex values', () => {
       expect(lightColors).toEqual({
-        bg: '#ffffff',
-        surface: '#f7f8fa',
-        elevated: '#ffffff',
-        text: '#16181d',
-        textMuted: '#5b6472',
-        border: '#e3e6eb',
-        primary: '#5457e6',
-        primaryContrast: '#ffffff',
-        secondary: '#0ea5a4',
-        accent: '#d946ef',
-        success: '#15803d',
-        warning: '#b45309',
-        danger: '#b91c1c',
-        info: '#1d4ed8',
-        focusRing: '#5457e6',
+        bg: '#FBF7F2',
+        surface: '#F4ECE1',
+        elevated: '#FFFFFF',
+        text: '#241C18',
+        textMuted: '#6E5C50',
+        border: '#E4D8CB',
+        primary: '#8E2F50',
+        primaryContrast: '#FFFFFF',
+        secondary: '#2E6E63',
+        accent: '#A6452A',
+        success: '#1F7A43',
+        warning: '#9A5B12',
+        danger: '#B3261E',
+        info: '#1F5FAE',
+        focusRing: '#8E2F50',
       });
     });
 
     it('dark palette matches the authoritative hex values', () => {
       expect(darkColors).toEqual({
-        bg: '#0b0f1a',
-        surface: '#121826',
-        elevated: '#1b2233',
-        text: '#eef1f6',
-        textMuted: '#9aa4b2',
-        border: '#2a3344',
-        primary: '#818cf8',
-        primaryContrast: '#0b0f1a',
-        secondary: '#2dd4bf',
-        accent: '#e879f9',
-        success: '#4ade80',
-        warning: '#fbbf24',
-        danger: '#f87171',
-        info: '#60a5fa',
-        focusRing: '#a5b4fc',
+        bg: '#17110F',
+        surface: '#211915',
+        elevated: '#2C2119',
+        text: '#F6EEE7',
+        textMuted: '#BBA99B',
+        border: '#3A2D25',
+        primary: '#E59CB3',
+        primaryContrast: '#17110F',
+        secondary: '#79C9BB',
+        accent: '#EB9A7A',
+        success: '#69D08C',
+        warning: '#E7B45C',
+        danger: '#F2938C',
+        info: '#86B6F0',
+        focusRing: '#E59CB3',
       });
     });
 
@@ -58,8 +58,8 @@ describe('Shared design tokens', () => {
       expect(Object.keys(lightColors).sort()).toEqual(Object.keys(darkColors).sort());
     });
 
-    it('uses the brand primary #5457e6 for text-bearing actions in light mode', () => {
-      expect(lightColors.primary).toBe('#5457e6');
+    it('uses the salon-luxe plum-wine primary #8E2F50 for text-bearing actions in light mode', () => {
+      expect(lightColors.primary).toBe('#8E2F50');
     });
   });
 

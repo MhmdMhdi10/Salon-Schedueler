@@ -30,6 +30,25 @@ services:
       retries: 12
     restart: unless-stopped
 
+  # Message broker for the reliable-SMS pipeline (durable queues, publisher
+  # confirms, retry + dead-letter). Management UI on :15672 (salon/salon).
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: salon
+      RABBITMQ_DEFAULT_PASS: salon
+    ports:
+      - "${RABBITMQ_HOST_PORT:-5673}:5672"
+      - "${RABBITMQ_MGMT_PORT:-15673}:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+    restart: unless-stopped
+
   backend:
     image: salon-booking-backend-dev
     build:
@@ -39,6 +58,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      rabbitmq:
+        condition: service_started
     environment:
       NODE_ENV: development
       PORT: "3000"
@@ -46,6 +67,8 @@ services:
       JWT_ACCESS_SECRET: dev-access-secret
       JWT_REFRESH_SECRET: dev-refresh-secret
       PAYMENT_CALLBACK_BASE_URL: "http://localhost:3000"
+      # Reliable SMS: publish to RabbitMQ (the sms-worker service delivers it).
+      RABBITMQ_URL: "amqp://salon:salon@rabbitmq:5672"
       # Dev convenience: widen the OTP validity window to 10 minutes so manual
       # testing (read code from logs → type it) isn't rushed by the 2-minute
       # production default. Do NOT carry this into production.
@@ -72,6 +95,33 @@ services:
       timeout: 5s
       retries: 12
       start_period: 60s
+    restart: unless-stopped
+
+  # SMS delivery worker: consumes the durable `sms.send` queue and performs the
+  # actual provider send (dev/log here) with manual ack, backoff retry, and
+  # dead-lettering. Shares the backend image + node_modules volumes and runs the
+  # compiled worker the backend's tsc-watch builds into dist/.
+  sms-worker:
+    image: salon-booking-backend-dev
+    build:
+      context: .
+      dockerfile: docker/dev.Dockerfile
+    command: [ "bash", "docker/sms-worker-entrypoint.sh" ]
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: "postgresql://salon:salon@postgres:5432/salon_dev?schema=public"
+      RABBITMQ_URL: "amqp://salon:salon@rabbitmq:5672"
+      # SMS provider keys intentionally unset -> dev/log delivery (logs here).
+    volumes:
+      - ./:/app
+      - backend-root-node-modules:/app/node_modules
+      - backend-backend-node-modules:/app/packages/backend/node_modules
+      - backend-shared-node-modules:/app/packages/shared/node_modules
     restart: unless-stopped
 
   web:
@@ -146,6 +196,7 @@ services:
 
 volumes:
   postgres-data:
+  rabbitmq-data:
   backend-root-node-modules:
   backend-backend-node-modules:
   backend-shared-node-modules:

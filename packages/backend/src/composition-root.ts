@@ -46,6 +46,8 @@ import { CancellationFlow } from './app/cancellation-flow.js';
 import type { SmsProvider } from './auth/sms-provider.interface.js';
 import type { PushProvider } from './notifications/push-provider.interface.js';
 import { DevLogSmsProvider, DevLogPushProvider } from './http/dev-providers.js';
+import { RabbitMqSmsPublisher } from './messaging/sms-queue.js';
+import { QueueingSmsProvider } from './messaging/queueing-sms-provider.js';
 import {
   PrismaNotificationRepository,
   PrismaWaitlistRepository,
@@ -106,6 +108,31 @@ function selectSmsProvider(config: AppConfig): SmsProvider {
 }
 
 /**
+ * The SMS provider used by the API process. When `RABBITMQ_URL` is configured,
+ * outbound SMS is published to a durable queue ({@link QueueingSmsProvider}); a
+ * separate worker performs the actual delivery with retry + dead-lettering. The
+ * real/dev provider ({@link selectSmsProvider}) is passed as a fallback so an
+ * SMS is still delivered directly if the broker is momentarily unreachable.
+ * Without `RABBITMQ_URL`, SMS is sent directly (the prior behavior).
+ *
+ * Exported so the SMS worker can build the same real provider for delivery.
+ */
+export function selectApiSmsProvider(config: AppConfig): SmsProvider {
+  const direct = selectSmsProvider(config);
+  if (!config.rabbitmqUrl) return direct;
+  const publisher = new RabbitMqSmsPublisher(config.rabbitmqUrl, {
+    maxAttempts: config.smsQueueMaxAttempts,
+    retryDelayMs: config.smsQueueRetryDelayMs,
+  });
+  return new QueueingSmsProvider(publisher, direct);
+}
+
+/** Build the real/dev SMS provider used by the worker to actually deliver. */
+export function selectDeliverySmsProvider(config: AppConfig): SmsProvider {
+  return selectSmsProvider(config);
+}
+
+/**
  * Select the push provider from configuration. When Pushe credentials are
  * present the real Pushe adapter is used (preferred); otherwise Najva when its
  * key is present. When no credentials are configured the dev/log provider is
@@ -161,7 +188,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
   });
 
   // External providers / gateways.
-  const smsProvider = selectSmsProvider(config);
+  const smsProvider = selectApiSmsProvider(config);
   const pushProvider = selectPushProvider(config);
   const botAdapters = selectBotAdapters(config);
   const gateway = selectGateway(config);
@@ -246,6 +273,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     cancellationService,
     schedulingEngine,
     waitlistService,
+    notificationService,
   });
 
   // Conversational in-chat booking (task 7.2): a BotSession-backed state machine

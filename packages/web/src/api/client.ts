@@ -146,10 +146,32 @@ export const meApi = {
 
 // Salon endpoints
 export const salonApi = {
-  resolveQr: (payload: string) => request<{ salon: { id: string; name: string } }>(`/salons/by-qr/${encodeURIComponent(payload)}`),
+  resolveQr: (payload: string) =>
+    request<{
+      salon: {
+        id: string;
+        name: string;
+        /**
+         * Storefront Brand_Accent key (signature-ui-system R4.1/R4.2) — null /
+         * absent means the signature default. Additive: existing callers that
+         * only read `{ id, name }` are unaffected.
+         */
+        brandAccent?: string | null;
+      };
+      /** Present only for a stylist-scoped QR — the pre-selected staff member. */
+      staff?: { id: string; fullName: string | null };
+    }>(`/salons/by-qr/${encodeURIComponent(payload)}`),
   getAvailability: (salonId: string, serviceId: string, date: string) =>
     request<{ slots: Array<{ startAt: string; endAt: string }> }>(`/salons/${salonId}/availability?serviceId=${serviceId}&date=${date}`),
   getServices: (salonId: string) => request<{ services: Array<{ id: string; name: string; durationMinutes: number; priceRial: number }> }>(`/salons/${salonId}/services`),
+  /**
+   * Public list of a salon's bookable stylists (Owner/Stylist roles) for the
+   * funnel's stylist picker. Customers can call this without authentication.
+   */
+  getStylists: (salonId: string) =>
+    request<{ stylists: Array<{ id: string; fullName: string | null; role: string }> }>(
+      `/salons/${salonId}/stylists`,
+    ),
 };
 
 // Booking endpoints
@@ -253,6 +275,58 @@ export const qrApi = {
    */
   getSalonQr: (salonId: string) =>
     request<SalonQrResponse>(`/salons/${salonId}/qr`),
+  /**
+   * A stylist-scoped QR (payload + names) that opens that stylist's booking
+   * page pre-selected. Lets the owner print a per-stylist code.
+   */
+  getStaffQr: (salonId: string, staffId: string) =>
+    request<{ payload: string; staffName: string; salonName: string }>(
+      `/salons/${salonId}/staff/${staffId}/qr`,
+    ),
+};
+
+// ─── Printed-card orders ───────────────────────────────────────────────────
+// Owner-panel «سفارش کارت چاپی» surface: a salon orders professionally printed
+// QR cards (the same custom-branded design previewed in the panel). The order
+// captures the chosen template/accent + a shipping contact. Activation/payment
+// + fulfilment are owned by the server (the panel never fakes acceptance).
+
+/** A printable asset template the salon can order. */
+export type CardTemplate = 'card' | 'banner';
+
+/** The order payload sent to the print-fulfilment endpoint. */
+export interface CardOrderInput {
+  salonId: string;
+  /** Which design to print. */
+  template: CardTemplate;
+  /** The chosen brand-accent key (mirrors the studio swatches). */
+  accent: string;
+  /** How many printed pieces. */
+  quantity: number;
+  /** Recipient/contact name. */
+  contactName: string;
+  /** Contact phone (Iranian mobile). */
+  phone: string;
+  /** Shipping address. */
+  address: string;
+  /** Optional free-text notes. */
+  notes?: string;
+}
+
+/** Server acknowledgement of a received print order. */
+export interface CardOrderResponse {
+  orderId: string;
+  status: string;
+}
+
+// Expected backend route (additive): POST /salons/:salonId/card-orders →
+// CardOrderResponse, guarded by `manage_appointments` (Owner/Admin).
+export const cardOrderApi = {
+  create: (body: CardOrderInput) =>
+    request<CardOrderResponse>(`/salons/${body.salonId}/card-orders`, {
+      method: 'POST',
+      body,
+    }),
 };
 
 // Admin endpoints
@@ -263,4 +337,79 @@ export const adminApi = {
     request<{ utilization: unknown; revenue: unknown; busiestWindows: unknown }>(`/salons/${salonId}/analytics?from=${from}&to=${to}`),
   getStaff: (salonId: string) => request<{ staff: unknown[] }>(`/salons/${salonId}/staff`),
   getChairs: (salonId: string) => request<{ chairs: unknown[] }>(`/salons/${salonId}/chairs`),
+};
+
+// ─── Approval policy ───────────────────────────────────────────────────────
+// Owner-panel approval-policy surface (auto-confirm vs manual approval). Mirrors
+// the backend `AvailabilityConfig` + admin routes: a salon-level default plus an
+// optional per-stylist override (null = inherit the salon default).
+//   GET  /salons/:salonId/approval-policy  → ApprovalPolicyResponse
+//   POST /salons/:salonId/auto-approve     (body { autoApprove })           — salon default
+//   POST /staff/:staffId/auto-approve      (body { autoApprove: bool|null }) — stylist override
+
+/** A staff member's approval-policy row in the owner UI. */
+export interface ApprovalPolicyStaff {
+  id: string;
+  fullName: string | null;
+  role: string;
+  /** null = inherit the salon default; true/false = explicit override. */
+  autoApprove: boolean | null;
+}
+
+/** The salon's approval policy (default + per-stylist overrides). */
+export interface ApprovalPolicyResponse {
+  /** The salon-level default — true auto-confirms new (deposit-free) bookings. */
+  autoApprove: boolean;
+  staff: ApprovalPolicyStaff[];
+}
+
+export const approvalPolicyApi = {
+  /** Read the salon default + every stylist's override for the owner UI. */
+  get: (salonId: string) =>
+    request<ApprovalPolicyResponse>(`/salons/${salonId}/approval-policy`),
+  /** Set the salon-level default approval policy. */
+  setSalon: (salonId: string, autoApprove: boolean) =>
+    request<{ ok: boolean; autoApprove: boolean }>(`/salons/${salonId}/auto-approve`, {
+      method: 'POST',
+      body: { autoApprove },
+    }),
+  /** Set (`true`/`false`) or clear (`null` = inherit) a stylist's override. */
+  setStaff: (staffId: string, autoApprove: boolean | null) =>
+    request<{ ok: boolean; autoApprove: boolean | null }>(`/staff/${staffId}/auto-approve`, {
+      method: 'POST',
+      body: { autoApprove },
+    }),
+};
+
+// ─── Brand accent (per-salon storefront theming) ────────────────────────────
+// Owner-panel + storefront Brand_Accent surface (signature-ui-system R4.1,
+// R4.7). Mirrors the additive backend `Salon.brandAccent` column and its
+// public read / owner write routes — a direct analogue of `approvalPolicyApi`:
+//   GET  /salons/:salonId/brand          → { brandAccent }            (public read)
+//   POST /salons/:salonId/brand-accent   (body { brandAccent: key|null }) (owner write,
+//                                          guarded by `configure_salon`)
+// `null` = the signature default (no per-tenant accent).
+
+/** Public read of a salon's storefront Brand_Accent (null = signature default). */
+export interface BrandAccentResponse {
+  /** The salon's Brand_Accent key (from the curated `ACCENTS`), or null. */
+  brandAccent: string | null;
+}
+
+export const brandAccentApi = {
+  /**
+   * Read a salon's storefront Brand_Accent so any (anonymous) visitor's funnel
+   * can theme itself. `null` = the signature default.
+   */
+  get: (salonId: string) =>
+    request<BrandAccentResponse>(`/salons/${salonId}/brand`),
+  /**
+   * Set (a curated accent key) or clear (`null` = signature default) the
+   * salon's storefront Brand_Accent. Owner-only (`configure_salon`).
+   */
+  set: (salonId: string, brandAccent: string | null) =>
+    request<{ ok: boolean; brandAccent: string | null }>(
+      `/salons/${salonId}/brand-accent`,
+      { method: 'POST', body: { brandAccent } },
+    ),
 };

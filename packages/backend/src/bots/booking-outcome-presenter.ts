@@ -31,6 +31,8 @@ import { toPersianDigits } from './persian-digits.js';
 export const OUTCOME_MSG = {
   /** Heading shown when a booking request is submitted and awaits salon approval. */
   pendingHeading: 'درخواست رزرو شما ثبت شد و در انتظار تایید سالن است ⏳',
+  /** Heading shown when a booking is auto-confirmed by the salon's policy. */
+  confirmedHeading: 'رزرو شما تأیید شد ✅',
   /** Heading shown before the payment link when the booking is held. */
   heldHeading:
     'برای نهایی‌شدن رزرو لطفاً پرداخت را تکمیل کنید. این رزرو هنوز قطعی نشده است.',
@@ -69,6 +71,9 @@ export function formatOutcomeText(
   switch (result.status) {
     case 'pending':
       return [OUTCOME_MSG.pendingHeading, ...detailLines(draft)].join('\n');
+
+    case 'confirmed':
+      return [OUTCOME_MSG.confirmedHeading, ...detailLines(draft)].join('\n');
 
     case 'held': {
       const url = result.payment.redirectUrl;

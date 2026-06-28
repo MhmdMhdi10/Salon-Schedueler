@@ -70,3 +70,72 @@ describe('Toast', () => {
     await expectNoSeriousA11yViolations(rtlContainer);
   });
 });
+
+/**
+ * R7.5 — the explicit success confirmation is announced through an ARIA live
+ * region. Status/info announce politely (`role="status"` + `aria-live="polite"`)
+ * so a success toast never interrupts the user, while errors announce
+ * assertively (`aria-live="assertive"`). This keeps the success moment
+ * perceivable without sight (ui-ux §7 success confirmation, §10 live regions).
+ */
+describe('Toast — success via live region (R7.5)', () => {
+  /** Collect every live region currently in the document. */
+  function liveRegions() {
+    return Array.from(
+      document.querySelectorAll<HTMLElement>('[role="status"][aria-live]'),
+    );
+  }
+
+  it('announces a success toast through a polite live region', async () => {
+    render(
+      <ToastProvider>
+        <Harness />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'ارسال' }));
+
+    // The success confirmation text is mirrored into a polite live region…
+    await waitFor(() => {
+      const polite = liveRegions().filter(
+        (el) => el.getAttribute('aria-live') === 'polite',
+      );
+      expect(
+        polite.some((el) => el.textContent?.includes('کد ارسال شد')),
+      ).toBe(true);
+    });
+
+    // …and it is NOT announced assertively (success must not interrupt).
+    const assertive = liveRegions().filter(
+      (el) => el.getAttribute('aria-live') === 'assertive',
+    );
+    expect(
+      assertive.some((el) => el.textContent?.includes('کد ارسال شد')),
+    ).toBe(false);
+  });
+
+  it('announces an error toast assertively', async () => {
+    function ErrorHarness() {
+      const { error } = useToast();
+      return (
+        <Button onClick={() => error({ title: 'پرداخت ناموفق' })}>
+          خطا
+        </Button>
+      );
+    }
+    render(
+      <ToastProvider>
+        <ErrorHarness />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'خطا' }));
+
+    await waitFor(() => {
+      const assertive = liveRegions().filter(
+        (el) => el.getAttribute('aria-live') === 'assertive',
+      );
+      expect(
+        assertive.some((el) => el.textContent?.includes('پرداخت ناموفق')),
+      ).toBe(true);
+    });
+  });
+});

@@ -137,6 +137,7 @@ describe('AnalyticsPage', () => {
     analyticsD.reject(new ApiError(403, 'FORBIDDEN', 'Owner only'));
 
     await waitFor(() => expect(screen.getByTestId('analytics-error')).toBeTruthy());
-    expect(screen.getByText('Owner only')).toBeTruthy();
+    // R5.6: error description is a user-friendly Persian message, never raw API codes
+    expect(screen.getByTestId('analytics-error').textContent).toContain('اتصال به سرور برقرار نشد');
   });
 });

@@ -147,6 +147,30 @@ export class NotificationService {
   }
 
   /**
+   * Send a cancellation notice to the booked customer after their appointment
+   * is cancelled — e.g. when a stylist or admin cancels the slot, the customer
+   * must be told (R12.x). Best-effort SMS, mirroring {@link sendConfirmation}:
+   * it logs success/failure and never throws, so a notification failure can
+   * never roll back the cancellation itself.
+   */
+  async sendCancellation(appointmentId: string): Promise<void> {
+    const appointment = await this.repository.findAppointment(appointmentId);
+    if (!appointment) {
+      return;
+    }
+
+    const message = this.buildCancellationMessage(appointment);
+    const result = await this.smsProvider.send(appointment.customerPhone, message);
+
+    await this.repository.logNotification({
+      appointmentId,
+      channel: 'sms',
+      status: result.ok ? 'sent' : 'failed',
+      error: result.ok ? null : result.error,
+    });
+  }
+
+  /**
    * Send a reminder for a specific appointment.
    * Always sends SMS (R12.2). Additionally sends push if customer has push
    * enabled with a registered device (R12.3).
@@ -250,6 +274,15 @@ export class NotificationService {
       minute: '2-digit',
     });
     return `متأسفانه درخواست نوبت شما برای ${appointment.serviceName} در تاریخ ${dateStr} ساعت ${timeStr} تأیید نشد. لطفاً زمان دیگری را انتخاب کنید.`;
+  }
+
+  private buildCancellationMessage(appointment: AppointmentInfo): string {
+    const dateStr = appointment.startAt.toLocaleDateString('fa-IR');
+    const timeStr = appointment.startAt.toLocaleTimeString('fa-IR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    return `نوبت شما برای ${appointment.serviceName} در تاریخ ${dateStr} ساعت ${timeStr} لغو شد. برای رزرو زمانی دیگر می‌توانید دوباره اقدام کنید.`;
   }
 
   private buildReminderMessage(appointment: AppointmentInfo): string {

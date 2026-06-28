@@ -56,42 +56,42 @@ export interface ColorPalette {
   focusRing: string;
 }
 
-/** Light theme palette (verbatim from ui-ux-skills.md). */
+/** Light theme palette — salon-luxe signature (verbatim from ui-ux-skills.md). */
 export const lightColors: ColorPalette = {
-  bg: '#ffffff',
-  surface: '#f7f8fa',
-  elevated: '#ffffff',
-  text: '#16181d',
-  textMuted: '#5b6472',
-  border: '#e3e6eb',
-  primary: '#5457e6',
-  primaryContrast: '#ffffff',
-  secondary: '#0ea5a4',
-  accent: '#d946ef',
-  success: '#15803d',
-  warning: '#b45309',
-  danger: '#b91c1c',
-  info: '#1d4ed8',
-  focusRing: '#5457e6',
+  bg: '#FBF7F2',
+  surface: '#F4ECE1',
+  elevated: '#FFFFFF',
+  text: '#241C18',
+  textMuted: '#6E5C50',
+  border: '#E4D8CB',
+  primary: '#8E2F50',
+  primaryContrast: '#FFFFFF',
+  secondary: '#2E6E63',
+  accent: '#A6452A',
+  success: '#1F7A43',
+  warning: '#9A5B12',
+  danger: '#B3261E',
+  info: '#1F5FAE',
+  focusRing: '#8E2F50',
 };
 
-/** Dark theme palette (verbatim from ui-ux-skills.md). */
+/** Dark theme palette — salon-luxe signature (verbatim from ui-ux-skills.md). */
 export const darkColors: ColorPalette = {
-  bg: '#0b0f1a',
-  surface: '#121826',
-  elevated: '#1b2233',
-  text: '#eef1f6',
-  textMuted: '#9aa4b2',
-  border: '#2a3344',
-  primary: '#818cf8',
-  primaryContrast: '#0b0f1a',
-  secondary: '#2dd4bf',
-  accent: '#e879f9',
-  success: '#4ade80',
-  warning: '#fbbf24',
-  danger: '#f87171',
-  info: '#60a5fa',
-  focusRing: '#a5b4fc',
+  bg: '#17110F',
+  surface: '#211915',
+  elevated: '#2C2119',
+  text: '#F6EEE7',
+  textMuted: '#BBA99B',
+  border: '#3A2D25',
+  primary: '#E59CB3',
+  primaryContrast: '#17110F',
+  secondary: '#79C9BB',
+  accent: '#EB9A7A',
+  success: '#69D08C',
+  warning: '#E7B45C',
+  danger: '#F2938C',
+  info: '#86B6F0',
+  focusRing: '#E59CB3',
 };
 
 /**
@@ -156,6 +156,34 @@ export const fontFamily = {
   cssStack: "'Vazirmatn', system-ui, 'Segoe UI', Tahoma, sans-serif",
 } as const;
 
+/**
+ * Signature display-type pairing (design §2, R1.2/R8.1). Numeric so the
+ * display-vs-body relationship is machine-checkable: the web mirror in
+ * `tokens.css` declares the matching `--font-weight-body` / `--font-weight-display`
+ * / `--line-height-display` / `--tracking-display` custom properties, and
+ * `styles/tokens-complete.test.ts` asserts the invariant
+ * `display weight > body weight` AND `display line-height < body line-height`,
+ * so heading text can never render visually uniform with body copy.
+ *
+ *  - weights are unitless OpenType weight values (Vazirmatn is a 100–900 variable face);
+ *  - line heights are unitless multipliers (body matches the `sm` body step, 1.75);
+ *  - `displayTracking` is letter-spacing in **em** (negative = tighter; `-0.01em` on web).
+ */
+export const typography = {
+  fontWeights: {
+    body: 400,
+    display: 800,
+  },
+  lineHeight: {
+    body: 1.75,
+    display: 1.15,
+  },
+  /** Letter-spacing in em. */
+  tracking: {
+    display: -0.01,
+  },
+} as const;
+
 /** Motion durations in milliseconds. */
 export const duration = {
   fast: 150,
@@ -195,6 +223,7 @@ export const tokens = {
   radius,
   typeScale,
   fontFamily,
+  typography,
   duration,
   easing,
   zIndex,
@@ -206,4 +235,5 @@ export type ThemeName = 'light' | 'dark';
 export type Spacing = typeof spacing;
 export type Radius = typeof radius;
 export type TypeScale = typeof typeScale;
+export type Typography = typeof typography;
 export type Tokens = typeof tokens;

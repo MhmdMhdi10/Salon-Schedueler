@@ -18,6 +18,16 @@ CREATE EXTENSION IF NOT EXISTS btree_gist;
 -- a new enum value in the same transaction that adds it. Idempotent.
 ALTER TYPE "ApptStatus" ADD VALUE IF NOT EXISTS 'pending';
 
+-- Booking approval policy (additive, idempotent). Default is manual approval:
+-- salon.auto_approve defaults to false; staff_member.auto_approve is nullable
+-- (null = inherit the salon default). Existing rows are unaffected.
+ALTER TABLE salon ADD COLUMN IF NOT EXISTS auto_approve boolean NOT NULL DEFAULT false;
+ALTER TABLE staff_member ADD COLUMN IF NOT EXISTS auto_approve boolean;
+
+-- Per-salon Brand_Accent key for storefront theming (signature-ui-system R4.1).
+-- Additive + nullable: null = signature default palette. Existing rows unaffected.
+ALTER TABLE salon ADD COLUMN IF NOT EXISTS brand_accent text;
+
 -- Generated occupancy interval [start_at, end_at). ADD COLUMN IF NOT EXISTS is
 -- supported by PostgreSQL, so this is idempotent on its own.
 ALTER TABLE appointment

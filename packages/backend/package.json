@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
     "start:dev": "ts-node -r tsconfig-paths/register src/main.ts",
+    "start:worker": "node dist/sms-worker.js",
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
     "prisma:generate": "prisma generate",
@@ -17,10 +18,12 @@
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "@salon/shared": "*",
+    "amqplib": "^0.10.4",
     "express": "^4.22.2",
     "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {
+    "@types/amqplib": "^0.10.5",
     "@types/express": "^4.17.25",
     "@types/jest": "^29.5.0",
     "@types/jsonwebtoken": "^9.0.10",

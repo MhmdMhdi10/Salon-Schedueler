@@ -83,21 +83,21 @@
   color-scheme: light;
 
   /* Color — semantic roles (light) */
-  --color-bg: #ffffff;
-  --color-surface: #f7f8fa;
-  --color-elevated: #ffffff;
-  --color-text: #16181d;
-  --color-text-muted: #5b6472;
-  --color-border: #e3e6eb;
-  --color-primary: #5457e6;
-  --color-primary-contrast: #ffffff;
-  --color-secondary: #0ea5a4;
-  --color-accent: #d946ef;
-  --color-success: #15803d;
-  --color-warning: #b45309;
-  --color-danger: #b91c1c;
-  --color-info: #1d4ed8;
-  --color-focus-ring: #5457e6;
+  --color-bg: #FBF7F2;
+  --color-surface: #F4ECE1;
+  --color-elevated: #FFFFFF;
+  --color-text: #241C18;
+  --color-text-muted: #6E5C50;
+  --color-border: #E4D8CB;
+  --color-primary: #8E2F50;
+  --color-primary-contrast: #FFFFFF;
+  --color-secondary: #2E6E63;
+  --color-accent: #A6452A;
+  --color-success: #1F7A43;
+  --color-warning: #9A5B12;
+  --color-danger: #B3261E;
+  --color-info: #1F5FAE;
+  --color-focus-ring: #8E2F50;
 
   /* Typography scale (rem, base 16px) */
   --font-2xs: 0.75rem;
@@ -107,6 +107,20 @@
   --font-lg: 1.375rem;
   --font-xl: 1.75rem;
   --font-2xl: 2.25rem;
+
+  /*
+   * Display treatment — the signature type pairing (design §2, R1.2/R8.1).
+   * Display titles are distinct from body in weight, line-height, and tracking
+   * so headings can never render visually uniform with body copy. The invariant
+   * (enforced in `styles/tokens-complete.test.ts` against the shared `typography`
+   * tokens): display weight > body weight AND display line-height < body
+   * line-height. Vazirmatn is a variable face (100–900) so the heavier display
+   * weight costs no extra download.
+   */
+  --font-weight-body: 400;
+  --font-weight-display: 800;
+  --line-height-display: 1.15;
+  --tracking-display: -0.01em;
 
   /* Font stack (Persian-first); metrics-matched fallback limits CLS */
   --font-family-sans: 'Vazirmatn', 'Vazirmatn Fallback', system-ui, 'Segoe UI',
@@ -154,21 +168,21 @@
   color-scheme: dark;
 
   /* Color — semantic roles (dark) */
-  --color-bg: #0b0f1a;
-  --color-surface: #121826;
-  --color-elevated: #1b2233;
-  --color-text: #eef1f6;
-  --color-text-muted: #9aa4b2;
-  --color-border: #2a3344;
-  --color-primary: #818cf8;
-  --color-primary-contrast: #0b0f1a;
-  --color-secondary: #2dd4bf;
-  --color-accent: #e879f9;
-  --color-success: #4ade80;
-  --color-warning: #fbbf24;
-  --color-danger: #f87171;
-  --color-info: #60a5fa;
-  --color-focus-ring: #a5b4fc;
+  --color-bg: #17110F;
+  --color-surface: #211915;
+  --color-elevated: #2C2119;
+  --color-text: #F6EEE7;
+  --color-text-muted: #BBA99B;
+  --color-border: #3A2D25;
+  --color-primary: #E59CB3;
+  --color-primary-contrast: #17110F;
+  --color-secondary: #79C9BB;
+  --color-accent: #EB9A7A;
+  --color-success: #69D08C;
+  --color-warning: #E7B45C;
+  --color-danger: #F2938C;
+  --color-info: #86B6F0;
+  --color-focus-ring: #E59CB3;
 
   /*
    * Dark mode prefers border + subtle shadow; heavy shadows read poorly on

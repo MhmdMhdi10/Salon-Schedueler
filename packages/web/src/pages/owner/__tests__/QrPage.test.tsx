@@ -21,6 +21,8 @@ import '../../../i18n';
  */
 
 const getSalonQr = vi.fn();
+const getStaffQr = vi.fn();
+const getStylists = vi.fn();
 
 vi.mock('../../../api/client', () => {
   class ApiError extends Error {
@@ -37,6 +39,10 @@ vi.mock('../../../api/client', () => {
     ApiError,
     qrApi: {
       getSalonQr: (...args: unknown[]) => getSalonQr(...args),
+      getStaffQr: (...args: unknown[]) => getStaffQr(...args),
+    },
+    salonApi: {
+      getStylists: (...args: unknown[]) => getStylists(...args),
     },
   };
 });
@@ -65,6 +71,12 @@ function renderPage() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  getStylists.mockResolvedValue({ stylists: [] });
+  getStaffQr.mockResolvedValue({
+    payload: 'https://book.salon.app/s/v1s.staff-1.salon-token-42.cafebabe',
+    staffName: 'زهرا',
+    salonName: 'سالن رز',
+  });
 });
 
 afterEach(() => {

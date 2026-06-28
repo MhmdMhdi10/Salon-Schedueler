@@ -25,6 +25,7 @@ import { healthRouter } from './routes/health.routes.js';
 import { authRouter } from './routes/auth.routes.js';
 import { salonRouter } from './routes/salon.routes.js';
 import { appointmentRouter } from './routes/appointment.routes.js';
+import { cardOrderRouter } from './routes/card-order.routes.js';
 import { paymentInitiateRouter, paymentCallbackRouter } from './routes/payment.routes.js';
 import { botRouter } from './routes/bot.routes.js';
 import { adminRouter } from './routes/admin.routes.js';
@@ -163,6 +164,7 @@ export function buildApp(opts: BuildAppOptions): Express {
     res.status(200).json({ ok: true });
   });
   protectedRouter.use(appointmentRouter(services, requireRole));
+  protectedRouter.use(cardOrderRouter(requireRole));
   protectedRouter.use(paymentInitiateRouter(services));
   protectedRouter.use(adminRouter(services, requireRole));
   protectedRouter.use(subscriptionRouter(services, requireRole));

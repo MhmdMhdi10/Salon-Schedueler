@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>سناریوها و جرنی‌های کاربران | سامانه رزرو سالن</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0b0f1a;
+      --surface: #121826;
+      --elevated: #1b2233;
+      --text: #eef1f6;
+      --muted: #9aa4b2;
+      --border: #2a3344;
+      --primary: #818cf8;
+      --primary-strong: #6366f1;
+      --success: #4ade80;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --info: #60a5fa;
+      --accent: #e879f9;
+      --teal: #2dd4bf;
+      --radius: 14px;
+      --radius-sm: 8px;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: 'Vazirmatn', system-ui, 'Segoe UI', Tahoma, sans-serif;
+      background: linear-gradient(180deg, #0b0f1a 0%, #0d1322 100%);
+      color: var(--text);
+      line-height: 1.85;
+      font-size: 16px;
+    }
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .wrap { max-width: 1080px; margin-inline: auto; padding: 0 20px 96px; }
+
+    /* Hero */
+    header.hero {
+      background: radial-gradient(1200px 400px at 100% -10%, rgba(129,140,248,.25), transparent 60%),
+                  radial-gradient(900px 360px at 0% -10%, rgba(232,121,249,.18), transparent 55%);
+      border-bottom: 1px solid var(--border);
+      padding: 56px 20px 40px;
+      text-align: center;
+    }
+    header.hero h1 { font-size: 2rem; margin: 0 0 10px; font-weight: 800; }
+    header.hero p { color: var(--muted); max-width: 60ch; margin: 6px auto; }
+    .hero-meta { margin-top: 18px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+
+    /* Sticky nav */
+    nav.toc {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(13,19,34,.92); backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px; margin-bottom: 28px;
+      display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+    }
+    nav.toc a {
+      font-size: .85rem; color: var(--text);
+      background: var(--elevated); border: 1px solid var(--border);
+      padding: 6px 12px; border-radius: 999px; white-space: nowrap;
+    }
+    nav.toc a:hover { border-color: var(--primary); text-decoration: none; }
+
+    section { margin: 40px 0; scroll-margin-top: 80px; }
+    h2.sec {
+      font-size: 1.5rem; font-weight: 800; margin: 0 0 4px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    h2.sec .ic { font-size: 1.4rem; }
+    .sec-sub { color: var(--muted); margin: 0 0 20px; font-size: .95rem; }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 22px 24px; margin: 16px 0;
+      box-shadow: var(--shadow);
+    }
+    .card h3 { margin: 0 0 6px; font-size: 1.15rem; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .card h3 .num { color: var(--primary); font-weight: 800; }
+    .card > p.desc { color: var(--muted); margin: 0 0 14px; }
+
+    /* Badges */
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: .72rem; font-weight: 700; padding: 3px 10px;
+      border-radius: 999px; border: 1px solid; white-space: nowrap;
+    }
+    .role-owner    { color:#c4b5fd; border-color:rgba(196,181,253,.4); background:rgba(129,140,248,.12); }
+    .role-admin    { color:#67e8f9; border-color:rgba(103,232,249,.4); background:rgba(45,212,191,.12); }
+    .role-stylist  { color:#fcd34d; border-color:rgba(252,211,77,.4);  background:rgba(251,191,36,.12); }
+    .role-customer { color:#86efac; border-color:rgba(134,239,172,.4); background:rgba(74,222,128,.12); }
+    .role-system   { color:#9aa4b2; border-color:rgba(154,164,178,.4); background:rgba(154,164,178,.12); }
+
+    .ch { color:#cbd5e1; border-color:var(--border); background:var(--elevated); }
+
+    /* status pills */
+    .st { display:inline-block; font-size:.72rem; font-weight:700; padding:2px 9px; border-radius:6px; }
+    .st-pending   { background:rgba(251,191,36,.16); color:#fcd34d; }
+    .st-held      { background:rgba(96,165,250,.16); color:#93c5fd; }
+    .st-confirmed { background:rgba(74,222,128,.16); color:#86efac; }
+    .st-cancelled { background:rgba(248,113,113,.16); color:#fca5a5; }
+    .st-no_show   { background:rgba(154,164,178,.18); color:#cbd5e1; }
+    .st-expired   { background:rgba(154,164,178,.18); color:#9aa4b2; }
+    .st-completed { background:rgba(45,212,191,.16); color:#5eead4; }
+
+    code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; direction: ltr; unicode-bidi: isolate;
+      background: var(--elevated); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; font-size: .82em; color:#c7d2fe; }
+
+    /* Steps */
+    ol.steps { list-style: none; counter-reset: s; padding: 0; margin: 8px 0 0; }
+    ol.steps > li {
+      counter-increment: s; position: relative; padding-inline-start: 44px; margin-bottom: 14px;
+    }
+    ol.steps > li::before {
+      content: counter(s); position: absolute; inset-inline-start: 0; top: 0;
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--primary-strong); color: #fff; font-weight: 800; font-size: .85rem;
+      display: flex; align-items: center; justify-content: center;
+    }
+    ol.steps > li b { color: var(--text); }
+    .meta-line { display:flex; flex-wrap:wrap; gap:6px; margin-top:5px; }
+
+    /* callouts */
+    .note, .warn, .gap {
+      border-radius: var(--radius-sm); padding: 12px 16px; margin: 14px 0; font-size: .92rem;
+      border-inline-start: 4px solid; background: var(--elevated);
+    }
+    .note { border-color: var(--info); }
+    .warn { border-color: var(--warning); }
+    .gap  { border-color: var(--danger); }
+    .note b, .warn b, .gap b { color: var(--text); }
+
+    table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: .9rem; }
+    th, td { border: 1px solid var(--border); padding: 9px 12px; text-align: start; vertical-align: top; }
+    th { background: var(--elevated); font-weight: 700; }
+    td.center, th.center { text-align: center; }
+    .yes { color: var(--success); font-weight: 800; }
+    .no  { color: var(--danger); font-weight: 800; }
+    .own { color: var(--warning); font-weight: 700; font-size:.82rem; }
+
+    .legend { display:flex; flex-wrap:wrap; gap:14px; margin-top:8px; font-size:.85rem; color:var(--muted); }
+    .legend span { display:inline-flex; align-items:center; gap:6px; }
+
+    .flowline { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:10px 0; font-size:.9rem; }
+    .flowline .arrow { color: var(--muted); }
+
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    @media (max-width:720px){ .grid2{ grid-template-columns:1fr; } .wrap{padding:0 14px 64px;} header.hero h1{font-size:1.5rem;} }
+
+    footer { text-align:center; color:var(--muted); font-size:.82rem; border-top:1px solid var(--border); padding-top:22px; margin-top:40px; }
+    .kbd { font-size:.78rem; color:var(--muted); }
+    hr.soft { border:none; border-top:1px dashed var(--border); margin:18px 0; }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <h1>سناریوها و جرنی‌های کامل کاربران</h1>
+    <p>سند مرجع همه‌ی نقش‌ها و جریان‌های ممکن در «سامانه رزرو سالن» — مشتری، مالک سالن، ادمین، آرایشگر و جریان‌های خودکار سیستم.</p>
+    <div class="hero-meta">
+      <span class="badge role-customer">مشتری</span>
+      <span class="badge role-owner">مالک سالن</span>
+      <span class="badge role-admin">ادمین</span>
+      <span class="badge role-stylist">آرایشگر</span>
+      <span class="badge role-system">سیستم / خودکار</span>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <a href="#overview">۱. نگاه کلی</a>
+    <a href="#channels">۲. کانال‌ها</a>
+    <a href="#status">۳. وضعیت‌های رزرو</a>
+    <a href="#rbac">۴. ماتریس دسترسی</a>
+    <a href="#auth">۵. ورود (OTP)</a>
+    <a href="#customer">۶. مشتری</a>
+    <a href="#owner">۷. مالک سالن</a>
+    <a href="#admin">۸. ادمین</a>
+    <a href="#stylist">۹. آرایشگر</a>
+    <a href="#system">۱۰. سیستم</a>
+    <a href="#accounts">۱۱. حساب‌های تست</a>
+    <a href="#gaps">۱۲. وضعیت پیاده‌سازی</a>
+  </nav>
+
+  <div class="wrap">
+
+    <!-- 1. OVERVIEW -->
+    <section id="overview">
+      <h2 class="sec"><span class="ic">🗺️</span> ۱. نگاه کلی</h2>
+      <p class="sec-sub">پنج بازیگر اصلی در سیستم وجود دارد. سه نقش «کارمند» (با نقش در توکن) و یک «مشتری» و یک بازیگر «خودکار/سیستمی».</p>
+
+      <div class="card">
+        <table>
+          <tr>
+            <th>بازیگر</th><th>کیست</th><th>کانال اصلی</th><th>کارهای کلیدی</th>
+          </tr>
+          <tr>
+            <td><span class="badge role-customer">مشتری</span></td>
+            <td>کسی که نوبت می‌گیرد (بدون نقش کارمندی)</td>
+            <td>وب / موبایل / ربات</td>
+            <td>اسکن QR، دیدن خدمات و زمان‌ها، رزرو، پرداخت بیعانه، لغو، لیست انتظار</td>
+          </tr>
+          <tr>
+            <td><span class="badge role-owner">مالک سالن</span></td>
+            <td>صاحب سالن — بالاترین سطح دسترسی</td>
+            <td>پنل ادمین وب</td>
+            <td>پیکربندی سالن، خدمات/کارکنان/صندلی/ساعات، QR، تایید نوبت، آمار، اشتراک</td>
+          </tr>
+          <tr>
+            <td><span class="badge role-admin">ادمین</span></td>
+            <td>مدیر اجرایی سالن</td>
+            <td>پنل ادمین وب</td>
+            <td>تایید/رد نوبت‌ها، عدم‌حضور، تقویم، مدیریت اشتراک — <b>بدون</b> دسترسی به آمار و پیکربندی</td>
+          </tr>
+          <tr>
+            <td><span class="badge role-stylist">آرایشگر</span></td>
+            <td>کارمند ارائه‌دهنده‌ی خدمت</td>
+            <td>پنل ادمین وب</td>
+            <td>فقط دیدن نوبت‌های خودش + یادداشت مشتری (فقط‌خواندنی)</td>
+          </tr>
+          <tr>
+            <td><span class="badge role-system">سیستم</span></td>
+            <td>جریان‌های خودکار</td>
+            <td>پس‌زمینه</td>
+            <td>یادآوری، انقضای هولد، اطلاع لیست انتظار، محاسبه‌ی وضعیت اشتراک</td>
+          </tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- 2. CHANNELS -->
+    <section id="channels">
+      <h2 class="sec"><span class="ic">📲</span> ۲. کانال‌ها</h2>
+      <p class="sec-sub">یک هسته‌ی بک‌اند مشترک، سه ورودی برای کاربر دارد.</p>
+      <div class="grid2">
+        <div class="card">
+          <h3>🌐 وب (PWA)</h3>
+          <p class="desc">React + Vite، فارسی و RTL. مسیرها:</p>
+          <ul>
+            <li><code>/qr/:payload</code> — ورود از QR</li>
+            <li><code>/salon/:id/book</code> — انتخاب خدمت/تاریخ/زمان</li>
+            <li><code>/salon/:id/book/confirm</code> — تأیید و پرداخت</li>
+            <li><code>/booking/success</code> — رسید (در انتظار تأیید)</li>
+            <li><code>/auth</code> — ورود با موبایل + OTP</li>
+            <li><code>/admin/calendar</code> · <code>/admin/analytics</code> · <code>/admin/config</code></li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>📱 موبایل (Expo)</h3>
+          <p class="desc">React Native. صفحه‌ها:</p>
+          <ul>
+            <li>ورود (موبایل + OTP)</li>
+            <li>اسکن QR با دوربین واقعی (expo-camera)</li>
+            <li>انتخاب خدمت/تاریخ/زمان و رزرو</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>🤖 ربات (تلگرام / بله)</h3>
+          <p class="desc">رزرو داخل گفت‌وگو. ورود با لینک عمیق <code>/start</code> یا <code>/book &lt;salonId&gt;</code>.</p>
+          <p class="desc">ماشین حالت: خدمت ← تاریخ ← زمان ← (در صورت نیاز OTP) ← تأیید.</p>
+        </div>
+        <div class="card">
+          <h3>🔔 اطلاع‌رسانی</h3>
+          <p class="desc">کانال‌ها: پیامک (SMS)، پوش (Push)، و پیام ربات (تلگرام/بله) با fallback به پیامک. هر تلاش در <code>notification_log</code> ثبت می‌شود.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. STATUS LIFECYCLE -->
+    <section id="status">
+      <h2 class="sec"><span class="ic">🔄</span> ۳. چرخه‌ی وضعیت نوبت</h2>
+      <p class="sec-sub">هر نوبت یکی از این وضعیت‌ها را دارد. وضعیت‌های <span class="st st-pending">pending</span>، <span class="st st-held">held</span> و <span class="st st-confirmed">confirmed</span> اسلات را «رزرو» نگه می‌دارند (در محدودیت عدم‌تداخل دیتابیس شرکت می‌کنند).</p>
+      <div class="card">
+        <table>
+          <tr><th>وضعیت</th><th>معنی</th><th>اسلات را اشغال می‌کند؟</th></tr>
+          <tr><td><span class="st st-pending">pending</span></td><td>در انتظار تأیید مدیر/ادمین (هنوز پیامکی برای مشتری نرفته)</td><td class="center yes">بله</td></tr>
+          <tr><td><span class="st st-held">held</span></td><td>در انتظار پرداخت بیعانه (۱۵ دقیقه فرصت)</td><td class="center yes">بله</td></tr>
+          <tr><td><span class="st st-confirmed">confirmed</span></td><td>قطعی‌شده — مشتری مطلع شده</td><td class="center yes">بله</td></tr>
+          <tr><td><span class="st st-completed">completed</span></td><td>انجام‌شده (برای آمار درآمد)</td><td class="center no">خیر</td></tr>
+          <tr><td><span class="st st-cancelled">cancelled</span></td><td>لغوشده (دستی یا رد ادمین)</td><td class="center no">خیر</td></tr>
+          <tr><td><span class="st st-no_show">no_show</span></td><td>عدم‌حضور مشتری</td><td class="center no">خیر</td></tr>
+          <tr><td><span class="st st-expired">expired</span></td><td>هولد بیعانه منقضی شد بدون پرداخت</td><td class="center no">خیر</td></tr>
+        </table>
+
+        <hr class="soft" />
+        <p><b>مسیر بدون بیعانه (پیش‌فرض):</b></p>
+        <div class="flowline">
+          <span class="st st-pending">pending</span><span class="arrow">— تأیید ادمین →</span>
+          <span class="st st-confirmed">confirmed</span><span class="arrow">+ پیامک</span>
+        </div>
+        <div class="flowline">
+          <span class="st st-pending">pending</span><span class="arrow">— رد ادمین →</span>
+          <span class="st st-cancelled">cancelled</span><span class="arrow">+ پیامک رد</span>
+        </div>
+        <p><b>مسیر با بیعانه:</b></p>
+        <div class="flowline">
+          <span class="st st-held">held</span><span class="arrow">— پرداخت موفق →</span>
+          <span class="st st-confirmed">confirmed</span>
+          <span class="arrow">یا</span>
+          <span class="st st-held">held</span><span class="arrow">— ۱۵ دقیقه بدون پرداخت →</span>
+          <span class="st st-expired">expired</span>
+        </div>
+        <div class="note">
+          <b>نکته‌ی طراحی:</b> رزروهای <b>بدون بیعانه</b> از دروازه‌ی «تأیید ادمین» عبور می‌کنند؛ رزروهای <b>بیعانه‌دار</b> دروازه‌شان «پرداخت» است و مستقیم از <span class="st st-held">held</span> به <span class="st st-confirmed">confirmed</span> می‌روند (تأیید ادمین ندارند).
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. RBAC -->
+    <section id="rbac">
+      <h2 class="sec"><span class="ic">🔐</span> ۴. ماتریس دسترسی (RBAC)</h2>
+      <p class="sec-sub">نقش هر کارمند در توکن ورود (JWT) قرار می‌گیرد و دسترسی‌ها بر اساس آن کنترل می‌شود.</p>
+      <div class="card">
+        <table>
+          <tr>
+            <th>اقدام</th>
+            <th class="center"><span class="badge role-owner">مالک</span></th>
+            <th class="center"><span class="badge role-admin">ادمین</span></th>
+            <th class="center"><span class="badge role-stylist">آرایشگر</span></th>
+            <th class="center"><span class="badge role-customer">مشتری</span></th>
+          </tr>
+          <tr><td>پیکربندی سالن + آمار <span class="kbd">(configure_salon)</span></td><td class="center yes">✓</td><td class="center no">✕</td><td class="center no">✕</td><td class="center no">✕</td></tr>
+          <tr><td>مدیریت نوبت‌ها: تأیید/رد/عدم‌حضور، صف انتظار، اشتراک <span class="kbd">(manage_appointments)</span></td><td class="center yes">✓</td><td class="center yes">✓</td><td class="center no">✕</td><td class="center no">✕</td></tr>
+          <tr><td>دیدن نوبت‌ها / تقویم <span class="kbd">(view_own_appointments)</span></td><td class="center yes">✓</td><td class="center yes">✓</td><td class="center own">فقط خودش</td><td class="center no">✕</td></tr>
+          <tr><td>دیدن یادداشت مشتری <span class="kbd">(view_customer_notes)</span></td><td class="center yes">✓</td><td class="center yes">✓</td><td class="center yes">✓</td><td class="center no">✕</td></tr>
+          <tr><td>رزرو نوبت برای خود</td><td class="center yes">✓</td><td class="center yes">✓</td><td class="center yes">✓</td><td class="center yes">✓</td></tr>
+        </table>
+        <p class="kbd">مالک همیشه به پیکربندی دسترسی دارد؛ ادمین همه‌چیز جز پیکربندی سالن را دارد؛ آرایشگر فقط نوبت‌های خودش را می‌بیند.</p>
+      </div>
+    </section>
+
+    <!-- 5. AUTH -->
+    <section id="auth">
+      <h2 class="sec"><span class="ic">🔑</span> ۵. ورود با کد یک‌بارمصرف (OTP)</h2>
+      <p class="sec-sub">همه (مشتری و کارمند) با شماره موبایل + کد ۶ رقمی وارد می‌شوند.</p>
+      <div class="card">
+        <ol class="steps">
+          <li><b>درخواست کد:</b> کاربر شماره موبایل می‌دهد.
+            <div class="meta-line"><span class="badge ch">عمومی</span> <code>POST /api/auth/otp/request {phone}</code></div></li>
+          <li><b>دریافت و وارد کردن کد:</b> کد ۶ رقمی پیامک می‌شود (در حالت dev در لاگ سرور). کاربر کد را وارد می‌کند.
+            <div class="meta-line"><span class="badge ch">عمومی</span> <code>POST /api/auth/otp/verify {phone, code}</code> → <code>{accessToken, refreshToken}</code></div></li>
+          <li><b>تعیین نقش:</b> اگر شماره با <code>staff_member.phone</code> یکی باشد، توکن نقش (Owner/Admin/Stylist) + شناسه‌ی کارمند می‌گیرد؛ در غیر این صورت «مشتری» است.</li>
+          <li><b>تمدید نشست:</b> <code>POST /api/auth/refresh {refreshToken}</code></li>
+        </ol>
+        <div class="note"><b>در ربات:</b> اگر گفت‌وگو هنوز به مشتری وصل نباشد، همین OTP داخل چت انجام می‌شود (شماره ← کد) و سپس <code>BotChat</code> ساخته می‌شود تا دفعه‌ی بعد لازم نباشد.</div>
+      </div>
+    </section>
+
+    <!-- 6. CUSTOMER -->
+    <section id="customer">
+      <h2 class="sec"><span class="ic">💇</span> ۶. جرنی‌های مشتری</h2>
+      <p class="sec-sub"><span class="badge role-customer">مشتری</span> — کسی که می‌خواهد نوبت بگیرد.</p>
+
+      <div class="card">
+        <h3><span class="num">۶.۱</span> رزرو نوبت بدون بیعانه (مسیر اصلی)</h3>
+        <p class="desc">رایج‌ترین سناریو. نتیجه «در انتظار تأیید» است، نه قطعی.</p>
+        <ol class="steps">
+          <li><b>ورود به سالن:</b> اسکن QR سالن (دوربین موبایل/وب) یا باز کردن لینک. سالن شناسایی می‌شود.
+            <div class="meta-line"><span class="badge ch">عمومی</span> <code>GET /api/salons/by-qr/:payload</code></div></li>
+          <li><b>انتخاب خدمت:</b> فهرست خدمات سالن نمایش داده می‌شود (مثلاً «کوتاهی مو»، «رنگ مو»).
+            <div class="meta-line"><span class="badge ch">عمومی</span> <code>GET /api/salons/:id/services</code></div></li>
+          <li><b>انتخاب تاریخ.</b></li>
+          <li><b>دیدن زمان‌های خالی:</b> فقط اسلات‌هایی که هم آرایشگرِ واجدشرایط و هم صندلیِ سازگار آزاد باشند.
+            <div class="meta-line"><span class="badge ch">عمومی</span> <code>GET /api/salons/:id/availability?serviceId=&date=</code></div></li>
+          <li><b>ورود (در صورت نیاز):</b> اگر وارد نشده، ابتدا OTP (بخش ۵).</li>
+          <li><b>تأیید رزرو:</b> اسلات را انتخاب و ثبت می‌کند.
+            <div class="meta-line"><span class="badge ch">نیازمند ورود</span> <code>POST /api/appointments {salonId, serviceId, startAt}</code></div></li>
+          <li><b>نتیجه:</b> نوبت با وضعیت <span class="st st-pending">pending</span> ساخته می‌شود. پیام: «درخواست رزرو شما ثبت شد و در انتظار تأیید سالن است». <b>هیچ پیامکی هنوز ارسال نمی‌شود.</b></li>
+          <li><b>انتظار:</b> تا وقتی ادمین/مالک تأیید کند.</li>
+          <li><b>پس از تأیید:</b> پیامک «نوبت شما برای … تأیید شد» → نوبت قطعی <span class="st st-confirmed">confirmed</span>.
+            <div class="meta-line"><span class="arrow">یا</span> <b>رد:</b> پیامک «متأسفانه درخواست … تأیید نشد» → <span class="st st-cancelled">cancelled</span></div></li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h3><span class="num">۶.۲</span> رزرو نوبت با بیعانه (پرداخت آنلاین)</h3>
+        <p class="desc">برای خدماتی که <code>requiresDeposit</code> دارند.</p>
+        <ol class="steps">
+          <li><b>ثبت رزرو:</b> مثل بالا، اما نتیجه <span class="st st-held">held</span> است با مهلت <b>۱۵ دقیقه</b>ای.</li>
+          <li><b>شروع پرداخت:</b> هدایت به درگاه (زرین‌پال/آیدی‌پی).
+            <div class="meta-line"><span class="badge ch">نیازمند ورود</span> <code>POST /api/payments/initiate {appointmentId}</code> → <code>redirectUrl</code></div></li>
+          <li><b>پرداخت در درگاه</b> و بازگشت.</li>
+          <li><b>تأیید پرداخت:</b> درگاه به سیستم برمی‌گردد، تراکنش راستی‌آزمایی و نوبت <span class="st st-held">held</span> ← <span class="st st-confirmed">confirmed</span> می‌شود + پیامک تأیید.
+            <div class="meta-line"><span class="badge ch">عمومی (callback درگاه)</span> <code>POST /api/payments/callback</code></div></li>
+          <li><b>پرداخت دیرهنگام:</b> اگر مهلت ۱۵ دقیقه تمام شده باشد (<span class="st st-expired">expired</span>) و بعد پرداخت بیاید: آزاد بودن اسلات دوباره بررسی می‌شود → اگر آزاد بود <span class="st st-confirmed">confirmed</span>، وگرنه پرداخت <b>refund</b> می‌شود.</li>
+        </ol>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <h3><span class="num">۶.۳</span> لغو نوبت</h3>
+          <ol class="steps">
+            <li><b>لغو:</b> مشتری نوبت را لغو می‌کند → <span class="st st-cancelled">cancelled</span>.
+              <div class="meta-line"><code>POST /api/appointments/:id/cancel</code></div></li>
+            <li><b>اطلاع لیست انتظار:</b> نفر اولِ صفِ همان بازه‌ی زمانی مطلع می‌شود.</li>
+            <li><b>سیاست بیعانه:</b> قبل از «پنجره‌ی لغو» → استرداد (refund)؛ داخل پنجره → نگه‌داری (retain).</li>
+          </ol>
+        </div>
+        <div class="card">
+          <h3><span class="num">۶.۴</span> لیست انتظار</h3>
+          <ol class="steps">
+            <li><b>پیوستن:</b> وقتی بازه‌ای پر است، مشتری به صف انتظار می‌پیوندد → وضعیت <code>waiting</code>.</li>
+            <li><b>آزاد شدن بازه:</b> با لغو/انقضای نوبتِ دیگر، نفر اول صف (FIFO) به <code>notified</code> می‌رود و پیامک می‌گیرد.</li>
+            <li><b>نتیجه:</b> <code>fulfilled</code> (رزرو کرد) یا <code>cancelled</code> (منصرف شد).</li>
+          </ol>
+          <div class="gap"><b>وضعیت:</b> منطق لیست انتظار پیاده‌سازی شده، اما «پیوستن» هنوز Endpoint وب ندارد؛ فعلاً فقط مسیرِ «اطلاع هنگام آزاد شدن» (از طریق لغو) فعال است.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><span class="num">۶.۵</span> رزرو از طریق ربات (تلگرام / بله)</h3>
+        <ol class="steps">
+          <li><b>شروع:</b> <code>/start</code> یا <code>/book &lt;salonId&gt;</code> (از لینک عمیق سالن).</li>
+          <li><b>انتخاب خدمت</b> (دکمه‌ها).</li>
+          <li><b>انتخاب تاریخ</b> (۷ روز آینده، با تاریخ شمسی).</li>
+          <li><b>انتخاب زمان</b> (حداکثر ۸ اسلات).</li>
+          <li><b>هویت:</b> اگر چت قبلاً به مشتری وصل است → مستقیم تأیید؛ وگرنه OTP داخل چت (شماره ← کد).</li>
+          <li><b>تأیید نهایی</b> (بله/خیر) → رزرو با <code>source = bot</code>.</li>
+          <li><b>نتیجه در چت:</b> <span class="st st-pending">pending</span> «در انتظار تأیید سالن ⏳» / <span class="st st-held">held</span> «لینک پرداخت» / رد «این زمان دیگر در دسترس نیست».</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h3><span class="num">۶.۶</span> اعلان‌ها و حساب مشتری</h3>
+        <ul>
+          <li><b>یادآوری:</b> ۶۰ دقیقه پیش از نوبت، پیامک یادآوری (+ پوش اگر فعال باشد).</li>
+          <li><b>ثبت دستگاه برای پوش:</b> <code>POST /api/devices/token {token, platform}</code></li>
+          <li><b>سابقه‌ی نوبت‌ها، یادداشت‌ها، آرایشگر منتخب، شمارنده‌ی عدم‌حضور</b> در پروفایل مشتری نگه‌داری می‌شود.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 7. OWNER -->
+    <section id="owner">
+      <h2 class="sec"><span class="ic">👑</span> ۷. جرنی‌های مالک سالن</h2>
+      <p class="sec-sub"><span class="badge role-owner">مالک سالن</span> — بالاترین دسترسی؛ همه‌ی کارهای ادمین + پیکربندی + آمار + اشتراک.</p>
+
+      <div class="card">
+        <h3><span class="num">۷.۱</span> راه‌اندازی اولیه (Onboarding)</h3>
+        <ol class="steps">
+          <li><b>ساخت سالن:</b> سالن با یک <code>qrToken</code> یکتا ساخته می‌شود.</li>
+          <li><b>افزودن کارکنان:</b> Owner / Admin / Stylist با نام و نقش.</li>
+          <li><b>افزودن صندلی‌ها و تجهیزات.</b></li>
+          <li><b>تعریف خدمات:</b> نام، مدت‌زمان، بافر، قیمت، نیاز به بیعانه.</li>
+          <li><b>اتصال خدمت ↔ آرایشگر و خدمت ↔ تجهیزات.</b></li>
+          <li><b>ساعات کاری</b> برای هر آرایشگر و هر صندلی + روزهای تعطیل/مرخصی.</li>
+        </ol>
+        <div class="gap"><b>وضعیت پیاده‌سازی:</b> منطق همه‌ی این‌ها در سرویس‌ها هست و فقط Endpointهای <b>خواندن</b> (staff/chairs/services) فعال‌اند؛ Endpointهای <b>ساخت/ویرایش</b> هنوز در API وصل نشده‌اند. فعلاً داده‌ها از طریق seed دیتابیس پر می‌شوند (سالن «سالن رز»). صفحه‌ی <code>/admin/config</code> سطح این کارهاست.</div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <h3><span class="num">۷.۲</span> صف تأیید نوبت‌ها</h3>
+          <ol class="steps">
+            <li><b>دیدن صف:</b> رزروهای <span class="st st-pending">pending</span> به ترتیب قدیمی‌ترین.
+              <div class="meta-line"><span class="badge role-admin">manage</span> <code>GET /api/salons/:id/pending</code></div></li>
+            <li><b>تأیید:</b> → <span class="st st-confirmed">confirmed</span> + پیامک به مشتری.
+              <div class="meta-line"><code>POST /api/appointments/:id/approve</code></div></li>
+            <li><b>رد:</b> → <span class="st st-cancelled">cancelled</span> + پیامک رد.
+              <div class="meta-line"><code>POST /api/appointments/:id/reject</code></div></li>
+          </ol>
+        </div>
+        <div class="card">
+          <h3><span class="num">۷.۳</span> تقویم</h3>
+          <p class="desc">نمای روز/هفته از نوبت‌ها (شامل <span class="st st-pending">pending</span>/<span class="st st-held">held</span>/<span class="st st-confirmed">confirmed</span>/<span class="st st-completed">completed</span>).</p>
+          <div class="meta-line"><span class="badge role-stylist">view</span> <code>GET /api/salons/:id/calendar?from=&to=</code></div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <h3><span class="num">۷.۴</span> آمار و گزارش‌ها <span class="badge role-owner">فقط مالک</span></h3>
+          <ul>
+            <li><b>بهره‌وری صندلی‌ها</b> (دقایق رزروشده / دقایق در دسترس)</li>
+            <li><b>درآمد</b> (مجموع قیمت خدماتِ <span class="st st-completed">completed</span>)</li>
+            <li><b>شلوغ‌ترین بازه‌ها</b></li>
+          </ul>
+          <div class="meta-line"><code>GET /api/salons/:id/analytics?from=&to=</code></div>
+        </div>
+        <div class="card">
+          <h3><span class="num">۷.۵</span> QR سالن</h3>
+          <p class="desc">دریافت کد QR پایدارِ سالن برای چاپ/نمایش (کمپین).</p>
+          <div class="meta-line"><span class="badge role-admin">manage</span> <code>GET /api/salons/:id/qr</code></div>
+          <p class="desc">هر اسکن ورودی در <code>qr_scan_event</code> شمارش می‌شود (<code>POST /api/salons/:id/scan</code>).</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><span class="num">۷.۶</span> اشتراک سالن</h3>
+        <p class="desc">چرخه‌ی عمر: <code>trial</code> (۱۴ روز) → <code>active</code> → <code>grace</code> (۷ روز) → <code>expired</code>. وضعیتِ مؤثر از روی تاریخ‌ها محاسبه می‌شود.</p>
+        <table>
+          <tr><th>پلن</th><th>مدت</th><th>قیمت (ریال)</th></tr>
+          <tr><td>آزمایشی (trial)</td><td>۱۴ روز</td><td>رایگان</td></tr>
+          <tr><td>ماهانه</td><td>۳۰ روز</td><td>۲٬۰۰۰٬۰۰۰</td></tr>
+          <tr><td>فصلی</td><td>۹۰ روز</td><td>۵٬۴۰۰٬۰۰۰</td></tr>
+          <tr><td>سالانه</td><td>۳۶۵ روز</td><td>۱۹٬۲۰۰٬۰۰۰</td></tr>
+        </table>
+        <ol class="steps">
+          <li><b>دیدن وضعیت/پلن‌ها:</b> <code>GET /api/subscription/plans</code> · <code>GET /api/salons/:id/subscription</code></li>
+          <li><b>خرید پلن:</b> هدایت به درگاه. <code>POST /api/subscription/purchase {salonId, plan}</code> → <code>redirectUrl</code></li>
+          <li><b>فعال‌سازی پس از پرداخت:</b> اشتراک <code>active</code> می‌شود و مدت پلن به پنجره‌ی باقیمانده اضافه می‌گردد (روزهای باقیمانده از بین نمی‌رود).</li>
+        </ol>
+        <div class="warn"><b>هنگام انقضا:</b> خواندن داده‌ها باز است اما عملیات نوشتن با خطای <code>402 SUBSCRIPTION_REQUIRED</code> بسته می‌شود تا مالک تمدید کند.</div>
+        <div class="gap"><b>وضعیت پیاده‌سازی:</b> میدلور سدِّ اشتراک و مسیر <code>callback</code> فعال‌سازی، پیاده و تست شده‌اند اما هنوز در روتر اصلی app.ts وصل نشده‌اند.</div>
+      </div>
+    </section>
+
+    <!-- 8. ADMIN -->
+    <section id="admin">
+      <h2 class="sec"><span class="ic">🛠️</span> ۸. جرنی‌های ادمین</h2>
+      <p class="sec-sub"><span class="badge role-admin">ادمین</span> — مدیریت روزمره‌ی نوبت‌ها. همه‌چیز <b>جز</b> پیکربندی سالن و آمار.</p>
+      <div class="card">
+        <h3>کارهای ادمین</h3>
+        <ol class="steps">
+          <li><b>صف تأیید:</b> دیدن رزروهای <span class="st st-pending">pending</span> و <b>تأیید</b> (→ <span class="st st-confirmed">confirmed</span> + پیامک) یا <b>رد</b> (→ <span class="st st-cancelled">cancelled</span> + پیامک).
+            <div class="meta-line"><code>GET /api/salons/:id/pending</code> · <code>POST …/approve</code> · <code>POST …/reject</code></div></li>
+          <li><b>ثبت عدم‌حضور:</b> نوبت → <span class="st st-no_show">no_show</span>؛ شمارنده‌ی عدم‌حضور مشتری +۱ و بیعانه نگه‌داری می‌شود.
+            <div class="meta-line"><code>POST /api/appointments/:id/no-show</code></div></li>
+          <li><b>تقویم:</b> دیدن همه‌ی نوبت‌های سالن. <code>GET /api/salons/:id/calendar</code></li>
+          <li><b>فهرست کارکنان و صندلی‌ها:</b> <code>GET /api/salons/:id/staff</code> · <code>/chairs</code></li>
+          <li><b>مدیریت اشتراک:</b> دیدن وضعیت و خرید پلن (مثل مالک).</li>
+        </ol>
+        <div class="note"><b>تفاوت با مالک:</b> ادمین به <b>آمار</b> (<code>analytics</code>) و <b>پیکربندی سالن</b> دسترسی ندارد (آن‌ها فقط برای مالک‌اند).</div>
+        <div class="note"><b>توجه:</b> تأیید/رد یا عدم‌حضورِ نوبتی که در وضعیت درست نباشد (مثلاً تأیید نوبتی که قبلاً تأیید شده) خطای وضعیت می‌دهد و انجام نمی‌شود.</div>
+      </div>
+    </section>
+
+    <!-- 9. STYLIST -->
+    <section id="stylist">
+      <h2 class="sec"><span class="ic">✂️</span> ۹. جرنی‌های آرایشگر</h2>
+      <p class="sec-sub"><span class="badge role-stylist">آرایشگر</span> — کم‌ترین دسترسی؛ تقریباً فقط‌خواندنی.</p>
+      <div class="card">
+        <h3>کارهای آرایشگر</h3>
+        <ol class="steps">
+          <li><b>دیدن نوبت‌های خودش:</b> فقط نوبت‌هایی که به او اختصاص دارند (نه کلِ سالن).
+            <div class="meta-line"><span class="badge role-stylist">view (own)</span> <code>GET /api/salons/:id/calendar</code></div></li>
+          <li><b>دیدن یادداشت‌های مشتری</b> (ترجیحات/حساسیت‌ها) — برای آمادگی پیش از خدمت.</li>
+        </ol>
+        <div class="note"><b>آرایشگر نمی‌تواند:</b> نوبت تأیید/رد/لغو کند، عدم‌حضور ثبت کند، سالن را پیکربندی کند یا آمار ببیند. (همه‌ی این‌ها برای مالک/ادمین است.)</div>
+        <div class="note">آرایشگر مثل هر کاربر دیگری می‌تواند برای خودش هم نوبت بگیرد (به‌عنوان مشتری).</div>
+      </div>
+    </section>
+
+    <!-- 10. SYSTEM -->
+    <section id="system">
+      <h2 class="sec"><span class="ic">⚙️</span> ۱۰. جریان‌های خودکار سیستم</h2>
+      <p class="sec-sub"><span class="badge role-system">سیستم</span> — بدون دخالت انسان اجرا می‌شوند.</p>
+      <div class="grid2">
+        <div class="card">
+          <h3>⏰ یادآوری نوبت</h3>
+          <p class="desc">۶۰ دقیقه پیش از شروع نوبت: پیامک یادآوری (+ پوش اگر مشتری فعال کرده باشد). اگر پیامک ناموفق شد، fallback ندارد و فقط لاگ می‌شود.</p>
+        </div>
+        <div class="card">
+          <h3>⌛ انقضای هولد بیعانه</h3>
+          <p class="desc">نوبت‌های <span class="st st-held">held</span> که ۱۵ دقیقه بدون پرداخت مانده‌اند → <span class="st st-expired">expired</span> و اسلات آزاد می‌شود.</p>
+        </div>
+        <div class="card">
+          <h3>📨 اطلاع لیست انتظار</h3>
+          <p class="desc">با آزاد شدن یک بازه (لغو/انقضا)، نفر اول صفِ همان بازه به <code>notified</code> می‌رود و پیامک می‌گیرد.</p>
+        </div>
+        <div class="card">
+          <h3>📅 وضعیت اشتراک</h3>
+          <p class="desc">وضعیت مؤثر (trial/active/grace/expired) لحظه‌ای از روی تاریخ‌ها محاسبه می‌شود؛ نیازی به job ندارد.</p>
+        </div>
+      </div>
+      <div class="gap"><b>وضعیت پیاده‌سازی:</b> «یادآوری» و «انقضای هولد» پیاده و تست شده‌اند، اما هیچ زمان‌بند (cron/worker) فعلاً آن‌ها را به‌صورت دوره‌ای صدا نمی‌زند؛ باید از بیرون فراخوانی شوند (مثلاً cron). محاسبه‌ی وضعیت اشتراک و اطلاع لیست انتظار (هنگام لغو) فعال‌اند.</div>
+    </section>
+
+    <!-- 11. ACCOUNTS -->
+    <section id="accounts">
+      <h2 class="sec"><span class="ic">🧪</span> ۱۱. حساب‌های تست (محیط dev)</h2>
+      <p class="sec-sub">سالن نمونه: «سالن رز» — خدمات: کوتاهی مو (۳۰ دقیقه)، رنگ مو (۹۰ دقیقه)، هر دو بدون بیعانه.</p>
+      <div class="card">
+        <table>
+          <tr><th>نقش</th><th>نام</th><th>موبایل (ورود با OTP)</th></tr>
+          <tr><td><span class="badge role-owner">مالک</span></td><td>سارا محمدی</td><td><code>09120000001</code></td></tr>
+          <tr><td><span class="badge role-admin">ادمین</span></td><td>مریم احمدی</td><td><code>09120000002</code></td></tr>
+          <tr><td><span class="badge role-stylist">آرایشگر</span></td><td>زهرا رضایی</td><td><code>09120000003</code></td></tr>
+          <tr><td><span class="badge role-customer">مشتری</span></td><td>نازنین کریمی</td><td><code>09120000004</code></td></tr>
+        </table>
+        <div class="note">در حالت dev، کد OTP به‌جای پیامک واقعی در لاگ سرور بک‌اند چاپ می‌شود.</div>
+      </div>
+    </section>
+
+    <!-- 12. GAPS -->
+    <section id="gaps">
+      <h2 class="sec"><span class="ic">📌</span> ۱۲. جمع‌بندی وضعیت پیاده‌سازی</h2>
+      <p class="sec-sub">برای صداقت فنی: جریان‌های بالا «طراحی محصول» هستند؛ این‌جا مشخص است چه چیزی همین حالا از طریق API فعال است و چه چیزی هنوز وصل نشده.</p>
+      <div class="card">
+        <table>
+          <tr><th>قابلیت</th><th class="center">منطق دامنه</th><th class="center">API/اتصال فعال؟</th></tr>
+          <tr><td>رزرو → pending → تأیید/رد ادمین + پیامک</td><td class="center yes">✓</td><td class="center yes">✓ فعال</td></tr>
+          <tr><td>محاسبه‌ی زمان‌های خالی + جلوگیری از تداخل</td><td class="center yes">✓</td><td class="center yes">✓ فعال</td></tr>
+          <tr><td>پرداخت بیعانه (held→پرداخت→confirmed)</td><td class="center yes">✓</td><td class="center yes">✓ فعال</td></tr>
+          <tr><td>لغو + عدم‌حضور + استرداد/نگه‌داری بیعانه</td><td class="center yes">✓</td><td class="center yes">✓ فعال</td></tr>
+          <tr><td>تقویم، صف تأیید، آمار، فهرست کارکنان/صندلی</td><td class="center yes">✓</td><td class="center yes">✓ فعال</td></tr>
+          <tr><td>رزرو از ربات (تلگرام/بله)</td><td class="center yes">✓</td><td class="center yes">✓ فعال</td></tr>
+          <tr><td>اشتراک: دیدن/خرید</td><td class="center yes">✓</td><td class="center yes">✓ فعال</td></tr>
+          <tr><td>ساخت/ویرایش سالن، کارکنان، صندلی، خدمت، ساعات، تعطیلات</td><td class="center yes">✓</td><td class="center no">✕ فقط seed (Endpoint نوشتن نیست)</td></tr>
+          <tr><td>پیوستن به لیست انتظار (سمت مشتری)</td><td class="center yes">✓</td><td class="center no">✕ Endpoint ندارد</td></tr>
+          <tr><td>یادآوری + انقضای هولد (دوره‌ای)</td><td class="center yes">✓</td><td class="center no">✕ زمان‌بند وصل نشده</td></tr>
+          <tr><td>سدِّ اشتراک منقضی (۴۰۲) + callback فعال‌سازی</td><td class="center yes">✓</td><td class="center no">✕ در app.ts mount نشده</td></tr>
+          <tr><td>سابقه/یادداشت/آرایشگر منتخب مشتری</td><td class="center yes">✓</td><td class="center no">✕ Endpoint ندارد</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      سند سناریوهای «سامانه رزرو سالن» — تولیدشده از روی کد واقعی پروژه.<br />
+      وضعیت‌ها: 
+      <span class="st st-pending">pending</span>
+      <span class="st st-held">held</span>
+      <span class="st st-confirmed">confirmed</span>
+      <span class="st st-completed">completed</span>
+      <span class="st st-cancelled">cancelled</span>
+      <span class="st st-no_show">no_show</span>
+      <span class="st st-expired">expired</span>
+    </footer>
+  </div>
+</body>
+</html>

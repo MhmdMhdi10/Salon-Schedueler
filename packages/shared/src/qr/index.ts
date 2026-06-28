@@ -29,6 +29,13 @@ function crc32(input: string): number {
  */
 export const QR_BASE_URL = 'https://book.salon.app/s/';
 const QR_VERSION = 'v1';
+/**
+ * Version tag for a stylist-scoped QR. A stylist payload embeds the staff id
+ * alongside the salon token: `v1s.<staffId>.<salonToken>`. The staff id is a
+ * UUID (no dots), so it is unambiguously the first segment; the salon token is
+ * the remainder before the checksum (and may itself contain dots).
+ */
+const QR_VERSION_STAFF = 'v1s';
 
 // ---------- Public API ----------
 
@@ -42,6 +49,25 @@ const QR_VERSION = 'v1';
  */
 export function encodeSalonQr(salonToken: string, baseUrl: string = QR_BASE_URL): string {
   const body = `${QR_VERSION}.${salonToken}`;
+  const checksum = crc32(body).toString(16).padStart(8, '0');
+  return `${baseUrl}${body}.${checksum}`;
+}
+
+/**
+ * Encodes a stylist-scoped QR: a deep link that resolves to the same salon but
+ * also names a specific staff member, so a scan can open that stylist's booking
+ * page pre-selected.
+ *
+ * Format: `<baseUrl>v1s.<staffId>.<salonToken>.<hex-checksum>`. Round-trips
+ * through {@link parseSalonQr}, which returns the `staffId` alongside the
+ * `salonToken`. Pass the same base used by {@link encodeSalonQr}.
+ */
+export function encodeStaffQr(
+  salonToken: string,
+  staffId: string,
+  baseUrl: string = QR_BASE_URL,
+): string {
+  const body = `${QR_VERSION_STAFF}.${staffId}.${salonToken}`;
   const checksum = crc32(body).toString(16).padStart(8, '0');
   return `${baseUrl}${body}.${checksum}`;
 }
@@ -80,6 +106,23 @@ export function parseSalonQr(payload: string, baseUrl: string = QR_BASE_URL): Qr
   const actualCrc = parseInt(checksumHex, 16);
   if (expectedCrc !== actualCrc) {
     return { kind: 'malformed' };
+  }
+
+  // Stylist variant: body is `v1s.<staffId>.<salonToken>`. The staff id is a
+  // UUID (contains no dots), so it is the first dot-delimited segment; the salon
+  // token is the remainder (which may itself contain dots).
+  if (body.startsWith(`${QR_VERSION_STAFF}.`)) {
+    const rest = body.slice(QR_VERSION_STAFF.length + 1);
+    const sep = rest.indexOf('.');
+    if (sep === -1) {
+      return { kind: 'malformed' };
+    }
+    const staffId = rest.slice(0, sep);
+    const staffSalonToken = rest.slice(sep + 1);
+    if (staffId.length === 0 || staffSalonToken.length === 0) {
+      return { kind: 'malformed' };
+    }
+    return { kind: 'ok', salonToken: staffSalonToken, staffId };
   }
 
   // Body must start with "v1."

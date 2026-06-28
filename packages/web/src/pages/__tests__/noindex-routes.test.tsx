@@ -43,6 +43,16 @@ vi.mock('../../api/client', () => {
       resolveQr: vi.fn().mockResolvedValue({ salon: { id: 'salon-1', name: 'سالن رز' } }),
       getServices: vi.fn().mockResolvedValue({ services: [] }),
       getAvailability: vi.fn().mockResolvedValue({ slots: [] }),
+      getStylists: vi.fn().mockResolvedValue({ stylists: [] }),
+    },
+    approvalPolicyApi: {
+      get: vi.fn().mockResolvedValue({ autoApprove: false, staff: [] }),
+      setSalon: vi.fn().mockResolvedValue({ ok: true, autoApprove: false }),
+      setStaff: vi.fn().mockResolvedValue({ ok: true, autoApprove: null }),
+    },
+    brandAccentApi: {
+      get: vi.fn().mockResolvedValue({ brandAccent: null }),
+      set: vi.fn().mockResolvedValue({ ok: true, brandAccent: null }),
     },
     bookingApi: {
       create: vi.fn().mockResolvedValue({ status: 'confirmed' }),

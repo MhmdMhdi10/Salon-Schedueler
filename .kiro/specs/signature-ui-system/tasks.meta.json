@@ -1,0 +1,570 @@
+{
+  "pbtResults": {
+    "7.6 Property test: Brand_Accent persists across sessions": {
+      "status": "passed",
+      "lastRunTimestamp": 1782647613458
+    },
+    "9.3 Create `packages/web/src/styles/tenant-contrast.test.ts`": {
+      "status": "passed",
+      "lastRunTimestamp": 1782649539788
+    },
+    "9.4 Property test: accent override is scoped and leaves the global theme unchanged": {
+      "status": "passed",
+      "lastRunTimestamp": 1782649544598
+    },
+    "9.5 Property test: accent resolution is total and falls back safely": {
+      "status": "passed",
+      "lastRunTimestamp": 1782649549341
+    },
+    "9.6 Property test: active accent preserves theme switching + reduced motion": {
+      "status": "passed",
+      "lastRunTimestamp": 1782649553920
+    },
+    "9.7 Unit-test `deriveTenantTokens`": {
+      "status": "passed",
+      "lastRunTimestamp": 1782649559248
+    },
+    "10.6 Property test: brand mark uses the salon's display identity": {
+      "status": "passed",
+      "lastRunTimestamp": 1782649563689
+    },
+    "10.7 Property test: PWA install identity derives from the accent and scopes to the storefront": {
+      "status": "passed",
+      "lastRunTimestamp": 1782649568217
+    },
+    "12.4 Property test: marketing routes are indexable with unique metadata": {
+      "status": "passed",
+      "lastRunTimestamp": 1782652705387
+    },
+    "13.4 Property test: data-surface lifecycle shows skeleton then the resolved state": {
+      "status": "passed",
+      "lastRunTimestamp": 1782655508999
+    },
+    "13.5 Property test: error states are safe and recoverable": {
+      "status": "passed",
+      "lastRunTimestamp": 1782655745800
+    },
+    "14.4 Property test: interactive elements define all six states": {
+      "status": "passed",
+      "lastRunTimestamp": 1782658008593
+    },
+    "14.5 Property test: numeric display is Persian and tabular": {
+      "status": "passed",
+      "lastRunTimestamp": 1782658233124
+    },
+    "14.6 Property test: digit display/normalization round-trips": {
+      "status": "passed",
+      "lastRunTimestamp": 1782658427486
+    },
+    "14.7 Property test: Jalali date conversion round-trips": {
+      "status": "passed",
+      "lastRunTimestamp": 1782658793407
+    },
+    "14.8 Property test: motion stays within the token band and reserves emphasized easing": {
+      "status": "passed",
+      "lastRunTimestamp": 1782659060049
+    }
+  },
+  "executionHistory": {
+    "6. Checkpoint — foundations green": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650718212
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650729509
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782651020130
+      }
+    ],
+    "11. Checkpoint — tenant theming green": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650718388
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782651027667
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782651219753
+      }
+    ],
+    "12.1 Rebuild the `MarketingHome` (`/`) hero and value sections": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650718659
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782651238875
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782651489414
+      }
+    ],
+    "12.2 Rebuild the `BusinessLanding` (`/business`) hero and value sections": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650718720
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782651497116
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782651831960
+      }
+    ],
+    "12.3 Add `home.*` / `business.*` Persian copy keys to `packages/web/src/i18n/fa.json`": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650718775
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782651852845
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782652122227
+      }
+    ],
+    "12.4 Property test: marketing routes are indexable with unique metadata": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650718829
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782652134840
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782652722081
+      }
+    ],
+    "12.5 Unit-test hero CTA prominence and routing": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650718881
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782652729754
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782652995291
+      }
+    ],
+    "13.1 Calendar day/week grid in `packages/web/src/pages/admin/CalendarPage.tsx`": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650718933
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782653004033
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782653826595
+      }
+    ],
+    "13.2 Analytics non-color-only encoding in `AnalyticsPage.tsx` + `AnalyticsChart.tsx`": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650718982
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782653834596
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782654217084
+      }
+    ],
+    "13.3 Standardize the owner data-state lifecycle across calendar + analytics": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650719046
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782654225177
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782655076980
+      }
+    ],
+    "13.4 Property test: data-surface lifecycle shows skeleton then the resolved state": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650719207
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782655085085
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782655523603
+      }
+    ],
+    "13.5 Property test: error states are safe and recoverable": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650719377
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782655527786
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782655765158
+      }
+    ],
+    "13.6 Property test: every metric has a non-color-only equivalent": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650719474
+      },
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782655770147
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782656231955
+      }
+    ],
+    "13.7 Unit-test RTL keyboard navigation": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650719541
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782656236322
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782656680120
+      }
+    ],
+    "14.1 Apply signature micro-interactions through motion tokens": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650719591
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782656684879
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782657122631
+      }
+    ],
+    "14.2 Ensure all six interactive states render with signature tokens": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650719641
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782657126843
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782657434822
+      }
+    ],
+    "14.3 Apply display + tabular typography and reading measure": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650719693
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782657438672
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782657672863
+      }
+    ],
+    "14.4 Property test: interactive elements define all six states": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650719753
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782657682518
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782658027173
+      }
+    ],
+    "14.5 Property test: numeric display is Persian and tabular": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650719824
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782658031901
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782658251331
+      }
+    ],
+    "14.6 Property test: digit display/normalization round-trips": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650719927
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782658255886
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782658441313
+      }
+    ],
+    "14.7 Property test: Jalali date conversion round-trips": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650720045
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782658445561
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782658814058
+      }
+    ],
+    "14.8 Property test: motion stays within the token band and reserves emphasized easing": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650720165
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782658818925
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782659074767
+      }
+    ],
+    "14.9 Unit-test success + reduced-motion + bidi": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650720260
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782659079018
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782659350966
+      }
+    ],
+    "15. Checkpoint — surfaces green": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650720348
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782659355784
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782659518928
+      }
+    ],
+    "16.1 Create `packages/web/src/styles/tokens-complete.test.ts`": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650720468
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782659523719
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782659698476
+      }
+    ],
+    "16.2 Create `packages/web/src/styles/distinctiveness.test.ts`": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650720670
+      },
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782659702889
+      }
+    ],
+    "16.3 Resolve any real violations surfaced by 16.1 / 16.2": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650720835
+      }
+    ],
+    "17.1 Add the \"Signature Design Language\" section to `.kiro/steering/ui-ux-skills.md`": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650720932
+      }
+    ],
+    "17.2 Add `.kiro/steering/signature-design-language.md`": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650721032
+      }
+    ],
+    "17.3 Add the two advisory hooks under `.kiro/hooks/`": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650721086
+      }
+    ],
+    "17.4 Add `packages/web/docs/distinctiveness-checklist.md`": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650721140
+      }
+    ],
+    "18. Final checkpoint — full gate": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782650721196
+      }
+    ],
+    "12. Redesign the marketing surfaces": [
+      {
+        "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782652995378
+      }
+    ],
+    "13. Elevate the owner dashboard (calendar + analytics)": [
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782656680243
+      }
+    ],
+    "14. Motion, component states, and typography/numerics polish": [
+      {
+        "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
+        "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
+        "timestamp": 1782659351014
+      }
+    ]
+  }
+}

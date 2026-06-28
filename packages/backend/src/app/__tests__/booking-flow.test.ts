@@ -134,6 +134,24 @@ describe('BookingFlow', () => {
       expect(result.status).toBe('held');
       expect(notifier.confirmations).toEqual([]);
     });
+
+    it('auto-confirms and notifies the customer when the policy approves', async () => {
+      const engine = makeEngine({
+        status: 'confirmed',
+        appointment: fakeAppointment('appt-auto'),
+      });
+      const notifier = makeNotifier();
+      const flow = new BookingFlow({
+        schedulingEngine: engine,
+        notificationService: notifier,
+      });
+
+      const result = await flow.book(sampleRequest);
+
+      expect(result).toEqual({ status: 'confirmed', appointment: { id: 'appt-auto' } });
+      expect(notifier.confirmations).toEqual(['appt-auto']);
+      expect(notifier.rejections).toEqual([]);
+    });
   });
 
   describe('approve()', () => {

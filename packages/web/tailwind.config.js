@@ -9,6 +9,8 @@
 // (`ms-*`/`me-*`, `ps-*`/`pe-*`, `start-*`/`end-*`, `text-start`/`text-end`)
 // which flip automatically under `dir="rtl"`. Add `tailwindcss-logical` only if
 // a gap appears — none required so far.
+import plugin from 'tailwindcss/plugin';
+
 export default {
   // Dark mode is driven by the `data-theme="dark"` attribute the ThemeProvider
   // sets on <html>, matching the steering theming hook.
@@ -64,6 +66,22 @@ export default {
       fontFamily: {
         sans: ["'Vazirmatn'", 'system-ui', "'Segoe UI'", 'Tahoma', 'sans-serif'],
       },
+      // Signature display-type pairing tokens (design §2, R1.2/R8.1). Exposed as
+      // atomic utilities (`font-body`/`font-display`, `leading-display`,
+      // `tracking-display`) and composed into the `.text-display` treatment
+      // below. Values resolve to the `--font-weight-*` / `--line-height-display`
+      // / `--tracking-display` custom properties so they re-tint with the theme
+      // and never hard-code a literal.
+      fontWeight: {
+        body: 'var(--font-weight-body)',
+        display: 'var(--font-weight-display)',
+      },
+      lineHeight: {
+        display: 'var(--line-height-display)',
+      },
+      letterSpacing: {
+        display: 'var(--tracking-display)',
+      },
       maxWidth: {
         // Content container width (steering §5: content max ≈ 1200px).
         container: '1200px',
@@ -94,7 +112,43 @@ export default {
         standard: 'var(--ease-standard)',
         emphasized: 'var(--ease-emphasized)',
       },
+      // Signature success micro-interaction (design §motion, R6.4/R6.5). The
+      // one keyframe that uses the emphasized easing token — reserved for the
+      // booking-success moment (`BookingSuccessPage`). It animates only
+      // compositor-friendly properties (`opacity` + `transform: scale`, never a
+      // reflow-triggering box property, R6.2) and drives its duration/easing
+      // from the motion tokens (`--dur-slow` = 300ms, within the 150–300ms band;
+      // `--ease-emphasized`), so no raw ms/easing literal is authored (R6.1).
+      // Applied via `motion-safe:` so it plays only when motion is allowed; the
+      // authoritative `prefers-reduced-motion` block in `tokens.css` governs the
+      // reduced-motion case (no transform, never gates content).
+      keyframes: {
+        'success-pop': {
+          '0%': { opacity: '0', transform: 'scale(0.85)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+      },
+      animation: {
+        'success-pop': 'success-pop var(--dur-slow) var(--ease-emphasized) both',
+      },
     },
   },
-  plugins: [],
+  plugins: [
+    // `.text-display` — the one-shot signature display treatment for hero and
+    // section titles (design §2). Composes the heavier display weight, the
+    // tighter display line-height, and the editorial tracking from tokens so a
+    // title is visibly distinct from body copy. Registered in the components
+    // layer so an explicit size utility (e.g. `text-2xl`) still sets the size;
+    // pair with `leading-display` when a size utility's own line-height must be
+    // overridden.
+    plugin(({ addComponents }) => {
+      addComponents({
+        '.text-display': {
+          fontWeight: 'var(--font-weight-display)',
+          lineHeight: 'var(--line-height-display)',
+          letterSpacing: 'var(--tracking-display)',
+        },
+      });
+    }),
+  ],
 };

@@ -138,6 +138,13 @@ export interface SalonProfile {
   /** Display name, Persian (e.g. «سالن رز»). */
   name: string;
   /**
+   * Optional configured display name used as the primary brand mark (R4.5).
+   * Falls back to `name` when absent.
+   */
+  displayName?: string;
+  /** Optional salon logo shown beside the brand mark (R4.5). */
+  logoUrl?: string;
+  /**
    * The booking-funnel salon id this profile links to. The CTA navigates into
    * `/salon/:salonId/book`; the public slug and the internal id are kept
    * separate (the slug never leaks an internal id into an indexable URL).
@@ -179,6 +186,12 @@ export interface SalonProfile {
   ogImage?: string;
   /** Off-page booking channels (web app/site, Bale + Telegram bots). */
   channels?: SalonChannels;
+  /**
+   * Optional Brand_Accent key (from the curated `ACCENTS`) for the storefront
+   * (signature-ui-system R4.1/R4.2). Lets a prerendered `/s/:slug` profile carry
+   * its accent without a DB round-trip; `undefined` = the signature default.
+   */
+  brandAccent?: string;
 }
 
 /**
@@ -251,6 +264,9 @@ const SALON_PROFILES: Record<string, SalonProfile> = {
       bale: 'https://ble.ir/salon_rose_bot',
       telegram: 'https://t.me/salon_rose_bot',
     },
+    // Storefront Brand_Accent (signature-ui-system R4.2): the warm rose accent
+    // suits «سالن رز» and tints the prerendered profile via <TenantTheme>.
+    brandAccent: 'rose',
   },
 };
 

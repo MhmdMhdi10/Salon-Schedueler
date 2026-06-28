@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Percent, Wallet, Clock, BarChart3 } from 'lucide-react';
-import { adminApi, ApiError } from '../../api/client';
+import { adminApi } from '../../api/client';
 import { SeoHead } from '../../components/seo';
 import {
   Card,
@@ -233,9 +233,10 @@ export function AnalyticsPage({ salonId: salonIdProp }: { salonId?: string }) {
         setModel(toModel(res));
         setStatus('success');
       })
-      .catch((err: unknown) => {
+      .catch((_err: unknown) => {
         if (!active) return;
-        setError(err instanceof ApiError ? err.message : t('booking.failed'));
+        // R5.6: Show a user-friendly Persian cause — never raw stack/HTTP codes.
+        setError(t('admin.analyticsPage.errorBody'));
         setStatus('error');
       });
 
@@ -373,9 +374,15 @@ export function AnalyticsPage({ salonId: salonIdProp }: { salonId?: string }) {
               />
             ) : (
               <>
+                {/* Accessible busiest-windows table equivalent (R5.2):
+                    provides the same data as the chart in a non-visual,
+                    screen-reader-friendly format. The chart references this
+                    table via aria-describedby for accessible linkage. */}
                 <table
+                  id="analytics-busiest-table"
                   data-testid="analytics-table"
                   className="w-full border-collapse text-sm"
+                  aria-label={t('admin.analyticsPage.table.title')}
                 >
                   <thead>
                     <tr className="border-b border-border text-muted">
@@ -405,7 +412,10 @@ export function AnalyticsPage({ salonId: salonIdProp }: { salonId?: string }) {
                   </tbody>
                 </table>
 
-                {/* Lazy chart — loads behind Suspense, never blocks first paint. */}
+                {/* Lazy chart — loads behind Suspense, never blocks first paint.
+                    Non-color-only (R5.2): each bar is paired with a visible text
+                    label + numeric value; the chart links to the table above via
+                    aria-describedby so AT users can access the equivalent data. */}
                 <div className="flex flex-col gap-2">
                   <h3 className="text-sm font-medium text-muted">
                     {t('admin.analyticsPage.chart.title')}
@@ -419,7 +429,10 @@ export function AnalyticsPage({ salonId: salonIdProp }: { salonId?: string }) {
                       />
                     }
                   >
-                    <AnalyticsChart data={chartData} />
+                    <AnalyticsChart
+                      data={chartData}
+                      tableId="analytics-busiest-table"
+                    />
                   </Suspense>
                 </div>
               </>

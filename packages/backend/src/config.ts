@@ -75,6 +75,18 @@ export interface AppConfig {
    * Optional; QR_Service falls back to its own documented default when absent.
    */
   publicBaseUrl?: string;
+  /**
+   * AMQP connection URL for the reliable-SMS pipeline (e.g.
+   * `amqp://user:pass@rabbitmq:5672`). When set, outbound SMS is published to a
+   * durable RabbitMQ queue (publisher confirms + persistent messages) and a
+   * separate worker delivers it with manual ack, retry, and dead-lettering.
+   * When absent, SMS is sent directly (the prior synchronous behavior).
+   */
+  rabbitmqUrl?: string;
+  /** Max delivery attempts before a message is dead-lettered. Defaults to 5. */
+  smsQueueMaxAttempts: number;
+  /** Backoff before a failed SMS is retried, in ms. Defaults to 30000. */
+  smsQueueRetryDelayMs: number;
   /** HTTP port the server listens on. Defaults to 3000. */
   port: number;
   /** Node environment. */
@@ -154,6 +166,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       ? Number(env.OTP_WINDOW_SECONDS)
       : 120,
     publicBaseUrl: env.PUBLIC_BASE_URL,
+    rabbitmqUrl: env.RABBITMQ_URL,
+    smsQueueMaxAttempts: env.SMS_QUEUE_MAX_ATTEMPTS
+      ? Number(env.SMS_QUEUE_MAX_ATTEMPTS)
+      : 5,
+    smsQueueRetryDelayMs: env.SMS_QUEUE_RETRY_DELAY_MS
+      ? Number(env.SMS_QUEUE_RETRY_DELAY_MS)
+      : 30000,
     port: env.PORT ? Number(env.PORT) : 3000,
     nodeEnv,
   };

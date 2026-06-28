@@ -183,8 +183,14 @@ export type BookingResult =
   | { status: 'held'; appointment: Appointment; paymentRedirectUrl: string }
   | { status: 'rejected'; reason: 'no_availability' | 'slot_unavailable' };
 
-/** Result of parsing a QR payload */
-export type QrParseResult = { kind: 'ok'; salonToken: string } | { kind: 'malformed' };
+/**
+ * Result of parsing a QR payload. A well-formed payload always carries the
+ * `salonToken`; a stylist QR additionally carries the `staffId` it was minted
+ * for (absent for a plain salon QR).
+ */
+export type QrParseResult =
+  | { kind: 'ok'; salonToken: string; staffId?: string }
+  | { kind: 'malformed' };
 
 /** Gregorian date components */
 export interface GregorianDate {

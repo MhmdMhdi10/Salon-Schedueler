@@ -33,6 +33,7 @@ import {
 
 const getServices = vi.fn();
 const getAvailability = vi.fn();
+const getStylists = vi.fn();
 const resolveQr = vi.fn();
 const getStaff = vi.fn();
 const getChairs = vi.fn();
@@ -62,8 +63,18 @@ vi.mock('../../api/client', () => {
       getAvailability: (salonId: string, serviceId: string, date: string) =>
         getAvailability(salonId, serviceId, date),
       resolveQr: (payload: string) => resolveQr(payload),
+      getStylists: (salonId: string) => getStylists(salonId),
     },
     bookingApi: { create: vi.fn() },
+    approvalPolicyApi: {
+      get: vi.fn().mockResolvedValue({ autoApprove: false, staff: [] }),
+      setSalon: vi.fn().mockResolvedValue({ ok: true, autoApprove: false }),
+      setStaff: vi.fn().mockResolvedValue({ ok: true, autoApprove: null }),
+    },
+    brandAccentApi: {
+      get: vi.fn().mockResolvedValue({ brandAccent: null }),
+      set: vi.fn().mockResolvedValue({ ok: true, brandAccent: null }),
+    },
     adminApi: {
       getStaff: (salonId: string) => getStaff(salonId),
       getChairs: (salonId: string) => getChairs(salonId),
@@ -101,6 +112,7 @@ beforeEach(() => {
   window.sessionStorage.clear();
   getServices.mockResolvedValue({ services: SERVICES });
   getAvailability.mockResolvedValue({ slots: [] });
+  getStylists.mockResolvedValue({ stylists: [] });
   resolveQr.mockResolvedValue({ salon: { id: 'salon-1', name: 'سالن رز' } });
   getStaff.mockResolvedValue({ staff: [{ id: 's1', name: 'مینا' }] });
   getChairs.mockResolvedValue({ chairs: [{ id: 'c1', name: 'صندلی ۱' }] });

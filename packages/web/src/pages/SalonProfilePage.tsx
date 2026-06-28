@@ -4,7 +4,8 @@ import { Link, useParams } from 'react-router-dom';
 import i18n from '../i18n';
 import { SeoHead, JsonLd, SITE_URL } from '../components/seo';
 import type { JsonLdNode } from '../components/seo';
-import { Num, DirText, Picture, cn, formatRial, toPersianDigits } from '../components/ui';
+import { Num, DirText, Picture, Avatar, cn, formatRial, toPersianDigits } from '../components/ui';
+import { TenantTheme } from '../components/theme';
 import { Salon3DStage } from '../components/three/Salon3DStage';
 import {
   getSalonProfile,
@@ -17,7 +18,7 @@ import { usePwaInstall } from '../pwa/usePwaInstall';
 
 /** Chic, high-contrast "ink" button (charcoal in light, paper in dark). */
 const INK_BUTTON =
-  'inline-flex min-h-[48px] items-center justify-center gap-2 rounded-pill bg-text px-7 py-3 text-md font-bold text-bg no-underline transition-transform duration-fast ease-emphasized hover:scale-[1.03] active:scale-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus motion-reduce:transition-none';
+  'inline-flex min-h-[48px] items-center justify-center gap-2 rounded-pill bg-text px-7 py-3 text-md font-bold text-bg no-underline transition-transform duration-fast ease-standard hover:scale-[1.03] active:scale-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus motion-reduce:transition-none';
 
 /** Outline "pill" link that inverts on hover — used for off-page channels. */
 const PILL_LINK =
@@ -220,8 +221,11 @@ export function SalonProfilePage() {
   const today = tehranToday();
   const openNow = isOpenNow(salon);
   const channels = salon.channels ?? {};
+  // The salon is the primary brand mark (R4.5): its configured display name when
+  // present, otherwise its stored name.
+  const brandMark = salon.displayName ?? salon.name;
   // A large, faint backdrop of the salon's brand word — the editorial signature.
-  const markWord = salon.name.split(' ').pop() ?? salon.name;
+  const markWord = brandMark.split(' ').pop() ?? brandMark;
 
   const handleInstall = async () => {
     const outcome = await promptInstall();
@@ -229,7 +233,8 @@ export function SalonProfilePage() {
   };
 
   return (
-    <div ref={rootRef} data-testid="salon-profile" className="mx-auto w-full max-w-container pb-28 md:pb-12">
+    <TenantTheme accentKey={salon.brandAccent}>
+      <div ref={rootRef} data-testid="salon-profile" className="mx-auto w-full max-w-container pb-28 md:pb-12">
       <SeoHead
         title={salon.name}
         description={salon.tagline}
@@ -272,9 +277,14 @@ export function SalonProfilePage() {
               </span>
             </div>
 
-            <h1 className="text-[clamp(2.75rem,9vw,5.5rem)] font-black leading-[0.95] text-text">
-              {salon.name}
-            </h1>
+            <div className="flex items-center gap-4">
+              {salon.logoUrl ? (
+                <Avatar src={salon.logoUrl} name={brandMark} size="lg" decorative />
+              ) : null}
+              <h1 className="text-[clamp(2.75rem,9vw,5.5rem)] font-black leading-[0.95] text-text">
+                {brandMark}
+              </h1>
+            </div>
 
             <p className="max-w-prose text-md text-muted">{headingSuffix}</p>
             <p className="max-w-prose text-md leading-loose text-muted">{salon.tagline}</p>
@@ -558,7 +568,8 @@ export function SalonProfilePage() {
           <Arrow />
         </Link>
       </div>
-    </div>
+      </div>
+    </TenantTheme>
   );
 }
 

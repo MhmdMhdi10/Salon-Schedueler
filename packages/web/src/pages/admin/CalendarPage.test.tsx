@@ -119,6 +119,7 @@ describe('CalendarPage', () => {
     calD.reject(new ApiError(403, 'FORBIDDEN', 'Not allowed'));
 
     await waitFor(() => expect(screen.getByTestId('calendar-error')).toBeTruthy());
-    expect(screen.getByText('Not allowed')).toBeTruthy();
+    // R5.6: error description is a user-friendly Persian message, never raw API codes
+    expect(screen.getByTestId('calendar-error').textContent).toContain('اتصال به سرور برقرار نشد');
   });
 });

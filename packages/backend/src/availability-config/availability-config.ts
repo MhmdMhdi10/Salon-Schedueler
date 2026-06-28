@@ -170,6 +170,75 @@ export class AvailabilityConfig {
       where: { salonId },
     });
   }
+
+  /**
+   * Read the salon's effective approval-policy configuration for the owner UI:
+   * the salon-level default plus every staff member's optional override (null =
+   * inherit). Backs the RBAC-guarded `GET /salons/:id/approval-policy` route
+   * (configure_salon). Throws if the salon does not exist.
+   */
+  async getApprovalPolicy(salonId: string): Promise<{
+    autoApprove: boolean;
+    staff: Array<{
+      id: string;
+      fullName: string | null;
+      role: string;
+      autoApprove: boolean | null;
+    }>;
+  }> {
+    const salon = await this.prisma.salon.findUnique({
+      where: { id: salonId },
+      select: { autoApprove: true },
+    });
+    if (!salon) {
+      throw new Error('Salon not found');
+    }
+    const staff = await this.prisma.staffMember.findMany({
+      where: { salonId },
+      select: { id: true, fullName: true, role: true, autoApprove: true },
+      orderBy: { fullName: 'asc' },
+    });
+    return { autoApprove: salon.autoApprove, staff };
+  }
+
+  /**
+   * Set the salon's default booking-approval policy (true = auto-confirm new
+   * bookings, false = require manual admin approval).
+   */
+  async setSalonAutoApprove(salonId: string, autoApprove: boolean): Promise<void> {
+    await this.prisma.salon.update({
+      where: { id: salonId },
+      data: { autoApprove },
+    });
+  }
+
+  /**
+   * Set (or clear) a stylist's approval-policy override. `null` inherits the
+   * salon default; `true`/`false` overrides it for that stylist.
+   */
+  async setStaffAutoApprove(
+    staffMemberId: string,
+    autoApprove: boolean | null,
+  ): Promise<void> {
+    await this.prisma.staffMember.update({
+      where: { id: staffMemberId },
+      data: { autoApprove },
+    });
+  }
+
+  /**
+   * Set (or clear) the salon's storefront Brand_Accent key (signature-ui-system
+   * R4.1). `null` clears the accent so the storefront falls back to the signature
+   * default palette; a non-null value is an opaque accent key (e.g. "rose")
+   * resolved client-side. Mirrors {@link setSalonAutoApprove}; owner-guarded at
+   * the API layer (`POST /salons/:id/brand-accent`, configure_salon).
+   */
+  async setSalonBrandAccent(salonId: string, brandAccent: string | null): Promise<void> {
+    await this.prisma.salon.update({
+      where: { id: salonId },
+      data: { brandAccent },
+    });
+  }
 }
 
 /**

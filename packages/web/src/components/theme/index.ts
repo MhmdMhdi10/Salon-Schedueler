@@ -11,3 +11,13 @@ export {
 export type { Theme, ThemeProviderProps } from './ThemeProvider';
 export { ThemeToggle } from './ThemeToggle';
 export type { ThemeToggleProps } from './ThemeToggle';
+
+/**
+ * Tenant theming (signature-ui-system R4): a scoped runtime wrapper that
+ * overrides the four accent-related CSS custom properties for a storefront
+ * subtree, plus the pure derivation of that override map from an `AccentTheme`.
+ */
+export { TenantTheme } from './TenantTheme';
+export type { TenantThemeProps } from './TenantTheme';
+export { deriveTenantTokens } from './tenantTokens';
+export { FunnelTenantTheme } from './FunnelTenantTheme';

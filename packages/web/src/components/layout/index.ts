@@ -34,3 +34,21 @@ export type { OwnerShellProps, OwnerNavItem } from './OwnerShell';
 
 export { RouteLoader, ROUTE_LOADER_TESTID } from './RouteLoader';
 export type { RouteLoaderProps } from './RouteLoader';
+
+/**
+ * Editorial layout primitives (design §3; R1.4, R2.2, R3.4) — thin CSS-grid
+ * wrappers (logical properties + tokens only) that let surfaces escape the
+ * generic "stacked equal cards" look:
+ *
+ *  - `EditorialSplit` — asymmetric 2-column hero/feature row (collapses on md).
+ *  - `FeatureMosaic` — uneven lead + supporting tiles for 3+ peer features.
+ *  - `SectionRhythm` — alternates section background + vertical density.
+ */
+export { EditorialSplit } from './EditorialSplit';
+export type { EditorialSplitProps } from './EditorialSplit';
+
+export { FeatureMosaic } from './FeatureMosaic';
+export type { FeatureMosaicProps } from './FeatureMosaic';
+
+export { SectionRhythm } from './SectionRhythm';
+export type { SectionRhythmProps } from './SectionRhythm';

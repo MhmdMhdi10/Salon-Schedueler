@@ -7,7 +7,8 @@ import { asyncRoute, validateRequired } from './route-helpers.js';
  * publicly accessible without authentication; `optionalAuth` attaches the
  * principal when a token is present but never rejects.
  *
- * - GET /salons/by-qr/:payload          -> 200 { salon: { id, name } }
+ * - GET /salons/by-qr/:payload          -> 200 { salon: { id, name, brandAccent } }
+ * - GET /salons/:id/brand               -> 200 { brandAccent }
  * - GET /salons/:id/services            -> 200 { services: [...] }
  * - GET /salons/:id/availability?serviceId=&date= -> 200 { slots: [...] }
  *
@@ -19,13 +20,60 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
 
   router.use(optionalAuth);
 
-  // Resolve a scanned QR payload to a salon. The route param is URL-decoded by
-  // Express; SalonRegistration distinguishes malformed from unregistered.
+  // Resolve a scanned QR payload to a salon (and, for a stylist QR, the named
+  // staff member). The route param is URL-decoded by Express; SalonRegistration
+  // distinguishes malformed from unregistered.
   router.get(
     '/salons/by-qr/:payload',
     asyncRoute(async (req, res) => {
-      const salon = await services.salonRegistration.resolveSalonByQr(req.params.payload);
-      res.status(200).json({ salon: { id: salon.id, name: salon.name } });
+      const { salon, staff } = await services.salonRegistration.resolveQr(
+        req.params.payload,
+      );
+      // brandAccent is additive (signature-ui-system R4.1/R4.2): anonymous
+      // storefront visitors receive the salon's accent so the funnel can theme
+      // itself; null = signature default. Existing { id, name } shape preserved.
+      const body: {
+        salon: { id: string; name: string; brandAccent: string | null };
+        staff?: { id: string; fullName: string | null };
+      } = {
+        salon: { id: salon.id, name: salon.name, brandAccent: salon.brandAccent ?? null },
+      };
+      if (staff) {
+        body.staff = { id: staff.id, fullName: staff.fullName };
+      }
+      res.status(200).json(body);
+    }),
+  );
+
+  // Public read of a salon's storefront Brand_Accent by id (signature-ui-system
+  // R4.1/R4.2). The booking funnel resolves a salon by id, so it needs a by-id
+  // accent read to theme the storefront for any (anonymous) visitor. null =
+  // signature default.
+  router.get(
+    '/salons/:id/brand',
+    asyncRoute(async (req, res) => {
+      const brandAccent = await services.salonRegistration.getSalonBrandAccent(
+        req.params.id,
+      );
+      res.status(200).json({ brandAccent });
+    }),
+  );
+
+  // List a salon's bookable stylists for the public booking funnel's stylist
+  // picker (id + display name + role). Public — no authentication required.
+  router.get(
+    '/salons/:id/stylists',
+    asyncRoute(async (req, res) => {
+      const stylists = await services.resourceRegistration.listBookableStaff(
+        req.params.id,
+      );
+      res.status(200).json({
+        stylists: stylists.map((s) => ({
+          id: s.id,
+          fullName: s.fullName,
+          role: s.role,
+        })),
+      });
     }),
   );
 

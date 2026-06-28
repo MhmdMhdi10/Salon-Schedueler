@@ -79,6 +79,14 @@ model Salon {
   name      String
   qrToken   String   @unique @map("qr_token")
   timezone  String   @default("Asia/Tehran")
+  // Default booking-approval policy for the salon. false (default) => new
+  // bookings are created 'pending' and need manual admin approval; true => they
+  // are auto-confirmed on creation. A staff member can override this (below).
+  autoApprove Boolean  @default(false) @map("auto_approve")
+  // Per-salon Brand_Accent key for storefront theming (signature-ui-system R4.1).
+  // Additive + nullable: null = use the signature default palette. The value is an
+  // opaque accent key (e.g. "rose") resolved client-side against the curated ACCENTS.
+  brandAccent String?  @map("brand_accent")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   staffMembers    StaffMember[]
@@ -102,6 +110,10 @@ model StaffMember {
   fullName String    @map("full_name")
   role     StaffRole
   active   Boolean   @default(true)
+  // Per-stylist override of the salon's approval policy. null => inherit the
+  // salon default; true => this stylist's bookings auto-confirm; false => this
+  // stylist's bookings always need manual approval.
+  autoApprove Boolean? @map("auto_approve")
   // Optional login phone. When a staff member's phone matches the phone used in
   // OTP login, the issued JWT carries their role + staffMemberId so the RBAC
   // matrix (Authorizer) applies. Nullable + unique: most staff rows may have no

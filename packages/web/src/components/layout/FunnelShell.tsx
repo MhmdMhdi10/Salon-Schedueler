@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { ChevronRight } from 'lucide-react';
 import { IconButton } from '../ui/IconButton';
 import { Num } from '../ui/Num';
+import { Avatar } from '../ui/Avatar';
 import { cn } from '../ui/cn';
 
 /** Stable id the funnel `<main>` exposes (skip-link target / focus). */
@@ -23,6 +24,13 @@ export interface FunnelShellProps {
   currentStep: FunnelStep;
   /** Salon name shown in the minimal top bar. Falls back to the app title. */
   salonName?: string;
+  /**
+   * The salon's configured display name (R4.5). When present it is the primary
+   * brand mark, taking precedence over `salonName`.
+   */
+  displayName?: string;
+  /** Optional salon logo shown beside the brand mark (R4.5). */
+  logoUrl?: string;
   /**
    * Optional back handler. When provided a back affordance is shown in the top
    * bar. In RTL the chevron points inline-start (visually right), per ui-ux §8.
@@ -60,6 +68,8 @@ export function FunnelShell({
   children,
   currentStep,
   salonName,
+  displayName,
+  logoUrl,
   onBack,
   cta,
   className,
@@ -67,6 +77,11 @@ export function FunnelShell({
   const { t } = useTranslation();
   const currentIndex = FUNNEL_STEPS.indexOf(currentStep);
   const total = FUNNEL_STEPS.length;
+
+  // R4.5: render the salon as the primary brand mark (`displayName ?? name`),
+  // with its logo when present; the platform identifier is demoted to a
+  // subordinate byline. With no salon identity we fall back to the app title.
+  const brandMark = (displayName ?? salonName)?.trim() || undefined;
 
   return (
     <div
@@ -85,9 +100,29 @@ export function FunnelShell({
               <ChevronRight className="h-5 w-5 rtl:-scale-x-100" />
             </IconButton>
           ) : null}
-          <span className="truncate text-md font-bold text-text">
-            {salonName ?? t('app.title')}
-          </span>
+          {brandMark ? (
+            <div className="flex min-w-0 items-center gap-2">
+              {logoUrl ? (
+                <Avatar src={logoUrl} name={brandMark} size="sm" decorative />
+              ) : null}
+              <span className="flex min-w-0 flex-col leading-tight">
+                <span
+                  data-funnel-brand-mark
+                  className="truncate text-md font-bold text-text"
+                >
+                  {brandMark}
+                </span>
+                {/* Subordinate platform byline (R4.5). */}
+                <span className="truncate text-2xs font-medium text-muted">
+                  {t('app.title')}
+                </span>
+              </span>
+            </div>
+          ) : (
+            <span className="truncate text-md font-bold text-text">
+              {t('app.title')}
+            </span>
+          )}
         </div>
       </header>
 

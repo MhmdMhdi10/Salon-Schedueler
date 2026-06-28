@@ -51,32 +51,36 @@ no visual design — treat every screen as greenfield and apply this guide.
 ## 2. Design tokens & theming
 
 Define tokens once as CSS custom properties on `:root`, theme via `[data-theme="dark"]`.
-Components consume **only** tokens — never raw hex, px, or ms literals. Seed palette is
-built around the existing brand indigo `#6366f1` (`theme_color` in `manifest.json`).
+Components consume **only** tokens — never raw hex, px, or ms literals. The signature palette
+is a warm **salon-luxe** direction — a plum-wine primary with a terracotta-clay accent over
+warm bone/sand neutrals and espresso ink — replacing the original indigo seed. (The PWA
+`theme_color` in `manifest.json` is derived from this primary.)
 
 ### Color — semantic roles (not literal names)
 
 | Token | Light | Dark | Use |
 | --- | --- | --- | --- |
-| `--color-bg` | `#ffffff` | `#0b0f1a` | Page background |
-| `--color-surface` | `#f7f8fa` | `#121826` | Cards, sheets |
-| `--color-elevated` | `#ffffff` | `#1b2233` | Menus, dialogs, popovers |
-| `--color-text` | `#16181d` | `#eef1f6` | Primary text |
-| `--color-text-muted` | `#5b6472` | `#9aa4b2` | Secondary/help text |
-| `--color-border` | `#e3e6eb` | `#2a3344` | Dividers, input borders |
-| `--color-primary` | `#5457e6` | `#818cf8` | Brand actions, CTAs |
-| `--color-primary-contrast` | `#ffffff` | `#0b0f1a` | Text/icon on primary |
-| `--color-secondary` | `#0ea5a4` | `#2dd4bf` | Secondary actions |
-| `--color-accent` | `#d946ef` | `#e879f9` | Highlights, badges |
-| `--color-success` | `#15803d` | `#4ade80` | Booked, paid, confirmed |
-| `--color-warning` | `#b45309` | `#fbbf24` | Expiring OTP, low slots |
-| `--color-danger` | `#b91c1c` | `#f87171` | Failed pay, cancel, errors |
-| `--color-info` | `#1d4ed8` | `#60a5fa` | Neutral notices |
-| `--color-focus-ring` | `#5457e6` | `#a5b4fc` | Focus outline |
+| `--color-bg` | `#FBF7F2` | `#17110F` | Page background |
+| `--color-surface` | `#F4ECE1` | `#211915` | Cards, sheets |
+| `--color-elevated` | `#FFFFFF` | `#2C2119` | Menus, dialogs, popovers |
+| `--color-text` | `#241C18` | `#F6EEE7` | Primary text |
+| `--color-text-muted` | `#6E5C50` | `#BBA99B` | Secondary/help text |
+| `--color-border` | `#E4D8CB` | `#3A2D25` | Dividers, input borders |
+| `--color-primary` | `#8E2F50` | `#E59CB3` | Brand actions, CTAs |
+| `--color-primary-contrast` | `#FFFFFF` | `#17110F` | Text/icon on primary |
+| `--color-secondary` | `#2E6E63` | `#79C9BB` | Secondary actions |
+| `--color-accent` | `#A6452A` | `#EB9A7A` | Highlights, badges |
+| `--color-success` | `#1F7A43` | `#69D08C` | Booked, paid, confirmed |
+| `--color-warning` | `#9A5B12` | `#E7B45C` | Expiring OTP, low slots |
+| `--color-danger` | `#B3261E` | `#F2938C` | Failed pay, cancel, errors |
+| `--color-info` | `#1F5FAE` | `#86B6F0` | Neutral notices |
+| `--color-focus-ring` | `#8E2F50` | `#E59CB3` | Focus outline |
 
-> Pick the **primary** shade so body-size text on it clears WCAG AA. The original
-> `#6366f1` fails 4.5:1 with white text at small sizes — use a darker `#5457e6` (or darker)
-> for text-bearing buttons, and reserve `#6366f1` for large fills/decoration.
+> Pick the **primary** shade so body-size text on it clears WCAG AA **in both directions** —
+> the primary is used both as a white-text fill *and* as colored text on near-white surfaces.
+> The salon-luxe plum-wine `#8E2F50` clears 4.5:1 both ways (its dark-mode counterpart
+> `#E59CB3` carries the dark `--color-primary-contrast` ink). Every shipped pairing is
+> verified in `packages/web/src/styles/contrast.test.ts` against `@salon/shared`.
 
 ### Typography scale (rem, base 16px)
 

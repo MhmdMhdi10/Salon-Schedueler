@@ -41,6 +41,7 @@ export interface BookingRequest {
  */
 export type BookingResult =
   | { status: 'pending'; appointment: Appointment } // R9.1, R9.7 — awaiting admin approval
+  | { status: 'confirmed'; appointment: Appointment } // auto-approved (salon/stylist policy)
   | { status: 'held'; appointment: Appointment; payment: { paymentId: string; redirectUrl: string } } // R10.1, R10.2
   | { status: 'rejected'; reason: 'no_availability' | 'slot_unavailable' }; // R9.2, R9.6
 
@@ -356,6 +357,8 @@ export class SchedulingEngine {
       include: {
         serviceStaff: true,
         serviceEquipment: true,
+        // The salon's default approval policy (auto-confirm vs manual).
+        salon: { select: { autoApprove: true } },
       },
     });
 
@@ -562,7 +565,18 @@ export class SchedulingEngine {
         const holdExpiresAt = requiresDeposit
           ? new Date(now.getTime() + this.holdPeriodSeconds * 1000)
           : null;
-        const appointmentStatus = requiresDeposit ? 'held' : 'pending';
+        // Approval policy: a per-stylist override (if set) wins over the salon
+        // default. Auto-approve confirms the booking immediately; otherwise it is
+        // created 'pending' for manual admin approval. Deposit-required services
+        // are always 'held' until payment, regardless of the approval policy.
+        const chosenStaff = availableStaff.find((s) => s.id === staffId);
+        const effectiveAutoApprove =
+          chosenStaff?.autoApprove ?? service.salon?.autoApprove ?? false;
+        const appointmentStatus = requiresDeposit
+          ? 'held'
+          : effectiveAutoApprove
+            ? 'confirmed'
+            : 'pending';
 
         const appointment = await this.prisma.appointment.create({
           data: {
@@ -596,8 +610,11 @@ export class SchedulingEngine {
           };
         }
 
-        // R9.7: Return the pending appointment awaiting admin approval
-        return { status: 'pending', appointment };
+        // Auto-approved -> 'confirmed' (the customer is notified by BookingFlow);
+        // otherwise 'pending' until an admin approves.
+        return appointmentStatus === 'confirmed'
+          ? { status: 'confirmed', appointment }
+          : { status: 'pending', appointment };
       } catch (error: any) {
         // Check if this is a PostgreSQL exclusion constraint violation
         // Prisma wraps it as a unique constraint violation (P2002) or raw database error

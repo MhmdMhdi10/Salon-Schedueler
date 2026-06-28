@@ -84,6 +84,16 @@ vi.mock('../../../api/client', () => {
     },
     salonApi: {
       getServices: vi.fn().mockResolvedValue({ services: [] }),
+      getStylists: vi.fn().mockResolvedValue({ stylists: [] }),
+    },
+    approvalPolicyApi: {
+      get: vi.fn().mockResolvedValue({ autoApprove: false, staff: [] }),
+      setSalon: vi.fn().mockResolvedValue({ ok: true, autoApprove: false }),
+      setStaff: vi.fn().mockResolvedValue({ ok: true, autoApprove: null }),
+    },
+    brandAccentApi: {
+      get: vi.fn().mockResolvedValue({ brandAccent: null }),
+      set: vi.fn().mockResolvedValue({ ok: true, brandAccent: null }),
     },
     subscriptionApi: {
       getStatus: (...args: unknown[]) => getSubStatus(...args),
@@ -92,6 +102,11 @@ vi.mock('../../../api/client', () => {
     },
     qrApi: {
       getSalonQr: (...args: unknown[]) => getSalonQr(...args),
+      getStaffQr: vi.fn().mockResolvedValue({
+        payload: 'https://book.salon.app/s/v1s.staff-1.salon-token-42.cafebabe',
+        staffName: 'زهرا',
+        salonName: 'سالن رز',
+      }),
     },
   };
 });

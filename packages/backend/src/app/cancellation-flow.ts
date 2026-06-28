@@ -30,11 +30,27 @@ export interface WaitlistNotify {
   notifyOnFree(salonId: string, windowStart: Date, windowEnd: Date): Promise<unknown>;
 }
 
+/**
+ * The customer-notify capability CancellationFlow needs to tell the booked
+ * customer their appointment was cancelled (e.g. a stylist cancelled the slot).
+ * `NotificationService` satisfies this structurally (its `sendCancellation` is
+ * best-effort and never throws).
+ */
+export interface CustomerCancellationNotify {
+  sendCancellation(appointmentId: string): Promise<void>;
+}
+
 /** Constructor dependencies for {@link CancellationFlow}. */
 export interface CancellationFlowDeps {
   cancellationService: CancellationOps;
   schedulingEngine: HoldReleaser;
   waitlistService: WaitlistNotify;
+  /**
+   * Optional customer notifier. When provided, a successful cancellation sends
+   * the booked customer an SMS (best-effort). Optional so existing callers/tests
+   * that don't need it keep working.
+   */
+  notificationService?: CustomerCancellationNotify;
   logger?: Logger;
 }
 
@@ -51,18 +67,23 @@ export class CancellationFlow {
   private readonly cancellationService: CancellationOps;
   private readonly schedulingEngine: HoldReleaser;
   private readonly waitlistService: WaitlistNotify;
+  private readonly notificationService?: CustomerCancellationNotify;
   private readonly logger: Logger;
 
   constructor(deps: CancellationFlowDeps) {
     this.cancellationService = deps.cancellationService;
     this.schedulingEngine = deps.schedulingEngine;
     this.waitlistService = deps.waitlistService;
+    this.notificationService = deps.notificationService;
     this.logger = deps.logger ?? console;
   }
 
   /**
-   * Cancel an appointment, then notify the waitlist head for the freed window
-   * (best-effort). The cancellation is returned unchanged.
+   * Cancel an appointment, then (best-effort) notify the booked customer that
+   * their appointment was cancelled and notify the waitlist head for the freed
+   * window. Neither notification can roll back the cancellation — a failure in
+   * either is logged and swallowed (Requirement 4.4). The cancellation is
+   * returned unchanged.
    *
    * Requirements: 4.2, 4.4 (original R13.4)
    */
@@ -76,6 +97,13 @@ export class CancellationFlow {
       cancellationWindowMinutes,
       now,
     );
+    // Tell the booked customer their slot was cancelled (best-effort). This is
+    // the path a stylist/admin cancellation flows through, so the customer is
+    // always informed by SMS.
+    if (this.notificationService) {
+      const notifier = this.notificationService;
+      await safelyNotify(() => notifier.sendCancellation(appointment.id), this.logger);
+    }
     await this.notifyWaitlistForWindow(
       appointment.salonId,
       appointment.startAt,

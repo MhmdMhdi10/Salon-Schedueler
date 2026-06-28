@@ -5,14 +5,25 @@ import {
   Armchair,
   CalendarOff,
   Clock,
+  Palette,
   Plus,
   Scissors,
+  ShieldCheck,
   Trash2,
   Users,
   type LucideIcon,
 } from 'lucide-react';
-import { adminApi, salonApi, ApiError } from '../../api/client';
+import {
+  adminApi,
+  approvalPolicyApi,
+  brandAccentApi,
+  salonApi,
+  ApiError,
+  type ApprovalPolicyStaff,
+} from '../../api/client';
 import { SeoHead } from '../../components/seo';
+import { TenantTheme } from '../../components/theme';
+import { ACCENTS } from '../owner/marketing-assets';
 import {
   Button,
   Card,
@@ -28,7 +39,10 @@ import {
   ErrorState,
   IconButton,
   Money,
+  Select,
   Skeleton,
+  Spinner,
+  Switch,
   TextField,
   ToastProvider,
   cn,
@@ -113,6 +127,8 @@ function toEntry(item: unknown, fallbackId: string): Entry {
 
 /** The in-page anchor-nav destinations (also the section ids). */
 const SECTION_IDS = {
+  approval: 'approval',
+  brand: 'brand',
   staff: 'staff',
   chairs: 'chairs',
   services: 'services',
@@ -388,6 +404,372 @@ function ServicesSection({
   );
 }
 
+/** Tri-state approval choice for a single stylist (maps to `boolean | null`). */
+type StaffPolicyValue = 'inherit' | 'auto' | 'manual';
+
+/** `null` (inherit) | `true` (auto) | `false` (manual) → the Select's value. */
+function toStaffValue(autoApprove: boolean | null): StaffPolicyValue {
+  if (autoApprove === null || autoApprove === undefined) return 'inherit';
+  return autoApprove ? 'auto' : 'manual';
+}
+
+/** The Select's value → the API payload (`null` = inherit the salon default). */
+function fromStaffValue(value: StaffPolicyValue): boolean | null {
+  if (value === 'inherit') return null;
+  return value === 'auto';
+}
+
+type PolicyStatus = 'loading' | 'success' | 'error';
+
+/**
+ * Approval-policy section: the salon-level default (auto-confirm vs manual
+ * approval) plus an optional per-stylist override. Wired to the owner endpoints
+ * (`GET /salons/:id/approval-policy`, `POST .../auto-approve`,
+ * `POST /staff/:id/auto-approve`). Edits are optimistic and reconciled — a
+ * failed save rolls back and surfaces an error toast (ui-ux §12, §6); a success
+ * confirms with a polite toast.
+ *
+ * This is a self-contained data surface with its own loading / error+retry /
+ * success states (ui-ux §6) so it never blocks the rest of the configuration
+ * page, which loads independently.
+ */
+function ApprovalPolicySection({ salonId }: { salonId: string }) {
+  const { t } = useTranslation();
+  const { success, error: toastError } = useToast();
+
+  const [status, setStatus] = useState<PolicyStatus>('loading');
+  const [salonAuto, setSalonAuto] = useState(false);
+  const [staff, setStaff] = useState<ApprovalPolicyStaff[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(() => {
+    setStatus('loading');
+    let active = true;
+    approvalPolicyApi
+      .get(salonId)
+      .then((policy) => {
+        if (!active) return;
+        setSalonAuto(policy.autoApprove);
+        setStaff(policy.staff);
+        setStatus('success');
+      })
+      .catch(() => {
+        if (active) setStatus('error');
+      });
+    return () => {
+      active = false;
+    };
+  }, [salonId]);
+
+  useEffect(() => load(), [load]);
+
+  const policyOptions = useMemo(
+    () => [
+      { value: 'inherit', label: t('admin.config.approval.inherit') },
+      { value: 'auto', label: t('admin.config.approval.auto') },
+      { value: 'manual', label: t('admin.config.approval.manual') },
+    ],
+    [t],
+  );
+
+  const handleSalonToggle = async (next: boolean) => {
+    const prev = salonAuto;
+    setSalonAuto(next); // optimistic
+    setSaving(true);
+    try {
+      await approvalPolicyApi.setSalon(salonId, next);
+      success({ title: t('admin.config.approval.saved') });
+    } catch {
+      setSalonAuto(prev); // reconcile/rollback
+      toastError({ title: t('admin.config.approval.saveFailed') });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleStaffChange = async (staffId: string, value: StaffPolicyValue) => {
+    const next = fromStaffValue(value);
+    const prev = staff;
+    setStaff((list) =>
+      list.map((s) => (s.id === staffId ? { ...s, autoApprove: next } : s)),
+    );
+    setSaving(true);
+    try {
+      await approvalPolicyApi.setStaff(staffId, next);
+      success({ title: t('admin.config.approval.saved') });
+    } catch {
+      setStaff(prev); // reconcile/rollback
+      toastError({ title: t('admin.config.approval.saveFailed') });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <SectionShell
+      id={SECTION_IDS.approval}
+      icon={ShieldCheck}
+      title={t('admin.config.approval.title')}
+    >
+      {status === 'loading' && (
+        <div
+          data-testid="approval-loading"
+          role="status"
+          aria-busy="true"
+          aria-label={t('admin.config.approval.loadingLabel')}
+          className="flex flex-col gap-3"
+        >
+          <Skeleton variant="rect" className="h-12" />
+          <Skeleton variant="rect" className="h-10" />
+        </div>
+      )}
+
+      {status === 'error' && (
+        <ErrorState
+          title={t('admin.config.approval.errorTitle')}
+          retryLabel={t('admin.config.retry')}
+          onRetry={load}
+        />
+      )}
+
+      {status === 'success' && (
+        <div data-testid="approval-policy" className="flex flex-col gap-5">
+          <p className="max-w-[60ch] text-sm text-muted">
+            {t('admin.config.approval.body')}
+          </p>
+
+          {/* Salon-level default. */}
+          <div className="rounded-md border border-border bg-bg p-4">
+            <Switch
+              checked={salonAuto}
+              onCheckedChange={handleSalonToggle}
+              disabled={saving}
+              label={t('admin.config.approval.salonToggleLabel')}
+              helperText={t('admin.config.approval.salonToggleHelper')}
+            />
+          </div>
+
+          {/* Per-stylist overrides. */}
+          <div className="flex flex-col gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-text">
+                {t('admin.config.approval.staffTitle')}
+              </h3>
+              <p className="mt-0.5 max-w-[60ch] text-xs text-muted">
+                {t('admin.config.approval.staffBody')}
+              </p>
+            </div>
+
+            {staff.length === 0 ? (
+              <EmptyState
+                icon={<Users className="h-8 w-8" />}
+                title={t('admin.config.approval.staffEmptyTitle')}
+                description={t('admin.config.approval.staffEmptyBody')}
+              />
+            ) : (
+              <ul data-testid="approval-staff-list" className="flex flex-col divide-y divide-border">
+                {staff.map((member) => {
+                  const value = toStaffValue(member.autoApprove);
+                  const name = member.fullName ?? member.id;
+                  return (
+                    <li
+                      key={member.id}
+                      className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="flex min-w-0 flex-col gap-0.5">
+                        <span className="break-words text-sm font-medium text-text">
+                          {name}
+                        </span>
+                        <span className="text-xs text-muted">
+                          {t(`app.role.${member.role}`)}
+                        </span>
+                      </div>
+                      <Select
+                        label={t('admin.config.approval.staffSelectLabel', { name })}
+                        labelHidden
+                        value={value}
+                        onValueChange={(v) =>
+                          handleStaffChange(member.id, v as StaffPolicyValue)
+                        }
+                        options={policyOptions}
+                        disabled={saving}
+                        helperText={
+                          value === 'inherit'
+                            ? salonAuto
+                              ? t('admin.config.approval.effectiveAuto')
+                              : t('admin.config.approval.effectiveManual')
+                            : undefined
+                        }
+                        containerClassName="w-full sm:w-56 sm:shrink-0"
+                      />
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            {/* Subtle in-flight hint kept out of the way (ui-ux §6). */}
+            {saving && (
+              <p
+                role="status"
+                aria-live="polite"
+                className="flex items-center gap-2 text-xs text-muted"
+              >
+                <Spinner size="sm" />
+                {t('common.saving')}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </SectionShell>
+  );
+}
+
+/** Brand-accent picker status: own loading / error / success surface. */
+type BrandStatus = 'loading' | 'success' | 'error';
+
+/**
+ * Brand_Accent section (signature-ui-system R4.1): lets the Owner pick the
+ * storefront accent from the curated `ACCENTS` (or clear it to the signature
+ * default) with a **live `TenantTheme` preview**, persisting via
+ * `brandAccentApi.set`. Like the approval-policy section it is a self-contained
+ * data surface (own loading / error+retry / success) wired to the owner brand
+ * routes (`GET /salons/:id/brand`, `POST /salons/:id/brand-accent`); edits are
+ * optimistic and reconciled — a failed save rolls back and surfaces an error
+ * toast (ui-ux §6, §12), a success confirms with a polite toast.
+ *
+ * The preview and swatches are tokens-only: the colors come from the runtime
+ * accent override `TenantTheme` injects (`bg-primary`/`bg-accent`), never an
+ * authored literal.
+ */
+function BrandAccentSection({ salonId }: { salonId: string }) {
+  const { t } = useTranslation();
+  const { success, error: toastError } = useToast();
+
+  const [status, setStatus] = useState<BrandStatus>('loading');
+  // '' = the signature default (no per-tenant accent).
+  const [accent, setAccent] = useState<string>('');
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(() => {
+    setStatus('loading');
+    let active = true;
+    brandAccentApi
+      .get(salonId)
+      .then((res) => {
+        if (!active) return;
+        setAccent(res.brandAccent ?? '');
+        setStatus('success');
+      })
+      .catch(() => {
+        if (active) setStatus('error');
+      });
+    return () => {
+      active = false;
+    };
+  }, [salonId]);
+
+  useEffect(() => load(), [load]);
+
+  const options = useMemo(
+    () => [
+      { value: '', label: t('admin.config.brand.defaultOption') },
+      ...ACCENTS.map((a) => ({
+        value: a.key,
+        label: t(`admin.config.brand.accents.${a.key}`),
+      })),
+    ],
+    [t],
+  );
+
+  const handleChange = async (value: string) => {
+    const prev = accent;
+    setAccent(value); // optimistic
+    setSaving(true);
+    try {
+      await brandAccentApi.set(salonId, value === '' ? null : value);
+      success({ title: t('admin.config.brand.saved') });
+    } catch {
+      setAccent(prev); // reconcile/rollback
+      toastError({ title: t('admin.config.brand.saveFailed') });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <SectionShell id={SECTION_IDS.brand} icon={Palette} title={t('admin.config.brand.title')}>
+      {status === 'loading' && (
+        <div
+          data-testid="brand-loading"
+          role="status"
+          aria-busy="true"
+          aria-label={t('admin.config.brand.loadingLabel')}
+          className="flex flex-col gap-3"
+        >
+          <Skeleton variant="rect" className="h-12" />
+          <Skeleton variant="rect" className="h-20" />
+        </div>
+      )}
+
+      {status === 'error' && (
+        <ErrorState
+          title={t('admin.config.brand.errorTitle')}
+          retryLabel={t('admin.config.retry')}
+          onRetry={load}
+        />
+      )}
+
+      {status === 'success' && (
+        <div data-testid="brand-accent" className="flex flex-col gap-5">
+          <p className="max-w-[60ch] text-sm text-muted">{t('admin.config.brand.body')}</p>
+
+          <Select
+            label={t('admin.config.brand.selectLabel')}
+            value={accent}
+            onValueChange={handleChange}
+            options={options}
+            disabled={saving}
+            containerClassName="w-full sm:w-72"
+          />
+
+          {/* Live preview — the swatches re-tint via the runtime accent vars
+              TenantTheme injects (tokens only). */}
+          <TenantTheme accentKey={accent || null}>
+            <div
+              data-testid="brand-accent-preview"
+              className="flex flex-wrap items-center gap-4 rounded-md border border-border bg-surface p-4"
+            >
+              <span className="text-xs font-semibold text-muted">
+                {t('admin.config.brand.previewLabel')}
+              </span>
+              <span className="inline-flex h-10 items-center rounded-pill bg-primary px-4 text-sm font-bold text-primary-contrast">
+                {t('admin.config.brand.previewCta')}
+              </span>
+              <span
+                aria-hidden="true"
+                className="inline-block h-10 w-10 rounded-md bg-accent"
+              />
+            </div>
+          </TenantTheme>
+
+          {saving && (
+            <p
+              role="status"
+              aria-live="polite"
+              className="flex items-center gap-2 text-xs text-muted"
+            >
+              <Spinner size="sm" />
+              {t('common.saving')}
+            </p>
+          )}
+        </div>
+      )}
+    </SectionShell>
+  );
+}
+
 function ConfigurationPageContent({ salonId: salonIdProp }: { salonId?: string }) {
   const { t } = useTranslation();
   const params = useParams<{ salonId?: string }>();
@@ -473,6 +855,8 @@ function ConfigurationPageContent({ salonId: salonIdProp }: { salonId?: string }
 
   const anchorNav = useMemo(
     () => [
+      { id: SECTION_IDS.approval, label: t('admin.config.approval.title') },
+      { id: SECTION_IDS.brand, label: t('admin.config.brand.title') },
       { id: SECTION_IDS.staff, label: t('admin.staff') },
       { id: SECTION_IDS.chairs, label: t('admin.chairs') },
       { id: SECTION_IDS.services, label: t('admin.services') },
@@ -563,6 +947,10 @@ function ConfigurationPageContent({ salonId: salonIdProp }: { salonId?: string }
 
       {status === 'success' && (
         <div className="flex flex-col gap-6">
+          <ApprovalPolicySection salonId={salonId} />
+
+          <BrandAccentSection salonId={salonId} />
+
           <EntrySection
             id={SECTION_IDS.staff}
             listTestId="staff-list"

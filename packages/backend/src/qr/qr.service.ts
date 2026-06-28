@@ -1,5 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
-import { encodeSalonQr } from '@salon/shared';
+import { encodeSalonQr, encodeStaffQr } from '@salon/shared';
 
 /**
  * QR_Service — owns stable per-salon QR generation, the campaign destination
@@ -112,6 +112,36 @@ export class QrService {
     return {
       payload: encodeSalonQr(salon.qrToken, this.qrDeepLinkBase),
       url: this.buildSalonQrUrl(salon.qrToken, source),
+      salonName: salon.name,
+    };
+  }
+
+  /**
+   * Build a stylist-scoped QR surface for the owner panel: a stable QR payload
+   * that resolves to the salon AND pre-selects this stylist in the booking
+   * funnel, plus the stylist + salon display names for the printable card.
+   *
+   * Reuses the shared `encodeStaffQr` codec over the salon's stable `qrToken`
+   * and the staff id, so the payload is reproducible while both are unchanged.
+   *
+   * @throws if the salon does not exist, or the staff member does not exist /
+   *         does not belong to the salon.
+   */
+  async buildStaffQrResponse(
+    salonId: string,
+    staffId: string,
+  ): Promise<{ payload: string; staffName: string; salonName: string }> {
+    const salon = await this.prisma.salon.findUnique({ where: { id: salonId } });
+    if (!salon) {
+      throw new Error(`Salon not found: ${salonId}`);
+    }
+    const staff = await this.prisma.staffMember.findUnique({ where: { id: staffId } });
+    if (!staff || staff.salonId !== salonId) {
+      throw new Error(`Staff not found in salon: ${staffId}`);
+    }
+    return {
+      payload: encodeStaffQr(salon.qrToken, staff.id, this.qrDeepLinkBase),
+      staffName: staff.fullName ?? '',
       salonName: salon.name,
     };
   }

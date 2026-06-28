@@ -62,6 +62,9 @@ function createMockPrisma() {
     dayOff,
     chairUnavailable,
     holiday,
+    salon: {
+      update: jest.fn().mockResolvedValue({}),
+    },
     $transaction: jest.fn().mockImplementation(async (fn: (tx: any) => Promise<any>) => {
       return fn(prisma);
     }),
@@ -400,6 +403,28 @@ describe('AvailabilityConfig', () => {
       const result = await config.getHolidays('some-id');
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('setSalonBrandAccent (signature-ui-system R4.1)', () => {
+    const salonId = '00000000-0000-0000-0000-000000000001';
+
+    it('should persist a non-null accent key on the salon', async () => {
+      await config.setSalonBrandAccent(salonId, 'rose');
+
+      expect(prisma.salon.update).toHaveBeenCalledWith({
+        where: { id: salonId },
+        data: { brandAccent: 'rose' },
+      });
+    });
+
+    it('should clear the accent (null) to fall back to the signature default', async () => {
+      await config.setSalonBrandAccent(salonId, null);
+
+      expect(prisma.salon.update).toHaveBeenCalledWith({
+        where: { id: salonId },
+        data: { brandAccent: null },
+      });
     });
   });
 });

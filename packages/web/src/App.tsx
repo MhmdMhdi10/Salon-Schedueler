@@ -7,7 +7,7 @@ import {
   Navigate,
   Outlet,
 } from 'react-router-dom';
-import { ThemeProvider } from './components/theme';
+import { ThemeProvider, FunnelTenantTheme } from './components/theme';
 import { AppShell, RouteLoader } from './components/layout';
 import { AuthProvider } from './auth/AuthContext';
 
@@ -187,14 +187,19 @@ export function App() {
                   {/* Customer flows */}
                   <Route path="/auth" element={<AuthPage />} />
                   <Route path="/qr/:payload" element={<QrLandingPage />} />
+                  {/*
+                   * Booking funnel — wrapped in the storefront theming boundary
+                   * (R4.2): it resolves the salon's Brand_Accent by id and scopes
+                   * it to the funnel subtree so any visitor sees the storefront's
+                   * accent. The steps render inside the boundary's <Outlet />.
+                   */}
                   <Route
                     path="/salon/:salonId/book"
-                    element={<AvailabilityPage />}
-                  />
-                  <Route
-                    path="/salon/:salonId/book/confirm"
-                    element={<BookingConfirmPage />}
-                  />
+                    element={<FunnelTenantTheme />}
+                  >
+                    <Route index element={<AvailabilityPage />} />
+                    <Route path="confirm" element={<BookingConfirmPage />} />
+                  </Route>
                   <Route
                     path="/booking/success"
                     element={<BookingSuccessPage />}
