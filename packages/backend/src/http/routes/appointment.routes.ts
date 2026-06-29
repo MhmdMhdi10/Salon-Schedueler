@@ -30,6 +30,47 @@ export type RequireRole = (
 export function appointmentRouter(services: Services, requireRole: RequireRole): Router {
   const router = Router();
 
+  // Authorize approve/reject by the appointment's OWNER: Owner/Admin may act on
+  // any booking in the salon; a Stylist may act only on a booking assigned to
+  // them. The appointment's staffMemberId is not in the request, so this guard
+  // reads the appointment first — hence an async guard rather than the
+  // synchronous `requireRole`. A denial never reaches the handler (Requirement 2.4).
+  const requireCanManageAppointment: RequestHandler = (req, res, next) => {
+    const principal = req.principal;
+    if (!principal) {
+      res.status(401).json({ code: 'UNAUTHORIZED' });
+      return;
+    }
+    if (!principal.role) {
+      // A customer (no staff role) cannot approve/reject.
+      res.status(403).json({ code: 'FORBIDDEN' });
+      return;
+    }
+    services.calendarService
+      .getAppointmentById(req.params.id)
+      .then((appt) => {
+        if (!appt) {
+          res.status(404).json({ code: 'NOT_FOUND' });
+          return;
+        }
+        const allowed = services.authorizer.can(
+          {
+            id: principal.id,
+            role: principal.role!,
+            staffMemberId: principal.staffMemberId,
+          },
+          'manage_own_appointments',
+          { salonId: appt.salonId, staffMemberId: appt.staffMemberId },
+        );
+        if (!allowed) {
+          res.status(403).json({ code: 'FORBIDDEN' });
+          return;
+        }
+        next();
+      })
+      .catch(next);
+  };
+
   router.post(
     '/appointments',
     asyncRoute(async (req, res) => {
@@ -88,22 +129,24 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
     }),
   );
 
-  // Salon admin approves a pending booking -> 'confirmed' + customer confirmation
-  // notification (sent by BookingFlow.approve). RBAC: manage_appointments.
+  // Approve a pending booking -> 'confirmed' + customer confirmation notification
+  // (sent by BookingFlow.approve). Owner/Admin may approve any salon booking; a
+  // Stylist may approve a booking assigned to them (ownership enforced by
+  // requireCanManageAppointment).
   router.post(
     '/appointments/:id/approve',
-    requireRole('manage_appointments'),
+    requireCanManageAppointment,
     asyncRoute(async (req, res) => {
       const appointment = await services.bookingFlow.approve(req.params.id);
       res.status(200).json({ status: 'confirmed', appointment });
     }),
   );
 
-  // Salon admin rejects a pending booking -> 'cancelled' + customer rejection
-  // notice (sent by BookingFlow.reject). RBAC: manage_appointments.
+  // Reject a pending booking -> 'cancelled' + customer rejection notice (sent by
+  // BookingFlow.reject). Same ownership rule as approve.
   router.post(
     '/appointments/:id/reject',
-    requireRole('manage_appointments'),
+    requireCanManageAppointment,
     asyncRoute(async (req, res) => {
       const appointment = await services.bookingFlow.reject(req.params.id);
       res.status(200).json({ status: 'cancelled', appointment });

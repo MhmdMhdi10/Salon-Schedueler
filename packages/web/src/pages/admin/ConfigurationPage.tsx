@@ -17,14 +17,17 @@ import {
   adminApi,
   approvalPolicyApi,
   brandAccentApi,
+  holidaysApi,
   salonApi,
   ApiError,
   type ApprovalPolicyStaff,
+  type SalonClosure,
 } from '../../api/client';
 import { SeoHead } from '../../components/seo';
 import { TenantTheme } from '../../components/theme';
 import { ACCENTS } from '../owner/marketing-assets';
 import {
+  Badge,
   Button,
   Card,
   CardContent,
@@ -38,6 +41,7 @@ import {
   EmptyState,
   ErrorState,
   IconButton,
+  JalaliDate,
   Money,
   Select,
   Skeleton,
@@ -235,13 +239,8 @@ function EntrySection({
       ) : (
         <ul data-testid={listTestId} className="flex flex-col divide-y divide-border">
           {entries.map((entry) => (
-            <li
-              key={entry.id}
-              className="flex items-center justify-between gap-3 py-2"
-            >
-              <span className="min-w-0 break-words text-sm text-text">
-                {entry.label}
-              </span>
+            <li key={entry.id} className="flex items-center justify-between gap-3 py-2">
+              <span className="min-w-0 break-words text-sm text-text">{entry.label}</span>
               <IconButton
                 variant="danger"
                 aria-label={t('admin.config.removeItem', { name: entry.label })}
@@ -256,7 +255,11 @@ function EntrySection({
       )}
 
       {entries.length === 0 && (
-        <EmptyState icon={<Icon className="h-8 w-8" />} title={emptyTitle} description={emptyBody} />
+        <EmptyState
+          icon={<Icon className="h-8 w-8" />}
+          title={emptyTitle}
+          description={emptyBody}
+        />
       )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -332,14 +335,9 @@ function ServicesSection({
       ) : (
         <ul data-testid="services-list" className="flex flex-col divide-y divide-border">
           {services.map((service) => (
-            <li
-              key={service.id}
-              className="flex items-center justify-between gap-3 py-2"
-            >
+            <li key={service.id} className="flex items-center justify-between gap-3 py-2">
               <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="break-words text-sm font-medium text-text">
-                  {service.name}
-                </span>
+                <span className="break-words text-sm font-medium text-text">{service.name}</span>
                 <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted">
                   <span className="inline-flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5" aria-hidden="true" />
@@ -490,9 +488,7 @@ function ApprovalPolicySection({ salonId }: { salonId: string }) {
   const handleStaffChange = async (staffId: string, value: StaffPolicyValue) => {
     const next = fromStaffValue(value);
     const prev = staff;
-    setStaff((list) =>
-      list.map((s) => (s.id === staffId ? { ...s, autoApprove: next } : s)),
-    );
+    setStaff((list) => list.map((s) => (s.id === staffId ? { ...s, autoApprove: next } : s)));
     setSaving(true);
     try {
       await approvalPolicyApi.setStaff(staffId, next);
@@ -534,9 +530,7 @@ function ApprovalPolicySection({ salonId }: { salonId: string }) {
 
       {status === 'success' && (
         <div data-testid="approval-policy" className="flex flex-col gap-5">
-          <p className="max-w-[60ch] text-sm text-muted">
-            {t('admin.config.approval.body')}
-          </p>
+          <p className="max-w-[60ch] text-sm text-muted">{t('admin.config.approval.body')}</p>
 
           {/* Salon-level default. */}
           <div className="rounded-md border border-border bg-bg p-4">
@@ -567,7 +561,10 @@ function ApprovalPolicySection({ salonId }: { salonId: string }) {
                 description={t('admin.config.approval.staffEmptyBody')}
               />
             ) : (
-              <ul data-testid="approval-staff-list" className="flex flex-col divide-y divide-border">
+              <ul
+                data-testid="approval-staff-list"
+                className="flex flex-col divide-y divide-border"
+              >
                 {staff.map((member) => {
                   const value = toStaffValue(member.autoApprove);
                   const name = member.fullName ?? member.id;
@@ -577,20 +574,14 @@ function ApprovalPolicySection({ salonId }: { salonId: string }) {
                       className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div className="flex min-w-0 flex-col gap-0.5">
-                        <span className="break-words text-sm font-medium text-text">
-                          {name}
-                        </span>
-                        <span className="text-xs text-muted">
-                          {t(`app.role.${member.role}`)}
-                        </span>
+                        <span className="break-words text-sm font-medium text-text">{name}</span>
+                        <span className="text-xs text-muted">{t(`app.role.${member.role}`)}</span>
                       </div>
                       <Select
                         label={t('admin.config.approval.staffSelectLabel', { name })}
                         labelHidden
                         value={value}
-                        onValueChange={(v) =>
-                          handleStaffChange(member.id, v as StaffPolicyValue)
-                        }
+                        onValueChange={(v) => handleStaffChange(member.id, v as StaffPolicyValue)}
                         options={policyOptions}
                         disabled={saving}
                         helperText={
@@ -747,10 +738,7 @@ function BrandAccentSection({ salonId }: { salonId: string }) {
               <span className="inline-flex h-10 items-center rounded-pill bg-primary px-4 text-sm font-bold text-primary-contrast">
                 {t('admin.config.brand.previewCta')}
               </span>
-              <span
-                aria-hidden="true"
-                className="inline-block h-10 w-10 rounded-md bg-accent"
-              />
+              <span aria-hidden="true" className="inline-block h-10 w-10 rounded-md bg-accent" />
             </div>
           </TenantTheme>
 
@@ -770,6 +758,292 @@ function BrandAccentSection({ salonId }: { salonId: string }) {
   );
 }
 
+type ClosureStatus = 'loading' | 'success' | 'error';
+
+/** Sort closures by date, then window start (full-day closures first per date). */
+function sortClosures(list: SalonClosure[]): SalonClosure[] {
+  return [...list].sort((a, b) => {
+    if (a.onDate !== b.onDate) return a.onDate < b.onDate ? -1 : 1;
+    const sa = a.startTime ?? '';
+    const sb = b.startTime ?? '';
+    return sa < sb ? -1 : sa > sb ? 1 : 0;
+  });
+}
+
+/**
+ * Closures section: the salon's "closed" calendar. The owner can block a whole
+ * day (a holiday — no bookings at all) or only an hour-range on a day (e.g. a
+ * midday break or an early close). Wired to `holidaysApi` (list/add/remove);
+ * the scheduling engine enforces every closure (the slot disappears from
+ * availability and a direct booking is rejected).
+ *
+ * Self-contained data surface with its own loading / empty / error+retry /
+ * success states (ui-ux §6); destructive removals confirm via the shared dialog
+ * and offer an undo that re-adds the closure (ui-ux §1).
+ */
+function ClosuresSection({
+  salonId,
+  requestDelete,
+}: {
+  salonId: string;
+  requestDelete: (state: DeleteState) => void;
+}) {
+  const { t } = useTranslation();
+  const { success, error: toastError } = useToast();
+
+  const [status, setStatus] = useState<ClosureStatus>('loading');
+  const [closures, setClosures] = useState<SalonClosure[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  // Add-form state. `mode` toggles between a full-day closure and an hour-range.
+  const [date, setDate] = useState('');
+  const [mode, setMode] = useState<'full' | 'range'>('full');
+  const [start, setStart] = useState('');
+  const [end, setEnd] = useState('');
+  const [formError, setFormError] = useState('');
+
+  const load = useCallback(() => {
+    setStatus('loading');
+    let active = true;
+    holidaysApi
+      .list(salonId)
+      .then((res) => {
+        if (!active) return;
+        setClosures(sortClosures(res.holidays));
+        setStatus('success');
+      })
+      .catch(() => {
+        if (active) setStatus('error');
+      });
+    return () => {
+      active = false;
+    };
+  }, [salonId]);
+
+  useEffect(() => load(), [load]);
+
+  const modeOptions = useMemo(
+    () => [
+      { value: 'full', label: t('admin.config.closures.modeFull') },
+      { value: 'range', label: t('admin.config.closures.modeRange') },
+    ],
+    [t],
+  );
+
+  const closureLabel = useCallback(
+    (c: SalonClosure): string =>
+      c.startTime && c.endTime
+        ? t('admin.config.closures.rangeSummary', { start: c.startTime, end: c.endTime })
+        : t('admin.config.closures.fullDay'),
+    [t],
+  );
+
+  const resetForm = () => {
+    setDate('');
+    setMode('full');
+    setStart('');
+    setEnd('');
+    setFormError('');
+  };
+
+  const handleAdd = async (e: FormEvent) => {
+    e.preventDefault();
+    setFormError('');
+    if (!date) {
+      setFormError(t('admin.config.closures.dateRequired'));
+      return;
+    }
+    const isRange = mode === 'range';
+    if (isRange) {
+      if (!start || !end) {
+        setFormError(t('admin.config.closures.timeRequired'));
+        return;
+      }
+      if (start >= end) {
+        setFormError(t('admin.config.closures.invalidRange'));
+        return;
+      }
+    }
+    setSaving(true);
+    try {
+      const { holiday } = await holidaysApi.add(salonId, {
+        onDate: date,
+        startTime: isRange ? start : null,
+        endTime: isRange ? end : null,
+      });
+      setClosures((prev) => sortClosures([...prev, holiday]));
+      resetForm();
+      success({ title: t('admin.config.closures.added') });
+    } catch {
+      toastError({ title: t('admin.config.closures.addFailed') });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemove = (c: SalonClosure) => {
+    requestDelete({
+      id: c.id,
+      label: closureLabel(c),
+      onConfirm: () => {
+        const prev = closures;
+        setClosures((list) => list.filter((x) => x.id !== c.id)); // optimistic
+        holidaysApi
+          .remove(salonId, c.id)
+          .then(() => {
+            success({
+              title: t('admin.config.closures.removed'),
+              undoLabel: t('common.undo'),
+              onUndo: () => {
+                holidaysApi
+                  .add(salonId, {
+                    onDate: c.onDate,
+                    startTime: c.startTime,
+                    endTime: c.endTime,
+                  })
+                  .then((res) => setClosures((l) => sortClosures([...l, res.holiday])))
+                  .catch(() => toastError({ title: t('admin.config.closures.addFailed') }));
+              },
+            });
+          })
+          .catch(() => {
+            setClosures(prev); // reconcile/rollback
+            toastError({ title: t('admin.config.closures.removeFailed') });
+          });
+      },
+    });
+  };
+
+  return (
+    <SectionShell id={SECTION_IDS.holidays} icon={CalendarOff} title={t('admin.holidays')}>
+      <p className="max-w-[60ch] text-sm text-muted">{t('admin.config.closures.body')}</p>
+
+      {status === 'loading' && (
+        <div
+          role="status"
+          aria-busy="true"
+          aria-label={t('admin.config.closures.loadingLabel')}
+          className="flex flex-col gap-2"
+        >
+          <Skeleton variant="rect" className="h-10" />
+          <Skeleton variant="rect" className="h-10" />
+        </div>
+      )}
+
+      {status === 'error' && (
+        <ErrorState
+          title={t('admin.config.closures.errorTitle')}
+          retryLabel={t('admin.config.retry')}
+          onRetry={load}
+        />
+      )}
+
+      {status === 'success' && (
+        <>
+          {closures.length === 0 ? (
+            <ul data-testid="holidays-list" className="sr-only" aria-hidden="true" />
+          ) : (
+            <ul data-testid="holidays-list" className="flex flex-col divide-y divide-border">
+              {closures.map((c) => (
+                <li key={c.id} className="flex items-center justify-between gap-3 py-2">
+                  <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className="inline-flex items-center gap-1 text-sm font-medium text-text">
+                      <CalendarOff className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
+                      <JalaliDate value={c.onDate} withWeekday variant="numeric" />
+                    </span>
+                    {c.startTime && c.endTime ? (
+                      <Badge status="warning">
+                        <span dir="ltr" className="tabular-nums">
+                          {c.startTime}–{c.endTime}
+                        </span>
+                      </Badge>
+                    ) : (
+                      <Badge status="danger">{t('admin.config.closures.fullDay')}</Badge>
+                    )}
+                  </span>
+                  <IconButton
+                    variant="danger"
+                    aria-label={t('admin.config.removeItem', { name: closureLabel(c) })}
+                    onClick={() => handleRemove(c)}
+                    className="h-9 min-h-0 w-9 min-w-0 shrink-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </IconButton>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {closures.length === 0 && (
+            <EmptyState
+              icon={<CalendarOff className="h-8 w-8" />}
+              title={t('admin.config.closures.emptyTitle')}
+              description={t('admin.config.closures.emptyBody')}
+            />
+          )}
+
+          <form onSubmit={handleAdd} className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <TextField
+                type="date"
+                dir="ltr"
+                label={t('admin.config.closures.dateLabel')}
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                containerClassName="sm:flex-1"
+              />
+              <Select
+                label={t('admin.config.closures.modeLabel')}
+                value={mode}
+                onValueChange={(v) => setMode(v as 'full' | 'range')}
+                options={modeOptions}
+                containerClassName="sm:w-52"
+              />
+            </div>
+
+            {mode === 'range' && (
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <TextField
+                  type="time"
+                  dir="ltr"
+                  label={t('admin.config.closures.startLabel')}
+                  value={start}
+                  onChange={(e) => setStart(e.target.value)}
+                  containerClassName="sm:flex-1"
+                />
+                <TextField
+                  type="time"
+                  dir="ltr"
+                  label={t('admin.config.closures.endLabel')}
+                  value={end}
+                  onChange={(e) => setEnd(e.target.value)}
+                  containerClassName="sm:flex-1"
+                />
+              </div>
+            )}
+
+            {formError && (
+              <p role="alert" className="text-sm text-danger">
+                {formError}
+              </p>
+            )}
+
+            <Button
+              type="submit"
+              startIcon={<Plus className="h-4 w-4" />}
+              loading={saving}
+              disabled={saving}
+              className="self-start"
+            >
+              {t('admin.config.closures.addCta')}
+            </Button>
+          </form>
+        </>
+      )}
+    </SectionShell>
+  );
+}
+
 function ConfigurationPageContent({ salonId: salonIdProp }: { salonId?: string }) {
   const { t } = useTranslation();
   const params = useParams<{ salonId?: string }>();
@@ -781,7 +1055,6 @@ function ConfigurationPageContent({ salonId: salonIdProp }: { salonId?: string }
   const [staff, setStaff] = useState<Entry[]>([]);
   const [chairs, setChairs] = useState<Entry[]>([]);
   const [services, setServices] = useState<ServiceItem[]>([]);
-  const [holidays, setHolidays] = useState<Entry[]>([]);
   const [pendingDelete, setPendingDelete] = useState<DeleteState | null>(null);
 
   const load = useCallback(() => {
@@ -827,16 +1100,15 @@ function ConfigurationPageContent({ salonId: salonIdProp }: { salonId?: string }
   );
 
   const restoreEntry = useCallback(
-    (setter: React.Dispatch<React.SetStateAction<Entry[]>>) =>
-      (entry: Entry, index: number) => {
-        undoToast(entry.label, () =>
-          setter((prev) => {
-            const next = [...prev];
-            next.splice(Math.min(index, next.length), 0, entry);
-            return next;
-          }),
-        );
-      },
+    (setter: React.Dispatch<React.SetStateAction<Entry[]>>) => (entry: Entry, index: number) => {
+      undoToast(entry.label, () =>
+        setter((prev) => {
+          const next = [...prev];
+          next.splice(Math.min(index, next.length), 0, entry);
+          return next;
+        }),
+      );
+    },
     [undoToast],
   );
 
@@ -874,10 +1146,7 @@ function ConfigurationPageContent({ salonId: salonIdProp }: { salonId?: string }
         <nav aria-label={t('admin.breadcrumb')}>
           <ol className="flex flex-wrap items-center gap-2 text-xs text-muted">
             <li>
-              <Link
-                to="/admin/calendar"
-                className="text-muted no-underline hover:text-text"
-              >
+              <Link to="/admin/calendar" className="text-muted no-underline hover:text-text">
                 {t('admin.home')}
               </Link>
             </li>
@@ -957,9 +1226,7 @@ function ConfigurationPageContent({ salonId: salonIdProp }: { salonId?: string }
             icon={Users}
             title={t('admin.staff')}
             entries={staff}
-            onAdd={(label) =>
-              setStaff((prev) => [...prev, { id: `staff-${Date.now()}`, label }])
-            }
+            onAdd={(label) => setStaff((prev) => [...prev, { id: `staff-${Date.now()}`, label }])}
             onRemove={(id) => setStaff((prev) => prev.filter((e) => e.id !== id))}
             onRestore={restoreEntry(setStaff)}
             addLabel={t('admin.config.staff.addLabel')}
@@ -976,9 +1243,7 @@ function ConfigurationPageContent({ salonId: salonIdProp }: { salonId?: string }
             icon={Armchair}
             title={t('admin.chairs')}
             entries={chairs}
-            onAdd={(label) =>
-              setChairs((prev) => [...prev, { id: `chair-${Date.now()}`, label }])
-            }
+            onAdd={(label) => setChairs((prev) => [...prev, { id: `chair-${Date.now()}`, label }])}
             onRemove={(id) => setChairs((prev) => prev.filter((e) => e.id !== id))}
             onRestore={restoreEntry(setChairs)}
             addLabel={t('admin.config.chairs.addLabel')}
@@ -992,10 +1257,7 @@ function ConfigurationPageContent({ salonId: salonIdProp }: { salonId?: string }
           <ServicesSection
             services={services}
             onAdd={(service) =>
-              setServices((prev) => [
-                ...prev,
-                { id: `service-${Date.now()}`, ...service },
-              ])
+              setServices((prev) => [...prev, { id: `service-${Date.now()}`, ...service }])
             }
             onRemove={(id) => setServices((prev) => prev.filter((s) => s.id !== id))}
             onRestore={restoreService}
@@ -1020,26 +1282,7 @@ function ConfigurationPageContent({ salonId: salonIdProp }: { salonId?: string }
               <p className="mb-4 max-w-[60ch] text-xs text-muted">
                 {t('admin.config.advancedBody')}
               </p>
-              <EntrySection
-                id={SECTION_IDS.holidays}
-                listTestId="holidays-list"
-                icon={CalendarOff}
-                title={t('admin.holidays')}
-                entries={holidays}
-                onAdd={(label) =>
-                  setHolidays((prev) => [...prev, { id: `holiday-${Date.now()}`, label }])
-                }
-                onRemove={(id) =>
-                  setHolidays((prev) => prev.filter((e) => e.id !== id))
-                }
-                onRestore={restoreEntry(setHolidays)}
-                addLabel={t('admin.config.holidays.addLabel')}
-                addPlaceholder={t('admin.config.holidays.addPlaceholder')}
-                addCta={t('admin.config.holidays.addCta')}
-                emptyTitle={t('admin.config.holidays.emptyTitle')}
-                emptyBody={t('admin.config.holidays.emptyBody')}
-                requestDelete={setPendingDelete}
-              />
+              <ClosuresSection salonId={salonId} requestDelete={setPendingDelete} />
             </div>
           </details>
         </div>
@@ -1057,9 +1300,7 @@ function ConfigurationPageContent({ salonId: salonIdProp }: { salonId?: string }
             <DialogTitle>
               {t('admin.config.confirmDeleteTitle', { name: pendingDelete.label })}
             </DialogTitle>
-            <DialogDescription>
-              {t('admin.config.confirmDeleteBody')}
-            </DialogDescription>
+            <DialogDescription>{t('admin.config.confirmDeleteBody')}</DialogDescription>
             <div className="mt-5 flex items-center justify-end gap-2">
               <DialogClose asChild>
                 <Button variant="secondary">{t('common.cancel')}</Button>

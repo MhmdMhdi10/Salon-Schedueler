@@ -107,6 +107,13 @@ services:
       context: .
       dockerfile: docker/dev.Dockerfile
     command: [ "bash", "docker/sms-worker-entrypoint.sh" ]
+    # Allocate a TTY so the worker's stdout is line-flushed and streamed to
+    # `docker logs` in real time. This is a low-traffic, mostly-idle process, so
+    # without a TTY Node buffers its startup/delivery lines in the stdout pipe
+    # (they only flush on process exit). The result is a container that LOOKS
+    # stuck on the initial "waiting..." line even though it has connected to the
+    # broker and is actively consuming sms.send.
+    tty: true
     depends_on:
       rabbitmq:
         condition: service_healthy

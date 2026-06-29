@@ -4,13 +4,16 @@ import type { StaffRole } from '@salon/shared';
  * Actions that can be authorized in the booking system.
  *
  * - configure_salon: Modify salon settings, staff, chairs, services (R2.2, R2.6)
- * - manage_appointments: Create, modify, cancel appointments (R2.3)
+ * - manage_appointments: Create, modify, cancel ANY appointment in the salon (R2.3)
+ * - manage_own_appointments: Approve/reject/manage an appointment assigned to the
+ *   acting staff member (Owner/Admin: any; Stylist: only their own)
  * - view_own_appointments: View assigned appointments (R2.5)
  * - view_customer_notes: View customer notes (R14.4)
  */
 export type Action =
   | 'configure_salon'
   | 'manage_appointments'
+  | 'manage_own_appointments'
   | 'view_own_appointments'
   | 'view_customer_notes';
 
@@ -43,12 +46,13 @@ export interface ResourceRef {
  *
  * Authorization matrix (from Requirements R2.2–R2.6, R14.4):
  *
- * | Action                     | Owner        | Admin | Stylist          |
- * |----------------------------|--------------|-------|------------------|
- * | configure_salon (R2.2,R2.6)| allow always | deny  | deny (R2.4)      |
- * | manage_appointments (R2.3) | allow        | allow | deny             |
- * | view_own_appointments(R2.5)| allow        | allow | allow (own only) |
- * | view_customer_notes (R14.4)| allow        | allow | allow            |
+ * | Action                      | Owner        | Admin | Stylist          |
+ * |-----------------------------|--------------|-------|------------------|
+ * | configure_salon (R2.2,R2.6) | allow always | deny  | deny (R2.4)      |
+ * | manage_appointments (R2.3)  | allow        | allow | deny             |
+ * | manage_own_appointments     | allow        | allow | allow (own only) |
+ * | view_own_appointments(R2.5) | allow        | allow | allow (own only) |
+ * | view_customer_notes (R14.4) | allow        | allow | allow            |
  *
  * Owner config access is guaranteed regardless of system state (R2.6).
  * Stylist "own only" checks compare principal.staffMemberId with resource.staffMemberId.
@@ -115,8 +119,13 @@ export class Authorizer {
         return false;
 
       case 'manage_appointments':
-        // Stylists cannot create/modify/cancel appointments
+        // Stylists cannot create/modify/cancel arbitrary appointments
         return false;
+
+      case 'manage_own_appointments':
+        // R2.5-style ownership: a Stylist may approve/reject/manage a booking
+        // only when it is assigned to them (resource.staffMemberId === own).
+        return this.isOwnResource(principal, resource);
 
       case 'view_own_appointments':
         // R2.5: Stylist can only view their own assigned appointments

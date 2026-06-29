@@ -28,6 +28,14 @@ ALTER TABLE staff_member ADD COLUMN IF NOT EXISTS auto_approve boolean;
 -- Additive + nullable: null = signature default palette. Existing rows unaffected.
 ALTER TABLE salon ADD COLUMN IF NOT EXISTS brand_accent text;
 
+-- Salon closures: optional time-of-day window on a holiday row. Both null = the
+-- whole day is closed (prior behavior); both set = only that window on the date
+-- is blocked (partial-day closure / hour-range block). Additive + nullable, so
+-- existing full-day holidays are unaffected. db push only runs on a fresh
+-- volume, so an existing dev DB needs these to pick up the new columns.
+ALTER TABLE holiday ADD COLUMN IF NOT EXISTS start_time time;
+ALTER TABLE holiday ADD COLUMN IF NOT EXISTS end_time time;
+
 -- Optional staff login phone (StaffMember.phone String? @unique in schema.prisma).
 -- Additive + nullable + unique. db push only runs on a fresh volume, so an
 -- existing dev DB needs this to pick up the column BEFORE dev-seed.sql (which

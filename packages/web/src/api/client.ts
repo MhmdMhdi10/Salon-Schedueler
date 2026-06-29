@@ -113,7 +113,7 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     public code: string,
-    message: string
+    message: string,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -122,11 +122,18 @@ export class ApiError extends Error {
 
 // Auth endpoints
 export const authApi = {
-  requestOtp: (phone: string) => request<void>('/auth/otp/request', { method: 'POST', body: { phone } }),
+  requestOtp: (phone: string) =>
+    request<void>('/auth/otp/request', { method: 'POST', body: { phone } }),
   verifyOtp: (phone: string, code: string) =>
-    request<{ accessToken: string; refreshToken: string }>('/auth/otp/verify', { method: 'POST', body: { phone, code } }),
+    request<{ accessToken: string; refreshToken: string }>('/auth/otp/verify', {
+      method: 'POST',
+      body: { phone, code },
+    }),
   refresh: (refreshToken: string) =>
-    request<{ accessToken: string; refreshToken: string }>('/auth/refresh', { method: 'POST', body: { refreshToken } }),
+    request<{ accessToken: string; refreshToken: string }>('/auth/refresh', {
+      method: 'POST',
+      body: { refreshToken },
+    }),
 };
 
 /** The authenticated principal as returned by `GET /me` (mirrors the backend `Principal`). */
@@ -162,8 +169,13 @@ export const salonApi = {
       staff?: { id: string; fullName: string | null };
     }>(`/salons/by-qr/${encodeURIComponent(payload)}`),
   getAvailability: (salonId: string, serviceId: string, date: string) =>
-    request<{ slots: Array<{ startAt: string; endAt: string }> }>(`/salons/${salonId}/availability?serviceId=${serviceId}&date=${date}`),
-  getServices: (salonId: string) => request<{ services: Array<{ id: string; name: string; durationMinutes: number; priceRial: number }> }>(`/salons/${salonId}/services`),
+    request<{ slots: Array<{ startAt: string; endAt: string }> }>(
+      `/salons/${salonId}/availability?serviceId=${serviceId}&date=${date}`,
+    ),
+  getServices: (salonId: string) =>
+    request<{
+      services: Array<{ id: string; name: string; durationMinutes: number; priceRial: number }>;
+    }>(`/salons/${salonId}/services`),
   /**
    * Public list of a salon's bookable stylists (Owner/Stylist roles) for the
    * funnel's stylist picker. Customers can call this without authentication.
@@ -176,15 +188,27 @@ export const salonApi = {
 
 // Booking endpoints
 export const bookingApi = {
-  create: (body: { salonId: string; serviceId: string; startAt: string; preferredStaffId?: string }) =>
-    request<{ status: string; appointment?: unknown; paymentRedirectUrl?: string }>('/appointments', { method: 'POST', body }),
-  cancel: (appointmentId: string) => request<void>(`/appointments/${appointmentId}/cancel`, { method: 'POST' }),
+  create: (body: {
+    salonId: string;
+    serviceId: string;
+    startAt: string;
+    preferredStaffId?: string;
+  }) =>
+    request<{ status: string; appointment?: unknown; paymentRedirectUrl?: string }>(
+      '/appointments',
+      { method: 'POST', body },
+    ),
+  cancel: (appointmentId: string) =>
+    request<void>(`/appointments/${appointmentId}/cancel`, { method: 'POST' }),
 };
 
 // Payment endpoints
 export const paymentApi = {
   initiate: (appointmentId: string) =>
-    request<{ redirectUrl: string }>('/payments/initiate', { method: 'POST', body: { appointmentId } }),
+    request<{ redirectUrl: string }>('/payments/initiate', {
+      method: 'POST',
+      body: { appointmentId },
+    }),
 };
 
 // ─── Subscription ──────────────────────────────────────────────────────────
@@ -273,8 +297,7 @@ export const qrApi = {
    * «QR و استند» standee surface. The QR is per-salon and stable (never
    * per-customer); the panel renders the payload as an image client-side.
    */
-  getSalonQr: (salonId: string) =>
-    request<SalonQrResponse>(`/salons/${salonId}/qr`),
+  getSalonQr: (salonId: string) => request<SalonQrResponse>(`/salons/${salonId}/qr`),
   /**
    * A stylist-scoped QR (payload + names) that opens that stylist's booking
    * page pre-selected. Lets the owner print a per-stylist code.
@@ -331,18 +354,29 @@ export const cardOrderApi = {
 
 // Admin endpoints
 export const adminApi = {
-  getCalendar: (salonId: string, from: string, to: string, view: 'day' | 'week') =>
-    request<{ appointments: unknown[] }>(`/salons/${salonId}/calendar?from=${from}&to=${to}&view=${view}`),
+  getCalendar: (salonId: string, from: string, to: string, view: 'day' | 'week' | 'month') =>
+    request<{ appointments: unknown[] }>(
+      `/salons/${salonId}/calendar?from=${from}&to=${to}&view=${view}`,
+    ),
   getAnalytics: (salonId: string, from: string, to: string) =>
-    request<{ utilization: unknown; revenue: unknown; busiestWindows: unknown }>(`/salons/${salonId}/analytics?from=${from}&to=${to}`),
+    request<{ utilization: unknown; revenue: unknown; busiestWindows: unknown }>(
+      `/salons/${salonId}/analytics?from=${from}&to=${to}`,
+    ),
   getStaff: (salonId: string) => request<{ staff: unknown[] }>(`/salons/${salonId}/staff`),
   getChairs: (salonId: string) => request<{ chairs: unknown[] }>(`/salons/${salonId}/chairs`),
+  /** The salon's bookings awaiting approval, oldest first (manage_appointments). */
+  getPending: (salonId: string) =>
+    request<{ appointments: unknown[] }>(`/salons/${salonId}/pending`),
   /** Approve a pending appointment (manage_appointments — Owner/Admin). */
   approveAppointment: (appointmentId: string) =>
-    request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/approve`, { method: 'POST' }),
+    request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/approve`, {
+      method: 'POST',
+    }),
   /** Reject a pending appointment (manage_appointments — Owner/Admin). */
   rejectAppointment: (appointmentId: string) =>
-    request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/reject`, { method: 'POST' }),
+    request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/reject`, {
+      method: 'POST',
+    }),
 };
 
 // ─── Approval policy ───────────────────────────────────────────────────────
@@ -371,8 +405,7 @@ export interface ApprovalPolicyResponse {
 
 export const approvalPolicyApi = {
   /** Read the salon default + every stylist's override for the owner UI. */
-  get: (salonId: string) =>
-    request<ApprovalPolicyResponse>(`/salons/${salonId}/approval-policy`),
+  get: (salonId: string) => request<ApprovalPolicyResponse>(`/salons/${salonId}/approval-policy`),
   /** Set the salon-level default approval policy. */
   setSalon: (salonId: string, autoApprove: boolean) =>
     request<{ ok: boolean; autoApprove: boolean }>(`/salons/${salonId}/auto-approve`, {
@@ -407,15 +440,57 @@ export const brandAccentApi = {
    * Read a salon's storefront Brand_Accent so any (anonymous) visitor's funnel
    * can theme itself. `null` = the signature default.
    */
-  get: (salonId: string) =>
-    request<BrandAccentResponse>(`/salons/${salonId}/brand`),
+  get: (salonId: string) => request<BrandAccentResponse>(`/salons/${salonId}/brand`),
   /**
    * Set (a curated accent key) or clear (`null` = signature default) the
    * salon's storefront Brand_Accent. Owner-only (`configure_salon`).
    */
   set: (salonId: string, brandAccent: string | null) =>
-    request<{ ok: boolean; brandAccent: string | null }>(
-      `/salons/${salonId}/brand-accent`,
-      { method: 'POST', body: { brandAccent } },
-    ),
+    request<{ ok: boolean; brandAccent: string | null }>(`/salons/${salonId}/brand-accent`, {
+      method: 'POST',
+      body: { brandAccent },
+    }),
+};
+
+// ─── Salon closures (block a full day / an hour-range) ───────────────────────
+// Owner-panel availability limits. Mirrors the backend `AvailabilityConfig`
+// holiday model + admin routes: a closure is a date that is either fully closed
+// (no time window) or partially closed for a [startTime,endTime) window. The
+// scheduling engine enforces both (no availability + booking rejected).
+//   GET    /salons/:salonId/holidays              → { holidays }
+//   POST   /salons/:salonId/holidays              (body { onDate, startTime?, endTime? })
+//   DELETE /salons/:salonId/holidays/:holidayId   → { ok }
+
+/** A single salon closure row. */
+export interface SalonClosure {
+  id: string;
+  /** ISO date `YYYY-MM-DD` the closure applies to. */
+  onDate: string;
+  /** "HH:mm" window start, or `null` for a full-day closure. */
+  startTime: string | null;
+  /** "HH:mm" window end, or `null` for a full-day closure. */
+  endTime: string | null;
+}
+
+/** Payload for adding a closure: a full day (omit times) or an hour-range. */
+export interface SalonClosureInput {
+  onDate: string;
+  startTime?: string | null;
+  endTime?: string | null;
+}
+
+export const holidaysApi = {
+  /** List the salon's closures (full-day + partial-day), soonest first. */
+  list: (salonId: string) => request<{ holidays: SalonClosure[] }>(`/salons/${salonId}/holidays`),
+  /** Add a closure. Omit both times for a full-day closure. */
+  add: (salonId: string, input: SalonClosureInput) =>
+    request<{ holiday: SalonClosure }>(`/salons/${salonId}/holidays`, {
+      method: 'POST',
+      body: input,
+    }),
+  /** Remove a closure by id. */
+  remove: (salonId: string, holidayId: string) =>
+    request<{ ok: boolean }>(`/salons/${salonId}/holidays/${holidayId}`, {
+      method: 'DELETE',
+    }),
 };

@@ -49,8 +49,14 @@ echo "[backend] applying dev seed data (idempotent)..."
 psql -v ON_ERROR_STOP=1 -f docker/db/dev-seed.sql
 
 # 5. Initial build of shared + backend, then start with watch reload.
+#    Use --force so the initial build ignores the incremental .tsbuildinfo cache
+#    and re-emits every output. A container killed mid-emit can leave 0-byte .js
+#    files that the cache still records as "built", so a plain `tsc -b` would
+#    skip them — leaving empty modules that crash at runtime (e.g. an imported
+#    class resolves to undefined → "X is not a constructor"). Forcing a clean
+#    emit on start makes the dev container self-heal from an interrupted build.
 echo "[backend] building @salon/shared + @salon/backend..."
-npx tsc -b packages/shared packages/backend
+npx tsc -b packages/shared packages/backend --force
 
 echo "[backend] starting API (watch reload) on http://localhost:${PORT:-3000}"
 npx tsc -b packages/shared packages/backend --watch --preserveWatchOutput &

@@ -93,17 +93,35 @@ export class CalendarService {
 
   /**
    * Get the salon's bookings awaiting admin approval (status 'pending'), oldest
-   * request first. Backs the admin approval queue (`GET /salons/:id/pending`)
-   * from which an admin approves or rejects each request. Not date-bounded — the
-   * queue should surface every outstanding request regardless of appointment time.
+   * request first. Backs the approval queue (`GET /salons/:id/pending`). When
+   * `staffMemberId` is provided the queue is scoped to that stylist's own
+   * requests (R2.5) — Owner/Admin pass no scope and see the whole salon. Not
+   * date-bounded — the queue surfaces every outstanding request.
+   *
+   * Enriched with the service name, customer full name, and staff member full
+   * name so the approvals UI can label each request without extra round-trips.
    */
-  async getPendingAppointments(salonId: string): Promise<Appointment[]> {
+  async getPendingAppointments(salonId: string, staffMemberId?: string) {
     return this.prisma.appointment.findMany({
       where: {
         salonId,
         status: 'pending',
+        ...(staffMemberId ? { staffMemberId } : {}),
+      },
+      include: {
+        service: { select: { name: true } },
+        customer: { select: { fullName: true } },
+        staffMember: { select: { fullName: true } },
       },
       orderBy: { createdAt: 'asc' },
     });
+  }
+
+  /**
+   * Read a single appointment by id (or null). Used by the approve/reject routes
+   * to authorize the caller against the appointment's owner before acting.
+   */
+  async getAppointmentById(id: string): Promise<Appointment | null> {
+    return this.prisma.appointment.findUnique({ where: { id } });
   }
 }

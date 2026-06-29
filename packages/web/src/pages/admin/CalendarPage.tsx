@@ -1,9 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CalendarX2, ChevronLeft, ChevronRight, Clock, User, Scissors } from 'lucide-react';
+import {
+  CalendarDays,
+  CalendarX2,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  User,
+  Scissors,
+} from 'lucide-react';
 import { adminApi } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
+import { gregorianToJalali, jalaliToGregorian, getJalaliMonthName } from '@salon/shared';
 import { SeoHead } from '../../components/seo';
 import {
   Badge,
@@ -37,7 +46,7 @@ import {
 
 const DEFAULT_SALON_ID = '11111111-1111-1111-1111-111111111111';
 
-type CalendarView = 'day' | 'week';
+type CalendarView = 'month' | 'week' | 'day';
 type LoadStatus = 'loading' | 'success' | 'error';
 
 /** Time slots for the grid (business hours 8:00–20:00, 1h intervals). */
@@ -98,10 +107,91 @@ function clockTime(iso: string | undefined): string | null {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-/** Compute the [from, to] range for a view. Day = today; week = Sat→Sat+7. */
+// ─── Jalali (Shamsi) month helpers ──────────────────────────────────────────
+// The salon's primary calendar is the Iranian Jalali month. These mirror the
+// JalaliDatePicker's month math via the shared converter (no new date kernel).
+const MS_PER_DAY = 86_400_000;
+
+interface JalaliYM {
+  jy: number;
+  jm: number;
+}
+
+/** The Jalali (year, month) containing a Gregorian date. */
+function jalaliYM(date: Date): JalaliYM {
+  const j = gregorianToJalali({
+    year: date.getFullYear(),
+    month: date.getMonth() + 1,
+    day: date.getDate(),
+  });
+  return { jy: j.jy, jm: j.jm };
+}
+
+/** Shift a Jalali (year, month) by `delta` months (handles year wrap). */
+function addJalaliMonths({ jy, jm }: JalaliYM, delta: number): JalaliYM {
+  const zero = jy * 12 + (jm - 1) + delta;
+  return { jy: Math.floor(zero / 12), jm: (zero % 12) + 1 };
+}
+
+/** Local Gregorian Date of day 1 of a Jalali month. */
+function jalaliMonthStart({ jy, jm }: JalaliYM): Date {
+  const g = jalaliToGregorian({ jy, jm, jd: 1 });
+  return new Date(g.year, g.month - 1, g.day);
+}
+
+/** Number of days in a Jalali month (derived from the converter). */
+function jalaliMonthLength(ym: JalaliYM): number {
+  const start = jalaliMonthStart(ym);
+  const next = jalaliMonthStart(addJalaliMonths(ym, 1));
+  return Math.round((next.getTime() - start.getTime()) / MS_PER_DAY);
+}
+
+/** Iranian-week column (Saturday = 0 … Friday = 6) for a JS day-of-week. */
+function iranianColumn(jsDay: number): number {
+  return (jsDay + 1) % 7;
+}
+
+/** Local `YYYY-MM-DD` for a Date (matches localDateKey's local bucketing). */
+function dateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+interface MonthDayCell {
+  date: Date;
+  jd: number;
+}
+
+/** Ordered day cells (Saturday-first) with leading-blank padding for a month. */
+function buildMonthCells(ym: JalaliYM): (MonthDayCell | null)[] {
+  const start = jalaliMonthStart(ym);
+  const length = jalaliMonthLength(ym);
+  const lead = iranianColumn(start.getDay());
+  const cells: (MonthDayCell | null)[] = [];
+  for (let i = 0; i < lead; i += 1) cells.push(null);
+  for (let jd = 1; jd <= length; jd += 1) {
+    cells.push({
+      date: new Date(start.getFullYear(), start.getMonth(), start.getDate() + jd - 1),
+      jd,
+    });
+  }
+  return cells;
+}
+
+/** Compute the [from, to] range for a view. Day = today; week = Sat→Sat+7;
+ *  month = the whole Jalali month containing `anchor`. */
 function rangeFor(view: CalendarView, anchor: Date): { from: string; to: string } {
   if (view === 'day') {
     return { from: isoDate(anchor, 0), to: isoDate(anchor, 1) };
+  }
+  if (view === 'month') {
+    const ym = jalaliYM(anchor);
+    return {
+      from: dateKey(jalaliMonthStart(ym)),
+      to: dateKey(jalaliMonthStart(addJalaliMonths(ym, 1))),
+    };
   }
   const weekStart = startOfIranianWeek(anchor);
   return { from: isoDate(weekStart, 0), to: isoDate(weekStart, 7) };
@@ -161,25 +251,26 @@ function AppointmentBlock({
   appt,
   canManage = false,
   onChanged,
+  showDate = false,
 }: {
   appt: Appointment;
   /** When true (Owner/Admin), a pending appointment exposes approve/reject. */
   canManage?: boolean;
   /** Called after a successful approve/reject so the calendar can refetch. */
   onChanged?: () => void;
+  /** Show the Jalali date above the time (used by the cross-day pending queue). */
+  showDate?: boolean;
 }) {
   const { t } = useTranslation();
-  const [actionStatus, setActionStatus] = useState<
-    'idle' | 'approving' | 'rejecting' | 'error'
-  >('idle');
+  const [actionStatus, setActionStatus] = useState<'idle' | 'approving' | 'rejecting' | 'error'>(
+    'idle',
+  );
   const start = clockTime(appt.startAt);
   const end = clockTime(appt.endAt);
   const service = appt.serviceName ?? t('admin.calendarPage.untitledService');
 
   // Managers may act, but only on a still-pending appointment.
-  const normalizedStatus = (appt.status ?? '')
-    .toLowerCase()
-    .replace(/[^a-z]/g, '');
+  const normalizedStatus = (appt.status ?? '').toLowerCase().replace(/[^a-z]/g, '');
   const showActions = canManage && normalizedStatus === 'pending';
   const busy = actionStatus === 'approving' || actionStatus === 'rejecting';
 
@@ -208,6 +299,12 @@ function AppointmentBlock({
 
   return (
     <article className="flex flex-col gap-1 rounded-sm border border-border bg-elevated p-2 text-xs shadow-1">
+      {showDate && appt.startAt && (
+        <p className="flex items-center gap-1 font-medium tabular-nums text-muted">
+          <CalendarDays className="h-3 w-3 shrink-0" aria-hidden="true" />
+          <JalaliDate value={appt.startAt} withWeekday variant="numeric" />
+        </p>
+      )}
       <div className="flex items-center justify-between gap-1">
         <span className="inline-flex items-center gap-1 font-medium tabular-nums text-text">
           <Clock className="h-3 w-3 shrink-0 text-muted" aria-hidden="true" />
@@ -489,9 +586,7 @@ function WeekGrid({
       }
       e.preventDefault();
       setFocusCol(next);
-      const cell = gridRef.current?.querySelector(
-        `[data-col="${next}"]`,
-      ) as HTMLElement | null;
+      const cell = gridRef.current?.querySelector(`[data-col="${next}"]`) as HTMLElement | null;
       cell?.focus();
     },
     [focusCol],
@@ -541,9 +636,158 @@ function WeekGrid({
   );
 }
 
+/** Persian weekday short headers in Iranian week order (Saturday first). */
+const MONTH_WEEKDAYS = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'] as const;
+
+/**
+ * Month view: a Jalali (Shamsi) month grid, Saturday-first. Each day cell shows
+ * the Persian day number and a compact summary of that day's appointments
+ * (time + service, pending highlighted) with a "+N" overflow. Clicking a day
+ * drills into the day view for that date. It is a read-only overview — approvals
+ * happen in the pending panel or the day view.
+ */
+function MonthGrid({
+  appointments,
+  monthAnchor,
+  onSelectDay,
+}: {
+  appointments: Appointment[];
+  monthAnchor: Date;
+  onSelectDay: (date: Date) => void;
+}) {
+  const { t } = useTranslation();
+  const todayKey = dateKey(new Date());
+
+  const cells = useMemo(() => {
+    const ym = jalaliYM(monthAnchor);
+    const byDate = new Map<string, Appointment[]>();
+    for (const a of appointments) {
+      if (!a.startAt) continue;
+      const key = localDateKey(a.startAt);
+      if (!key) continue;
+      const arr = byDate.get(key) ?? [];
+      arr.push(a);
+      byDate.set(key, arr);
+    }
+    return buildMonthCells(ym).map((c) => {
+      if (!c) return null;
+      const key = dateKey(c.date);
+      const items = (byDate.get(key) ?? []).sort((a, b) => {
+        const ta = a.startAt ? new Date(a.startAt).getTime() : 0;
+        const tb = b.startAt ? new Date(b.startAt).getTime() : 0;
+        return ta - tb;
+      });
+      return { date: c.date, jd: c.jd, key, items };
+    });
+  }, [appointments, monthAnchor]);
+
+  return (
+    <div data-testid="calendar-month" className="flex flex-col gap-2">
+      <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted">
+        {MONTH_WEEKDAYS.map((w, i) => (
+          <div key={i} className="py-1">
+            {w}
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-7 gap-1" aria-label={t('admin.calendarPage.month.gridLabel')}>
+        {cells.map((cell, idx) => {
+          if (!cell) {
+            return (
+              <div
+                key={`blank-${idx}`}
+                aria-hidden="true"
+                className="min-h-[4.5rem] rounded-md sm:min-h-[6rem]"
+              />
+            );
+          }
+          const isToday = cell.key === todayKey;
+          const shown = cell.items.slice(0, 2);
+          const overflow = cell.items.length - shown.length;
+          return (
+            <button
+              key={cell.key}
+              type="button"
+              onClick={() => onSelectDay(cell.date)}
+              aria-label={t('admin.calendarPage.month.dayLabel', {
+                count: cell.items.length,
+              })}
+              className={cn(
+                'flex min-h-[4.5rem] flex-col gap-1 rounded-md border p-1 text-start sm:min-h-[6rem]',
+                'transition-colors duration-fast ease-standard hover:bg-elevated',
+                'outline-none focus-visible:outline focus-visible:outline-2',
+                'focus-visible:outline-offset-2 focus-visible:outline-focus',
+                isToday ? 'border-primary bg-surface' : 'border-border',
+              )}
+            >
+              <span
+                className={cn(
+                  'text-xs font-medium tabular-nums',
+                  isToday ? 'text-primary' : 'text-text',
+                )}
+              >
+                <Num value={cell.jd} />
+              </span>
+              <span className="flex flex-col gap-0.5">
+                {shown.map((appt) => {
+                  const norm = (appt.status ?? '').toLowerCase().replace(/[^a-z]/g, '');
+                  const isPending = norm === 'pending' || norm === 'held';
+                  return (
+                    <span
+                      key={appt.id}
+                      className={cn(
+                        'truncate rounded-sm px-1 py-0.5 text-[0.65rem] leading-tight',
+                        isPending ? 'border border-warning text-warning' : 'bg-elevated text-muted',
+                      )}
+                    >
+                      {clockTime(appt.startAt) && (
+                        <span className="tabular-nums">{clockTime(appt.startAt)} </span>
+                      )}
+                      {appt.serviceName ?? t('admin.calendarPage.untitledService')}
+                    </span>
+                  );
+                })}
+                {overflow > 0 && (
+                  <span className="text-[0.65rem] text-muted">
+                    {t('admin.calendarPage.month.more', { count: overflow })}
+                  </span>
+                )}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /** Skeleton placeholder grid shown while the calendar loads (R5.4). */
 function CalendarSkeleton({ view }: { view: CalendarView }) {
   const { t } = useTranslation();
+
+  if (view === 'month') {
+    return (
+      <div
+        data-testid="calendar-loading"
+        role="status"
+        aria-busy="true"
+        aria-label={t('admin.calendarPage.loadingLabel')}
+        className="flex flex-col gap-2"
+      >
+        <div className="grid grid-cols-7 gap-1">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <Skeleton key={`h-${i}`} variant="text" className="mx-auto h-3 w-4" />
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {Array.from({ length: 35 }).map((_, i) => (
+            <Skeleton key={i} variant="rect" className="min-h-[4.5rem] sm:min-h-[6rem]" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (view === 'week') {
     return (
@@ -633,11 +877,26 @@ function DateNav({
   const prevLabel =
     view === 'day'
       ? t('admin.calendarPage.prevDay')
-      : t('admin.calendarPage.prevWeek');
+      : view === 'month'
+        ? t('admin.calendarPage.prevMonth')
+        : t('admin.calendarPage.prevWeek');
   const nextLabel =
     view === 'day'
       ? t('admin.calendarPage.nextDay')
-      : t('admin.calendarPage.nextWeek');
+      : view === 'month'
+        ? t('admin.calendarPage.nextMonth')
+        : t('admin.calendarPage.nextWeek');
+
+  // Month view reads as "تیر ۱۴۰۵"; day/week show the anchor's full Jalali date.
+  const ym = jalaliYM(anchor);
+  const title =
+    view === 'month' ? (
+      <>
+        {getJalaliMonthName(ym.jm)} <Num value={ym.jy} />
+      </>
+    ) : (
+      <JalaliDate value={anchor.toISOString()} variant="long" />
+    );
 
   return (
     <nav
@@ -645,34 +904,137 @@ function DateNav({
       className="flex items-center gap-2"
       onKeyDown={handleKeyDown}
     >
-      <Button
-        variant="ghost"
-        aria-label={prevLabel}
-        onClick={() => onNavigate(-1)}
-      >
+      <Button variant="ghost" aria-label={prevLabel} onClick={() => onNavigate(-1)}>
         {/* In RTL ChevronRight points inline-start (= back) */}
         <ChevronRight className="h-4 w-4" aria-hidden="true" />
       </Button>
 
       <span className="min-w-[6rem] text-center text-sm font-medium tabular-nums text-text">
-        <JalaliDate value={anchor.toISOString()} variant="long" />
+        {title}
       </span>
 
-      <Button
-        variant="ghost"
-        aria-label={nextLabel}
-        onClick={() => onNavigate(1)}
-      >
+      <Button variant="ghost" aria-label={nextLabel} onClick={() => onNavigate(1)}>
         <ChevronLeft className="h-4 w-4" aria-hidden="true" />
       </Button>
 
-      <Button
-        variant="ghost"
-        onClick={() => onNavigate(0)}
-      >
+      <Button variant="ghost" onClick={() => onNavigate(0)}>
         {t('admin.calendarPage.today')}
       </Button>
     </nav>
+  );
+}
+
+/**
+ * Discoverable approvals queue for Owner/Admin: every booking awaiting approval
+ * (status 'pending'), regardless of which day it falls on — so a manager never
+ * has to hunt the calendar for the inline approve/reject affordance. Backed by
+ * `GET /salons/:id/pending`; each row reuses {@link AppointmentBlock} so approve/
+ * reject behave identically to the grid. Self-contained loading / empty / error
+ * states (ui-ux §6).
+ *
+ * It refetches whenever the parent calendar reloads (`reloadToken`), and an
+ * approve/reject here calls `onChanged` so both this panel and the grid refresh.
+ */
+function PendingApprovalsPanel({
+  salonId,
+  reloadToken,
+  onChanged,
+}: {
+  salonId: string;
+  reloadToken: number;
+  onChanged: () => void;
+}) {
+  const { t } = useTranslation();
+  const [status, setStatus] = useState<LoadStatus>('loading');
+  const [items, setItems] = useState<Appointment[]>([]);
+  // Local token so the error-state retry can refetch without a parent reload.
+  const [localToken, setLocalToken] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    setStatus('loading');
+    adminApi
+      .getPending(salonId)
+      .then((res) => {
+        if (!active) return;
+        setItems(res.appointments.map((a, i) => toAppointment(a, `pending-${i + 1}`)));
+        setStatus('success');
+      })
+      .catch(() => {
+        if (active) setStatus('error');
+      });
+    return () => {
+      active = false;
+    };
+  }, [salonId, reloadToken, localToken]);
+
+  // While loading the very first time, keep the panel quiet (a slim skeleton).
+  return (
+    <section
+      aria-labelledby="pending-approvals-title"
+      className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4"
+    >
+      <header className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-col gap-0.5">
+          <h2
+            id="pending-approvals-title"
+            className="flex items-center gap-2 text-lg text-display text-text"
+          >
+            {t('admin.calendarPage.pending.title')}
+            {status === 'success' && items.length > 0 && (
+              <Badge status="warning">
+                <Num value={items.length} />
+              </Badge>
+            )}
+          </h2>
+          <p className="text-xs text-muted">{t('admin.calendarPage.pending.subtitle')}</p>
+        </div>
+      </header>
+
+      {status === 'loading' && (
+        <div
+          role="status"
+          aria-busy="true"
+          aria-label={t('admin.calendarPage.pending.loadingLabel')}
+          className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3"
+        >
+          <Skeleton variant="rect" className="h-24" />
+          <Skeleton variant="rect" className="h-24" />
+        </div>
+      )}
+
+      {status === 'error' && (
+        <ErrorState
+          title={t('admin.calendarPage.pending.errorTitle')}
+          retryLabel={t('admin.calendarPage.retry')}
+          onRetry={() => setLocalToken((n) => n + 1)}
+        />
+      )}
+
+      {status === 'success' &&
+        (items.length === 0 ? (
+          <EmptyState
+            icon={<Clock className="h-8 w-8" />}
+            title={t('admin.calendarPage.pending.emptyTitle')}
+            description={t('admin.calendarPage.pending.emptyBody')}
+          />
+        ) : (
+          <div
+            data-testid="pending-approvals-list"
+            className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3"
+          >
+            {items.map((appt) => (
+              <AppointmentBlock
+                key={appt.id}
+                appt={appt}
+                canManage
+                onChanged={onChanged}
+                showDate
+              />
+            ))}
+          </div>
+        ))}
+    </section>
   );
 }
 
@@ -681,12 +1043,15 @@ export function CalendarPage({ salonId: salonIdProp }: { salonId?: string }) {
   const params = useParams<{ salonId?: string }>();
   const salonId = salonIdProp ?? params.salonId ?? DEFAULT_SALON_ID;
 
-  // RBAC: only Owner/Admin may approve/reject. Outside an AuthProvider (e.g.
-  // isolated tests) `role` is undefined → no management affordances render.
-  const { role } = useAuth();
-  const canManage = role === 'Owner' || role === 'Admin';
+  // Any staff member may act on the appointments they can see: Owner/Admin on the
+  // whole salon, a Stylist on their own (the calendar grid + pending queue are
+  // already scoped to the stylist server-side, and the backend re-checks
+  // ownership on approve/reject). Customers/anonymous (no role) get no
+  // management affordances.
+  const { isStaff } = useAuth();
+  const canManage = isStaff;
 
-  const [view, setView] = useState<CalendarView>('day');
+  const [view, setView] = useState<CalendarView>('month');
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [error, setError] = useState('');
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -704,6 +1069,10 @@ export function CalendarPage({ salonId: salonIdProp }: { salonId?: string }) {
     (dir: -1 | 0 | 1) => {
       setAnchor((prev) => {
         if (dir === 0) return new Date();
+        if (view === 'month') {
+          // Step a whole Jalali month (land on day 1 of the target month).
+          return jalaliMonthStart(addJalaliMonths(jalaliYM(prev), dir));
+        }
         const step = view === 'day' ? 1 : 7;
         const next = new Date(prev);
         next.setDate(next.getDate() + dir * step);
@@ -725,9 +1094,7 @@ export function CalendarPage({ salonId: salonIdProp }: { salonId?: string }) {
       .getCalendar(salonId, from, to, view)
       .then((res) => {
         if (!active) return;
-        setAppointments(
-          res.appointments.map((appt, i) => toAppointment(appt, `appt-${i + 1}`)),
-        );
+        setAppointments(res.appointments.map((appt, i) => toAppointment(appt, `appt-${i + 1}`)));
         setStatus('success');
       })
       .catch((_err: unknown) => {
@@ -758,7 +1125,10 @@ export function CalendarPage({ salonId: salonIdProp }: { salonId?: string }) {
       )}
 
       {status === 'success' && (
-        <div data-testid="calendar-appointments" aria-label={t('admin.calendarPage.appointmentsLabel')}>
+        <div
+          data-testid="calendar-appointments"
+          aria-label={t('admin.calendarPage.appointmentsLabel')}
+        >
           {appointments.length === 0 ? (
             <EmptyState
               data-testid="calendar-empty"
@@ -766,12 +1136,17 @@ export function CalendarPage({ salonId: salonIdProp }: { salonId?: string }) {
               title={t('admin.calendarPage.emptyTitle')}
               description={t('admin.calendarPage.emptyBody')}
             />
-          ) : view === 'day' ? (
-            <DayGrid
+          ) : view === 'month' ? (
+            <MonthGrid
               appointments={appointments}
-              canManage={canManage}
-              onChanged={onChanged}
+              monthAnchor={anchor}
+              onSelectDay={(d) => {
+                setAnchor(d);
+                setView('day');
+              }}
             />
+          ) : view === 'day' ? (
+            <DayGrid appointments={appointments} canManage={canManage} onChanged={onChanged} />
           ) : (
             <WeekGrid
               appointments={appointments}
@@ -791,10 +1166,14 @@ export function CalendarPage({ salonId: salonIdProp }: { salonId?: string }) {
 
       <header className="flex flex-col gap-2">
         <h1 className="text-xl text-display text-text">{t('admin.calendar')}</h1>
-        <p className="max-w-prose text-sm text-muted">
-          {t('admin.calendarPage.subtitle')}
-        </p>
+        <p className="max-w-prose text-sm text-muted">{t('admin.calendarPage.subtitle')}</p>
       </header>
+
+      {/* Owner/Admin: a prominent approvals queue so pending requests are never
+          buried in the grid. Hidden for stylists (no manage_appointments). */}
+      {canManage && (
+        <PendingApprovalsPanel salonId={salonId} reloadToken={reloadToken} onChanged={onChanged} />
+      )}
 
       <Tabs
         value={view}
@@ -803,19 +1182,17 @@ export function CalendarPage({ salonId: salonIdProp }: { salonId?: string }) {
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <TabsList aria-label={t('admin.calendarPage.viewToggleLabel')} className="self-start">
-            <TabsTrigger value="day">{t('admin.calendarPage.dayTab')}</TabsTrigger>
+            <TabsTrigger value="month">{t('admin.calendarPage.monthTab')}</TabsTrigger>
             <TabsTrigger value="week">{t('admin.calendarPage.weekTab')}</TabsTrigger>
+            <TabsTrigger value="day">{t('admin.calendarPage.dayTab')}</TabsTrigger>
           </TabsList>
 
           <DateNav view={view} anchor={anchor} onNavigate={handleNavigate} />
         </div>
 
-        <TabsContent value="day">
-          {body}
-        </TabsContent>
-        <TabsContent value="week">
-          {body}
-        </TabsContent>
+        <TabsContent value="month">{body}</TabsContent>
+        <TabsContent value="week">{body}</TabsContent>
+        <TabsContent value="day">{body}</TabsContent>
       </Tabs>
     </div>
   );

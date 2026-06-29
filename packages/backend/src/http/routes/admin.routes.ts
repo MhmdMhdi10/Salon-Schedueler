@@ -48,6 +48,37 @@ const toCalendarDto = (a: any) => ({
  * Mounted behind `requireAuth`; each route adds its own role guard. Denials return
  * 403 FORBIDDEN with no state change.
  */
+/** Format a Prisma `@db.Time` value (epoch-based, UTC h/m) to "HH:mm", or null. */
+const formatClosureTime = (t: unknown): string | null => {
+  if (t == null) return null;
+  const d = new Date(t as string | number | Date);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+};
+
+/**
+ * Flatten a `holiday` (closure) row to the DTO the config UI consumes: the ISO
+ * date plus an optional [startTime,endTime) HH:mm window. `startTime`/`endTime`
+ * are null for a full-day closure and set for a partial-day (hour-range) one.
+ */
+const toClosureDto = (h: {
+  id: string;
+  onDate: Date | string;
+  startTime?: unknown;
+  endTime?: unknown;
+}) => ({
+  id: h.id,
+  onDate:
+    typeof h.onDate === 'string'
+      ? h.onDate.slice(0, 10)
+      : new Date(h.onDate).toISOString().slice(0, 10),
+  startTime: formatClosureTime(h.startTime),
+  endTime: formatClosureTime(h.endTime),
+});
+
+/** "HH:mm" 24-hour validator for closure window times. */
+const HHMM_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
 export function adminRouter(services: Services, requireRole: RequireRole): Router {
   const router = Router();
 
@@ -83,16 +114,24 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     }),
   );
 
-  // Approval queue: bookings awaiting admin approval (status 'pending'), oldest
-  // first. An admin approves/rejects each via POST /appointments/:id/approve|reject.
+  // Approval queue: bookings awaiting approval (status 'pending'), oldest first.
+  // A Stylist sees only their own pending requests (R2.5); Owner/Admin see the
+  // whole salon. Each is approved/rejected via POST /appointments/:id/approve|reject.
   router.get(
     '/salons/:id/pending',
-    requireRole('manage_appointments'),
+    requireRole('view_own_appointments', (req) => ({
+      salonId: req.params.id,
+      staffMemberId: req.principal?.staffMemberId,
+    })),
     asyncRoute(async (req, res) => {
+      const principal = req.principal!;
+      // Scope to the stylist's own requests; Owner/Admin pass no scope (all).
+      const staffScope = principal.role === 'Stylist' ? principal.staffMemberId : undefined;
       const appointments = await services.calendarService.getPendingAppointments(
         req.params.id,
+        staffScope,
       );
-      res.status(200).json({ appointments });
+      res.status(200).json({ appointments: appointments.map(toCalendarDto) });
     }),
   );
 
@@ -191,6 +230,76 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
       const brandAccent = typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : null;
       await services.availabilityConfig.setSalonBrandAccent(req.params.id, brandAccent);
       res.status(200).json({ ok: true, brandAccent });
+    }),
+  );
+
+  // ── Salon closures (block a full day, or an hour-range) ─────────────────────
+  // The salon's "closed" calendar: a closure with no time window blocks the
+  // whole day; one with a [startTime,endTime) window blocks only that part of
+  // the day. The scheduling engine enforces both (no availability + booking
+  // rejected). Owner-only (configure_salon). Read/add/remove.
+  router.get(
+    '/salons/:id/holidays',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const closures = await services.availabilityConfig.getHolidays(req.params.id);
+      res.status(200).json({ holidays: closures.map((h) => toClosureDto(h)) });
+    }),
+  );
+
+  // Add a closure. Body: { onDate: "YYYY-MM-DD", startTime?: "HH:mm",
+  // endTime?: "HH:mm" }. Times are both-or-neither; omit both for a full-day
+  // closure. endTime must be strictly after startTime.
+  router.post(
+    '/salons/:id/holidays',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const onDate = body.onDate;
+      if (typeof onDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(onDate)) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'onDate' });
+        return;
+      }
+      const rawStart = body.startTime;
+      const rawEnd = body.endTime;
+      const hasStart = typeof rawStart === 'string' && rawStart !== '';
+      const hasEnd = typeof rawEnd === 'string' && rawEnd !== '';
+      // Both-or-neither: a window needs both ends.
+      if (hasStart !== hasEnd) {
+        res
+          .status(400)
+          .json({ code: 'VALIDATION_ERROR', field: hasStart ? 'endTime' : 'startTime' });
+        return;
+      }
+      if (hasStart) {
+        const start = rawStart as string;
+        const end = rawEnd as string;
+        if (!HHMM_RE.test(start) || !HHMM_RE.test(end)) {
+          res.status(400).json({ code: 'VALIDATION_ERROR', field: 'startTime' });
+          return;
+        }
+        if (start >= end) {
+          res.status(400).json({ code: 'VALIDATION_ERROR', field: 'endTime' });
+          return;
+        }
+      }
+      const created = await services.availabilityConfig.addHoliday(
+        req.params.id,
+        onDate,
+        hasStart ? (rawStart as string) : null,
+        hasEnd ? (rawEnd as string) : null,
+      );
+      res.status(201).json({ holiday: toClosureDto(created) });
+    }),
+  );
+
+  // Remove a closure by id (scoped under the salon for a RESTful path).
+  router.delete(
+    '/salons/:id/holidays/:holidayId',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      await services.availabilityConfig.removeHoliday(req.params.holidayId);
+      res.status(200).json({ ok: true });
     }),
   );
 

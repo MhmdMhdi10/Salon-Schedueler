@@ -142,14 +142,33 @@ export class AvailabilityConfig {
   }
 
   /**
-   * Add a salon holiday (R4.3).
+   * Add a salon closure (R4.3). With no time window it closes the WHOLE day (a
+   * classic holiday); with both `startTime` and `endTime` (HH:mm) it blocks only
+   * that part of `onDate` (a partial-day closure / hour-range block). The times
+   * share the WorkingHours nominal clock and are enforced by the scheduling
+   * engine (getAvailability + book).
    */
-  async addHoliday(salonId: string, onDate: string): Promise<Holiday> {
+  async addHoliday(
+    salonId: string,
+    onDate: string,
+    startTime?: string | null,
+    endTime?: string | null,
+  ): Promise<Holiday> {
+    const partial =
+      typeof startTime === 'string' &&
+      startTime !== '' &&
+      typeof endTime === 'string' &&
+      endTime !== '';
     return this.prisma.holiday.create({
+      // Cast: the checked-in Prisma client may predate the additive
+      // start_time/end_time columns; the entrypoint regenerates before build.
       data: {
         salonId,
         onDate: new Date(onDate),
-      },
+        ...(partial
+          ? { startTime: parseTime(startTime as string), endTime: parseTime(endTime as string) }
+          : {}),
+      } as never,
     });
   }
 
@@ -163,11 +182,12 @@ export class AvailabilityConfig {
   }
 
   /**
-   * Retrieve all holidays for a salon.
+   * Retrieve all closures for a salon, soonest date first.
    */
   async getHolidays(salonId: string): Promise<Holiday[]> {
     return this.prisma.holiday.findMany({
       where: { salonId },
+      orderBy: { onDate: 'asc' },
     });
   }
 
@@ -216,10 +236,7 @@ export class AvailabilityConfig {
    * Set (or clear) a stylist's approval-policy override. `null` inherits the
    * salon default; `true`/`false` overrides it for that stylist.
    */
-  async setStaffAutoApprove(
-    staffMemberId: string,
-    autoApprove: boolean | null,
-  ): Promise<void> {
+  async setStaffAutoApprove(staffMemberId: string, autoApprove: boolean | null): Promise<void> {
     await this.prisma.staffMember.update({
       where: { id: staffMemberId },
       data: { autoApprove },

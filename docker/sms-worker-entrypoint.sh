@@ -9,7 +9,10 @@ set -euo pipefail
 cd /app
 
 echo "[sms-worker] waiting for the compiled worker bundle (built by backend)..."
-until [ -f packages/backend/dist/sms-worker.js ]; do
+# -s (not -f): the bundle must be non-empty. An interrupted backend build can
+# leave a 0-byte dist/sms-worker.js; waiting on mere existence would exec an
+# empty file. Wait until the backend's build writes real content.
+until [ -s packages/backend/dist/sms-worker.js ]; do
   sleep 2
 done
 

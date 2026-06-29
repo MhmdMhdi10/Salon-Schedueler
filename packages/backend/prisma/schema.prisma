@@ -265,6 +265,14 @@ model Holiday {
   id      String   @id @default(uuid()) @db.Uuid
   salonId String   @map("salon_id") @db.Uuid
   onDate  DateTime @map("on_date") @db.Date
+  // Optional time-of-day window for a PARTIAL-day closure. Both null => the
+  // whole day is closed (a full holiday); both set => only [startTime,endTime)
+  // on `onDate` is blocked (e.g. a midday break, or "no bookings after 18:00").
+  // The times use the same nominal salon clock as WorkingHours and are compared
+  // by the scheduling engine via timeToAbsolute, so a closure cleanly carves a
+  // hole out of the working-hours window.
+  startTime DateTime? @map("start_time") @db.Time
+  endTime   DateTime? @map("end_time") @db.Time
 
   salon Salon @relation(fields: [salonId], references: [id])
 

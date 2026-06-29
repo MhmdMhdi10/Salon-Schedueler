@@ -1,9 +1,5 @@
 import type { PrismaClient, Appointment } from '@prisma/client';
-import {
-  generateCandidateStarts,
-  intervalsOverlap,
-  computeOccupancyEnd,
-} from '@salon/shared';
+import { generateCandidateStarts, intervalsOverlap, computeOccupancyEnd } from '@salon/shared';
 
 /**
  * Query input for availability computation.
@@ -42,7 +38,11 @@ export interface BookingRequest {
 export type BookingResult =
   | { status: 'pending'; appointment: Appointment } // R9.1, R9.7 — awaiting admin approval
   | { status: 'confirmed'; appointment: Appointment } // auto-approved (salon/stylist policy)
-  | { status: 'held'; appointment: Appointment; payment: { paymentId: string; redirectUrl: string } } // R10.1, R10.2
+  | {
+      status: 'held';
+      appointment: Appointment;
+      payment: { paymentId: string; redirectUrl: string };
+    } // R10.1, R10.2
   | { status: 'rejected'; reason: 'no_availability' | 'slot_unavailable' }; // R9.2, R9.6
 
 /**
@@ -103,18 +103,32 @@ export class SchedulingEngine {
     const bufferMin = service.bufferMin;
     const requiredEquipmentIds = service.serviceEquipment.map((se) => se.equipmentId);
 
-    // 2. Check if date is a salon holiday (R4.5)
+    // 2. Resolve salon closures on this date (R4.5). A closure with no time
+    //    window closes the WHOLE day; a closure with a [startTime,endTime)
+    //    window blocks only that part of the day (partial-day closure). Times
+    //    share the WorkingHours nominal clock (see timeToAbsolute).
     const targetDate = new Date(date + 'T00:00:00Z');
-    const isHoliday = await this.prisma.holiday.findFirst({
+    const closures = (await this.prisma.holiday.findMany({
       where: {
         salonId,
         onDate: targetDate,
       },
-    });
+      // Cast: the checked-in Prisma client may predate the additive
+      // start_time/end_time columns; the entrypoint regenerates before build.
+    })) as unknown as Array<{ startTime: Date | null; endTime: Date | null }>;
 
-    if (isHoliday) {
-      return []; // R4.5: exclude holidays from availability
+    const fullDayClosed = closures.some((c) => c.startTime == null || c.endTime == null);
+    if (fullDayClosed) {
+      return []; // R4.5: a full-day closure excludes the whole date
     }
+
+    // Absolute [start,end) windows to carve out of availability on this date.
+    const closureWindows = closures
+      .filter((c) => c.startTime != null && c.endTime != null)
+      .map((c) => ({
+        start: this.timeToAbsolute(c.startTime as Date, date),
+        end: this.timeToAbsolute(c.endTime as Date, date),
+      }));
 
     // 3. Resolve qualified staff set (R6.2)
     const qualifiedStaffIds = service.serviceStaff.map((ss) => ss.staffMemberId);
@@ -270,8 +284,16 @@ export class SchedulingEngine {
 
     // Collect all unique working-hour windows across staff and chairs
     // to determine the overall day window for candidate generation
-    const allStaffWindows = this.getAbsoluteWindows(staffHoursMap, availableStaff.map((s) => s.id), date);
-    const allChairWindows = this.getAbsoluteWindows(chairHoursMap, chairsWithHours.map((c) => c.id), date);
+    const allStaffWindows = this.getAbsoluteWindows(
+      staffHoursMap,
+      availableStaff.map((s) => s.id),
+      date,
+    );
+    const allChairWindows = this.getAbsoluteWindows(
+      chairHoursMap,
+      chairsWithHours.map((c) => c.id),
+      date,
+    );
 
     // The overall window is the union of all windows for candidate generation
     const overallStart = this.getEarliestStart(allStaffWindows, allChairWindows);
@@ -294,6 +316,11 @@ export class SchedulingEngine {
     for (const candidateStart of candidates) {
       const candidateEnd = computeOccupancyEnd(candidateStart, durationMin, bufferMin);
       const candidateInterval = { start: candidateStart, end: candidateEnd };
+
+      // Skip any candidate that overlaps a partial-day salon closure window.
+      if (closureWindows.some((w) => intervalsOverlap(candidateInterval, w))) {
+        continue;
+      }
 
       // Check if at least one qualified staff is free for this interval
       const staffFree = this.isAnyStaffFree(
@@ -371,13 +398,33 @@ export class SchedulingEngine {
     const endAt = computeOccupancyEnd(startAt, service.durationMin, service.bufferMin);
     const date = startAtISO.slice(0, 10); // Extract ISO date portion
 
-    // 3. Check if date is a salon holiday
+    // 3. Check salon closures on this date. A full-day closure (no time window)
+    //    rejects outright; a partial-day closure rejects only when the requested
+    //    interval overlaps its [startTime,endTime) window.
     const targetDate = new Date(date + 'T00:00:00Z');
-    const isHoliday = await this.prisma.holiday.findFirst({
+    const closures = (await this.prisma.holiday.findMany({
       where: { salonId, onDate: targetDate },
-    });
+      // Cast: the checked-in Prisma client may predate the additive
+      // start_time/end_time columns; the entrypoint regenerates before build.
+    })) as unknown as Array<{ startTime: Date | null; endTime: Date | null }>;
 
-    if (isHoliday) {
+    const fullDayClosed = closures.some((c) => c.startTime == null || c.endTime == null);
+    if (fullDayClosed) {
+      return { status: 'rejected', reason: 'no_availability' };
+    }
+
+    const overlapsClosure = closures
+      .filter((c) => c.startTime != null && c.endTime != null)
+      .some((c) =>
+        intervalsOverlap(
+          { start: startAt, end: endAt },
+          {
+            start: this.timeToAbsolute(c.startTime as Date, date),
+            end: this.timeToAbsolute(c.endTime as Date, date),
+          },
+        ),
+      );
+    if (overlapsClosure) {
       return { status: 'rejected', reason: 'no_availability' };
     }
 
@@ -552,7 +599,11 @@ export class SchedulingEngine {
     }
 
     // 10. Try to insert with bounded retries (R9.5, R9.6)
-    for (let attempt = 0; attempt < Math.min(candidatePairs.length, MAX_BOOKING_RETRIES); attempt++) {
+    for (
+      let attempt = 0;
+      attempt < Math.min(candidatePairs.length, MAX_BOOKING_RETRIES);
+      attempt++
+    ) {
       const { staffId, chairId } = candidatePairs[attempt];
 
       try {
@@ -778,8 +829,10 @@ export class SchedulingEngine {
       return true;
     }
     // Check nested meta for constraint names
-    if (error?.meta?.target?.includes('no_staff_overlap') ||
-      error?.meta?.target?.includes('no_chair_overlap')) {
+    if (
+      error?.meta?.target?.includes('no_staff_overlap') ||
+      error?.meta?.target?.includes('no_chair_overlap')
+    ) {
       return true;
     }
     // Prisma surfaces a PostgreSQL exclusion violation (e.g. a lost booking race)
@@ -1037,7 +1090,9 @@ export class SchedulingEngine {
   private timeToAbsolute(time: Date, date: string): Date {
     const hours = time.getUTCHours();
     const minutes = time.getUTCMinutes();
-    return new Date(`${date}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00.000Z`);
+    return new Date(
+      `${date}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00.000Z`,
+    );
   }
 
   /**
@@ -1047,10 +1102,7 @@ export class SchedulingEngine {
     staffWindows: { start: Date; end: Date }[],
     chairWindows: { start: Date; end: Date }[],
   ): Date | null {
-    const allStarts = [
-      ...staffWindows.map((w) => w.start),
-      ...chairWindows.map((w) => w.start),
-    ];
+    const allStarts = [...staffWindows.map((w) => w.start), ...chairWindows.map((w) => w.start)];
     if (allStarts.length === 0) return null;
     return new Date(Math.min(...allStarts.map((d) => d.getTime())));
   }
@@ -1062,10 +1114,7 @@ export class SchedulingEngine {
     staffWindows: { start: Date; end: Date }[],
     chairWindows: { start: Date; end: Date }[],
   ): Date | null {
-    const allEnds = [
-      ...staffWindows.map((w) => w.end),
-      ...chairWindows.map((w) => w.end),
-    ];
+    const allEnds = [...staffWindows.map((w) => w.end), ...chairWindows.map((w) => w.end)];
     if (allEnds.length === 0) return null;
     return new Date(Math.max(...allEnds.map((d) => d.getTime())));
   }
