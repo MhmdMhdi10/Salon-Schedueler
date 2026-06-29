@@ -147,6 +147,11 @@ describe('CalendarService', () => {
           startAt: { lt: new Date('2024-03-16T00:00:00Z') },
           endAt: { gt: new Date('2024-03-15T00:00:00Z') },
         },
+        include: {
+          service: { select: { name: true } },
+          customer: { select: { fullName: true } },
+          staffMember: { select: { fullName: true } },
+        },
         orderBy: { startAt: 'asc' },
       });
     });

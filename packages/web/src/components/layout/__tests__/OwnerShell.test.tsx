@@ -76,13 +76,19 @@ describe('OwnerShell', () => {
     expect(
       screen.getAllByRole('link', { name: 'QR و استند' }).length,
     ).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByRole('link', { name: 'بارکد من' }).length,
+    ).toBeGreaterThanOrEqual(1);
   });
 
   it('hides configuration from a Stylist (RBAC, R2.5)', () => {
     renderOwner({ role: 'Stylist' });
-    // Stylist gets only the calendar (own appointments) destination.
+    // Stylist sees their own calendar and personal QR — nothing else.
     expect(
       screen.getAllByRole('link', { name: 'تقویم' }).length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByRole('link', { name: 'بارکد من' }).length,
     ).toBeGreaterThanOrEqual(1);
     expect(
       screen.queryByRole('link', { name: 'تنظیمات سالن' }),
@@ -138,6 +144,7 @@ describe('ownerNavForRole (RBAC matrix)', () => {
       '/owner/config',
       '/owner/subscription',
       '/owner/qr',
+      '/owner/my-qr',
     ]);
   });
 
@@ -148,8 +155,8 @@ describe('ownerNavForRole (RBAC matrix)', () => {
     expect(paths).not.toContain('/owner/config');
   });
 
-  it('limits Stylist to calendar only', () => {
+  it('limits Stylist to calendar and their personal QR', () => {
     const nav = ownerNavForRole('Stylist');
-    expect(nav.map((i) => i.to)).toEqual(['/owner/calendar']);
+    expect(nav.map((i) => i.to)).toEqual(['/owner/calendar', '/owner/my-qr']);
   });
 });

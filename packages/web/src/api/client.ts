@@ -337,6 +337,12 @@ export const adminApi = {
     request<{ utilization: unknown; revenue: unknown; busiestWindows: unknown }>(`/salons/${salonId}/analytics?from=${from}&to=${to}`),
   getStaff: (salonId: string) => request<{ staff: unknown[] }>(`/salons/${salonId}/staff`),
   getChairs: (salonId: string) => request<{ chairs: unknown[] }>(`/salons/${salonId}/chairs`),
+  /** Approve a pending appointment (manage_appointments — Owner/Admin). */
+  approveAppointment: (appointmentId: string) =>
+    request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/approve`, { method: 'POST' }),
+  /** Reject a pending appointment (manage_appointments — Owner/Admin). */
+  rejectAppointment: (appointmentId: string) =>
+    request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/reject`, { method: 'POST' }),
 };
 
 // ─── Approval policy ───────────────────────────────────────────────────────

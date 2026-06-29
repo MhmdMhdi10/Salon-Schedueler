@@ -7,6 +7,7 @@ import {
   CreditCard,
   QrCode,
   LogOut,
+  Share2,
   type LucideIcon,
 } from 'lucide-react';
 import { ThemeToggle } from '../theme';
@@ -64,6 +65,12 @@ export const OWNER_NAV: readonly OwnerNavItem[] = [
     to: '/owner/qr',
     icon: QrCode,
     roles: ['Owner', 'Admin'],
+  },
+  {
+    labelKey: 'owner.nav.myQr',
+    to: '/owner/my-qr',
+    icon: Share2,
+    roles: ['Owner', 'Admin', 'Stylist'],
   },
 ] as const;
 

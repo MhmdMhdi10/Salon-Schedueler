@@ -1,13 +1,16 @@
-import { Router, type RequestHandler } from 'express';
+import { Router, type Request, type RequestHandler } from 'express';
 import type { Services } from '../app.js';
-import type { Action } from '../../auth/authorizer.js';
+import type { Action, ResourceRef } from '../../auth/authorizer.js';
 import { asyncRoute, validateRequired } from './route-helpers.js';
 
 /**
  * Factory type for the RBAC guard, supplied by `buildApp` (bound to the
  * Authorizer). Kept as a parameter so the router stays construction-agnostic.
  */
-export type RequireRole = (action: Action) => RequestHandler;
+export type RequireRole = (
+  action: Action,
+  resolveResource?: (req: Request) => ResourceRef,
+) => RequestHandler;
 
 /**
  * Protected appointment routes (Requirement 2.2, 2.5 / original R9, R11). Mounted

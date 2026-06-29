@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, Phone, ShieldCheck } from 'lucide-react';
 import { authApi, setAccessToken, setRefreshToken } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
@@ -106,6 +106,7 @@ export function AuthPage() {
 function AuthPageContent() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { success } = useToast();
   const { refresh: refreshAuth } = useAuth();
 
@@ -122,6 +123,13 @@ function AuthPageContent() {
   const phoneIsValid = PHONE_PATTERN.test(normalizedPhone);
   const codeValue = code.join('');
   const codeIsComplete = codeValue.length === OTP_LENGTH;
+
+  // True when we arrived here mid-booking (BookingConfirmPage bounced an
+  // anonymous customer to log in). Drives the phone-step subtitle copy and the
+  // return-intent routing after a successful OTP verification.
+  const hasBookingReturnIntent = Boolean(
+    (location.state as { returnTo?: string } | null)?.returnTo,
+  );
 
   // Resend countdown: ticks once per second while the cooldown is active.
   useEffect(() => {
@@ -175,7 +183,21 @@ function AuthPageContent() {
       // route by the token's role without blocking on a /me round-trip: staff
       // land in the management panel, customers in the public/booking app.
       void refreshAuth();
-      navigate(roleFromAccessToken(result.accessToken) ? '/owner' : '/');
+      // If we were sent here mid-booking, route back to the funnel and let it
+      // resume automatically (`autoConfirm`). Otherwise fall back to role-based
+      // routing: staff → management panel, customers → public/booking app.
+      const returnTo = (location.state as { returnTo?: string } | null)?.returnTo;
+      if (typeof returnTo === 'string' && returnTo) {
+        const returnState =
+          (location.state as { returnState?: Record<string, unknown> } | null)
+            ?.returnState ?? {};
+        navigate(returnTo, {
+          state: { ...returnState, autoConfirm: true },
+          replace: true,
+        });
+      } else {
+        navigate(roleFromAccessToken(result.accessToken) ? '/owner' : '/');
+      }
     } catch {
       setError(t('auth.invalidOtp'));
     } finally {
@@ -269,7 +291,9 @@ function AuthPageContent() {
         <h1 className="text-xl font-bold text-text">{t('auth.title')}</h1>
         <p className="mt-2 text-sm text-muted">
           {step === 'phone'
-            ? t('auth.phoneStepSubtitle')
+            ? hasBookingReturnIntent
+              ? t('auth.bookingIntentSubtitle')
+              : t('auth.phoneStepSubtitle')
             : t('auth.otpStepSubtitle', { phone: toPersianDigits(normalizedPhone) })}
         </p>
       </div>

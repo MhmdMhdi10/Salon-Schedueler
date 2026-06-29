@@ -109,6 +109,19 @@ describe('OwnerQrPage — load + data states (R4.1)', () => {
   });
 });
 
+describe('OwnerQrPage — per-stylist QR gallery', () => {
+  it('renders the per-stylist QR gallery once the page loads', async () => {
+    getSalonQr.mockResolvedValue(QR_RESPONSE);
+    getStylists.mockResolvedValue({
+      stylists: [{ id: 's1', fullName: 'زهرا', role: 'Stylist' }],
+    });
+
+    renderPage();
+
+    expect(await screen.findByTestId('qr-stylist-gallery')).toBeInTheDocument();
+  });
+});
+
 describe('OwnerQrPage — QR image (R4.1)', () => {
   beforeEach(() => {
     getSalonQr.mockResolvedValue(QR_RESPONSE);

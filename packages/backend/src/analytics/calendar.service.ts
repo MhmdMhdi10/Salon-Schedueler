@@ -42,14 +42,23 @@ export class CalendarService {
    * Get all appointments for a specific staff member within a date range (R15.2).
    * Includes held, confirmed, and completed appointments.
    * Excludes cancelled, no_show, and expired since they no longer occupy the staff.
+   *
+   * Each row is enriched with the related service name, customer full name, and
+   * staff member full name so the calendar UI can label bookings without extra
+   * round-trips. The return type is inferred as the enriched Prisma row type.
    */
-  async getStaffCalendar(staffId: string, from: Date, to: Date): Promise<Appointment[]> {
+  async getStaffCalendar(staffId: string, from: Date, to: Date) {
     return this.prisma.appointment.findMany({
       where: {
         staffMemberId: staffId,
         status: { in: ['pending', 'held', 'confirmed', 'completed'] },
         startAt: { lt: to },
         endAt: { gt: from },
+      },
+      include: {
+        service: { select: { name: true } },
+        customer: { select: { fullName: true } },
+        staffMember: { select: { fullName: true } },
       },
       orderBy: { startAt: 'asc' },
     });
@@ -60,14 +69,23 @@ export class CalendarService {
    * Used by the RBAC-guarded `GET /salons/:id/calendar` route. Includes held,
    * confirmed, and completed appointments; excludes statuses that no longer occupy
    * a (staff, chair) pair.
+   *
+   * Each row is enriched with the related service name, customer full name, and
+   * staff member full name so the calendar UI can label bookings and group by
+   * staff. The return type is inferred as the enriched Prisma row type.
    */
-  async getSalonCalendar(salonId: string, from: Date, to: Date): Promise<Appointment[]> {
+  async getSalonCalendar(salonId: string, from: Date, to: Date) {
     return this.prisma.appointment.findMany({
       where: {
         salonId,
         status: { in: ['pending', 'held', 'confirmed', 'completed'] },
         startAt: { lt: to },
         endAt: { gt: from },
+      },
+      include: {
+        service: { select: { name: true } },
+        customer: { select: { fullName: true } },
+        staffMember: { select: { fullName: true } },
       },
       orderBy: { startAt: 'asc' },
     });

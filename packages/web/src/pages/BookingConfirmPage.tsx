@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { CalendarClock, Clock, CreditCard, Scissors } from 'lucide-react';
@@ -59,6 +59,18 @@ function redirectToGateway(url: string): void {
 }
 
 /**
+ * Duck-types a rejection as an authentication failure (not signed in / token
+ * expired) without depending on the `ApiError` class. We intentionally avoid
+ * `instanceof ApiError` so this stays robust across module/test boundaries
+ * where the concrete error type may not be the same reference — we only read
+ * the shape (`status` / `code`) the API surfaces on a 401.
+ */
+function isAuthFailure(err: unknown): boolean {
+  const e = err as { status?: number; code?: string } | null;
+  return !!e && (e.status === 401 || e.code === 'UNAUTHORIZED');
+}
+
+/**
  * Customer **booking-confirm** step at `/salon/:salonId/book/confirm`
  * (R4.5, R7.2, R7.5; ui-ux Booking-Confirm recipe, §6, §8, §12).
  *
@@ -90,11 +102,17 @@ export function BookingConfirmPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const state = location.state as ConfirmSelection | undefined;
+  const state = location.state as
+    | (ConfirmSelection & { autoConfirm?: boolean })
+    | undefined;
 
   const [service, setService] = useState<Service | null>(null);
   const [detailsStatus, setDetailsStatus] = useState<DetailsStatus>('loading');
   const [confirmStatus, setConfirmStatus] = useState<ConfirmStatus>('idle');
+
+  // Guards against bouncing to /auth more than once (e.g. a flaky 401 on retry)
+  // and against re-redirecting after we've already returned authenticated.
+  const redirectedToAuthRef = useRef(false);
 
   // A booking is "in flight" once the customer commits and until the gateway
   // hand-off / success navigation takes over. During this window leaving the
@@ -138,6 +156,18 @@ export function BookingConfirmPage() {
     loadDetails();
   }, [loadDetails]);
 
+  // Resume after returning authenticated from /auth: once the summary details
+  // are ready (so the success receipt can carry `service.name`), auto-run the
+  // booking exactly once. The flag is set by AuthPage on its way back here.
+  const didAutoConfirmRef = useRef(false);
+  useEffect(() => {
+    if (!didAutoConfirmRef.current && state?.autoConfirm && detailsStatus === 'ready') {
+      didAutoConfirmRef.current = true;
+      void handleConfirm();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, detailsStatus]);
+
   const handleConfirm = async () => {
     if (!salonId || !state) return;
     setConfirmStatus('submitting');
@@ -169,7 +199,25 @@ export function BookingConfirmPage() {
       } else {
         setConfirmStatus('error');
       }
-    } catch {
+    } catch (err) {
+      // Not signed in (or the token expired): route to phone+OTP login and resume
+      // the booking automatically afterwards. Only redirect on a genuine auth
+      // failure, only once, and never after we already came back from /auth.
+      if (isAuthFailure(err) && !state.autoConfirm && !redirectedToAuthRef.current) {
+        redirectedToAuthRef.current = true;
+        setConfirmStatus('idle');
+        navigate('/auth', {
+          state: {
+            returnTo: location.pathname,
+            returnState: {
+              serviceId: state.serviceId,
+              startAt: state.startAt,
+              preferredStaffId: state.preferredStaffId,
+            },
+          },
+        });
+        return;
+      }
       setConfirmStatus('error');
     }
   };

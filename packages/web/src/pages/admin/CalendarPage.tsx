@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { CalendarX2, ChevronLeft, ChevronRight, Clock, User, Scissors } from 'lucide-react';
 import { adminApi } from '../../api/client';
+import { useAuth } from '../../auth/AuthContext';
 import { SeoHead } from '../../components/seo';
 import {
   Badge,
@@ -156,11 +157,47 @@ function deriveStaff(appointments: Appointment[]): string[] {
 }
 
 /** A single appointment block within a grid cell. */
-function AppointmentBlock({ appt }: { appt: Appointment }) {
+function AppointmentBlock({
+  appt,
+  canManage = false,
+  onChanged,
+}: {
+  appt: Appointment;
+  /** When true (Owner/Admin), a pending appointment exposes approve/reject. */
+  canManage?: boolean;
+  /** Called after a successful approve/reject so the calendar can refetch. */
+  onChanged?: () => void;
+}) {
   const { t } = useTranslation();
+  const [actionStatus, setActionStatus] = useState<
+    'idle' | 'approving' | 'rejecting' | 'error'
+  >('idle');
   const start = clockTime(appt.startAt);
   const end = clockTime(appt.endAt);
   const service = appt.serviceName ?? t('admin.calendarPage.untitledService');
+
+  // Managers may act, but only on a still-pending appointment.
+  const normalizedStatus = (appt.status ?? '')
+    .toLowerCase()
+    .replace(/[^a-z]/g, '');
+  const showActions = canManage && normalizedStatus === 'pending';
+  const busy = actionStatus === 'approving' || actionStatus === 'rejecting';
+
+  const runAction = async (kind: 'approve' | 'reject') => {
+    setActionStatus(kind === 'approve' ? 'approving' : 'rejecting');
+    try {
+      if (kind === 'approve') {
+        await adminApi.approveAppointment(appt.id);
+      } else {
+        await adminApi.rejectAppointment(appt.id);
+      }
+      setActionStatus('idle');
+      onChanged?.();
+    } catch {
+      // R5.6: surface a friendly inline message, never a raw HTTP/stack code.
+      setActionStatus('error');
+    }
+  };
 
   let statusNode: React.ReactNode = null;
   if (appt.status) {
@@ -200,6 +237,36 @@ function AppointmentBlock({ appt }: { appt: Appointment }) {
           {appt.customerName}
         </p>
       )}
+
+      {showActions && (
+        <div className="mt-1 flex flex-col gap-1">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="md"
+              variant="primary"
+              loading={actionStatus === 'approving'}
+              disabled={busy}
+              onClick={() => void runAction('approve')}
+            >
+              {t('admin.calendarPage.approve')}
+            </Button>
+            <Button
+              size="md"
+              variant="ghost"
+              loading={actionStatus === 'rejecting'}
+              disabled={busy}
+              onClick={() => void runAction('reject')}
+            >
+              {t('admin.calendarPage.reject')}
+            </Button>
+          </div>
+          {actionStatus === 'error' && (
+            <p role="alert" className="text-danger">
+              {t('admin.calendarPage.actionError')}
+            </p>
+          )}
+        </div>
+      )}
     </article>
   );
 }
@@ -209,7 +276,15 @@ function AppointmentBlock({ appt }: { appt: Appointment }) {
  * horizontal axis = staff members. Keyboard-navigable cells with RTL-correct
  * arrow keys (ArrowRight = inline-start = previous column in RTL).
  */
-function DayGrid({ appointments }: { appointments: Appointment[] }) {
+function DayGrid({
+  appointments,
+  canManage,
+  onChanged,
+}: {
+  appointments: Appointment[];
+  canManage?: boolean;
+  onChanged?: () => void;
+}) {
   const { t } = useTranslation();
   const staff = useMemo(() => deriveStaff(appointments), [appointments]);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -340,7 +415,12 @@ function DayGrid({ appointments }: { appointments: Appointment[] }) {
                   )}
                 >
                   {cellAppts.map((appt) => (
-                    <AppointmentBlock key={appt.id} appt={appt} />
+                    <AppointmentBlock
+                      key={appt.id}
+                      appt={appt}
+                      canManage={canManage}
+                      onChanged={onChanged}
+                    />
                   ))}
                 </div>
               );
@@ -360,9 +440,13 @@ function DayGrid({ appointments }: { appointments: Appointment[] }) {
 function WeekGrid({
   appointments,
   weekStart,
+  canManage,
+  onChanged,
 }: {
   appointments: Appointment[];
   weekStart: Date;
+  canManage?: boolean;
+  onChanged?: () => void;
 }) {
   const { t } = useTranslation();
   const gridRef = useRef<HTMLDivElement>(null);
@@ -442,7 +526,12 @@ function WeekGrid({
             </header>
             <div className="flex flex-col gap-2">
               {day.items.map((appt) => (
-                <AppointmentBlock key={appt.id} appt={appt} />
+                <AppointmentBlock
+                  key={appt.id}
+                  appt={appt}
+                  canManage={canManage}
+                  onChanged={onChanged}
+                />
               ))}
             </div>
           </section>
@@ -592,6 +681,11 @@ export function CalendarPage({ salonId: salonIdProp }: { salonId?: string }) {
   const params = useParams<{ salonId?: string }>();
   const salonId = salonIdProp ?? params.salonId ?? DEFAULT_SALON_ID;
 
+  // RBAC: only Owner/Admin may approve/reject. Outside an AuthProvider (e.g.
+  // isolated tests) `role` is undefined → no management affordances render.
+  const { role } = useAuth();
+  const canManage = role === 'Owner' || role === 'Admin';
+
   const [view, setView] = useState<CalendarView>('day');
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [error, setError] = useState('');
@@ -601,6 +695,9 @@ export function CalendarPage({ salonId: salonIdProp }: { salonId?: string }) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfIranianWeek(new Date()));
   // Bumped by the retry action to re-run the load effect.
   const [reloadToken, setReloadToken] = useState(0);
+
+  /** Refetch after an approve/reject so the grid reflects the new status. */
+  const onChanged = useCallback(() => setReloadToken((n) => n + 1), []);
 
   /** Navigate the date anchor. dir: -1 = back, +1 = forward, 0 = today. */
   const handleNavigate = useCallback(
@@ -670,9 +767,18 @@ export function CalendarPage({ salonId: salonIdProp }: { salonId?: string }) {
               description={t('admin.calendarPage.emptyBody')}
             />
           ) : view === 'day' ? (
-            <DayGrid appointments={appointments} />
+            <DayGrid
+              appointments={appointments}
+              canManage={canManage}
+              onChanged={onChanged}
+            />
           ) : (
-            <WeekGrid appointments={appointments} weekStart={weekStart} />
+            <WeekGrid
+              appointments={appointments}
+              weekStart={weekStart}
+              canManage={canManage}
+              onChanged={onChanged}
+            />
           )}
         </div>
       )}

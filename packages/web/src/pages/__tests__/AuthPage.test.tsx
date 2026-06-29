@@ -7,7 +7,7 @@ import {
   cleanup,
   within,
 } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import '../../i18n';
 import { expectNoSeriousA11yViolations } from '../../test/a11y';
@@ -27,6 +27,7 @@ const setAccessToken = vi.fn();
 
 vi.mock('../../api/client', () => ({
   setAccessToken: (token: string | null) => setAccessToken(token),
+  setRefreshToken: vi.fn(),
   authApi: {
     requestOtp: (phone: string) => requestOtp(phone),
     verifyOtp: (phone: string, code: string) => verifyOtp(phone, code),
@@ -192,6 +193,64 @@ describe('AuthPage — OTP step', () => {
     await advanceToOtp();
     fireEvent.click(screen.getByRole('button', { name: 'ویرایش شماره موبایل' }));
     expect(screen.getByLabelText('شماره موبایل')).toBeInTheDocument();
+  });
+});
+
+describe('AuthPage — booking return intent', () => {
+  /** Probe standing in for the booking-confirm route; surfaces the router state. */
+  function ReturnProbe() {
+    const location = useLocation();
+    return <div>return-page:{JSON.stringify(location.state)}</div>;
+  }
+
+  it('routes back to the booking funnel with autoConfirm after OTP verification', async () => {
+    render(
+      <HelmetProvider>
+        <MemoryRouter
+          initialEntries={[
+            {
+              pathname: '/auth',
+              state: {
+                returnTo: '/salon/salon-1/book/confirm',
+                returnState: {
+                  serviceId: 'svc-1',
+                  startAt: '2999-03-15T09:30:00.000Z',
+                },
+              },
+            },
+          ]}
+        >
+          <Routes>
+            <Route path="/auth" element={<AuthPage />} />
+            <Route
+              path="/salon/:salonId/book/confirm"
+              element={<ReturnProbe />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </HelmetProvider>,
+    );
+
+    // Phone step → request the code.
+    fireEvent.change(screen.getByLabelText('شماره موبایل'), {
+      target: { value: VALID_PHONE },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'دریافت کد' }));
+
+    // OTP step → paste the 6 digits and verify.
+    const first = await screen.findByLabelText('رقم ۱ کد تایید');
+    fireEvent.paste(first, { clipboardData: { getData: () => '123456' } });
+    await waitFor(() =>
+      expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('6'),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'تایید و ورود' }));
+
+    // Landed back on the booking funnel with the selection + the resume flag.
+    const probe = await screen.findByText(/^return-page:/);
+    const state = JSON.parse(probe.textContent!.slice('return-page:'.length));
+    expect(state.autoConfirm).toBe(true);
+    expect(state.serviceId).toBe('svc-1');
+    expect(state.startAt).toBe('2999-03-15T09:30:00.000Z');
   });
 });
 

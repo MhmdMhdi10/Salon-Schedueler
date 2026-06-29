@@ -125,6 +125,9 @@ const OwnerSubscriptionPage = lazy(() =>
 const OwnerQrPage = lazy(() =>
   import('./pages/owner').then((m) => ({ default: m.OwnerQrPage })),
 );
+const OwnerMyQrPage = lazy(() =>
+  import('./pages/owner').then((m) => ({ default: m.OwnerMyQrPage })),
+);
 
 export function App() {
   return (
@@ -155,6 +158,7 @@ export function App() {
                     element={<OwnerSubscriptionPage />}
                   />
                   <Route path="qr" element={<OwnerQrPage />} />
+                  <Route path="my-qr" element={<OwnerMyQrPage />} />
                 </Route>
 
                 {/* Public + customer + admin surfaces, inside the app shell. */}

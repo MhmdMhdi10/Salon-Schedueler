@@ -2,6 +2,7 @@ import { Navigate, useOutletContext } from 'react-router-dom';
 import { CalendarPage } from '../admin/CalendarPage';
 import { AnalyticsPage } from '../admin/AnalyticsPage';
 import { ConfigurationPage } from '../admin/ConfigurationPage';
+import { MyQrPage } from './MyQrPage';
 import type { OwnerRole } from '../../api/client';
 
 /** Context the {@link OwnerLayout} `<Outlet>` provides to nested owner pages. */
@@ -105,3 +106,19 @@ export { OwnerSubscriptionPage } from './SubscriptionPage';
 
 /** QR + standee landing — real surface (task 5.4; R4.1, R4.3). */
 export { OwnerQrPage } from './QrPage';
+
+/**
+ * Personal QR section — «بارکد من» (R4.1, R2.5).
+ *
+ * Like the calendar, this is the one *other* destination every authenticated
+ * staff role may reach: a stylist views (and shares/prints) their **own**
+ * booking QR. It therefore carries no `OwnerRoleGuard` — the {@link MyQrPage}
+ * itself handles the "account not linked to a stylist" case.
+ */
+export function OwnerMyQrPage() {
+  return (
+    <section data-testid="owner-my-qr-page">
+      <MyQrPage />
+    </section>
+  );
+}

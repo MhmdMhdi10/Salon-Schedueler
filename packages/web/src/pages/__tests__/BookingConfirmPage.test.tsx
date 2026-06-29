@@ -46,6 +46,12 @@ function AvailabilityProbe() {
   return <div>availability-page:{location.pathname}</div>;
 }
 
+/** Probe standing in for the `/auth` screen; surfaces the carried router state. */
+function AuthProbe() {
+  const location = useLocation();
+  return <div>auth-page:{JSON.stringify(location.state)}</div>;
+}
+
 /** Sentinel for "no router state" (deep-link / missing-selection case). */
 const NO_STATE = Symbol('no-state');
 
@@ -65,6 +71,7 @@ function renderPage(state: unknown = SELECTION, salonId = 'salon-1') {
             element={<BookingConfirmPage />}
           />
           <Route path="/salon/:salonId/book" element={<AvailabilityProbe />} />
+          <Route path="/auth" element={<AuthProbe />} />
           <Route path="/booking/success" element={<SuccessProbe />} />
         </Routes>
       </MemoryRouter>
@@ -207,6 +214,34 @@ describe('BookingConfirmPage — confirm states', () => {
       await screen.findByText('ثبت رزرو ناموفق بود'),
     ).toBeInTheDocument();
     expect(screen.queryByText('success-page')).not.toBeInTheDocument();
+  });
+});
+
+describe('BookingConfirmPage — sign-in then resume', () => {
+  it('routes an unauthenticated confirm to /auth carrying the return intent + selection', async () => {
+    // A 401/UNAUTHORIZED-shaped rejection (the anonymous-customer case) must
+    // bounce to the phone+OTP login rather than showing the generic error.
+    createBooking.mockRejectedValueOnce({ status: 401, code: 'UNAUTHORIZED' });
+    renderPage();
+    const cta = await screen.findByRole('button', { name: 'تایید رزرو' });
+    await waitFor(() => expect(cta).not.toBeDisabled());
+    cta.click();
+
+    const probe = await screen.findByText(/^auth-page:/);
+    const carried = JSON.parse(probe.textContent!.slice('auth-page:'.length));
+    expect(carried.returnTo).toBe('/salon/salon-1/book/confirm');
+    expect(carried.returnState.serviceId).toBe('svc-1');
+    // The generic confirm error must NOT show — we redirected instead.
+    expect(screen.queryByText('ثبت رزرو ناموفق بود')).not.toBeInTheDocument();
+  });
+
+  it('auto-confirms on mount when returning authenticated (autoConfirm flag)', async () => {
+    createBooking.mockResolvedValue({ status: 'pending' });
+    // Arrive back from /auth with the resume flag — no click required.
+    renderPage({ ...SELECTION, autoConfirm: true });
+    expect(await screen.findByText('success-page')).toBeInTheDocument();
+    expect(createBooking).toHaveBeenCalledTimes(1);
+    expect(createBooking).toHaveBeenCalledWith({ salonId: 'salon-1', ...SELECTION });
   });
 });
 

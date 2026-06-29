@@ -43,6 +43,7 @@ import {
   type AccentTheme,
   type AssetKind,
 } from './marketing-assets';
+import { StylistQrGallery } from './StylistQrGallery';
 
 import './owner-qr.css';
 
@@ -540,6 +541,9 @@ export function OwnerQrPage() {
             </div>
             <p className="text-xs text-muted">{t('owner.qr.printHint')}</p>
           </Card>
+
+          {/* ── Per-stylist QR gallery (every bookable stylist at once) ── */}
+          <StylistQrGallery salonId={salonId} salonName={data.salonName} />
 
           {/* ── Raw QR preview (stable code for digital reuse) ── */}
           <Card

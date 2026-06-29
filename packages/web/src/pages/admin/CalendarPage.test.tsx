@@ -5,6 +5,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import '../../i18n';
 import { CalendarPage } from './CalendarPage';
 import { adminApi, ApiError } from '../../api/client';
+import type { OwnerRole } from '../../api/client';
 
 /**
  * Component tests for the admin CalendarPage.
@@ -28,9 +29,19 @@ vi.mock('../../api/client', () => {
     ApiError,
     adminApi: {
       getCalendar: vi.fn(),
+      approveAppointment: vi.fn(),
+      rejectAppointment: vi.fn(),
     },
   };
 });
+
+// `useAuth` drives the manage_appointments affordances. The default is an
+// anonymous session (role undefined → no approve/reject), which is what the
+// pre-existing cases rely on; the new cases override it per test.
+const mockGetRole = vi.fn(() => undefined as OwnerRole | undefined);
+vi.mock('../../auth/AuthContext', () => ({
+  useAuth: () => ({ role: mockGetRole() }),
+}));
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -44,6 +55,9 @@ function deferred<T>() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Default to an anonymous session so the existing cases render no
+  // management buttons; the approve/reject cases opt in to a manager role.
+  mockGetRole.mockReturnValue(undefined);
 });
 
 afterEach(() => {
@@ -122,4 +136,70 @@ describe('CalendarPage', () => {
     // R5.6: error description is a user-friendly Persian message, never raw API codes
     expect(screen.getByTestId('calendar-error').textContent).toContain('اتصال به سرور برقرار نشد');
   });
+});
+
+/** A pending appointment placed at 10:00 local today (visible in the day grid). */
+function pendingAppointment() {
+  const start = new Date();
+  start.setHours(10, 0, 0, 0);
+  return {
+    id: 'appt-7',
+    startAt: start.toISOString(),
+    endAt: new Date(start.getTime() + 45 * 60_000).toISOString(),
+    serviceName: 'رنگ مو',
+    staffName: 'زهرا',
+    status: 'pending',
+  };
+}
+
+describe('CalendarPage — approve/reject (manage_appointments)', () => {
+  it('shows approve/reject on a pending appointment and refetches after approving (Owner)', async () => {
+    mockGetRole.mockReturnValue('Owner');
+    vi.mocked(adminApi.getCalendar).mockResolvedValue({
+      appointments: [pendingAppointment()],
+    });
+    vi.mocked(adminApi.approveAppointment).mockResolvedValue({
+      status: 'confirmed',
+      appointment: {},
+    });
+
+    renderPage();
+
+    await waitFor(() =>
+      expect(screen.getByTestId('calendar-appointments')).toBeTruthy(),
+    );
+
+    const approveBtn = await screen.findByRole('button', { name: 'تأیید' });
+    expect(screen.getByRole('button', { name: 'رد' })).toBeTruthy();
+
+    const callsBefore = vi.mocked(adminApi.getCalendar).mock.calls.length;
+    fireEvent.click(approveBtn);
+
+    await waitFor(() =>
+      expect(adminApi.approveAppointment).toHaveBeenCalledWith('appt-7'),
+    );
+    // On success the calendar refetches so the new status is reflected.
+    await waitFor(() =>
+      expect(
+        vi.mocked(adminApi.getCalendar).mock.calls.length,
+      ).toBeGreaterThan(callsBefore),
+    );
+  });
+
+  it.each(['Stylist', undefined] as const)(
+    'hides approve/reject for non-managers (role=%s)',
+    async (role) => {
+      mockGetRole.mockReturnValue(role);
+      vi.mocked(adminApi.getCalendar).mockResolvedValue({
+        appointments: [pendingAppointment()],
+      });
+
+      renderPage();
+
+      await waitFor(() =>
+        expect(screen.getByTestId('calendar-appointments')).toBeTruthy(),
+      );
+      expect(screen.queryByRole('button', { name: 'تأیید' })).toBeNull();
+    },
+  );
 });

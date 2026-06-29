@@ -16,9 +16,30 @@ function parseDateParam(value: unknown): Date | null {
 }
 
 /**
+ * Flatten an enriched calendar appointment row (with included service/customer/
+ * staff relations) into the DTO the calendar clients consume. The `*Name` fields
+ * are pulled off the included relations (null when the relation is absent). Date
+ * fields are left as-is; Express serializes them to ISO strings on the wire (the
+ * web layer parses them back). Applies to both the Stylist (getStaffCalendar) and
+ * Owner/Admin (getSalonCalendar) branches.
+ */
+const toCalendarDto = (a: any) => ({
+  id: a.id,
+  startAt: a.startAt,
+  endAt: a.endAt,
+  status: a.status,
+  staffMemberId: a.staffMemberId,
+  serviceName: a.service?.name ?? null,
+  customerName: a.customer?.fullName ?? null,
+  staffName: a.staffMember?.fullName ?? null,
+});
+
+/**
  * Admin routes behind RBAC (Requirement 2.2, 2.4 / original R15, R16).
  *
  * - GET /salons/:id/calendar?from=&to=&view= -> { appointments }  (view_own_appointments)
+ *     Stylist sees only their own appointments (getStaffCalendar, R2.5); Owner/Admin
+ *     see the whole salon (getSalonCalendar).
  * - GET /salons/:id/pending                   -> { appointments }  (manage_appointments) — approval queue
  * - GET /salons/:id/analytics?from=&to=      -> { utilization, revenue, busiestWindows } (configure_salon — Owner-only)
  * - GET /salons/:id/staff                     -> { staff }   (manage_appointments)
@@ -32,7 +53,14 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
 
   router.get(
     '/salons/:id/calendar',
-    requireRole('view_own_appointments'),
+    // A Stylist may view the calendar but only their own appointments (R2.5), so the
+    // ownership check needs a resource: scope it to the caller's own staffMemberId.
+    // Owner/Admin bypass the ownership check in the Authorizer, so the value is moot
+    // for them. Without this resolver the empty resource made every Stylist 403.
+    requireRole('view_own_appointments', (req) => ({
+      salonId: req.params.id,
+      staffMemberId: req.principal?.staffMemberId,
+    })),
     asyncRoute(async (req, res) => {
       if (!validateRequired(res, req.query as Record<string, unknown>, ['from', 'to'])) {
         return;
@@ -43,12 +71,15 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         res.status(400).json({ code: 'VALIDATION_ERROR', field: from ? 'to' : 'from' });
         return;
       }
-      const appointments = await services.calendarService.getSalonCalendar(
-        req.params.id,
-        from,
-        to,
-      );
-      res.status(200).json({ appointments });
+      // R2.5: a Stylist sees only their own appointments; Owner/Admin see the salon.
+      const principal = req.principal!;
+      const appointments =
+        principal.role === 'Stylist' && principal.staffMemberId
+          ? await services.calendarService.getStaffCalendar(principal.staffMemberId, from, to)
+          : await services.calendarService.getSalonCalendar(req.params.id, from, to);
+      // Flatten the enriched rows (service/customer/staff relations) to the DTO the
+      // calendar clients read, for both the Stylist and Owner/Admin branches.
+      res.status(200).json({ appointments: appointments.map(toCalendarDto) });
     }),
   );
 

@@ -52,6 +52,7 @@ function makeServices() {
     },
     calendarService: {
       getSalonCalendar: jest.fn().mockResolvedValue([]),
+      getStaffCalendar: jest.fn().mockResolvedValue([]),
     },
     analyticsService: {
       chairUtilization: jest
@@ -67,6 +68,14 @@ function makeServices() {
     },
     availabilityConfig: {
       setSalonBrandAccent: jest.fn().mockResolvedValue(undefined),
+    },
+    qrService: {
+      buildSalonQrResponse: jest
+        .fn()
+        .mockResolvedValue({ payload: 'p', url: 'u', salonName: 's' }),
+      buildStaffQrResponse: jest
+        .fn()
+        .mockResolvedValue({ payload: 'p', staffName: 'زهرا', salonName: 's' }),
     },
     authorizer: new Authorizer(),
   };
@@ -440,6 +449,140 @@ describe('HTTP routes', () => {
         .set('Authorization', `Bearer ${staffToken('Owner')}`);
       expect(res.status).toBe(200);
       expect(fake.cancellationService.markNoShow).toHaveBeenCalledWith('appt-1');
+    });
+  });
+
+  // ── Calendar (protected, RBAC view_own_appointments) ─────────────────────────
+  // R2.5: Owner/Admin/Stylist may all view the calendar; a Stylist sees ONLY their
+  // own appointments (getStaffCalendar) while Owner/Admin see the whole salon
+  // (getSalonCalendar). A customer (no staff role) is denied with no state change.
+  describe('GET /api/salons/:id/calendar', () => {
+    const query = { from: '2024-03-01T00:00:00.000Z', to: '2024-03-31T00:00:00.000Z' };
+
+    it('returns 200 with only the Stylist own appointments (getStaffCalendar)', async () => {
+      const res = await request(app)
+        .get('/api/salons/salon-1/calendar')
+        .query(query)
+        .set('Authorization', `Bearer ${staffToken('Stylist')}`);
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ appointments: [] });
+      expect(fake.calendarService.getStaffCalendar).toHaveBeenCalledWith(
+        'staff-Stylist-1',
+        expect.any(Date),
+        expect.any(Date),
+      );
+      expect(fake.calendarService.getSalonCalendar).not.toHaveBeenCalled();
+    });
+
+    it('returns 200 with the whole salon for an Owner (getSalonCalendar)', async () => {
+      const res = await request(app)
+        .get('/api/salons/salon-1/calendar')
+        .query(query)
+        .set('Authorization', `Bearer ${staffToken('Owner')}`);
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ appointments: [] });
+      expect(fake.calendarService.getSalonCalendar).toHaveBeenCalledWith(
+        'salon-1',
+        expect.any(Date),
+        expect.any(Date),
+      );
+      expect(fake.calendarService.getStaffCalendar).not.toHaveBeenCalled();
+    });
+
+    it('returns 200 with the whole salon for an Admin (getSalonCalendar)', async () => {
+      const res = await request(app)
+        .get('/api/salons/salon-1/calendar')
+        .query(query)
+        .set('Authorization', `Bearer ${staffToken('Admin')}`);
+      expect(res.status).toBe(200);
+      expect(fake.calendarService.getSalonCalendar).toHaveBeenCalledWith(
+        'salon-1',
+        expect.any(Date),
+        expect.any(Date),
+      );
+    });
+
+    it('maps enriched rows to a flat DTO with service/customer/staff names', async () => {
+      fake.calendarService.getSalonCalendar.mockResolvedValue([
+        {
+          id: 'a1',
+          startAt: new Date('2024-03-15T09:00:00.000Z'),
+          endAt: new Date('2024-03-15T09:30:00.000Z'),
+          status: 'pending',
+          staffMemberId: 'st1',
+          service: { name: 'کوتاهی مو' },
+          customer: { fullName: 'سارا' },
+          staffMember: { fullName: 'زهرا' },
+        },
+      ]);
+      const res = await request(app)
+        .get('/api/salons/salon-1/calendar')
+        .query(query)
+        .set('Authorization', `Bearer ${staffToken('Owner')}`);
+      expect(res.status).toBe(200);
+      expect(res.body.appointments[0]).toMatchObject({
+        id: 'a1',
+        serviceName: 'کوتاهی مو',
+        customerName: 'سارا',
+        staffName: 'زهرا',
+      });
+    });
+
+    it('returns 403 FORBIDDEN for a customer (no staff role) with no state change', async () => {
+      const res = await request(app)
+        .get('/api/salons/salon-1/calendar')
+        .query(query)
+        .set('Authorization', `Bearer ${customerToken()}`);
+      expect(res.status).toBe(403);
+      expect(res.body).toEqual({ code: 'FORBIDDEN' });
+      expect(fake.calendarService.getStaffCalendar).not.toHaveBeenCalled();
+      expect(fake.calendarService.getSalonCalendar).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 VALIDATION_ERROR when from/to are missing', async () => {
+      const res = await request(app)
+        .get('/api/salons/salon-1/calendar')
+        .set('Authorization', `Bearer ${staffToken('Owner')}`);
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('VALIDATION_ERROR');
+    });
+  });
+
+  // ── Per-stylist QR (protected, RBAC view_own_appointments) ───────────────────
+  // Owner/Admin may fetch ANY stylist's QR; a Stylist may fetch ONLY their own
+  // (staffId === their own staffMemberId). staffToken(role) signs
+  // staffMemberId = 'staff-' + (role + '-1'), e.g. Stylist -> 'staff-Stylist-1'.
+  describe('GET /api/salons/:id/staff/:staffId/qr', () => {
+    it('allows a Stylist to fetch their OWN QR (200 with payload)', async () => {
+      const res = await request(app)
+        .get('/api/salons/salon-1/staff/staff-Stylist-1/qr')
+        .set('Authorization', `Bearer ${staffToken('Stylist')}`);
+      expect(res.status).toBe(200);
+      expect(res.body.payload).toBe('p');
+      expect(fake.qrService.buildStaffQrResponse).toHaveBeenCalledWith(
+        'salon-1',
+        'staff-Stylist-1',
+      );
+    });
+
+    it('returns 403 FORBIDDEN when a Stylist requests a different stylist QR', async () => {
+      const res = await request(app)
+        .get('/api/salons/salon-1/staff/other-staff/qr')
+        .set('Authorization', `Bearer ${staffToken('Stylist')}`);
+      expect(res.status).toBe(403);
+      expect(res.body).toEqual({ code: 'FORBIDDEN' });
+      expect(fake.qrService.buildStaffQrResponse).not.toHaveBeenCalled();
+    });
+
+    it('allows an Owner to fetch ANY stylist QR (200)', async () => {
+      const res = await request(app)
+        .get('/api/salons/salon-1/staff/whoever/qr')
+        .set('Authorization', `Bearer ${staffToken('Owner')}`);
+      expect(res.status).toBe(200);
+      expect(fake.qrService.buildStaffQrResponse).toHaveBeenCalledWith(
+        'salon-1',
+        'whoever',
+      );
     });
   });
 
