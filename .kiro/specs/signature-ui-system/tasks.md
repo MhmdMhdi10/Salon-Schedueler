@@ -345,14 +345,14 @@ recommended path), not the client-only fallback.
   - Ensure marketing, owner-dashboard, motion/state/typography suites, `contrast.test.ts`, and web
     typecheck pass; ask the user if questions arise.
 
-- [ ] 16. Quality gates: token completeness + distinctiveness guardrail
+- [x] 16. Quality gates: token completeness + distinctiveness guardrail
   - [x] 16.1 Create `packages/web/src/styles/tokens-complete.test.ts`
     - Assert both `lightColors` and `darkColors` define a non-empty value for every `ColorPalette`
       role, and that display weight > body weight AND display line-height < body line-height
     - **Property 2: Token completeness across both themes**
     - **Property 3: Display type is always distinct from body type**
     - _Requirements: 1.1, 1.2, 1.6, 8.1_
-  - [-] 16.2 Create `packages/web/src/styles/distinctiveness.test.ts`
+  - [x] 16.2 Create `packages/web/src/styles/distinctiveness.test.ts`
     - Scan authored `src/**/*.{ts,tsx,css}` (exclude `*.test.*`, `tokens.css`, `components/three`,
       `pages/owner/marketing-assets.ts`, generated assets; allow `// distinctiveness-ok:` opt-out
       and `rtl:`/logical utilities); flag indigo→purple gradient literals, physical `left`/`right`
@@ -361,7 +361,7 @@ recommended path), not the client-only fallback.
     - **Property 19: The distinctiveness guardrail flags generic regressions**
     - **Property 20: Guardrail violations are reported with file and rule**
     - _Requirements: 2.1, 2.3, 6.1, 6.2, 9.5, 11.3, 11.4_
-  - [ ] 16.3 Resolve any real violations surfaced by 16.1 / 16.2
+  - [x] 16.3 Resolve any real violations surfaced by 16.1 / 16.2
     - Fix legitimate flags (replace literals with tokens, physical with logical properties) or add a
       justified `// distinctiveness-ok:` opt-out; do not weaken the rules to pass
     - Verify: `web npx vitest run src/styles/tokens-complete.test.ts src/styles/distinctiveness.test.ts`
@@ -369,33 +369,33 @@ recommended path), not the client-only fallback.
       `/business`, `/s/:slug`) via `scripts/analyze-bundle.mjs`
     - _Requirements: 9.2, 9.5, 9.6, 11.3_
 
-- [ ] 17. Governance and documentation
-  - [ ] 17.1 Add the "Signature Design Language" section to `.kiro/steering/ui-ux-skills.md`
+- [x] 17. Governance and documentation
+  - [x] 17.1 Add the "Signature Design Language" section to `.kiro/steering/ui-ux-skills.md`
     - Document the salon-luxe palette (light + dark), display/body type pairing, the `Motif`
       device and its recurrence, the editorial layout primitives, and the anti-generic constraints;
       state explicitly that automated checks are a floor and full WCAG 2.2 AA needs manual AT
       testing + expert review
     - _Requirements: 9.3, 10.1_
-  - [ ] 17.2 Add `.kiro/steering/signature-design-language.md`
+  - [x] 17.2 Add `.kiro/steering/signature-design-language.md`
     - `inclusion: fileMatch`, `fileMatchPattern: 'packages/web/src/**/*.{ts,tsx,css}'`; capture the
       enforceable rules (salon-luxe tokens only; no indigo→purple hero gradient; FeatureMosaic/
       EditorialSplit for 3+ peer features; display tokens for titles; motif on brand surfaces;
       tokens-only + logical properties; tenant accent via runtime vars)
     - _Requirements: 10.2_
-  - [ ] 17.3 Add the two advisory hooks under `.kiro/hooks/`
+  - [x] 17.3 Add the two advisory hooks under `.kiro/hooks/`
     - `post-file-save-web-a11y.kiro.hook` (PostFileSave, matcher `packages/web/.*\.(ts|tsx|css)$`,
       runs contrast + tenant-contrast + distinctiveness suites, `blocking: false`) and
       `pre-tool-use-design-reminder.kiro.hook` (PreToolUse on `fs_write|str_replace`, advisory
       reminder, `blocking: false`); neither blocks a save nor mutates file contents
     - _Requirements: 10.3, 10.4, 10.5_
-  - [ ] 17.4 Add `packages/web/docs/distinctiveness-checklist.md`
+  - [x] 17.4 Add `packages/web/docs/distinctiveness-checklist.md`
     - Per-screen review checklist verifying at minimum: signature palette in use, non-default
       (editorial/asymmetric) layout, branded motion, bespoke empty/loading/error states, brand
       motif present, and Persian display typography; documented so a reviewer applies it before a
       screen is "done"
     - _Requirements: 11.1, 11.2_
 
-- [ ] 18. Final checkpoint — full gate
+- [x] 18. Final checkpoint — full gate
   - Run the web suite (excluding the known pre-existing failures), web + shared + backend typecheck,
     and confirm `contrast.test.ts`, `tenant-contrast.test.ts`, `tokens-complete.test.ts`, and
     `distinctiveness.test.ts` are green; ask the user if questions arise.

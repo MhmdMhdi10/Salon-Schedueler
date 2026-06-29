@@ -14,8 +14,11 @@ services:
       - "5532:5432"
 
   backend:
+    # Host 3100 (and 3101) are taken by the ai-mockup-studio dev project on this
+    # machine, so remap the salon backend to 3110. Container port stays 3000, so
+    # the web -> backend proxy (backend:3000) is unaffected.
     ports: !override
-      - "3100:3000"
+      - "3110:3000"
     # Dev-only: issue QR payloads + campaign URLs against the local web dev
     # server so the QR/links are testable on this machine. Change to a LAN IP
     # (e.g. http://192.168.x.x:5273) to scan from a phone on the network, or
@@ -30,10 +33,10 @@ services:
   mobile:
     # Bring the Expo/Metro container into the running stack. Metro must advertise
     # this machine's LAN IP so a physical phone (Expo Go) can reach it, and the
-    # app must call the backend on its remapped host port (3100, not the default
+    # app must call the backend on its remapped host port (3110, not the default
     # 3000). Update REACT_NATIVE_PACKAGER_HOSTNAME if this machine's LAN IP
     # changes. Start with: docker compose --profile mobile up -d
     environment:
       REACT_NATIVE_PACKAGER_HOSTNAME: "192.168.10.216"
-      EXPO_PUBLIC_API_BASE_URL: "http://192.168.10.216:3100"
+      EXPO_PUBLIC_API_BASE_URL: "http://192.168.10.216:3110"
 

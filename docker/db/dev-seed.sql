@@ -102,6 +102,11 @@ FROM generate_series(0, 6) AS d;
 -- ─── Dev Test Users ────────────────────────────────────────────────────────────
 -- Customer records linked to staff and a standalone customer for testing all
 -- roles through OTP-based auth. Phone numbers are deterministic for dev docs.
+--
+-- These INSERTs conflict on the unique `phone`, not just `id`: OTP login may have
+-- already created a customer row with one of these phones under a random id, so
+-- ON CONFLICT (phone) DO NOTHING keeps the seed idempotent against that drift
+-- (ON CONFLICT (id) would miss the independent phone-uniqueness collision).
 
 -- Owner customer record (links phone 09120000001 to the Owner staff member)
 INSERT INTO customer (id, phone, full_name)
@@ -110,7 +115,7 @@ VALUES (
   '09120000001',
   'سارا محمدی'
 )
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (phone) DO NOTHING;
 
 -- Admin staff member + customer record
 INSERT INTO staff_member (id, salon_id, full_name, role, active, phone)
@@ -130,7 +135,7 @@ VALUES (
   '09120000002',
   'مریم احمدی'
 )
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (phone) DO NOTHING;
 
 -- Stylist staff member + customer record
 INSERT INTO staff_member (id, salon_id, full_name, role, active, phone)

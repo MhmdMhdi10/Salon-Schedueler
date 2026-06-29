@@ -48,12 +48,14 @@ export const FORBIDDEN_ON_PUBLIC = [
 
 /**
  * The public, indexable entry routes whose initial JS is budgeted. These match
- * the prerendered/indexable surfaces (seo §1): marketing home, salon profile,
- * discovery, and legal/trust pages. Keyed by a human label → the chunk-name
- * substring Vite uses for that route's lazy chunk.
+ * the prerendered/indexable surfaces (seo §1): marketing home, the
+ * owner-acquisition landing, salon profile, discovery, and legal/trust pages.
+ * Keyed by a human label → the chunk-name substring Vite uses for that route's
+ * lazy chunk.
  */
 export const PUBLIC_ENTRY_CHUNKS = {
   'MarketingHome (/)': 'MarketingHome',
+  'BusinessLanding (/business)': 'BusinessLanding',
   'SalonProfilePage (/s/:slug)': 'SalonProfilePage',
   'DiscoveryPages (/city, /services)': 'DiscoveryPages',
   'LegalPages (/about, /contact, /privacy, /terms)': 'LegalPages',

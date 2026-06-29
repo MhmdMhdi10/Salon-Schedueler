@@ -63,6 +63,10 @@
     "14.8 Property test: motion stays within the token band and reserves emphasized easing": {
       "status": "passed",
       "lastRunTimestamp": 1782659060049
+    },
+    "16.2 Create `packages/web/src/styles/distinctiveness.test.ts`": {
+      "status": "passed",
+      "lastRunTimestamp": 1782671271261
     }
   },
   "executionHistory": {
@@ -501,6 +505,21 @@
         "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
         "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
         "timestamp": 1782659702889
+      },
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782667310180
+      },
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782667324364
+      },
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782671321039
       }
     ],
     "16.3 Resolve any real violations surfaced by 16.1 / 16.2": [
@@ -508,6 +527,31 @@
         "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
         "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
         "timestamp": 1782650720835
+      },
+      {
+        "executionId": "e4ed6665-a4a1-4733-ac86-9626ffbd1022",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782667210076
+      },
+      {
+        "executionId": "e4ed6665-a4a1-4733-ac86-9626ffbd1022",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782667223049
+      },
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782667310315
+      },
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782671332215
+      },
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782672273701
       }
     ],
     "17.1 Add the \"Signature Design Language\" section to `.kiro/steering/ui-ux-skills.md`": [
@@ -515,6 +559,26 @@
         "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
         "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
         "timestamp": 1782650720932
+      },
+      {
+        "executionId": "e4ed6665-a4a1-4733-ac86-9626ffbd1022",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782667210149
+      },
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782667310466
+      },
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782672286851
+      },
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782672585088
       }
     ],
     "17.2 Add `.kiro/steering/signature-design-language.md`": [
@@ -522,6 +586,26 @@
         "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
         "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
         "timestamp": 1782650721032
+      },
+      {
+        "executionId": "e4ed6665-a4a1-4733-ac86-9626ffbd1022",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782667210231
+      },
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782667310610
+      },
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782672594086
+      },
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782672715442
       }
     ],
     "17.3 Add the two advisory hooks under `.kiro/hooks/`": [
@@ -529,6 +613,26 @@
         "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
         "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
         "timestamp": 1782650721086
+      },
+      {
+        "executionId": "e4ed6665-a4a1-4733-ac86-9626ffbd1022",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782667210307
+      },
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782667310698
+      },
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782672719675
+      },
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782675230471
       }
     ],
     "17.4 Add `packages/web/docs/distinctiveness-checklist.md`": [
@@ -536,6 +640,26 @@
         "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
         "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
         "timestamp": 1782650721140
+      },
+      {
+        "executionId": "e4ed6665-a4a1-4733-ac86-9626ffbd1022",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782667210393
+      },
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782667310820
+      },
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782675236292
+      },
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782675486656
       }
     ],
     "18. Final checkpoint — full gate": [
@@ -543,6 +667,26 @@
         "executionId": "b0421207-7062-41d8-bb8e-e196c8d0bd14",
         "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
         "timestamp": 1782650721196
+      },
+      {
+        "executionId": "e4ed6665-a4a1-4733-ac86-9626ffbd1022",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782667210455
+      },
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782667310923
+      },
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782675500189
+      },
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782676032420
       }
     ],
     "12. Redesign the marketing surfaces": [
@@ -564,6 +708,20 @@
         "executionId": "c41d288b-b70f-4805-9bdf-56f0f22794a1",
         "chatSessionId": "sess_21098579-b674-49a0-b5c4-c3827564cd16",
         "timestamp": 1782659351014
+      }
+    ],
+    "16. Quality gates: token completeness + distinctiveness guardrail": [
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782672273850
+      }
+    ],
+    "17. Governance and documentation": [
+      {
+        "executionId": "2eea60db-fb09-4318-bf92-d14139e53465",
+        "chatSessionId": "sess_280847ae-6d72-4d18-bd87-09b6c3d86993",
+        "timestamp": 1782675486808
       }
     ]
   }

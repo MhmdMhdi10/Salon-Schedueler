@@ -29,6 +29,132 @@ no visual design — treat every screen as greenfield and apply this guide.
 
 ---
 
+## Signature Design Language
+
+> **This is the signature layer that governs every screen.** It elevates the tokenized,
+> RTL-first foundation documented below (§1–§14) into a distinctive, premium **salon-luxe**
+> identity — a plum-wine primary with a terracotta-clay accent over warm bone/sand neutrals and
+> espresso ink — that reads unmistakably as a beauty brand and never as a generic, default
+> AI-template UI. It is a *layering*, not a rewrite: every component keeps consuming the same
+> semantic token names; only the token **values**, the display-type pairing, the brand motif,
+> and the layout rhythm change.
+
+The signature palette has three sources of truth that must stay byte-identical:
+`packages/shared/src/tokens/index.ts` (`lightColors`/`darkColors`),
+`packages/web/src/styles/tokens.css` (`:root` / `[data-theme="dark"]`), and the color table in
+this file. **Where this document and the shipped tokens disagree, this steering file wins — so
+keep all three in lockstep.** The palette below is the shipped identity and is the same one
+tabulated in §2.
+
+### Salon-luxe palette — light & dark (shipped)
+
+Byte-identical to the semantic color table in §2 and to `tokens.css` / `@salon/shared`;
+reproduced here as the signature reference.
+
+| Token | Light | Dark | Role |
+| --- | --- | --- | --- |
+| `--color-bg` | `#FBF7F2` | `#17110F` | Warm porcelain / espresso page bg |
+| `--color-surface` | `#F4ECE1` | `#211915` | Warm sand cards, sheets |
+| `--color-elevated` | `#FFFFFF` | `#2C2119` | Menus, dialogs, popovers |
+| `--color-text` | `#241C18` | `#F6EEE7` | Espresso / bone primary ink |
+| `--color-text-muted` | `#6E5C50` | `#BBA99B` | Warm taupe secondary text |
+| `--color-border` | `#E4D8CB` | `#3A2D25` | Warm dividers, input borders |
+| `--color-primary` | `#8E2F50` | `#E59CB3` | Plum-wine brand action / CTA |
+| `--color-primary-contrast` | `#FFFFFF` | `#17110F` | Text/icon on primary |
+| `--color-secondary` | `#2E6E63` | `#79C9BB` | Deep-eucalyptus secondary action |
+| `--color-accent` | `#A6452A` | `#EB9A7A` | Terracotta-clay highlight / badge |
+| `--color-success` | `#1F7A43` | `#69D08C` | Booked, paid, confirmed |
+| `--color-warning` | `#9A5B12` | `#E7B45C` | Expiring OTP, low slots |
+| `--color-danger` | `#B3261E` | `#F2938C` | Failed pay, cancel, errors |
+| `--color-info` | `#1F5FAE` | `#86B6F0` | Neutral notices |
+| `--color-focus-ring` | `#8E2F50` | `#E59CB3` | Focus outline |
+
+The plum-wine `--color-primary` is deliberately dark and saturated because it is used **both**
+as a fill (white text on it) *and* as colored text on near-white surfaces, so it must clear WCAG
+AA (4.5:1) in **both** directions; the accent is a warm clay terracotta (not magenta) so it
+stays usable as badge text (≥ 4.5:1 on bg/surface). Every shipped pairing is verified in
+`packages/web/src/styles/contrast.test.ts` against `@salon/shared`.
+
+### Display ⇄ body type pairing
+
+A deliberate type pairing keeps display/heading text visually distinct from Vazirmatn body text
+in every case. Tokens are declared in `tokens.css` and mirrored numerically in `@salon/shared`
+(`typography`):
+
+| Token | Value | Role |
+| --- | --- | --- |
+| `--font-weight-body` | `400` | Body copy weight |
+| `--font-weight-display` | `800` | Hero/section title weight (heavier than body) |
+| `--line-height-display` | `1.15` | Display line-height (tighter than body 1.75) |
+| `--tracking-display` | `-0.01em` | Editorial display letter-spacing (tighter) |
+
+**Invariant (enforced by `styles/tokens-complete.test.ts`): display weight > body weight AND
+display line-height < body line-height.** This guarantees headings can never render visually
+uniform with body copy — there is no exception. Apply the display treatment (via the
+`text-display` utility/helper composed in `tailwind.config.js`) to hero and section titles.
+Vazirmatn is a 100–900 variable face, so the heavier display weight costs no extra download.
+
+### Brand motif — the recurring signature device
+
+One reusable brand device: a **token-driven SVG "petal arc"** (an overlapping-arc, salon-
+evocative mark) in `packages/web/src/components/brand/Motif.tsx`, exported via
+`components/brand/index.ts`. Its fills derive from `var(--color-primary)` / `var(--color-accent)`
+(and `currentColor`), so it re-tints automatically per theme **and** per tenant accent. It is
+decorative — `aria-hidden` by default — and `className` controls size only, never color.
+
+| Variant | Use | Where it recurs |
+| --- | --- | --- |
+| `mark` | Logo-scale glyph beside the brand wordmark | `AppShell`, `OwnerShell`, `FunnelShell` headers |
+| `band` | Hero divider / flourish | `MarketingHome` & `BusinessLanding` hero divider; `SalonProfilePage` header flourish |
+| `watermark` | Faint background motif | Behind owner empty states |
+
+Because the motif reads the accent tokens, on a tenant storefront it automatically adopts that
+salon's Brand_Accent.
+
+### Editorial / asymmetric layout primitives
+
+To escape the "stacked equal cards" look, compose primary/brand content with the editorial
+layout primitives in `components/layout` (thin grid wrappers, logical-properties only):
+
+- **`EditorialSplit`** — asymmetric two-column (e.g. `1.4fr 1fr`, alternating sides) for heroes
+  and feature rows; collapses to one column under `md`.
+- **`FeatureMosaic`** — a deliberately uneven grid (one lead tile + supporting tiles) for 3+ peer
+  features, so "a single row of equal cards" is never the only option.
+- **`SectionRhythm`** — alternates section background between `--color-bg` and `--color-surface`
+  and varies vertical density so consecutive sections differ.
+
+### Anti-generic constraints (non-negotiable)
+
+- **No default indigo→purple hero gradient.** Hero backgrounds derive from palette tokens (solid
+  `--color-surface`, a token-driven motif `band`, or a warm `--color-primary` / `--color-accent`
+  wash) — never a literal `linear-gradient(… #6366f1 … #a855f7 …)` or the indigo/purple hex
+  family in authored styles.
+- **No sole 3-equal-card row** for three or more peer features — at least one such surface uses
+  `FeatureMosaic` or `EditorialSplit`.
+- **Vary section rhythm** via `SectionRhythm`; consecutive sections must differ in layout,
+  background, or density.
+- **A domain-specific visual is present** (salon imagery or the brand `Motif`) — not solely a row
+  of generic monochrome icons.
+- **Tokens-only + logical properties.** No raw hex/px/ms literals in authored styles; no physical
+  `left`/`right` for flow-relative spacing (use logical `inline-start`/`inline-end`; see §11).
+- **Tenant accent via runtime CSS vars only.** A salon's Brand_Accent is injected as runtime
+  custom properties on a scoped storefront wrapper (`TenantTheme`), never as authored color
+  literals, so component code stays tokens-only.
+
+These constraints are also captured as an enforceable steering skill
+(`.kiro/steering/signature-design-language.md`) and backed by the distinctiveness guardrail
+(`packages/web/src/styles/distinctiveness.test.ts`), which reports each violating file + rule.
+
+### Honest scope — automated checks are a floor, not a certificate
+
+The contrast test, the axe/Lighthouse accessibility checks, and the distinctiveness guardrail are
+**necessary but not sufficient — they are a floor, not a certificate.** **Full WCAG 2.2 AA
+conformance requires manual testing with assistive technologies** (VoiceOver/iOS, TalkBack/
+Android, NVDA — all exercised in RTL/Farsi), keyboard-only runs, and **expert accessibility
+review**. Treat every automated pass as a floor, never as proof of conformance (see also §10).
+
+---
+
 ## 1. Core design principles
 
 - **Clarity first.** One primary action per screen. The funnel's primary CTA (e.g.

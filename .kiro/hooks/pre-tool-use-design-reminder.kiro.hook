@@ -1,0 +1,12 @@
+{
+  "enabled": true,
+  "name": "Signature design-language reminder",
+  "description": "Surfaces the distinctive design-language rules before a web file write (advisory; never blocks or edits).",
+  "event": "PreToolUse",
+  "matcher": "fs_write|str_replace",
+  "action": {
+    "type": "advisory",
+    "message": "Signature design language: salon-luxe palette tokens only; no indigo→purple gradient; display tokens for titles; motif on brand surfaces; logical properties only; tenant accent via runtime vars. See .kiro/steering/signature-design-language.md.",
+    "blocking": false
+  }
+}
