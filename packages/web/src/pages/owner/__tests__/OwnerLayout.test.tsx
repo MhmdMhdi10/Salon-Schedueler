@@ -61,6 +61,8 @@ vi.mock('../../../api/client', () => {
 });
 
 import { OwnerLayout } from '../OwnerLayout';
+import { AuthProvider } from '../../../auth/AuthContext';
+import { HeaderAuthNav } from '../../../components/layout/HeaderAuthNav';
 import {
   OwnerCalendarPage,
   OwnerConfigurationPage,
@@ -173,16 +175,44 @@ describe('OwnerLayout — RBAC (R2.3)', () => {
 });
 
 describe('OwnerLayout — sign-out', () => {
-  it('clears tokens and routes back to /auth', async () => {
+  it('clears the app-wide session so the shared header shows signed-out', async () => {
     getAccessToken.mockReturnValue('t');
     getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Owner' } });
 
-    renderOwnerApp();
+    // Render inside a real AuthProvider with the app-shell header mounted at the
+    // sign-out destination. Regression for the bug where the owner sign-out
+    // dropped the tokens but not the AuthContext, so the header kept showing
+    // «خروج» / the account nav. The sign-out must flip the shared state so the
+    // header that reads `useAuth()` renders the signed-out «ورود» link instead.
+    render(
+      <HelmetProvider>
+        <ThemeProvider defaultTheme="light">
+          <MemoryRouter initialEntries={['/owner/calendar']}>
+            <AuthProvider>
+              <Routes>
+                <Route path="/owner" element={<OwnerLayout />}>
+                  <Route
+                    path="calendar"
+                    element={<div data-testid="owner-calendar-stub" />}
+                  />
+                </Route>
+                <Route path="/auth" element={<HeaderAuthNav />} />
+              </Routes>
+            </AuthProvider>
+          </MemoryRouter>
+        </ThemeProvider>
+      </HelmetProvider>,
+    );
 
-    await screen.findByTestId('owner-calendar-page');
-    fireEvent.click(screen.getByTestId('owner-sign-out'));
+    // The owner shell (and its sign-out control) renders once the session
+    // resolves; a lightweight stub stands in for the heavy calendar page.
+    fireEvent.click(await screen.findByTestId('owner-sign-out'));
 
+    // The shared header now reflects the signed-out state: the «ورود» link is
+    // shown and the «خروج» control is gone.
+    expect(await screen.findByTestId('header-sign-in')).toBeInTheDocument();
+    expect(screen.queryByTestId('header-sign-out')).not.toBeInTheDocument();
+    // Token clearing still happens (via AuthContext.signOut → api signOut).
     expect(signOut).toHaveBeenCalledTimes(1);
-    expect(await screen.findByTestId('auth-surface')).toBeInTheDocument();
   });
 });

@@ -393,6 +393,7 @@ describe('AvailabilityConfig', () => {
 
       expect(prisma.holiday.findMany).toHaveBeenCalledWith({
         where: { salonId },
+        orderBy: { onDate: 'asc' },
       });
       expect(result).toEqual(mockHolidays);
     });

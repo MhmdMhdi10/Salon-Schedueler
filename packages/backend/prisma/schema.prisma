@@ -114,6 +114,10 @@ model StaffMember {
   // salon default; true => this stylist's bookings auto-confirm; false => this
   // stylist's bookings always need manual approval.
   autoApprove Boolean? @map("auto_approve")
+  // When true, the salon has granted this stylist the right to manage their OWN
+  // availability — block a full day or an hour-range for themselves only (never
+  // the whole salon). Default false => only Owner/Admin can block their time.
+  manageOwnAvailability Boolean @default(false) @map("manage_own_availability")
   // Optional login phone. When a staff member's phone matches the phone used in
   // OTP login, the issued JWT carries their role + staffMemberId so the RBAC
   // matrix (Authorizer) applies. Nullable + unique: most staff rows may have no
@@ -240,6 +244,13 @@ model DayOff {
   id            String   @id @default(uuid()) @db.Uuid
   staffMemberId String   @map("staff_member_id") @db.Uuid
   onDate        DateTime @map("on_date") @db.Date
+  // Optional time-of-day window for a PARTIAL-day block (mirrors Holiday). Both
+  // null => the stylist is off the WHOLE day; both set => only [startTime,endTime)
+  // on `onDate` is blocked for THIS stylist (e.g. a midday break). The times use
+  // the same nominal salon clock as WorkingHours and are carved out per-staff by
+  // the scheduling engine via timeToAbsolute — the rest of the salon is unaffected.
+  startTime DateTime? @map("start_time") @db.Time
+  endTime   DateTime? @map("end_time") @db.Time
 
   staffMember StaffMember @relation(fields: [staffMemberId], references: [id])
 

@@ -23,6 +23,7 @@ function createMockPrisma(overrides: Record<string, any> = {}) {
     },
     holiday: {
       findFirst: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn().mockResolvedValue([]),
     },
     staffMember: {
       findMany: jest.fn().mockResolvedValue([]),
@@ -139,6 +140,62 @@ describe('SchedulingEngine.getAvailability', () => {
         const durationMs = end.getTime() - start.getTime();
         expect(durationMs).toBe(45 * 60 * 1000); // 30 + 15 = 45 minutes
       }
+    });
+
+    it('carves out a stylist partial-day block (hour-range) from availability', async () => {
+      const prisma = createMockPrisma();
+      prisma.service.findUnique.mockResolvedValue(standardService());
+      prisma.staffMember.findMany.mockResolvedValue(standardStaff());
+      prisma.chair.findMany.mockResolvedValue(standardChair());
+      prisma.workingHours.findMany
+        .mockResolvedValueOnce(staffWorkingHoursForDay())
+        .mockResolvedValueOnce(chairWorkingHoursForDay());
+      // The stylist blocked 12:00–13:00 for themselves (partial day-off).
+      prisma.dayOff.findMany.mockResolvedValue([
+        { staffMemberId: STAFF_ID, startTime: timeDate(12, 0), endTime: timeDate(13, 0) },
+      ]);
+
+      const engine = new SchedulingEngine(prisma);
+      const slots = await engine.getAvailability({
+        salonId: SALON_ID,
+        serviceId: SERVICE_ID,
+        date: DATE,
+        granularityMinutes: 15,
+      });
+
+      const blockStart = new Date('2024-03-15T12:00:00.000Z').getTime();
+      const blockEnd = new Date('2024-03-15T13:00:00.000Z').getTime();
+      // No emitted slot may overlap the blocked window.
+      for (const slot of slots) {
+        const s = new Date(slot.startAt).getTime();
+        const e = new Date(slot.endAt).getTime();
+        expect(s < blockEnd && e > blockStart).toBe(false);
+      }
+      // Sanity: availability still exists outside the block (the 9:00 opener).
+      expect(slots.some((sl) => sl.startAt === '2024-03-15T09:00:00.000Z')).toBe(true);
+    });
+
+    it('removes a stylist entirely on a full-day block (no time window)', async () => {
+      const prisma = createMockPrisma();
+      prisma.service.findUnique.mockResolvedValue(standardService());
+      prisma.staffMember.findMany.mockResolvedValue(standardStaff());
+      prisma.chair.findMany.mockResolvedValue(standardChair());
+      prisma.workingHours.findMany
+        .mockResolvedValueOnce(staffWorkingHoursForDay())
+        .mockResolvedValueOnce(chairWorkingHoursForDay());
+      prisma.dayOff.findMany.mockResolvedValue([
+        { staffMemberId: STAFF_ID, startTime: null, endTime: null },
+      ]);
+
+      const engine = new SchedulingEngine(prisma);
+      const slots = await engine.getAvailability({
+        salonId: SALON_ID,
+        serviceId: SERVICE_ID,
+        date: DATE,
+        granularityMinutes: 15,
+      });
+      // The only qualified stylist is fully off → no availability.
+      expect(slots).toEqual([]);
     });
 
     it('returns slots at correct granularity (30 min)', async () => {
@@ -603,6 +660,7 @@ describe('SchedulingEngine.book', () => {
       },
       holiday: {
         findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
       },
       staffMember: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -1162,6 +1220,7 @@ describe('SchedulingEngine.book - held booking path (R10.1)', () => {
       },
       holiday: {
         findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
       },
       staffMember: {
         findMany: jest.fn().mockResolvedValue([]),

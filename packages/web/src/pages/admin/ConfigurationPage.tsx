@@ -19,9 +19,14 @@ import {
   brandAccentApi,
   holidaysApi,
   salonApi,
+  staffApi,
+  staffAvailabilityApi,
   ApiError,
   type ApprovalPolicyStaff,
   type SalonClosure,
+  type SalonStaff,
+  type StaffRole,
+  type StaffUpdateInput,
 } from '../../api/client';
 import { SeoHead } from '../../components/seo';
 import { TenantTheme } from '../../components/theme';
@@ -42,6 +47,7 @@ import {
   ErrorState,
   IconButton,
   JalaliDate,
+  JalaliDatePicker,
   Money,
   Select,
   Skeleton,
@@ -501,6 +507,25 @@ function ApprovalPolicySection({ salonId }: { salonId: string }) {
     }
   };
 
+  // Grant/revoke a stylist's permission to manage their own availability (block
+  // their own day/hours from the calendar). Optimistic with rollback (ui-ux §6).
+  const handleStaffManageOwn = async (staffId: string, allowed: boolean) => {
+    const prev = staff;
+    setStaff((list) =>
+      list.map((s) => (s.id === staffId ? { ...s, manageOwnAvailability: allowed } : s)),
+    );
+    setSaving(true);
+    try {
+      await staffAvailabilityApi.setManageOwn(staffId, allowed);
+      success({ title: t('admin.config.approval.saved') });
+    } catch {
+      setStaff(prev); // reconcile/rollback
+      toastError({ title: t('admin.config.approval.saveFailed') });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <SectionShell
       id={SECTION_IDS.approval}
@@ -577,22 +602,32 @@ function ApprovalPolicySection({ salonId }: { salonId: string }) {
                         <span className="break-words text-sm font-medium text-text">{name}</span>
                         <span className="text-xs text-muted">{t(`app.role.${member.role}`)}</span>
                       </div>
-                      <Select
-                        label={t('admin.config.approval.staffSelectLabel', { name })}
-                        labelHidden
-                        value={value}
-                        onValueChange={(v) => handleStaffChange(member.id, v as StaffPolicyValue)}
-                        options={policyOptions}
-                        disabled={saving}
-                        helperText={
-                          value === 'inherit'
-                            ? salonAuto
-                              ? t('admin.config.approval.effectiveAuto')
-                              : t('admin.config.approval.effectiveManual')
-                            : undefined
-                        }
-                        containerClassName="w-full sm:w-56 sm:shrink-0"
-                      />
+                      <div className="flex w-full flex-col gap-2 sm:w-56 sm:shrink-0">
+                        <Select
+                          label={t('admin.config.approval.staffSelectLabel', { name })}
+                          labelHidden
+                          value={value}
+                          onValueChange={(v) => handleStaffChange(member.id, v as StaffPolicyValue)}
+                          options={policyOptions}
+                          disabled={saving}
+                          helperText={
+                            value === 'inherit'
+                              ? salonAuto
+                                ? t('admin.config.approval.effectiveAuto')
+                                : t('admin.config.approval.effectiveManual')
+                              : undefined
+                          }
+                          containerClassName="w-full"
+                        />
+                        {member.role === 'Stylist' && (
+                          <Switch
+                            checked={member.manageOwnAvailability}
+                            onCheckedChange={(v) => handleStaffManageOwn(member.id, v)}
+                            disabled={saving}
+                            label={t('admin.config.approval.manageOwnLabel')}
+                          />
+                        )}
+                      </div>
                     </li>
                   );
                 })}
@@ -795,8 +830,10 @@ function ClosuresSection({
   const [closures, setClosures] = useState<SalonClosure[]>([]);
   const [saving, setSaving] = useState(false);
 
-  // Add-form state. `mode` toggles between a full-day closure and an hour-range.
+  // Add-form state. `mode` toggles between a full-day closure and an hour-range;
+  // `toDate` (optional) turns a single day into a multi-day range.
   const [date, setDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [mode, setMode] = useState<'full' | 'range'>('full');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
@@ -840,6 +877,7 @@ function ClosuresSection({
 
   const resetForm = () => {
     setDate('');
+    setToDate('');
     setMode('full');
     setStart('');
     setEnd('');
@@ -851,6 +889,10 @@ function ClosuresSection({
     setFormError('');
     if (!date) {
       setFormError(t('admin.config.closures.dateRequired'));
+      return;
+    }
+    if (toDate && toDate < date) {
+      setFormError(t('admin.config.closures.invalidDateRange'));
       return;
     }
     const isRange = mode === 'range';
@@ -866,12 +908,16 @@ function ClosuresSection({
     }
     setSaving(true);
     try {
-      const { holiday } = await holidaysApi.add(salonId, {
+      const res = await holidaysApi.add(salonId, {
         onDate: date,
+        toDate: toDate || null,
         startTime: isRange ? start : null,
         endTime: isRange ? end : null,
       });
-      setClosures((prev) => sortClosures([...prev, holiday]));
+      // A multi-day range returns every created row in `holidays`; fall back to
+      // the single `holiday` for a one-day closure.
+      const added = res.holidays ?? [res.holiday];
+      setClosures((prev) => sortClosures([...prev, ...added]));
       resetForm();
       success({ title: t('admin.config.closures.added') });
     } catch {
@@ -984,14 +1030,24 @@ function ClosuresSection({
 
           <form onSubmit={handleAdd} className="flex flex-col gap-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <TextField
-                type="date"
-                dir="ltr"
-                label={t('admin.config.closures.dateLabel')}
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                containerClassName="sm:flex-1"
-              />
+              <div className="sm:flex-1">
+                <JalaliDatePicker
+                  label={t('admin.config.closures.fromDateLabel')}
+                  value={date || null}
+                  onChange={(iso) => setDate(iso)}
+                  variant="sheet"
+                />
+              </div>
+              <div className="sm:flex-1">
+                <JalaliDatePicker
+                  label={t('admin.config.closures.toDateLabel')}
+                  value={toDate || null}
+                  min={date || null}
+                  onChange={(iso) => setToDate(iso)}
+                  variant="sheet"
+                  helperText={t('admin.config.closures.toDateHelper')}
+                />
+              </div>
               <Select
                 label={t('admin.config.closures.modeLabel')}
                 value={mode}
@@ -1044,6 +1100,203 @@ function ClosuresSection({
   );
 }
 
+/** Role options for the staff add/edit controls (RBAC access level). */
+const STAFF_ROLE_VALUES: StaffRole[] = ['Owner', 'Admin', 'Stylist'];
+/** Iranian mobile pattern for an optional staff login phone. */
+const STAFF_PHONE_RE = /^09\d{9}$/;
+
+/**
+ * Staff / user management section: add a stylist, admin, or owner to the salon
+ * and manage their role (RBAC access), optional login phone (OTP sign-in), and
+ * active flag. Wired to the owner endpoints (`GET/POST /salons/:id/staff`,
+ * `PATCH /staff/:id`). The granular approval/availability permissions live in
+ * the approval-policy section, so they are not duplicated here.
+ *
+ * Presentational over the parent's loaded `staff` list (so a staff load failure
+ * still surfaces the page-level error state); mutations are optimistic and
+ * reconciled — a failed save rolls back and surfaces an error (ui-ux §6, §12).
+ */
+function StaffSection({
+  staff,
+  salonId,
+  onChange,
+}: {
+  staff: SalonStaff[];
+  salonId: string;
+  onChange: React.Dispatch<React.SetStateAction<SalonStaff[]>>;
+}) {
+  const { t } = useTranslation();
+  const { success, error: toastError } = useToast();
+  const [fullName, setFullName] = useState('');
+  const [role, setRole] = useState<StaffRole>('Stylist');
+  const [phone, setPhone] = useState('');
+  const [formError, setFormError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const roleOptions = useMemo(
+    () => STAFF_ROLE_VALUES.map((r) => ({ value: r, label: t(`app.role.${r}`) })),
+    [t],
+  );
+
+  const handleAdd = async (e: FormEvent) => {
+    e.preventDefault();
+    setFormError('');
+    const name = fullName.trim();
+    if (!name) {
+      setFormError(t('admin.config.staff.nameRequired'));
+      return;
+    }
+    const trimmedPhone = phone.trim();
+    if (trimmedPhone && !STAFF_PHONE_RE.test(trimmedPhone)) {
+      setFormError(t('admin.config.staff.invalidPhone'));
+      return;
+    }
+    setSaving(true);
+    try {
+      const { staff: created } = await staffApi.create(salonId, {
+        fullName: name,
+        role,
+        phone: trimmedPhone || null,
+      });
+      onChange((prev) => [...prev, created]);
+      setFullName('');
+      setRole('Stylist');
+      setPhone('');
+      success({ title: t('admin.config.staff.added') });
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'PHONE_TAKEN') {
+        setFormError(t('admin.config.staff.phoneTaken'));
+      } else {
+        toastError({ title: t('admin.config.staff.addFailed') });
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const patchStaff = async (id: string, patch: StaffUpdateInput) => {
+    const prev = staff;
+    onChange((list) => list.map((s) => (s.id === id ? ({ ...s, ...patch } as SalonStaff) : s)));
+    try {
+      await staffApi.update(id, patch);
+      success({ title: t('admin.config.staff.saved') });
+    } catch (err) {
+      onChange(prev); // reconcile/rollback
+      if (err instanceof ApiError && err.code === 'PHONE_TAKEN') {
+        toastError({ title: t('admin.config.staff.phoneTaken') });
+      } else {
+        toastError({ title: t('admin.config.staff.saveFailed') });
+      }
+    }
+  };
+
+  return (
+    <SectionShell id={SECTION_IDS.staff} icon={Users} title={t('admin.staff')}>
+      <p className="max-w-[60ch] text-sm text-muted">{t('admin.config.staff.body')}</p>
+
+      {staff.length === 0 ? (
+        <ul data-testid="staff-list" className="sr-only" aria-hidden="true" />
+      ) : (
+        <ul data-testid="staff-list" className="flex flex-col divide-y divide-border">
+          {staff.map((member) => {
+            const name = member.fullName ?? member.id;
+            return (
+              <li
+                key={member.id}
+                className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  <span className="break-words text-sm font-medium text-text">{name}</span>
+                  <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted">
+                    <span>{t(`app.role.${member.role}`)}</span>
+                    {member.phone ? (
+                      <span dir="ltr" className="tabular-nums">
+                        {member.phone}
+                      </span>
+                    ) : (
+                      <span>{t('admin.config.staff.noLogin')}</span>
+                    )}
+                    {!member.active && (
+                      <span className="text-danger">{t('admin.config.staff.inactive')}</span>
+                    )}
+                  </span>
+                </div>
+                <div className="flex w-full flex-col gap-2 sm:w-64 sm:shrink-0">
+                  <Select
+                    label={t('admin.config.staff.roleSelectLabel', { name })}
+                    labelHidden
+                    value={member.role}
+                    onValueChange={(v) => patchStaff(member.id, { role: v as StaffRole })}
+                    options={roleOptions}
+                    containerClassName="w-full"
+                  />
+                  <Switch
+                    checked={member.active}
+                    onCheckedChange={(v) => patchStaff(member.id, { active: v })}
+                    label={t('admin.config.staff.activeLabel')}
+                  />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {staff.length === 0 && (
+        <EmptyState
+          icon={<Users className="h-8 w-8" />}
+          title={t('admin.config.staff.emptyTitle')}
+          description={t('admin.config.staff.emptyBody')}
+        />
+      )}
+
+      <form onSubmit={handleAdd} className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <TextField
+            label={t('admin.config.staff.addLabel')}
+            placeholder={t('admin.config.staff.addPlaceholder')}
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            containerClassName="sm:flex-1"
+          />
+          <Select
+            label={t('admin.config.staff.roleLabel')}
+            value={role}
+            onValueChange={(v) => setRole(v as StaffRole)}
+            options={roleOptions}
+            containerClassName="sm:w-48"
+          />
+        </div>
+        <TextField
+          label={t('admin.config.staff.phoneLabel')}
+          helperText={t('admin.config.staff.phoneHelper')}
+          placeholder="09xxxxxxxxx"
+          type="tel"
+          inputMode="tel"
+          dir="ltr"
+          autoComplete="off"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+        />
+        {formError && (
+          <p role="alert" className="text-sm text-danger">
+            {formError}
+          </p>
+        )}
+        <Button
+          type="submit"
+          startIcon={<Plus className="h-4 w-4" />}
+          loading={saving}
+          disabled={saving}
+          className="self-start"
+        >
+          {t('admin.config.staff.addCta')}
+        </Button>
+      </form>
+    </SectionShell>
+  );
+}
+
 function ConfigurationPageContent({ salonId: salonIdProp }: { salonId?: string }) {
   const { t } = useTranslation();
   const params = useParams<{ salonId?: string }>();
@@ -1052,7 +1305,7 @@ function ConfigurationPageContent({ salonId: salonIdProp }: { salonId?: string }
 
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [error, setError] = useState('');
-  const [staff, setStaff] = useState<Entry[]>([]);
+  const [staff, setStaff] = useState<SalonStaff[]>([]);
   const [chairs, setChairs] = useState<Entry[]>([]);
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [pendingDelete, setPendingDelete] = useState<DeleteState | null>(null);
@@ -1069,7 +1322,7 @@ function ConfigurationPageContent({ salonId: salonIdProp }: { salonId?: string }
     ])
       .then(([staffRes, chairsRes, servicesRes]) => {
         if (!active) return;
-        setStaff(staffRes.staff.map((s, i) => toEntry(s, `staff-${i + 1}`)));
+        setStaff(staffRes.staff);
         setChairs(chairsRes.chairs.map((c, i) => toEntry(c, `chair-${i + 1}`)));
         setServices(servicesRes.services);
         setStatus('success');
@@ -1220,22 +1473,7 @@ function ConfigurationPageContent({ salonId: salonIdProp }: { salonId?: string }
 
           <BrandAccentSection salonId={salonId} />
 
-          <EntrySection
-            id={SECTION_IDS.staff}
-            listTestId="staff-list"
-            icon={Users}
-            title={t('admin.staff')}
-            entries={staff}
-            onAdd={(label) => setStaff((prev) => [...prev, { id: `staff-${Date.now()}`, label }])}
-            onRemove={(id) => setStaff((prev) => prev.filter((e) => e.id !== id))}
-            onRestore={restoreEntry(setStaff)}
-            addLabel={t('admin.config.staff.addLabel')}
-            addPlaceholder={t('admin.config.staff.addPlaceholder')}
-            addCta={t('admin.config.staff.addCta')}
-            emptyTitle={t('admin.config.staff.emptyTitle')}
-            emptyBody={t('admin.config.staff.emptyBody')}
-            requestDelete={setPendingDelete}
-          />
+          <StaffSection staff={staff} salonId={salonId} onChange={setStaff} />
 
           <EntrySection
             id={SECTION_IDS.chairs}

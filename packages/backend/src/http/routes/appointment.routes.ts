@@ -71,6 +71,53 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
       .catch(next);
   };
 
+  // Authorize cancellation. Unlike approve/reject (staff-only), a booking can be
+  // cancelled by EITHER the owning customer (self-service cancel from the
+  // booking app) OR managing staff (Owner/Admin any salon booking; a Stylist
+  // only their own). This reads the appointment first so the open-by-id route
+  // can't be used to cancel someone else's booking (the route previously had no
+  // guard at all). A denial never reaches the handler.
+  const requireCanCancelAppointment: RequestHandler = (req, res, next) => {
+    const principal = req.principal;
+    if (!principal) {
+      res.status(401).json({ code: 'UNAUTHORIZED' });
+      return;
+    }
+    services.calendarService
+      .getAppointmentById(req.params.id)
+      .then((appt) => {
+        if (!appt) {
+          res.status(404).json({ code: 'NOT_FOUND' });
+          return;
+        }
+        // The booking's own customer may always cancel it.
+        if (appt.customerId === principal.id) {
+          next();
+          return;
+        }
+        // Otherwise the caller must be staff who can manage this appointment.
+        if (!principal.role) {
+          res.status(403).json({ code: 'FORBIDDEN' });
+          return;
+        }
+        const allowed = services.authorizer.can(
+          {
+            id: principal.id,
+            role: principal.role,
+            staffMemberId: principal.staffMemberId,
+          },
+          'manage_own_appointments',
+          { salonId: appt.salonId, staffMemberId: appt.staffMemberId },
+        );
+        if (!allowed) {
+          res.status(403).json({ code: 'FORBIDDEN' });
+          return;
+        }
+        next();
+      })
+      .catch(next);
+  };
+
   router.post(
     '/appointments',
     asyncRoute(async (req, res) => {
@@ -114,6 +161,7 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
 
   router.post(
     '/appointments/:id/cancel',
+    requireCanCancelAppointment,
     asyncRoute(async (req, res) => {
       const appointment = await services.cancellationFlow.cancel(req.params.id);
       res.status(200).json({ status: 'cancelled', appointment });

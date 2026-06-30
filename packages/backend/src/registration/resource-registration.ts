@@ -28,16 +28,43 @@ export class ResourceRegistration {
     salonId: string,
     fullName: string,
     role: StaffRole,
+    phone?: string | null,
   ): Promise<StaffMember> {
     const staffMember = await this.prisma.staffMember.create({
       data: {
         salonId,
         fullName,
         role,
+        // A login phone is optional: when set (and unique) it lets that person
+        // sign in via OTP and receive a staff JWT with this role (auth.service
+        // findStaffClaimsByPhone). Omit to create a non-login staff record.
+        ...(phone ? { phone } : {}),
       },
     });
 
     return staffMember;
+  }
+
+  /**
+   * Update a staff member's identity / role / login / active flag (owner-guarded
+   * at the route layer). Only provided fields are changed. Passing `phone: null`
+   * clears the login; a non-empty `phone` sets it (must be unique — a duplicate
+   * surfaces as a Prisma P2002 the route maps to 409). Changing `role` is how an
+   * owner promotes/demotes a person (e.g. Stylist → Admin).
+   */
+  async updateStaffMember(
+    id: string,
+    patch: { fullName?: string; role?: StaffRole; phone?: string | null; active?: boolean },
+  ): Promise<StaffMember> {
+    return this.prisma.staffMember.update({
+      where: { id },
+      data: {
+        ...(patch.fullName !== undefined ? { fullName: patch.fullName } : {}),
+        ...(patch.role !== undefined ? { role: patch.role } : {}),
+        ...(patch.phone !== undefined ? { phone: patch.phone } : {}),
+        ...(patch.active !== undefined ? { active: patch.active } : {}),
+      },
+    });
   }
 
   /**

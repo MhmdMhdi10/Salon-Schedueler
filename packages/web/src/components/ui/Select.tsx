@@ -123,7 +123,11 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(function Select
             position="popper"
             sideOffset={4}
             className={cn(
-              'z-overlay overflow-hidden rounded-md bg-elevated text-text shadow-2',
+              // z-dialog (not z-overlay) so the dropdown renders ABOVE a Radix
+              // Dialog (which sits on z-dialog); on z-overlay it would open
+              // behind the dialog and its options would be invisible. Matches
+              // the JalaliDatePicker popover, which also uses z-dialog.
+              'z-dialog overflow-hidden rounded-md bg-elevated text-text shadow-2',
               'border border-border',
               'min-w-[var(--radix-select-trigger-width)]',
             )}

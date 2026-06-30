@@ -83,6 +83,21 @@ vi.mock('../../api/client', () => {
       getAnalytics: (salonId: string, from: string, to: string) =>
         getAnalytics(salonId, from, to),
     },
+    holidaysApi: {
+      list: vi.fn().mockResolvedValue({ holidays: [] }),
+      add: vi.fn().mockResolvedValue({ holiday: {} }),
+      remove: vi.fn().mockResolvedValue({ ok: true }),
+    },
+    staffApi: {
+      create: vi.fn().mockResolvedValue({ staff: {} }),
+      update: vi.fn().mockResolvedValue({ staff: {} }),
+    },
+    staffAvailabilityApi: {
+      list: vi.fn().mockResolvedValue({ blocks: [] }),
+      add: vi.fn().mockResolvedValue({ block: {} }),
+      remove: vi.fn().mockResolvedValue({ ok: true }),
+      setManageOwn: vi.fn().mockResolvedValue({ ok: true, allowed: false }),
+    },
   };
 });
 
@@ -242,7 +257,7 @@ describe('Keyboard & focus — funnel/admin controls are reachable with a visibl
     // The day/week toggle preserves the tab semantics that keyboard users rely
     // on (Radix roving tabindex, RTL-aware arrow keys).
     const tabs = screen.getAllByRole('tab');
-    expect(tabs.length).toBe(2);
+    expect(tabs.length).toBe(3);
     expect(tabs[0]).toHaveAttribute('aria-selected');
   });
 });

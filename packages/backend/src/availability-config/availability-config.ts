@@ -77,14 +77,32 @@ export class AvailabilityConfig {
   }
 
   /**
-   * Add a day off for a staff member (R4.1).
+   * Add a day off / availability block for a staff member (R4.1). With no time
+   * window it blocks the WHOLE day; with both `startTime` and `endTime` (HH:mm)
+   * it blocks only that part of `onDate` for THIS stylist (a partial-day block).
+   * Mirrors {@link addHoliday}; the scheduling engine carves it out per-staff.
    */
-  async addDayOff(staffMemberId: string, onDate: string): Promise<DayOff> {
+  async addDayOff(
+    staffMemberId: string,
+    onDate: string,
+    startTime?: string | null,
+    endTime?: string | null,
+  ): Promise<DayOff> {
+    const partial =
+      typeof startTime === 'string' &&
+      startTime !== '' &&
+      typeof endTime === 'string' &&
+      endTime !== '';
     return this.prisma.dayOff.create({
+      // Cast: the checked-in Prisma client may predate the additive
+      // start_time/end_time columns; the entrypoint regenerates before build.
       data: {
         staffMemberId,
         onDate: new Date(onDate),
-      },
+        ...(partial
+          ? { startTime: parseTime(startTime as string), endTime: parseTime(endTime as string) }
+          : {}),
+      } as never,
     });
   }
 
@@ -95,6 +113,18 @@ export class AvailabilityConfig {
     await this.prisma.dayOff.delete({
       where: { id: dayOffId },
     });
+  }
+
+  /**
+   * Remove a staff member's day-off/block, but only when it belongs to that
+   * staff member (so a stylist can never delete another's via a guessed id).
+   * Returns true when a row was deleted.
+   */
+  async removeDayOffForStaff(dayOffId: string, staffMemberId: string): Promise<boolean> {
+    const result = await this.prisma.dayOff.deleteMany({
+      where: { id: dayOffId, staffMemberId },
+    });
+    return result.count > 0;
   }
 
   /**
@@ -204,6 +234,7 @@ export class AvailabilityConfig {
       fullName: string | null;
       role: string;
       autoApprove: boolean | null;
+      manageOwnAvailability: boolean;
     }>;
   }> {
     const salon = await this.prisma.salon.findUnique({
@@ -213,11 +244,25 @@ export class AvailabilityConfig {
     if (!salon) {
       throw new Error('Salon not found');
     }
-    const staff = await this.prisma.staffMember.findMany({
+    const staff = (await this.prisma.staffMember.findMany({
       where: { salonId },
-      select: { id: true, fullName: true, role: true, autoApprove: true },
+      // Cast: manageOwnAvailability is an additive column; the checked-in client
+      // may predate it (the entrypoint regenerates before build).
+      select: {
+        id: true,
+        fullName: true,
+        role: true,
+        autoApprove: true,
+        manageOwnAvailability: true,
+      } as never,
       orderBy: { fullName: 'asc' },
-    });
+    })) as unknown as Array<{
+      id: string;
+      fullName: string | null;
+      role: string;
+      autoApprove: boolean | null;
+      manageOwnAvailability: boolean;
+    }>;
     return { autoApprove: salon.autoApprove, staff };
   }
 
@@ -241,6 +286,38 @@ export class AvailabilityConfig {
       where: { id: staffMemberId },
       data: { autoApprove },
     });
+  }
+
+  /**
+   * Grant or revoke a stylist's permission to manage their OWN availability
+   * (block their own day or hours). Salon-controlled; Owner-only at the API
+   * layer (`POST /staff/:id/manage-availability`, configure_salon).
+   */
+  async setStaffManageOwnAvailability(staffMemberId: string, allowed: boolean): Promise<void> {
+    await this.prisma.staffMember.update({
+      where: { id: staffMemberId },
+      // Cast: additive column; the checked-in client may predate it.
+      data: { manageOwnAvailability: allowed } as never,
+    });
+  }
+
+  /**
+   * Read a staff member's salonId + self-availability grant. Used to authorize
+   * stylist self-service availability changes (must be their own staff record
+   * AND the salon must have granted the permission). Null when not found.
+   */
+  async getStaffAvailabilityContext(
+    staffMemberId: string,
+  ): Promise<{ salonId: string; manageOwnAvailability: boolean } | null> {
+    const staff = (await this.prisma.staffMember.findUnique({
+      where: { id: staffMemberId },
+      select: { salonId: true, manageOwnAvailability: true } as never,
+    })) as unknown as { salonId: string; manageOwnAvailability?: boolean } | null;
+    if (!staff) return null;
+    return {
+      salonId: staff.salonId,
+      manageOwnAvailability: staff.manageOwnAvailability === true,
+    };
   }
 
   /**

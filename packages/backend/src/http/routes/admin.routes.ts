@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type RequestHandler } from 'express';
 import type { Services } from '../app.js';
 import type { RequireRole } from './appointment.routes.js';
 import { asyncRoute, validateRequired } from './route-helpers.js';
@@ -78,6 +78,105 @@ const toClosureDto = (h: {
 
 /** "HH:mm" 24-hour validator for closure window times. */
 const HHMM_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/**
+ * Validate a closure/availability-block body: an ISO `onDate` (YYYY-MM-DD), an
+ * OPTIONAL `toDate` (YYYY-MM-DD, ≥ onDate) for a multi-day range, plus an
+ * optional both-or-neither [startTime,endTime) "HH:mm" window (omit both for a
+ * full day; endTime must be strictly after startTime). When a range is given the
+ * same window applies to every day in it. Shared by the salon closure and the
+ * per-stylist availability-block routes.
+ */
+function parseDateWindow(
+  body: Record<string, unknown>,
+):
+  | {
+      ok: true;
+      onDate: string;
+      toDate: string | null;
+      startTime: string | null;
+      endTime: string | null;
+    }
+  | { ok: false; field: string } {
+  const onDate = body.onDate;
+  if (typeof onDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(onDate)) {
+    return { ok: false, field: 'onDate' };
+  }
+  // Optional end of a multi-day range. Empty/absent => a single day.
+  let toDate: string | null = null;
+  const rawTo = body.toDate;
+  if (rawTo !== undefined && rawTo !== null && rawTo !== '') {
+    if (typeof rawTo !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(rawTo)) {
+      return { ok: false, field: 'toDate' };
+    }
+    if (rawTo < onDate) {
+      return { ok: false, field: 'toDate' };
+    }
+    toDate = rawTo;
+  }
+  const rawStart = body.startTime;
+  const rawEnd = body.endTime;
+  const hasStart = typeof rawStart === 'string' && rawStart !== '';
+  const hasEnd = typeof rawEnd === 'string' && rawEnd !== '';
+  if (hasStart !== hasEnd) {
+    return { ok: false, field: hasStart ? 'endTime' : 'startTime' };
+  }
+  if (hasStart) {
+    const start = rawStart as string;
+    const end = rawEnd as string;
+    if (!HHMM_RE.test(start) || !HHMM_RE.test(end)) {
+      return { ok: false, field: 'startTime' };
+    }
+    if (start >= end) {
+      return { ok: false, field: 'endTime' };
+    }
+    return { ok: true, onDate, toDate, startTime: start, endTime: end };
+  }
+  return { ok: true, onDate, toDate, startTime: null, endTime: null };
+}
+
+/** Cap on a single multi-day closure/block range (defensive, ~1 year). */
+const MAX_RANGE_DAYS = 366;
+
+/** Inclusive list of `YYYY-MM-DD` dates from `from` to `to` (capped). */
+function datesInRange(from: string, to: string): string[] {
+  const out: string[] = [];
+  const end = new Date(`${to}T00:00:00Z`).getTime();
+  let cursor = new Date(`${from}T00:00:00Z`).getTime();
+  while (cursor <= end && out.length < MAX_RANGE_DAYS) {
+    out.push(new Date(cursor).toISOString().slice(0, 10));
+    cursor += 86_400_000;
+  }
+  return out;
+}
+
+/** Valid staff roles (mirrors the @salon/shared StaffRole / prisma enum). */
+const STAFF_ROLES = ['Owner', 'Admin', 'Stylist'] as const;
+/** Iranian mobile pattern for an optional staff login phone. */
+const PHONE_RE = /^09\d{9}$/;
+
+/** Flatten a staff row to the owner-UI DTO (identity + role + login + flags). */
+const toStaffDto = (s: {
+  id: string;
+  fullName: string | null;
+  role: string;
+  phone?: string | null;
+  active: boolean;
+  autoApprove?: boolean | null;
+  manageOwnAvailability?: boolean;
+}) => ({
+  id: s.id,
+  fullName: s.fullName,
+  role: s.role,
+  phone: s.phone ?? null,
+  active: s.active,
+  autoApprove: s.autoApprove ?? null,
+  manageOwnAvailability: s.manageOwnAvailability === true,
+});
+
+/** True for a Prisma unique-constraint violation (e.g. a duplicate phone). */
+const isUniqueViolation = (err: unknown): boolean =>
+  typeof err === 'object' && err !== null && (err as { code?: string }).code === 'P2002';
 
 export function adminRouter(services: Services, requireRole: RequireRole): Router {
   const router = Router();
@@ -169,7 +268,106 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     requireRole('manage_appointments'),
     asyncRoute(async (req, res) => {
       const staff = await services.resourceRegistration.listStaff(req.params.id);
-      res.status(200).json({ staff });
+      res.status(200).json({ staff: staff.map((s) => toStaffDto(s)) });
+    }),
+  );
+
+  // Add a staff member to the salon (Owner only). Body: { fullName, role,
+  // phone? }. `role` sets their RBAC access (Owner/Admin/Stylist); an optional
+  // unique `phone` is their OTP login (matched in auth.service → staff JWT).
+  router.post(
+    '/salons/:id/staff',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const fullName = typeof body.fullName === 'string' ? body.fullName.trim() : '';
+      if (!fullName) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'fullName' });
+        return;
+      }
+      const role = body.role;
+      if (typeof role !== 'string' || !STAFF_ROLES.includes(role as (typeof STAFF_ROLES)[number])) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'role' });
+        return;
+      }
+      const rawPhone = typeof body.phone === 'string' ? body.phone.trim() : '';
+      if (rawPhone && !PHONE_RE.test(rawPhone)) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'phone' });
+        return;
+      }
+      try {
+        const created = await services.resourceRegistration.registerStaffMember(
+          req.params.id,
+          fullName,
+          role as (typeof STAFF_ROLES)[number],
+          rawPhone || null,
+        );
+        res.status(201).json({ staff: toStaffDto(created) });
+      } catch (err) {
+        if (isUniqueViolation(err)) {
+          res.status(409).json({ code: 'PHONE_TAKEN', field: 'phone' });
+          return;
+        }
+        throw err;
+      }
+    }),
+  );
+
+  // Update a staff member's identity / role / login / active flag (Owner only).
+  // Body: any subset of { fullName, role, phone, active }. `phone: ""`/null
+  // clears the login; a non-empty value (must be unique) sets it.
+  router.patch(
+    '/staff/:id',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const patch: {
+        fullName?: string;
+        role?: (typeof STAFF_ROLES)[number];
+        phone?: string | null;
+        active?: boolean;
+      } = {};
+
+      if (body.fullName !== undefined) {
+        const fullName = typeof body.fullName === 'string' ? body.fullName.trim() : '';
+        if (!fullName) {
+          res.status(400).json({ code: 'VALIDATION_ERROR', field: 'fullName' });
+          return;
+        }
+        patch.fullName = fullName;
+      }
+      if (body.role !== undefined) {
+        if (
+          typeof body.role !== 'string' ||
+          !STAFF_ROLES.includes(body.role as (typeof STAFF_ROLES)[number])
+        ) {
+          res.status(400).json({ code: 'VALIDATION_ERROR', field: 'role' });
+          return;
+        }
+        patch.role = body.role as (typeof STAFF_ROLES)[number];
+      }
+      if (body.phone !== undefined) {
+        const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
+        if (phone && !PHONE_RE.test(phone)) {
+          res.status(400).json({ code: 'VALIDATION_ERROR', field: 'phone' });
+          return;
+        }
+        patch.phone = phone || null;
+      }
+      if (body.active !== undefined) {
+        patch.active = body.active === true || body.active === 'true';
+      }
+
+      try {
+        const updated = await services.resourceRegistration.updateStaffMember(req.params.id, patch);
+        res.status(200).json({ staff: toStaffDto(updated) });
+      } catch (err) {
+        if (isUniqueViolation(err)) {
+          res.status(409).json({ code: 'PHONE_TAKEN', field: 'phone' });
+          return;
+        }
+        throw err;
+      }
     }),
   );
 
@@ -247,49 +445,35 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     }),
   );
 
-  // Add a closure. Body: { onDate: "YYYY-MM-DD", startTime?: "HH:mm",
-  // endTime?: "HH:mm" }. Times are both-or-neither; omit both for a full-day
-  // closure. endTime must be strictly after startTime.
+  // Add a closure. Body: { onDate: "YYYY-MM-DD", toDate?: "YYYY-MM-DD",
+  // startTime?: "HH:mm", endTime?: "HH:mm" }. Times are both-or-neither; omit
+  // both for a full-day closure. `toDate` (≥ onDate) closes every day in the
+  // range with the same window (a vacation, or a daily window across days).
   router.post(
     '/salons/:id/holidays',
     requireRole('configure_salon'),
     asyncRoute(async (req, res) => {
-      const body = (req.body ?? {}) as Record<string, unknown>;
-      const onDate = body.onDate;
-      if (typeof onDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(onDate)) {
-        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'onDate' });
+      const parsed = parseDateWindow((req.body ?? {}) as Record<string, unknown>);
+      if (!parsed.ok) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: parsed.field });
         return;
       }
-      const rawStart = body.startTime;
-      const rawEnd = body.endTime;
-      const hasStart = typeof rawStart === 'string' && rawStart !== '';
-      const hasEnd = typeof rawEnd === 'string' && rawEnd !== '';
-      // Both-or-neither: a window needs both ends.
-      if (hasStart !== hasEnd) {
-        res
-          .status(400)
-          .json({ code: 'VALIDATION_ERROR', field: hasStart ? 'endTime' : 'startTime' });
-        return;
+      const dates = parsed.toDate ? datesInRange(parsed.onDate, parsed.toDate) : [parsed.onDate];
+      const created = [];
+      for (const d of dates) {
+        created.push(
+          await services.availabilityConfig.addHoliday(
+            req.params.id,
+            d,
+            parsed.startTime,
+            parsed.endTime,
+          ),
+        );
       }
-      if (hasStart) {
-        const start = rawStart as string;
-        const end = rawEnd as string;
-        if (!HHMM_RE.test(start) || !HHMM_RE.test(end)) {
-          res.status(400).json({ code: 'VALIDATION_ERROR', field: 'startTime' });
-          return;
-        }
-        if (start >= end) {
-          res.status(400).json({ code: 'VALIDATION_ERROR', field: 'endTime' });
-          return;
-        }
-      }
-      const created = await services.availabilityConfig.addHoliday(
-        req.params.id,
-        onDate,
-        hasStart ? (rawStart as string) : null,
-        hasEnd ? (rawEnd as string) : null,
-      );
-      res.status(201).json({ holiday: toClosureDto(created) });
+      const holidays = created.map((h) => toClosureDto(h));
+      // Singular `holiday` (first row) kept for backward compatibility; `holidays`
+      // carries every row created for a multi-day range.
+      res.status(201).json({ holiday: holidays[0], holidays });
     }),
   );
 
@@ -300,6 +484,122 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     asyncRoute(async (req, res) => {
       await services.availabilityConfig.removeHoliday(req.params.holidayId);
       res.status(200).json({ ok: true });
+    }),
+  );
+
+  // ── Per-stylist availability blocks (a stylist's own day / hour-range off) ──
+  // Distinct from a salon closure: these affect ONLY the one stylist's calendar.
+  // Owner/Admin may manage any stylist's blocks; a Stylist may manage their OWN
+  // blocks only when the salon has granted them the self-availability permission
+  // (`StaffMember.manageOwnAvailability`). The scheduling engine drops the
+  // stylist (full-day) or carves out their window (partial) from availability.
+  const requireCanManageStaffAvailability: RequestHandler = (req, res, next) => {
+    const principal = req.principal;
+    if (!principal) {
+      res.status(401).json({ code: 'UNAUTHORIZED' });
+      return;
+    }
+    if (!principal.role) {
+      res.status(403).json({ code: 'FORBIDDEN' });
+      return;
+    }
+    // Owner/Admin may manage any stylist's availability (manage_appointments).
+    if (
+      services.authorizer.can(
+        { id: principal.id, role: principal.role, staffMemberId: principal.staffMemberId },
+        'manage_appointments',
+      )
+    ) {
+      next();
+      return;
+    }
+    // Otherwise the caller must be the stylist themselves AND the salon must have
+    // granted them the self-availability permission.
+    if (!principal.staffMemberId || principal.staffMemberId !== req.params.staffId) {
+      res.status(403).json({ code: 'FORBIDDEN' });
+      return;
+    }
+    services.availabilityConfig
+      .getStaffAvailabilityContext(req.params.staffId)
+      .then((ctx) => {
+        if (!ctx) {
+          res.status(404).json({ code: 'NOT_FOUND' });
+          return;
+        }
+        if (!ctx.manageOwnAvailability) {
+          res.status(403).json({ code: 'FORBIDDEN' });
+          return;
+        }
+        next();
+      })
+      .catch(next);
+  };
+
+  router.get(
+    '/staff/:staffId/availability-blocks',
+    requireCanManageStaffAvailability,
+    asyncRoute(async (req, res) => {
+      const blocks = await services.availabilityConfig.getDaysOff(req.params.staffId);
+      res.status(200).json({ blocks: blocks.map((b) => toClosureDto(b)) });
+    }),
+  );
+
+  // Add a block. Body: { onDate: "YYYY-MM-DD", toDate?: "YYYY-MM-DD",
+  // startTime?: "HH:mm", endTime?: "HH:mm" } — omit both times for a full-day
+  // block; `toDate` blocks every day in the range with the same window.
+  router.post(
+    '/staff/:staffId/availability-blocks',
+    requireCanManageStaffAvailability,
+    asyncRoute(async (req, res) => {
+      const parsed = parseDateWindow((req.body ?? {}) as Record<string, unknown>);
+      if (!parsed.ok) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: parsed.field });
+        return;
+      }
+      const dates = parsed.toDate ? datesInRange(parsed.onDate, parsed.toDate) : [parsed.onDate];
+      const created = [];
+      for (const d of dates) {
+        created.push(
+          await services.availabilityConfig.addDayOff(
+            req.params.staffId,
+            d,
+            parsed.startTime,
+            parsed.endTime,
+          ),
+        );
+      }
+      const blocks = created.map((b) => toClosureDto(b));
+      res.status(201).json({ block: blocks[0], blocks });
+    }),
+  );
+
+  // Remove a block by id (scoped to the staff member so a stylist can never
+  // delete another's block via a guessed id).
+  router.delete(
+    '/staff/:staffId/availability-blocks/:blockId',
+    requireCanManageStaffAvailability,
+    asyncRoute(async (req, res) => {
+      const removed = await services.availabilityConfig.removeDayOffForStaff(
+        req.params.blockId,
+        req.params.staffId,
+      );
+      if (!removed) {
+        res.status(404).json({ code: 'NOT_FOUND' });
+        return;
+      }
+      res.status(200).json({ ok: true });
+    }),
+  );
+
+  // Grant or revoke a stylist's permission to manage their OWN availability
+  // (Owner only). Body: { allowed: boolean }.
+  router.post(
+    '/staff/:id/manage-availability',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const allowed = req.body?.allowed === true || req.body?.allowed === 'true';
+      await services.availabilityConfig.setStaffManageOwnAvailability(req.params.id, allowed);
+      res.status(200).json({ ok: true, allowed });
     }),
   );
 

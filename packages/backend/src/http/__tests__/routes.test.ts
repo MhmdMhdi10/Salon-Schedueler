@@ -53,6 +53,7 @@ function makeServices() {
     calendarService: {
       getSalonCalendar: jest.fn().mockResolvedValue([]),
       getStaffCalendar: jest.fn().mockResolvedValue([]),
+      getAppointmentById: jest.fn(),
     },
     analyticsService: {
       chairUtilization: jest
@@ -68,6 +69,15 @@ function makeServices() {
     },
     availabilityConfig: {
       setSalonBrandAccent: jest.fn().mockResolvedValue(undefined),
+      getDaysOff: jest.fn().mockResolvedValue([]),
+      addDayOff: jest
+        .fn()
+        .mockResolvedValue({ id: 'block-1', onDate: '2026-07-15', startTime: null, endTime: null }),
+      removeDayOffForStaff: jest.fn().mockResolvedValue(true),
+      getStaffAvailabilityContext: jest
+        .fn()
+        .mockResolvedValue({ salonId: 'salon-1', manageOwnAvailability: false }),
+      setStaffManageOwnAvailability: jest.fn().mockResolvedValue(undefined),
     },
     qrService: {
       buildSalonQrResponse: jest
@@ -409,22 +419,161 @@ describe('HTTP routes', () => {
     });
   });
 
-  // ── Cancel (protected) ───────────────────────────────────────────────────────
+  // ── Cancel (protected: owning customer OR managing staff) ────────────────────
   describe('POST /api/appointments/:id/cancel', () => {
-    it('calls cancellationFlow.cancel and returns 200', async () => {
-      fake.cancellationFlow.cancel.mockResolvedValue({
+    const cancelled = {
+      id: 'appt-1',
+      salonId: 'salon-1',
+      startAt: new Date('2024-03-15T10:00:00.000Z'),
+      endAt: new Date('2024-03-15T11:00:00.000Z'),
+      status: 'cancelled',
+    };
+
+    it('lets the owning customer cancel their booking and returns 200', async () => {
+      fake.calendarService.getAppointmentById.mockResolvedValue({
         id: 'appt-1',
         salonId: 'salon-1',
-        startAt: new Date('2024-03-15T10:00:00.000Z'),
-        endAt: new Date('2024-03-15T11:00:00.000Z'),
-        status: 'cancelled',
+        customerId: 'cust-1',
+        staffMemberId: 'staff-1',
       });
+      fake.cancellationFlow.cancel.mockResolvedValue(cancelled);
       const res = await request(app)
         .post('/api/appointments/appt-1/cancel')
-        .set('Authorization', `Bearer ${customerToken()}`);
+        .set('Authorization', `Bearer ${customerToken('cust-1')}`);
       expect(res.status).toBe(200);
       expect(res.body.status).toBe('cancelled');
       expect(fake.cancellationFlow.cancel).toHaveBeenCalledWith('appt-1');
+    });
+
+    it('forbids a different customer from cancelling another customer booking (403)', async () => {
+      fake.calendarService.getAppointmentById.mockResolvedValue({
+        id: 'appt-1',
+        salonId: 'salon-1',
+        customerId: 'cust-1',
+        staffMemberId: 'staff-1',
+      });
+      const res = await request(app)
+        .post('/api/appointments/appt-1/cancel')
+        .set('Authorization', `Bearer ${customerToken('cust-2')}`);
+      expect(res.status).toBe(403);
+      expect(res.body).toEqual({ code: 'FORBIDDEN' });
+      expect(fake.cancellationFlow.cancel).not.toHaveBeenCalled();
+    });
+
+    it('lets managing staff (Owner) cancel any salon booking and returns 200', async () => {
+      fake.calendarService.getAppointmentById.mockResolvedValue({
+        id: 'appt-1',
+        salonId: 'salon-1',
+        customerId: 'cust-9',
+        staffMemberId: 'staff-1',
+      });
+      fake.cancellationFlow.cancel.mockResolvedValue(cancelled);
+      const res = await request(app)
+        .post('/api/appointments/appt-1/cancel')
+        .set('Authorization', `Bearer ${staffToken('Owner')}`);
+      expect(res.status).toBe(200);
+      expect(fake.cancellationFlow.cancel).toHaveBeenCalledWith('appt-1');
+    });
+
+    it('returns 404 when the appointment does not exist', async () => {
+      fake.calendarService.getAppointmentById.mockResolvedValue(null);
+      const res = await request(app)
+        .post('/api/appointments/missing/cancel')
+        .set('Authorization', `Bearer ${customerToken('cust-1')}`);
+      expect(res.status).toBe(404);
+      expect(fake.cancellationFlow.cancel).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── Staff availability blocks (stylist self-service, salon-granted) ──────────
+  describe('POST /api/staff/:staffId/availability-blocks', () => {
+    it('lets an Owner add a block for any stylist (201)', async () => {
+      const res = await request(app)
+        .post('/api/staff/staff-x/availability-blocks')
+        .set('Authorization', `Bearer ${staffToken('Owner')}`)
+        .send({ onDate: '2026-07-15' });
+      expect(res.status).toBe(201);
+      expect(fake.availabilityConfig.addDayOff).toHaveBeenCalled();
+    });
+
+    it('lets a granted Stylist block their OWN time (201)', async () => {
+      fake.availabilityConfig.getStaffAvailabilityContext.mockResolvedValue({
+        salonId: 'salon-1',
+        manageOwnAvailability: true,
+      });
+      const res = await request(app)
+        .post('/api/staff/staff-Stylist-1/availability-blocks')
+        .set('Authorization', `Bearer ${staffToken('Stylist')}`)
+        .send({ onDate: '2026-07-15', startTime: '12:00', endTime: '13:00' });
+      expect(res.status).toBe(201);
+      expect(fake.availabilityConfig.addDayOff).toHaveBeenCalledWith(
+        'staff-Stylist-1',
+        '2026-07-15',
+        '12:00',
+        '13:00',
+      );
+    });
+
+    it('forbids a Stylist who was NOT granted the permission (403)', async () => {
+      fake.availabilityConfig.getStaffAvailabilityContext.mockResolvedValue({
+        salonId: 'salon-1',
+        manageOwnAvailability: false,
+      });
+      const res = await request(app)
+        .post('/api/staff/staff-Stylist-1/availability-blocks')
+        .set('Authorization', `Bearer ${staffToken('Stylist')}`)
+        .send({ onDate: '2026-07-15' });
+      expect(res.status).toBe(403);
+      expect(fake.availabilityConfig.addDayOff).not.toHaveBeenCalled();
+    });
+
+    it('forbids a Stylist managing another stylist (403)', async () => {
+      const res = await request(app)
+        .post('/api/staff/staff-OTHER/availability-blocks')
+        .set('Authorization', `Bearer ${staffToken('Stylist')}`)
+        .send({ onDate: '2026-07-15' });
+      expect(res.status).toBe(403);
+      expect(fake.availabilityConfig.addDayOff).not.toHaveBeenCalled();
+    });
+
+    it('forbids a customer (403)', async () => {
+      const res = await request(app)
+        .post('/api/staff/staff-Stylist-1/availability-blocks')
+        .set('Authorization', `Bearer ${customerToken()}`)
+        .send({ onDate: '2026-07-15' });
+      expect(res.status).toBe(403);
+    });
+
+    it('validates the date (400)', async () => {
+      const res = await request(app)
+        .post('/api/staff/staff-x/availability-blocks')
+        .set('Authorization', `Bearer ${staffToken('Owner')}`)
+        .send({ onDate: 'not-a-date' });
+      expect(res.status).toBe(400);
+    });
+  });
+
+  // ── Owner grant of a stylist's self-availability permission ──────────────────
+  describe('POST /api/staff/:id/manage-availability', () => {
+    it('allows an Owner to grant the permission (200)', async () => {
+      const res = await request(app)
+        .post('/api/staff/staff-x/manage-availability')
+        .set('Authorization', `Bearer ${staffToken('Owner')}`)
+        .send({ allowed: true });
+      expect(res.status).toBe(200);
+      expect(fake.availabilityConfig.setStaffManageOwnAvailability).toHaveBeenCalledWith(
+        'staff-x',
+        true,
+      );
+    });
+
+    it('forbids an Admin (configure_salon is Owner-only) (403)', async () => {
+      const res = await request(app)
+        .post('/api/staff/staff-x/manage-availability')
+        .set('Authorization', `Bearer ${staffToken('Admin')}`)
+        .send({ allowed: true });
+      expect(res.status).toBe(403);
+      expect(fake.availabilityConfig.setStaffManageOwnAvailability).not.toHaveBeenCalled();
     });
   });
 

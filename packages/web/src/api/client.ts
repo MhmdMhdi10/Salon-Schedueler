@@ -362,7 +362,7 @@ export const adminApi = {
     request<{ utilization: unknown; revenue: unknown; busiestWindows: unknown }>(
       `/salons/${salonId}/analytics?from=${from}&to=${to}`,
     ),
-  getStaff: (salonId: string) => request<{ staff: unknown[] }>(`/salons/${salonId}/staff`),
+  getStaff: (salonId: string) => request<{ staff: SalonStaff[] }>(`/salons/${salonId}/staff`),
   getChairs: (salonId: string) => request<{ chairs: unknown[] }>(`/salons/${salonId}/chairs`),
   /** The salon's bookings awaiting approval, oldest first (manage_appointments). */
   getPending: (salonId: string) =>
@@ -375,6 +375,17 @@ export const adminApi = {
   /** Reject a pending appointment (manage_appointments — Owner/Admin). */
   rejectAppointment: (appointmentId: string) =>
     request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/reject`, {
+      method: 'POST',
+    }),
+  /**
+   * Cancel a confirmed/held appointment from the calendar. The backend releases
+   * the staff + chair, applies the deposit refund/retain policy, and notifies
+   * the customer. Authorized for managing staff (Owner/Admin any salon booking;
+   * a Stylist only their own) — the route also allows the owning customer for
+   * self-service cancellation.
+   */
+  cancelAppointment: (appointmentId: string) =>
+    request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/cancel`, {
       method: 'POST',
     }),
 };
@@ -394,6 +405,8 @@ export interface ApprovalPolicyStaff {
   role: string;
   /** null = inherit the salon default; true/false = explicit override. */
   autoApprove: boolean | null;
+  /** Whether the salon has granted this stylist self-availability management. */
+  manageOwnAvailability: boolean;
 }
 
 /** The salon's approval policy (default + per-stylist overrides). */
@@ -475,6 +488,8 @@ export interface SalonClosure {
 /** Payload for adding a closure: a full day (omit times) or an hour-range. */
 export interface SalonClosureInput {
   onDate: string;
+  /** Optional end of a multi-day range (≥ onDate); same window applies daily. */
+  toDate?: string | null;
   startTime?: string | null;
   endTime?: string | null;
 }
@@ -484,13 +499,113 @@ export const holidaysApi = {
   list: (salonId: string) => request<{ holidays: SalonClosure[] }>(`/salons/${salonId}/holidays`),
   /** Add a closure. Omit both times for a full-day closure. */
   add: (salonId: string, input: SalonClosureInput) =>
-    request<{ holiday: SalonClosure }>(`/salons/${salonId}/holidays`, {
-      method: 'POST',
-      body: input,
-    }),
+    request<{ holiday: SalonClosure; holidays?: SalonClosure[] }>(
+      `/salons/${salonId}/holidays`,
+      {
+        method: 'POST',
+        body: input,
+      },
+    ),
   /** Remove a closure by id. */
   remove: (salonId: string, holidayId: string) =>
     request<{ ok: boolean }>(`/salons/${salonId}/holidays/${holidayId}`, {
       method: 'DELETE',
+    }),
+};
+
+// ─── Per-stylist availability blocks (a stylist's own day / hour-range off) ──
+// Distinct from a salon closure: a block affects ONLY that stylist's calendar.
+// Owner/Admin may manage any stylist's blocks; a Stylist may manage their OWN
+// blocks only when the salon has granted the permission (manageOwnAvailability).
+// The block shape mirrors SalonClosure (full-day when both times are null).
+//   GET    /staff/:staffId/availability-blocks            → { blocks }
+//   POST   /staff/:staffId/availability-blocks            (body { onDate, startTime?, endTime? })
+//   DELETE /staff/:staffId/availability-blocks/:blockId   → { ok }
+//   POST   /staff/:staffId/manage-availability            (body { allowed })  — Owner-only grant
+
+export const staffAvailabilityApi = {
+  /**
+   * List a stylist's own availability blocks. For a stylist this succeeds only
+   * when the salon has granted them the permission (otherwise 403) — the calendar
+   * uses that to decide whether to show the self-block affordance.
+   */
+  list: (staffId: string) =>
+    request<{ blocks: SalonClosure[] }>(`/staff/${staffId}/availability-blocks`),
+  /** Add a block for the stylist. Omit both times for a full-day block. */
+  add: (staffId: string, input: SalonClosureInput) =>
+    request<{ block: SalonClosure; blocks?: SalonClosure[] }>(
+      `/staff/${staffId}/availability-blocks`,
+      {
+        method: 'POST',
+        body: input,
+      },
+    ),
+  /** Remove one of the stylist's blocks by id. */
+  remove: (staffId: string, blockId: string) =>
+    request<{ ok: boolean }>(`/staff/${staffId}/availability-blocks/${blockId}`, {
+      method: 'DELETE',
+    }),
+  /** Owner grant/revoke of a stylist's self-availability permission. */
+  setManageOwn: (staffId: string, allowed: boolean) =>
+    request<{ ok: boolean; allowed: boolean }>(`/staff/${staffId}/manage-availability`, {
+      method: 'POST',
+      body: { allowed },
+    }),
+};
+
+// ─── Staff / user management (add a stylist, admin, or owner) ────────────────
+// Owner-only staff CRUD. A staff member has a role (RBAC access) and an optional
+// unique login phone: setting the phone lets that person sign in via OTP and
+// receive a staff JWT with this role (auth.service findStaffClaimsByPhone). The
+// granular permission flags (autoApprove, manageOwnAvailability) are managed by
+// the approval-policy + staff-availability surfaces, not here.
+//   GET   /salons/:salonId/staff   → { staff }
+//   POST  /salons/:salonId/staff   (body { fullName, role, phone? })  → { staff }
+//   PATCH /staff/:staffId          (body subset { fullName, role, phone, active }) → { staff }
+
+/** Staff RBAC role. */
+export type StaffRole = 'Owner' | 'Admin' | 'Stylist';
+
+/** A salon staff member as the owner UI sees it. */
+export interface SalonStaff {
+  id: string;
+  fullName: string | null;
+  role: StaffRole;
+  /** OTP login phone, or null (no login). */
+  phone: string | null;
+  active: boolean;
+  /** Approval-policy override (null = inherit the salon default). */
+  autoApprove: boolean | null;
+  /** Whether the salon granted this stylist self-availability management. */
+  manageOwnAvailability: boolean;
+}
+
+export interface StaffCreateInput {
+  fullName: string;
+  role: StaffRole;
+  /** Optional unique login phone (`09xxxxxxxxx`); omit for a non-login record. */
+  phone?: string | null;
+}
+
+export interface StaffUpdateInput {
+  fullName?: string;
+  role?: StaffRole;
+  /** `null`/empty clears the login; a non-empty value sets it (must be unique). */
+  phone?: string | null;
+  active?: boolean;
+}
+
+export const staffApi = {
+  /** Add a staff member (Owner only). Returns the created record. */
+  create: (salonId: string, input: StaffCreateInput) =>
+    request<{ staff: SalonStaff }>(`/salons/${salonId}/staff`, {
+      method: 'POST',
+      body: input,
+    }),
+  /** Update a staff member's identity / role / login / active flag (Owner only). */
+  update: (staffId: string, patch: StaffUpdateInput) =>
+    request<{ staff: SalonStaff }>(`/staff/${staffId}`, {
+      method: 'PATCH',
+      body: patch,
     }),
 };

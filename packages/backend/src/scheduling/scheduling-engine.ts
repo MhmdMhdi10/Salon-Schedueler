@@ -175,19 +175,45 @@ export class SchedulingEngine {
       return [];
     }
 
-    // 5. Filter staff by days off (R4.4)
-    const daysOff = await this.prisma.dayOff.findMany({
+    // 5. Filter staff by days off (R4.4). A day-off with no time window removes
+    //    the stylist for the WHOLE day; one with a [startTime,endTime) window
+    //    only blocks that part of the stylist's day (a per-staff partial block).
+    const daysOff = (await this.prisma.dayOff.findMany({
       where: {
         staffMemberId: { in: staffWithHours.map((s) => s.id) },
         onDate: targetDate,
       },
-    });
+      // Cast: the checked-in Prisma client may predate the additive
+      // start_time/end_time columns; the entrypoint regenerates before build.
+    })) as unknown as Array<{
+      staffMemberId: string;
+      startTime: Date | null;
+      endTime: Date | null;
+    }>;
 
-    const staffOnDayOff = new Set(daysOff.map((d) => d.staffMemberId));
-    const availableStaff = staffWithHours.filter((s) => !staffOnDayOff.has(s.id));
+    const staffFullDayOff = new Set(
+      daysOff
+        .filter((d) => d.startTime == null || d.endTime == null)
+        .map((d) => d.staffMemberId),
+    );
+    const availableStaff = staffWithHours.filter((s) => !staffFullDayOff.has(s.id));
 
     if (availableStaff.length === 0) {
       return [];
+    }
+
+    // Per-staff partial blocks: absolute [start,end) windows carved out of a
+    // specific stylist's availability on this date (full-day blocks already
+    // removed the stylist above). Times share the WorkingHours nominal clock.
+    const staffBlockWindows = new Map<string, { start: Date; end: Date }[]>();
+    for (const d of daysOff) {
+      if (d.startTime == null || d.endTime == null) continue;
+      const windows = staffBlockWindows.get(d.staffMemberId) ?? [];
+      windows.push({
+        start: this.timeToAbsolute(d.startTime, date),
+        end: this.timeToAbsolute(d.endTime, date),
+      });
+      staffBlockWindows.set(d.staffMemberId, windows);
     }
 
     // 6. Resolve compatible chair set (R6.3)
@@ -330,6 +356,7 @@ export class SchedulingEngine {
         candidateStart,
         candidateEnd,
         date,
+        staffBlockWindows,
       );
 
       if (!staffFree) {
@@ -468,19 +495,46 @@ export class SchedulingEngine {
       return { status: 'rejected', reason: 'no_availability' };
     }
 
-    // Filter by days off
-    const daysOff = await this.prisma.dayOff.findMany({
+    // Filter by days off. A full-day block (no time window) removes the stylist
+    // entirely; a partial block carves a per-staff window enforced against the
+    // requested interval below.
+    const daysOff = (await this.prisma.dayOff.findMany({
       where: {
         staffMemberId: { in: staffWithHours.map((s) => s.id) },
         onDate: targetDate,
       },
-    });
-    const staffOnDayOff = new Set(daysOff.map((d) => d.staffMemberId));
-    const availableStaff = staffWithHours.filter((s) => !staffOnDayOff.has(s.id));
+    })) as unknown as Array<{
+      staffMemberId: string;
+      startTime: Date | null;
+      endTime: Date | null;
+    }>;
+    const staffFullDayOff = new Set(
+      daysOff
+        .filter((d) => d.startTime == null || d.endTime == null)
+        .map((d) => d.staffMemberId),
+    );
+    const availableStaff = staffWithHours.filter((s) => !staffFullDayOff.has(s.id));
 
     if (availableStaff.length === 0) {
       return { status: 'rejected', reason: 'no_availability' };
     }
+
+    // Stylists whose own partial block overlaps the requested interval are
+    // disqualified (only their availability is affected, not the salon's).
+    const staffPartialBlocked = new Set(
+      daysOff
+        .filter((d) => d.startTime != null && d.endTime != null)
+        .filter((d) =>
+          intervalsOverlap(
+            { start: startAt, end: endAt },
+            {
+              start: this.timeToAbsolute(d.startTime as Date, date),
+              end: this.timeToAbsolute(d.endTime as Date, date),
+            },
+          ),
+        )
+        .map((d) => d.staffMemberId),
+    );
 
     // 5. Resolve compatible chairs (equipment match ∩ active ∩ working hours ∩ ¬unavailable)
     const requiredEquipmentIds = service.serviceEquipment.map((se) => se.equipmentId);
@@ -565,7 +619,7 @@ export class SchedulingEngine {
       startAt,
       endAt,
       date,
-    );
+    ).filter((id) => !staffPartialBlocked.has(id));
 
     const freeChairs = this.getFreeChairIds(
       chairsWithHours.map((c) => c.id),
@@ -952,6 +1006,7 @@ export class SchedulingEngine {
     candidateStart: Date,
     candidateEnd: Date,
     date: string,
+    staffBlockWindows?: Map<string, { start: Date; end: Date }[]>,
   ): boolean {
     for (const staffId of staffIds) {
       const hours = staffHoursMap.get(staffId) ?? [];
@@ -964,6 +1019,16 @@ export class SchedulingEngine {
       });
 
       if (!fitsInWindow) {
+        continue;
+      }
+
+      // Skip this stylist if the interval overlaps one of their own partial
+      // availability blocks (a self-service hour-range block).
+      const blocks = staffBlockWindows?.get(staffId) ?? [];
+      const isBlocked = blocks.some((b) =>
+        intervalsOverlap({ start: candidateStart, end: candidateEnd }, b),
+      );
+      if (isBlocked) {
         continue;
       }
 

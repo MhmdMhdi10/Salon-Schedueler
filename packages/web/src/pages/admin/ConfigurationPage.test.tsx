@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import '../../i18n';
 import { ConfigurationPage } from './ConfigurationPage';
-import { adminApi, salonApi, ApiError } from '../../api/client';
+import { adminApi, salonApi, staffApi, ApiError, type SalonStaff } from '../../api/client';
 
 /**
  * Component tests for the admin ConfigurationPage.
@@ -33,6 +33,13 @@ vi.mock('../../api/client', () => {
     salonApi: {
       getServices: vi.fn(),
     },
+    staffApi: {
+      create: vi.fn(),
+      update: vi.fn().mockResolvedValue({ staff: {} }),
+    },
+    staffAvailabilityApi: {
+      setManageOwn: vi.fn().mockResolvedValue({ ok: true, allowed: false }),
+    },
     approvalPolicyApi: {
       get: vi.fn().mockResolvedValue({ autoApprove: false, staff: [] }),
       setSalon: vi.fn().mockResolvedValue({ ok: true, autoApprove: false }),
@@ -41,6 +48,11 @@ vi.mock('../../api/client', () => {
     brandAccentApi: {
       get: vi.fn().mockResolvedValue({ brandAccent: null }),
       set: vi.fn().mockResolvedValue({ ok: true, brandAccent: null }),
+    },
+    holidaysApi: {
+      list: vi.fn().mockResolvedValue({ holidays: [] }),
+      add: vi.fn().mockResolvedValue({ holiday: {} }),
+      remove: vi.fn().mockResolvedValue({ ok: true }),
     },
   };
 });
@@ -65,7 +77,7 @@ afterEach(() => {
 
 describe('ConfigurationPage', () => {
   it('shows a loading state and then renders staff, chairs, and services from the API', async () => {
-    const staffD = deferred<{ staff: unknown[] }>();
+    const staffD = deferred<{ staff: SalonStaff[] }>();
     const chairsD = deferred<{ chairs: unknown[] }>();
     const servicesD =
       deferred<{ services: Array<{ id: string; name: string; durationMinutes: number; priceRial: number }> }>();
@@ -87,7 +99,28 @@ describe('ConfigurationPage', () => {
     expect(adminApi.getChairs).toHaveBeenCalledWith('salon-9');
     expect(salonApi.getServices).toHaveBeenCalledWith('salon-9');
 
-    staffD.resolve({ staff: [{ id: 's1', name: 'سارا' }, { id: 's2', name: 'Mina' }] });
+    staffD.resolve({
+      staff: [
+        {
+          id: 's1',
+          fullName: 'سارا',
+          role: 'Stylist',
+          phone: null,
+          active: true,
+          autoApprove: null,
+          manageOwnAvailability: false,
+        },
+        {
+          id: 's2',
+          fullName: 'Mina',
+          role: 'Admin',
+          phone: null,
+          active: true,
+          autoApprove: null,
+          manageOwnAvailability: false,
+        },
+      ],
+    });
     chairsD.resolve({ chairs: [{ id: 'c1', name: 'Chair 1' }] });
     servicesD.resolve({
       services: [{ id: 'sv1', name: 'Haircut', durationMinutes: 30, priceRial: 500000 }],
@@ -102,7 +135,7 @@ describe('ConfigurationPage', () => {
   });
 
   it('shows an error state when a list fails to load', async () => {
-    const staffD = deferred<{ staff: unknown[] }>();
+    const staffD = deferred<{ staff: SalonStaff[] }>();
     vi.mocked(adminApi.getStaff).mockReturnValue(staffD.promise);
     vi.mocked(adminApi.getChairs).mockResolvedValue({ chairs: [] });
     vi.mocked(salonApi.getServices).mockResolvedValue({ services: [] });
@@ -144,13 +177,29 @@ describe('ConfigurationPage', () => {
     expect(screen.getByText('هنوز صندلی‌ای ثبت نشده')).toBeTruthy();
 
     // Inline add: typing a staff name and submitting appends a list item.
+    vi.mocked(staffApi.create).mockResolvedValue({
+      staff: {
+        id: 's-new',
+        fullName: 'سارا',
+        role: 'Stylist',
+        phone: null,
+        active: true,
+        autoApprove: null,
+        manageOwnAvailability: false,
+      },
+    });
     const nameInput = screen.getByLabelText('نام کارمند');
     fireEvent.change(nameInput, { target: { value: 'سارا' } });
     fireEvent.click(screen.getByRole('button', { name: 'افزودن کارمند' }));
 
     await waitFor(() =>
-      expect(within(screen.getByTestId('staff-list')).getByText('سارا')).toBeTruthy()
+      expect(within(screen.getByTestId('staff-list')).getByText('سارا')).toBeTruthy(),
     );
+    expect(staffApi.create).toHaveBeenCalledWith('salon-9', {
+      fullName: 'سارا',
+      role: 'Stylist',
+      phone: null,
+    });
   });
 
   it('shows the Rial price for services with grouped Persian digits', async () => {
@@ -174,10 +223,8 @@ describe('ConfigurationPage', () => {
   });
 
   it('confirms a destructive delete and offers an undo toast', async () => {
-    vi.mocked(adminApi.getStaff).mockResolvedValue({
-      staff: [{ id: 's1', name: 'سارا' }],
-    });
-    vi.mocked(adminApi.getChairs).mockResolvedValue({ chairs: [] });
+    vi.mocked(adminApi.getStaff).mockResolvedValue({ staff: [] });
+    vi.mocked(adminApi.getChairs).mockResolvedValue({ chairs: [{ id: 'c1', name: 'سارا' }] });
     vi.mocked(salonApi.getServices).mockResolvedValue({ services: [] });
 
     render(
@@ -189,7 +236,7 @@ describe('ConfigurationPage', () => {
     );
 
     await waitFor(() =>
-      expect(within(screen.getByTestId('staff-list')).getByText('سارا')).toBeTruthy()
+      expect(within(screen.getByTestId('chairs-list')).getByText('سارا')).toBeTruthy()
     );
 
     // Destructive action requires confirmation (ui-ux §1 forgiveness).
@@ -199,14 +246,14 @@ describe('ConfigurationPage', () => {
 
     // Item removed, and an undo toast («بازگردانی») is offered.
     await waitFor(() =>
-      expect(within(screen.getByTestId('staff-list')).queryByText('سارا')).toBeNull()
+      expect(within(screen.getByTestId('chairs-list')).queryByText('سارا')).toBeNull()
     );
     const undo = await screen.findByRole('button', { name: 'بازگردانی' });
 
     // Undo restores the item.
     fireEvent.click(undo);
     await waitFor(() =>
-      expect(within(screen.getByTestId('staff-list')).getByText('سارا')).toBeTruthy()
+      expect(within(screen.getByTestId('chairs-list')).getByText('سارا')).toBeTruthy()
     );
   });
 });

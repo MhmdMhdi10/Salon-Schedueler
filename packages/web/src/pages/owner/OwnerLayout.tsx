@@ -4,6 +4,7 @@ import { Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { OwnerShell } from '../../components/layout';
 import { RouteLoader } from '../../components/layout/RouteLoader';
 import { SeoHead } from '../../components/seo';
+import { useAuth } from '../../auth/AuthContext';
 import {
   bootstrapAuth,
   getAccessToken,
@@ -41,6 +42,7 @@ type OwnerAuthState =
 export function OwnerLayout() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { signOut: signOutSession } = useAuth();
   const [state, setState] = useState<OwnerAuthState>({ phase: 'loading' });
 
   useEffect(() => {
@@ -74,7 +76,14 @@ export function OwnerLayout() {
   }, []);
 
   const handleSignOut = () => {
-    clearSession();
+    // Clear the *app-wide* session through AuthContext (it drops the tokens and
+    // flips the shared auth state to anonymous). The shell header outside the
+    // owner panel — `HeaderAuthNav`, which reads `useAuth()` — then immediately
+    // shows the signed-out state. Calling the api `clearSession()` directly here
+    // (the previous behaviour) only dropped the tokens, so the context stayed
+    // "authenticated" and the header kept showing «خروج» / the account nav until
+    // a full reload.
+    signOutSession();
     navigate('/auth');
   };
 

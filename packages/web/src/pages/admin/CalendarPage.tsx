@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
+  Ban,
   CalendarDays,
+  CalendarOff,
   CalendarX2,
   ChevronLeft,
   ChevronRight,
@@ -10,23 +12,33 @@ import {
   User,
   Scissors,
 } from 'lucide-react';
-import { adminApi } from '../../api/client';
+import { adminApi, holidaysApi, staffAvailabilityApi, type SalonClosure } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { gregorianToJalali, jalaliToGregorian, getJalaliMonthName } from '@salon/shared';
 import { SeoHead } from '../../components/seo';
 import {
   Badge,
   Button,
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
   EmptyState,
   ErrorState,
   JalaliDate,
+  JalaliDatePicker,
   Num,
+  Select,
   Skeleton,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
+  TextField,
+  ToastProvider,
   cn,
+  useToast,
   type BadgeStatus,
 } from '../../components/ui';
 
@@ -159,6 +171,36 @@ function dateKey(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+/**
+ * Decorative diagonal-line hatch overlay marking a closed/blocked area. It fills
+ * its (positioned) parent, is `aria-hidden`, and takes its line color from the
+ * current text color (pass a token color via `className`, e.g. `text-danger`).
+ */
+function Hatch({ className }: { className?: string }) {
+  const id = useId().replace(/:/g, '');
+  return (
+    <span
+      aria-hidden="true"
+      className={cn('pointer-events-none absolute inset-0 overflow-hidden text-muted', className)}
+    >
+      <svg className="h-full w-full" preserveAspectRatio="none">
+        <defs>
+          <pattern
+            id={`hatch-${id}`}
+            width="7"
+            height="7"
+            patternUnits="userSpaceOnUse"
+            patternTransform="rotate(45)"
+          >
+            <line x1="0" y1="0" x2="0" y2="7" stroke="currentColor" strokeWidth="1.5" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill={`url(#hatch-${id})`} />
+      </svg>
+    </span>
+  );
+}
+
 interface MonthDayCell {
   date: Date;
   jd: number;
@@ -262,9 +304,11 @@ function AppointmentBlock({
   showDate?: boolean;
 }) {
   const { t } = useTranslation();
-  const [actionStatus, setActionStatus] = useState<'idle' | 'approving' | 'rejecting' | 'error'>(
-    'idle',
-  );
+  const { success, error: toastError } = useToast();
+  const [actionStatus, setActionStatus] = useState<
+    'idle' | 'approving' | 'rejecting' | 'cancelling' | 'error'
+  >('idle');
+  const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
   const start = clockTime(appt.startAt);
   const end = clockTime(appt.endAt);
   const service = appt.serviceName ?? t('admin.calendarPage.untitledService');
@@ -272,7 +316,14 @@ function AppointmentBlock({
   // Managers may act, but only on a still-pending appointment.
   const normalizedStatus = (appt.status ?? '').toLowerCase().replace(/[^a-z]/g, '');
   const showActions = canManage && normalizedStatus === 'pending';
-  const busy = actionStatus === 'approving' || actionStatus === 'rejecting';
+  // A confirmed/held booking can be cancelled by a manager. A pending one uses
+  // reject instead; cancelled/completed/no-show are terminal (no cancel).
+  const showCancel =
+    canManage && (normalizedStatus === 'confirmed' || normalizedStatus === 'held');
+  const busy =
+    actionStatus === 'approving' ||
+    actionStatus === 'rejecting' ||
+    actionStatus === 'cancelling';
 
   const runAction = async (kind: 'approve' | 'reject') => {
     setActionStatus(kind === 'approve' ? 'approving' : 'rejecting');
@@ -287,6 +338,21 @@ function AppointmentBlock({
     } catch {
       // R5.6: surface a friendly inline message, never a raw HTTP/stack code.
       setActionStatus('error');
+    }
+  };
+
+  const runCancel = async () => {
+    setActionStatus('cancelling');
+    try {
+      await adminApi.cancelAppointment(appt.id);
+      setConfirmCancelOpen(false);
+      setActionStatus('idle');
+      success({ title: t('admin.calendarPage.cancelSuccess') });
+      onChanged?.();
+    } catch {
+      // Keep the dialog open so the manager can retry; friendly message only.
+      setActionStatus('error');
+      toastError({ title: t('admin.calendarPage.cancelError') });
     }
   };
 
@@ -364,6 +430,59 @@ function AppointmentBlock({
           )}
         </div>
       )}
+
+      {showCancel && (
+        <div className="mt-1 flex flex-col gap-1">
+          <Button
+            size="md"
+            variant="ghost"
+            startIcon={<Ban className="h-4 w-4" />}
+            loading={actionStatus === 'cancelling'}
+            disabled={busy}
+            onClick={() => setConfirmCancelOpen(true)}
+            data-testid="appt-cancel"
+          >
+            {t('admin.calendarPage.cancel')}
+          </Button>
+
+          <Dialog
+            open={confirmCancelOpen}
+            onOpenChange={(open) => {
+              if (!busy) setConfirmCancelOpen(open);
+            }}
+          >
+            <DialogContent>
+              <DialogTitle>{t('admin.calendarPage.cancelConfirmTitle')}</DialogTitle>
+              <DialogDescription>
+                {t('admin.calendarPage.cancelConfirmBody', { service })}
+              </DialogDescription>
+              <div className="mt-4 flex flex-wrap justify-end gap-2">
+                <DialogClose asChild>
+                  <Button variant="ghost" size="md" disabled={busy}>
+                    {t('admin.calendarPage.cancelDismiss')}
+                  </Button>
+                </DialogClose>
+                <Button
+                  variant="danger"
+                  size="md"
+                  loading={actionStatus === 'cancelling'}
+                  disabled={busy}
+                  onClick={() => void runCancel()}
+                  data-testid="appt-cancel-confirm"
+                >
+                  {t('admin.calendarPage.cancelConfirm')}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {actionStatus === 'error' && (
+            <p role="alert" className="text-danger">
+              {t('admin.calendarPage.cancelError')}
+            </p>
+          )}
+        </div>
+      )}
     </article>
   );
 }
@@ -377,16 +496,37 @@ function DayGrid({
   appointments,
   canManage,
   onChanged,
+  closedFull = false,
+  windows = [],
 }: {
   appointments: Appointment[];
   canManage?: boolean;
   onChanged?: () => void;
+  /** Whole day is closed (every hour hatched). */
+  closedFull?: boolean;
+  /** Partial-hour blocked windows ("HH:mm") for this day. */
+  windows?: { start: string; end: string }[];
 }) {
   const { t } = useTranslation();
   const staff = useMemo(() => deriveStaff(appointments), [appointments]);
   const gridRef = useRef<HTMLDivElement>(null);
   const [focusRow, setFocusRow] = useState(0);
   const [focusCol, setFocusCol] = useState(0);
+
+  /** Whether a given hour [hour:00, hour+1:00) is within a blocked window. */
+  const isHourBlocked = useCallback(
+    (hour: number): boolean => {
+      if (closedFull) return true;
+      const hStart = hour * 60;
+      const hEnd = (hour + 1) * 60;
+      return windows.some((w) => {
+        const [sh, sm] = w.start.split(':').map(Number);
+        const [eh, em] = w.end.split(':').map(Number);
+        return sh * 60 + sm < hEnd && eh * 60 + em > hStart;
+      });
+    },
+    [closedFull, windows],
+  );
 
   /** Map appointments into a [hour][staffIndex] structure. */
   const cellMap = useMemo(() => {
@@ -502,15 +642,17 @@ function DayGrid({
                   tabIndex={isFocused ? 0 : -1}
                   data-row={rowIdx}
                   data-col={colIdx}
+                  data-blocked={isHourBlocked(hour) || undefined}
                   aria-label={`${String(hour).padStart(2, '0')}:00, ${staff[colIdx]}`}
                   className={cn(
-                    'min-h-[3.5rem] border-b border-border p-1',
+                    'relative min-h-[3.5rem] overflow-hidden border-b border-border p-1',
                     'outline-none focus-visible:outline focus-visible:outline-2',
                     'focus-visible:outline-offset-[-2px] focus-visible:outline-focus',
                     'transition-colors duration-fast ease-standard',
                     colIdx < staff.length - 1 && 'border-e border-border',
                   )}
                 >
+                  {isHourBlocked(hour) && <Hatch className="text-danger/50" />}
                   {cellAppts.map((appt) => (
                     <AppointmentBlock
                       key={appt.id}
@@ -650,10 +792,16 @@ function MonthGrid({
   appointments,
   monthAnchor,
   onSelectDay,
+  closedDates,
+  partialDates,
 }: {
   appointments: Appointment[];
   monthAnchor: Date;
   onSelectDay: (date: Date) => void;
+  /** `YYYY-MM-DD` days that are fully closed (hatched). */
+  closedDates?: Set<string>;
+  /** `YYYY-MM-DD` days with a partial-hour block (marked). */
+  partialDates?: Set<string>;
 }) {
   const { t } = useTranslation();
   const todayKey = dateKey(new Date());
@@ -703,6 +851,8 @@ function MonthGrid({
             );
           }
           const isToday = cell.key === todayKey;
+          const isClosed = closedDates?.has(cell.key) ?? false;
+          const isPartial = !isClosed && (partialDates?.has(cell.key) ?? false);
           const shown = cell.items.slice(0, 2);
           const overflow = cell.items.length - shown.length;
           return (
@@ -710,26 +860,38 @@ function MonthGrid({
               key={cell.key}
               type="button"
               onClick={() => onSelectDay(cell.date)}
-              aria-label={t('admin.calendarPage.month.dayLabel', {
-                count: cell.items.length,
-              })}
+              data-closed={isClosed || undefined}
+              aria-label={
+                isClosed
+                  ? t('admin.calendarPage.month.closedDayLabel')
+                  : t('admin.calendarPage.month.dayLabel', { count: cell.items.length })
+              }
               className={cn(
-                'flex min-h-[4.5rem] flex-col gap-1 rounded-md border p-1 text-start sm:min-h-[6rem]',
+                'relative flex min-h-[4.5rem] flex-col gap-1 overflow-hidden rounded-md border p-1 text-start sm:min-h-[6rem]',
                 'transition-colors duration-fast ease-standard hover:bg-elevated',
                 'outline-none focus-visible:outline focus-visible:outline-2',
                 'focus-visible:outline-offset-2 focus-visible:outline-focus',
                 isToday ? 'border-primary bg-surface' : 'border-border',
               )}
             >
-              <span
-                className={cn(
-                  'text-xs font-medium tabular-nums',
-                  isToday ? 'text-primary' : 'text-text',
+              {isClosed && <Hatch className="text-danger/60" />}
+              <span className="relative flex items-center justify-between gap-1">
+                <span
+                  className={cn(
+                    'text-xs font-medium tabular-nums',
+                    isToday ? 'text-primary' : 'text-text',
+                  )}
+                >
+                  <Num value={cell.jd} />
+                </span>
+                {(isClosed || isPartial) && (
+                  <CalendarOff
+                    className={cn('h-3.5 w-3.5 shrink-0', isClosed ? 'text-danger' : 'text-warning')}
+                    aria-hidden="true"
+                  />
                 )}
-              >
-                <Num value={cell.jd} />
               </span>
-              <span className="flex flex-col gap-0.5">
+              <span className="relative flex flex-col gap-0.5">
                 {shown.map((appt) => {
                   const norm = (appt.status ?? '').toLowerCase().replace(/[^a-z]/g, '');
                   const isPending = norm === 'pending' || norm === 'held';
@@ -1038,7 +1200,180 @@ function PendingApprovalsPanel({
   );
 }
 
-export function CalendarPage({ salonId: salonIdProp }: { salonId?: string }) {
+/**
+ * A "block a date" dialog launched from the calendar toolbar — either a full-day
+ * block or an hour-range (e.g. a midday break / early close). Used for BOTH the
+ * Owner's salon-wide closure and a granted stylist's own-availability block; the
+ * caller supplies the labels and the `onSubmit` that calls the right API. The
+ * scheduling engine then drops those slots from availability and rejects direct
+ * bookings. Mirrors the Configuration closures form's validation.
+ */
+function ClosureDialog({
+  defaultDate,
+  open,
+  onOpenChange,
+  title,
+  description,
+  submitLabel,
+  successTitle,
+  failTitle,
+  onSubmit,
+}: {
+  defaultDate: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description: string;
+  submitLabel: string;
+  successTitle: string;
+  failTitle: string;
+  onSubmit: (input: {
+    onDate: string;
+    toDate: string | null;
+    startTime: string | null;
+    endTime: string | null;
+  }) => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const { success, error: toastError } = useToast();
+  const [date, setDate] = useState(defaultDate);
+  const [toDate, setToDate] = useState('');
+  const [mode, setMode] = useState<'full' | 'range'>('full');
+  const [start, setStart] = useState('');
+  const [end, setEnd] = useState('');
+  const [formError, setFormError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // Re-seed the form each time the dialog opens (the viewed day may have changed).
+  useEffect(() => {
+    if (open) {
+      setDate(defaultDate);
+      setToDate('');
+      setMode('full');
+      setStart('');
+      setEnd('');
+      setFormError('');
+    }
+  }, [open, defaultDate]);
+
+  const modeOptions = useMemo(
+    () => [
+      { value: 'full', label: t('admin.config.closures.modeFull') },
+      { value: 'range', label: t('admin.config.closures.modeRange') },
+    ],
+    [t],
+  );
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError('');
+    if (!date) {
+      setFormError(t('admin.config.closures.dateRequired'));
+      return;
+    }
+    if (toDate && toDate < date) {
+      setFormError(t('admin.config.closures.invalidDateRange'));
+      return;
+    }
+    const isRange = mode === 'range';
+    if (isRange) {
+      if (!start || !end) {
+        setFormError(t('admin.config.closures.timeRequired'));
+        return;
+      }
+      if (start >= end) {
+        setFormError(t('admin.config.closures.invalidRange'));
+        return;
+      }
+    }
+    setSaving(true);
+    try {
+      await onSubmit({
+        onDate: date,
+        toDate: toDate || null,
+        startTime: isRange ? start : null,
+        endTime: isRange ? end : null,
+      });
+      success({ title: successTitle });
+      onOpenChange(false);
+    } catch {
+      toastError({ title: failTitle });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!saving) onOpenChange(next);
+      }}
+    >
+      <DialogContent>
+        <DialogTitle>{title}</DialogTitle>
+        <DialogDescription>{description}</DialogDescription>
+        <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
+          <JalaliDatePicker
+            label={t('admin.config.closures.fromDateLabel')}
+            value={date || null}
+            onChange={(iso) => setDate(iso)}
+          />
+          <JalaliDatePicker
+            label={t('admin.config.closures.toDateLabel')}
+            value={toDate || null}
+            min={date || null}
+            onChange={(iso) => setToDate(iso)}
+            helperText={t('admin.config.closures.toDateHelper')}
+          />
+          <Select
+            label={t('admin.config.closures.modeLabel')}
+            value={mode}
+            onValueChange={(v) => setMode(v as 'full' | 'range')}
+            options={modeOptions}
+          />
+          {mode === 'range' && (
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <TextField
+                type="time"
+                dir="ltr"
+                label={t('admin.config.closures.startLabel')}
+                value={start}
+                onChange={(e) => setStart(e.target.value)}
+                containerClassName="sm:flex-1"
+              />
+              <TextField
+                type="time"
+                dir="ltr"
+                label={t('admin.config.closures.endLabel')}
+                value={end}
+                onChange={(e) => setEnd(e.target.value)}
+                containerClassName="sm:flex-1"
+              />
+            </div>
+          )}
+          {formError && (
+            <p role="alert" className="text-sm text-danger">
+              {formError}
+            </p>
+          )}
+          <div className="mt-1 flex flex-wrap justify-end gap-2">
+            <DialogClose asChild>
+              <Button type="button" variant="ghost" size="md" disabled={saving}>
+                {t('admin.calendarPage.cancelDismiss')}
+              </Button>
+            </DialogClose>
+            <Button type="submit" variant="primary" size="md" loading={saving} disabled={saving}>
+              {submitLabel}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CalendarPageContent({ salonId: salonIdProp }: { salonId?: string }) {
   const { t } = useTranslation();
   const params = useParams<{ salonId?: string }>();
   const salonId = salonIdProp ?? params.salonId ?? DEFAULT_SALON_ID;
@@ -1048,8 +1383,22 @@ export function CalendarPage({ salonId: salonIdProp }: { salonId?: string }) {
   // already scoped to the stylist server-side, and the backend re-checks
   // ownership on approve/reject). Customers/anonymous (no role) get no
   // management affordances.
-  const { isStaff } = useAuth();
+  const { isStaff, role, principal } = useAuth();
   const canManage = isStaff;
+  // Declaring closures (a full-day holiday or an hour-range block) is an
+  // Owner-only salon-configuration capability (configure_salon), so only Owners
+  // get the "declare closure" affordance in the calendar.
+  const canConfigure = role === 'Owner';
+  // A Stylist may block their OWN day/hours only when the salon has granted the
+  // permission. Detect it by attempting to read their own blocks: the endpoint
+  // 200s only when granted (403 otherwise), so it doubles as the capability probe.
+  const staffMemberId = principal?.staffMemberId;
+  const isStylist = role === 'Stylist';
+  const [canSelfBlock, setCanSelfBlock] = useState(false);
+  const [selfBlockOpen, setSelfBlockOpen] = useState(false);
+  // Closed days / blocked windows to hatch on the calendar. For an Owner these
+  // are the salon closures; for a granted Stylist, their own availability blocks.
+  const [blocked, setBlocked] = useState<SalonClosure[]>([]);
 
   const [view, setView] = useState<CalendarView>('month');
   const [status, setStatus] = useState<LoadStatus>('loading');
@@ -1060,9 +1409,73 @@ export function CalendarPage({ salonId: salonIdProp }: { salonId?: string }) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfIranianWeek(new Date()));
   // Bumped by the retry action to re-run the load effect.
   const [reloadToken, setReloadToken] = useState(0);
+  // Controls the "declare closure" dialog (Owner-only).
+  const [closureOpen, setClosureOpen] = useState(false);
 
-  /** Refetch after an approve/reject so the grid reflects the new status. */
+  /** Refetch after an approve/reject/cancel so the grid reflects the change. */
   const onChanged = useCallback(() => setReloadToken((n) => n + 1), []);
+
+  // Load the blocked windows to hatch on the calendar: salon closures for an
+  // Owner; the stylist's own blocks otherwise (which also probes the
+  // self-availability grant — the list 200s only when granted, else 403).
+  useEffect(() => {
+    let active = true;
+    const apply = (list: SalonClosure[]) => {
+      if (active) setBlocked(list);
+    };
+    if (canConfigure) {
+      holidaysApi
+        .list(salonId)
+        .then((r) => apply(r.holidays))
+        .catch(() => apply([]));
+    } else if (isStylist && staffMemberId) {
+      staffAvailabilityApi
+        .list(staffMemberId)
+        .then((r) => {
+          if (!active) return;
+          setCanSelfBlock(true);
+          setBlocked(r.blocks);
+        })
+        .catch(() => {
+          if (!active) return;
+          setCanSelfBlock(false);
+          setBlocked([]);
+        });
+    } else {
+      apply([]);
+    }
+    return () => {
+      active = false;
+    };
+  }, [canConfigure, isStylist, staffMemberId, salonId, reloadToken]);
+
+  // Closed days (full-day) and partial-window blocks, keyed by `YYYY-MM-DD`.
+  const { closedDates, partialDates, windowsByDate } = useMemo(() => {
+    const closed = new Set<string>();
+    const partial = new Set<string>();
+    const windows = new Map<string, { start: string; end: string }[]>();
+    for (const b of blocked) {
+      if (b.startTime && b.endTime) {
+        partial.add(b.onDate);
+        const arr = windows.get(b.onDate) ?? [];
+        arr.push({ start: b.startTime, end: b.endTime });
+        windows.set(b.onDate, arr);
+      } else {
+        closed.add(b.onDate);
+      }
+    }
+    return { closedDates: closed, partialDates: partial, windowsByDate: windows };
+  }, [blocked]);
+
+  // Prefill the closure dialog's date with the day in view (day view only); the
+  // owner can still change it. Month/week open with an empty date field.
+  const closureDefaultDate = useMemo(() => {
+    if (view !== 'day') return '';
+    const y = anchor.getFullYear();
+    const m = String(anchor.getMonth() + 1).padStart(2, '0');
+    const d = String(anchor.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }, [view, anchor]);
 
   /** Navigate the date anchor. dir: -1 = back, +1 = forward, 0 = today. */
   const handleNavigate = useCallback(
@@ -1129,7 +1542,7 @@ export function CalendarPage({ salonId: salonIdProp }: { salonId?: string }) {
           data-testid="calendar-appointments"
           aria-label={t('admin.calendarPage.appointmentsLabel')}
         >
-          {appointments.length === 0 ? (
+          {appointments.length === 0 && blocked.length === 0 ? (
             <EmptyState
               data-testid="calendar-empty"
               icon={<CalendarX2 className="h-8 w-8" />}
@@ -1140,13 +1553,21 @@ export function CalendarPage({ salonId: salonIdProp }: { salonId?: string }) {
             <MonthGrid
               appointments={appointments}
               monthAnchor={anchor}
+              closedDates={closedDates}
+              partialDates={partialDates}
               onSelectDay={(d) => {
                 setAnchor(d);
                 setView('day');
               }}
             />
           ) : view === 'day' ? (
-            <DayGrid appointments={appointments} canManage={canManage} onChanged={onChanged} />
+            <DayGrid
+              appointments={appointments}
+              canManage={canManage}
+              onChanged={onChanged}
+              closedFull={closedDates.has(dateKey(anchor))}
+              windows={windowsByDate.get(dateKey(anchor)) ?? []}
+            />
           ) : (
             <WeekGrid
               appointments={appointments}
@@ -1187,13 +1608,80 @@ export function CalendarPage({ salonId: salonIdProp }: { salonId?: string }) {
             <TabsTrigger value="day">{t('admin.calendarPage.dayTab')}</TabsTrigger>
           </TabsList>
 
-          <DateNav view={view} anchor={anchor} onNavigate={handleNavigate} />
+          <div className="flex flex-wrap items-center gap-2">
+            {canConfigure && (
+              <Button
+                variant="secondary"
+                size="md"
+                startIcon={<CalendarOff className="h-4 w-4" />}
+                onClick={() => setClosureOpen(true)}
+                data-testid="calendar-declare-closure"
+              >
+                {t('admin.calendarPage.closure.cta')}
+              </Button>
+            )}
+            {!canConfigure && canSelfBlock && (
+              <Button
+                variant="secondary"
+                size="md"
+                startIcon={<CalendarOff className="h-4 w-4" />}
+                onClick={() => setSelfBlockOpen(true)}
+                data-testid="calendar-self-block"
+              >
+                {t('admin.calendarPage.selfBlock.cta')}
+              </Button>
+            )}
+            <DateNav view={view} anchor={anchor} onNavigate={handleNavigate} />
+          </div>
         </div>
 
         <TabsContent value="month">{body}</TabsContent>
         <TabsContent value="week">{body}</TabsContent>
         <TabsContent value="day">{body}</TabsContent>
       </Tabs>
+
+      {canConfigure && (
+        <ClosureDialog
+          open={closureOpen}
+          onOpenChange={setClosureOpen}
+          defaultDate={closureDefaultDate}
+          title={t('admin.calendarPage.closure.title')}
+          description={t('admin.calendarPage.closure.body')}
+          submitLabel={t('admin.config.closures.addCta')}
+          successTitle={t('admin.config.closures.added')}
+          failTitle={t('admin.config.closures.addFailed')}
+          onSubmit={(input) => holidaysApi.add(salonId, input).then(() => onChanged())}
+        />
+      )}
+
+      {!canConfigure && canSelfBlock && staffMemberId && (
+        <ClosureDialog
+          open={selfBlockOpen}
+          onOpenChange={setSelfBlockOpen}
+          defaultDate={closureDefaultDate}
+          title={t('admin.calendarPage.selfBlock.title')}
+          description={t('admin.calendarPage.selfBlock.body')}
+          submitLabel={t('admin.calendarPage.selfBlock.addCta')}
+          successTitle={t('admin.calendarPage.selfBlock.added')}
+          failTitle={t('admin.calendarPage.selfBlock.addFailed')}
+          onSubmit={(input) =>
+            staffAvailabilityApi.add(staffMemberId, input).then(() => onChanged())
+          }
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * Public entry point. Hosts its own {@link ToastProvider} so the cancel /
+ * closure confirmations work whether the calendar is mounted standalone (as in
+ * the component tests) or inside the owner shell.
+ */
+export function CalendarPage({ salonId }: { salonId?: string }) {
+  return (
+    <ToastProvider>
+      <CalendarPageContent salonId={salonId} />
+    </ToastProvider>
   );
 }

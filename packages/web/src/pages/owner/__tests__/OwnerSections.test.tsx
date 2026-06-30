@@ -74,6 +74,21 @@ vi.mock('../../../api/client', () => {
       get: vi.fn().mockResolvedValue({ brandAccent: null }),
       set: vi.fn().mockResolvedValue({ ok: true, brandAccent: null }),
     },
+    holidaysApi: {
+      list: vi.fn().mockResolvedValue({ holidays: [] }),
+      add: vi.fn().mockResolvedValue({ holiday: {} }),
+      remove: vi.fn().mockResolvedValue({ ok: true }),
+    },
+    staffApi: {
+      create: vi.fn().mockResolvedValue({ staff: {} }),
+      update: vi.fn().mockResolvedValue({ staff: {} }),
+    },
+    staffAvailabilityApi: {
+      list: vi.fn().mockResolvedValue({ blocks: [] }),
+      add: vi.fn().mockResolvedValue({ block: {} }),
+      remove: vi.fn().mockResolvedValue({ ok: true }),
+      setManageOwn: vi.fn().mockResolvedValue({ ok: true, allowed: false }),
+    },
   };
 });
 
