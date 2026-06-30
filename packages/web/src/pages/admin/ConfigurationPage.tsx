@@ -28,6 +28,7 @@ import {
   type StaffRole,
   type StaffUpdateInput,
 } from '../../api/client';
+import { useSalonId } from '../../auth/useSalonId';
 import { SeoHead } from '../../components/seo';
 import { TenantTheme } from '../../components/theme';
 import { ACCENTS } from '../owner/marketing-assets';
@@ -95,8 +96,6 @@ import {
  * An admin route is private and must never be indexed; `<SeoHead>` (noindex
  * default) emits `noindex,follow` (seo §1, R8.7).
  */
-
-const DEFAULT_SALON_ID = '11111111-1111-1111-1111-111111111111';
 
 type LoadStatus = 'loading' | 'success' | 'error';
 
@@ -1301,7 +1300,8 @@ function ConfigurationPageContent({ salonId: salonIdProp }: { salonId?: string }
   const { t } = useTranslation();
   const params = useParams<{ salonId?: string }>();
   const { success } = useToast();
-  const salonId = salonIdProp ?? params.salonId ?? DEFAULT_SALON_ID;
+  const sessionSalonId = useSalonId();
+  const salonId = salonIdProp ?? params.salonId ?? sessionSalonId;
 
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [error, setError] = useState('');

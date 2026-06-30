@@ -96,7 +96,10 @@ describe('ThemeProvider', () => {
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
   });
 
-  it('falls back to prefers-color-scheme when no stored choice exists', () => {
+  it('defaults to light even when the OS prefers dark (no auto-follow)', () => {
+    // A Persian beauty/salon storefront should land on the warm porcelain
+    // palette every time regardless of the visitor's OS scheme — users opt in
+    // to dark via the explicit toggle (the choice then persists).
     mockMatchMedia(true); // OS prefers dark, nothing stored.
 
     render(
@@ -105,9 +108,9 @@ describe('ThemeProvider', () => {
       </ThemeProvider>,
     );
 
-    expect(screen.getByTestId('theme')).toHaveTextContent('dark');
+    expect(screen.getByTestId('theme')).toHaveTextContent('light');
     expect(screen.getByTestId('explicit')).toHaveTextContent('false');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
   });
 
   it('defaults to light when nothing is stored and the OS prefers light', () => {
@@ -133,11 +136,15 @@ describe('ThemeProvider', () => {
       </ThemeProvider>,
     );
 
-    // jsdom can't resolve the CSS var, so the mirrored fallback applies.
-    expect(getThemeColorMeta()).toBe('#0b0f1a');
+    // jsdom can't resolve the CSS var, so the mirrored fallback applies — the
+    // rosé-noir dark `--color-bg`.
+    expect(getThemeColorMeta()).toBe('#1A1117');
   });
 
-  it('follows OS changes until the user makes an explicit choice', () => {
+  it('does NOT auto-follow OS scheme changes (visitor must opt in)', () => {
+    // The OS-follow listener was intentionally removed so a dark-OS visitor
+    // never sees a stark night-mode brand on first paint and a system flip
+    // can never silently override the warm porcelain default.
     const media = mockMatchMedia(false);
 
     render(
@@ -148,8 +155,8 @@ describe('ThemeProvider', () => {
     expect(screen.getByTestId('theme')).toHaveTextContent('light');
 
     act(() => media.emit(true));
-    expect(screen.getByTestId('theme')).toHaveTextContent('dark');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    expect(screen.getByTestId('theme')).toHaveTextContent('light');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
   });
 
   it('stops following the OS once a choice is persisted', () => {

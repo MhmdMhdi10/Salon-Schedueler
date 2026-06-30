@@ -24,6 +24,7 @@ import { makeRbac } from './middleware/rbac.js';
 import { healthRouter } from './routes/health.routes.js';
 import { authRouter } from './routes/auth.routes.js';
 import { salonRouter } from './routes/salon.routes.js';
+import { registrationRouter } from './routes/registration.routes.js';
 import { appointmentRouter } from './routes/appointment.routes.js';
 import { cardOrderRouter } from './routes/card-order.routes.js';
 import { paymentInitiateRouter, paymentCallbackRouter } from './routes/payment.routes.js';
@@ -143,6 +144,10 @@ export function buildApp(opts: BuildAppOptions): Express {
   // They are mounted under /api (the client base path) except /healthz.
   app.use(healthRouter());
   app.use('/api', authRouter(services));
+  // Public salon self-registration (creates salon + Owner + trial). Mounted
+  // before the protected router so an owner can sign their salon up without an
+  // account; they then sign in via OTP with the phone they registered.
+  app.use('/api', registrationRouter(services));
   app.use('/api', salonRouter(services, optionalAuth));
   app.use('/api', paymentCallbackRouter(services));
   // Bot webhooks: public (no requireAuth), guarded by a webhook-secret path

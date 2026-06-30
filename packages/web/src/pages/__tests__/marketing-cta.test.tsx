@@ -100,7 +100,7 @@ describe('Hero CTA prominence and routing (R3.1, R3.6)', () => {
       expect(heroPrimaryCtas).toHaveLength(1);
     });
 
-    it('hero primary CTA routes to /owner (sign-up entry) with no interstitial', () => {
+    it('hero primary CTA routes to /business/register (sign-up entry) with no interstitial', () => {
       const { getByTestId } = renderBusiness();
       const root = getByTestId('business-landing');
       const hero = root.querySelector('[data-hero]');
@@ -108,7 +108,7 @@ describe('Hero CTA prominence and routing (R3.1, R3.6)', () => {
       const primaryCta = hero!.querySelector('[data-cta="primary"]');
       expect(primaryCta).not.toBeNull();
       // Direct link — no interstitial, no confirmation dialog
-      expect(primaryCta!.getAttribute('href')).toBe('/owner');
+      expect(primaryCta!.getAttribute('href')).toBe('/business/register');
       // It's a plain <a> (rendered by react-router Link) — no button wrapping
       expect(primaryCta!.tagName.toLowerCase()).toBe('a');
     });

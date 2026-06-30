@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Percent, Wallet, Clock, BarChart3 } from 'lucide-react';
 import { adminApi } from '../../api/client';
+import { useSalonId } from '../../auth/useSalonId';
 import { SeoHead } from '../../components/seo';
 import {
   Card,
@@ -49,8 +50,6 @@ import type { ChartDatum } from './AnalyticsChart';
  * An admin route is private and must never be indexed; `<SeoHead>` (noindex
  * default) emits `noindex,follow` (seo §1, R8.7).
  */
-
-const DEFAULT_SALON_ID = '11111111-1111-1111-1111-111111111111';
 
 type LoadStatus = 'loading' | 'success' | 'error';
 
@@ -212,7 +211,8 @@ function AnalyticsSkeleton() {
 export function AnalyticsPage({ salonId: salonIdProp }: { salonId?: string }) {
   const { t } = useTranslation();
   const params = useParams<{ salonId?: string }>();
-  const salonId = salonIdProp ?? params.salonId ?? DEFAULT_SALON_ID;
+  const sessionSalonId = useSalonId();
+  const salonId = salonIdProp ?? params.salonId ?? sessionSalonId;
 
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [error, setError] = useState('');

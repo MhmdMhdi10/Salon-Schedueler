@@ -12,10 +12,16 @@ import {
  * Light/dark theming for the PWA (R1.8, R3.3, R3.4, R11.4).
  *
  * Resolution order on first load: stored user choice (`localStorage`) →
- * OS `prefers-color-scheme` → light default. The active theme is written as
- * `data-theme` on `<html>` (the hook the token stylesheet and Tailwind's
- * `darkMode: ['class','[data-theme="dark"]']` config key off), and the
- * `<meta name="theme-color">` is kept in sync so the PWA chrome matches.
+ * **light default**. The OS `prefers-color-scheme` is intentionally **not**
+ * auto-followed: a Persian beauty/salon storefront should land on the warm
+ * porcelain palette every time regardless of the visitor's OS scheme (so a
+ * dark-OS visitor doesn't see a stark night-mode brand on first paint).
+ * Users opt in to dark via the explicit toggle, and that choice persists.
+ *
+ * The active theme is written as `data-theme` on `<html>` (the hook the token
+ * stylesheet and Tailwind's `darkMode: ['class','[data-theme="dark"]']` config
+ * key off), and the `<meta name="theme-color">` is kept in sync so the PWA
+ * chrome matches.
  *
  * Switching themes only swaps CSS custom properties, so all token-driven
  * styling updates immediately with **no reload and no layout shift** — nothing
@@ -32,11 +38,12 @@ export const THEME_STORAGE_KEY = 'salon-theme';
  * Fallback `theme-color` values used only when the `--color-bg` token can't be
  * read from the cascade (e.g. jsdom in tests, or before styles load). They
  * mirror the `--color-bg` token in `styles/tokens.css` (light `:root`, dark
- * `[data-theme="dark"]`) so the PWA chrome matches the page background.
+ * `[data-theme="dark"]`) so the PWA chrome matches the page background. The
+ * dark fallback tracks the salon-luxe rosé-noir bg.
  */
 const FALLBACK_THEME_COLOR: Record<Theme, string> = {
   light: '#ffffff',
-  dark: '#0b0f1a',
+  dark: '#1A1117',
 };
 
 interface ThemeContextValue {
@@ -65,18 +72,11 @@ function readStoredTheme(): Theme | null {
   }
 }
 
-function getSystemTheme(): Theme {
-  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : 'light';
-  }
-  return 'light';
-}
-
-/** localStorage → prefers-color-scheme → light. */
+/** localStorage → light. The OS `prefers-color-scheme` is intentionally not
+ * consulted; a dark-OS visitor still lands on the warm porcelain palette on
+ * first paint and only flips to dark if they explicitly toggle. */
 function resolveInitialTheme(): Theme {
-  return readStoredTheme() ?? getSystemTheme();
+  return readStoredTheme() ?? 'light';
 }
 
 /** Apply the theme to `<html>` and keep `<meta name="theme-color">` in sync. */
@@ -122,25 +122,9 @@ export function ThemeProvider({ children, defaultTheme }: ThemeProviderProps) {
     applyTheme(theme);
   }, [theme]);
 
-  // While the user hasn't chosen, follow OS changes live (R3.4).
-  useEffect(() => {
-    if (hasExplicitChoice) return;
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function')
-      return;
-
-    const query = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (event: MediaQueryListEvent) => {
-      setThemeState(event.matches ? 'dark' : 'light');
-    };
-
-    // addEventListener is the modern API; some engines only have addListener.
-    if (typeof query.addEventListener === 'function') {
-      query.addEventListener('change', handleChange);
-      return () => query.removeEventListener('change', handleChange);
-    }
-    query.addListener(handleChange);
-    return () => query.removeListener(handleChange);
-  }, [hasExplicitChoice]);
+  // We intentionally do NOT subscribe to `prefers-color-scheme` changes (see
+  // the module doc): a dark-OS visitor stays on the warm porcelain palette and
+  // only flips when they explicitly toggle.
 
   const setTheme = useCallback((next: Theme) => {
     setThemeState(next);

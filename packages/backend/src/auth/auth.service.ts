@@ -14,11 +14,13 @@ export interface AuthTokens {
 /**
  * Staff identity claims embedded in a token when the authenticated phone maps
  * to an active staff member. `role` drives the RBAC matrix; `staffMemberId` is
- * used for Stylist "own only" ownership checks.
+ * used for Stylist "own only" ownership checks; `salonId` lets the owner panel
+ * scope every read/write to the staff member's own salon (no hard-coded salon).
  */
 interface StaffClaims {
   role: string;
   staffMemberId: string;
+  salonId: string;
 }
 
 /**
@@ -206,7 +208,12 @@ export class AuthService {
       const role = typeof payload.role === 'string' ? payload.role : undefined;
       const staffMemberId =
         typeof payload.staffMemberId === 'string' ? payload.staffMemberId : undefined;
-      const staff = role && staffMemberId ? { role, staffMemberId } : undefined;
+      const salonId =
+        typeof payload.salonId === 'string' ? payload.salonId : undefined;
+      const staff =
+        role && staffMemberId && salonId
+          ? { role, staffMemberId, salonId }
+          : undefined;
       return this.issueTokens(payload.sub, staff);
     } catch (err) {
       if (err instanceof AuthError) {
@@ -243,12 +250,12 @@ export class AuthService {
   ): Promise<StaffClaims | undefined> {
     const staff = await this.prisma.staffMember.findFirst({
       where: { phone, active: true },
-      select: { id: true, role: true },
+      select: { id: true, role: true, salonId: true },
     });
     if (!staff) {
       return undefined;
     }
-    return { role: staff.role, staffMemberId: staff.id };
+    return { role: staff.role, staffMemberId: staff.id, salonId: staff.salonId };
   }
 
   /**
@@ -261,7 +268,11 @@ export class AuthService {
    */
   private issueTokens(customerId: string, staff?: StaffClaims): AuthTokens {
     const staffClaims = staff
-      ? { role: staff.role, staffMemberId: staff.staffMemberId }
+      ? {
+          role: staff.role,
+          staffMemberId: staff.staffMemberId,
+          salonId: staff.salonId,
+        }
       : {};
 
     const accessToken = jwt.sign(

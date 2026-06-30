@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { cn } from '../ui/cn';
 
 /**
@@ -69,6 +70,9 @@ export function Motif({
   className,
   'aria-hidden': ariaHidden = true,
 }: MotifProps) {
+  // A document-unique id so the band gradient never collides when several
+  // motifs render on one page (SVG paint-server refs are document-global).
+  const uid = useId().replace(/:/g, '');
   const common = {
     className: cn(className),
     'aria-hidden': ariaHidden,
@@ -77,26 +81,39 @@ export function Motif({
   };
 
   if (variant === 'band') {
-    // A wide divider: a row of small flowers stepping across the strip,
-    // alternating their vertical nudge so the band reads as an organic arc.
-    const count = 7;
-    const step = 48;
+    // An elegant centered flourish: a single petal-arc flower over a hairline
+    // that fades at both ends, framed by two small accent beads. Reads as a
+    // refined section divider — not the old row of repeated marks.
+    const fadeId = `motif-band-fade-${uid}`;
     return (
       <svg
         {...common}
-        viewBox={`0 0 ${count * step} 48`}
+        viewBox="0 0 320 48"
         preserveAspectRatio="xMidYMid meet"
         data-motif="band"
       >
-        {Array.from({ length: count }, (_, i) => (
-          <g
-            key={`band-flower-${i}`}
-            transform={`translate(${i * step} 0) scale(0.9)`}
-            opacity={i % 2 === 0 ? 1 : 0.8}
-          >
-            <Flower idPrefix={`band-${i}`} />
+        <defs>
+          <linearGradient id={fadeId} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="var(--color-accent)" stopOpacity="0" />
+            <stop
+              offset="0.5"
+              stopColor="var(--color-accent)"
+              stopOpacity="0.55"
+            />
+            <stop offset="1" stopColor="var(--color-accent)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {/* Hairline that fades toward both edges, passing behind the flower. */}
+        <rect x="16" y="23" width="288" height="2" rx="1" fill={`url(#${fadeId})`} />
+        {/* Flanking accent beads. */}
+        <circle cx="112" cy="24" r="2" fill="var(--color-accent)" opacity="0.85" />
+        <circle cx="208" cy="24" r="2" fill="var(--color-accent)" opacity="0.85" />
+        {/* Centered flower. */}
+        <g transform="translate(160 24) scale(0.92)">
+          <g transform="translate(-24 -24)">
+            <Flower idPrefix={`band-${uid}`} />
           </g>
-        ))}
+        </g>
       </svg>
     );
   }

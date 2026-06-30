@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import {
   Check,
   Copy,
   Download,
   Image as ImageIcon,
+  Lock,
   Package,
   Printer,
   Sparkles,
@@ -17,7 +18,9 @@ import {
   salonApi,
   type SalonQrResponse,
 } from '../../api/client';
+import { useSalonId } from '../../auth/useSalonId';
 import { SeoHead } from '../../components/seo';
+import { Motif } from '../../components/brand';
 import {
   Button,
   Card,
@@ -47,10 +50,7 @@ import { StylistQrGallery } from './StylistQrGallery';
 
 import './owner-qr.css';
 
-/** Default salon scope (mirrors the other owner/admin sections). */
-const DEFAULT_SALON_ID = '11111111-1111-1111-1111-111111111111';
-
-type LoadStatus = 'loading' | 'success' | 'error';
+type LoadStatus = 'loading' | 'success' | 'error' | 'locked';
 type OrderStatus = 'idle' | 'submitting' | 'success' | 'error';
 
 /** A bookable stylist for the QR target selector. */
@@ -200,7 +200,8 @@ function QrSkeleton() {
 export function OwnerQrPage() {
   const { t } = useTranslation();
   const params = useParams<{ salonId?: string }>();
-  const salonId = params.salonId ?? DEFAULT_SALON_ID;
+  const sessionSalonId = useSalonId();
+  const salonId = params.salonId ?? sessionSalonId;
 
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [error, setError] = useState('');
@@ -244,6 +245,13 @@ export function OwnerQrPage() {
       })
       .catch((err: unknown) => {
         if (!active) return;
+        // Barcode generation is gated behind a paid subscription: the backend
+        // answers 402 SUBSCRIPTION_REQUIRED for a salon on trial/expired. Show
+        // the "subscribe to unlock" gate instead of a generic error.
+        if (err instanceof ApiError && err.status === 402) {
+          setStatus('locked');
+          return;
+        }
         setError(err instanceof ApiError ? err.message : t('owner.qr.errorTitle'));
         setStatus('error');
       });
@@ -393,6 +401,42 @@ export function OwnerQrPage() {
           retryLabel={t('owner.qr.retry')}
           onRetry={() => setReloadToken((n) => n + 1)}
         />
+      )}
+
+      {status === 'locked' && (
+        <Card
+          as="section"
+          data-testid="qr-subscription-gate"
+          elevated
+          className="relative flex flex-col items-center gap-4 overflow-hidden text-center"
+        >
+          <Motif
+            variant="watermark"
+            className="pointer-events-none absolute -top-6 -end-6 h-40 w-40"
+          />
+          <span
+            className="relative flex h-14 w-14 items-center justify-center rounded-pill bg-primary/10 text-primary"
+            aria-hidden="true"
+          >
+            <Lock className="h-7 w-7" />
+          </span>
+          <CardTitle as="h2" className="relative text-lg font-bold text-text">
+            {t('owner.qr.gate.title')}
+          </CardTitle>
+          <p className="relative max-w-prose text-sm text-muted">
+            {t('owner.qr.gate.body')}
+          </p>
+          <Link
+            to="/owner/subscription"
+            className="relative inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md bg-primary px-5 py-3 text-md font-medium text-primary-contrast no-underline shadow-1 transition-colors duration-fast ease-standard hover:brightness-110 active:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          >
+            <Sparkles className="h-4 w-4" aria-hidden="true" />
+            {t('owner.qr.gate.cta')}
+          </Link>
+          <p className="relative max-w-prose text-xs text-muted">
+            {t('owner.qr.gate.trialNote')}
+          </p>
+        </Card>
       )}
 
       {status === 'success' && data && (

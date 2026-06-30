@@ -75,23 +75,27 @@ export const lightColors: ColorPalette = {
   focusRing: '#8E2F50',
 };
 
-/** Dark theme palette — salon-luxe signature (verbatim from ui-ux-skills.md). */
+/**
+ * Dark theme palette — "rosé-noir": a deep wine-charcoal ground (replacing the
+ * muddier espresso browns) so the rose/plum brand glows. Mirror of the
+ * `[data-theme="dark"]` block in `tokens.css`; AA-verified in `contrast.test.ts`.
+ */
 export const darkColors: ColorPalette = {
-  bg: '#17110F',
-  surface: '#211915',
-  elevated: '#2C2119',
-  text: '#F6EEE7',
-  textMuted: '#BBA99B',
-  border: '#3A2D25',
-  primary: '#E59CB3',
-  primaryContrast: '#17110F',
+  bg: '#1A1117',
+  surface: '#271A22',
+  elevated: '#33232C',
+  text: '#F7EBF0',
+  textMuted: '#C6ABB5',
+  border: '#402E38',
+  primary: '#EAA0B8',
+  primaryContrast: '#1A1117',
   secondary: '#79C9BB',
-  accent: '#EB9A7A',
+  accent: '#ECA486',
   success: '#69D08C',
   warning: '#E7B45C',
   danger: '#F2938C',
   info: '#86B6F0',
-  focusRing: '#E59CB3',
+  focusRing: '#EAA0B8',
 };
 
 /**

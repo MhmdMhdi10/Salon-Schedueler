@@ -80,3 +80,56 @@ export function requireActiveSubscription(
     next();
   };
 }
+
+/**
+ * Subscription statuses that represent a *paid* subscription — the salon has
+ * purchased a plan at least once and is either current (`active`) or within the
+ * post-expiry grace window (`grace`). A `trial` (free starter) and `expired`
+ * subscription are NOT paid.
+ */
+const PAID_STATUSES: ReadonlySet<string> = new Set(['active', 'grace']);
+
+/**
+ * Build a stricter subscription gate for *premium* features that require an
+ * actual paid subscription — not merely a free trial.
+ *
+ * Unlike {@link requireActiveSubscription} (which lets `trial`/`active`/`grace`
+ * through and only blocks writes on `expired`), this gate blocks the request —
+ * for ALL methods, reads included — unless the salon's effective status is
+ * `active` or `grace`. A `trial` or `expired` salon receives
+ * `402 { code: 'SUBSCRIPTION_REQUIRED' }` and the handler is never reached.
+ *
+ * It backs the product rule "barcode/QR generation requires a subscription":
+ * the trial lets an owner set the salon up, but generating the customer-
+ * acquisition QR is unlocked only once a plan is purchased.
+ *
+ * Must run after `requireAuth` so `req.principal` is populated; if no principal
+ * is present it responds `401 { code: 'UNAUTHORIZED' }`, matching `requireRole`.
+ */
+export function requirePaidSubscription(
+  subscriptionService: Pick<SubscriptionService, 'getStatus'>,
+  resolveSalonId: SalonIdResolver = defaultResolveSalonId,
+): RequestHandler {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const principal = req.principal;
+    if (!principal) {
+      res.status(401).json({ code: 'UNAUTHORIZED' });
+      return;
+    }
+
+    const salonId = resolveSalonId(req);
+    if (!salonId) {
+      res.status(400).json({ code: 'SALON_ID_REQUIRED' });
+      return;
+    }
+
+    const status = await subscriptionService.getStatus(salonId);
+    if (!PAID_STATUSES.has(status)) {
+      // trial / expired → the premium feature is locked behind a purchase.
+      res.status(402).json({ code: 'SUBSCRIPTION_REQUIRED' });
+      return;
+    }
+
+    next();
+  };
+}

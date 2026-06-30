@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Download, Image as ImageIcon, QrCode, Share2 } from 'lucide-react';
+import { Download, Image as ImageIcon, Lock, QrCode, Share2 } from 'lucide-react';
 import { ApiError, qrApi } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
+import { useSalonId } from '../../auth/useSalonId';
 import { SeoHead } from '../../components/seo';
 import { Button, EmptyState, ErrorState, Skeleton } from '../../components/ui';
 import { downloadQrPng, downloadQrSvg, qrImageDataUri } from './marketing-assets';
@@ -21,10 +22,7 @@ import { downloadQrPng, downloadQrSvg, qrImageDataUri } from './marketing-assets
  * personal QR, so it gets an explanatory empty state instead.
  */
 
-/** Default salon scope (mirrors the other owner/admin sections). */
-const DEFAULT_SALON_ID = '11111111-1111-1111-1111-111111111111';
-
-type LoadStatus = 'loading' | 'success' | 'error';
+type LoadStatus = 'loading' | 'success' | 'error' | 'locked';
 
 /** The stylist-scoped QR payload + display names from `qrApi.getStaffQr`. */
 interface StaffQr {
@@ -54,7 +52,7 @@ export function MyQrPage() {
   const { t } = useTranslation();
   const { principal } = useAuth();
   const staffMemberId = principal?.staffMemberId;
-  const salonId = DEFAULT_SALON_ID;
+  const salonId = useSalonId();
 
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [error, setError] = useState('');
@@ -80,6 +78,11 @@ export function MyQrPage() {
       })
       .catch((err: unknown) => {
         if (!active) return;
+        // Barcode generation requires the salon's paid subscription (402).
+        if (err instanceof ApiError && err.status === 402) {
+          setStatus('locked');
+          return;
+        }
         setError(err instanceof ApiError ? err.message : t('owner.myQr.errorBody'));
         setStatus('error');
       });
@@ -138,6 +141,15 @@ export function MyQrPage() {
       ) : (
         <>
           {status === 'loading' && <MyQrSkeleton />}
+
+          {status === 'locked' && (
+            <EmptyState
+              data-testid="my-qr-locked"
+              icon={<Lock className="h-8 w-8" />}
+              title={t('owner.myQr.lockedTitle')}
+              description={t('owner.myQr.lockedBody')}
+            />
+          )}
 
           {status === 'error' && (
             <ErrorState

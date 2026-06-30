@@ -19,6 +19,7 @@ import {
   type SubscriptionStatus,
   type SubscriptionStatusResponse,
 } from '../../api/client';
+import { useSalonId } from '../../auth/useSalonId';
 import { SeoHead } from '../../components/seo';
 import {
   Badge,
@@ -62,9 +63,6 @@ import {
  * `noindex` default (seo §1). The `owner-subscription-page` testID and the
  * surrounding `dir`/`lang` contract are preserved.
  */
-
-/** Default salon scope (mirrors the other owner/admin sections). */
-const DEFAULT_SALON_ID = '11111111-1111-1111-1111-111111111111';
 
 /** The paid plans the owner can buy/renew with, in ascending duration order. */
 const PAID_PLAN_ORDER: SubscriptionPlanKind[] = ['monthly', 'quarterly', 'annual'];
@@ -118,7 +116,8 @@ function SubscriptionSkeleton() {
 export function OwnerSubscriptionPage() {
   const { t } = useTranslation();
   const params = useParams<{ salonId?: string }>();
-  const salonId = params.salonId ?? DEFAULT_SALON_ID;
+  const sessionSalonId = useSalonId();
+  const salonId = params.salonId ?? sessionSalonId;
 
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [error, setError] = useState('');

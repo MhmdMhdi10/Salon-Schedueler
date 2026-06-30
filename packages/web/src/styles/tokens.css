@@ -167,22 +167,23 @@
 [data-theme='dark'] {
   color-scheme: dark;
 
-  /* Color — semantic roles (dark) */
-  --color-bg: #17110F;
-  --color-surface: #211915;
-  --color-elevated: #2C2119;
-  --color-text: #F6EEE7;
-  --color-text-muted: #BBA99B;
-  --color-border: #3A2D25;
-  --color-primary: #E59CB3;
-  --color-primary-contrast: #17110F;
+  /* Color — semantic roles (dark "rosé-noir": deep wine-charcoal ground so the
+     rose/plum brand glows; replaces the muddier espresso browns) */
+  --color-bg: #1A1117;
+  --color-surface: #271A22;
+  --color-elevated: #33232C;
+  --color-text: #F7EBF0;
+  --color-text-muted: #C6ABB5;
+  --color-border: #402E38;
+  --color-primary: #EAA0B8;
+  --color-primary-contrast: #1A1117;
   --color-secondary: #79C9BB;
-  --color-accent: #EB9A7A;
+  --color-accent: #ECA486;
   --color-success: #69D08C;
   --color-warning: #E7B45C;
   --color-danger: #F2938C;
   --color-info: #86B6F0;
-  --color-focus-ring: #E59CB3;
+  --color-focus-ring: #EAA0B8;
 
   /*
    * Dark mode prefers border + subtle shadow; heavy shadows read poorly on

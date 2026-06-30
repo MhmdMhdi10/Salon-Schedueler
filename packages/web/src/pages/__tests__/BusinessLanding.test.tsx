@@ -45,13 +45,13 @@ describe('BusinessLanding', () => {
     expect(h1s).toHaveLength(1);
   });
 
-  it('routes the primary CTA to owner sign-up (/owner) (R5.2)', () => {
+  it('routes the primary CTA to salon registration (/business/register) (R5.2)', () => {
     const { getByTestId } = renderLanding();
     const root = getByTestId('business-landing');
-    const ownerLinks = within(root)
+    const registerLinks = within(root)
       .getAllByRole('link')
-      .filter((a) => a.getAttribute('href') === '/owner');
-    expect(ownerLinks.length).toBeGreaterThan(0);
+      .filter((a) => a.getAttribute('href') === '/business/register');
+    expect(registerLinks.length).toBeGreaterThan(0);
   });
 
   it('routes a secondary CTA to the customer booking funnel (/) (R5.3)', () => {

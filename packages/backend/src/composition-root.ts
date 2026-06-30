@@ -108,18 +108,30 @@ function selectSmsProvider(config: AppConfig): SmsProvider {
 }
 
 /**
- * The SMS provider used by the API process. When `RABBITMQ_URL` is configured,
- * outbound SMS is published to a durable queue ({@link QueueingSmsProvider}); a
- * separate worker performs the actual delivery with retry + dead-lettering. The
- * real/dev provider ({@link selectSmsProvider}) is passed as a fallback so an
- * SMS is still delivered directly if the broker is momentarily unreachable.
- * Without `RABBITMQ_URL`, SMS is sent directly (the prior behavior).
+ * The SMS provider used by the API process. When a REAL SMS provider is
+ * configured (Kavenegar/SMS.ir) and `RABBITMQ_URL` is set, outbound SMS is
+ * published to a durable queue ({@link QueueingSmsProvider}); a separate worker
+ * performs the actual delivery with retry + dead-lettering. The real provider
+ * ({@link selectSmsProvider}) is passed as a fallback so an SMS is still
+ * delivered directly if the broker is momentarily unreachable.
+ *
+ * In dev/log mode (no SMS credentials), there is no real provider to deliver to,
+ * so the broker hop adds nothing but indirection — and it means the code (e.g. a
+ * login OTP) is only ever logged by the separate sms-worker process, not the API
+ * the developer is watching. So we send DIRECTLY via the dev/log provider, which
+ * prints `[dev-sms] -> <phone>: <message>` in THIS process's logs. The queue is
+ * also skipped entirely when `RABBITMQ_URL` is unset (the prior behavior).
  *
  * Exported so the SMS worker can build the same real provider for delivery.
  */
 export function selectApiSmsProvider(config: AppConfig): SmsProvider {
   const direct = selectSmsProvider(config);
-  if (!config.rabbitmqUrl) return direct;
+  // Only route through the durable queue when there is a real provider to
+  // deliver to. In dev/log mode, send directly so the OTP is visible in the API
+  // logs (and the broker/worker indirection — plus its dev restart noise — is
+  // bypassed). Configure KAVENEGAR_API_KEY or SMSIR_API_KEY to exercise the queue.
+  const hasRealSmsProvider = Boolean(config.kavenegarApiKey || config.smsirApiKey);
+  if (!config.rabbitmqUrl || !hasRealSmsProvider) return direct;
   const publisher = new RabbitMqSmsPublisher(config.rabbitmqUrl, {
     maxAttempts: config.smsQueueMaxAttempts,
     retryDelayMs: config.smsQueueRetryDelayMs,

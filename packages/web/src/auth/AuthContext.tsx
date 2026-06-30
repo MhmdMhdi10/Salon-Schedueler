@@ -25,6 +25,8 @@ export interface AuthPrincipal {
   id: string;
   role?: OwnerRole;
   staffMemberId?: string;
+  /** The salon a staff principal belongs to (used to scope the owner panel). */
+  salonId?: string;
 }
 
 /** Lifecycle of the app-wide session. */
@@ -92,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: p.id,
         role: p.role,
         staffMemberId: p.staffMemberId,
+        salonId: p.salonId,
       };
       setPrincipal(next);
       setStatus('authenticated');

@@ -8,6 +8,52 @@ export const CreateSalonSchema = z.object({
 
 export type CreateSalon = z.infer<typeof CreateSalonSchema>;
 
+/** Iranian mobile number pattern (Latin digits, normalized before validation). */
+const IRANIAN_MOBILE = /^09\d{9}$/;
+
+/**
+ * A single service captured during salon self-registration (the onboarding
+ * questionnaire). Durations/prices arrive as numbers (the web normalizes any
+ * Persian digits to Latin before submit). Kept lean on purpose — buffer,
+ * deposit and equipment are configured later in the panel.
+ */
+export const RegisterSalonServiceSchema = z.object({
+  name: z.string().min(1).max(120),
+  durationMinutes: z.number().int().positive().max(24 * 60),
+  priceRial: z.number().int().nonnegative(),
+});
+
+export type RegisterSalonService = z.infer<typeof RegisterSalonServiceSchema>;
+
+/**
+ * Salon self-registration payload (public, unauthenticated). Creates the salon,
+ * its Owner staff member (logging in with `phone` mints an Owner token), starts
+ * the free trial, and provisions the optional onboarding answers (services,
+ * chairs, brand accent) so the panel is pre-filled.
+ *
+ * Every onboarding answer beyond the three identity fields is OPTIONAL so the
+ * questionnaire can be skipped: `salonName`, `ownerName` and `phone` are the
+ * only required inputs.
+ */
+export const RegisterSalonSchema = z.object({
+  /** Salon display name (required). */
+  salonName: z.string().min(1).max(120),
+  /** Owner's full name — becomes the Owner staff member (required). */
+  ownerName: z.string().min(1).max(120),
+  /** Owner login phone (Iranian mobile, normalized to Latin digits; required). */
+  phone: z.string().regex(IRANIAN_MOBILE),
+  /** IANA timezone; defaults to Tehran. */
+  timezone: z.string().default('Asia/Tehran'),
+  /** Optional storefront brand-accent key (skippable). */
+  brandAccent: z.string().max(40).optional(),
+  /** Optional services to pre-create (skippable). */
+  services: z.array(RegisterSalonServiceSchema).max(50).default([]),
+  /** Optional number of chairs to pre-create, named «صندلی N» (skippable). */
+  chairCount: z.number().int().min(0).max(50).default(0),
+});
+
+export type RegisterSalon = z.infer<typeof RegisterSalonSchema>;
+
 /** Schema for registering a staff member */
 export const RegisterStaffMemberSchema = z.object({
   salonId: z.string().uuid(),

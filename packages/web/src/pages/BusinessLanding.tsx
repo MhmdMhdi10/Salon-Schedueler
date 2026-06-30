@@ -104,8 +104,12 @@ export function BusinessLanding() {
                 {t('business.hero.subtitle')}
               </p>
               <div className="flex flex-wrap items-center gap-3 pt-1">
-                {/* Primary CTA → owner sign-up / panel (no interstitial). */}
-                <Link to="/owner" data-cta="primary" className={PRIMARY_CTA}>
+                {/* Primary CTA → salon self-registration wizard. */}
+                <Link
+                  to="/business/register"
+                  data-cta="primary"
+                  className={PRIMARY_CTA}
+                >
                   {t('business.hero.primaryCta')}
                 </Link>
                 {/* Subordinate secondary CTA → customer home. */}
@@ -257,7 +261,11 @@ export function BusinessLanding() {
                 </ul>
               </CardContent>
               <div className="flex flex-wrap items-center gap-3">
-                <Link to="/owner" data-cta="primary" className={PRIMARY_CTA}>
+                <Link
+                  to="/business/register"
+                  data-cta="primary"
+                  className={PRIMARY_CTA}
+                >
                   {t('business.cta.ownerCta')}
                 </Link>
                 <Link to="/" data-cta="secondary" className={SECONDARY_CTA}>

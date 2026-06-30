@@ -53,21 +53,21 @@ reproduced here as the signature reference.
 
 | Token | Light | Dark | Role |
 | --- | --- | --- | --- |
-| `--color-bg` | `#FBF7F2` | `#17110F` | Warm porcelain / espresso page bg |
-| `--color-surface` | `#F4ECE1` | `#211915` | Warm sand cards, sheets |
-| `--color-elevated` | `#FFFFFF` | `#2C2119` | Menus, dialogs, popovers |
-| `--color-text` | `#241C18` | `#F6EEE7` | Espresso / bone primary ink |
-| `--color-text-muted` | `#6E5C50` | `#BBA99B` | Warm taupe secondary text |
-| `--color-border` | `#E4D8CB` | `#3A2D25` | Warm dividers, input borders |
-| `--color-primary` | `#8E2F50` | `#E59CB3` | Plum-wine brand action / CTA |
-| `--color-primary-contrast` | `#FFFFFF` | `#17110F` | Text/icon on primary |
+| `--color-bg` | `#FBF7F2` | `#1A1117` | Warm porcelain / wine-noir page bg |
+| `--color-surface` | `#F4ECE1` | `#271A22` | Warm sand / deep-wine cards, sheets |
+| `--color-elevated` | `#FFFFFF` | `#33232C` | Menus, dialogs, popovers |
+| `--color-text` | `#241C18` | `#F7EBF0` | Espresso / rose-bone primary ink |
+| `--color-text-muted` | `#6E5C50` | `#C6ABB5` | Warm taupe / mauve secondary text |
+| `--color-border` | `#E4D8CB` | `#402E38` | Warm dividers, input borders |
+| `--color-primary` | `#8E2F50` | `#EAA0B8` | Plum-wine brand action / CTA |
+| `--color-primary-contrast` | `#FFFFFF` | `#1A1117` | Text/icon on primary |
 | `--color-secondary` | `#2E6E63` | `#79C9BB` | Deep-eucalyptus secondary action |
-| `--color-accent` | `#A6452A` | `#EB9A7A` | Terracotta-clay highlight / badge |
+| `--color-accent` | `#A6452A` | `#ECA486` | Terracotta-clay highlight / badge |
 | `--color-success` | `#1F7A43` | `#69D08C` | Booked, paid, confirmed |
 | `--color-warning` | `#9A5B12` | `#E7B45C` | Expiring OTP, low slots |
 | `--color-danger` | `#B3261E` | `#F2938C` | Failed pay, cancel, errors |
 | `--color-info` | `#1F5FAE` | `#86B6F0` | Neutral notices |
-| `--color-focus-ring` | `#8E2F50` | `#E59CB3` | Focus outline |
+| `--color-focus-ring` | `#8E2F50` | `#EAA0B8` | Focus outline |
 
 The plum-wine `--color-primary` is deliberately dark and saturated because it is used **both**
 as a fill (white text on it) *and* as colored text on near-white surfaces, so it must clear WCAG
@@ -186,21 +186,21 @@ warm bone/sand neutrals and espresso ink — replacing the original indigo seed.
 
 | Token | Light | Dark | Use |
 | --- | --- | --- | --- |
-| `--color-bg` | `#FBF7F2` | `#17110F` | Page background |
-| `--color-surface` | `#F4ECE1` | `#211915` | Cards, sheets |
-| `--color-elevated` | `#FFFFFF` | `#2C2119` | Menus, dialogs, popovers |
-| `--color-text` | `#241C18` | `#F6EEE7` | Primary text |
-| `--color-text-muted` | `#6E5C50` | `#BBA99B` | Secondary/help text |
-| `--color-border` | `#E4D8CB` | `#3A2D25` | Dividers, input borders |
-| `--color-primary` | `#8E2F50` | `#E59CB3` | Brand actions, CTAs |
-| `--color-primary-contrast` | `#FFFFFF` | `#17110F` | Text/icon on primary |
+| `--color-bg` | `#FBF7F2` | `#1A1117` | Page background |
+| `--color-surface` | `#F4ECE1` | `#271A22` | Cards, sheets |
+| `--color-elevated` | `#FFFFFF` | `#33232C` | Menus, dialogs, popovers |
+| `--color-text` | `#241C18` | `#F7EBF0` | Primary text |
+| `--color-text-muted` | `#6E5C50` | `#C6ABB5` | Secondary/help text |
+| `--color-border` | `#E4D8CB` | `#402E38` | Dividers, input borders |
+| `--color-primary` | `#8E2F50` | `#EAA0B8` | Brand actions, CTAs |
+| `--color-primary-contrast` | `#FFFFFF` | `#1A1117` | Text/icon on primary |
 | `--color-secondary` | `#2E6E63` | `#79C9BB` | Secondary actions |
-| `--color-accent` | `#A6452A` | `#EB9A7A` | Highlights, badges |
+| `--color-accent` | `#A6452A` | `#ECA486` | Highlights, badges |
 | `--color-success` | `#1F7A43` | `#69D08C` | Booked, paid, confirmed |
 | `--color-warning` | `#9A5B12` | `#E7B45C` | Expiring OTP, low slots |
 | `--color-danger` | `#B3261E` | `#F2938C` | Failed pay, cancel, errors |
 | `--color-info` | `#1F5FAE` | `#86B6F0` | Neutral notices |
-| `--color-focus-ring` | `#8E2F50` | `#E59CB3` | Focus outline |
+| `--color-focus-ring` | `#8E2F50` | `#EAA0B8` | Focus outline |
 
 > Pick the **primary** shade so body-size text on it clears WCAG AA **in both directions** —
 > the primary is used both as a white-text fill *and* as colored text on near-white surfaces.

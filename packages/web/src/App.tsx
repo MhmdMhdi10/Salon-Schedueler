@@ -55,6 +55,11 @@ const BusinessLanding = lazy(() =>
     default: m.BusinessLanding,
   })),
 );
+const RegisterSalonPage = lazy(() =>
+  import('./pages/business/RegisterSalonPage').then((m) => ({
+    default: m.RegisterSalonPage,
+  })),
+);
 const SalonProfilePage = lazy(() =>
   import('./pages/SalonProfilePage').then((m) => ({
     default: m.SalonProfilePage,
@@ -174,6 +179,12 @@ export function App() {
 
                   {/* Owner-acquisition marketing landing (indexable) */}
                   <Route path="/business" element={<BusinessLanding />} />
+
+                  {/* Salon self-registration onboarding wizard (noindex) */}
+                  <Route
+                    path="/business/register"
+                    element={<RegisterSalonPage />}
+                  />
 
                   {/* Public salon profile (indexable) */}
                   <Route path="/s/:slug" element={<SalonProfilePage />} />

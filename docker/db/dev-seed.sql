@@ -155,7 +155,7 @@ VALUES (
   '09120000003',
   'زهرا رضایی'
 )
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (phone) DO NOTHING;
 
 -- Link services to the new stylist so she has bookable appointments
 INSERT INTO service_staff (service_id, staff_member_id)
@@ -183,7 +183,7 @@ VALUES (
   '09120000004',
   'نازنین کریمی'
 )
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (phone) DO NOTHING;
 
 -- ─── Subscription ────────────────────────────────────────────────────────────
 -- An ACTIVE annual subscription for the dev salon so the owner panel's «اشتراک»

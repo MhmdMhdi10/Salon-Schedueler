@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { adminApi, holidaysApi, staffAvailabilityApi, type SalonClosure } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
+import { useSalonId } from '../../auth/useSalonId';
 import { gregorianToJalali, jalaliToGregorian, getJalaliMonthName } from '@salon/shared';
 import { SeoHead } from '../../components/seo';
 import {
@@ -55,8 +56,6 @@ import {
  *
  * All copy from `fa.json` (`admin.calendarPage.*`). Noindex admin route.
  */
-
-const DEFAULT_SALON_ID = '11111111-1111-1111-1111-111111111111';
 
 type CalendarView = 'month' | 'week' | 'day';
 type LoadStatus = 'loading' | 'success' | 'error';
@@ -1376,7 +1375,8 @@ function ClosureDialog({
 function CalendarPageContent({ salonId: salonIdProp }: { salonId?: string }) {
   const { t } = useTranslation();
   const params = useParams<{ salonId?: string }>();
-  const salonId = salonIdProp ?? params.salonId ?? DEFAULT_SALON_ID;
+  const sessionSalonId = useSalonId();
+  const salonId = salonIdProp ?? params.salonId ?? sessionSalonId;
 
   // Any staff member may act on the appointments they can see: Owner/Admin on the
   // whole salon, a Stylist on their own (the calendar grid + pending queue are

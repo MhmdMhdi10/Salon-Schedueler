@@ -13,6 +13,12 @@ export interface HttpPrincipal {
   id: string;
   role?: StaffRole;
   staffMemberId?: string;
+  /**
+   * The salon the staff member belongs to (staff tokens only). Lets the owner
+   * panel scope every read/write to the caller's own salon instead of relying
+   * on a hard-coded id. Absent on customer tokens.
+   */
+  salonId?: string;
 }
 
 // Augment Express's Request so handlers can read `req.principal`.
@@ -57,7 +63,9 @@ function payloadToPrincipal(payload: jwt.JwtPayload): HttpPrincipal | null {
       : undefined;
   const rawStaffId = (payload as Record<string, unknown>).staffMemberId;
   const staffMemberId = typeof rawStaffId === 'string' ? rawStaffId : undefined;
-  return { id: payload.sub, role, staffMemberId };
+  const rawSalonId = (payload as Record<string, unknown>).salonId;
+  const salonId = typeof rawSalonId === 'string' ? rawSalonId : undefined;
+  return { id: payload.sub, role, staffMemberId, salonId };
 }
 
 /**

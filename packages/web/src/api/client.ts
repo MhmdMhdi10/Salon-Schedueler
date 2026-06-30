@@ -143,12 +143,66 @@ export interface Principal {
   id: string;
   role: OwnerRole;
   staffMemberId?: string;
+  /**
+   * The salon this staff member belongs to. Lets the owner panel scope every
+   * read/write to the caller's own salon instead of a hard-coded id. Present on
+   * staff tokens issued after the backend started embedding it; absent for
+   * older tokens (callers fall back to the dev default).
+   */
+  salonId?: string;
 }
 
 // Authenticated identity endpoint — derives the current principal (and its
 // role) from the access token so the owner panel can gate by RBAC (task 5.1).
 export const meApi = {
   getMe: () => request<{ principal: Principal }>('/me'),
+};
+
+// ─── Salon registration (public onboarding) ─────────────────────────────────
+// Self-service salon sign-up from the marketing landing. Creates the salon, its
+// Owner staff member (the `phone` becomes the OTP login that mints an Owner
+// token), starts the free trial, and provisions the optional questionnaire
+// answers. Only salonName/ownerName/phone are required — the rest is skippable.
+
+/** One service captured in the onboarding questionnaire. */
+export interface RegisterSalonServiceInput {
+  name: string;
+  durationMinutes: number;
+  priceRial: number;
+}
+
+/** Salon self-registration payload (mirrors the backend `RegisterSalonSchema`). */
+export interface RegisterSalonInput {
+  salonName: string;
+  ownerName: string;
+  /** Iranian mobile (Latin digits, `09xxxxxxxxx`) — the OTP login identity. */
+  phone: string;
+  timezone?: string;
+  /** Storefront brand-accent key (optional). */
+  brandAccent?: string;
+  /** Services to pre-create (optional). */
+  services?: RegisterSalonServiceInput[];
+  /** Number of chairs to pre-create (optional). */
+  chairCount?: number;
+}
+
+/** Server acknowledgement of a created salon. */
+export interface RegisterSalonResponse {
+  salonId: string;
+  salonName: string;
+}
+
+export const registrationApi = {
+  /**
+   * Register a new salon. On success the owner signs in via OTP with the same
+   * `phone` to enter the panel. A phone already in use surfaces as an
+   * `ApiError` with `code === 'PHONE_TAKEN'` (HTTP 409).
+   */
+  registerSalon: (input: RegisterSalonInput) =>
+    request<RegisterSalonResponse>('/register/salon', {
+      method: 'POST',
+      body: input,
+    }),
 };
 
 // Salon endpoints
