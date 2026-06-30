@@ -137,12 +137,26 @@ services:
       context: .
       dockerfile: docker/dev.Dockerfile
     command: [ "bash", "docker/web-entrypoint.sh" ]
+    # Allocate a TTY so Vite's incremental output (HMR update lines, build
+    # errors) is line-flushed and streamed to `docker logs` in real time.
+    # Without it, Node block-buffers stdout to the log pipe, so live-reload
+    # activity is invisible until enough output accumulates (same reason the
+    # sms-worker sets this). Vite's screen-clear is disabled in vite.config.ts
+    # so the log scrollback stays readable.
+    tty: true
     depends_on:
       - backend
     environment:
       # The browser calls same-origin /api; the Vite dev server proxies it to the
       # backend over the compose network (see packages/web/vite.config.ts).
       VITE_PROXY_TARGET: "http://backend:3000"
+      # Live edits: the source is bind-mounted, but native fs events aren't
+      # reliably delivered into the container, so Vite would never see host edits
+      # and HMR would go silent. Poll for changes instead (mirrors the mobile
+      # service). VITE_DEV_POLLING flips Vite's own watcher to polling;
+      # CHOKIDAR_USEPOLLING is the de-facto global fallback honoured by chokidar.
+      VITE_DEV_POLLING: "1"
+      CHOKIDAR_USEPOLLING: "1"
     ports:
       - "5173:5173"
     volumes:

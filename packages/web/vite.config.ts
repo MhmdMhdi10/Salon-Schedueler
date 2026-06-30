@@ -9,6 +9,12 @@ export default defineConfig({
   // a writable path via `VITE_CACHE_DIR` so `npm run dev` works without changing
   // node_modules ownership; falls back to the default when unset.
   cacheDir: process.env.VITE_CACHE_DIR || undefined,
+  // In Docker dev the web container runs with a TTY (so Vite's incremental
+  // output — `hmr update …`, errors — flushes to `docker compose logs` in real
+  // time instead of being block-buffered). Vite clears the terminal on each
+  // update by default, which would wipe the `docker logs` scrollback; keep the
+  // history readable. Harmless for native dev (just disables the screen clear).
+  clearScreen: false,
   plugins: [
     react(),
     // PWA service worker via the `injectManifest` strategy (task 4.5; design
@@ -134,6 +140,25 @@ export default defineConfig({
     // container, and proxy the API so the browser stays same-origin (no CORS).
     host: true,
     port: 5173,
+    // File watching in Docker dev: the source tree is bind-mounted into the
+    // container, but native inotify events from the host aren't reliably
+    // delivered across the mount boundary, so Vite's watcher never fires and
+    // edits don't trigger HMR (the same caveat the mobile/Expo service notes).
+    // When `VITE_DEV_POLLING` is set (Docker dev — see docker-compose.yml) fall
+    // back to polling so host edits are picked up promptly. Native `npm run dev`
+    // leaves this unset to keep watching event-driven and avoid the extra CPU.
+    // node_modules/.git stay ignored by Vite's defaults, so polling stays cheap.
+    watch: process.env.VITE_DEV_POLLING
+      ? { usePolling: true, interval: 100 }
+      : undefined,
+    // HMR websocket reachability: the browser opens the HMR socket back on the
+    // port it loaded the page from. In Docker the container's Vite port (5173)
+    // is published on a different host port (e.g. 5273 via the dev override), so
+    // tell the client which port to reach through `VITE_HMR_CLIENT_PORT`. Unset
+    // (native dev, or a 1:1 port map) → Vite falls back to the page's own port.
+    hmr: process.env.VITE_HMR_CLIENT_PORT
+      ? { clientPort: Number(process.env.VITE_HMR_CLIENT_PORT) }
+      : undefined,
     proxy: {
       '/api': {
         // In Docker dev this is set to http://backend:3000; locally it defaults
