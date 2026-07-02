@@ -10,13 +10,11 @@ import type { WaitlistService } from '../waitlist/waitlist.service.js';
 import type { CustomerService } from '../customer/customer.service.js';
 import type { AnalyticsService, CalendarService } from '../analytics/index.js';
 import type { ServiceCatalog } from '../catalog/service-catalog.js';
-import type {
-  SalonRegistration,
-  ResourceRegistration,
-} from '../registration/index.js';
+import type { SalonRegistration, ResourceRegistration } from '../registration/index.js';
 import type { AvailabilityConfig } from '../availability-config/index.js';
 import type { QrService } from '../qr/index.js';
 import type { SubscriptionService } from '../subscription/index.js';
+import type { WebsiteImportService } from '../import/index.js';
 import type { BookingFlow } from '../app/booking-flow.js';
 import type { CancellationFlow } from '../app/cancellation-flow.js';
 import { makeAuth } from './middleware/auth.js';
@@ -32,6 +30,7 @@ import { botRouter } from './routes/bot.routes.js';
 import { adminRouter } from './routes/admin.routes.js';
 import { subscriptionRouter } from './routes/subscription.routes.js';
 import { qrRouter } from './routes/qr.routes.js';
+import { importRouter } from './routes/import.routes.js';
 import { deviceRouter } from './routes/device.routes.js';
 import { errorHandler } from './middleware/error-handler.js';
 
@@ -62,6 +61,8 @@ export interface Services {
   qrService: QrService;
   /** Subscription lifecycle: status, configurable plans, purchase hand-off (R3.x). */
   subscriptionService: SubscriptionService;
+  /** Firecrawl-backed website import: scrapes a salon's site to prefill registration. */
+  websiteImportService: WebsiteImportService;
   authorizer: Authorizer;
   /** Application-layer flow: booking + confirmation notification (Requirement 4.1). */
   bookingFlow: BookingFlow;
@@ -113,14 +114,10 @@ export function buildApp(opts: BuildAppOptions): Express {
         res.setHeader('Access-Control-Allow-Origin', origin);
         res.setHeader('Vary', 'Origin');
         res.setHeader('Access-Control-Allow-Credentials', 'true');
-        res.setHeader(
-          'Access-Control-Allow-Methods',
-          'GET,POST,PUT,PATCH,DELETE,OPTIONS',
-        );
+        res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
         res.setHeader(
           'Access-Control-Allow-Headers',
-          req.headers['access-control-request-headers'] ??
-            'Content-Type,Authorization',
+          req.headers['access-control-request-headers'] ?? 'Content-Type,Authorization',
         );
         res.setHeader('Access-Control-Max-Age', '600');
       }
@@ -149,6 +146,7 @@ export function buildApp(opts: BuildAppOptions): Express {
   // account; they then sign in via OTP with the phone they registered.
   app.use('/api', registrationRouter(services));
   app.use('/api', salonRouter(services, optionalAuth));
+  app.use('/api', importRouter(services));
   app.use('/api', paymentCallbackRouter(services));
   // Bot webhooks: public (no requireAuth), guarded by a webhook-secret path
   // segment; always answer 200 on a valid secret to avoid retry storms

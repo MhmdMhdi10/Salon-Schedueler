@@ -37,6 +37,7 @@ import { SalonRegistration, ResourceRegistration } from './registration/index.js
 import { AvailabilityConfig } from './availability-config/index.js';
 import { QrService } from './qr/index.js';
 import { SubscriptionService, DEFAULT_SUBSCRIPTION_PRICES } from './subscription/index.js';
+import { FirecrawlClient, WebsiteImportService } from './import/index.js';
 
 // Application-layer flows (cross-service wiring — Requirement 4.5).
 import { BookingFlow } from './app/booking-flow.js';
@@ -276,6 +277,18 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     },
   });
 
+  // Website import: scrapes a salon's own website via Firecrawl to prefill the
+  // registration form (Requirement 12.6). Built only when FIRECRAWL_API_URL is
+  // set; otherwise the service stays disabled and the route returns 503
+  // IMPORT_DISABLED so the wizard degrades to manual entry.
+  const firecrawlClient = config.firecrawlApiUrl
+    ? new FirecrawlClient({
+        apiUrl: config.firecrawlApiUrl,
+        apiKey: config.firecrawlApiKey,
+      })
+    : undefined;
+  const websiteImportService = new WebsiteImportService({ client: firecrawlClient });
+
   const authorizer = new Authorizer();
 
   // Application-layer flows wire the framework-agnostic domain services together:
@@ -323,6 +336,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     availabilityConfig,
     qrService,
     subscriptionService,
+    websiteImportService,
     authorizer,
     bookingFlow,
     cancellationFlow,

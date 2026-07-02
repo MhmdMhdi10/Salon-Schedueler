@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { MapPin, Scissors } from 'lucide-react';
+import { Scissors } from 'lucide-react';
 import i18n from '../i18n';
 import { SeoHead, JsonLd, SITE_URL } from '../components/seo';
 import type { JsonLdNode } from '../components/seo';
-import { Card, CardContent, CardTitle, Num } from '../components/ui';
+import { Card, CardContent, CardTitle, Num, SalonCard } from '../components/ui';
 import { getCity, getServiceType } from '../data/discovery';
 import {
   getSalonsByCity,
@@ -79,28 +79,14 @@ function SalonList({ salons, titleId }: { salons: SalonProfile[]; titleId: strin
   }
 
   return (
-    <ul className="grid gap-3 md:grid-cols-2" role="list" aria-labelledby={titleId}>
+    <ul
+      className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+      role="list"
+      aria-labelledby={titleId}
+    >
       {salons.map((salon) => (
         <li key={salon.slug}>
-          <Card as="article" className="flex flex-col gap-2">
-            <CardTitle as="h3">{salon.name}</CardTitle>
-            <CardContent className="flex flex-col gap-2">
-              <p className="flex items-start gap-2 text-sm text-muted">
-                <MapPin aria-hidden="true" size={18} className="mt-0.5 shrink-0" />
-                <span>
-                  {salon.neighborhood}، {salon.address.addressLocality}
-                </span>
-              </p>
-              <p className="text-sm text-muted">{salon.tagline}</p>
-              <Link
-                to={`/s/${salon.slug}`}
-                className="inline-flex min-h-[44px] items-center text-primary underline-offset-4 hover:underline"
-              >
-                {/* Descriptive link text, e.g. «مشاهده سالن رز» (seo §2). */}
-                {t('discovery.viewProfile')} {salon.name}
-              </Link>
-            </CardContent>
-          </Card>
+          <SalonCard salon={salon} />
         </li>
       ))}
     </ul>

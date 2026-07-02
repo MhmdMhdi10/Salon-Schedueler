@@ -104,6 +104,10 @@ export type {
 // Status & feedback
 export { Badge } from './Badge';
 export type { BadgeProps, BadgeStatus } from './Badge';
+export { RatingStars } from './RatingStars';
+export type { RatingStarsProps, RatingStarsSize } from './RatingStars';
+export { SalonCard } from './SalonCard';
+export type { SalonCardProps } from './SalonCard';
 export { EmptyState } from './EmptyState';
 export type { EmptyStateProps } from './EmptyState';
 export { ErrorState } from './ErrorState';

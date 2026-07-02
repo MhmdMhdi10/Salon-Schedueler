@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CalendarClock, Clock, Scissors, Users } from 'lucide-react';
+import { CalendarClock, Clock, Scissors, Store, Users } from 'lucide-react';
 import { salonApi } from '../api/client';
 import { SeoHead } from '../components/seo';
+import { readSalonName } from '../utils/salonName';
 import {
   EmptyState,
   ErrorState,
@@ -157,6 +158,10 @@ export function AvailabilityPage() {
   const [searchParams] = useSearchParams();
   const isMobile = useIsMobile();
   const minDate = useMemo(() => todayISO(), []);
+  // The salon name (cached at the QR-landing / profile step). Shown as a
+  // "booking at {salon}" subtitle so the funnel always says which salon you are
+  // booking with — Booksy-style. Omitted cleanly when not yet cached.
+  const salonName = useMemo(() => readSalonName(salonId), [salonId]);
 
   // Restore any persisted selection so back-navigation keeps the user's place.
   const restored = useMemo(() => readSelection(salonId), [salonId]);
@@ -313,7 +318,15 @@ export function AvailabilityPage() {
       className="mx-auto flex w-full max-w-funnel flex-col gap-6 py-6"
     >
       <SeoHead title={t('seo.titles.availability')} />
-      <h1 className="text-xl font-bold text-text">{t('booking.heading')}</h1>
+      <div className="flex flex-col gap-1">
+        <h1 className="text-xl font-bold text-text">{t('booking.heading')}</h1>
+        {salonName && (
+          <p className="flex items-center gap-2 text-sm text-muted">
+            <Store className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {t('booking.atSalon', { salon: salonName })}
+          </p>
+        )}
+      </div>
 
       {/* Service selector — card radio list with loading / error / empty / ready. */}
       <section aria-labelledby="service-section-title" className="flex flex-col gap-3">

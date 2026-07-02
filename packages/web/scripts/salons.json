@@ -1,6 +1,9 @@
 {
   "_comment": "Build-time list of public, indexable salon profiles for sitemap.xml generation (seo §7). Each entry yields an /s/:slug URL. `lastmod` is an optional W3C date (YYYY-MM-DD); when omitted the build date is used. Populate this from the salon API/export at release time — new salons are not indexable until the next build (see design 'Public-route prerender' caveat).",
   "salons": [
-    { "slug": "salon-rose", "lastmod": "2025-01-15" }
+    { "slug": "salon-rose", "lastmod": "2025-01-15" },
+    { "slug": "salon-noor", "lastmod": "2025-01-15" },
+    { "slug": "salon-aria", "lastmod": "2025-01-15" },
+    { "slug": "brooklyn-barber", "lastmod": "2025-01-15" }
   ]
 }
