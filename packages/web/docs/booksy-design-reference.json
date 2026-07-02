@@ -1,0 +1,64 @@
+{
+  "source": "fallback",
+  "capturedAt": "2026-07-02T13:18:30.990Z",
+  "surfaces": [
+    {
+      "kind": "marketing-home",
+      "url": "https://booksy.com/en-us",
+      "layout": [
+        "full-bleed hero with a background image + a centered, prominent search bar",
+        "search bar: two pill inputs (service + location) + a solid primary \"Search\" button on the inline-end",
+        "category circles row directly under the hero: circular icon emblem + label, horizontally scrollable on mobile",
+        "popular professionals: salon cards (cover photo, name, star rating + review count, category, address, \"from $X\" price, \"Book\" button)",
+        "how it works: 3 numbered steps (choose service / pick time / confirm) with icons",
+        "app-download promo band with app store badges + a QR",
+        "trust strip: ratings, number of bookings, \"available 24/7\""
+      ],
+      "copy": {
+        "heroTitle": "Book trusted beauty pros, instantly",
+        "heroSubtitle": "Search and book appointments at top salons near you.",
+        "searchServicePlaceholder": "Service or salon name",
+        "searchLocationPlaceholder": "City or neighborhood",
+        "searchSubmit": "Search",
+        "categoriesTitle": "Popular categories",
+        "featuredTitle": "Popular professionals near you",
+        "howItWorksTitle": "How Booksy works",
+        "appPromoTitle": "Get the Booksy app"
+      }
+    },
+    {
+      "kind": "search-results",
+      "url": "https://booksy.com/en-us/search/haircut/tehran",
+      "layout": [
+        "sticky results header: result count + sort control (Recommended / Top rated / Price)",
+        "filter chip row: open now, next available, price range, reviews, map view toggle",
+        "result list: one card per salon — cover thumbnail (inline-start), name, rating + reviews, category, address, \"from $X\", a prominent \"Book\" button (inline-end)",
+        "map toggle button swaps the list for a map with pinned salon cards",
+        "mobile: filters collapse into a bottom sheet opened by a \"Filters\" chip"
+      ],
+      "copy": {
+        "resultsLabel": "{{count}} places near you",
+        "sortLabel": "Sort",
+        "filterOpenNow": "Open now",
+        "filterNextAvailable": "Next available",
+        "filterPrice": "Price",
+        "filterReviews": "Reviews",
+        "viewMap": "Map",
+        "viewList": "List",
+        "book": "Book"
+      }
+    },
+    {
+      "kind": "business-profile",
+      "url": "https://booksy.com/en-us/biz/salon-rose/12345",
+      "layout": [
+        "storefront hero: cover gallery + salon name + rating + category + address",
+        "sticky inline-booking rail (desktop) / sticky bottom \"Book\" bar (mobile): service picker → date → time → confirm",
+        "services list with name, duration, price, and a \"Book\" affordance per row",
+        "team members row (avatar + name + role)",
+        "reviews list with author, rating, date, text",
+        "gallery, opening hours, NAP, map embed"
+      ]
+    }
+  ]
+}
