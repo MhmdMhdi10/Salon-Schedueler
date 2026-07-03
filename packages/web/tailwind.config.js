@@ -112,24 +112,68 @@ export default {
         standard: 'var(--ease-standard)',
         emphasized: 'var(--ease-emphasized)',
       },
-      // Signature success micro-interaction (design §motion, R6.4/R6.5). The
-      // one keyframe that uses the emphasized easing token — reserved for the
-      // booking-success moment (`BookingSuccessPage`). It animates only
-      // compositor-friendly properties (`opacity` + `transform: scale`, never a
-      // reflow-triggering box property, R6.2) and drives its duration/easing
-      // from the motion tokens (`--dur-slow` = 300ms, within the 150–300ms band;
-      // `--ease-emphasized`), so no raw ms/easing literal is authored (R6.1).
-      // Applied via `motion-safe:` so it plays only when motion is allowed; the
-      // authoritative `prefers-reduced-motion` block in `tokens.css` governs the
-      // reduced-motion case (no transform, never gates content).
+      // Motion library — the signature micro-interactions that make the PWA
+      // feel alive. Every keyframe animates ONLY compositor-friendly properties
+      // (`opacity` + `transform`) — never a reflow-triggering box property
+      // (R6.2) — and every duration/easing resolves to a motion token
+      // (`--dur-fast/base/slow`, `--ease-standard/emphasized`), so no raw
+      // ms/easing literal is authored (R6.1). All animations are gated by the
+      // global `prefers-reduced-motion: reduce` block in `tokens.css` (which
+      // clamps them to 0.01ms) and most are applied via `motion-safe:` so they
+      // play only when the visitor allows motion.
       keyframes: {
+        // Booking-success moment (reserved for `BookingSuccessPage`).
         'success-pop': {
           '0%': { opacity: '0', transform: 'scale(0.85)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
         },
+        // Soft entrance from below — page sections, cards, list items.
+        'fade-up': {
+          '0%': { opacity: '0', transform: 'translateY(8px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        // Pure opacity entrance — overlays, toasts, route transitions.
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        // Scale-in for popovers, sheets, dialogs, badges.
+        'scale-in': {
+          '0%': { opacity: '0', transform: 'scale(0.96)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        // Inline-end slide for side drawers / sheets.
+        'slide-in-end': {
+          '0%': { opacity: '0', transform: 'translateX(12px)' },
+          '100%': { opacity: '1', transform: 'translateX(0)' },
+        },
+        // Skeleton shimmer — a diagonal gloss sweeps across the placeholder so
+        // loading surfaces read as "alive" rather than static gray blocks.
+        shimmer: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
+        // Toast slide-up from the bottom edge.
+        'toast-in': {
+          '0%': { opacity: '0', transform: 'translateY(16px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        // Press feedback — a quick scale-down pulse for tap targets.
+        'tap-pulse': {
+          '0%': { transform: 'scale(1)' },
+          '40%': { transform: 'scale(0.97)' },
+          '100%': { transform: 'scale(1)' },
+        },
       },
       animation: {
         'success-pop': 'success-pop var(--dur-slow) var(--ease-emphasized) both',
+        'fade-up': 'fade-up var(--dur-base) var(--ease-standard) both',
+        'fade-in': 'fade-in var(--dur-base) var(--ease-standard) both',
+        'scale-in': 'scale-in var(--dur-fast) var(--ease-emphasized) both',
+        'slide-in-end': 'slide-in-end var(--dur-base) var(--ease-standard) both',
+        shimmer: 'shimmer 1.6s var(--ease-standard) infinite',
+        'toast-in': 'toast-in var(--dur-base) var(--ease-emphasized) both',
+        'tap-pulse': 'tap-pulse var(--dur-fast) var(--ease-standard)',
       },
     },
   },
@@ -141,12 +185,22 @@ export default {
     // layer so an explicit size utility (e.g. `text-2xl`) still sets the size;
     // pair with `leading-display` when a size utility's own line-height must be
     // overridden.
-    plugin(({ addComponents }) => {
+    plugin(({ addComponents, addUtilities }) => {
       addComponents({
         '.text-display': {
           fontWeight: 'var(--font-weight-display)',
           lineHeight: 'var(--line-height-display)',
           letterSpacing: 'var(--tracking-display)',
+        },
+      });
+      // `.shimmer-bg` — the gradient + mask the `animate-shimmer` keyframe
+      // sweeps across. Applied to `Skeleton` (see `components/ui/Skeleton.tsx`).
+      addUtilities({
+        '.shimmer-bg': {
+          backgroundImage:
+            'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%)',
+          backgroundSize: '200% 100%',
+          backgroundRepeat: 'no-repeat',
         },
       });
     }),

@@ -61,13 +61,7 @@ export type { TooltipProps } from './Tooltip';
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './Tabs';
 
 // Display & layout
-export {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardFooter,
-} from './Card';
+export { Card, CardHeader, CardTitle, CardContent, CardFooter } from './Card';
 export type { CardProps } from './Card';
 export { Skeleton } from './Skeleton';
 export type { SkeletonProps, SkeletonVariant } from './Skeleton';
@@ -75,6 +69,12 @@ export { Avatar } from './Avatar';
 export type { AvatarProps, AvatarSize } from './Avatar';
 export { Picture } from './Picture';
 export type { PictureProps, PictureSource } from './Picture';
+export { Rating } from './Rating';
+export type { RatingProps } from './Rating';
+export { SalonCard } from './SalonCard';
+export type { SalonCardProps } from './SalonCard';
+export { Reveal, PageTransition } from './Motion';
+export type { RevealProps, PageTransitionProps } from './Motion';
 
 // Persian formatting & bidi helpers (display-only localization, R7.2–7.5)
 export { Num, toPersianDigits } from './Num';
@@ -88,33 +88,18 @@ export type { DirTextProps } from './DirText';
 
 // Date & time selection
 export { JalaliDatePicker } from './JalaliDatePicker';
-export type {
-  JalaliDatePickerProps,
-  JalaliDatePickerVariant,
-} from './JalaliDatePicker';
+export type { JalaliDatePickerProps, JalaliDatePickerVariant } from './JalaliDatePicker';
 export { SlotGrid, SlotChip } from './SlotGrid';
-export type {
-  SlotGridProps,
-  SlotChipProps,
-  SlotItem,
-  SlotState,
-} from './SlotGrid';
-
+export type { SlotGridProps, SlotChipProps, SlotItem, SlotState } from './SlotGrid';
+export { DayScroller } from './DayScroller';
+export type { DayScrollerProps, DayScrollerItem } from './DayScroller';
 
 // Status & feedback
 export { Badge } from './Badge';
 export type { BadgeProps, BadgeStatus } from './Badge';
-export { RatingStars } from './RatingStars';
-export type { RatingStarsProps, RatingStarsSize } from './RatingStars';
-export { SalonCard } from './SalonCard';
-export type { SalonCardProps } from './SalonCard';
 export { EmptyState } from './EmptyState';
 export type { EmptyStateProps } from './EmptyState';
 export { ErrorState } from './ErrorState';
 export type { ErrorStateProps } from './ErrorState';
 export { ToastProvider, useToast } from './Toast';
-export type {
-  ToastProviderProps,
-  ToastOptions,
-  ToastStatus,
-} from './Toast';
+export type { ToastProviderProps, ToastOptions, ToastStatus } from './Toast';

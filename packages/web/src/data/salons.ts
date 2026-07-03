@@ -80,42 +80,6 @@ export interface SalonService {
   priceRial: number;
 }
 
-/**
- * A single customer review shown on the profile (marketplace "social proof",
- * Booksy-style). Presentation-only demo content — mirrored into the page's
- * `AggregateRating`/`Review` JSON-LD so the structured data only ever marks up
- * what is visible on the page (seo §5 — never fabricate rich-result reviews for
- * content that is not shown).
- */
-export interface SalonReview {
-  /** Stable id (also used as a React key). */
-  id: string;
-  /** Reviewer display name, Persian (e.g. «سارا محمدی»). */
-  author: string;
-  /** Star rating 1–5 (integer for display). */
-  rating: number;
-  /** ISO instant the review was published (rendered Jalali on the page). */
-  date: string;
-  /** The review text, Persian. */
-  body: string;
-  /** Optional service the review is about, Persian (e.g. «رنگ مو»). */
-  service?: string;
-}
-
-/**
- * A bookable team member surfaced on the profile ("meet the team", Booksy-
- * style). Presentation-only; avatars render as initials so no per-person image
- * assets are required and the profile's image contract stays clean.
- */
-export interface SalonStaff {
-  /** Stable id (also used as a React key). */
-  id: string;
-  /** Full name, Persian (e.g. «مینا رضایی»). */
-  name: string;
-  /** Role / specialty, Persian (e.g. «متخصص رنگ»). */
-  role: string;
-}
-
 /** A gallery image with explicit dimensions (CLS-safe) and Persian alt text. */
 export interface GalleryImage {
   /** Fallback `<img src>` — a universally-supported PNG/JPG. */
@@ -205,28 +169,12 @@ export interface SalonProfile {
   telephone: string;
   /** schema.org `priceRange` indicator (e.g. `$$`). */
   priceRange: string;
-  /**
-   * Short category label, Persian (e.g. «آرایشگاه زنانه») — shown on the
-   * profile hero and on marketplace salon cards (Booksy-style).
-   */
-  category?: string;
-  /**
-   * Average customer rating (1–5, one decimal, e.g. `4.8`) shown on the hero
-   * and salon cards. Mirrored into the profile's `AggregateRating` JSON-LD.
-   */
-  rating?: number;
-  /** Total number of reviews behind `rating` (mirrored into JSON-LD). */
-  reviewCount?: number;
   /** Precise coordinates. */
   geo: SalonGeo;
   /** Opening hours (stored once; rendered Iranian-week order). */
   openingHours: OpeningHours[];
   /** Offered services, priced in Rial. */
   services: SalonService[];
-  /** Bookable team members surfaced on the profile ("meet the team"). */
-  staff?: SalonStaff[];
-  /** Customer reviews surfaced on the profile (mirrored into JSON-LD). */
-  reviews?: SalonReview[];
   /** Gallery images (sized, lazy, Persian alt). */
   gallery: GalleryImage[];
   /**
@@ -244,6 +192,20 @@ export interface SalonProfile {
    * its accent without a DB round-trip; `undefined` = the signature default.
    */
   brandAccent?: string;
+  /**
+   * Average customer rating (0–5) shown as Booksy-style social proof on
+   * discovery surfaces and the profile header. Optional; omitted when the salon
+   * has no aggregated reviews yet.
+   */
+  rating?: number;
+  /** Total customer review count backing {@link SalonProfile.rating}. */
+  reviewCount?: number;
+  /**
+   * Cover image URL used as the card thumbnail on discovery surfaces (a
+   * square-ish or 16:9 optimized asset). Falls back to the first gallery image
+   * when absent.
+   */
+  coverUrl?: string;
 }
 
 /**
@@ -272,9 +234,6 @@ const SALON_PROFILES: Record<string, SalonProfile> = {
     },
     telephone: '+98-21-1234-5678',
     priceRange: '$$',
-    category: 'آرایشگاه و سالن زیبایی زنانه',
-    rating: 4.8,
-    reviewCount: 124,
     geo: { latitude: 35.8, longitude: 51.4 },
     openingHours: [
       { day: 'Saturday', opens: '10:00', closes: '20:00' },
@@ -289,37 +248,6 @@ const SALON_PROFILES: Record<string, SalonProfile> = {
       { id: 'haircut', name: 'کوتاهی مو', durationMinutes: 45, priceRial: 2500000 },
       { id: 'color', name: 'رنگ مو', durationMinutes: 120, priceRial: 8500000 },
       { id: 'makeup', name: 'میکاپ', durationMinutes: 90, priceRial: 12000000 },
-    ],
-    staff: [
-      { id: 'mina', name: 'مینا رضایی', role: 'متخصص رنگ و مش' },
-      { id: 'sara', name: 'سارا محمدی', role: 'کوتاهی و حالت‌دهی' },
-      { id: 'niloo', name: 'نیلوفر کریمی', role: 'میکاپ‌آرتیست' },
-    ],
-    reviews: [
-      {
-        id: 'r1',
-        author: 'الهام ت.',
-        rating: 5,
-        date: '2025-05-18T10:00:00.000Z',
-        service: 'رنگ مو',
-        body: 'رنگ مویم دقیقاً همان چیزی شد که می‌خواستم. مینا واقعاً حرفه‌ای بود و محیط سالن هم تمیز و آرام بود.',
-      },
-      {
-        id: 'r2',
-        author: 'مریم ک.',
-        rating: 5,
-        date: '2025-04-30T10:00:00.000Z',
-        service: 'میکاپ',
-        body: 'برای میکاپ عروسی رفتم و عالی بود. رزرو آنلاین هم خیلی راحت بود و سر وقت پذیرش شدم.',
-      },
-      {
-        id: 'r3',
-        author: 'زهرا ن.',
-        rating: 4,
-        date: '2025-04-12T10:00:00.000Z',
-        service: 'کوتاهی مو',
-        body: 'کوتاهی مو خوب بود و به سلیقه‌ام توجه کردند. کمی منتظر ماندم ولی در کل راضی بودم.',
-      },
     ],
     gallery: [
       {
@@ -353,284 +281,9 @@ const SALON_PROFILES: Record<string, SalonProfile> = {
     // Storefront Brand_Accent (signature-ui-system R4.2): the warm rose accent
     // suits «سالن رز» and tints the prerendered profile via <TenantTheme>.
     brandAccent: 'rose',
-  },
-  'salon-noor': {
-    slug: 'salon-noor',
-    name: 'سالن نور',
-    // Demo storefront — points its booking CTA at the same seeded dev salon so
-    // the funnel works end-to-end from any demo profile.
-    bookingSalonId: '11111111-1111-1111-1111-111111111111',
-    citySlug: 'tehran',
-    tagline: 'رنگ، کوتاهی و کاشت ناخن با کادر حرفه‌ای در زعفرانیه تهران.',
-    description:
-      'سالن زیبایی نور در زعفرانیه تهران، خدمات رنگ و مش، کوتاهی تخصصی و کاشت ناخن را با نوبت‌دهی آنلاین ارائه می‌دهد. خدمت دلخواهتان را انتخاب کنید و نوبت خود را در چند ثانیه رزرو کنید.',
-    neighborhood: 'زعفرانیه',
-    address: {
-      streetAddress: 'زعفرانیه، خیابان نمونه، پلاک ۲۴',
-      addressLocality: 'تهران',
-      addressRegion: 'تهران',
-      addressCountry: 'IR',
-    },
-    telephone: '+98-21-2345-6789',
-    priceRange: '$$$',
-    category: 'آرایشگاه زنانه و ناخن',
-    rating: 4.6,
-    reviewCount: 89,
-    geo: { latitude: 35.81, longitude: 51.42 },
-    openingHours: [
-      { day: 'Saturday', opens: '09:00', closes: '21:00' },
-      { day: 'Sunday', opens: '09:00', closes: '21:00' },
-      { day: 'Monday', opens: '09:00', closes: '21:00' },
-      { day: 'Tuesday', opens: '09:00', closes: '21:00' },
-      { day: 'Wednesday', opens: '09:00', closes: '21:00' },
-      { day: 'Thursday', opens: '09:00', closes: '19:00' },
-      { day: 'Friday', closed: true },
-    ],
-    services: [
-      { id: 'haircut', name: 'کوتاهی مو', durationMinutes: 40, priceRial: 2200000 },
-      { id: 'color', name: 'رنگ و مش', durationMinutes: 150, priceRial: 9500000 },
-      { id: 'nails', name: 'کاشت ناخن', durationMinutes: 90, priceRial: 4500000 },
-    ],
-    staff: [
-      { id: 'roya', name: 'رویا احمدی', role: 'متخصص رنگ و بالیاژ' },
-      { id: 'shirin', name: 'شیرین موسوی', role: 'طراح و کاشت ناخن' },
-    ],
-    reviews: [
-      {
-        id: 'r1',
-        author: 'نگار ص.',
-        rating: 5,
-        date: '2025-05-02T10:00:00.000Z',
-        service: 'رنگ و مش',
-        body: 'بالیاژم فوق‌العاده شد و دقیقاً طبق عکسی که نشان دادم اجرا کردند. حتماً دوباره می‌روم.',
-      },
-      {
-        id: 'r2',
-        author: 'پریسا م.',
-        rating: 4,
-        date: '2025-03-21T10:00:00.000Z',
-        service: 'کاشت ناخن',
-        body: 'کاشت ناخن تمیز و باکیفیت بود. رزرو اینترنتی هم کار را خیلی راحت کرد.',
-      },
-    ],
-    gallery: [
-      {
-        src: '/og/default.jpg',
-        avifSrcSet: '/og/default.avif 1200w',
-        webpSrcSet: '/og/default.webp 1200w',
-        width: 1200,
-        height: 630,
-        alt: 'نمای داخلی سالن زیبایی نور',
-      },
-      {
-        src: '/hero/hero-1280.png',
-        srcSet: '/hero/hero-640.png 640w, /hero/hero-1280.png 1280w',
-        avifSrcSet: '/hero/hero-640.avif 640w, /hero/hero-1280.avif 1280w',
-        webpSrcSet: '/hero/hero-640.webp 640w, /hero/hero-1280.webp 1280w',
-        width: 1280,
-        height: 720,
-        alt: 'نمونه کار رنگ و مش در سالن نور',
-      },
-    ],
-    mapEmbedUrl: 'https://neshan.org/maps/iframe/@35.81,51.42,15z',
-    ogImage: '/og/default.jpg',
-    channels: {
-      website: '/',
-      telegram: 'https://t.me/salon_noor_bot',
-    },
-    brandAccent: 'violet',
-  },
-  'salon-aria': {
-    slug: 'salon-aria',
-    name: 'سالن آریا',
-    bookingSalonId: '11111111-1111-1111-1111-111111111111',
-    citySlug: 'tehran',
-    tagline: 'میکاپ، کوتاهی و مراقبت پوست در فضایی آرام در سعادت‌آباد.',
-    description:
-      'سالن زیبایی آریا در سعادت‌آباد تهران، میکاپ مجلسی و عروس، کوتاهی و حالت‌دهی مو و پاکسازی و مراقبت پوست را با نوبت‌دهی آنلاین ارائه می‌دهد. زمان دلخواهتان را انتخاب و نوبت خود را ثبت کنید.',
-    neighborhood: 'سعادت‌آباد',
-    address: {
-      streetAddress: 'سعادت‌آباد، بلوار نمونه، پلاک ۵',
-      addressLocality: 'تهران',
-      addressRegion: 'تهران',
-      addressCountry: 'IR',
-    },
-    telephone: '+98-21-3456-7890',
-    priceRange: '$$',
-    category: 'آرایشگاه، میکاپ و اسپا',
-    rating: 4.9,
-    reviewCount: 213,
-    geo: { latitude: 35.78, longitude: 51.37 },
-    openingHours: [
-      { day: 'Saturday', opens: '10:00', closes: '20:00' },
-      { day: 'Sunday', opens: '10:00', closes: '20:00' },
-      { day: 'Monday', opens: '10:00', closes: '20:00' },
-      { day: 'Tuesday', opens: '10:00', closes: '20:00' },
-      { day: 'Wednesday', opens: '10:00', closes: '20:00' },
-      { day: 'Thursday', opens: '10:00', closes: '20:00' },
-      { day: 'Friday', closed: true },
-    ],
-    services: [
-      { id: 'haircut', name: 'کوتاهی و حالت‌دهی', durationMinutes: 45, priceRial: 2800000 },
-      { id: 'makeup', name: 'میکاپ مجلسی', durationMinutes: 90, priceRial: 13500000 },
-      { id: 'skin', name: 'پاکسازی پوست', durationMinutes: 60, priceRial: 3900000 },
-    ],
-    staff: [
-      { id: 'darya', name: 'دریا حسینی', role: 'میکاپ‌آرتیست ارشد' },
-      { id: 'tara', name: 'تارا اکبری', role: 'متخصص پوست' },
-      { id: 'nazanin', name: 'نازنین رحیمی', role: 'کوتاهی و حالت‌دهی' },
-    ],
-    reviews: [
-      {
-        id: 'r1',
-        author: 'آیدا ر.',
-        rating: 5,
-        date: '2025-05-25T10:00:00.000Z',
-        service: 'میکاپ مجلسی',
-        body: 'بهترین میکاپی که تا حالا داشتم. ماندگاری عالی و برخورد فوق‌العاده صمیمی. پیشنهاد می‌کنم.',
-      },
-      {
-        id: 'r2',
-        author: 'سمیرا خ.',
-        rating: 5,
-        date: '2025-05-10T10:00:00.000Z',
-        service: 'پاکسازی پوست',
-        body: 'بعد از پاکسازی پوستم واقعاً شفاف شد و مشاوره‌ی خوبی هم برای مراقبت گرفتم.',
-      },
-      {
-        id: 'r3',
-        author: 'مهسا ب.',
-        rating: 5,
-        date: '2025-04-19T10:00:00.000Z',
-        service: 'کوتاهی و حالت‌دهی',
-        body: 'محیط آرام و تمیزی داشت و کوتاهی مو دقیق و طبق سلیقه‌ام انجام شد.',
-      },
-    ],
-    gallery: [
-      {
-        src: '/hero/hero-1280.png',
-        srcSet: '/hero/hero-640.png 640w, /hero/hero-1280.png 1280w',
-        avifSrcSet: '/hero/hero-640.avif 640w, /hero/hero-1280.avif 1280w',
-        webpSrcSet: '/hero/hero-640.webp 640w, /hero/hero-1280.webp 1280w',
-        width: 1280,
-        height: 720,
-        alt: 'نمای داخلی سالن زیبایی آریا',
-      },
-      {
-        src: '/og/default.jpg',
-        avifSrcSet: '/og/default.avif 1200w',
-        webpSrcSet: '/og/default.webp 1200w',
-        width: 1200,
-        height: 630,
-        alt: 'نمونه کار میکاپ مجلسی در سالن آریا',
-      },
-    ],
-    mapEmbedUrl: 'https://neshan.org/maps/iframe/@35.78,51.37,15z',
-    ogImage: '/og/default.jpg',
-    channels: {
-      website: '/',
-      bale: 'https://ble.ir/salon_aria_bot',
-      telegram: 'https://t.me/salon_aria_bot',
-    },
-    brandAccent: 'teal',
-  },
-  'brooklyn-barber': {
-    slug: 'brooklyn-barber',
-    name: 'بروکلین باربرشاپ',
-    // Demo storefront — reuses the seeded dev salon for a working booking CTA.
-    bookingSalonId: '11111111-1111-1111-1111-111111111111',
-    citySlug: 'tehran',
-    tagline: 'فِید، اصلاح ریش و کوتاهی مردانه به سبک خیابانی نیویورک؛ با تیمی از باربرهای حرفه‌ای.',
-    description:
-      'بروکلین باربرشاپ یک باربرشاپ مردانه به سبک نیویورک در قلب تهران است: فِید و کوتاهی مردانه، فرم و اصلاح ریش و شیو با حوله داغ، در فضایی گرم با موسیقی و قهوه. تیم ما از باربرهای باتجربه تشکیل شده، از جمله آرش، آرتیست فِید و خالکوبی. خدمت دلخواهت را انتخاب کن و نوبتت را در چند ثانیه رزرو کن.',
-    neighborhood: 'جردن',
-    address: {
-      streetAddress: 'جردن، خیابان نمونه، پلاک ۱۸',
-      addressLocality: 'تهران',
-      addressRegion: 'تهران',
-      addressCountry: 'IR',
-    },
-    telephone: '+98-21-8899-0011',
-    priceRange: '$$$',
-    category: 'باربرشاپ و آرایشگاه مردانه',
-    rating: 4.9,
-    reviewCount: 342,
-    geo: { latitude: 35.77, longitude: 51.42 },
-    openingHours: [
-      { day: 'Saturday', opens: '11:00', closes: '22:00' },
-      { day: 'Sunday', opens: '11:00', closes: '22:00' },
-      { day: 'Monday', opens: '11:00', closes: '22:00' },
-      { day: 'Tuesday', opens: '11:00', closes: '22:00' },
-      { day: 'Wednesday', opens: '11:00', closes: '22:00' },
-      { day: 'Thursday', opens: '11:00', closes: '23:00' },
-      { day: 'Friday', opens: '14:00', closes: '22:00' },
-    ],
-    services: [
-      { id: 'haircut', name: 'فِید و کوتاهی مردانه', durationMinutes: 40, priceRial: 1800000 },
-      { id: 'beard', name: 'فرم و اصلاح ریش', durationMinutes: 25, priceRial: 900000 },
-      { id: 'shave', name: 'شیو با حوله داغ', durationMinutes: 30, priceRial: 1200000 },
-      { id: 'combo', name: 'پکیج کامل (مو + ریش)', durationMinutes: 60, priceRial: 2500000 },
-    ],
-    staff: [
-      { id: 'arash', name: 'آرش رستمی', role: 'مستر باربر • فِید و آرتیست تتو' },
-      { id: 'sam', name: 'سام کریمی', role: 'متخصص ریش و شیو کلاسیک' },
-      { id: 'daniel', name: 'دنیل مرادی', role: 'باربر و طراح خط ریش' },
-    ],
-    reviews: [
-      {
-        id: 'r1',
-        author: 'کیان م.',
-        rating: 5,
-        date: '2025-05-28T10:00:00.000Z',
-        service: 'فِید و کوتاهی مردانه',
-        body: 'آرش، همون باربری که کل بازوش خالکوبیه، بهترین فِیدی که تا حالا داشتم رو زد. دقیقاً حس یه باربرشاپ واقعی نیویورک رو داشت.',
-      },
-      {
-        id: 'r2',
-        author: 'پویا ن.',
-        rating: 5,
-        date: '2025-05-12T10:00:00.000Z',
-        service: 'شیو با حوله داغ',
-        body: 'شیو با حوله داغ عالی بود، فضا و موزیک هم فوق‌العاده. همون وایب باحالی که دنبالش بودم.',
-      },
-      {
-        id: 'r3',
-        author: 'رضا آ.',
-        rating: 4,
-        date: '2025-04-20T10:00:00.000Z',
-        service: 'پکیج کامل (مو + ریش)',
-        body: 'کوتاهی و ریش هر دو تمیز و حرفه‌ای انجام شد. کمی شلوغ بود ولی کاملاً ارزشش را داشت.',
-      },
-    ],
-    gallery: [
-      {
-        src: '/hero/hero-1280.png',
-        srcSet: '/hero/hero-640.png 640w, /hero/hero-1280.png 1280w',
-        avifSrcSet: '/hero/hero-640.avif 640w, /hero/hero-1280.avif 1280w',
-        webpSrcSet: '/hero/hero-640.webp 640w, /hero/hero-1280.webp 1280w',
-        width: 1280,
-        height: 720,
-        alt: 'فضای داخلی بروکلین باربرشاپ به سبک نیویورک',
-      },
-      {
-        src: '/og/default.jpg',
-        avifSrcSet: '/og/default.avif 1200w',
-        webpSrcSet: '/og/default.webp 1200w',
-        width: 1200,
-        height: 630,
-        alt: 'باربر در حال زدن فِید مو در بروکلین باربرشاپ',
-      },
-    ],
-    mapEmbedUrl: 'https://neshan.org/maps/iframe/@35.77,51.42,15z',
-    ogImage: '/og/default.jpg',
-    channels: {
-      website: '/',
-      telegram: 'https://t.me/brooklyn_barber_bot',
-      bale: 'https://ble.ir/brooklyn_barber_bot',
-    },
-    // Moody "night" accent (dark slate) tints the storefront for a cool,
-    // urban New-York-barbershop vibe via <TenantTheme> — no global palette change.
-    brandAccent: 'night',
+    rating: 4.8,
+    reviewCount: 124,
+    coverUrl: '/hero/hero-1280.png',
   },
 };
 
@@ -665,14 +318,4 @@ export function getSalonsByService(serviceType: string | undefined): SalonProfil
   if (!serviceType) return [];
   const key = serviceType.trim();
   return getAllSalonProfiles().filter((s) => s.services.some((svc) => svc.id === key));
-}
-
-/**
- * The lowest service price (Rial) offered by a salon, used for the "from …"
- * price shown on marketplace salon cards (Booksy-style). Returns `undefined`
- * for a salon with no services so the card can omit the price cleanly.
- */
-export function getMinServicePriceRial(salon: SalonProfile): number | undefined {
-  if (!salon.services.length) return undefined;
-  return Math.min(...salon.services.map((svc) => svc.priceRial));
 }

@@ -28,7 +28,7 @@ import { useEffect } from 'react';
  * (`tokens.css` `:root`). Used when no per-salon accent color is supplied. The
  * old hard-coded indigo `#6366f1` is gone (signature-ui-system R4.6).
  */
-const SIGNATURE_THEME_COLOR = '#8E2F50';
+const SIGNATURE_THEME_COLOR = '#D81B60';
 
 /** Shared, static fields mirrored from `public/manifest.json`. */
 const SHARED_MANIFEST = {

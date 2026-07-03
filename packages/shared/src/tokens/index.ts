@@ -56,46 +56,50 @@ export interface ColorPalette {
   focusRing: string;
 }
 
-/** Light theme palette — salon-luxe signature (verbatim from ui-ux-skills.md). */
+/**
+ * Light theme palette — Booksy-inspired: a vibrant magenta-pink primary on a
+ * clean white canvas with cool-neutral grays. Every pairing is WCAG 2.2 AA
+ * verified in `web/src/styles/contrast.test.ts`.
+ */
 export const lightColors: ColorPalette = {
-  bg: '#FBF7F2',
-  surface: '#F4ECE1',
+  bg: '#FFFFFF',
+  surface: '#F6F7F9',
   elevated: '#FFFFFF',
-  text: '#241C18',
-  textMuted: '#6E5C50',
-  border: '#E4D8CB',
-  primary: '#8E2F50',
+  text: '#1A1D23',
+  textMuted: '#5B6573',
+  border: '#E6E8EC',
+  primary: '#D81B60',
   primaryContrast: '#FFFFFF',
-  secondary: '#2E6E63',
-  accent: '#A6452A',
+  secondary: '#1F8A70',
+  accent: '#FF6B35',
   success: '#1F7A43',
   warning: '#9A5B12',
   danger: '#B3261E',
   info: '#1F5FAE',
-  focusRing: '#8E2F50',
+  focusRing: '#D81B60',
 };
 
 /**
- * Dark theme palette — "rosé-noir": a deep wine-charcoal ground (replacing the
- * muddier espresso browns) so the rose/plum brand glows. Mirror of the
+ * Dark theme palette — Instagram-inspired: a near-black charcoal ground so the
+ * magenta brand glows and white text reads crisply. Mirror of the
  * `[data-theme="dark"]` block in `tokens.css`; AA-verified in `contrast.test.ts`.
  */
 export const darkColors: ColorPalette = {
-  bg: '#1A1117',
-  surface: '#271A22',
-  elevated: '#33232C',
-  text: '#F7EBF0',
-  textMuted: '#C6ABB5',
-  border: '#402E38',
-  primary: '#EAA0B8',
-  primaryContrast: '#1A1117',
+  bg: '#121212',
+  surface: '#181818',
+  elevated: '#1F1F1F',
+  text: '#FAFAFA',
+  textMuted: '#A8A8A8',
+  border: '#262626',
+  primary: '#FF6B9D',
+  primaryContrast: '#121212',
   secondary: '#79C9BB',
   accent: '#ECA486',
   success: '#69D08C',
   warning: '#E7B45C',
   danger: '#F2938C',
   info: '#86B6F0',
-  focusRing: '#EAA0B8',
+  focusRing: '#FF6B9D',
 };
 
 /**

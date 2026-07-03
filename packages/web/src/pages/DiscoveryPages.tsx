@@ -4,13 +4,9 @@ import { Scissors } from 'lucide-react';
 import i18n from '../i18n';
 import { SeoHead, JsonLd, SITE_URL } from '../components/seo';
 import type { JsonLdNode } from '../components/seo';
-import { Card, CardContent, CardTitle, Num, SalonCard } from '../components/ui';
+import { Card, CardContent, CardTitle, Num, Reveal, SalonCard } from '../components/ui';
 import { getCity, getServiceType } from '../data/discovery';
-import {
-  getSalonsByCity,
-  getSalonsByService,
-  type SalonProfile,
-} from '../data/salons';
+import { getSalonsByCity, getSalonsByService, type SalonProfile } from '../data/salons';
 
 /**
  * Public discovery pages — `/city/:city` and `/services/:type` (task 5.3;
@@ -79,18 +75,39 @@ function SalonList({ salons, titleId }: { salons: SalonProfile[]; titleId: strin
   }
 
   return (
-    <ul
-      className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-      role="list"
-      aria-labelledby={titleId}
-    >
-      {salons.map((salon) => (
+    <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" role="list" aria-labelledby={titleId}>
+      {salons.map((salon, i) => (
         <li key={salon.slug}>
-          <SalonCard salon={salon} />
+          <Reveal stagger={((i % 8) + 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}>
+            <SalonCard
+              slug={salon.slug}
+              name={salon.name}
+              coverUrl={salon.coverUrl ?? salon.gallery[0]?.src ?? '/og/default.jpg'}
+              rating={salon.rating ?? 0}
+              reviewCount={salon.reviewCount ?? 0}
+              location={`${salon.neighborhood}، ${salon.address.addressLocality}`}
+              services={salon.services.map((s) => s.name)}
+              openNow={!salon.openingHours.find((h) => h.day === currentDay())?.closed}
+            />
+          </Reveal>
         </li>
       ))}
     </ul>
   );
+}
+
+/** Today's Iranian-week day token (used for the "open now" badge). */
+function currentDay(): import('../data/salons').SchemaDay {
+  const map: Record<number, import('../data/salons').SchemaDay> = {
+    6: 'Saturday',
+    0: 'Sunday',
+    1: 'Monday',
+    2: 'Tuesday',
+    3: 'Wednesday',
+    4: 'Thursday',
+    5: 'Friday',
+  };
+  return map[new Date().getDay()];
 }
 
 /** Builds the `BreadcrumbList` JSON-LD for a discovery page (خانه ‹ page). */
@@ -136,10 +153,7 @@ export function CityPage() {
 
       {/* Neighborhoods — neighborhood-level intent, real content (seo §11). */}
       <section className="py-4" aria-labelledby="city-neighborhoods-title">
-        <h2
-          id="city-neighborhoods-title"
-          className="mb-3 text-lg font-bold text-text"
-        >
+        <h2 id="city-neighborhoods-title" className="mb-3 text-lg font-bold text-text">
           {t('discovery.neighborhoodsTitle')}
         </h2>
         <ul className="flex flex-wrap gap-2" role="list">
@@ -200,10 +214,7 @@ export function ServicePage() {
 
       {/* What the service includes — concrete, service-specific (seo §1). */}
       <section className="py-4" aria-labelledby="service-includes-title">
-        <h2
-          id="service-includes-title"
-          className="mb-3 text-lg font-bold text-text"
-        >
+        <h2 id="service-includes-title" className="mb-3 text-lg font-bold text-text">
           {t('discovery.includesTitle')}
         </h2>
         <ul className="flex flex-col gap-2 ps-5 [list-style:disc] text-muted" role="list">

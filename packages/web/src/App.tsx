@@ -1,14 +1,9 @@
 import { lazy, Suspense } from 'react';
 import { HelmetProvider } from 'react-helmet-async';
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Navigate,
-  Outlet,
-} from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { ThemeProvider, FunnelTenantTheme } from './components/theme';
 import { AppShell, RouteLoader } from './components/layout';
+import { PageTransition } from './components/ui';
 import { AuthProvider } from './auth/AuthContext';
 
 /**
@@ -71,21 +66,15 @@ const CityPage = lazy(() =>
 const ServicePage = lazy(() =>
   import('./pages/DiscoveryPages').then((m) => ({ default: m.ServicePage })),
 );
-const AboutPage = lazy(() =>
-  import('./pages/LegalPages').then((m) => ({ default: m.AboutPage })),
-);
+const AboutPage = lazy(() => import('./pages/LegalPages').then((m) => ({ default: m.AboutPage })));
 const ContactPage = lazy(() =>
   import('./pages/LegalPages').then((m) => ({ default: m.ContactPage })),
 );
 const PrivacyPage = lazy(() =>
   import('./pages/LegalPages').then((m) => ({ default: m.PrivacyPage })),
 );
-const TermsPage = lazy(() =>
-  import('./pages/LegalPages').then((m) => ({ default: m.TermsPage })),
-);
-const AuthPage = lazy(() =>
-  import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })),
-);
+const TermsPage = lazy(() => import('./pages/LegalPages').then((m) => ({ default: m.TermsPage })));
+const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })));
 const QrLandingPage = lazy(() =>
   import('./pages/QrLandingPage').then((m) => ({ default: m.QrLandingPage })),
 );
@@ -127,9 +116,7 @@ const OwnerConfigurationPage = lazy(() =>
 const OwnerSubscriptionPage = lazy(() =>
   import('./pages/owner').then((m) => ({ default: m.OwnerSubscriptionPage })),
 );
-const OwnerQrPage = lazy(() =>
-  import('./pages/owner').then((m) => ({ default: m.OwnerQrPage })),
-);
+const OwnerQrPage = lazy(() => import('./pages/owner').then((m) => ({ default: m.OwnerQrPage })));
 const OwnerMyQrPage = lazy(() =>
   import('./pages/owner').then((m) => ({ default: m.OwnerMyQrPage })),
 );
@@ -140,108 +127,89 @@ export function App() {
       <ThemeProvider>
         <BrowserRouter>
           <AuthProvider>
-          <div dir="rtl" lang="fa" className="app-root">
-            <Suspense fallback={<RouteLoader />}>
-              <Routes>
-                {/*
-                 * Owner panel (R2.1): `/owner/*` brings its own `OwnerShell`
-                 * (header / single `<main>` / role-filtered nav) so it renders
-                 * OUTSIDE `AppShell` — exactly one `<main>` landmark per page.
-                 * `OwnerLayout` gates the area (auth bootstrap + RBAC) and the
-                 * nested pages render inside its `<Outlet>`.
-                 */}
-                <Route path="/owner" element={<OwnerLayout />}>
-                  <Route
-                    index
-                    element={<Navigate to="/owner/calendar" replace />}
-                  />
-                  <Route path="calendar" element={<OwnerCalendarPage />} />
-                  <Route path="analytics" element={<OwnerAnalyticsPage />} />
-                  <Route path="config" element={<OwnerConfigurationPage />} />
-                  <Route
-                    path="subscription"
-                    element={<OwnerSubscriptionPage />}
-                  />
-                  <Route path="qr" element={<OwnerQrPage />} />
-                  <Route path="my-qr" element={<OwnerMyQrPage />} />
-                </Route>
-
-                {/* Public + customer + admin surfaces, inside the app shell. */}
-                <Route
-                  element={
-                    <AppShell>
-                      <Outlet />
-                    </AppShell>
-                  }
-                >
-                  {/* Public marketing home (indexable) */}
-                  <Route path="/" element={<MarketingHome />} />
-
-                  {/* Owner-acquisition marketing landing (indexable) */}
-                  <Route path="/business" element={<BusinessLanding />} />
-
-                  {/* Salon self-registration onboarding wizard (noindex) */}
-                  <Route
-                    path="/business/register"
-                    element={<RegisterSalonPage />}
-                  />
-
-                  {/* Public salon profile (indexable) */}
-                  <Route path="/s/:slug" element={<SalonProfilePage />} />
-
-                  {/* Public discovery pages (indexable) */}
-                  <Route path="/city/:city" element={<CityPage />} />
-                  <Route path="/services/:type" element={<ServicePage />} />
-
-                  {/* Public trust & legal pages (indexable) */}
-                  <Route path="/about" element={<AboutPage />} />
-                  <Route path="/contact" element={<ContactPage />} />
-                  <Route path="/privacy" element={<PrivacyPage />} />
-                  <Route path="/terms" element={<TermsPage />} />
-
-                  {/* Customer flows */}
-                  <Route path="/auth" element={<AuthPage />} />
-                  <Route path="/qr/:payload" element={<QrLandingPage />} />
+            <div dir="rtl" lang="fa" className="app-root">
+              <Suspense fallback={<RouteLoader />}>
+                <Routes>
                   {/*
-                   * Booking funnel — wrapped in the storefront theming boundary
-                   * (R4.2): it resolves the salon's Brand_Accent by id and scopes
-                   * it to the funnel subtree so any visitor sees the storefront's
-                   * accent. The steps render inside the boundary's <Outlet />.
+                   * Owner panel (R2.1): `/owner/*` brings its own `OwnerShell`
+                   * (header / single `<main>` / role-filtered nav) so it renders
+                   * OUTSIDE `AppShell` — exactly one `<main>` landmark per page.
+                   * `OwnerLayout` gates the area (auth bootstrap + RBAC) and the
+                   * nested pages render inside its `<Outlet>`.
                    */}
-                  <Route
-                    path="/salon/:salonId/book"
-                    element={<FunnelTenantTheme />}
-                  >
-                    <Route index element={<AvailabilityPage />} />
-                    <Route path="confirm" element={<BookingConfirmPage />} />
+                  <Route path="/owner" element={<OwnerLayout />}>
+                    <Route index element={<Navigate to="/owner/calendar" replace />} />
+                    <Route path="calendar" element={<OwnerCalendarPage />} />
+                    <Route path="analytics" element={<OwnerAnalyticsPage />} />
+                    <Route path="config" element={<OwnerConfigurationPage />} />
+                    <Route path="subscription" element={<OwnerSubscriptionPage />} />
+                    <Route path="qr" element={<OwnerQrPage />} />
+                    <Route path="my-qr" element={<OwnerMyQrPage />} />
                   </Route>
-                  <Route
-                    path="/booking/success"
-                    element={<BookingSuccessPage />}
-                  />
 
-                  {/* Legacy admin paths → consolidated into the owner panel,
+                  {/* Public + customer + admin surfaces, inside the app shell. */}
+                  <Route
+                    element={
+                      <AppShell>
+                        <PageTransition>
+                          <Outlet />
+                        </PageTransition>
+                      </AppShell>
+                    }
+                  >
+                    {/* Public marketing home (indexable) */}
+                    <Route path="/" element={<MarketingHome />} />
+
+                    {/* Owner-acquisition marketing landing (indexable) */}
+                    <Route path="/business" element={<BusinessLanding />} />
+
+                    {/* Salon self-registration onboarding wizard (noindex) */}
+                    <Route path="/business/register" element={<RegisterSalonPage />} />
+
+                    {/* Public salon profile (indexable) */}
+                    <Route path="/s/:slug" element={<SalonProfilePage />} />
+
+                    {/* Public discovery pages (indexable) */}
+                    <Route path="/city/:city" element={<CityPage />} />
+                    <Route path="/services/:type" element={<ServicePage />} />
+
+                    {/* Public trust & legal pages (indexable) */}
+                    <Route path="/about" element={<AboutPage />} />
+                    <Route path="/contact" element={<ContactPage />} />
+                    <Route path="/privacy" element={<PrivacyPage />} />
+                    <Route path="/terms" element={<TermsPage />} />
+
+                    {/* Customer flows */}
+                    <Route path="/auth" element={<AuthPage />} />
+                    <Route path="/qr/:payload" element={<QrLandingPage />} />
+                    {/*
+                     * Booking funnel — wrapped in the storefront theming boundary
+                     * (R4.2): it resolves the salon's Brand_Accent by id and scopes
+                     * it to the funnel subtree so any visitor sees the storefront's
+                     * accent. The steps render inside the boundary's <Outlet />.
+                     */}
+                    <Route path="/salon/:salonId/book" element={<FunnelTenantTheme />}>
+                      <Route index element={<AvailabilityPage />} />
+                      <Route path="confirm" element={<BookingConfirmPage />} />
+                    </Route>
+                    <Route path="/booking/success" element={<BookingSuccessPage />} />
+
+                    {/* Legacy admin paths → consolidated into the owner panel,
                       which bootstraps auth and guards by role. */}
-                  <Route
-                    path="/admin"
-                    element={<Navigate to="/owner" replace />}
-                  />
-                  <Route
-                    path="/admin/config"
-                    element={<Navigate to="/owner/config" replace />}
-                  />
-                  <Route
-                    path="/admin/calendar"
-                    element={<Navigate to="/owner/calendar" replace />}
-                  />
-                  <Route
-                    path="/admin/analytics"
-                    element={<Navigate to="/owner/analytics" replace />}
-                  />
-                </Route>
-              </Routes>
-            </Suspense>
-          </div>
+                    <Route path="/admin" element={<Navigate to="/owner" replace />} />
+                    <Route path="/admin/config" element={<Navigate to="/owner/config" replace />} />
+                    <Route
+                      path="/admin/calendar"
+                      element={<Navigate to="/owner/calendar" replace />}
+                    />
+                    <Route
+                      path="/admin/analytics"
+                      element={<Navigate to="/owner/analytics" replace />}
+                    />
+                  </Route>
+                </Routes>
+              </Suspense>
+            </div>
           </AuthProvider>
         </BrowserRouter>
       </ThemeProvider>

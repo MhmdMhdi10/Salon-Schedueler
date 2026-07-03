@@ -31,37 +31,42 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
  * - focus-visible uses the global focus ring (`--color-focus-ring`) via the
  *   `focus` color token.
  * - loading is driven by the `loading` prop (spinner + `aria-busy`).
+ *
+ * Booksy signature: primary actions render as a full pill (`rounded-pill`),
+ * the visual hallmark of the Booksy booking funnel CTA.
  */
 const base = cn(
   'relative inline-flex items-center justify-center gap-2',
   'min-h-[44px] min-w-[44px]',
-  'rounded-md font-medium text-sm leading-none',
+  'font-medium text-sm leading-none',
   'select-none whitespace-nowrap',
-  'transition-colors duration-fast ease-standard',
+  'transition-[background-color,border-color,color,transform,box-shadow] duration-fast ease-standard',
+  'motion-safe:active:scale-[0.97]',
   'outline-none focus-visible:outline focus-visible:outline-2',
   'focus-visible:outline-offset-2 focus-visible:outline-focus',
   'disabled:cursor-not-allowed disabled:opacity-60',
+  'disabled:motion-safe:active:scale-100',
 );
 
 const sizeClasses: Record<ButtonSize, string> = {
-  md: 'px-4 py-2',
-  lg: 'px-5 py-3 text-md',
+  md: 'px-5 py-2 rounded-pill',
+  lg: 'px-6 py-3 text-md rounded-pill',
 };
 
 const variantClasses: Record<ButtonVariant, string> = {
-  // Text-bearing fills use the AA-safe primary shade from tokens.
+  // Text-bearing fills use the AA-safe primary shade from tokens. Booksy pill.
   primary: cn(
     'bg-primary text-primary-contrast shadow-1',
     'hover:brightness-110 active:brightness-95',
     'disabled:hover:brightness-100',
   ),
   secondary: cn(
-    'bg-surface text-text border border-border',
+    'bg-surface text-text border border-border rounded-md',
     'hover:bg-elevated active:brightness-95',
     'disabled:hover:bg-surface',
   ),
   ghost: cn(
-    'bg-transparent text-text',
+    'bg-transparent text-text rounded-md',
     'hover:bg-surface active:brightness-95',
     'disabled:hover:bg-transparent',
   ),
@@ -112,9 +117,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       )}
       {/* Keep the label in the DOM but visually hidden while loading so the
           button width does not jump (protects layout / CLS). */}
-      <span
-        className={cn('inline-flex items-center gap-2', loading && 'invisible')}
-      >
+      <span className={cn('inline-flex items-center gap-2', loading && 'invisible')}>
         {startIcon && (
           <span className="inline-flex shrink-0" aria-hidden="true">
             {startIcon}

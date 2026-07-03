@@ -20,7 +20,7 @@ import { ensureAaFill } from '../../styles/contrast';
  */
 
 /** The signature default theme color (no per-salon accent). */
-const SIGNATURE_THEME_COLOR = '#8E2F50';
+const SIGNATURE_THEME_COLOR = '#D81B60';
 
 let lastManifestJson = '';
 const RealBlob = globalThis.Blob;

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CalendarClock, Clock, Scissors, Store, Users } from 'lucide-react';
+import { CalendarClock, Clock, Scissors, Users } from 'lucide-react';
 import { salonApi } from '../api/client';
 import { SeoHead } from '../components/seo';
-import { readSalonName } from '../utils/salonName';
 import {
+  DayScroller,
+  type DayScrollerItem,
   EmptyState,
   ErrorState,
   JalaliDatePicker,
@@ -16,6 +17,7 @@ import {
   type SlotItem,
   type SlotState,
 } from '../components/ui';
+import { gregorianToJalali, getJalaliMonthName } from '@salon/shared';
 
 /** A bookable service as returned by the salon services endpoint (unchanged contract). */
 interface Service {
@@ -85,6 +87,49 @@ function writeSelection(salonId: string, selection: PersistedSelection): void {
   } catch {
     // Best-effort persistence; a storage failure must never break the funnel.
   }
+}
+
+/** Persian weekday short labels (Saturday-first to match the Iranian week). */
+const PERSIAN_WEEKDAY_SHORT: Record<number, string> = {
+  0: 'یک',
+  1: 'دو',
+  2: 'سه',
+  3: 'چهار',
+  4: 'پنج',
+  5: 'جمعه',
+  6: 'شنبه',
+};
+
+/**
+ * Builds the next `count` days as Booksy-style scroller items — Persian weekday
+ * + day-of-month + month — starting today. Each item's `iso` is a local
+ * `YYYY-MM-DD` the availability API understands.
+ */
+function buildUpcomingDays(count: number): DayScrollerItem[] {
+  const out: DayScrollerItem[] = [];
+  const base = new Date();
+  base.setHours(0, 0, 0, 0);
+  for (let i = 0; i < count; i += 1) {
+    const d = new Date(base);
+    d.setDate(base.getDate() + i);
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+      d.getDate(),
+    ).padStart(2, '0')}`;
+    const j = gregorianToJalali({
+      year: d.getFullYear(),
+      month: d.getMonth() + 1,
+      day: d.getDate(),
+    });
+    out.push({
+      iso,
+      weekday: PERSIAN_WEEKDAY_SHORT[d.getDay()],
+      day: j.jd,
+      month: getJalaliMonthName(j.jm),
+      hasSlots: true,
+      disabled: false,
+    });
+  }
+  return out;
 }
 
 /** Today as a `YYYY-MM-DD` local date — the inclusive lower bound for the picker. */
@@ -158,10 +203,7 @@ export function AvailabilityPage() {
   const [searchParams] = useSearchParams();
   const isMobile = useIsMobile();
   const minDate = useMemo(() => todayISO(), []);
-  // The salon name (cached at the QR-landing / profile step). Shown as a
-  // "booking at {salon}" subtitle so the funnel always says which salon you are
-  // booking with — Booksy-style. Omitted cleanly when not yet cached.
-  const salonName = useMemo(() => readSalonName(salonId), [salonId]);
+  const upcomingDays = useMemo(() => buildUpcomingDays(14), []);
 
   // Restore any persisted selection so back-navigation keeps the user's place.
   const restored = useMemo(() => readSelection(salonId), [salonId]);
@@ -318,15 +360,7 @@ export function AvailabilityPage() {
       className="mx-auto flex w-full max-w-funnel flex-col gap-6 py-6"
     >
       <SeoHead title={t('seo.titles.availability')} />
-      <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-bold text-text">{t('booking.heading')}</h1>
-        {salonName && (
-          <p className="flex items-center gap-2 text-sm text-muted">
-            <Store className="h-4 w-4 shrink-0" aria-hidden="true" />
-            {t('booking.atSalon', { salon: salonName })}
-          </p>
-        )}
-      </div>
+      <h1 className="text-xl font-bold text-text">{t('booking.heading')}</h1>
 
       {/* Service selector — card radio list with loading / error / empty / ready. */}
       <section aria-labelledby="service-section-title" className="flex flex-col gap-3">
@@ -416,15 +450,19 @@ export function AvailabilityPage() {
         </section>
       )}
 
-      {/* Date — Jalali picker (bottom sheet on mobile), past dates disabled. */}
+      {/* Date — Booksy-style horizontal day scroller for the next 14 days,
+           plus the full Jalali calendar for jumping further out. */}
       <section aria-labelledby="date-section-title" className="flex flex-col gap-3">
-        <h2
-          id="date-section-title"
-          className="flex items-center gap-2 text-lg font-bold text-text"
-        >
+        <h2 id="date-section-title" className="flex items-center gap-2 text-lg font-bold text-text">
           <CalendarClock className="h-5 w-5" aria-hidden="true" />
           {t('booking.selectDate')}
         </h2>
+        <DayScroller
+          days={upcomingDays}
+          value={date || null}
+          onChange={handleDateChange}
+          label={t('booking.selectDate')}
+        />
         <JalaliDatePicker
           label={t('booking.selectDate')}
           value={date || null}
@@ -437,10 +475,7 @@ export function AvailabilityPage() {
 
       {/* Time slots — skeleton → empty → populated, with an explicit error+retry. */}
       <section aria-labelledby="time-section-title" className="flex flex-col gap-3">
-        <h2
-          id="time-section-title"
-          className="flex items-center gap-2 text-lg font-bold text-text"
-        >
+        <h2 id="time-section-title" className="flex items-center gap-2 text-lg font-bold text-text">
           <Clock className="h-5 w-5" aria-hidden="true" />
           {t('booking.selectTime')}
         </h2>

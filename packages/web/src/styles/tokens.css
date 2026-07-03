@@ -82,22 +82,22 @@
 :root {
   color-scheme: light;
 
-  /* Color — semantic roles (light) */
-  --color-bg: #FBF7F2;
-  --color-surface: #F4ECE1;
+  /* Color — semantic roles (light): Booksy-inspired magenta on clean white */
+  --color-bg: #FFFFFF;
+  --color-surface: #F6F7F9;
   --color-elevated: #FFFFFF;
-  --color-text: #241C18;
-  --color-text-muted: #6E5C50;
-  --color-border: #E4D8CB;
-  --color-primary: #8E2F50;
+  --color-text: #1A1D23;
+  --color-text-muted: #5B6573;
+  --color-border: #E6E8EC;
+  --color-primary: #D81B60;
   --color-primary-contrast: #FFFFFF;
-  --color-secondary: #2E6E63;
-  --color-accent: #A6452A;
+  --color-secondary: #1F8A70;
+  --color-accent: #FF6B35;
   --color-success: #1F7A43;
   --color-warning: #9A5B12;
   --color-danger: #B3261E;
   --color-info: #1F5FAE;
-  --color-focus-ring: #8E2F50;
+  --color-focus-ring: #D81B60;
 
   /* Typography scale (rem, base 16px) */
   --font-2xs: 0.75rem;
@@ -167,23 +167,23 @@
 [data-theme='dark'] {
   color-scheme: dark;
 
-  /* Color — semantic roles (dark "rosé-noir": deep wine-charcoal ground so the
-     rose/plum brand glows; replaces the muddier espresso browns) */
-  --color-bg: #1A1117;
-  --color-surface: #271A22;
-  --color-elevated: #33232C;
-  --color-text: #F7EBF0;
-  --color-text-muted: #C6ABB5;
-  --color-border: #402E38;
-  --color-primary: #EAA0B8;
-  --color-primary-contrast: #1A1117;
+  /* Color — semantic roles (dark "Instagram": near-black ground so magenta glows
+     and white text reads crisply). AA-verified in contrast.test.ts. */
+  --color-bg: #121212;
+  --color-surface: #181818;
+  --color-elevated: #1F1F1F;
+  --color-text: #FAFAFA;
+  --color-text-muted: #A8A8A8;
+  --color-border: #262626;
+  --color-primary: #FF6B9D;
+  --color-primary-contrast: #121212;
   --color-secondary: #79C9BB;
   --color-accent: #ECA486;
   --color-success: #69D08C;
   --color-warning: #E7B45C;
   --color-danger: #F2938C;
   --color-info: #86B6F0;
-  --color-focus-ring: #EAA0B8;
+  --color-focus-ring: #FF6B9D;
 
   /*
    * Dark mode prefers border + subtle shadow; heavy shadows read poorly on

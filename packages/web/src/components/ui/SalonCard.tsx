@@ -1,124 +1,118 @@
-import { useTranslation } from 'react-i18next';
+import { forwardRef } from 'react';
+import { MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, MapPin } from 'lucide-react';
 import { cn } from './cn';
-import { Picture, type PictureSource } from './Picture';
-import { RatingStars } from './RatingStars';
-import { formatRial } from './Money';
-import {
-  getMinServicePriceRial,
-  type SalonProfile,
-} from '../../data/salons';
+import { Rating } from './Rating';
+import { Badge } from './Badge';
 
-export interface SalonCardProps {
-  /** The salon to present (presentation-only public profile). */
-  salon: SalonProfile;
-  /**
-   * Image loading strategy. Cards below the fold pass `lazy` (default); the
-   * first row on a discovery page may pass `eager`.
-   */
-  imageLoading?: 'lazy' | 'eager';
-  /** Sizing/spacing classes only (tokens). */
-  className?: string;
+export interface SalonCardProps extends Omit<React.HTMLAttributes<HTMLElement>, 'title'> {
+  /** Salon slug used to build the profile link `/s/:slug`. */
+  slug: string;
+  /** Salon display name. */
+  name: string;
+  /** Cover image URL (a plain img; pass an optimized asset). */
+  coverUrl: string;
+  /** Average rating 0–5. */
+  rating: number;
+  /** Total review count. */
+  reviewCount: number;
+  /** Neighborhood / district line shown under the name. */
+  location?: string;
+  /** Short list of service labels previewed on the card (max ~3 shown). */
+  services?: string[];
+  /** Open-now indicator. When true shows a green "باز" pill. */
+  openNow?: boolean;
+  /** Optional href override (defaults to `/s/:slug`). */
+  href?: string;
+  /** Render as a different element via `as` (default `article`). */
+  as?: React.ElementType;
 }
 
 /**
- * Marketplace **salon card** (Booksy-style): a cover photo, the salon name,
- * its rating + review count, category, neighborhood/city, and a "from …" price
- * — the unit shared by the discovery grids and the home "featured salons" row.
+ * Salon result card — the Booksy discovery surface.
  *
- * ## Accessibility (ui-ux §10)
- * The whole card is a single link to the profile via the "stretched link"
- * pattern (`<Link>` with a full-bleed `::after`), so there is exactly one
- * interactive element per card and its accessible name is the salon name — no
- * nested/overlapping links. The cover image carries a meaningful Persian `alt`;
- * the rating stars and chevron are decorative.
+ * A white elevated card with a 16:9 cover photo on top, the salon name + star
+ * rating row beneath, a location line, and a wrap of service pills. The whole
+ * card is a single tap target into the salon profile (Booksy pattern: the
+ * entire card is clickable, not just a "book" button).
  *
- * Tokens only; logical properties throughout so it mirrors correctly in RTL.
+ * Token-driven, RTL-first, accessible: the cover is decorative (empty alt) and
+ * the salon name is the link's accessible name; rating carries its own
+ * `role="img"` label.
  */
-export function SalonCard({ salon, imageLoading = 'lazy', className }: SalonCardProps) {
-  const { t } = useTranslation();
-  const cover = salon.gallery[0];
-  const sources = cover
-    ? ([
-        cover.avifSrcSet && { type: 'image/avif', srcSet: cover.avifSrcSet },
-        cover.webpSrcSet && { type: 'image/webp', srcSet: cover.webpSrcSet },
-      ].filter(Boolean) as PictureSource[])
-    : [];
-  const minPrice = getMinServicePriceRial(salon);
-
+export const SalonCard = forwardRef<HTMLElement, SalonCardProps>(function SalonCard(
+  {
+    slug,
+    name,
+    coverUrl,
+    rating,
+    reviewCount,
+    location,
+    services = [],
+    openNow = false,
+    href,
+    as: Component = 'article',
+    className,
+    ...rest
+  },
+  ref,
+) {
+  const linkHref = href ?? `/s/${slug}`;
+  const preview = services.slice(0, 3);
+  const overflow = Math.max(0, services.length - preview.length);
   return (
-    <article
+    <Component
+      ref={ref}
       className={cn(
-        'group relative flex flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-1',
-        'transition-shadow duration-base ease-standard hover:shadow-2',
-        'focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus',
+        'group overflow-hidden rounded-lg border border-border bg-elevated shadow-1',
+        'transition-[box-shadow,transform,border-color] duration-base ease-standard',
+        'hover:-translate-y-0.5 hover:shadow-2 hover:border-primary/40',
+        'motion-safe:active:scale-[0.99]',
+        'focus-within:shadow-2 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus',
         className,
       )}
+      {...rest}
     >
-      {/* Cover photo (sized + lazy → CLS-safe). Zooms gently on hover. */}
-      <div className="relative aspect-[4/3] overflow-hidden bg-elevated">
-        {cover && (
-          <Picture
-            sources={sources}
-            src={cover.src}
-            fallbackSrcSet={cover.srcSet}
-            sizes="(min-width: 1024px) 33vw, (min-width: 480px) 50vw, 100vw"
-            width={cover.width}
-            height={cover.height}
-            alt={cover.alt}
-            loading={imageLoading}
-            className="h-full w-full object-cover transition-transform duration-slow ease-standard group-hover:scale-105 motion-reduce:transform-none"
+      <Link to={linkHref} className="flex flex-col" aria-label={`${name} — ${rating} امتیاز`}>
+        <div className="relative aspect-[16/9] w-full overflow-hidden bg-surface">
+          <img
+            src={coverUrl}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full object-cover transition-transform duration-slow ease-standard group-hover:scale-[1.03]"
           />
-        )}
-        {salon.priceRange && (
-          <span className="absolute end-2 top-2 rounded-pill border border-border bg-elevated px-2 py-0.5 text-2xs font-medium text-text shadow-1">
-            {salon.priceRange}
-          </span>
-        )}
-      </div>
-
-      <div className="flex flex-1 flex-col gap-2 p-4">
-        <h3 className="text-md font-bold leading-snug text-text">
-          <Link
-            to={`/s/${salon.slug}`}
-            className="rounded-sm no-underline outline-none after:absolute after:inset-0 after:content-['']"
-          >
-            {salon.name}
-          </Link>
-        </h3>
-
-        {salon.category && (
-          <p className="text-xs text-muted">{salon.category}</p>
-        )}
-
-        {typeof salon.rating === 'number' && (
-          <RatingStars value={salon.rating} count={salon.reviewCount} />
-        )}
-
-        <p className="flex items-center gap-1 text-sm text-muted">
-          <MapPin aria-hidden="true" size={16} className="shrink-0" />
-          <span>
-            {salon.neighborhood}، {salon.address.addressLocality}
-          </span>
-        </p>
-
-        <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-          {typeof minPrice === 'number' ? (
-            <span className="text-sm text-text">
-              {t('salonCard.fromPrice', { price: formatRial(minPrice) })}
-            </span>
-          ) : (
-            <span />
+          {openNow && (
+            <Badge status="success" className="absolute end-2 top-2 shadow-1">
+              باز
+            </Badge>
           )}
-          <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
-            {t('salonCard.view')}
-            <ChevronLeft aria-hidden="true" size={16} className="shrink-0" />
-          </span>
         </div>
-      </div>
-    </article>
+        <div className="flex flex-1 flex-col gap-2 p-4">
+          <h3 className="text-md font-semibold text-text leading-snug">{name}</h3>
+          <Rating value={rating} count={reviewCount} size="sm" />
+          {location && (
+            <p className="flex items-center gap-1 text-2xs text-muted">
+              <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span>{location}</span>
+            </p>
+          )}
+          {preview.length > 0 && (
+            <ul role="list" className="mt-1 flex flex-wrap gap-1" aria-label="خدمات">
+              {preview.map((s) => (
+                <li key={s} className="rounded-pill bg-surface px-3 py-1 text-2xs text-muted">
+                  {s}
+                </li>
+              ))}
+              {overflow > 0 && (
+                <li className="rounded-pill bg-surface px-3 py-1 text-2xs text-muted">
+                  +<span>{overflow}</span>
+                </li>
+              )}
+            </ul>
+          )}
+        </div>
+      </Link>
+    </Component>
   );
-}
-
-export default SalonCard;
+});

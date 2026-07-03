@@ -23,9 +23,12 @@ const variantClasses: Record<SkeletonVariant, string> = {
  * size each Skeleton to mirror the final content so there is no layout shift
  * when real data arrives.
  *
- * Motion: the `animate-pulse` shimmer is an opacity-only animation and is
- * neutralized globally under `prefers-reduced-motion` (tokens.css), so it is
- * reduced-motion safe.
+ * Motion: a diagonal gloss sweeps across the placeholder (`animate-shimmer` on
+ * top of the resting `bg-border` fill via the `.shimmer-bg` utility) so
+ * loading surfaces read as "alive" rather than static gray blocks — the
+ * Booksy/Instagram loading feel. The shimmer animates only `background-position`
+ * (a compositor-friendly property) and is neutralized globally under
+ * `prefers-reduced-motion` (tokens.css), so it is reduced-motion safe.
  *
  * Decorative by default (`aria-hidden`): the surrounding region should expose
  * its own busy state (e.g. `aria-busy`/`role="status"`) so assistive tech is
@@ -36,7 +39,8 @@ export function Skeleton({ variant = 'rect', className, ...rest }: SkeletonProps
     <div
       aria-hidden="true"
       className={cn(
-        'animate-pulse bg-border',
+        'relative overflow-hidden bg-border',
+        'animate-shimmer shimmer-bg',
         variantClasses[variant],
         className,
       )}
