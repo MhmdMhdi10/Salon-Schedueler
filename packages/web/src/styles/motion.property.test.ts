@@ -85,21 +85,56 @@ const EMPHASIZED_PATTERNS = [
 ];
 
 describe('Property 18 — motion stays within the token band', () => {
-  const tokens = parseDurationTokens(readFileSync(TOKENS_CSS, 'utf8'));
+  const allTokens = parseDurationTokens(readFileSync(TOKENS_CSS, 'utf8'));
 
-  it('declares the expected --dur-* motion tokens', () => {
-    const names = tokens.map((t) => t.name).sort();
+  /**
+   * Animation/orchestration tokens are exempt from the 150–300ms interaction band.
+   * These serve page transitions, stagger orchestration, and celebration sequences
+   * (design §2 "Animation Tokens"), not micro-interactions.
+   */
+  const ANIMATION_TOKENS = new Set([
+    '--dur-enter',
+    '--dur-exit',
+    '--dur-stagger',
+    '--dur-celebration',
+  ]);
+
+  const interactionTokens = allTokens.filter((t) => !ANIMATION_TOKENS.has(t.name));
+  const animationTokens = allTokens.filter((t) => ANIMATION_TOKENS.has(t.name));
+
+  it('declares the expected --dur-* interaction motion tokens', () => {
+    const names = interactionTokens.map((t) => t.name).sort();
     expect(names).toEqual(['--dur-base', '--dur-fast', '--dur-slow']);
   });
 
-  it('every authored duration token is within the 150–300ms band', () => {
-    // fast-check: for ANY authored duration token, the value lies in the band.
+  it('declares the expected --dur-* animation tokens', () => {
+    const names = animationTokens.map((t) => t.name).sort();
+    expect(names).toEqual([
+      '--dur-celebration',
+      '--dur-enter',
+      '--dur-exit',
+      '--dur-stagger',
+    ]);
+  });
+
+  it('every interaction duration token is within the 150–300ms band', () => {
+    // fast-check: for ANY interaction duration token, the value lies in the band.
     fc.assert(
-      fc.property(fc.constantFrom(...tokens), (token) => {
+      fc.property(fc.constantFrom(...interactionTokens), (token) => {
         expect(token.ms).toBeGreaterThanOrEqual(BAND_MIN_MS);
         expect(token.ms).toBeLessThanOrEqual(BAND_MAX_MS);
       }),
     );
+  });
+
+  it('animation tokens have sensible values for their purpose', () => {
+    const byName = Object.fromEntries(animationTokens.map((t) => [t.name, t.ms]));
+    // Enter is slower than exit (asymmetric timing)
+    expect(byName['--dur-enter']).toBeGreaterThan(byName['--dur-exit']);
+    // Stagger is a short delay increment
+    expect(byName['--dur-stagger']).toBeLessThanOrEqual(100);
+    // Celebration is the longest animation
+    expect(byName['--dur-celebration']).toBeGreaterThan(byName['--dur-enter']);
   });
 });
 

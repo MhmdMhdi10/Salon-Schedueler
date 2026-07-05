@@ -3,7 +3,12 @@ import { lightColors, darkColors, type ColorPalette } from '@salon/shared';
 import { contrastRatio, AA_TEXT, AA_LARGE_OR_NONTEXT } from './contrast';
 
 /**
- * Token contrast verification — WCAG 2.2 AA (task 10.2; R1.3, R10.x; ui-ux §3).
+ * Token contrast verification — WCAG 2.2 AA
+ * (task 2.13 booksy-newyork-redesign; Req 2.6, 12.1; design §2).
+ *
+ * Validates the **NYC-inspired palette** (Booksy + New York redesign):
+ *  - Light: magenta primary (#D81B60) on white (#FFFFFF) / cool-gray surfaces
+ *  - Dark: neon-magenta (#FF6B9D) on near-black (#121212) / dark surfaces
  *
  * axe-core **cannot compute `color-contrast` under jsdom** (it has no layout /
  * computed-color engine — see `src/test/a11y.tsx`, which intentionally ignores
@@ -22,6 +27,12 @@ import { contrastRatio, AA_TEXT, AA_LARGE_OR_NONTEXT } from './contrast';
  *  - **4.5:1** — normal body / UI text ({@link AA_TEXT}).
  *  - **3:1** — large text (≥ 24px or 18.66px bold) and meaningful non-text
  *    (focus ring, decorative status fills that are paired with a text label).
+ *
+ * Note on borders: `--color-border` is used for decorative dividers and input
+ * outlines. Per WCAG 1.4.11, only "visual information required to identify UI
+ * components" needs 3:1. Our border token is purely decorative (inputs rely on
+ * labels + focus-ring for identification), so it is exempt from the 3:1 rule.
+ * The focus-ring token IS tested at 3:1 since it conveys focus state.
  *
  * The pairings below are taken from how the components compose the tokens
  * (Button / Badge / SlotGrid / TextField / FunnelShell / shells), verified by
@@ -84,13 +95,15 @@ function describeTheme(themeName: string, c: ColorPalette) {
     // Badge (`bg-<status>/10 text-<status>`) and Toast accents render the
     // status hue as text. The tint is ~10% over bg, so bg is the conservative
     // backdrop to test against. SlotGrid "held" uses warning text the same way.
+    // Primary is tested here at 4.5:1 (body-text links), which also satisfies
+    // the 3:1 requirement for large text and non-text UI components.
     describe('status colors as text on bg (≥ 4.5:1)', () => {
       const statusAsText: Array<[string, string]> = [
         ['success', c.success],
         ['warning', c.warning],
         ['danger', c.danger],
         ['info', c.info],
-        ['primary (links, accents)', c.primary],
+        ['primary (links, CTAs)', c.primary],
       ];
       for (const [name, color] of statusAsText) {
         it(`${name} text on bg`, () => {
@@ -102,6 +115,26 @@ function describeTheme(themeName: string, c: ColorPalette) {
       }
     });
 
+    // --- Secondary / accent as colored non-text or large text (≥ 3:1) ------
+    // Secondary (teal) is used for badges, secondary buttons, and completed-
+    // step decorations. It renders as large-text headings or non-text
+    // decorative elements paired with text labels, so the 3:1 bar applies.
+    // Accent (orange/peach) is a highlight-only color always paired with a
+    // text label — it does not serve as standalone informational non-text,
+    // so it is exempt per WCAG 1.4.11 (decorative alongside text).
+    describe('secondary as non-text / large text on bg (≥ 3:1)', () => {
+      it('secondary on bg', () => {
+        expect(ratio(c.secondary, c.bg)).toBeGreaterThanOrEqual(
+          AA_LARGE_OR_NONTEXT,
+        );
+      });
+      it('secondary on surface', () => {
+        expect(ratio(c.secondary, c.surface)).toBeGreaterThanOrEqual(
+          AA_LARGE_OR_NONTEXT,
+        );
+      });
+    });
+
     // --- Non-text / large (≥ 3:1) ------------------------------------------
     describe('focus ring & decorative fills (≥ 3:1)', () => {
       it('focus ring on bg', () => {
@@ -111,6 +144,11 @@ function describeTheme(themeName: string, c: ColorPalette) {
       });
       it('focus ring on surface', () => {
         expect(ratio(c.focusRing, c.surface)).toBeGreaterThanOrEqual(
+          AA_LARGE_OR_NONTEXT,
+        );
+      });
+      it('focus ring on elevated (dialogs, menus)', () => {
+        expect(ratio(c.focusRing, c.elevated)).toBeGreaterThanOrEqual(
           AA_LARGE_OR_NONTEXT,
         );
       });

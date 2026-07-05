@@ -7,62 +7,60 @@ import {
   Eye,
   Hand,
   Heart,
-  MapPin,
   Paintbrush,
   Scissors,
   Search,
   Sparkles,
 } from 'lucide-react';
 import { SeoHead, JsonLd, SITE_NAME, SITE_URL } from '../components/seo';
-import { Card, CardContent, CardTitle, Picture } from '../components/ui';
-import { EditorialSplit, SectionRhythm } from '../components/layout';
+import {
+  Card,
+  CardContent,
+  CardTitle,
+  ParallaxHero,
+  SalonCard,
+  ScrollReveal,
+  StaggerContainer,
+  StaggerItem,
+} from '../components/ui';
+import { FeatureMosaic, SectionRhythm } from '../components/layout';
 import { Motif } from '../components/brand';
+import { MetricsSection } from '../components/sections/MetricsSection';
+import { OwnerBenefitsSection } from '../components/sections/OwnerBenefitsSection';
+import { getAllSalonProfiles } from '../data/salons';
 
 /**
- * Public marketing home at `/` (task 5.1 / 12.1; R1.4, R2.1, R2.2, R2.4, R2.5,
- * R3.1–R3.6, R8.1, R8.6, R9.1, R9.4).
+ * Public marketing home at `/` — Booksy + NYC Redesign.
  *
- * This is the platform's primary indexable surface and replaces the old login
- * page that used to render at `/` — the login surface now lives fully at
- * `/auth` (kept `noindex`). The page is a **signature** content surface, not a
- * generic stack of equal cards: an asymmetric editorial hero (`EditorialSplit`)
- * over a token background (no indigo→purple gradient cliché) with the brand
- * `Motif` band divider; one most-prominent primary CTA into the funnel; an
- * uneven value `FeatureMosaic` (a lead tile + supporting tiles); a trust block
- * that surfaces only real, on-page proof; and a crawlable trust/legal footer.
- * Sections alternate background + density via `SectionRhythm` (design §5).
+ * The hero uses a full-viewport `ParallaxHero` with AVIF background image,
+ * heroic Persian headline at 3xl–5xl scale, a single prominent magenta CTA,
+ * and trust badge pills (Req 4.1, 4.2). The remaining sections use
+ * `SectionRhythm` for alternating background + density.
  *
- * ## SEO (seo §3, §4, §5) — PRESERVED EXACTLY
- *  - `<SeoHead index>` opts this route **in** to indexing (the default is
- *    noindex) and emits the unique title/description, single-host canonical,
- *    OG/Twitter card, and `hreflang` self-reference.
- *  - `<JsonLd>` injects the site-wide `WebSite` + `Organization` structured
- *    data, mirroring the build-time prerender (`scripts/prerender.mjs`
- *    `homeJsonLd`) so the client and prerendered HTML agree.
+ * ## SEO (seo §3, §4, §5) — PRESERVED
+ *  - `<SeoHead index>` emits unique title/description, canonical, OG/Twitter.
+ *  - `<JsonLd>` injects `WebSite` + `Organization` structured data.
  *
- * ## LCP / Core Web Vitals (seo §9; R9.4, R9.5, R9.6) — PRESERVED EXACTLY
- *  - The hero image is the LCP element: the **AVIF** candidate is preloaded in
- *    `<head>` and the `<img>` carries `fetchpriority="high"` + `loading="eager"`.
- *  - The hero is served through a `<picture>` (`<Picture>`): AVIF/WebP sources
- *    with a PNG fallback, each at a responsive `srcset` of two widths, with
- *    explicit `width`/`height` so it never causes layout shift (CLS; R9.6).
+ * ## LCP / Core Web Vitals
+ *  - The hero image is the LCP element: AVIF preloaded in `<head>`,
+ *    `ParallaxHero` renders it with `loading="eager"` + `fetchpriority="high"`.
  *
- * All copy comes from the `fa.json` i18n catalog (`home.*` / `seo.*`) — no
- * hard-coded Farsi in JSX. Tokens only; layout uses logical properties (RTL).
+ * All copy comes from the `fa.json` i18n catalog — no hard-coded Farsi in JSX.
+ * Tokens only; layout uses logical properties (RTL).
  */
 export function MarketingHome() {
   const { t } = useTranslation();
 
-  // The hero is the LCP image: served as AVIF → WebP → PNG, each at two widths.
-  // The PNG is the universal fallback (`<img src>`); the AVIF candidate is what
-  // we preload (it is what supporting browsers fetch). Variants are emitted at
-  // identical dimensions by scripts/generate-pwa-assets.mjs so width/height stay
-  // valid for every format.
-  const heroSrc = '/hero/hero-1280.png';
-  const heroFallbackSrcSet = '/hero/hero-640.png 640w, /hero/hero-1280.png 1280w';
-  const heroAvifSrcSet = '/hero/hero-640.avif 640w, /hero/hero-1280.avif 1280w';
-  const heroWebpSrcSet = '/hero/hero-640.webp 640w, /hero/hero-1280.webp 1280w';
-  const heroSizes = '(min-width: 768px) 50vw, 100vw';
+  // The most-highly-rated salons, surfaced as a Booksy-style "featured" row.
+  // Presentation-only; sorted by rating so the strongest storefronts lead.
+  const featuredSalons = getAllSalonProfiles()
+    .slice()
+    .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
+    .slice(0, 3);
+
+  // The hero LCP image: full-viewport AVIF background used by ParallaxHero.
+  // ParallaxHero handles loading="eager" + fetchpriority="high" internally.
+  const heroImageSrc = '/images/hero-salon-interior-1920w.avif';
 
   return (
     <div data-testid="marketing-home">
@@ -72,18 +70,14 @@ export function MarketingHome() {
         path="/"
         index
       >
-        {/* Preload the LCP hero image so it is fetched with top priority.
-            We preload the AVIF candidate (what supporting browsers render) with
-            the same `imageSrcSet`/`imageSizes` the <picture> uses, so the
-            preload matches the resource actually chosen. React 18 expects the
-            lowercase `fetchpriority` DOM attribute. */}
+        {/* Preload the LCP hero image (AVIF full-viewport background) so it is
+            fetched with top priority. ParallaxHero renders it as `loading="eager"`
+            + `fetchpriority="high"` internally. */}
         <link
           rel="preload"
           as="image"
           type="image/avif"
-          href="/hero/hero-1280.avif"
-          imageSrcSet={heroAvifSrcSet}
-          imageSizes={heroSizes}
+          href={heroImageSrc}
           {...{ fetchpriority: 'high' }}
         />
       </SeoHead>
@@ -105,161 +99,65 @@ export function MarketingHome() {
         ]}
       />
 
-      <SectionRhythm startWith="bg">
-        {/* Hero — asymmetric editorial split: value proposition + the single
-            most-prominent primary CTA on one side, the domain LCP image on the
-            other, closed by the signature motif band. A token-driven
-            atmospheric backdrop (soft primary + accent blur orbs) sits behind
-            the content so the hero reads as an immersive surface, not a card. */}
+      {/* ─── Full-viewport Parallax Hero (Req 4.1, 4.2) ─── */}
+      <ParallaxHero
+        imageSrc={heroImageSrc}
+        imageAlt={t('marketing.hero.imageAlt')}
+        className="min-h-screen"
+      >
         <div className="mx-auto w-full max-w-container px-4">
-          <div className="relative">
-            {/* Atmospheric backdrop — decorative, clipped to its own bounds so
-                the floating preview card can still poke past the hero. */}
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 overflow-hidden rounded-lg"
+          <div className="flex flex-col items-start gap-5">
+            <h1 className="max-w-prose text-3xl font-[800] leading-[var(--line-height-hero)] tracking-[var(--tracking-tight)] text-white md:text-4xl lg:text-5xl">
+              {t('marketing.hero.title')}
+            </h1>
+            <p className="max-w-prose text-md text-white/70">
+              {t('marketing.hero.subtitle')}
+            </p>
+            {/* Primary magenta CTA — full-width on mobile, auto on desktop */}
+            <Link
+              to="/s/salon-rose"
+              data-cta="primary"
+              className={`${PRIMARY_CTA} w-full sm:w-auto`}
             >
-              <div className="absolute -top-20 -end-16 h-72 w-72 rounded-pill bg-primary opacity-30 blur-3xl" />
-              <div className="absolute -bottom-16 -start-20 h-80 w-80 rounded-pill bg-accent opacity-25 blur-3xl" />
-              <Motif
-                variant="watermark"
-                className="absolute -bottom-6 end-6 h-40 w-40"
-              />
-            </div>
-          <EditorialSplit lead="start">
-            <div data-hero className="flex flex-col items-start gap-4">
-              <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-accent">
-                <Motif variant="mark" className="h-4 w-4" />
-                {t('home.hero.eyebrow')}
-              </span>
-              <h1 className="max-w-prose text-2xl leading-display text-display text-text">
-                {t('home.hero.title')}
-              </h1>
-              <p className="max-w-prose text-md text-muted">
-                {t('home.hero.subtitle')}
-              </p>
-              {/* Booksy-style search widget — two inputs (service + location)
-                  and a primary "Search" CTA. The CTA is the single
-                  most-prominent action on the page (R3.1) and routes into the
-                  booking funnel; inputs are visual lead-magnets for the search
-                  flow that is wired up later. */}
-              <form
-                role="search"
-                aria-label={t('home.hero.search.label')}
-                onSubmit={(event) => event.preventDefault()}
-                className="flex w-full max-w-prose flex-col gap-3 rounded-lg border border-border bg-elevated p-3 shadow-2 sm:flex-row sm:items-stretch"
+              <Search aria-hidden="true" size={18} />
+              {t('marketing.hero.cta')}
+            </Link>
+            {/* Trust badges — small pills showing platform stats */}
+            <ul role="list" className="flex flex-wrap items-center gap-2 pt-2">
+              {[
+                t('marketing.hero.badges.salons'),
+                t('marketing.hero.badges.bookings'),
+                t('marketing.hero.badges.satisfaction'),
+              ].map((label) => (
+                <li
+                  key={label}
+                  className="inline-flex items-center gap-2 rounded-pill border border-white/20 bg-white/10 px-3 py-1 text-xs text-white/80 backdrop-blur-sm"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="h-2 w-2 rounded-pill bg-primary"
+                  />
+                  {label}
+                </li>
+              ))}
+            </ul>
+            {/* Subordinate sign-in link — keeps auth reachable without
+                competing with the primary search CTA. */}
+            <p className="pt-1 text-xs text-white/60">
+              {t('home.hero.haveAccount')}{' '}
+              <Link
+                to="/auth"
+                data-cta="secondary"
+                className="ms-1 font-medium text-primary underline-offset-4 hover:underline"
               >
-                <label className="flex flex-1 items-center gap-2 rounded-md bg-surface px-3 py-2">
-                  <Sparkles
-                    aria-hidden="true"
-                    size={18}
-                    className="shrink-0 text-primary"
-                  />
-                  <span className="sr-only">
-                    {t('home.hero.search.serviceLabel')}
-                  </span>
-                  <input
-                    type="text"
-                    name="service"
-                    autoComplete="off"
-                    enterKeyHint="search"
-                    placeholder={t('home.hero.search.servicePlaceholder')}
-                    className="w-full min-w-0 bg-transparent text-sm text-text outline-none placeholder:text-muted"
-                  />
-                </label>
-                <label className="flex flex-1 items-center gap-2 rounded-md bg-surface px-3 py-2">
-                  <MapPin
-                    aria-hidden="true"
-                    size={18}
-                    className="shrink-0 text-primary"
-                  />
-                  <span className="sr-only">
-                    {t('home.hero.search.locationLabel')}
-                  </span>
-                  <input
-                    type="text"
-                    name="location"
-                    autoComplete="off"
-                    enterKeyHint="search"
-                    placeholder={t('home.hero.search.locationPlaceholder')}
-                    className="w-full min-w-0 bg-transparent text-sm text-text outline-none placeholder:text-muted"
-                  />
-                </label>
-                <Link
-                  to="/s/salon-rose"
-                  data-cta="primary"
-                  className={`${PRIMARY_CTA} sm:px-6`}
-                >
-                  <Search aria-hidden="true" size={18} />
-                  {t('home.hero.search.submit')}
-                </Link>
-              </form>
-
-              {/* Trust highlights under the search widget — quick, scannable
-                  reassurances. Decorative bullets; copy from the i18n catalog. */}
-              <ul role="list" className="flex flex-wrap items-center gap-2 pt-1">
-                {[
-                  t('home.hero.highlights.speed'),
-                  t('home.hero.highlights.noCall'),
-                  t('home.hero.highlights.reminder'),
-                ].map((label) => (
-                  <li
-                    key={label}
-                    className="inline-flex items-center gap-2 rounded-pill border border-border bg-surface px-3 py-1 text-xs text-muted"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="h-2 w-2 rounded-pill bg-accent"
-                    />
-                    {label}
-                  </li>
-                ))}
-              </ul>
-
-              {/* Subordinate "have an account?" link — keeps the auth surface
-                  reachable from the hero without competing with the primary
-                  search CTA. */}
-              <p className="pt-1 text-xs text-muted">
-                {t('home.hero.haveAccount')}{' '}
-                <Link
-                  to="/auth"
-                  data-cta="secondary"
-                  className="ms-1 font-medium text-primary underline-offset-4 hover:underline"
-                >
-                  {t('home.hero.secondaryCta')}
-                </Link>
-              </p>
-            </div>
-            <div className="relative">
-              {/* The illustration is its own surface (a salon-luxe scene with
-                  a built-in warm ground) so it does not need a card frame.
-                  Letting it breathe lets the section's atmospheric glow read. */}
-              <Picture
-                sources={[
-                  { type: 'image/avif', srcSet: heroAvifSrcSet },
-                  { type: 'image/webp', srcSet: heroWebpSrcSet },
-                ]}
-                src={heroSrc}
-                fallbackSrcSet={heroFallbackSrcSet}
-                sizes={heroSizes}
-                width={1280}
-                height={720}
-                alt={t('home.hero.imageAlt')}
-                loading="eager"
-                className="h-auto w-full rounded-lg shadow-2"
-                {...{ fetchpriority: 'high' }}
-              />
-            </div>
-          </EditorialSplit>
-
+                {t('home.hero.secondaryCta')}
+              </Link>
+            </p>
           </div>
-          {/* Signature motif band — a token-driven divider, decorative. */}
-          <Motif
-            variant="band"
-            className="mx-auto mt-8 block h-6 w-full max-w-sm text-primary"
-          />
         </div>
+      </ParallaxHero>
 
+      <SectionRhythm startWith="bg">
         {/* Categories — Booksy-style compact tile row right under the hero.
             Icon + label tiles arranged in a responsive grid (3 cols on phones,
             up to 6 on desktop). Each tile is a real link into the booking
@@ -291,40 +189,91 @@ export function MarketingHome() {
           </section>
         </div>
 
-        {/* How it works — three quick steps from service to confirmed slot
-            (follows the reference template's HowItWorks section; R3.4). */}
+        {/* Featured salons — a Booksy-style row of the top-rated storefronts
+            (photo, rating, category, location, from-price), each linking to
+            its public profile. A real marketplace discovery surface. */}
+        <div className="mx-auto w-full max-w-container px-4">
+          <section aria-labelledby="home-featured-title">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2
+                  id="home-featured-title"
+                  className="text-xl leading-display text-display text-text"
+                >
+                  {t('home.featured.title')}
+                </h2>
+                <p className="mt-2 max-w-prose text-muted">
+                  {t('home.featured.subtitle')}
+                </p>
+              </div>
+              <Link to="/city/tehran" className={SECONDARY_CTA}>
+                {t('home.featured.viewAll')}
+              </Link>
+            </div>
+            <StaggerContainer className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {featuredSalons.map((salon) => (
+                <StaggerItem key={salon.slug}>
+                  <SalonCard salon={salon} />
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
+          </section>
+        </div>
+
+        {/* How it works — three steps using FeatureMosaic for an asymmetric
+            editorial layout (Req 4.3, anti-generic constraint: no sole 3-equal-card row). 
+            The first step is the "lead" tile (spans 2 cols + 2 rows on md+) and the
+            remaining steps are compact supporting tiles, creating a deliberately uneven
+            visual rhythm. ScrollReveal provides entrance animation. */}
         <div className="mx-auto w-full max-w-container px-4">
           <section aria-labelledby="home-how-title">
-            <h2
-              id="home-how-title"
-              className="text-xl leading-display text-display text-text"
-            >
-              {t('home.howItWorks.title')}
-            </h2>
-            <p className="mt-2 max-w-prose text-muted">
-              {t('home.howItWorks.subtitle')}
-            </p>
-            <ol className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-3">
-              <StepCard
-                step="۱"
-                icon={<Sparkles aria-hidden="true" size={22} />}
-                title={t('home.howItWorks.step1.title')}
-                body={t('home.howItWorks.step1.body')}
-              />
-              <StepCard
-                step="۲"
-                icon={<CalendarCheck aria-hidden="true" size={22} />}
-                title={t('home.howItWorks.step2.title')}
-                body={t('home.howItWorks.step2.body')}
-              />
-              <StepCard
-                step="۳"
-                icon={<Check aria-hidden="true" size={22} />}
-                title={t('home.howItWorks.step3.title')}
-                body={t('home.howItWorks.step3.body')}
-              />
-            </ol>
+            <ScrollReveal>
+              <h2
+                id="home-how-title"
+                className="text-xl leading-display text-display text-text"
+              >
+                {t('home.howItWorks.title')}
+              </h2>
+              <p className="mt-2 max-w-prose text-muted">
+                {t('home.howItWorks.subtitle')}
+              </p>
+            </ScrollReveal>
+            <ScrollReveal delay={0.1}>
+              <FeatureMosaic className="mt-6">
+                {/* Lead tile — step 1 (prominent, spans 2 cols + 2 rows on md+) */}
+                <HowItWorksLeadTile
+                  step="۱"
+                  icon={<Sparkles aria-hidden="true" size={28} />}
+                  title={t('home.howItWorks.step1.title')}
+                  body={t('home.howItWorks.step1.body')}
+                />
+                {/* Supporting tile — step 2 */}
+                <HowItWorksTile
+                  step="۲"
+                  icon={<CalendarCheck aria-hidden="true" size={22} />}
+                  title={t('home.howItWorks.step2.title')}
+                  body={t('home.howItWorks.step2.body')}
+                />
+                {/* Supporting tile — step 3 */}
+                <HowItWorksTile
+                  step="۳"
+                  icon={<Check aria-hidden="true" size={22} />}
+                  title={t('home.howItWorks.step3.title')}
+                  body={t('home.howItWorks.step3.body')}
+                />
+              </FeatureMosaic>
+            </ScrollReveal>
           </section>
+        </div>
+
+        {/* ─── Social Proof Metrics (Req 4.4) ─── */}
+        <div className="mx-auto w-full max-w-container px-4">
+          <MetricsSection />
+        </div>
+
+        {/* ─── Owner Benefits — Editorial Split (Req 4.6) ─── */}
+        <div className="mx-auto w-full max-w-container px-4">
+          <OwnerBenefitsSection />
         </div>
 
         {/* Trust block — only real, on-page proof (no fabricated metrics). */}
@@ -389,34 +338,50 @@ export function MarketingHome() {
           </section>
         </div>
 
-        {/* Closing call to action (template "Cta") — one clear next step. */}
+        {/* ─── Final CTA — Distinct dark surface treatment (Req 4.7) ─── */}
+        {/* Visually distinct from the parallax hero: a solid dark surface band
+            with white text, brand motif, and urgency messaging. No image, no
+            parallax — the contrast with the hero's imagery is the point. */}
         <div className="mx-auto w-full max-w-container px-4">
-          <section aria-labelledby="home-final-title">
-            <div className="relative overflow-hidden rounded-lg border border-border bg-elevated p-6 shadow-2 sm:p-8">
+          <ScrollReveal>
+            <section
+              aria-labelledby="home-final-title"
+              className="relative overflow-hidden rounded-lg bg-[var(--color-text)] px-6 py-12 text-center sm:px-10 sm:py-16"
+            >
+              {/* Decorative brand motif band — faint, behind the content */}
+              <Motif
+                variant="band"
+                className="pointer-events-none absolute inset-x-0 top-6 mx-auto h-10 w-64 opacity-20 sm:w-80"
+              />
+              {/* Large decorative watermark in the background */}
               <Motif
                 variant="watermark"
-                className="pointer-events-none absolute -bottom-8 -end-8 h-48 w-48"
+                className="pointer-events-none absolute -bottom-10 -end-10 h-56 w-56 opacity-[0.08]"
               />
-              <div className="relative flex flex-col items-start gap-3">
+              <div className="relative flex flex-col items-center gap-4">
                 <h2
                   id="home-final-title"
-                  className="text-xl leading-display text-display text-text"
+                  className="text-xl font-[var(--font-weight-display)] leading-[var(--line-height-display)] tracking-[var(--tracking-display)] text-[var(--color-bg)] md:text-2xl lg:text-3xl"
                 >
                   {t('home.finalCta.title')}
                 </h2>
-                <p className="max-w-prose text-md text-muted">
+                <p className="max-w-prose text-md text-[var(--color-bg)]/70">
                   {t('home.finalCta.body')}
                 </p>
+                <p className="text-sm text-[var(--color-bg)]/50">
+                  {t('home.finalCta.urgency')}
+                </p>
+                {/* Primary CTA: full-width mobile, centered auto desktop */}
                 <Link
                   to="/s/salon-rose"
                   data-cta="closing"
-                  className={`${PRIMARY_CTA} mt-1`}
+                  className={`${PRIMARY_CTA} mt-3 w-full sm:w-auto`}
                 >
                   {t('home.finalCta.cta')}
                 </Link>
               </div>
-            </div>
-          </section>
+            </section>
+          </ScrollReveal>
         </div>
       </SectionRhythm>
 
@@ -463,10 +428,12 @@ const SECONDARY_CTA =
 export default MarketingHome;
 
 /**
- * A single "how it works" step: a numbered brand badge + a supporting icon,
- * then the step title and body. Rendered as a list item inside the `<ol>`.
+ * Lead tile for the "How It Works" mosaic — the first and most prominent step.
+ * Spans 2 columns + 2 rows on desktop (via FeatureMosaic's lead slot). Uses a
+ * large step number as a display-scale typographic device and more generous
+ * padding for visual weight.
  */
-function StepCard({
+function HowItWorksLeadTile({
   step,
   icon,
   title,
@@ -478,7 +445,52 @@ function StepCard({
   body: string;
 }) {
   return (
-    <li className="flex h-full flex-col gap-3 rounded-lg border border-border bg-surface p-5 shadow-1">
+    <div className="flex h-full flex-col justify-between gap-5 rounded-lg border border-border bg-surface p-6 shadow-1 sm:p-8">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-4">
+          <span
+            aria-hidden="true"
+            className="inline-flex h-14 w-14 items-center justify-center rounded-pill bg-primary text-xl font-[var(--font-weight-display)] text-primary-contrast"
+          >
+            {step}
+          </span>
+          <span aria-hidden="true" className="text-accent">
+            {icon}
+          </span>
+        </div>
+        <h3 className="text-lg font-medium leading-display text-text md:text-xl">
+          {title}
+        </h3>
+        <p className="max-w-prose text-sm text-muted md:text-md">{body}</p>
+      </div>
+      {/* Decorative connector line — reinforces the "step 1 is the start" feeling */}
+      <div
+        aria-hidden="true"
+        className="mt-auto h-1 w-16 rounded-pill bg-primary/20"
+      />
+    </div>
+  );
+}
+
+/**
+ * Supporting tile for the "How It Works" mosaic — compact secondary steps.
+ * These sit beside the lead tile at a smaller visual scale, creating the
+ * asymmetric editorial rhythm. Same info density (number, icon, title, body)
+ * but less visual weight.
+ */
+function HowItWorksTile({
+  step,
+  icon,
+  title,
+  body,
+}: {
+  step: string;
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="flex h-full flex-col gap-3 rounded-lg border border-border bg-surface p-5 shadow-1">
       <div className="flex items-center gap-3">
         <span
           aria-hidden="true"
@@ -492,7 +504,7 @@ function StepCard({
       </div>
       <h3 className="text-lg font-medium text-text">{title}</h3>
       <p className="text-sm text-muted">{body}</p>
-    </li>
+    </div>
   );
 }
 

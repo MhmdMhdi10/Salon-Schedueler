@@ -1,4 +1,5 @@
 import { forwardRef } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from './cn';
 import { Skeleton } from './Skeleton';
 
@@ -16,6 +17,12 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
    * popovers). Defaults to the resting surface elevation.
    */
   elevated?: boolean;
+  /**
+   * Enable hover-lift micro-interaction: card lifts 4px on hover with a shadow
+   * increase, and scales down slightly on press. Use for clickable/discovery
+   * cards; omit for static info cards.
+   */
+  hoverLift?: boolean;
   /** Render as a different element (e.g. `article`/`section`) for landmarks. */
   as?: React.ElementType;
 }
@@ -27,12 +34,17 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
  *
  * The `loading` variant swaps in a Skeleton block so the card reserves its
  * space and there is no layout shift when content arrives (ui-ux §12, R2.3).
+ *
+ * When `hoverLift` is enabled, the card lifts 4px on hover with a shadow
+ * increase and scales slightly on press — ideal for discovery grids and
+ * clickable card lists. Static info cards should omit this prop.
  */
 export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
   {
     loading = false,
     loadingLabel,
     elevated = false,
+    hoverLift = false,
     as: Component = 'div',
     className,
     children,
@@ -40,26 +52,62 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
   },
   ref,
 ) {
+  const prefersReduced = useReducedMotion();
+
+  const cardClassName = cn(
+    'rounded-lg border border-border p-5',
+    elevated ? 'bg-elevated shadow-2' : 'bg-surface shadow-1',
+    // Add will-change hint and cursor for hover-lift cards
+    hoverLift && 'cursor-pointer',
+    className,
+  );
+
+  const cardContent = loading ? (
+    <div className="flex flex-col gap-3" role="status" aria-label={loadingLabel}>
+      <Skeleton variant="text" className="w-1/2" />
+      <Skeleton variant="rect" className="h-24" />
+      <Skeleton variant="text" className="w-3/4" />
+    </div>
+  ) : (
+    children
+  );
+
+  // When hoverLift is enabled, wrap in a motion component for micro-interactions
+  if (hoverLift) {
+    // Determine motion behavior based on reduced-motion preference
+    const hoverAnimation =
+      !prefersReduced ? { y: -4, boxShadow: 'var(--shadow-2)' } : undefined;
+    const tapAnimation = !prefersReduced ? { scale: 0.98 } : undefined;
+
+    // Access motion[element] via bracket notation — Framer Motion's proxy
+    // supports all valid HTML element strings (div, article, section, etc.)
+    const tag = (typeof Component === 'string' ? Component : 'div') as keyof typeof motion;
+    const MotionComponent = motion[tag];
+
+    return (
+      <MotionComponent
+        ref={ref}
+        aria-busy={loading || undefined}
+        whileHover={hoverAnimation}
+        whileTap={tapAnimation}
+        transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+        className={cardClassName}
+        {...rest}
+      >
+        {cardContent}
+      </MotionComponent>
+    );
+  }
+
+  // Non-hoverable cards: plain element (no motion overhead)
   return (
     <Component
       ref={ref}
       aria-busy={loading || undefined}
-      className={cn(
-        'rounded-lg border border-border p-5',
-        elevated ? 'bg-elevated shadow-2' : 'bg-surface shadow-1',
-        className,
-      )}
+      className={cardClassName}
       {...rest}
     >
-      {loading ? (
-        <div className="flex flex-col gap-3" role="status" aria-label={loadingLabel}>
-          <Skeleton variant="text" className="w-1/2" />
-          <Skeleton variant="rect" className="h-24" />
-          <Skeleton variant="text" className="w-3/4" />
-        </div>
-      ) : (
-        children
-      )}
+      {cardContent}
     </Component>
   );
 });

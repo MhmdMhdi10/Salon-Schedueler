@@ -1,0 +1,843 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Run Firecrawl analysis on Booksy.com pages (home, salon profile, booking flow, search/discovery)": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248432145
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248448298
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783249087965
+      }
+    ],
+    "1.2 Document design patterns as `docs/design-research/booksy-analysis.md` (layouts, colors, typography, CTAs, photography)": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248432205
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783249096315
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783249145647
+      }
+    ],
+    "1.3 Gather photography references and document imagery direction for NYC editorial feel": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248432344
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783249153494
+      }
+    ],
+    "2.1 Add heroic typography tokens to `tokens.css` (`--font-3xl` through `--font-5xl`, `--tracking-tight`, `--line-height-hero`)": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248432405
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783249341994
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783249489095
+      }
+    ],
+    "2.2 Add animation tokens to `tokens.css` (`--dur-enter`, `--dur-exit`, `--dur-stagger`, `--dur-celebration`, `--ease-spring`, `--ease-decelerate`)": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248432487
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783249497584
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783249839288
+      }
+    ],
+    "2.3 Update dark theme shadows with NYC noir glow shadows (`--shadow-glow`)": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248432589
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783249847260
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783250284061
+      }
+    ],
+    "2.4 Extend `tailwind.config.js` with heroic font sizes and animation token utilities": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248432673
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783250288434
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783250426212
+      }
+    ],
+    "2.5 Create `motion-variants.ts` with standardized Framer Motion variant library": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248432748
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783250431211
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783250784295
+      }
+    ],
+    "2.6 Upgrade `PageTransition` in `Motion.tsx` to Framer Motion `AnimatePresence` with RTL-aware directional slide": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248432810
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783250788683
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783251028284
+      }
+    ],
+    "2.7 Add `ScrollReveal` component using Framer Motion `useInView` + reduced-motion handling": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248432875
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783251032712
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783251180329
+      }
+    ],
+    "2.8 Add `StaggerContainer` and `StaggerItem` components for cascading entrance animations": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248432928
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783251184654
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783251341758
+      }
+    ],
+    "2.9 Create `Celebration.tsx` with `CelebrationRing` and `ConfettiParticles` components": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248432980
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783251346068
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783251556368
+      }
+    ],
+    "2.10 Create `ParallaxHero.tsx` component with scroll-driven parallax + reduced-motion fallback": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248433032
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783251561478
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783251837745
+      }
+    ],
+    "2.11 Create `AnimatedCounter.tsx` component for scroll-triggered number counting in Persian numerals": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248433165
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783251842102
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783252099804
+      }
+    ],
+    "2.12 Add micro-interaction props to `Button.tsx` (whileTap scale) and `Card.tsx` (hover-lift variant)": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248433352
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783252104346
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783252433592
+      }
+    ],
+    "2.13 Update contrast tests to validate new NYC palette pairings": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248433466
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783252437756
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783252915454
+      }
+    ],
+    "3.1 Redesign `MarketingHome.tsx` hero with `ParallaxHero` — full-viewport, AVIF background, heroic Persian headline, magenta CTA": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248433555
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783252928742
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783253642885
+      }
+    ],
+    "3.2 Add social proof `MetricsSection` with `AnimatedCounter` components showing platform stats in Persian numerals": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248433688
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783253652863
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783253924898
+      }
+    ],
+    "3.3 Enhance salon showcase section with `StaggerContainer`/`StaggerItem` for cascading card reveals": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248433994
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783253929385
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783254265276
+      }
+    ],
+    "3.4 Add `OwnerBenefitsSection` with editorial split layouts (alternating image/text) for salon owner features": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248434094
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783254270310
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783254616118
+      }
+    ],
+    "3.5 Redesign \"How It Works\" section with asymmetric editorial layout (not equal cards)": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248434203
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783254621339
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783254904878
+      }
+    ],
+    "3.6 Redesign final CTA section with distinct visual treatment from hero": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248434357
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783254909895
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783255136959
+      }
+    ],
+    "3.7 Add hero image assets (AVIF/WebP/PNG at responsive sizes) for landing page": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248434534
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783255141717
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783255405251
+      }
+    ],
+    "3.8 Verify landing page Core Web Vitals: LCP < 2.5s, CLS < 0.1, responsive at all breakpoints": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248434586
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783255410320
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783256135967
+      }
+    ],
+    "4.1 Create `FilterBar.tsx` component — sticky filter chips for service type, rating, sort with URL sync": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248434646
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783256146678
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783256615212
+      }
+    ],
+    "4.2 Redesign `DiscoveryPages.tsx` (CityPage/ServicePage) with filter bar, staggered card grid, and skeleton loading": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248434717
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783256625184
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783257103483
+      }
+    ],
+    "4.3 Enhance `SalonCard.tsx` with photography-forward NYC design, hover-lift, and press feedback animations": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248434795
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783257108521
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783257575813
+      }
+    ],
+    "4.4 Add empty state for no filter results with reset action in Persian": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248434848
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783257580580
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783257603579
+      }
+    ],
+    "4.5 Add infinite scroll pagination (load next 24 salons on scroll-to-bottom)": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248434901
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783257608750
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783258217475
+      }
+    ],
+    "4.6 Verify discovery pages: responsive grid (3/2/1 columns), SEO structured data, skeleton states": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248434953
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783258223219
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783258491119
+      }
+    ],
+    "5.1 Create `ImageCarousel.tsx` — swipeable gallery with drag gestures, dots, RTL-mirrored arrows": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248435071
+      },
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783258502591
+      },
+      {
+        "executionId": "21561137-b251-4695-a526-fa5e4006561c",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783259057247
+      }
+    ],
+    "5.2 Redesign `SalonProfilePage.tsx` hero with carousel, display type, rating, \"Book Now\" CTA": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248435118
+      },
+      {
+        "executionId": "21561137-b251-4695-a526-fa5e4006561c",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783259062581
+      },
+      {
+        "executionId": "21561137-b251-4695-a526-fa5e4006561c",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783259515494
+      }
+    ],
+    "5.3 Redesign services section as expandable categories with per-service \"Book\" button, stagger animations": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248435176
+      },
+      {
+        "executionId": "21561137-b251-4695-a526-fa5e4006561c",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783259520188
+      },
+      {
+        "executionId": "21561137-b251-4695-a526-fa5e4006561c",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783260191364
+      }
+    ],
+    "5.4 Add salon info sections: about (show more toggle), hours (Iranian week), staff gallery, map embed (lazy)": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248435257
+      },
+      {
+        "executionId": "21561137-b251-4695-a526-fa5e4006561c",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783260196732
+      },
+      {
+        "executionId": "21561137-b251-4695-a526-fa5e4006561c",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783260642578
+      }
+    ],
+    "5.5 Add scroll-triggered animations to profile sections (fade-up headers, parallax gallery)": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248435338
+      },
+      {
+        "executionId": "21561137-b251-4695-a526-fa5e4006561c",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783260647221
+      },
+      {
+        "executionId": "21561137-b251-4695-a526-fa5e4006561c",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783260924168
+      }
+    ],
+    "5.6 Ensure brand accent scoping works with `TenantTheme` + WCAG AA fallback": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248435403
+      },
+      {
+        "executionId": "21561137-b251-4695-a526-fa5e4006561c",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783260929364
+      },
+      {
+        "executionId": "21561137-b251-4695-a526-fa5e4006561c",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783261180835
+      }
+    ],
+    "5.7 Add/verify JSON-LD structured data (BeautySalon, Service, BreadcrumbList, OpeningHoursSpecification)": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248435467
+      },
+      {
+        "executionId": "21561137-b251-4695-a526-fa5e4006561c",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783261190192
+      },
+      {
+        "executionId": "21561137-b251-4695-a526-fa5e4006561c",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783261417445
+      }
+    ],
+    "5.8 Verify profile page: responsive, RTL, SEO indexable, accessible carousel navigation": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248435551
+      },
+      {
+        "executionId": "21561137-b251-4695-a526-fa5e4006561c",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783261422710
+      },
+      {
+        "executionId": "21561137-b251-4695-a526-fa5e4006561c",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783261812068
+      }
+    ],
+    "6.1 Create `BookingStepper.tsx` — horizontal progress indicator with Persian step labels, RTL flow": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248435619
+      },
+      {
+        "executionId": "21561137-b251-4695-a526-fa5e4006561c",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783261819722
+      },
+      {
+        "executionId": "21561137-b251-4695-a526-fa5e4006561c",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783261992226
+      }
+    ],
+    "6.2 Add AnimatePresence step transitions to booking flow (directional slide, RTL-aware)": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248435682
+      },
+      {
+        "executionId": "21561137-b251-4695-a526-fa5e4006561c",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783262003383
+      }
+    ],
+    "6.3 Enhance service selection with card-based Booksy layout, selection animation (highlight + checkmark)": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248435763
+      }
+    ],
+    "6.4 Create `MobileDatePicker.tsx` — bottom-sheet wrapper for `JalaliDatePicker` on mobile": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248435817
+      }
+    ],
+    "6.5 Add slot chip selection animation (magenta fill, scale pulse) to `SlotGrid.tsx`": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248435923
+      }
+    ],
+    "6.6 Redesign `BookingConfirmPage.tsx` as premium receipt-like summary card": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248435971
+      }
+    ],
+    "6.7 Enhance `BookingSuccessPage.tsx` with celebration animation (CelebrationRing + ConfettiParticles)": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248436023
+      }
+    ],
+    "6.8 Ensure booking flow is fully keyboard-operable with RTL focus order and maintains state on back-navigation": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248436083
+      }
+    ],
+    "6.9 Verify booking steps are noindex, thumb-zone CTAs on mobile, error/skeleton states complete": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248436125
+      }
+    ],
+    "7.1 Create `OwnerSidebar.tsx` — collapsible sidebar nav with icons-only mode, role-filtered, RTL": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248436174
+      }
+    ],
+    "7.2 Create `OwnerBottomTabs.tsx` — mobile bottom tab bar with active indicator animation": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248436227
+      }
+    ],
+    "7.3 Rework `OwnerShell.tsx` to use sidebar (desktop) + bottom tabs (mobile) with responsive switching": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248436280
+      }
+    ],
+    "7.4 Redesign `OwnerCalendarPage.tsx` — day/week views, time grid, appointment blocks, view-switch animation": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248436339
+      }
+    ],
+    "7.5 Redesign `OwnerAnalyticsPage.tsx` — metrics cards with counter animation, charts with NYC styling, lazy-loaded chart lib": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248436461
+      }
+    ],
+    "7.6 Redesign `OwnerConfigurationPage.tsx` — card sections with expand/collapse, inline edit, add/remove animations": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248436507
+      }
+    ],
+    "7.7 Apply dark-mode-first styling to all owner surfaces (default dark, overridable)": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248436566
+      }
+    ],
+    "7.8 Verify dashboard: keyboard nav (RTL arrows), skeleton/error states, Jalali dates, Persian numerals, responsive": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248436616
+      }
+    ],
+    "8.1 Create `SalonPlaceholder.tsx` — branded placeholder using Motif + signature palette": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248436668
+      }
+    ],
+    "8.2 Generate/source NYC editorial salon photography for landing and discovery placeholders": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248436724
+      }
+    ],
+    "8.3 Process images through AVIF/WebP pipeline with responsive srcset (640w, 960w, 1280w)": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248436784
+      }
+    ],
+    "8.4 Ensure all images have Persian alt text, explicit width/height, correct loading/fetchpriority attributes": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248436830
+      }
+    ],
+    "9.1 Update `manifest.json` with NYC magenta theme_color, Persian metadata, maskable icon": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248436884
+      }
+    ],
+    "9.2 Verify service worker caching strategy (no auth data leakage, offline shell works)": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248436946
+      }
+    ],
+    "9.3 Verify all public pages are prerendered with correct meta, canonical, OG, hreflang, JSON-LD in initial HTML": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248437006
+      }
+    ],
+    "9.4 Generate branded OG images (1200x630, RTL-correct Persian text, magenta brand)": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248437065
+      }
+    ],
+    "9.5 Verify robots.txt + sitemap.xml list only indexable URLs": [
+      {
+        "executionId": "23b8c53a-660a-412a-9a84-0ac00ef9c0f8",
+        "chatSessionId": "sess_ef0dbd89-54bc-4cea-b3ce-3ef0756d878c",
+        "timestamp": 1783248437123
+      }
+    ]
+  }
+}

@@ -62,6 +62,9 @@ export default {
         lg: ['var(--font-lg)', { lineHeight: '1.45' }],
         xl: ['var(--font-xl)', { lineHeight: '1.35' }],
         '2xl': ['var(--font-2xl)', { lineHeight: '1.25' }],
+        '3xl': ['var(--font-3xl)', { lineHeight: 'var(--line-height-hero)' }],
+        '4xl': ['var(--font-4xl)', { lineHeight: 'var(--line-height-hero)' }],
+        '5xl': ['var(--font-5xl)', { lineHeight: 'var(--line-height-hero)' }],
       },
       fontFamily: {
         sans: ["'Vazirmatn'", 'system-ui', "'Segoe UI'", 'Tahoma', 'sans-serif'],
@@ -78,9 +81,11 @@ export default {
       },
       lineHeight: {
         display: 'var(--line-height-display)',
+        hero: 'var(--line-height-hero)',
       },
       letterSpacing: {
         display: 'var(--tracking-display)',
+        tight: 'var(--tracking-tight)',
       },
       maxWidth: {
         // Content container width (steering §5: content max ≈ 1200px).
@@ -102,15 +107,22 @@ export default {
         1: 'var(--shadow-1)',
         2: 'var(--shadow-2)',
         3: 'var(--shadow-3)',
+        glow: 'var(--shadow-glow)',
       },
       transitionDuration: {
         fast: 'var(--dur-fast)',
         base: 'var(--dur-base)',
         slow: 'var(--dur-slow)',
+        enter: 'var(--dur-enter)',
+        exit: 'var(--dur-exit)',
+        stagger: 'var(--dur-stagger)',
+        celebration: 'var(--dur-celebration)',
       },
       transitionTimingFunction: {
         standard: 'var(--ease-standard)',
         emphasized: 'var(--ease-emphasized)',
+        spring: 'var(--ease-spring)',
+        decelerate: 'var(--ease-decelerate)',
       },
       // Motion library — the signature micro-interactions that make the PWA
       // feel alive. Every keyframe animates ONLY compositor-friendly properties
