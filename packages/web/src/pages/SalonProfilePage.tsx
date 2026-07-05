@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { MapPin, Phone } from 'lucide-react';
+import { ChevronDown, MapPin, Phone, Star } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import i18n from '../i18n';
 import { SeoHead, JsonLd, SITE_URL } from '../components/seo';
 import type { JsonLdNode } from '../components/seo';
@@ -9,12 +10,16 @@ import {
   Avatar,
   DirText,
   JalaliDate,
+  Num,
   Picture,
   RatingStars,
+  StaggerContainer,
+  StaggerItem,
   cn,
   formatRial,
   toPersianDigits,
 } from '../components/ui';
+import { ImageCarousel, type CarouselImage } from '../components/ui/ImageCarousel';
 import { Motif } from '../components/brand';
 import { TenantTheme } from '../components/theme';
 import {
@@ -22,6 +27,7 @@ import {
   IRANIAN_WEEK_ORDER,
   PERSIAN_DAY_LABEL,
   type SalonProfile,
+  type SalonService,
   type SchemaDay,
 } from '../data/salons';
 import { usePwaInstall } from '../pwa/usePwaInstall';
@@ -183,6 +189,21 @@ export function SalonProfilePage() {
               },
             });
           });
+
+          // 7) Gallery parallax — images shift subtly on scroll for depth.
+          root.querySelectorAll('[data-parallax]').forEach((el) => {
+            const node = el as HTMLElement;
+            animate(node, {
+              y: [0, -20],
+              ease: 'linear',
+              autoplay: onScroll({
+                target: node,
+                enter: { target: 'top', container: 'bottom' },
+                leave: { target: 'bottom', container: 'top' },
+                sync: 0.3,
+              }),
+            });
+          });
         });
       })
       .catch(() => {
@@ -236,6 +257,13 @@ export function SalonProfilePage() {
         cover.webpSrcSet && { type: 'image/webp', srcSet: cover.webpSrcSet },
       ].filter(Boolean) as { type: string; srcSet: string }[]
     : [];
+  // Map gallery images to the ImageCarousel's expected shape
+  const carouselImages: CarouselImage[] = salon.gallery.map((img) => ({
+    src: img.src,
+    alt: img.alt,
+    width: img.width,
+    height: img.height,
+  }));
   const reviews = salon.reviews ?? [];
   const staff = salon.staff ?? [];
   const reviewTotal = salon.reviewCount ?? reviews.length;
@@ -275,85 +303,124 @@ export function SalonProfilePage() {
           </ol>
         </nav>
 
-        {/* Hero — Booksy-style: cover photo, name, rating, category, price
-            range, open marker, location, and the primary booking CTA. */}
-        <header className="pt-2">
-          {cover && (
-            <div
-              data-hero-cover
-              className="overflow-hidden rounded-lg border border-border bg-elevated shadow-1"
-            >
-              <Picture
-                sources={coverSources}
-                src={cover.src}
-                fallbackSrcSet={cover.srcSet}
-                sizes="(min-width: 1024px) 1024px, 100vw"
-                width={cover.width}
-                height={cover.height}
-                alt={cover.alt}
-                loading="lazy"
-                className="aspect-[16/9] w-full object-cover"
-              />
+        {/* Hero — Booksy-style: full-width image carousel with overlaid salon
+            name (display typography), star rating, location, and prominent
+            "Book Now" CTA. ~60vh on mobile, ~50vh on desktop. */}
+        <header className="relative -mx-4 md:mx-0 md:rounded-lg md:overflow-hidden">
+          {/* Image carousel hero */}
+          {salon.gallery.length > 0 ? (
+            <ImageCarousel
+              images={carouselImages}
+              className="h-[60vh] md:h-[50vh]"
+              eagerFirst
+            />
+          ) : (
+            <div className="flex h-[60vh] md:h-[50vh] items-center justify-center bg-surface">
+              <Motif variant="watermark" className="h-16 w-16 text-border opacity-50" />
             </div>
           )}
 
+          {/* Scrim overlay for text legibility */}
+          <div
+            className="absolute inset-0 bg-gradient-to-t from-bg/80 via-bg/30 to-transparent pointer-events-none"
+            aria-hidden="true"
+          />
+
+          {/* Overlay content — positioned at the bottom of the hero */}
           <div
             data-hero
-            className="mt-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between"
+            className="absolute inset-x-0 bottom-0 z-10 flex flex-col gap-3 px-5 pb-6 md:px-8 md:pb-8"
           >
-            <div className="flex flex-col gap-3">
-              <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-accent">
-                <Motif variant="mark" className="h-4 w-4" />
-                {salon.category ?? t('salon.profile.eyebrow')}
-              </span>
-              <h1 className="text-2xl leading-display text-display text-text">
-                {brandMark}
-              </h1>
+            {/* Category eyebrow */}
+            <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/80">
+              <Motif variant="mark" className="h-4 w-4" />
+              {salon.category ?? t('salon.profile.eyebrow')}
+            </span>
 
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                {typeof salon.rating === 'number' && (
-                  <RatingStars value={salon.rating} count={salon.reviewCount} size="md" />
-                )}
-                {salon.priceRange && (
-                  <span className="text-sm font-medium tracking-wide text-muted">
-                    {salon.priceRange}
-                  </span>
-                )}
-                {openNow !== null && (
-                  <span className="inline-flex items-center gap-2 text-sm text-text">
-                    <span
-                      aria-hidden="true"
-                      className={cn(
-                        'h-2.5 w-2.5 rounded-pill',
-                        openNow ? 'bg-success' : 'bg-muted',
-                      )}
-                    />
-                    {openNow ? t('salon.profile.openNow') : t('salon.profile.closedNow')}
+            {/* Salon name — display-weight headline */}
+            <h1 className="text-2xl md:text-3xl text-display text-white drop-shadow-sm">
+              {brandMark}
+            </h1>
+
+            {/* Star rating + review count */}
+            {typeof salon.rating === 'number' && (
+              <div className="flex items-center gap-2">
+                <Star
+                  aria-hidden="true"
+                  size={18}
+                  className="shrink-0 fill-warning text-warning"
+                />
+                <span className="text-sm font-bold text-white">
+                  <Num value={salon.rating.toFixed(1)} />
+                </span>
+                {salon.reviewCount && (
+                  <span className="text-sm text-white/70">
+                    ({t('rating.reviews', { count: salon.reviewCount })})
                   </span>
                 )}
               </div>
+            )}
 
-              <p className="flex items-center gap-2 text-sm text-muted">
-                <MapPin aria-hidden="true" size={18} className="shrink-0" />
-                {salon.neighborhood}، {salon.address.addressLocality}
-              </p>
-              <p className="max-w-prose text-md leading-loose text-muted">
-                {salon.tagline}
-              </p>
-            </div>
+            {/* Location */}
+            <p className="flex items-center gap-2 text-sm text-white/80">
+              <MapPin aria-hidden="true" size={16} className="shrink-0" />
+              {salon.neighborhood}، {salon.address.addressLocality}
+            </p>
 
-            <div className="flex shrink-0 flex-col gap-3 sm:flex-row md:flex-col md:items-stretch">
-              <Link to={bookHref} className={PRIMARY_BTN} onClick={cacheSalonName}>
+            {/* Primary "Book Now" CTA */}
+            <div className="mt-2 hidden md:block">
+              <Link
+                to={bookHref}
+                onClick={cacheSalonName}
+                className={cn(PRIMARY_BTN, 'shadow-2')}
+              >
                 {t('salon.profile.bookCtaLong')}
                 <Arrow />
               </Link>
-              <a href={`tel:${salon.telephone}`} className={SECONDARY_BTN}>
-                <Phone aria-hidden="true" size={18} />
-                {t('salon.profile.callCta')}
-              </a>
             </div>
           </div>
         </header>
+
+        {/* Below-hero actions row — visible only on mobile (desktop has CTA in overlay) */}
+        <div
+          data-hero
+          className="mt-5 flex flex-col gap-3 md:hidden"
+        >
+          <Link to={bookHref} className={cn(PRIMARY_BTN, 'w-full')} onClick={cacheSalonName}>
+            {t('salon.profile.bookCtaLong')}
+            <Arrow />
+          </Link>
+          <a href={`tel:${salon.telephone}`} className={SECONDARY_BTN}>
+            <Phone aria-hidden="true" size={18} />
+            {t('salon.profile.callCta')}
+          </a>
+        </div>
+
+        {/* Open/closed + price range + tagline below the hero */}
+        <div className="mt-5 flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {openNow !== null && (
+              <span className="inline-flex items-center gap-2 text-sm text-text">
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    'h-2.5 w-2.5 rounded-pill',
+                    openNow ? 'bg-success' : 'bg-muted',
+                  )}
+                />
+                {openNow ? t('salon.profile.openNow') : t('salon.profile.closedNow')}
+              </span>
+            )}
+            {salon.priceRange && (
+              <span className="text-sm font-medium tracking-wide text-muted">
+                {salon.priceRange}
+              </span>
+            )}
+          </div>
+          <p className="max-w-prose text-md leading-loose text-muted">
+            {salon.tagline}
+          </p>
+        </div>
 
         {/* Slim feature band — truthful highlights, divided, no boxes/icons. */}
         <ul
@@ -375,52 +442,27 @@ export function SalonProfilePage() {
           ))}
         </ul>
 
-        {/* 01 Services — price list; each row books that service. */}
-        <section className="pt-12" aria-labelledby="salon-services-title">
+        {/* 00 About / Description — expandable "show more" toggle (task 5.4; R6.3). */}
+        {salon.description && (
+          <section data-reveal className="pt-12" aria-labelledby="salon-about-title">
+            <SectionHeader id="salon-about-title" index="00" title={t('salon.profile.aboutTitle')} />
+            <AboutSection description={salon.description} />
+          </section>
+        )}
+
+        {/* 01 Services — expandable categories; each service has a "Book" CTA (task 5.3; R6.2). */}
+        <section data-reveal className="pt-12" aria-labelledby="salon-services-title">
           <SectionHeader id="salon-services-title" index="01" title={t('salon.profile.servicesTitle')} />
-          <ul data-stagger role="list" className="flex flex-col border-t border-border">
-            {salon.services.map((service, index) => (
-              <li
-                key={service.id}
-                className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-border py-5"
-              >
-                <div className="flex min-w-0 flex-col gap-1">
-                  <h3 className="flex items-center gap-2 text-lg font-bold text-text">
-                    {service.name}
-                    {index === 0 && (
-                      <span className="rounded-pill bg-primary px-2 py-0.5 text-2xs font-medium text-primary-contrast">
-                        {t('salon.profile.popular')}
-                      </span>
-                    )}
-                  </h3>
-                  <span className="text-xs text-muted">
-                    {t('salon.profile.durationMinutes', { count: service.durationMinutes })}
-                  </span>
-                </div>
-                <div className="ms-auto flex items-center gap-4">
-                  <bdi dir="rtl" className="whitespace-nowrap text-lg font-bold tabular-nums text-text">
-                    <span data-countup={String(service.priceRial)}>
-                      {formatRial(service.priceRial)}
-                    </span>
-                    <span className="ms-1">ریال</span>
-                  </bdi>
-                  <Link
-                    to={bookHref}
-                    className={SERVICE_BOOK_BTN}
-                    onClick={cacheSalonName}
-                    aria-label={t('salon.profile.bookServiceAria', { name: service.name })}
-                  >
-                    {t('salon.profile.bookService')}
-                  </Link>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <ServiceCategories
+            services={salon.services}
+            bookHref={bookHref}
+            onBookClick={cacheSalonName}
+          />
         </section>
 
         {/* 02 Reviews — customer social proof (mirrored into JSON-LD). */}
         {reviews.length > 0 && (
-          <section className="pt-12" aria-labelledby="salon-reviews-title">
+          <section data-reveal className="pt-12" aria-labelledby="salon-reviews-title">
             <SectionHeader id="salon-reviews-title" index="02" title={t('salon.profile.reviewsTitle')} />
             {typeof salon.rating === 'number' && (
               <div data-reveal className="mb-6 flex items-center gap-4">
@@ -463,7 +505,7 @@ export function SalonProfilePage() {
 
         {/* 03 Team — meet the people who do the work. */}
         {staff.length > 0 && (
-          <section className="pt-12" aria-labelledby="salon-team-title">
+          <section data-reveal className="pt-12" aria-labelledby="salon-team-title">
             <SectionHeader id="salon-team-title" index="03" title={t('salon.profile.teamTitle')} />
             <p className="mb-5 max-w-prose text-sm text-muted">
               {t('salon.profile.teamSubtitle')}
@@ -487,18 +529,19 @@ export function SalonProfilePage() {
           </section>
         )}
 
-        {/* 04 Opening hours — editorial table, today emphasized. */}
-        <section className="pt-12" aria-labelledby="salon-hours-title">
+        {/* 04 Opening hours — editorial table, today emphasized (task 5.4; R6.3). */}
+        <section data-reveal className="pt-12" aria-labelledby="salon-hours-title">
           <SectionHeader id="salon-hours-title" index="04" title={t('salon.profile.hoursTitle')} />
           <ul data-stagger role="list" className="flex flex-col border-t border-border">
             {orderedHours(salon).map((entry) => {
               const isToday = entry.day === today;
+              const isClosed = entry.closed || !entry.opens || !entry.closes;
               return (
                 <li
                   key={entry.day}
                   className={cn(
                     'flex items-center justify-between gap-4 border-b border-border py-3 text-sm',
-                    isToday && 'font-bold',
+                    isToday && 'rounded-md bg-surface px-3 font-bold',
                   )}
                 >
                   <span className="flex items-center gap-2 text-text">
@@ -509,15 +552,27 @@ export function SalonProfilePage() {
                       </span>
                     )}
                   </span>
-                  {entry.closed || !entry.opens || !entry.closes ? (
-                    <span className="text-muted">{t('salon.profile.hoursClosed')}</span>
+                  {isClosed ? (
+                    <span className="inline-flex items-center gap-1.5 text-danger">
+                      <span
+                        aria-hidden="true"
+                        className="h-2 w-2 rounded-pill bg-danger"
+                      />
+                      {t('salon.profile.hoursClosed')}
+                    </span>
                   ) : (
-                    <DirText dir="ltr" className="text-muted tabular-nums">
-                      {t('salon.profile.hoursRange', {
-                        opens: toPersianDigits(entry.opens),
-                        closes: toPersianDigits(entry.closes),
-                      })}
-                    </DirText>
+                    <span className="inline-flex items-center gap-1.5 text-success">
+                      <span
+                        aria-hidden="true"
+                        className="h-2 w-2 rounded-pill bg-success"
+                      />
+                      <DirText dir="ltr" className="tabular-nums">
+                        {t('salon.profile.hoursRange', {
+                          opens: toPersianDigits(entry.opens!),
+                          closes: toPersianDigits(entry.closes!),
+                        })}
+                      </DirText>
+                    </span>
                   )}
                 </li>
               );
@@ -526,7 +581,7 @@ export function SalonProfilePage() {
         </section>
 
         {/* 05 Gallery — asymmetric framed tiles, sized + lazy + Persian alt. */}
-        <section className="pt-12" aria-labelledby="salon-gallery-title">
+        <section data-reveal className="pt-12" aria-labelledby="salon-gallery-title">
           <SectionHeader id="salon-gallery-title" index="05" title={t('salon.profile.galleryTitle')} />
           <div data-stagger className="grid grid-cols-1 gap-4 sm:grid-cols-12">
             {salon.gallery.map((image, index) => {
@@ -538,6 +593,7 @@ export function SalonProfilePage() {
               return (
                 <figure
                   key={image.src}
+                  data-parallax
                   className={cn(
                     'group overflow-hidden rounded-lg bg-surface',
                     featured
@@ -563,7 +619,7 @@ export function SalonProfilePage() {
         </section>
 
         {/* 06 Booking channels — website / Bale / Telegram. */}
-        <section className="pt-12" aria-labelledby="salon-channels-title">
+        <section data-reveal className="pt-12" aria-labelledby="salon-channels-title">
           <SectionHeader id="salon-channels-title" index="06" title={t('salon.profile.channelsTitle')} />
           <p className="mb-5 max-w-prose text-sm text-muted">
             {t('salon.profile.channelsHint')}
@@ -625,7 +681,7 @@ export function SalonProfilePage() {
         )}
 
         {/* 07 Contact / NAP — identical to JSON-LD (seo §11). */}
-        <section className="pt-12" aria-labelledby="salon-contact-title">
+        <section data-reveal className="pt-12" aria-labelledby="salon-contact-title">
           <SectionHeader id="salon-contact-title" index="07" title={t('salon.profile.contactTitle')} />
           <address data-reveal className="flex flex-col gap-6 not-italic sm:flex-row sm:justify-between">
             <p className="max-w-prose text-md leading-loose text-text">
@@ -646,16 +702,10 @@ export function SalonProfilePage() {
               </a>
             </p>
           </address>
-          <div className="mt-6 overflow-hidden rounded-lg border border-border">
-            <iframe
-              title={t('salon.profile.mapEmbedTitle', { name: salon.name })}
-              src={salon.mapEmbedUrl}
-              loading="lazy"
-              width={1200}
-              height={320}
-              className="block h-[320px] w-full border-0"
-            />
-          </div>
+          <LazyMapEmbed
+            src={salon.mapEmbedUrl}
+            title={t('salon.profile.mapEmbedTitle', { name: salon.name })}
+          />
         </section>
 
         {/* Sticky mobile booking bar — primary CTA in thumb reach (ui-ux §5). */}
@@ -670,6 +720,275 @@ export function SalonProfilePage() {
         </div>
       </div>
     </TenantTheme>
+  );
+}
+
+// ─── About Section with Show-More Toggle (task 5.4; R6.3) ────────────────────
+
+/**
+ * Displays the salon description with a "show more" / "show less" toggle when
+ * the text exceeds 3 lines. Uses `line-clamp-3` for truncation and
+ * `AnimatePresence` for smooth expand/collapse animation.
+ */
+function AboutSection({ description }: { description: string }) {
+  const { t } = useTranslation();
+  const prefersReduced = useReducedMotion();
+  const [expanded, setExpanded] = useState(false);
+  const [needsToggle, setNeedsToggle] = useState(false);
+  const textRef = useRef<HTMLParagraphElement>(null);
+
+  // Detect if the text overflows 3 lines and needs a toggle button.
+  useEffect(() => {
+    const el = textRef.current;
+    if (!el) return;
+    // scrollHeight > clientHeight means the text overflows when clamped.
+    setNeedsToggle(el.scrollHeight > el.clientHeight + 2);
+  }, [description]);
+
+  return (
+    <div data-reveal>
+      <AnimatePresence initial={false}>
+        <motion.div
+          key="about-text"
+          initial={false}
+          animate={{ height: 'auto' }}
+          transition={{ duration: prefersReduced ? 0 : 0.3, ease: [0.2, 0, 0, 1] }}
+        >
+          <p
+            ref={textRef}
+            className={cn(
+              'max-w-prose text-md leading-loose text-text',
+              !expanded && 'line-clamp-3',
+            )}
+          >
+            {description}
+          </p>
+        </motion.div>
+      </AnimatePresence>
+      {needsToggle && (
+        <button
+          type="button"
+          onClick={() => setExpanded((prev) => !prev)}
+          className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-primary transition-colors duration-fast ease-standard hover:text-primary/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          aria-expanded={expanded}
+        >
+          {expanded ? t('salon.profile.showLess') : t('salon.profile.showMore')}
+          <motion.span
+            animate={{ rotate: expanded ? 180 : 0 }}
+            transition={{ duration: prefersReduced ? 0 : 0.2, ease: [0.2, 0, 0, 1] }}
+            className="inline-flex"
+            aria-hidden="true"
+          >
+            <ChevronDown size={16} />
+          </motion.span>
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Lazy-Loaded Map Embed via IntersectionObserver (task 5.4; R6.3) ─────────
+
+/**
+ * A map iframe that only loads when scrolled into view using
+ * IntersectionObserver. This prevents the heavy map embed from blocking the
+ * initial page load and saves bandwidth for users who don't scroll that far.
+ */
+function LazyMapEmbed({ src, title }: { src: string; title: string }) {
+  const { t } = useTranslation();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '200px 0px' }, // Start loading 200px before it scrolls into view
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      className="mt-6 overflow-hidden rounded-lg border border-border"
+    >
+      {isVisible ? (
+        <iframe
+          title={title}
+          src={src}
+          width={1200}
+          height={320}
+          className="block h-[320px] w-full border-0"
+        />
+      ) : (
+        <div
+          role="img"
+          className="flex h-[320px] w-full items-center justify-center bg-surface"
+          aria-label={t('salon.profile.mapLoading')}
+        >
+          <MapPin aria-hidden="true" size={32} className="text-muted opacity-40" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Expandable Service Categories (task 5.3; R6.2) ─────────────────────────
+
+/** Groups services by their `category` field and returns an ordered array. */
+function groupServicesByCategory(
+  services: SalonService[],
+  fallbackLabel: string,
+): Array<{ category: string; services: SalonService[] }> {
+  const map = new Map<string, SalonService[]>();
+  for (const service of services) {
+    const key = service.category ?? fallbackLabel;
+    const group = map.get(key);
+    if (group) {
+      group.push(service);
+    } else {
+      map.set(key, [service]);
+    }
+  }
+  return Array.from(map.entries()).map(([category, items]) => ({
+    category,
+    services: items,
+  }));
+}
+
+interface ServiceCategoriesProps {
+  services: SalonService[];
+  bookHref: string;
+  onBookClick: () => void;
+}
+
+/**
+ * Services grouped by category in expandable/collapsible sections.
+ *
+ * The first category starts expanded; subsequent categories are collapsed.
+ * Each category heading is a toggle button with `aria-expanded` and
+ * `aria-controls` linking to its panel. Services within animate in via
+ * `StaggerContainer`/`StaggerItem` when the category is expanded.
+ */
+function ServiceCategories({ services, bookHref, onBookClick }: ServiceCategoriesProps) {
+  const { t } = useTranslation();
+  const prefersReduced = useReducedMotion();
+  const categories = groupServicesByCategory(services, t('salon.profile.allServices'));
+
+  // First category starts expanded; track open state per category key.
+  const [openCategories, setOpenCategories] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    if (categories.length > 0) initial.add(categories[0].category);
+    return initial;
+  });
+
+  const toggle = useCallback((category: string) => {
+    setOpenCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
+      return next;
+    });
+  }, []);
+
+  return (
+    <div className="flex flex-col border-t border-border">
+      {categories.map((group) => {
+        const isOpen = openCategories.has(group.category);
+        const panelId = `services-panel-${group.category.replace(/\s/g, '-')}`;
+        const toggleId = `services-toggle-${group.category.replace(/\s/g, '-')}`;
+
+        return (
+          <div key={group.category} className="border-b border-border">
+            {/* Category toggle heading */}
+            <button
+              id={toggleId}
+              type="button"
+              onClick={() => toggle(group.category)}
+              aria-expanded={isOpen}
+              aria-controls={panelId}
+              className="flex w-full items-center gap-3 py-5 text-start transition-colors duration-fast ease-standard hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+              aria-label={t('salon.profile.categoryToggle', { name: group.category })}
+            >
+              <motion.span
+                animate={{ rotate: isOpen ? 180 : 0 }}
+                transition={{ duration: prefersReduced ? 0 : 0.2, ease: [0.2, 0, 0, 1] }}
+                className="flex shrink-0 items-center text-muted"
+                aria-hidden="true"
+              >
+                <ChevronDown size={20} />
+              </motion.span>
+              <h3 className="text-lg font-bold text-text">{group.category}</h3>
+              <span className="text-xs text-muted">
+                ({t('salon.profile.servicesCount', { count: group.services.length })})
+              </span>
+            </button>
+
+            {/* Expandable service list panel */}
+            <motion.div
+              id={panelId}
+              role="region"
+              aria-labelledby={toggleId}
+              initial={false}
+              animate={{
+                height: isOpen ? 'auto' : 0,
+                opacity: isOpen ? 1 : 0,
+              }}
+              transition={{ duration: prefersReduced ? 0 : 0.3, ease: [0.2, 0, 0, 1] }}
+              className="overflow-hidden"
+              aria-hidden={!isOpen}
+            >
+              <StaggerContainer className="flex flex-col pb-2">
+                {group.services.map((service) => (
+                  <StaggerItem key={service.id}>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-border/50 py-4 ps-8">
+                      <div className="flex min-w-0 flex-col gap-1">
+                        <span className="text-md font-bold text-text">
+                          {service.name}
+                        </span>
+                        <span className="text-xs text-muted">
+                          {t('salon.profile.durationMinutes', { count: service.durationMinutes })}
+                        </span>
+                      </div>
+                      <div className="ms-auto flex items-center gap-4">
+                        <bdi dir="rtl" className="whitespace-nowrap text-md font-bold tabular-nums text-text">
+                          <span data-countup={String(service.priceRial)}>
+                            {formatRial(service.priceRial)}
+                          </span>
+                          <span className="ms-1 text-sm text-muted">ریال</span>
+                        </bdi>
+                        <Link
+                          to={`${bookHref}?service=${service.id}`}
+                          className={SERVICE_BOOK_BTN}
+                          onClick={onBookClick}
+                          aria-label={t('salon.profile.bookServiceAria', { name: service.name })}
+                          tabIndex={isOpen ? undefined : -1}
+                        >
+                          {t('salon.profile.bookService')}
+                        </Link>
+                      </div>
+                    </div>
+                  </StaggerItem>
+                ))}
+              </StaggerContainer>
+            </motion.div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

@@ -78,6 +78,12 @@ export interface SalonService {
   durationMinutes: number;
   /** Price in Iranian Rial (machine value; rendered via `<Money>`). */
   priceRial: number;
+  /**
+   * Optional category label (Persian) for grouping services into expandable
+   * sections on the salon profile (task 5.3, R6.2). When omitted the service
+   * appears under a general "all services" group.
+   */
+  category?: string;
 }
 
 /** A gallery image with explicit dimensions (CLS-safe) and Persian alt text. */
@@ -245,9 +251,9 @@ const SALON_PROFILES: Record<string, SalonProfile> = {
       { day: 'Friday', closed: true },
     ],
     services: [
-      { id: 'haircut', name: 'کوتاهی مو', durationMinutes: 45, priceRial: 2500000 },
-      { id: 'color', name: 'رنگ مو', durationMinutes: 120, priceRial: 8500000 },
-      { id: 'makeup', name: 'میکاپ', durationMinutes: 90, priceRial: 12000000 },
+      { id: 'haircut', name: 'کوتاهی مو', durationMinutes: 45, priceRial: 2500000, category: 'خدمات مو' },
+      { id: 'color', name: 'رنگ مو', durationMinutes: 120, priceRial: 8500000, category: 'خدمات مو' },
+      { id: 'makeup', name: 'میکاپ', durationMinutes: 90, priceRial: 12000000, category: 'آرایش صورت' },
     ],
     gallery: [
       {

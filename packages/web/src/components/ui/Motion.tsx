@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
+import { pageVariants, pageTransition } from '../../lib/motion-variants';
 import { cn } from './cn';
 
 export interface RevealProps {
@@ -87,16 +89,32 @@ export interface PageTransitionProps {
 }
 
 /**
- * Route-transition wrapper — a soft `fade-up` on every navigation so the new
- * page feels like it arrives rather than pops. Keyed on the pathname so the
- * animation re-fires on each route change. Reduced-motion: the keyframe is
- * gated, so content is shown immediately with no transform.
+ * Route-transition wrapper using Framer Motion `AnimatePresence` for richer,
+ * interruptible, directional page transitions.
+ *
+ * Keyed on the current pathname so the exit/enter cycle fires on each route
+ * change. The slide direction is RTL-aware: pages enter from inline-start
+ * (negative x in RTL layout). Under `prefers-reduced-motion: reduce` all
+ * transform-based animations are disabled — only an opacity crossfade remains
+ * (handled by passing empty variants).
  */
 export function PageTransition({ children, className }: PageTransitionProps) {
   const { pathname } = useLocation();
+  const prefersReduced = useReducedMotion();
+
   return (
-    <div key={pathname} className={cn('motion-safe:animate-fade-up', className)}>
-      {children}
-    </div>
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={pathname}
+        variants={prefersReduced ? {} : pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={pageTransition}
+        className={className}
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
   );
 }

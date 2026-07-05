@@ -30,6 +30,23 @@ if (!('ResizeObserver' in globalThis)) {
     ResizeObserver;
 }
 
+// IntersectionObserver is used by the infinite scroll hook and scroll-reveal
+// animations. Provide a no-op shim so tests can mount components using it.
+if (!('IntersectionObserver' in globalThis)) {
+  class IntersectionObserver {
+    constructor(private _cb: IntersectionObserverCallback) {}
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+    get root(): Element | null { return null; }
+    get rootMargin(): string { return ''; }
+    get thresholds(): ReadonlyArray<number> { return []; }
+    takeRecords(): IntersectionObserverEntry[] { return []; }
+  }
+  (globalThis as unknown as { IntersectionObserver: unknown }).IntersectionObserver =
+    IntersectionObserver;
+}
+
 type MatchMediaFn = (query: string) => MediaQueryList;
 
 if (!('matchMedia' in window)) {

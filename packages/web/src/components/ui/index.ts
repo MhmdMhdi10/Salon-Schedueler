@@ -71,10 +71,27 @@ export { Picture } from './Picture';
 export type { PictureProps, PictureSource } from './Picture';
 export { Rating } from './Rating';
 export type { RatingProps } from './Rating';
+export { RatingStars } from './RatingStars';
+export type { RatingStarsProps, RatingStarsSize } from './RatingStars';
 export { SalonCard } from './SalonCard';
 export type { SalonCardProps } from './SalonCard';
 export { Reveal, PageTransition } from './Motion';
 export type { RevealProps, PageTransitionProps } from './Motion';
+export { ScrollReveal } from './ScrollReveal';
+export type { ScrollRevealProps } from './ScrollReveal';
+export { StaggerContainer, StaggerItem } from './StaggerContainer';
+export type { StaggerContainerProps, StaggerItemProps } from './StaggerContainer';
+export { CelebrationRing, ConfettiParticles } from './Celebration';
+export { ParallaxHero } from './ParallaxHero';
+export type { ParallaxHeroProps } from './ParallaxHero';
+export { AnimatedCounter } from './AnimatedCounter';
+export type { AnimatedCounterProps } from './AnimatedCounter';
+export { FilterBar } from './FilterBar';
+export type { FilterBarProps, SortOption } from './FilterBar';
+export { ImageCarousel } from './ImageCarousel';
+export type { ImageCarouselProps, CarouselImage } from './ImageCarousel';
+export { BookingStepper } from './BookingStepper';
+export type { BookingStepperProps, BookingStep } from './BookingStepper';
 
 // Persian formatting & bidi helpers (display-only localization, R7.2–7.5)
 export { Num, toPersianDigits } from './Num';
