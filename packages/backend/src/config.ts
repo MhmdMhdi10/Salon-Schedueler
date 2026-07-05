@@ -91,15 +91,6 @@ export interface AppConfig {
   port: number;
   /** Node environment. */
   nodeEnv: string;
-  /**
-   * Base URL of a Firecrawl instance used by the website-import feature to
-   * scrape a salon's own website and prefill the registration form. Optional:
-   * when absent, `POST /api/import/website` returns 503 IMPORT_DISABLED.
-   * Self-hosted Firecrawl needs no API key; the cloud service does.
-   */
-  firecrawlApiUrl?: string;
-  /** Optional Firecrawl API key (Bearer). Unneeded for self-hosted instances. */
-  firecrawlApiKey?: string;
 }
 
 /** Documented safe development defaults (never used in production). */
@@ -130,16 +121,19 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const isProduction = nodeEnv === 'production';
 
   if (isProduction) {
-    const missing = REQUIRED_IN_PRODUCTION.filter(({ key }) => !env[key]).map(({ label }) => label);
+    const missing = REQUIRED_IN_PRODUCTION.filter(({ key }) => !env[key]).map(
+      ({ label }) => label,
+    );
     if (missing.length > 0) {
       throw new Error(
         `Missing required production configuration: ${missing.join(', ')}. ` +
-          `Set these environment variables before starting the server in production.`,
+        `Set these environment variables before starting the server in production.`,
       );
     }
   }
 
-  const paymentGateway: PaymentGatewayName = env.PAYMENT_GATEWAY === 'idpay' ? 'idpay' : 'zarinpal';
+  const paymentGateway: PaymentGatewayName =
+    env.PAYMENT_GATEWAY === 'idpay' ? 'idpay' : 'zarinpal';
 
   return {
     databaseUrl: env.DATABASE_URL ?? DEV_DEFAULTS.databaseUrl,
@@ -148,7 +142,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     paymentGateway,
     zarinpalMerchantId: env.ZARINPAL_MERCHANT_ID,
     idpayApiKey: env.IDPAY_API_KEY,
-    paymentCallbackBaseUrl: env.PAYMENT_CALLBACK_BASE_URL ?? DEV_DEFAULTS.paymentCallbackBaseUrl,
+    paymentCallbackBaseUrl:
+      env.PAYMENT_CALLBACK_BASE_URL ?? DEV_DEFAULTS.paymentCallbackBaseUrl,
     kavenegarApiKey: env.KAVENEGAR_API_KEY,
     kavenegarBaseUrl: env.KAVENEGAR_BASE_URL,
     kavenegarSender: env.KAVENEGAR_SENDER,
@@ -167,16 +162,18 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     subQuarterlyRial: env.SUB_QUARTERLY_RIAL,
     subAnnualRial: env.SUB_ANNUAL_RIAL,
     subTrialDays: env.SUB_TRIAL_DAYS ? Number(env.SUB_TRIAL_DAYS) : 14,
-    otpWindowSeconds: env.OTP_WINDOW_SECONDS ? Number(env.OTP_WINDOW_SECONDS) : 120,
+    otpWindowSeconds: env.OTP_WINDOW_SECONDS
+      ? Number(env.OTP_WINDOW_SECONDS)
+      : 120,
     publicBaseUrl: env.PUBLIC_BASE_URL,
     rabbitmqUrl: env.RABBITMQ_URL,
-    smsQueueMaxAttempts: env.SMS_QUEUE_MAX_ATTEMPTS ? Number(env.SMS_QUEUE_MAX_ATTEMPTS) : 5,
+    smsQueueMaxAttempts: env.SMS_QUEUE_MAX_ATTEMPTS
+      ? Number(env.SMS_QUEUE_MAX_ATTEMPTS)
+      : 5,
     smsQueueRetryDelayMs: env.SMS_QUEUE_RETRY_DELAY_MS
       ? Number(env.SMS_QUEUE_RETRY_DELAY_MS)
       : 30000,
     port: env.PORT ? Number(env.PORT) : 3000,
     nodeEnv,
-    firecrawlApiUrl: env.FIRECRAWL_API_URL,
-    firecrawlApiKey: env.FIRECRAWL_API_KEY,
   };
 }

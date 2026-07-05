@@ -90,12 +90,7 @@ describe('MarketingHome', () => {
 
   it('renders the hero image with explicit dimensions and meaningful alt (R8.8, R9.4)', () => {
     const { getByTestId } = renderHome();
-    // The page now also renders featured-salon cards with their own images, so
-    // select the LCP hero specifically (the one preloaded with fetchpriority
-    // high) rather than assuming a single image on the page.
-    const imgs = within(getByTestId('marketing-home')).getAllByRole('img');
-    const img =
-      imgs.find((el) => el.getAttribute('fetchpriority') === 'high') ?? imgs[0];
+    const img = within(getByTestId('marketing-home')).getByRole('img');
     expect(img).toHaveAttribute('width', '1280');
     expect(img).toHaveAttribute('height', '720');
     expect(img.getAttribute('alt')?.trim()).toBeTruthy();

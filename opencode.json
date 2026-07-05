@@ -1,39 +1,11 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "model": "openrouter/z-ai/glm-5.2",
   "provider": {
-    "conduit": {
-      "npm": "@ai-sdk/openai-compatible",
-      "name": "Conduit",
+    "openrouter": {
       "options": {
-        "baseURL": "https://conduit.ozdoev.net/api/v1"
-      },
-      "models": {
-        "gpt-5": {
-          "name": "GPT-5"
-        },
-        "gpt-5.5": {
-          "name": "GPT-5.5"
-        },
-        "gpt-5-mini": {
-          "name": "GPT-5 Mini"
-        },
-        "claude-opus-4-8": {
-          "name": "Claude Opus 4.8"
-        },
-        "claude-sonnet-4-6": {
-          "name": "Claude Sonnet 4.6"
-        },
-        "gemini-3-pro": {
-          "name": "Gemini 3 Pro"
-        },
-        "grok-4": {
-          "name": "Grok 4"
-        },
-        "glm-5.2": {
-          "name": "GLM 5.2"
-        }
+        "apiKey": "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"
       }
     }
-  },
-  "model": "conduit/glm-5.2"
+  }
 }

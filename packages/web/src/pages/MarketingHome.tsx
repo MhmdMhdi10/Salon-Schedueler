@@ -14,10 +14,9 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { SeoHead, JsonLd, SITE_NAME, SITE_URL } from '../components/seo';
-import { Card, CardContent, CardTitle, Picture, SalonCard } from '../components/ui';
+import { Card, CardContent, CardTitle, Picture } from '../components/ui';
 import { EditorialSplit, SectionRhythm } from '../components/layout';
 import { Motif } from '../components/brand';
-import { getAllSalonProfiles } from '../data/salons';
 
 /**
  * Public marketing home at `/` (task 5.1 / 12.1; R1.4, R2.1, R2.2, R2.4, R2.5,
@@ -53,13 +52,6 @@ import { getAllSalonProfiles } from '../data/salons';
  */
 export function MarketingHome() {
   const { t } = useTranslation();
-
-  // The most-highly-rated salons, surfaced as a Booksy-style "featured" row.
-  // Presentation-only; sorted by rating so the strongest storefronts lead.
-  const featuredSalons = getAllSalonProfiles()
-    .slice()
-    .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
-    .slice(0, 3);
 
   // The hero is the LCP image: served as AVIF → WebP → PNG, each at two widths.
   // The PNG is the universal fallback (`<img src>`); the AVIF candidate is what
@@ -294,40 +286,6 @@ export function MarketingHome() {
                   icon={service.icon}
                   title={t(`home.services.items.${service.key}.title`)}
                 />
-              ))}
-            </ul>
-          </section>
-        </div>
-
-        {/* Featured salons — a Booksy-style row of the top-rated storefronts
-            (photo, rating, category, location, from-price), each linking to
-            its public profile. A real marketplace discovery surface. */}
-        <div className="mx-auto w-full max-w-container px-4">
-          <section aria-labelledby="home-featured-title">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <h2
-                  id="home-featured-title"
-                  className="text-xl leading-display text-display text-text"
-                >
-                  {t('home.featured.title')}
-                </h2>
-                <p className="mt-2 max-w-prose text-muted">
-                  {t('home.featured.subtitle')}
-                </p>
-              </div>
-              <Link to="/city/tehran" className={SECONDARY_CTA}>
-                {t('home.featured.viewAll')}
-              </Link>
-            </div>
-            <ul
-              role="list"
-              className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-            >
-              {featuredSalons.map((salon) => (
-                <li key={salon.slug}>
-                  <SalonCard salon={salon} />
-                </li>
               ))}
             </ul>
           </section>

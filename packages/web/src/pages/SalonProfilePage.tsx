@@ -1,22 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { MapPin, Phone } from 'lucide-react';
 import i18n from '../i18n';
 import { SeoHead, JsonLd, SITE_URL } from '../components/seo';
 import type { JsonLdNode } from '../components/seo';
-import {
-  Avatar,
-  DirText,
-  JalaliDate,
-  Picture,
-  RatingStars,
-  cn,
-  formatRial,
-  toPersianDigits,
-} from '../components/ui';
-import { Motif } from '../components/brand';
+import { Num, DirText, Picture, Avatar, cn, formatRial, toPersianDigits } from '../components/ui';
 import { TenantTheme } from '../components/theme';
+import { Salon3DStage } from '../components/three/Salon3DStage';
 import {
   getSalonProfile,
   IRANIAN_WEEK_ORDER,
@@ -25,31 +15,23 @@ import {
   type SchemaDay,
 } from '../data/salons';
 import { usePwaInstall } from '../pwa/usePwaInstall';
-import { writeSalonName } from '../utils/salonName';
 
-/** Prominent filled brand CTA — the single most-prominent action per view. */
-const PRIMARY_BTN =
-  'inline-flex min-h-[48px] items-center justify-center gap-2 rounded-md bg-primary px-6 py-3 text-md font-bold text-primary-contrast no-underline shadow-1 transition-colors duration-fast ease-standard hover:brightness-110 active:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
+/** Chic, high-contrast "ink" button (charcoal in light, paper in dark). */
+const INK_BUTTON =
+  'inline-flex min-h-[48px] items-center justify-center gap-2 rounded-pill bg-text px-7 py-3 text-md font-bold text-bg no-underline transition-transform duration-fast ease-standard hover:scale-[1.03] active:scale-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus motion-reduce:transition-none';
 
-/** Quiet neutral action (call, install, off-page channels). */
-const SECONDARY_BTN =
-  'inline-flex min-h-[44px] items-center justify-center gap-2 rounded-md border border-border bg-surface px-5 py-2 text-sm font-medium text-text no-underline transition-colors duration-fast ease-standard hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
-
-/** Per-service "Book" affordance — outline that fills with brand on hover. */
-const SERVICE_BOOK_BTN =
-  'inline-flex min-h-[44px] items-center justify-center gap-1 rounded-md border border-primary px-4 py-2 text-sm font-bold text-primary no-underline transition-colors duration-fast ease-standard hover:bg-primary hover:text-primary-contrast focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
+/** Outline "pill" link that inverts on hover — used for off-page channels. */
+const PILL_LINK =
+  'inline-flex min-h-[44px] items-center gap-2 rounded-pill border border-text px-5 py-2 text-sm font-medium text-text no-underline transition-colors duration-fast ease-standard hover:bg-text hover:text-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
 
 /**
  * Public salon profile at `/s/:slug` (task 5.2; R8.1, R8.3, R8.4, R8.8, R9.1).
  *
- * Redesigned as a **Booksy-style marketplace storefront**: a cover-photo hero
- * carrying the salon name, its star rating + review count, category, price
- * range, live open/closed marker and location, with a prominent "book" CTA; a
- * price-list of services each with its own "book" affordance; a customer
- * **reviews** block; a **team** block; then hours (Iranian week), gallery, other
- * booking channels, install, and NAP + map. SEO, RTL, a11y, and perf discipline
- * are preserved (tokens only; images sized + lazy; one `<h1>`; AA-safe colors;
- * decorative avatars/icons hidden from assistive tech).
+ * Designed as an editorial salon "lookbook" rather than a generic dashboard:
+ * oversized display type, numbered section headers with hairline rules, a real
+ * price-list menu, an asymmetric gallery, and chic ink/outline controls. SEO,
+ * RTL, a11y, and perf discipline are preserved (tokens only; images sized +
+ * lazy; one <h1>; AA-safe color usage).
  */
 export function SalonProfilePage() {
   const { t } = useTranslation();
@@ -91,8 +73,13 @@ export function SalonProfilePage() {
               ease: 'out(3)',
             });
           }
+          const stage = root.querySelector('[data-hero-3d]') as HTMLElement | null;
+          if (stage) {
+            animate(stage, { opacity: [0, 1], scale: [0.92, 1], duration: 900, ease: 'out(3)' });
+          }
 
-          // 2) Hero parallax — playback SCRUBBED to scroll position.
+          // 2) Hero parallax — playback SCRUBBED to scroll position (sync),
+          //    the anime.js-homepage feel: layers drift at different rates.
           if (hero) {
             const heroRange = (sync: number) =>
               onScroll({
@@ -101,15 +88,23 @@ export function SalonProfilePage() {
                 leave: { target: 'bottom', container: 'top' },
                 sync,
               });
-            const cover = root.querySelector('[data-hero-cover]') as HTMLElement | null;
-            if (cover) {
-              animate(cover, { y: [0, -40], ease: 'linear', autoplay: heroRange(0.3) });
+            const mark = root.querySelector('[data-parallax="mark"]') as HTMLElement | null;
+            if (mark) {
+              animate(mark, {
+                y: [0, -220],
+                opacity: [0.12, 0.02],
+                ease: 'linear',
+                autoplay: heroRange(0.18),
+              });
+            }
+            if (stage) {
+              animate(stage, { y: [0, -90], ease: 'linear', autoplay: heroRange(0.32) });
             }
             const heroText = root.querySelector('[data-hero]') as HTMLElement | null;
             if (heroText) {
               animate(heroText, {
-                y: [0, -24],
-                opacity: [1, 0.6],
+                y: [0, -36],
+                opacity: [1, 0.5],
                 ease: 'linear',
                 autoplay: heroRange(0.42),
               });
@@ -216,29 +211,21 @@ export function SalonProfilePage() {
     );
   }
 
+  const headingSuffix = t('salon.profile.headingSuffix', {
+    city: salon.address.addressLocality,
+    neighborhood: salon.neighborhood,
+  });
   const path = `/s/${salon.slug}`;
   const ogImage = salon.ogImage ? `${SITE_URL}${salon.ogImage}` : undefined;
   const bookHref = `/salon/${salon.bookingSalonId}/book`;
-  // Cache the salon name (keyed by its booking id) as the customer enters the
-  // funnel, so the availability/confirm steps can show "booking at {salon}"
-  // without another API round-trip — the same cache the QR landing writes.
-  const cacheSalonName = () => writeSalonName(salon.bookingSalonId, salon.name);
   const today = tehranToday();
   const openNow = isOpenNow(salon);
   const channels = salon.channels ?? {};
   // The salon is the primary brand mark (R4.5): its configured display name when
   // present, otherwise its stored name.
   const brandMark = salon.displayName ?? salon.name;
-  const cover = salon.gallery[0];
-  const coverSources = cover
-    ? [
-        cover.avifSrcSet && { type: 'image/avif', srcSet: cover.avifSrcSet },
-        cover.webpSrcSet && { type: 'image/webp', srcSet: cover.webpSrcSet },
-      ].filter(Boolean) as { type: string; srcSet: string }[]
-    : [];
-  const reviews = salon.reviews ?? [];
-  const staff = salon.staff ?? [];
-  const reviewTotal = salon.reviewCount ?? reviews.length;
+  // A large, faint backdrop of the salon's brand word — the editorial signature.
+  const markWord = brandMark.split(' ').pop() ?? brandMark;
 
   const handleInstall = async () => {
     const outcome = await promptInstall();
@@ -247,427 +234,340 @@ export function SalonProfilePage() {
 
   return (
     <TenantTheme accentKey={salon.brandAccent}>
-      <div
-        ref={rootRef}
-        data-testid="salon-profile"
-        className="mx-auto w-full max-w-container pb-28 md:pb-12"
-      >
-        <SeoHead
-          title={salon.name}
-          description={salon.tagline}
-          path={path}
-          ogType="business.business"
-          image={ogImage}
-          index
-        />
-        <JsonLd data={buildSalonJsonLd(salon)} />
+      <div ref={rootRef} data-testid="salon-profile" className="mx-auto w-full max-w-container pb-28 md:pb-12">
+      <SeoHead
+        title={salon.name}
+        description={salon.tagline}
+        path={path}
+        ogType="business.business"
+        image={ogImage}
+        index
+      />
+      <JsonLd data={buildSalonJsonLd(salon)} />
 
-        {/* Breadcrumb — mirrors the BreadcrumbList JSON-LD (seo §5). */}
-        <nav aria-label={t('salon.profile.breadcrumb')} className="py-3 text-sm">
-          <ol className="flex flex-wrap items-center gap-x-2 text-muted" role="list">
-            <li>
-              <Link to="/" className="hover:text-text hover:underline">
-                {t('salon.profile.crumbHome')}
-              </Link>
-            </li>
-            <li aria-hidden="true">‹</li>
-            <li className="text-text">{salon.name}</li>
-          </ol>
-        </nav>
+      {/* Breadcrumb — mirrors the BreadcrumbList JSON-LD (seo §5). */}
+      <nav aria-label={t('salon.profile.breadcrumb')} className="py-3 text-sm">
+        <ol className="flex flex-wrap items-center gap-x-2 text-muted" role="list">
+          <li>
+            <Link to="/" className="hover:text-text hover:underline">
+              {t('salon.profile.crumbHome')}
+            </Link>
+          </li>
+          <li aria-hidden="true">‹</li>
+          <li className="text-text">{salon.name}</li>
+        </ol>
+      </nav>
 
-        {/* Hero — Booksy-style: cover photo, name, rating, category, price
-            range, open marker, location, and the primary booking CTA. */}
-        <header className="pt-2">
-          {cover && (
-            <div
-              data-hero-cover
-              className="overflow-hidden rounded-lg border border-border bg-elevated shadow-1"
-            >
-              <Picture
-                sources={coverSources}
-                src={cover.src}
-                fallbackSrcSet={cover.srcSet}
-                sizes="(min-width: 1024px) 1024px, 100vw"
-                width={cover.width}
-                height={cover.height}
-                alt={cover.alt}
-                loading="lazy"
-                className="aspect-[16/9] w-full object-cover"
-              />
-            </div>
-          )}
-
-          <div
-            data-hero
-            className="mt-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between"
-          >
-            <div className="flex flex-col gap-3">
-              <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-accent">
-                <Motif variant="mark" className="h-4 w-4" />
-                {salon.category ?? t('salon.profile.eyebrow')}
+      {/* Hero — editorial: an overline, an oversized name over a faint brand
+          mark, the locale/tagline, a live open marker, and the primary CTA. */}
+      <header className="relative overflow-hidden py-10 sm:py-16">
+        <span
+          aria-hidden="true"
+          data-parallax="mark"
+          className="pointer-events-none absolute -top-8 select-none text-[28vw] font-black leading-none text-accent opacity-[0.07] end-0 sm:text-[20vw]"
+        >
+          {markWord}
+        </span>
+        <div className="relative grid items-center gap-8 lg:grid-cols-2">
+          <div data-hero className="flex flex-col items-start gap-5">
+            <div className="flex items-center gap-3">
+              <span aria-hidden="true" className="h-px w-10 bg-accent" />
+              <span className="text-xs font-bold tracking-[0.25em] text-muted">
+                {t('salon.profile.eyebrow')}
               </span>
-              <h1 className="text-2xl leading-display text-display text-text">
+            </div>
+
+            <div className="flex items-center gap-4">
+              {salon.logoUrl ? (
+                <Avatar src={salon.logoUrl} name={brandMark} size="lg" decorative />
+              ) : null}
+              <h1 className="text-[clamp(2.75rem,9vw,5.5rem)] font-black leading-[0.95] text-text">
                 {brandMark}
               </h1>
-
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                {typeof salon.rating === 'number' && (
-                  <RatingStars value={salon.rating} count={salon.reviewCount} size="md" />
-                )}
-                {salon.priceRange && (
-                  <span className="text-sm font-medium tracking-wide text-muted">
-                    {salon.priceRange}
-                  </span>
-                )}
-                {openNow !== null && (
-                  <span className="inline-flex items-center gap-2 text-sm text-text">
-                    <span
-                      aria-hidden="true"
-                      className={cn(
-                        'h-2.5 w-2.5 rounded-pill',
-                        openNow ? 'bg-success' : 'bg-muted',
-                      )}
-                    />
-                    {openNow ? t('salon.profile.openNow') : t('salon.profile.closedNow')}
-                  </span>
-                )}
-              </div>
-
-              <p className="flex items-center gap-2 text-sm text-muted">
-                <MapPin aria-hidden="true" size={18} className="shrink-0" />
-                {salon.neighborhood}، {salon.address.addressLocality}
-              </p>
-              <p className="max-w-prose text-md leading-loose text-muted">
-                {salon.tagline}
-              </p>
             </div>
 
-            <div className="flex shrink-0 flex-col gap-3 sm:flex-row md:flex-col md:items-stretch">
-              <Link to={bookHref} className={PRIMARY_BTN} onClick={cacheSalonName}>
+            <p className="max-w-prose text-md text-muted">{headingSuffix}</p>
+            <p className="max-w-prose text-md leading-loose text-muted">{salon.tagline}</p>
+
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-text">
+              {openNow !== null && (
+                <span className="inline-flex items-center gap-2">
+                  <span
+                    aria-hidden="true"
+                    className={cn('h-2.5 w-2.5 rounded-pill', openNow ? 'bg-success' : 'bg-muted')}
+                  />
+                  {openNow ? t('salon.profile.openNow') : t('salon.profile.closedNow')}
+                </span>
+              )}
+              <span className="text-muted">
+                {salon.neighborhood}، {salon.address.addressLocality}
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-5 pt-2">
+              <Link to={bookHref} className={INK_BUTTON}>
                 {t('salon.profile.bookCtaLong')}
                 <Arrow />
               </Link>
-              <a href={`tel:${salon.telephone}`} className={SECONDARY_BTN}>
-                <Phone aria-hidden="true" size={18} />
+              <a
+                href={`tel:${salon.telephone}`}
+                className="text-sm font-medium text-text underline decoration-accent decoration-2 underline-offset-4 hover:decoration-text"
+              >
                 {t('salon.profile.callCta')}
               </a>
             </div>
           </div>
-        </header>
 
-        {/* Slim feature band — truthful highlights, divided, no boxes/icons. */}
-        <ul
-          data-stagger
-          className="mt-8 flex flex-col divide-y divide-border border-y border-border sm:flex-row sm:divide-x sm:divide-y-0 sm:rtl:divide-x-reverse"
-          role="list"
-        >
-          {[
-            t('salon.profile.feat247'),
-            t('salon.profile.featInstant'),
-            t('salon.profile.featReminder'),
-          ].map((label, i) => (
-            <li key={label} className="flex items-center gap-3 py-4 sm:flex-1 sm:px-5">
-              <span className="text-sm font-black text-accent">
-                {toPersianDigits(String(i + 1))}
-              </span>
-              <span className="text-sm font-medium text-text">{label}</span>
+          {/* Signature 3D centerpiece (decorative, lazy + WebGL/motion-gated). */}
+          <div data-hero-3d>
+            <Salon3DStage className="h-[280px] w-full sm:h-[360px] lg:h-[480px]" />
+          </div>
+        </div>
+      </header>
+
+      {/* Slim feature band — truthful highlights, divided, no boxes/icons. */}
+      <ul
+        data-stagger
+        className="flex flex-col divide-y divide-border border-y border-border sm:flex-row sm:divide-x sm:divide-y-0 sm:rtl:divide-x-reverse"
+        role="list"
+      >
+        {[
+          t('salon.profile.feat247'),
+          t('salon.profile.featInstant'),
+          t('salon.profile.featReminder'),
+        ].map((label, i) => (
+          <li key={label} className="flex items-center gap-3 py-4 sm:flex-1 sm:px-5">
+            <span className="text-sm font-black text-accent">
+              {toPersianDigits(String(i + 1))}
+            </span>
+            <span className="text-sm font-medium text-text">{label}</span>
+          </li>
+        ))}
+      </ul>
+
+      {/* Services — a salon price list (name · dotted leader · price). */}
+      <section className="pt-12" aria-labelledby="salon-services-title">
+        <SectionHeader id="salon-services-title" index="01" title={t('salon.profile.servicesTitle')} />
+        <ul data-stagger role="list" className="flex flex-col border-t border-border">
+          {salon.services.map((service, index) => (
+            <li
+              key={service.id}
+              className="flex items-baseline gap-4 border-b border-border py-5"
+            >
+              <div className="flex flex-col gap-1">
+                <h3 className="flex items-center gap-2 text-lg font-bold text-text">
+                  {service.name}
+                  {index === 0 && (
+                    <span className="rounded-pill bg-text px-2 py-0.5 text-2xs font-medium text-bg">
+                      {t('salon.profile.popular')}
+                    </span>
+                  )}
+                </h3>
+                <span className="text-xs text-muted">
+                  <Num value={service.durationMinutes} />{' '}
+                  {t('salon.profile.durationMinutes', { count: service.durationMinutes })}
+                </span>
+              </div>
+              <span
+                aria-hidden="true"
+                className="mb-1.5 hidden flex-1 border-b border-dotted border-border sm:block"
+              />
+              <bdi
+                dir="rtl"
+                className="ms-auto whitespace-nowrap text-lg font-bold tabular-nums text-text sm:ms-0"
+              >
+                <span data-countup={String(service.priceRial)}>
+                  {formatRial(service.priceRial)}
+                </span>
+                <span className="ms-1">ریال</span>
+              </bdi>
             </li>
           ))}
         </ul>
+      </section>
 
-        {/* 01 Services — price list; each row books that service. */}
-        <section className="pt-12" aria-labelledby="salon-services-title">
-          <SectionHeader id="salon-services-title" index="01" title={t('salon.profile.servicesTitle')} />
-          <ul data-stagger role="list" className="flex flex-col border-t border-border">
-            {salon.services.map((service, index) => (
+      {/* Opening hours — editorial table, today emphasized (no boxes). */}
+      <section className="pt-12" aria-labelledby="salon-hours-title">
+        <SectionHeader id="salon-hours-title" index="02" title={t('salon.profile.hoursTitle')} />
+        <ul data-stagger role="list" className="flex flex-col border-t border-border">
+          {orderedHours(salon).map((entry) => {
+            const isToday = entry.day === today;
+            return (
               <li
-                key={service.id}
-                className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-border py-5"
+                key={entry.day}
+                className={cn(
+                  'flex items-center justify-between gap-4 border-b border-border py-3 text-sm',
+                  isToday && 'font-bold',
+                )}
               >
-                <div className="flex min-w-0 flex-col gap-1">
-                  <h3 className="flex items-center gap-2 text-lg font-bold text-text">
-                    {service.name}
-                    {index === 0 && (
-                      <span className="rounded-pill bg-primary px-2 py-0.5 text-2xs font-medium text-primary-contrast">
-                        {t('salon.profile.popular')}
-                      </span>
-                    )}
-                  </h3>
-                  <span className="text-xs text-muted">
-                    {t('salon.profile.durationMinutes', { count: service.durationMinutes })}
-                  </span>
-                </div>
-                <div className="ms-auto flex items-center gap-4">
-                  <bdi dir="rtl" className="whitespace-nowrap text-lg font-bold tabular-nums text-text">
-                    <span data-countup={String(service.priceRial)}>
-                      {formatRial(service.priceRial)}
+                <span className="flex items-center gap-2 text-text">
+                  {PERSIAN_DAY_LABEL[entry.day]}
+                  {isToday && (
+                    <span className="text-2xs font-black tracking-wide text-accent">
+                      {t('salon.profile.todayBadge')}
                     </span>
-                    <span className="ms-1">ریال</span>
-                  </bdi>
-                  <Link
-                    to={bookHref}
-                    className={SERVICE_BOOK_BTN}
-                    onClick={cacheSalonName}
-                    aria-label={t('salon.profile.bookServiceAria', { name: service.name })}
-                  >
-                    {t('salon.profile.bookService')}
-                  </Link>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        {/* 02 Reviews — customer social proof (mirrored into JSON-LD). */}
-        {reviews.length > 0 && (
-          <section className="pt-12" aria-labelledby="salon-reviews-title">
-            <SectionHeader id="salon-reviews-title" index="02" title={t('salon.profile.reviewsTitle')} />
-            {typeof salon.rating === 'number' && (
-              <div data-reveal className="mb-6 flex items-center gap-4">
-                <span className="text-2xl font-black tabular-nums text-text">
-                  {toPersianDigits(salon.rating.toFixed(1)).replace('.', '٫')}
+                  )}
                 </span>
-                <div className="flex flex-col gap-1">
-                  <RatingStars value={salon.rating} hideValue size="md" />
-                  <span className="text-sm text-muted">
-                    {t('salon.profile.reviewsSummary', { count: reviewTotal })}
-                  </span>
-                </div>
-              </div>
-            )}
-            <ul data-stagger role="list" className="flex flex-col gap-4">
-              {reviews.map((review) => (
-                <li
-                  key={review.id}
-                  className="rounded-lg border border-border bg-surface p-5 shadow-1"
-                >
-                  <div className="flex items-center gap-3">
-                    <Avatar name={review.author} decorative />
-                    <div className="flex flex-col">
-                      <span className="text-sm font-bold text-text">{review.author}</span>
-                      <RatingStars value={review.rating} hideValue />
-                    </div>
-                    <JalaliDate value={review.date} className="ms-auto text-xs text-muted" />
-                  </div>
-                  {review.service && (
-                    <p className="mt-3 text-xs font-bold text-accent">
-                      {t('salon.profile.reviewFor', { service: review.service })}
-                    </p>
-                  )}
-                  <p className="mt-2 text-sm leading-loose text-text">{review.body}</p>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+                {entry.closed || !entry.opens || !entry.closes ? (
+                  <span className="text-muted">{t('salon.profile.hoursClosed')}</span>
+                ) : (
+                  <DirText dir="ltr" className="text-muted tabular-nums">
+                    {t('salon.profile.hoursRange', {
+                      opens: toPersianDigits(entry.opens),
+                      closes: toPersianDigits(entry.closes),
+                    })}
+                  </DirText>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
 
-        {/* 03 Team — meet the people who do the work. */}
-        {staff.length > 0 && (
-          <section className="pt-12" aria-labelledby="salon-team-title">
-            <SectionHeader id="salon-team-title" index="03" title={t('salon.profile.teamTitle')} />
-            <p className="mb-5 max-w-prose text-sm text-muted">
-              {t('salon.profile.teamSubtitle')}
-            </p>
-            <ul
-              data-stagger
-              role="list"
-              className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4"
-            >
-              {staff.map((member) => (
-                <li
-                  key={member.id}
-                  className="flex flex-col items-center gap-2 rounded-lg border border-border bg-surface p-4 text-center shadow-1"
-                >
-                  <Avatar name={member.name} decorative size="lg" />
-                  <span className="text-sm font-bold text-text">{member.name}</span>
-                  <span className="text-xs text-muted">{member.role}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {/* 04 Opening hours — editorial table, today emphasized. */}
-        <section className="pt-12" aria-labelledby="salon-hours-title">
-          <SectionHeader id="salon-hours-title" index="04" title={t('salon.profile.hoursTitle')} />
-          <ul data-stagger role="list" className="flex flex-col border-t border-border">
-            {orderedHours(salon).map((entry) => {
-              const isToday = entry.day === today;
-              return (
-                <li
-                  key={entry.day}
-                  className={cn(
-                    'flex items-center justify-between gap-4 border-b border-border py-3 text-sm',
-                    isToday && 'font-bold',
-                  )}
-                >
-                  <span className="flex items-center gap-2 text-text">
-                    {PERSIAN_DAY_LABEL[entry.day]}
-                    {isToday && (
-                      <span className="text-2xs font-black tracking-wide text-accent">
-                        {t('salon.profile.todayBadge')}
-                      </span>
-                    )}
-                  </span>
-                  {entry.closed || !entry.opens || !entry.closes ? (
-                    <span className="text-muted">{t('salon.profile.hoursClosed')}</span>
-                  ) : (
-                    <DirText dir="ltr" className="text-muted tabular-nums">
-                      {t('salon.profile.hoursRange', {
-                        opens: toPersianDigits(entry.opens),
-                        closes: toPersianDigits(entry.closes),
-                      })}
-                    </DirText>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-
-        {/* 05 Gallery — asymmetric framed tiles, sized + lazy + Persian alt. */}
-        <section className="pt-12" aria-labelledby="salon-gallery-title">
-          <SectionHeader id="salon-gallery-title" index="05" title={t('salon.profile.galleryTitle')} />
-          <div data-stagger className="grid grid-cols-1 gap-4 sm:grid-cols-12">
-            {salon.gallery.map((image, index) => {
-              const sources = [
-                image.avifSrcSet && { type: 'image/avif', srcSet: image.avifSrcSet },
-                image.webpSrcSet && { type: 'image/webp', srcSet: image.webpSrcSet },
-              ].filter(Boolean) as { type: string; srcSet: string }[];
-              const featured = index === 0;
-              return (
-                <figure
-                  key={image.src}
-                  className={cn(
-                    'group overflow-hidden rounded-lg bg-surface',
-                    featured
-                      ? 'aspect-[4/3] sm:col-span-7'
-                      : 'aspect-[3/4] sm:col-span-5 sm:mt-12',
-                  )}
-                >
-                  <Picture
-                    sources={sources}
-                    src={image.src}
-                    fallbackSrcSet={image.srcSet}
-                    sizes="(min-width: 1024px) 33vw, (min-width: 480px) 50vw, 100vw"
-                    width={image.width}
-                    height={image.height}
-                    alt={image.alt}
-                    loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-slow ease-standard group-hover:scale-105 motion-reduce:transform-none"
-                  />
-                </figure>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* 06 Booking channels — website / Bale / Telegram. */}
-        <section className="pt-12" aria-labelledby="salon-channels-title">
-          <SectionHeader id="salon-channels-title" index="06" title={t('salon.profile.channelsTitle')} />
-          <p className="mb-5 max-w-prose text-sm text-muted">
-            {t('salon.profile.channelsHint')}
-          </p>
-          <div data-stagger className="flex flex-wrap gap-3">
-            {channels.website && (
-              <Link to={channels.website} className={SECONDARY_BTN}>
-                {t('salon.profile.channelWebsite')}
-              </Link>
-            )}
-            {channels.bale && (
-              <a href={channels.bale} target="_blank" rel="noopener noreferrer" className={SECONDARY_BTN}>
-                {t('salon.profile.channelBale')}
-                <Arrow external />
-                <span className="sr-only"> ({t('salon.profile.channelNewTab')})</span>
-              </a>
-            )}
-            {channels.telegram && (
-              <a href={channels.telegram} target="_blank" rel="noopener noreferrer" className={SECONDARY_BTN}>
-                {t('salon.profile.channelTelegram')}
-                <Arrow external />
-                <span className="sr-only"> ({t('salon.profile.channelNewTab')})</span>
-              </a>
-            )}
-          </div>
-        </section>
-
-        {/* Add as web app — save it to book faster. */}
-        {installed ? (
-          <p className="pt-10 text-sm font-medium text-success">
-            {t('salon.profile.installedNote')}
-          </p>
-        ) : (
-          <section
-            data-reveal
-            className="mt-12 flex flex-col gap-4 border-t-2 border-border pt-6 sm:flex-row sm:items-center sm:justify-between"
-            aria-labelledby="salon-install-title"
-          >
-            <div className="flex flex-col gap-1">
-              <h2 id="salon-install-title" className="text-lg font-bold text-text">
-                {t('salon.profile.installTitle')}
-              </h2>
-              <p className="max-w-prose text-sm text-muted">
-                {t('salon.profile.installBody')}
-              </p>
-              {showInstallHelp && (
-                <p role="note" className="mt-2 max-w-prose text-sm text-muted">
-                  <span className="font-bold text-text">
-                    {t('salon.profile.installManualTitle')}:{' '}
-                  </span>
-                  {t('salon.profile.installManualBody')}
-                </p>
-              )}
-            </div>
-            <button type="button" onClick={handleInstall} className={cn(SECONDARY_BTN, 'sm:shrink-0')}>
-              {t('salon.profile.installCta')}
-            </button>
-          </section>
-        )}
-
-        {/* 07 Contact / NAP — identical to JSON-LD (seo §11). */}
-        <section className="pt-12" aria-labelledby="salon-contact-title">
-          <SectionHeader id="salon-contact-title" index="07" title={t('salon.profile.contactTitle')} />
-          <address data-reveal className="flex flex-col gap-6 not-italic sm:flex-row sm:justify-between">
-            <p className="max-w-prose text-md leading-loose text-text">
-              <span className="block text-xs font-bold tracking-wide text-muted">
-                {t('salon.profile.addressLabel')}
-              </span>
-              {salon.address.streetAddress}، {salon.address.addressLocality}
-            </p>
-            <p className="text-md text-text">
-              <span className="block text-xs font-bold tracking-wide text-muted">
-                {t('salon.profile.phoneLabel')}
-              </span>
-              <a
-                href={`tel:${salon.telephone}`}
-                className="text-lg font-bold underline decoration-accent decoration-2 underline-offset-4 hover:decoration-text"
+      {/* Gallery — asymmetric, framed tiles with a hover-zoom; images stay
+          sized + lazy + Persian alt (CLS-safe, motion-reduce friendly). */}
+      <section className="pt-12" aria-labelledby="salon-gallery-title">
+        <SectionHeader id="salon-gallery-title" index="03" title={t('salon.profile.galleryTitle')} />
+        <div data-stagger className="grid grid-cols-1 gap-4 sm:grid-cols-12">
+          {salon.gallery.map((image, index) => {
+            const sources = [
+              image.avifSrcSet && { type: 'image/avif', srcSet: image.avifSrcSet },
+              image.webpSrcSet && { type: 'image/webp', srcSet: image.webpSrcSet },
+            ].filter(Boolean) as { type: string; srcSet: string }[];
+            const featured = index === 0;
+            return (
+              <figure
+                key={image.src}
+                className={cn(
+                  'group overflow-hidden bg-surface',
+                  featured
+                    ? 'aspect-[4/3] sm:col-span-7'
+                    : 'aspect-[3/4] sm:col-span-5 sm:mt-12',
+                )}
               >
-                <DirText dir="ltr">{salon.telephone}</DirText>
-              </a>
-            </p>
-          </address>
-          <div className="mt-6 overflow-hidden rounded-lg border border-border">
-            <iframe
-              title={t('salon.profile.mapEmbedTitle', { name: salon.name })}
-              src={salon.mapEmbedUrl}
-              loading="lazy"
-              width={1200}
-              height={320}
-              className="block h-[320px] w-full border-0"
-            />
-          </div>
-        </section>
-
-        {/* Sticky mobile booking bar — primary CTA in thumb reach (ui-ux §5). */}
-        <div
-          className="fixed inset-x-0 bottom-0 z-sticky border-t border-border bg-bg px-4 py-3 md:hidden"
-          style={{ paddingBottom: 'calc(var(--space-3) + env(safe-area-inset-bottom))' }}
-        >
-          <Link to={bookHref} className={cn(PRIMARY_BTN, 'w-full')} onClick={cacheSalonName}>
-            {t('salon.profile.bookCta')}
-            <Arrow />
-          </Link>
+                <Picture
+                  sources={sources}
+                  src={image.src}
+                  fallbackSrcSet={image.srcSet}
+                  sizes="(min-width: 1024px) 33vw, (min-width: 480px) 50vw, 100vw"
+                  width={image.width}
+                  height={image.height}
+                  alt={image.alt}
+                  loading="lazy"
+                  className="h-full w-full object-cover transition-transform duration-slow ease-standard group-hover:scale-105 motion-reduce:transform-none"
+                />
+              </figure>
+            );
+          })}
         </div>
+      </section>
+
+      {/* Booking channels — outline pill links (web app/site, Bale, Telegram). */}
+      <section className="pt-12" aria-labelledby="salon-channels-title">
+        <SectionHeader id="salon-channels-title" index="04" title={t('salon.profile.channelsTitle')} />
+        <p className="mb-5 max-w-prose text-sm text-muted">
+          {t('salon.profile.channelsHint')}
+        </p>
+        <div data-stagger className="flex flex-wrap gap-3">
+          {channels.website && (
+            <Link to={channels.website} className={PILL_LINK}>
+              {t('salon.profile.channelWebsite')}
+            </Link>
+          )}
+          {channels.bale && (
+            <a href={channels.bale} target="_blank" rel="noopener noreferrer" className={PILL_LINK}>
+              {t('salon.profile.channelBale')}
+              <Arrow external />
+              <span className="sr-only"> ({t('salon.profile.channelNewTab')})</span>
+            </a>
+          )}
+          {channels.telegram && (
+            <a href={channels.telegram} target="_blank" rel="noopener noreferrer" className={PILL_LINK}>
+              {t('salon.profile.channelTelegram')}
+              <Arrow external />
+              <span className="sr-only"> ({t('salon.profile.channelNewTab')})</span>
+            </a>
+          )}
+        </div>
+      </section>
+
+      {/* Add as web app — refined ink callout (save it to book faster). */}
+      {installed ? (
+        <p className="pt-10 text-sm font-medium text-success">
+          {t('salon.profile.installedNote')}
+        </p>
+      ) : (
+        <section
+          data-reveal
+          className="mt-12 flex flex-col gap-4 border-t-2 border-text pt-6 sm:flex-row sm:items-center sm:justify-between"
+          aria-labelledby="salon-install-title"
+        >
+          <div className="flex flex-col gap-1">
+            <h2 id="salon-install-title" className="text-lg font-bold text-text">
+              {t('salon.profile.installTitle')}
+            </h2>
+            <p className="max-w-prose text-sm text-muted">
+              {t('salon.profile.installBody')}
+            </p>
+            {showInstallHelp && (
+              <p role="note" className="mt-2 max-w-prose text-sm text-muted">
+                <span className="font-bold text-text">
+                  {t('salon.profile.installManualTitle')}:{' '}
+                </span>
+                {t('salon.profile.installManualBody')}
+              </p>
+            )}
+          </div>
+          <button type="button" onClick={handleInstall} className={cn(INK_BUTTON, 'sm:shrink-0')}>
+            {t('salon.profile.installCta')}
+          </button>
+        </section>
+      )}
+
+      {/* Contact / NAP — editorial footer block (identical to JSON-LD, seo §11). */}
+      <section className="pt-12" aria-labelledby="salon-contact-title">
+        <SectionHeader id="salon-contact-title" index="05" title={t('salon.profile.contactTitle')} />
+        <address data-reveal className="flex flex-col gap-6 not-italic sm:flex-row sm:justify-between">
+          <p className="max-w-prose text-md leading-loose text-text">
+            <span className="block text-xs font-bold tracking-wide text-muted">
+              {t('salon.profile.addressLabel')}
+            </span>
+            {salon.address.streetAddress}، {salon.address.addressLocality}
+          </p>
+          <p className="text-md text-text">
+            <span className="block text-xs font-bold tracking-wide text-muted">
+              {t('salon.profile.phoneLabel')}
+            </span>
+            <a
+              href={`tel:${salon.telephone}`}
+              className="text-lg font-bold underline decoration-accent decoration-2 underline-offset-4 hover:decoration-text"
+            >
+              <DirText dir="ltr">{salon.telephone}</DirText>
+            </a>
+          </p>
+        </address>
+        <div className="mt-6 overflow-hidden border border-border">
+          <iframe
+            title={t('salon.profile.mapEmbedTitle', { name: salon.name })}
+            src={salon.mapEmbedUrl}
+            loading="lazy"
+            width={1200}
+            height={320}
+            className="block h-[320px] w-full border-0"
+          />
+        </div>
+      </section>
+
+      {/* Sticky mobile booking bar — primary CTA in thumb reach (ui-ux §5). */}
+      <div
+        className="fixed inset-x-0 bottom-0 z-sticky border-t border-border bg-bg px-4 py-3 md:hidden"
+        style={{ paddingBottom: 'calc(var(--space-3) + env(safe-area-inset-bottom))' }}
+      >
+        <Link to={bookHref} className={cn(INK_BUTTON, 'w-full')}>
+          {t('salon.profile.bookCta')}
+          <Arrow />
+        </Link>
+      </div>
       </div>
     </TenantTheme>
   );
@@ -774,11 +674,10 @@ function tehranToday(): SchemaDay | null {
 }
 
 /**
- * Builds the page's JSON-LD: `BeautySalon` (+ `AggregateRating`/`Review` when
- * reviews are shown) + one `Service` per offering (`priceCurrency:"IRR"`) +
- * `BreadcrumbList` (seo §5). Built from the same `SalonProfile` that renders on
- * the page, so the structured data marks up only visible content and the NAP /
- * ratings stay consistent — nothing is fabricated.
+ * Builds the page's JSON-LD: `BeautySalon` + one `Service` per offering
+ * (`priceCurrency:"IRR"`) + `BreadcrumbList` (seo §5). Built from the same
+ * `SalonProfile` that renders on the page, so the structured data marks up only
+ * visible content and the NAP stays consistent — nothing is fabricated.
  *
  * Exported so it can be unit-tested without rendering the whole page.
  */
@@ -814,32 +713,6 @@ export function buildSalonJsonLd(salon: SalonProfile): JsonLdNode[] {
       })),
   };
   if (image) beautySalon.image = image;
-
-  // AggregateRating + Review mirror the ratings/reviews shown on the page (seo
-  // §5 — mark up only visible content; never fabricate rich-result reviews).
-  if (typeof salon.rating === 'number' && salon.reviewCount) {
-    beautySalon.aggregateRating = {
-      '@type': 'AggregateRating',
-      ratingValue: salon.rating.toFixed(1),
-      reviewCount: String(salon.reviewCount),
-      bestRating: '5',
-      worstRating: '1',
-    };
-  }
-  if (salon.reviews && salon.reviews.length > 0) {
-    beautySalon.review = salon.reviews.map((r) => ({
-      '@type': 'Review',
-      author: { '@type': 'Person', name: r.author },
-      datePublished: r.date.slice(0, 10),
-      reviewRating: {
-        '@type': 'Rating',
-        ratingValue: String(r.rating),
-        bestRating: '5',
-        worstRating: '1',
-      },
-      reviewBody: r.body,
-    }));
-  }
 
   const services: JsonLdNode[] = salon.services.map((service) => ({
     '@type': 'Service',

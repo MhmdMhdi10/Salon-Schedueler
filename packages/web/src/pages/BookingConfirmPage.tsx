@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CalendarClock, Clock, CreditCard, Scissors, Store } from 'lucide-react';
+import { CalendarClock, Clock, CreditCard, Scissors } from 'lucide-react';
 import { bookingApi, salonApi } from '../api/client';
 import { SeoHead } from '../components/seo';
 import { readSalonName } from '../utils/salonName';
@@ -250,9 +250,6 @@ export function BookingConfirmPage() {
   }
 
   const time = toPersianDigits(timeLabel(state.startAt));
-  // The salon name cached earlier in the funnel (QR landing / profile), shown
-  // as a "where" row so the confirm summary says which salon you're booking.
-  const salonName = readSalonName(salonId);
 
   return (
     <div
@@ -286,15 +283,6 @@ export function BookingConfirmPage() {
         {detailsStatus === 'ready' && service && (
           <Card as="section">
             <dl className="flex flex-col divide-y divide-border">
-              {salonName && (
-                <div className="flex items-center justify-between gap-4 py-2 first:pt-0">
-                  <dt className="flex items-center gap-2 text-sm text-muted">
-                    <Store className="h-4 w-4" aria-hidden="true" />
-                    {t('booking.whereLabel')}
-                  </dt>
-                  <dd className="text-sm font-medium text-text">{salonName}</dd>
-                </div>
-              )}
               <div className="flex items-center justify-between gap-4 py-2 first:pt-0">
                 <dt className="flex items-center gap-2 text-sm text-muted">
                   <Scissors className="h-4 w-4" aria-hidden="true" />

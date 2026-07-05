@@ -19,12 +19,12 @@ services:
       # Host port is overridable so it doesn't collide with a Postgres already
       # running on the host. Override via POSTGRES_HOST_PORT (see .env). The
       # backend always reaches the DB over the compose network at postgres:5432.
-      - '${POSTGRES_HOST_PORT:-5432}:5432'
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/postgres/initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U salon -d salon_dev']
+      test: [ "CMD-SHELL", "pg_isready -U salon -d salon_dev" ]
       interval: 5s
       timeout: 5s
       retries: 12
@@ -38,12 +38,12 @@ services:
       RABBITMQ_DEFAULT_USER: salon
       RABBITMQ_DEFAULT_PASS: salon
     ports:
-      - '${RABBITMQ_HOST_PORT:-5673}:5672'
-      - '${RABBITMQ_MGMT_PORT:-15673}:15672'
+      - "${RABBITMQ_HOST_PORT:-5673}:5672"
+      - "${RABBITMQ_MGMT_PORT:-15673}:15672"
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     healthcheck:
-      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
       interval: 10s
       timeout: 10s
       retries: 12
@@ -54,7 +54,7 @@ services:
     build:
       context: .
       dockerfile: docker/dev.Dockerfile
-    command: ['bash', 'docker/backend-entrypoint.sh']
+    command: [ "bash", "docker/backend-entrypoint.sh" ]
     depends_on:
       postgres:
         condition: service_healthy
@@ -62,33 +62,26 @@ services:
         condition: service_started
     environment:
       NODE_ENV: development
-      PORT: '3000'
-      DATABASE_URL: 'postgresql://salon:salon@postgres:5432/salon_dev?schema=public'
+      PORT: "3000"
+      DATABASE_URL: "postgresql://salon:salon@postgres:5432/salon_dev?schema=public"
       JWT_ACCESS_SECRET: dev-access-secret
       JWT_REFRESH_SECRET: dev-refresh-secret
-      PAYMENT_CALLBACK_BASE_URL: 'http://localhost:3000'
+      PAYMENT_CALLBACK_BASE_URL: "http://localhost:3000"
       # Reliable SMS: publish to RabbitMQ (the sms-worker service delivers it).
-      RABBITMQ_URL: 'amqp://salon:salon@rabbitmq:5672'
+      RABBITMQ_URL: "amqp://salon:salon@rabbitmq:5672"
       # Dev convenience: widen the OTP validity window to 10 minutes so manual
       # testing (read code from logs → type it) isn't rushed by the 2-minute
       # production default. Do NOT carry this into production.
-      OTP_WINDOW_SECONDS: '600'
+      OTP_WINDOW_SECONDS: "600"
       # Consumed by pg_isready + psql in the dev entrypoint.
       PGHOST: postgres
-      PGPORT: '5432'
+      PGPORT: "5432"
       PGUSER: salon
       PGPASSWORD: salon
       PGDATABASE: salon_dev
       # SMS/push provider keys are intentionally unset -> dev/log adapters are used.
-      # Website import: a self-hosted Firecrawl running on the host (started
-      # separately via docker/firecrawl-compose.yml) is reachable at the host's
-      # docker.internal address. Unset -> the import feature stays disabled.
-      FIRECRAWL_API_URL: '${FIRECRAWL_API_URL:-}'
-      FIRECRAWL_API_KEY: '${FIRECRAWL_API_KEY:-}'
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
     ports:
-      - '3000:3000'
+      - "3000:3000"
     volumes:
       - ./:/app
       - backend-root-node-modules:/app/node_modules
@@ -113,7 +106,7 @@ services:
     build:
       context: .
       dockerfile: docker/dev.Dockerfile
-    command: ['bash', 'docker/sms-worker-entrypoint.sh']
+    command: [ "bash", "docker/sms-worker-entrypoint.sh" ]
     # Allocate a TTY so the worker's stdout is line-flushed and streamed to
     # `docker logs` in real time. This is a low-traffic, mostly-idle process, so
     # without a TTY Node buffers its startup/delivery lines in the stdout pipe
@@ -128,8 +121,8 @@ services:
         condition: service_started
     environment:
       NODE_ENV: development
-      DATABASE_URL: 'postgresql://salon:salon@postgres:5432/salon_dev?schema=public'
-      RABBITMQ_URL: 'amqp://salon:salon@rabbitmq:5672'
+      DATABASE_URL: "postgresql://salon:salon@postgres:5432/salon_dev?schema=public"
+      RABBITMQ_URL: "amqp://salon:salon@rabbitmq:5672"
       # SMS provider keys intentionally unset -> dev/log delivery (logs here).
     volumes:
       - ./:/app
@@ -143,7 +136,7 @@ services:
     build:
       context: .
       dockerfile: docker/dev.Dockerfile
-    command: ['bash', 'docker/web-entrypoint.sh']
+    command: [ "bash", "docker/web-entrypoint.sh" ]
     # Allocate a TTY so Vite's incremental output (HMR update lines, build
     # errors) is line-flushed and streamed to `docker logs` in real time.
     # Without it, Node block-buffers stdout to the log pipe, so live-reload
@@ -156,16 +149,16 @@ services:
     environment:
       # The browser calls same-origin /api; the Vite dev server proxies it to the
       # backend over the compose network (see packages/web/vite.config.ts).
-      VITE_PROXY_TARGET: 'http://backend:3000'
+      VITE_PROXY_TARGET: "http://backend:3000"
       # Live edits: the source is bind-mounted, but native fs events aren't
       # reliably delivered into the container, so Vite would never see host edits
       # and HMR would go silent. Poll for changes instead (mirrors the mobile
       # service). VITE_DEV_POLLING flips Vite's own watcher to polling;
       # CHOKIDAR_USEPOLLING is the de-facto global fallback honoured by chokidar.
-      VITE_DEV_POLLING: '1'
-      CHOKIDAR_USEPOLLING: '1'
+      VITE_DEV_POLLING: "1"
+      CHOKIDAR_USEPOLLING: "1"
     ports:
-      - '5173:5173'
+      - "5173:5173"
     volumes:
       - ./:/app
       - web-root-node-modules:/app/node_modules
@@ -185,24 +178,24 @@ services:
     build:
       context: .
       dockerfile: docker/dev.Dockerfile
-    profiles: ['mobile']
-    command: ['bash', 'docker/mobile-entrypoint.sh']
+    profiles: [ "mobile" ]
+    command: [ "bash", "docker/mobile-entrypoint.sh" ]
     depends_on:
       - backend
     environment:
       # Metro advertises this host so the QR / exp:// URL is reachable from the
       # phone. Defaults to localhost (only works for an emulator on the host).
-      REACT_NATIVE_PACKAGER_HOSTNAME: '${HOST_LAN_IP:-localhost}'
+      REACT_NATIVE_PACKAGER_HOSTNAME: "${HOST_LAN_IP:-localhost}"
       # The app (Expo Go on the phone) calls the backend at the host IP:3000.
-      EXPO_PUBLIC_API_BASE_URL: 'http://${HOST_LAN_IP:-localhost}:3000'
+      EXPO_PUBLIC_API_BASE_URL: "http://${HOST_LAN_IP:-localhost}:3000"
       # Expo in a container: poll for file changes (bind-mount fs events are
       # unreliable across the host boundary) and skip interactive prompts.
-      CHOKIDAR_USEPOLLING: '1'
-      EXPO_NO_TELEMETRY: '1'
+      CHOKIDAR_USEPOLLING: "1"
+      EXPO_NO_TELEMETRY: "1"
     ports:
-      - '8081:8081' # Metro bundler
-      - '19000:19000' # Expo dev server
-      - '19001:19001' # Expo dev server (legacy/manifest)
+      - "8081:8081"      # Metro bundler
+      - "19000:19000"    # Expo dev server
+      - "19001:19001"    # Expo dev server (legacy/manifest)
     volumes:
       - ./:/app
       - mobile-root-node-modules:/app/node_modules
@@ -213,11 +206,11 @@ services:
   # Optional lightweight DB UI: `docker compose --profile tools up`.
   adminer:
     image: adminer:4
-    profiles: ['tools']
+    profiles: [ "tools" ]
     depends_on:
       - postgres
     ports:
-      - '8080:8080'
+      - "8080:8080"
     environment:
       ADMINER_DEFAULT_SERVER: postgres
     restart: unless-stopped
