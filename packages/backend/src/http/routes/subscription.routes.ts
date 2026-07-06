@@ -15,6 +15,7 @@ const PAID_PLANS: ReadonlySet<string> = new Set(['monthly', 'quarterly', 'annual
  * - GET  /subscription/plans          -> { plans: [{ kind, durationDays, priceRial }] }
  * - GET  /salons/:id/subscription     -> { status, planKind, expiresAt }
  * - POST /subscription/purchase        -> { redirectUrl }   (body: { salonId, plan })
+ * - GET  /subscriptions/callback       -> processes gateway return, redirects to panel
  *
  * Mounted behind `requireAuth`; gated with `manage_appointments` so Owner and
  * Admin (who both see the «اشتراک» panel section) may use them while a Stylist
@@ -83,6 +84,48 @@ export function subscriptionRouter(services: Services, requireRole: RequireRole)
         plan as SubscriptionPlanKind,
       );
       res.status(200).json(result);
+    }),
+  );
+
+  return router;
+}
+
+/**
+ * Public subscription-callback route. The payment gateway redirects the browser
+ * here after payment. Finds the pending payment by authority, activates the
+ * subscription, then redirects the browser back to the owner panel.
+ *
+ * GET /subscriptions/callback?Authority=xxx&Status=OK → 302 → /owner/subscription
+ */
+export function subscriptionCallbackRouter(services: Services): Router {
+  const router = Router();
+
+  router.get(
+    '/subscriptions/callback',
+    asyncRoute(async (req, res) => {
+      const authority = (req.query.Authority ?? req.query.authority) as string | undefined;
+      const status = (req.query.Status ?? req.query.status) as string | undefined;
+
+      if (!authority || (status !== 'OK' && status !== 'ok')) {
+        res.redirect('/owner/subscription?payment=error');
+        return;
+      }
+
+      try {
+        // Find the subscription payment by authority
+        const payment = await services.subscriptionService.findPaymentByAuthority(authority);
+        if (!payment) {
+          console.error(`[subscription-callback] no payment found for authority=${authority}`);
+          res.redirect('/owner/subscription?payment=error');
+          return;
+        }
+
+        await services.subscriptionService.activateFromPayment(payment.id);
+        res.redirect('/owner/subscription?payment=success');
+      } catch (err) {
+        console.error('[subscription-callback] activation failed:', err);
+        res.redirect('/owner/subscription?payment=error');
+      }
     }),
   );
 

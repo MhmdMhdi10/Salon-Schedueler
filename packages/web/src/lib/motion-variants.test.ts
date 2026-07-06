@@ -7,6 +7,7 @@ import {
   stepVariants,
   celebrationVariants,
   pageTransition,
+  stepTransition,
   revealTransition,
   celebrationTransition,
   easings,
@@ -39,7 +40,7 @@ describe('motion-variants', () => {
   describe('itemVariants', () => {
     it('defines hidden and visible states with 300ms standard ease', () => {
       expect(itemVariants.hidden).toEqual({ opacity: 0, y: 16 });
-      const visible = itemVariants.visible as {
+      const visible = itemVariants.visible as unknown as {
         opacity: number;
         y: number;
         transition: { duration: number; ease: number[] };
@@ -82,6 +83,14 @@ describe('motion-variants', () => {
       expect(pageTransition).toEqual({
         type: 'tween',
         duration: 0.3,
+        ease: [0.2, 0, 0, 1],
+      });
+    });
+
+    it('stepTransition uses 250ms tween with standard ease for snappier step slides', () => {
+      expect(stepTransition).toEqual({
+        type: 'tween',
+        duration: 0.25,
         ease: [0.2, 0, 0, 1],
       });
     });

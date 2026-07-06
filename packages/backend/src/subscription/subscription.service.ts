@@ -98,6 +98,7 @@ interface SubscriptionDelegate {
 interface SubscriptionPaymentDelegate {
   create(args: { data: Record<string, unknown> }): Promise<SubscriptionPaymentRecord>;
   findUnique(args: { where: { id: string } }): Promise<SubscriptionPaymentRecord | null>;
+  findFirst(args: { where: Record<string, unknown> }): Promise<SubscriptionPaymentRecord | null>;
   update(args: {
     where: { id: string };
     data: Record<string, unknown>;
@@ -141,6 +142,11 @@ export class SubscriptionService {
   /** All plan definitions (durations + configurable prices). */
   getPlans(): PlanDefinition[] {
     return Object.values(this.plans);
+  }
+
+  /** Find a subscription payment by its gateway authority string. */
+  async findPaymentByAuthority(authority: string): Promise<SubscriptionPaymentRecord | null> {
+    return this.subscriptionPayments.findFirst({ where: { authority } });
   }
 
   /** Look up a single plan definition by kind. */

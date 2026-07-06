@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ChevronDown, MapPin, Phone, Star } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import i18n from '../i18n';
+import { salonApi } from '../api/client';
 import { SeoHead, JsonLd, SITE_URL } from '../components/seo';
 import type { JsonLdNode } from '../components/seo';
 import {
@@ -59,11 +60,35 @@ const SERVICE_BOOK_BTN =
  */
 export function SalonProfilePage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { slug } = useParams<{ slug: string }>();
   const salon = getSalonProfile(slug);
   const { installed, promptInstall } = usePwaInstall();
   const [showInstallHelp, setShowInstallHelp] = useState(false);
+  const [qrRedirecting, setQrRedirecting] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+
+  // Unknown slug on the static profile catalogue → it may be a live QR token
+  // (the QR service issues links as /s/<qrToken>?utm_source=qr). Resolve it
+  // through the real backend lookup — never assume the token equals the
+  // salon's internal id, since they are different values (Task fix, R7.2).
+  useEffect(() => {
+    if (salon || !slug) return;
+    let active = true;
+    setQrRedirecting(true);
+    salonApi
+      .resolveQr(slug)
+      .then((result) => {
+        if (!active) return;
+        navigate(`/salon/${result.salon.id}/book`, { replace: true });
+      })
+      .catch(() => {
+        if (active) setQrRedirecting(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [salon, slug, navigate]);
 
   // Progressive-enhancement motion with anime.js (v4): a staggered hero intro
   // and scroll-reveals for the sections. Dynamically imported so it stays out
@@ -216,8 +241,13 @@ export function SalonProfilePage() {
     };
   }, []);
 
-  // Unknown slug → a noindex "not found" surface (no canonical into the index).
+  // Unknown slug: while resolving it as a possible QR token, avoid flashing a
+  // "not found" surface — render nothing until the lookup settles.
   if (!salon) {
+    if (qrRedirecting) {
+      return null;
+    }
+
     return (
       <div data-testid="salon-not-found">
         <SeoHead title={t('salon.profile.notFoundTitle')} />

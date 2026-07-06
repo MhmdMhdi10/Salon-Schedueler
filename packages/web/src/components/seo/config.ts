@@ -37,7 +37,12 @@ export const SITE_URL: string = normalizeOrigin(
     'https://example.ir',
 );
 
-/** Branded default Open Graph image (1200×630, seo §4). Absolute on the site host. */
+/**
+ * Branded default Open Graph image (1200×630, seo §4). Absolute on the site host.
+ * Source template: public/og/default.svg (RTL-correct Persian text, magenta brand).
+ * Raster variants: default.jpg, default.webp, default.avif (generated via scripts/generate-og-images.ts).
+ * Social platforms require raster formats — always serve .jpg in og:image meta.
+ */
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/og/default.jpg`;
 export const OG_IMAGE_WIDTH = 1200;
 export const OG_IMAGE_HEIGHT = 630;

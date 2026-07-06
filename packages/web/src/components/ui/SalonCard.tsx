@@ -52,7 +52,8 @@ function resolveCardData(props: SalonCardProps) {
     return {
       slug: s.slug,
       name: s.name,
-      coverUrl: s.coverUrl ?? s.gallery[0]?.src ?? '/og/default.jpg',
+      coverUrl: s.coverUrl ?? s.gallery[0]?.src ?? '/placeholders/default-salon.svg',
+      coverAlt: s.gallery[0]?.alt ?? `تصویر ${s.name}`,
       rating: s.rating ?? 0,
       reviewCount: s.reviewCount ?? 0,
       location: `${s.neighborhood}، ${s.address.addressLocality}`,
@@ -63,7 +64,8 @@ function resolveCardData(props: SalonCardProps) {
   return {
     slug: props.slug ?? '',
     name: props.name ?? '',
-    coverUrl: props.coverUrl ?? '/og/default.jpg',
+    coverUrl: props.coverUrl ?? '/placeholders/default-salon.svg',
+    coverAlt: props.coverAlt ?? `تصویر ${props.name ?? ''}`,
     rating: props.rating ?? 0,
     reviewCount: props.reviewCount ?? 0,
     location: props.location,
@@ -144,7 +146,7 @@ export const SalonCard = forwardRef<HTMLElement, SalonCardProps>(function SalonC
         'focus-within:shadow-2 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus',
         className,
       )}
-      {...rest}
+      {...(rest as Record<string, unknown>)}
     >
       <Link
         to={linkHref}
@@ -155,7 +157,7 @@ export const SalonCard = forwardRef<HTMLElement, SalonCardProps>(function SalonC
         <div className="relative aspect-[16/9] w-full overflow-hidden bg-surface">
           <img
             src={data.coverUrl}
-            alt={coverAlt ?? `تصویر ${data.name}`}
+            alt={coverAlt ?? data.coverAlt}
             loading="lazy"
             decoding="async"
             width={640}

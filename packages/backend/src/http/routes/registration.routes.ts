@@ -73,5 +73,21 @@ export function registrationRouter(services: Services): Router {
     }),
   );
 
+  // Pre-flight phone-availability check for the registration wizard. Lets the
+  // owner learn a phone is already registered AT THE PHONE FIELD (Step 1) rather
+  // than after Submit bounces them back from Step 3. Public — no auth.
+  router.get(
+    '/register/check-phone',
+    asyncRoute(async (req, res) => {
+      const phone = String(req.query.phone ?? '').trim();
+      if (!phone) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'phone' });
+        return;
+      }
+      const taken = await services.salonRegistration.isPhoneTaken(phone);
+      res.status(200).json({ available: !taken });
+    }),
+  );
+
   return router;
 }

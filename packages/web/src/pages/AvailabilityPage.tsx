@@ -5,17 +5,19 @@ import { CalendarClock, Clock, Scissors, Users } from 'lucide-react';
 import { salonApi } from '../api/client';
 import { SeoHead } from '../components/seo';
 import {
+  BookingStepper,
   DayScroller,
   type DayScrollerItem,
   EmptyState,
   ErrorState,
   JalaliDatePicker,
-  Money,
   RadioGroup,
   Skeleton,
   SlotGrid,
   type SlotItem,
   type SlotState,
+  ServiceCardList,
+  type ServiceCardItem,
 } from '../components/ui';
 import { gregorianToJalali, getJalaliMonthName } from '@salon/shared';
 
@@ -146,6 +148,13 @@ function slotLabel(iso: string): string {
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
+
+/** Booking stepper steps (step 1 = service/date/time selection). */
+const BOOKING_STEPS = [
+  { key: 'service', label: 'خدمت' },
+  { key: 'datetime', label: 'تاریخ' },
+  { key: 'confirm', label: 'تایید' },
+];
 
 /**
  * Reports whether the viewport is phone-sized (below the `md` breakpoint), so
@@ -330,18 +339,12 @@ export function AvailabilityPage() {
     return { id: slot.startAt, label: slotLabel(slot.startAt), state };
   });
 
-  const serviceOptions = services.map((service) => ({
-    value: service.id,
-    label: service.name,
-    helperText: (
-      <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="inline-flex items-center gap-1">
-          <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-          {t('booking.durationMinutes', { count: service.durationMinutes })}
-        </span>
-        <Money amountRial={service.priceRial} className="font-medium text-text" />
-      </span>
-    ),
+  // Map services to ServiceCardItem for the Booksy-style card list
+  const serviceCardItems: ServiceCardItem[] = services.map((service) => ({
+    id: service.id,
+    name: service.name,
+    durationMinutes: service.durationMinutes,
+    priceRial: service.priceRial,
   }));
 
   // Stylist options: an explicit "any stylist" choice first (sentinel `any` so
@@ -357,10 +360,13 @@ export function AvailabilityPage() {
   return (
     <div
       data-testid="availability-page"
-      className="mx-auto flex w-full max-w-funnel flex-col gap-6 py-6"
+      className="mx-auto flex w-full max-w-funnel flex-col gap-6 px-4 py-6 pb-[env(safe-area-inset-bottom)]"
     >
       <SeoHead title={t('seo.titles.availability')} />
       <h1 className="text-xl font-bold text-text">{t('booking.heading')}</h1>
+
+      {/* Progress stepper — step 1 (service/date/time) active */}
+      <BookingStepper steps={BOOKING_STEPS} currentStep={0} className="mb-2" />
 
       {/* Service selector — card radio list with loading / error / empty / ready. */}
       <section aria-labelledby="service-section-title" className="flex flex-col gap-3">
@@ -403,12 +409,14 @@ export function AvailabilityPage() {
         )}
 
         {servicesStatus === 'ready' && services.length > 0 && (
-          <RadioGroup
-            label={t('booking.selectService')}
-            labelHidden
+          <ServiceCardList
+            services={serviceCardItems}
             value={selectedService}
             onValueChange={handleServiceChange}
-            options={serviceOptions}
+            ariaLabel={t('booking.selectService')}
+            durationLabel={(minutes) =>
+              t('booking.durationMinutes', { count: minutes })
+            }
           />
         )}
       </section>

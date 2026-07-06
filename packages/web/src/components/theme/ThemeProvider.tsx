@@ -37,13 +37,12 @@ export const THEME_STORAGE_KEY = 'salon-theme';
 /**
  * Fallback `theme-color` values used only when the `--color-bg` token can't be
  * read from the cascade (e.g. jsdom in tests, or before styles load). They
- * mirror the `--color-bg` token in `styles/tokens.css` (light `:root`, dark
- * `[data-theme="dark"]`) so the PWA chrome matches the page background. The
- * dark fallback tracks the salon-luxe rosé-noir bg.
+ * mirror the NYC brand primary for light and the dark-mode bg so the PWA chrome
+ * shows the brand accent in light mode.
  */
 const FALLBACK_THEME_COLOR: Record<Theme, string> = {
-  light: '#ffffff',
-  dark: '#1A1117',
+  light: '#D81B60',
+  dark: '#121212',
 };
 
 interface ThemeContextValue {

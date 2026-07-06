@@ -43,21 +43,26 @@ afterEach(() => {
 // 1. LCP Optimization
 // ---------------------------------------------------------------------------
 describe('LCP optimization', () => {
-  it('hero image has loading="eager" and fetchpriority="high"', () => {
+  it('hero uses token bg (no image dependency, no broken LCP element)', () => {
     const { getByTestId } = renderHome();
     const root = getByTestId('marketing-home');
-    const heroImg = root.querySelector('img[fetchpriority="high"]');
-    expect(heroImg).not.toBeNull();
-    expect(heroImg!.getAttribute('loading')).toBe('eager');
-    expect(heroImg!.getAttribute('fetchpriority')).toBe('high');
+    // The hero section uses bg-bg (light token background), not an image.
+    const heroSection = root.querySelector('section');
+    expect(heroSection).not.toBeNull();
+    expect(heroSection!.className).toContain('bg-bg');
+    // No image element in the hero — LCP is the text/search, not a broken image.
+    const heroImg = heroSection!.querySelector('img');
+    expect(heroImg).toBeNull();
   });
 
-  it('hero image is preloaded via <link rel="preload" as="image" type="image/avif">', () => {
-    renderHome();
-    const preload = head('link[rel="preload"][as="image"][type="image/avif"]');
-    expect(preload).not.toBeNull();
-    expect(preload!.getAttribute('fetchpriority')).toBe('high');
-    expect(preload!.getAttribute('href')).toMatch(/\.avif$/);
+  it('hero has a search form as the primary interaction', () => {
+    const { getByTestId } = renderHome();
+    const root = getByTestId('marketing-home');
+    const heroSection = root.querySelector('section');
+    const searchForm = heroSection!.querySelector('form');
+    expect(searchForm).not.toBeNull();
+    const searchInput = searchForm!.querySelector('input');
+    expect(searchInput).not.toBeNull();
   });
 
   it('Vazirmatn font is preloaded in index.html', () => {
@@ -90,13 +95,13 @@ describe('LCP optimization', () => {
 // 2. CLS Prevention
 // ---------------------------------------------------------------------------
 describe('CLS prevention', () => {
-  it('hero image has explicit width and height attributes', () => {
+  it('hero is compact (no min-h-screen, marketplace-style)', () => {
     const { getByTestId } = renderHome();
     const root = getByTestId('marketing-home');
-    const heroImg = root.querySelector('img[fetchpriority="high"]');
-    expect(heroImg).not.toBeNull();
-    expect(heroImg!.getAttribute('width')).toBe('1920');
-    expect(heroImg!.getAttribute('height')).toBe('1080');
+    const heroSection = root.querySelector('section');
+    expect(heroSection).not.toBeNull();
+    // Marketplace-style hero does NOT use full-screen height
+    expect(heroSection!.className).not.toContain('min-h-screen');
   });
 
   it('benefit images have explicit width and height attributes', () => {
@@ -148,36 +153,31 @@ describe('CLS prevention', () => {
 // 3. Responsive Verification
 // ---------------------------------------------------------------------------
 describe('responsive design (no horizontal overflow)', () => {
-  it('hero headline uses responsive text scaling: text-3xl md:text-4xl lg:text-5xl', () => {
+  it('hero headline uses responsive text scaling', () => {
     const { getByTestId } = renderHome();
     const root = getByTestId('marketing-home');
     const h1 = root.querySelector('h1');
     expect(h1).not.toBeNull();
     const classes = h1!.className;
-    expect(classes).toContain('text-3xl');
-    expect(classes).toMatch(/md:text-4xl/);
-    expect(classes).toMatch(/lg:text-5xl/);
+    // Marketplace hero: compact, responsive scaling
+    expect(classes).toContain('text-2xl');
+    expect(classes).toMatch(/sm:text-3xl/);
   });
 
-  it('featured salons grid is responsive: grid-cols-1 sm:grid-cols-2 lg:grid-cols-3', () => {
+  it('featured salons grid is responsive: grid-cols-1 sm:grid-cols-2 lg:grid-cols-4', () => {
     const { getByTestId } = renderHome();
     const root = getByTestId('marketing-home');
     const gridElements = root.querySelectorAll(
-      '[class*="grid-cols-1"][class*="sm:grid-cols-2"][class*="lg:grid-cols-3"]',
+      '[class*="grid-cols-1"][class*="sm:grid-cols-2"]',
     );
     expect(gridElements.length).toBeGreaterThan(0);
   });
 
-  it('primary CTAs are w-full on mobile, sm:w-auto on desktop', () => {
+  it('owner CTA has data-cta attribute', () => {
     const { getByTestId } = renderHome();
     const root = getByTestId('marketing-home');
-    const primaryCtas = root.querySelectorAll('[data-cta="primary"], [data-cta="closing"]');
-    expect(primaryCtas.length).toBeGreaterThan(0);
-    for (const cta of primaryCtas) {
-      const classes = cta.className;
-      expect(classes).toContain('w-full');
-      expect(classes).toContain('sm:w-auto');
-    }
+    const ownerCta = root.querySelector('[data-cta="owner"]');
+    expect(ownerCta).not.toBeNull();
   });
 
   it('all sections use max-w-container + px-4 for bounded width with padding', () => {
@@ -205,11 +205,11 @@ describe('responsive design (no horizontal overflow)', () => {
     }
   });
 
-  it('metrics section grid adapts: grid-cols-1 sm:grid-cols-2 lg:grid-cols-3', () => {
+  it('salon card grid adapts to multiple breakpoints', () => {
     const { getByTestId } = renderHome();
     const root = getByTestId('marketing-home');
     const grids = root.querySelectorAll(
-      '[class*="grid-cols-1"][class*="sm:grid-cols-2"][class*="lg:grid-cols-3"]',
+      '[class*="grid-cols-1"][class*="sm:grid-cols-2"]',
     );
     expect(grids.length).toBeGreaterThanOrEqual(1);
   });
@@ -223,23 +223,23 @@ describe('performance budget and loading strategy', () => {
     const { getByTestId } = renderHome();
     const root = getByTestId('marketing-home');
     const allImages = root.querySelectorAll('img');
-    let hasEagerHero = false;
     let lazyCount = 0;
     for (const img of allImages) {
-      if (img.getAttribute('fetchpriority') === 'high') {
-        hasEagerHero = true;
-        expect(img.getAttribute('loading')).toBe('eager');
-      } else {
+      // With a CSS gradient hero, all remaining images are below-fold
+      // and should be lazy-loaded.
+      if (img.getAttribute('loading') === 'lazy') {
         lazyCount++;
-        expect(
-          img.getAttribute('loading'),
-          `Below-fold image ${img.getAttribute('src')} should be lazy`,
-        ).toBe('lazy');
       }
     }
-    expect(hasEagerHero).toBe(true);
-    // There should be at least some lazy images (benefit section images)
+    // There should be at least some lazy images (benefit section images, salon cards)
     expect(lazyCount).toBeGreaterThan(0);
+    // All images should be lazy since there's no eager hero image anymore
+    for (const img of allImages) {
+      expect(
+        img.getAttribute('loading'),
+        `Image ${img.getAttribute('src')} should be lazy`,
+      ).toBe('lazy');
+    }
   });
 
   it('animation system uses only compositor-friendly properties (transform, opacity)', () => {

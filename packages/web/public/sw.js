@@ -32,6 +32,7 @@ import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 const SHELL_CACHE = 'salon-shell-v2';
 const IMAGE_CACHE = 'salon-images-v2';
 const API_CACHE = 'salon-public-api-v2';
+const FONT_CACHE = 'salon-fonts-v1';
 
 /**
  * The build-time precache manifest, injected by `vite-plugin-pwa`'s
@@ -45,10 +46,10 @@ const SHELL_URLS = Array.from(
   new Set(['/', '/index.html', '/manifest.json', ...PRECACHE_ENTRIES.map((e) => e.url)])
 );
 
-const KNOWN_CACHES = [SHELL_CACHE, IMAGE_CACHE, API_CACHE];
+const KNOWN_CACHES = [SHELL_CACHE, IMAGE_CACHE, API_CACHE, FONT_CACHE];
 
 /** Path prefixes whose navigations are private/transactional — never cached. */
-const NOINDEX_NAV_PREFIXES = ['/auth', '/admin', '/booking', '/qr'];
+const NOINDEX_NAV_PREFIXES = ['/auth', '/admin', '/owner', '/booking', '/qr'];
 
 function isNoindexNavigation(url) {
   const path = url.pathname;
@@ -66,11 +67,26 @@ function isImageRequest(request, url) {
   );
 }
 
+function isFontRequest(request, url) {
+  return (
+    request.destination === 'font' ||
+    /\.(?:woff2?|ttf|otf|eot)$/i.test(url.pathname)
+  );
+}
+
 const imageStrategy = new CacheFirst({
   cacheName: IMAGE_CACHE,
   plugins: [
     new CacheableResponsePlugin({ statuses: [0, 200] }),
-    new ExpirationPlugin({ maxEntries: 60, maxAgeSeconds: 30 * 24 * 60 * 60 }),
+    new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 }),
+  ],
+});
+
+const fontStrategy = new CacheFirst({
+  cacheName: FONT_CACHE,
+  plugins: [
+    new CacheableResponsePlugin({ statuses: [0, 200] }),
+    new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 365 * 24 * 60 * 60 }),
   ],
 });
 
@@ -126,6 +142,13 @@ self.addEventListener('fetch', (event) => {
   // Salon imagery → CacheFirst (bounded by expiration).
   if (isImageRequest(request, url)) {
     event.respondWith(imageStrategy.handle({ request, event }));
+    return;
+  }
+
+  // Font files → CacheFirst with long expiration (1 year). Fonts are immutable
+  // once hashed so a long TTL is safe and avoids re-downloading on repeat visits.
+  if (isFontRequest(request, url)) {
+    event.respondWith(fontStrategy.handle({ request, event }));
     return;
   }
 

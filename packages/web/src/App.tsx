@@ -120,6 +120,9 @@ const OwnerQrPage = lazy(() => import('./pages/owner').then((m) => ({ default: m
 const OwnerMyQrPage = lazy(() =>
   import('./pages/owner').then((m) => ({ default: m.OwnerMyQrPage })),
 );
+const OwnerTransactionsPage = lazy(() =>
+  import('./pages/owner').then((m) => ({ default: m.OwnerTransactionsPage })),
+);
 
 export function App() {
   return (
@@ -143,6 +146,7 @@ export function App() {
                     <Route path="analytics" element={<OwnerAnalyticsPage />} />
                     <Route path="config" element={<OwnerConfigurationPage />} />
                     <Route path="subscription" element={<OwnerSubscriptionPage />} />
+                    <Route path="transactions" element={<OwnerTransactionsPage />} />
                     <Route path="qr" element={<OwnerQrPage />} />
                     <Route path="my-qr" element={<OwnerMyQrPage />} />
                   </Route>

@@ -1,18 +1,55 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { OwnerShell, OWNER_CONTENT_ID, ownerNavForRole } from '..';
+import { OwnerShell, OWNER_CONTENT_ID, OWNER_THEME_STORAGE_KEY, ownerNavForRole } from '..';
 import { ThemeProvider } from '../../theme';
+import { TooltipProvider } from '../../ui/Tooltip';
 import '../../../i18n';
 import { renderRtl, expectNoSeriousA11yViolations } from '../../../test/a11y';
 import type { OwnerRole } from '../../../api/client';
 
 /**
- * Tests for the owner panel shell (task 5.1; R2.1, R2.3, R2.9, R2.10): header
- * with salon name + theme toggle + sign-out, a single <main>, role-filtered
- * navigation (Owner/Admin full panel, Stylist limited), and the owner
- * data-shell marker distinguishing it from the customer/admin shells.
+ * Tests for the reworked owner panel shell (task 7.3; Req 8.5):
+ * - Desktop (lg+): uses OwnerSidebar with collapsible navigation
+ * - Mobile (<lg): uses OwnerBottomTabs with fixed bottom bar
+ * - Responsive switching via useMediaQuery
+ * - Header with salon name + theme toggle + sign-out
+ * - Single <main> landmark
+ * - Role-filtered navigation (Owner/Admin full panel, Stylist limited)
+ * - Sidebar collapsed state persisted to localStorage
  */
+
+// ─── matchMedia mock ──────────────────────────────────────────────────────────
+
+let mediaQueryMatches = false;
+
+function mockMatchMedia() {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: mediaQueryMatches,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
+beforeEach(() => {
+  mediaQueryMatches = false;
+  mockMatchMedia();
+  localStorage.clear();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function renderOwner(
   props: Partial<React.ComponentProps<typeof OwnerShell>> = {},
@@ -26,16 +63,29 @@ function renderOwner(
   } = props;
   return render(
     <ThemeProvider defaultTheme="light">
-      <MemoryRouter initialEntries={[initialPath]}>
-        <div dir="rtl" lang="fa">
-          <OwnerShell role={role} onSignOut={onSignOut} {...rest}>
-            {children}
-          </OwnerShell>
-        </div>
-      </MemoryRouter>
+      <TooltipProvider>
+        <MemoryRouter initialEntries={[initialPath]}>
+          <div dir="rtl" lang="fa">
+            <OwnerShell role={role} onSignOut={onSignOut} {...rest}>
+              {children}
+            </OwnerShell>
+          </div>
+        </MemoryRouter>
+      </TooltipProvider>
     </ThemeProvider>,
   );
 }
+
+function renderDesktop(
+  props: Partial<React.ComponentProps<typeof OwnerShell>> = {},
+  initialPath = '/owner/calendar',
+) {
+  mediaQueryMatches = true;
+  mockMatchMedia();
+  return renderOwner(props, initialPath);
+}
+
+// ─── Core Shell Tests ─────────────────────────────────────────────────────────
 
 describe('OwnerShell', () => {
   it('exposes a single <main> with the owner content id', () => {
@@ -51,7 +101,7 @@ describe('OwnerShell', () => {
     expect(screen.getByRole('link', { name: 'سالن رز' })).toBeInTheDocument();
   });
 
-  it('renders a sign-out control that calls onSignOut', async () => {
+  it('renders a sign-out control that calls onSignOut', () => {
     const onSignOut = vi.fn();
     renderOwner({ onSignOut });
     const signOut = screen.getByTestId('owner-sign-out');
@@ -63,70 +113,119 @@ describe('OwnerShell', () => {
     const { container } = renderOwner();
     expect(container.querySelector('[data-shell="owner"]')).toBeInTheDocument();
   });
+});
 
-  it('shows the full panel navigation for an Owner', () => {
+// ─── Mobile View Tests (default — useMediaQuery returns false) ────────────────
+
+describe('OwnerShell — mobile (<lg)', () => {
+  it('renders the OwnerBottomTabs component', () => {
     renderOwner({ role: 'Owner' });
-    // Each destination appears in both the side nav and the bottom tab bar.
-    expect(
-      screen.getAllByRole('link', { name: 'تنظیمات سالن' }).length,
-    ).toBeGreaterThanOrEqual(1);
-    expect(
-      screen.getAllByRole('link', { name: 'اشتراک من' }).length,
-    ).toBeGreaterThanOrEqual(1);
-    expect(
-      screen.getAllByRole('link', { name: 'QR و استند' }).length,
-    ).toBeGreaterThanOrEqual(1);
-    expect(
-      screen.getAllByRole('link', { name: 'بارکد من' }).length,
-    ).toBeGreaterThanOrEqual(1);
+    const tabBar = screen.getByTestId('owner-bottom-tabs');
+    expect(tabBar).toBeInTheDocument();
   });
 
-  it('hides configuration from a Stylist (RBAC, R2.5)', () => {
-    renderOwner({ role: 'Stylist' });
-    // Stylist sees their own calendar and personal QR — nothing else.
-    expect(
-      screen.getAllByRole('link', { name: 'تقویم' }).length,
-    ).toBeGreaterThanOrEqual(1);
-    expect(
-      screen.getAllByRole('link', { name: 'بارکد من' }).length,
-    ).toBeGreaterThanOrEqual(1);
-    expect(
-      screen.queryByRole('link', { name: 'تنظیمات سالن' }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('link', { name: 'آمار' }),
-    ).not.toBeInTheDocument();
-  });
-
-  it('marks the active route with aria-current="page"', () => {
-    renderOwner({ role: 'Owner' }, '/owner/subscription');
-    const current = screen.getAllByRole('link', { name: 'اشتراک من' });
-    expect(
-      current.some((el) => el.getAttribute('aria-current') === 'page'),
-    ).toBe(true);
-  });
-
-  it('renders a mobile bottom tab bar', () => {
+  it('shows tabs for Calendar, Analytics, and Config', () => {
     renderOwner({ role: 'Owner' });
-    const tabBar = screen.getByTestId('owner-tab-bar');
-    expect(
-      within(tabBar).getByRole('link', { name: 'تقویم' }),
-    ).toBeInTheDocument();
+    const tabBar = screen.getByTestId('owner-bottom-tabs');
+    expect(within(tabBar).getByRole('button', { name: 'تقویم' })).toBeInTheDocument();
+    expect(within(tabBar).getByRole('button', { name: 'آمار' })).toBeInTheDocument();
+    expect(within(tabBar).getByRole('button', { name: 'تنظیمات سالن' })).toBeInTheDocument();
   });
 
-  it('has no serious/critical a11y violations in RTL', async () => {
+  it('does NOT render the sidebar on mobile', () => {
+    renderOwner({ role: 'Owner' });
+    // The sidebar uses aria-label="ناوبری پنل مدیریت"
+    expect(screen.queryByLabelText('ناوبری پنل مدیریت')).not.toBeInTheDocument();
+  });
+
+  it('marks the active tab with aria-current="page"', () => {
+    renderOwner({ role: 'Owner' }, '/owner/calendar');
+    const tabBar = screen.getByTestId('owner-bottom-tabs');
+    const calendarBtn = within(tabBar).getByRole('button', { name: 'تقویم' });
+    expect(calendarBtn).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('adds bottom padding to main for bottom tabs clearance', () => {
+    renderOwner({ role: 'Owner' });
+    const main = screen.getByRole('main');
+    expect(main.className).toContain('pb-[calc(');
+  });
+});
+
+// ─── Desktop View Tests (useMediaQuery returns true for lg+) ──────────────────
+
+describe('OwnerShell — desktop (lg+)', () => {
+  it('renders the OwnerSidebar on desktop', () => {
+    renderDesktop({ role: 'Owner' });
+    expect(screen.getByLabelText('ناوبری پنل مدیریت')).toBeInTheDocument();
+  });
+
+  it('does NOT render OwnerBottomTabs on desktop', () => {
+    renderDesktop({ role: 'Owner' });
+    expect(screen.queryByTestId('owner-bottom-tabs')).not.toBeInTheDocument();
+  });
+
+  it('shows the full sidebar navigation for an Owner', () => {
+    renderDesktop({ role: 'Owner' });
+    const sidebar = screen.getByLabelText('ناوبری پنل مدیریت');
+    // Owner should see calendar, analytics, and config in sidebar
+    expect(within(sidebar).getByRole('link', { name: 'تقویم' })).toBeInTheDocument();
+    expect(within(sidebar).getByRole('link', { name: 'آمار' })).toBeInTheDocument();
+    expect(within(sidebar).getByRole('link', { name: 'تنظیمات' })).toBeInTheDocument();
+  });
+
+  it('hides configuration and analytics from a Stylist (RBAC)', () => {
+    renderDesktop({ role: 'Stylist' });
+    const sidebar = screen.getByLabelText('ناوبری پنل مدیریت');
+    // Stylist sees only calendar
+    expect(within(sidebar).getByRole('link', { name: 'تقویم' })).toBeInTheDocument();
+    expect(within(sidebar).queryByRole('link', { name: 'تنظیمات' })).not.toBeInTheDocument();
+    expect(within(sidebar).queryByRole('link', { name: 'آمار' })).not.toBeInTheDocument();
+  });
+
+  it('marks the active route with aria-current="page" in sidebar', () => {
+    renderDesktop({ role: 'Owner' }, '/owner/analytics');
+    const sidebar = screen.getByLabelText('ناوبری پنل مدیریت');
+    const analyticsLink = within(sidebar).getByRole('link', { name: 'آمار' });
+    expect(analyticsLink).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('persists sidebar collapsed state to localStorage', () => {
+    renderDesktop({ role: 'Owner' });
+    // Toggle button label contains ZWNJ — use the exact Unicode string
+    const toggleBtn = screen.getByLabelText('جمع\u200Cکردن ناوبری');
+    fireEvent.click(toggleBtn);
+    expect(localStorage.getItem('owner-sidebar-collapsed')).toBe('true');
+  });
+
+  it('restores collapsed state from localStorage', () => {
+    localStorage.setItem('owner-sidebar-collapsed', 'true');
+    renderDesktop({ role: 'Owner' });
+    // When collapsed, the expand button label should be visible
+    expect(screen.getByLabelText('گسترش ناوبری')).toBeInTheDocument();
+  });
+});
+
+// ─── Accessibility ────────────────────────────────────────────────────────────
+
+describe('OwnerShell — accessibility', () => {
+  it('has no serious/critical a11y violations in RTL (mobile)', async () => {
     const { rtlContainer } = renderRtl(
       <ThemeProvider defaultTheme="light">
-        <MemoryRouter initialEntries={['/owner/calendar']}>
-          <OwnerShell role="Owner" salonName="سالن رز" onSignOut={vi.fn()}>
-            <h1>تقویم</h1>
-          </OwnerShell>
-        </MemoryRouter>
+        <TooltipProvider>
+          <MemoryRouter initialEntries={['/owner/calendar']}>
+            <OwnerShell role="Owner" salonName="سالن رز" onSignOut={vi.fn()}>
+              <h1>تقویم</h1>
+            </OwnerShell>
+          </MemoryRouter>
+        </TooltipProvider>
       </ThemeProvider>,
     );
     await expectNoSeriousA11yViolations(rtlContainer);
   });
 });
+
+// ─── ownerNavForRole (pure utility — unchanged) ───────────────────────────────
 
 describe('ownerNavForRole (RBAC matrix)', () => {
   const roles: OwnerRole[] = ['Owner', 'Admin', 'Stylist'];
@@ -158,5 +257,66 @@ describe('ownerNavForRole (RBAC matrix)', () => {
   it('limits Stylist to calendar and their personal QR', () => {
     const nav = ownerNavForRole('Stylist');
     expect(nav.map((i) => i.to)).toEqual(['/owner/calendar', '/owner/my-qr']);
+  });
+});
+
+// ─── Dark-mode-first (Task 7.7; Req 8.1) ─────────────────────────────────────
+
+describe('OwnerShell — dark-mode-first (Task 7.7)', () => {
+  it('defaults to data-theme="dark" on first visit (no stored preference)', () => {
+    const { container } = renderOwner();
+    const shell = container.querySelector('[data-shell="owner"]');
+    expect(shell).toHaveAttribute('data-theme', 'dark');
+  });
+
+  it('uses a separate localStorage key (owner-theme) independent of main app theme', () => {
+    // Main app theme is light, but owner panel should still default dark
+    localStorage.setItem('salon-theme', 'light');
+    const { container } = renderOwner();
+    const shell = container.querySelector('[data-shell="owner"]');
+    expect(shell).toHaveAttribute('data-theme', 'dark');
+  });
+
+  it('respects stored owner-theme="light" preference', () => {
+    localStorage.setItem(OWNER_THEME_STORAGE_KEY, 'light');
+    const { container } = renderOwner();
+    const shell = container.querySelector('[data-shell="owner"]');
+    expect(shell).toHaveAttribute('data-theme', 'light');
+  });
+
+  it('toggles from dark to light and persists to owner-theme key', () => {
+    const { container } = renderOwner();
+    const shell = container.querySelector('[data-shell="owner"]');
+    expect(shell).toHaveAttribute('data-theme', 'dark');
+
+    const toggle = screen.getByTestId('owner-theme-toggle');
+    fireEvent.click(toggle);
+
+    expect(shell).toHaveAttribute('data-theme', 'light');
+    expect(localStorage.getItem(OWNER_THEME_STORAGE_KEY)).toBe('light');
+  });
+
+  it('toggles back from light to dark', () => {
+    localStorage.setItem(OWNER_THEME_STORAGE_KEY, 'light');
+    const { container } = renderOwner();
+    const shell = container.querySelector('[data-shell="owner"]');
+    expect(shell).toHaveAttribute('data-theme', 'light');
+
+    const toggle = screen.getByTestId('owner-theme-toggle');
+    fireEvent.click(toggle);
+
+    expect(shell).toHaveAttribute('data-theme', 'dark');
+    expect(localStorage.getItem(OWNER_THEME_STORAGE_KEY)).toBe('dark');
+  });
+
+  it('does not modify the main app theme key when toggling', () => {
+    localStorage.setItem('salon-theme', 'light');
+    renderOwner();
+
+    const toggle = screen.getByTestId('owner-theme-toggle');
+    fireEvent.click(toggle);
+
+    // Main app theme key should remain untouched
+    expect(localStorage.getItem('salon-theme')).toBe('light');
   });
 });

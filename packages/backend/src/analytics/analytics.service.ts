@@ -391,4 +391,69 @@ export class AnalyticsService {
 
     return totalMinutes;
   }
+
+  /**
+   * List the salon's money transactions — appointment payments + subscription
+   * payments — as a unified, newest-first ledger for the owner panel.
+   *
+   * BigInt amounts are mapped to Number (safe for the serialized JSON sizes
+   * in play; Rial amounts fit comfortably within Number.MAX_SAFE_INTEGER).
+   * Card-order intake is fulfilment-only and excluded.
+   */
+  async listTransactions(
+    salonId: string,
+  ): Promise<{
+    id: string;
+    kind: 'appointment' | 'subscription';
+    amountRial: number;
+    status: string;
+    gateway: string;
+    refId: string | null;
+    createdAt: string;
+    label: string | null;
+  }[]> {
+    const [payments, subPayments] = await Promise.all([
+      this.prisma.payment.findMany({
+        where: { appointment: { salonId } },
+        include: {
+          appointment: {
+            include: { service: { select: { name: true } } },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 200,
+      }),
+      this.prisma.subscriptionPayment.findMany({
+        where: { subscription: { salonId } },
+        orderBy: { createdAt: 'desc' },
+        take: 200,
+      }),
+    ]);
+
+    const tx = [
+      ...payments.map((p) => ({
+        id: p.id,
+        kind: 'appointment' as const,
+        amountRial: Number(p.amountRial),
+        status: p.status,
+        gateway: p.gateway,
+        refId: p.refId ?? null,
+        createdAt: p.createdAt.toISOString(),
+        label: p.appointment?.service?.name ?? null,
+      })),
+      ...subPayments.map((p) => ({
+        id: p.id,
+        kind: 'subscription' as const,
+        amountRial: Number(p.amountRial),
+        status: p.status,
+        gateway: p.gateway,
+        refId: p.refId ?? null,
+        createdAt: p.createdAt.toISOString(),
+        label: p.planKind,
+      })),
+    ];
+
+    tx.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    return tx;
+  }
 }

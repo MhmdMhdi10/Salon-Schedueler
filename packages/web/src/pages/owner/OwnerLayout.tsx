@@ -4,6 +4,7 @@ import { Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { OwnerShell } from '../../components/layout';
 import { RouteLoader } from '../../components/layout/RouteLoader';
 import { SeoHead } from '../../components/seo';
+import { TooltipProvider } from '../../components/ui/Tooltip';
 import { useAuth } from '../../auth/AuthContext';
 import {
   bootstrapAuth,
@@ -101,10 +102,12 @@ export function OwnerLayout() {
   }
 
   return (
-    <OwnerShell role={state.role} onSignOut={handleSignOut}>
-      <SeoHead title={t('owner.title')} />
-      <Outlet context={{ role: state.role }} />
-    </OwnerShell>
+    <TooltipProvider>
+      <OwnerShell role={state.role} onSignOut={handleSignOut}>
+        <SeoHead title={t('owner.title')} />
+        <Outlet context={{ role: state.role }} />
+      </OwnerShell>
+    </TooltipProvider>
   );
 }
 

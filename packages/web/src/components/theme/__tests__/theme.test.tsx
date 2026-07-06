@@ -137,8 +137,8 @@ describe('ThemeProvider', () => {
     );
 
     // jsdom can't resolve the CSS var, so the mirrored fallback applies — the
-    // rosé-noir dark `--color-bg`.
-    expect(getThemeColorMeta()).toBe('#1A1117');
+    // NYC dark-mode bg.
+    expect(getThemeColorMeta()).toBe('#121212');
   });
 
   it('does NOT auto-follow OS scheme changes (visitor must opt in)', () => {

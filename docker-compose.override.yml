@@ -29,13 +29,17 @@ services:
   web:
     ports: !override
       - "5273:5173"
-    # The container's Vite port (5173) is published on host 5273, so the HMR
-    # client (loaded in the browser from :5273) must open its websocket back on
-    # 5273 — not the container-internal 5173 it would otherwise infer. The base
-    # compose maps 5173:5173, so it omits this and the client just uses the page
-    # port. Consumed by packages/web/vite.config.ts (server.hmr.clientPort).
-    environment:
-      VITE_HMR_CLIENT_PORT: "5273"
+    # NOTE on HMR client port: if you access the app via the HOST-mapped port
+    # (http://localhost:5273), uncomment VITE_HMR_CLIENT_PORT below so the HMR
+    # websocket reconnects on 5273 instead of the container-internal 5173.
+    #
+    # If you access the app via the container's internal Docker network IP
+    # directly (e.g. http://172.18.0.x:5173 — common in sandboxed/remote dev
+    # environments that route straight to the bridge network), leave this
+    # UNSET: port 5273 does not exist on that internal IP, only on `localhost`
+    # from the host, so setting it here breaks HMR in that access mode.
+    # environment:
+    #   VITE_HMR_CLIENT_PORT: "5273"
 
   mobile:
     # Bring the Expo/Metro container into the running stack. Metro must advertise

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4A4A4A"/>
+      <stop offset="100%" stop-color="#2A2A2A"/>
+    </linearGradient>
+    <pattern id="dots" width="40" height="40" patternUnits="userSpaceOnUse">
+      <circle cx="20" cy="20" r="1.5" fill="white" opacity="0.06"/>
+    </pattern>
+  </defs>
+  <rect width="640" height="360" fill="url(#bg)"/>
+  <rect width="640" height="360" fill="url(#dots)"/>
+  <g opacity="0.1" transform="translate(290, 120)">
+    <circle cx="30" cy="20" r="18" stroke="white" stroke-width="2" fill="none"/>
+    <rect x="10" y="50" width="40" height="30" rx="4" stroke="white" stroke-width="2" fill="none"/>
+  </g>
+  <text x="320" y="200" text-anchor="middle" dominant-baseline="middle" font-family="Vazirmatn, Tahoma, sans-serif" font-size="28" font-weight="700" fill="white" direction="rtl">تصویر سالن</text>
+  <text x="320" y="240" text-anchor="middle" dominant-baseline="middle" font-family="Vazirmatn, Tahoma, sans-serif" font-size="14" fill="white" opacity="0.5" direction="rtl">تصویر به‌زودی اضافه می‌شود</text>
+</svg>

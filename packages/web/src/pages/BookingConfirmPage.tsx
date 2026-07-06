@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CalendarClock, Clock, CreditCard, Scissors } from 'lucide-react';
+import { CalendarClock, Clock, CreditCard, Scissors, Store } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { bookingApi, salonApi } from '../api/client';
 import { SeoHead } from '../components/seo';
 import { readSalonName } from '../utils/salonName';
 import {
+  BookingStepper,
   Button,
-  Card,
   EmptyState,
   ErrorState,
   JalaliDate,
@@ -60,47 +61,39 @@ function redirectToGateway(url: string): void {
 
 /**
  * Duck-types a rejection as an authentication failure (not signed in / token
- * expired) without depending on the `ApiError` class. We intentionally avoid
- * `instanceof ApiError` so this stays robust across module/test boundaries
- * where the concrete error type may not be the same reference — we only read
- * the shape (`status` / `code`) the API surfaces on a 401.
+ * expired) without depending on the `ApiError` class.
  */
 function isAuthFailure(err: unknown): boolean {
   const e = err as { status?: number; code?: string } | null;
   return !!e && (e.status === 401 || e.code === 'UNAUTHORIZED');
 }
 
+/** Booking stepper steps (step 3 = confirm). */
+const BOOKING_STEPS = [
+  { key: 'service', label: 'خدمت' },
+  { key: 'datetime', label: 'تاریخ' },
+  { key: 'confirm', label: 'تایید' },
+];
+
 /**
  * Customer **booking-confirm** step at `/salon/:salonId/book/confirm`
  * (R4.5, R7.2, R7.5; ui-ux Booking-Confirm recipe, §6, §8, §12).
  *
- * The last gate before money moves. The redesign composes design-system
- * primitives instead of bare HTML:
- *
- *  - **Summary card** — the chosen service, the **Jalali** date and time
- *    (`<JalaliDate>` + Persian-digit time), and the **Rial** price (`<Money>`),
- *    plus a deposit/payment notice (R4.5, R7.2, R7.5). The card carries its own
- *    loading (skeleton) / error (retry) states while the service detail loads.
- *  - **Sticky bottom CTA** «تایید رزرو» in the thumb zone, clearing the device
- *    safe-area inset so it is always reachable one-handed (ui-ux §5).
- *  - **Confirm states** — idle → in-button loading → an explicit
- *    **payment-redirect** surface («در حال انتقال به درگاه پرداخت...») shown
- *    before the gateway hand-off → error with retry (ui-ux §6).
- *  - **Abandon warning** — while a booking/payment is in flight a `beforeunload`
- *    guard warns the customer before they drop a partially completed/paid
- *    booking (ui-ux §8 "warn before abandoning a partially completed/paid
- *    booking").
- *
- * The `booking-confirm` testID is preserved and the `bookingApi`/`salonApi`
- * calls are unchanged — this is presentation only. A booking-funnel step is
- * thin/duplicate content and must never be indexed; `<SeoHead>` (noindex
- * default) emits `noindex,follow` (seo §1, R8.7).
+ * Redesigned as a premium receipt-like summary card with:
+ * - BookingStepper showing step 3 active
+ * - Elevated card (shadow-2, rounded-lg) with receipt styling
+ * - Dotted dividers between sections (token-driven border)
+ * - Labeled rows: service, date (Jalali), time, price (Rial), salon name
+ * - All text Persian, Persian digits, Jalali dates
+ * - CTA in thumb zone (bottom third of viewport on mobile)
+ * - Token-only styling, logical properties for RTL
  */
 export function BookingConfirmPage() {
   const { t } = useTranslation();
   const { salonId } = useParams<{ salonId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
+  const prefersReduced = useReducedMotion();
 
   const state = location.state as
     | (ConfirmSelection & { autoConfirm?: boolean })
@@ -110,21 +103,14 @@ export function BookingConfirmPage() {
   const [detailsStatus, setDetailsStatus] = useState<DetailsStatus>('loading');
   const [confirmStatus, setConfirmStatus] = useState<ConfirmStatus>('idle');
 
-  // Guards against bouncing to /auth more than once (e.g. a flaky 401 on retry)
-  // and against re-redirecting after we've already returned authenticated.
   const redirectedToAuthRef = useRef(false);
 
-  // A booking is "in flight" once the customer commits and until the gateway
-  // hand-off / success navigation takes over. During this window leaving the
-  // page risks a partially completed/paid booking, so we arm an unload guard.
   const isPending = confirmStatus === 'submitting' || confirmStatus === 'redirecting';
 
   useEffect(() => {
     if (!isPending) return undefined;
     const warn = (event: BeforeUnloadEvent) => {
       event.preventDefault();
-      // Modern browsers show their own generic copy; a non-empty returnValue
-      // is what actually triggers the native confirm dialog.
       event.returnValue = t('booking.abandonWarning');
       return event.returnValue;
     };
@@ -132,9 +118,6 @@ export function BookingConfirmPage() {
     return () => window.removeEventListener('beforeunload', warn);
   }, [isPending, t]);
 
-  // Resolve the chosen service so the summary can show its name + Rial price.
-  // The selection only carries the service id; we look it up via the unchanged
-  // services endpoint (presentation adaptation only).
   const loadDetails = useCallback(() => {
     if (!salonId || !state) return;
     setDetailsStatus('loading');
@@ -156,9 +139,6 @@ export function BookingConfirmPage() {
     loadDetails();
   }, [loadDetails]);
 
-  // Resume after returning authenticated from /auth: once the summary details
-  // are ready (so the success receipt can carry `service.name`), auto-run the
-  // booking exactly once. The flag is set by AuthPage on its way back here.
   const didAutoConfirmRef = useRef(false);
   useEffect(() => {
     if (!didAutoConfirmRef.current && state?.autoConfirm && detailsStatus === 'ready') {
@@ -180,14 +160,9 @@ export function BookingConfirmPage() {
       });
 
       if (result.status === 'held' && result.paymentRedirectUrl) {
-        // Money is confirmed by the server; show the explicit redirect surface
-        // and hand off to the payment gateway. Keep the pending guard armed.
         setConfirmStatus('redirecting');
         redirectToGateway(result.paymentRedirectUrl);
       } else if (result.status === 'pending' || result.status === 'confirmed') {
-        // pending = awaiting admin approval; confirmed = auto-approved by the
-        // salon/stylist policy. Both reach the receipt, which presents the right
-        // state from `status` (no fabricated success — the server decided).
         navigate('/booking/success', {
           state: {
             status: result.status,
@@ -200,9 +175,6 @@ export function BookingConfirmPage() {
         setConfirmStatus('error');
       }
     } catch (err) {
-      // Not signed in (or the token expired): route to phone+OTP login and resume
-      // the booking automatically afterwards. Only redirect on a genuine auth
-      // failure, only once, and never after we already came back from /auth.
       if (isAuthFailure(err) && !state.autoConfirm && !redirectedToAuthRef.current) {
         redirectedToAuthRef.current = true;
         setConfirmStatus('idle');
@@ -224,9 +196,9 @@ export function BookingConfirmPage() {
 
   const backToBooking = () => navigate(`/salon/${salonId}/book`);
 
-  // Guard: arriving here without a selection (e.g. a direct deep link) can't
-  // confirm anything. Offer a clear way back into the funnel. Still emit the
-  // noindex head so the route never leaks.
+  const salonName = useMemo(() => readSalonName(salonId ?? ''), [salonId]);
+
+  // Guard: arriving here without a selection (e.g. a direct deep link)
   if (!state) {
     return (
       <div
@@ -254,21 +226,36 @@ export function BookingConfirmPage() {
   return (
     <div
       data-testid="booking-confirm"
-      className="mx-auto flex w-full max-w-funnel flex-col gap-6 py-6"
+      className="mx-auto flex w-full max-w-funnel flex-col gap-6 px-4 py-6"
     >
       <SeoHead title={t('seo.titles.confirm')} />
-      <h1 className="text-xl font-bold text-text">{t('booking.confirmHeading')}</h1>
 
-      {/* Summary card: service · Jalali date/time · Rial price · deposit notice. */}
-      <section aria-labelledby="summary-title" className="flex flex-col gap-3">
+      {/* Page heading — visually styled as stepper context */}
+      <h1 className="sr-only">{t('booking.confirmHeading')}</h1>
+
+      {/* Progress stepper — step 3 (confirm) active */}
+      <BookingStepper steps={BOOKING_STEPS} currentStep={2} className="mb-2" />
+
+      {/* Receipt-like summary card */}
+      <section aria-labelledby="summary-title">
         <h2 id="summary-title" className="sr-only">
           {t('booking.summaryTitle')}
         </h2>
 
         {detailsStatus === 'loading' && (
-          <Card loading loadingLabel={t('booking.detailsLoadingLabel')}>
-            <Skeleton variant="text" />
-          </Card>
+          <div
+            className="rounded-lg border border-border bg-elevated p-6 shadow-2"
+            role="status"
+            aria-label={t('booking.detailsLoadingLabel')}
+          >
+            <Skeleton variant="text" className="mb-4 w-1/3" />
+            <div className="flex flex-col gap-4">
+              <Skeleton variant="text" className="w-full" />
+              <Skeleton variant="text" className="w-full" />
+              <Skeleton variant="text" className="w-full" />
+              <Skeleton variant="text" className="w-2/3" />
+            </div>
+          </div>
         )}
 
         {detailsStatus === 'error' && (
@@ -281,55 +268,103 @@ export function BookingConfirmPage() {
         )}
 
         {detailsStatus === 'ready' && service && (
-          <Card as="section">
-            <dl className="flex flex-col divide-y divide-border">
-              <div className="flex items-center justify-between gap-4 py-2 first:pt-0">
-                <dt className="flex items-center gap-2 text-sm text-muted">
-                  <Scissors className="h-4 w-4" aria-hidden="true" />
+          <motion.div
+            className="overflow-hidden rounded-lg border border-border bg-elevated shadow-2"
+            initial={prefersReduced ? false : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: [0.2, 0, 0, 1] }}
+          >
+            {/* Card header */}
+            <div className="border-b border-dashed border-border px-6 py-4">
+              <h3 className="text-lg font-bold text-text">
+                {t('booking.receiptTitle')}
+              </h3>
+            </div>
+
+            {/* Receipt rows */}
+            <dl className="px-6 py-4">
+              {/* Service */}
+              <div className="flex items-center justify-between gap-4 py-3">
+                <dt className="flex items-center gap-2 text-sm text-text-muted">
+                  <Scissors className="h-4 w-4 shrink-0" aria-hidden="true" />
                   {t('booking.serviceLabel')}
                 </dt>
-                <dd className="text-sm font-medium text-text">{service.name}</dd>
+                <dd className="text-sm font-semibold text-text">{service.name}</dd>
               </div>
 
-              <div className="flex items-center justify-between gap-4 py-2">
-                <dt className="flex items-center gap-2 text-sm text-muted">
-                  <CalendarClock className="h-4 w-4" aria-hidden="true" />
+              {/* Dotted divider */}
+              <div className="border-t border-dashed border-border" aria-hidden="true" />
+
+              {/* Date */}
+              <div className="flex items-center justify-between gap-4 py-3">
+                <dt className="flex items-center gap-2 text-sm text-text-muted">
+                  <CalendarClock className="h-4 w-4 shrink-0" aria-hidden="true" />
                   {t('booking.dateLabel')}
                 </dt>
-                <dd className="text-sm font-medium text-text">
+                <dd className="text-sm font-semibold text-text">
                   <JalaliDate value={state.startAt} withWeekday />
                 </dd>
               </div>
 
-              <div className="flex items-center justify-between gap-4 py-2">
-                <dt className="flex items-center gap-2 text-sm text-muted">
-                  <Clock className="h-4 w-4" aria-hidden="true" />
+              {/* Dotted divider */}
+              <div className="border-t border-dashed border-border" aria-hidden="true" />
+
+              {/* Time */}
+              <div className="flex items-center justify-between gap-4 py-3">
+                <dt className="flex items-center gap-2 text-sm text-text-muted">
+                  <Clock className="h-4 w-4 shrink-0" aria-hidden="true" />
                   {t('booking.timeLabel')}
                 </dt>
-                <dd className="text-sm font-medium text-text">
+                <dd className="text-sm font-semibold text-text">
                   {t('booking.timeAt', { time })}
                 </dd>
               </div>
 
-              <div className="flex items-center justify-between gap-4 py-2 last:pb-0">
-                <dt className="flex items-center gap-2 text-sm text-muted">
-                  <CreditCard className="h-4 w-4" aria-hidden="true" />
+              {/* Dotted divider */}
+              <div className="border-t border-dashed border-border" aria-hidden="true" />
+
+              {/* Price */}
+              <div className="flex items-center justify-between gap-4 py-3">
+                <dt className="flex items-center gap-2 text-sm text-text-muted">
+                  <CreditCard className="h-4 w-4 shrink-0" aria-hidden="true" />
                   {t('booking.priceLabel')}
                 </dt>
-                <dd className="text-sm font-bold text-text">
+                <dd className="text-base font-bold text-text">
                   <Money amountRial={service.priceRial} />
                 </dd>
               </div>
+
+              {/* Salon name (if available) */}
+              {salonName && (
+                <>
+                  {/* Dotted divider */}
+                  <div
+                    className="border-t border-dashed border-border"
+                    aria-hidden="true"
+                  />
+
+                  <div className="flex items-center justify-between gap-4 py-3">
+                    <dt className="flex items-center gap-2 text-sm text-text-muted">
+                      <Store className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      {t('booking.salonLabel')}
+                    </dt>
+                    <dd className="text-sm font-semibold text-text">{salonName}</dd>
+                  </div>
+                </>
+              )}
             </dl>
 
-            <p className="mt-4 rounded-md bg-bg p-3 text-xs text-muted">
-              {t('booking.depositNotice')}
-            </p>
-          </Card>
+            {/* Deposit/payment notice */}
+            <div className="border-t border-dashed border-border px-6 py-4">
+              <p className="rounded-md bg-surface p-3 text-xs text-text-muted">
+                {t('booking.depositNotice')}
+              </p>
+            </div>
+          </motion.div>
         )}
       </section>
 
-      {/* Explicit payment-redirect surface, shown before the gateway hand-off. */}
+      {/* Explicit payment-redirect surface */}
       {confirmStatus === 'redirecting' && (
         <p
           role="status"
@@ -341,7 +376,7 @@ export function BookingConfirmPage() {
         </p>
       )}
 
-      {/* Confirm failure: friendly cause + retry (never a raw error). */}
+      {/* Confirm failure: friendly cause + retry */}
       {confirmStatus === 'error' && (
         <ErrorState
           title={t('booking.confirmErrorTitle')}
@@ -351,10 +386,10 @@ export function BookingConfirmPage() {
         />
       )}
 
-      {/* Sticky bottom CTA «تایید رزرو» in the thumb zone, clearing safe-area. */}
+      {/* Sticky bottom CTA «تایید رزرو» — thumb zone, clearing safe-area */}
       <div
         data-testid="booking-confirm-cta"
-        className="sticky bottom-0 z-sticky -mx-4 border-t border-border bg-surface px-4 pb-[env(safe-area-inset-bottom)] pt-3"
+        className="sticky bottom-0 z-sticky -mx-4 mt-auto border-t border-border bg-bg px-4 pb-[env(safe-area-inset-bottom)] pt-4"
       >
         <Button
           fullWidth

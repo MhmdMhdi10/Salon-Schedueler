@@ -191,7 +191,7 @@ afterEach(() => {
 describe('Owner panel a11y — OwnerLayout / OwnerShell chrome (R7.1)', () => {
   it('exposes the panel landmarks (header/nav/main) around the content', async () => {
     const { rtlContainer } = renderOwnerPanel('Owner', '/owner/calendar');
-    await screen.findByTestId('admin-calendar');
+    await screen.findByTestId('owner-calendar-page');
 
     // The owner shell contributes its own header + side/tab-bar navs, and the
     // panel exposes a single <main> landmark for the routed content.
@@ -204,7 +204,7 @@ describe('Owner panel a11y — OwnerLayout / OwnerShell chrome (R7.1)', () => {
 
   it('labels the icon-only theme toggle in the header', async () => {
     const { rtlContainer } = renderOwnerPanel('Owner', '/owner/calendar');
-    await screen.findByTestId('admin-calendar');
+    await screen.findByTestId('owner-calendar-page');
 
     // The owner shell header carries the icon-only theme toggle, identified by
     // its toggle (aria-pressed) semantics; an icon-only control must be named.
@@ -218,13 +218,13 @@ describe('Owner panel a11y — OwnerLayout / OwnerShell chrome (R7.1)', () => {
 
   it('opens the outline at a single <h1> with ordered headings', async () => {
     const { rtlContainer } = renderOwnerPanel('Owner', '/owner/calendar');
-    await screen.findByTestId('admin-calendar');
+    await screen.findByTestId('owner-calendar-page');
     expectSingleH1AndOrderedHeadings(rtlContainer);
   });
 
   it('has no serious/critical violations in RTL', async () => {
     const { rtlContainer } = renderOwnerPanel('Owner', '/owner/calendar');
-    await screen.findByTestId('admin-calendar');
+    await screen.findByTestId('owner-calendar-page');
     await expectNoSeriousA11yViolations(rtlContainer);
   });
 });

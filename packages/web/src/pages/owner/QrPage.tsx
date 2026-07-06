@@ -99,6 +99,8 @@ function QrAsset({
       <img
         src={qrDataUri}
         alt={qrAlt}
+        width={200}
+        height={200}
         {...(imgTestId ? { 'data-testid': imgTestId } : {})}
       />
     </span>
@@ -349,7 +351,25 @@ export function OwnerQrPage() {
 
   const handleOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!data || !orderValid) return;
+    if (!data) return;
+    // Validate on submit so the button is always tappable and the user gets
+    // explicit field-level feedback instead of a perpetually-greyed button.
+    const name = orderName.trim();
+    const phone = toLatinDigits(orderPhone).replace(/\D/g, '');
+    const address = orderAddress.trim();
+    const fieldErrors: { name?: string; phone?: string; address?: string } = {};
+    if (name.length < 2) fieldErrors.name = t('owner.qr.order.nameLabel');
+    if (!/^09\d{9}$/.test(phone)) fieldErrors.phone = t('owner.qr.order.phoneLabel');
+    if (address.length < 5) fieldErrors.address = t('owner.qr.order.addressLabel');
+    if (Object.keys(fieldErrors).length > 0) {
+      setOrderError(
+        t('owner.qr.order.missingFields', {
+          defaultValue: 'این فیلدها را تکمیل کنید: {{fields}}',
+          fields: Object.values(fieldErrors).join('، '),
+        }),
+      );
+      return;
+    }
     setOrderStatus('submitting');
     setOrderError('');
     try {
@@ -358,9 +378,9 @@ export function OwnerQrPage() {
         template: orderTemplate,
         accent: accentKey,
         quantity: Number(orderQty),
-        contactName: orderName.trim(),
-        phone: normalizedPhone,
-        address: orderAddress.trim(),
+        contactName: name,
+        phone,
+        address,
         notes: orderNotes.trim() || undefined,
       });
       setOrderId(res.orderId);
@@ -454,136 +474,144 @@ export function OwnerQrPage() {
               <p className="text-sm text-muted">{t('owner.qr.studioSubtitle')}</p>
             </div>
 
-            {/* QR target: the whole salon (default) or a specific stylist. Only
-                shown when the salon has bookable stylists. */}
-            {stylists.length > 0 && (
-              <Select
-                label={t('owner.qr.targetLabel')}
-                value={targetStaffId === '' ? 'salon' : targetStaffId}
-                onValueChange={(v) => setTargetStaffId(v === 'salon' ? '' : v)}
-                options={[
-                  { value: 'salon', label: t('owner.qr.targetSalon') },
-                  ...stylists.map((s) => ({
-                    value: s.id,
-                    label: s.fullName ?? t('owner.qr.targetStylistFallback'),
-                  })),
-                ]}
-                helperText={t('owner.qr.targetHint')}
-              />
-            )}
+            <div className="owner-qr-studio-grid">
+              {/* Controls column */}
+              <div className="flex flex-col gap-4">
+                {/* QR target: the whole salon (default) or a specific stylist. Only
+                    shown when the salon has bookable stylists. */}
+                {stylists.length > 0 && (
+                  <Select
+                    label={t('owner.qr.targetLabel')}
+                    value={targetStaffId === '' ? 'salon' : targetStaffId}
+                    onValueChange={(v) => setTargetStaffId(v === 'salon' ? '' : v)}
+                    options={[
+                      { value: 'salon', label: t('owner.qr.targetSalon') },
+                      ...stylists.map((s) => ({
+                        value: s.id,
+                        label: s.fullName ?? t('owner.qr.targetStylistFallback'),
+                      })),
+                    ]}
+                    helperText={t('owner.qr.targetHint')}
+                  />
+                )}
 
-            {/* Template segmented control */}
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-medium text-muted">
-                {t('owner.qr.templateLabel')}
-              </span>
-              <div
-                className="owner-qr-segmented"
-                role="group"
-                aria-label={t('owner.qr.templateLabel')}
-              >
-                {ASSET_KINDS.map((k) => (
-                  <button
-                    key={k}
-                    type="button"
-                    aria-pressed={kind === k}
-                    className={cn(
-                      'owner-qr-seg',
-                      kind === k && 'owner-qr-seg--on',
-                    )}
-                    onClick={() => setKind(k)}
+                {/* Template segmented control */}
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs font-medium text-muted">
+                    {t('owner.qr.templateLabel')}
+                  </span>
+                  <div
+                    className="owner-qr-segmented"
+                    role="group"
+                    aria-label={t('owner.qr.templateLabel')}
                   >
-                    {t(`owner.qr.template.${k}`)}
-                  </button>
-                ))}
+                    {ASSET_KINDS.map((k) => (
+                      <button
+                        key={k}
+                        type="button"
+                        aria-pressed={kind === k}
+                        className={cn(
+                          'owner-qr-seg',
+                          kind === k && 'owner-qr-seg--on',
+                        )}
+                        onClick={() => setKind(k)}
+                      >
+                        {t(`owner.qr.template.${k}`)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Accent swatches */}
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs font-medium text-muted">
+                    {t('owner.qr.accentLabel')}
+                  </span>
+                  <div
+                    className="owner-qr-swatches"
+                    role="group"
+                    aria-label={t('owner.qr.accentLabel')}
+                  >
+                    {ACCENTS.map((a) => (
+                      <button
+                        key={a.key}
+                        type="button"
+                        aria-pressed={accentKey === a.key}
+                        aria-label={t(`owner.qr.accent.${a.key}`)}
+                        title={t(`owner.qr.accent.${a.key}`)}
+                        className={cn(
+                          'owner-qr-swatch',
+                          accentKey === a.key && 'owner-qr-swatch--on',
+                        )}
+                        style={{
+                          background: `linear-gradient(135deg, ${a.from}, ${a.to})`,
+                        }}
+                        onClick={() => setAccentKey(a.key)}
+                      >
+                        {accentKey === a.key && (
+                          <Check className="h-4 w-4" aria-hidden="true" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Tagline */}
+                <TextField
+                  label={t('owner.qr.taglineLabel')}
+                  value={tagline}
+                  onChange={(e) => setTagline(e.target.value)}
+                  placeholder={t('owner.qr.taglinePlaceholder')}
+                  maxLength={48}
+                  helperText={t('owner.qr.taglineHint')}
+                />
+              </div>
+
+              {/* Live preview column — sticky on desktop so it stays in view
+                  while scrolling the controls. */}
+              <div className="flex flex-col gap-3">
+                <div className="owner-qr-stage" data-testid="qr-asset-preview">
+                  <QrAsset
+                    kind={kind}
+                    salonName={data.salonName}
+                    tagline={effectiveTagline}
+                    qrDataUri={qrDataUri}
+                    qrAlt={qrAlt}
+                    accent={accent}
+                    t={t}
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    data-testid="qr-print"
+                    variant="primary"
+                    startIcon={<Printer className="h-4 w-4" />}
+                    onClick={handlePrint}
+                  >
+                    {t(`owner.qr.print.${kind}`)}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    startIcon={<Download className="h-4 w-4" />}
+                    onClick={() => downloadQrSvg(activePayload, qrAlt, data.salonName)}
+                  >
+                    {t('owner.qr.downloadSvg')}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    startIcon={<ImageIcon className="h-4 w-4" />}
+                    onClick={() =>
+                      void downloadQrPng(activePayload, qrAlt, data.salonName)
+                    }
+                  >
+                    {t('owner.qr.downloadPng')}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted">{t('owner.qr.printHint')}</p>
               </div>
             </div>
-
-            {/* Accent swatches */}
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-medium text-muted">
-                {t('owner.qr.accentLabel')}
-              </span>
-              <div
-                className="owner-qr-swatches"
-                role="group"
-                aria-label={t('owner.qr.accentLabel')}
-              >
-                {ACCENTS.map((a) => (
-                  <button
-                    key={a.key}
-                    type="button"
-                    aria-pressed={accentKey === a.key}
-                    aria-label={t(`owner.qr.accent.${a.key}`)}
-                    title={t(`owner.qr.accent.${a.key}`)}
-                    className={cn(
-                      'owner-qr-swatch',
-                      accentKey === a.key && 'owner-qr-swatch--on',
-                    )}
-                    style={{
-                      background: `linear-gradient(135deg, ${a.from}, ${a.to})`,
-                    }}
-                    onClick={() => setAccentKey(a.key)}
-                  >
-                    {accentKey === a.key && (
-                      <Check className="h-4 w-4" aria-hidden="true" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Tagline */}
-            <TextField
-              label={t('owner.qr.taglineLabel')}
-              value={tagline}
-              onChange={(e) => setTagline(e.target.value)}
-              placeholder={t('owner.qr.taglinePlaceholder')}
-              maxLength={48}
-              helperText={t('owner.qr.taglineHint')}
-            />
-
-            {/* Live preview */}
-            <div className="owner-qr-stage" data-testid="qr-asset-preview">
-              <QrAsset
-                kind={kind}
-                salonName={data.salonName}
-                tagline={effectiveTagline}
-                qrDataUri={qrDataUri}
-                qrAlt={qrAlt}
-                accent={accent}
-                t={t}
-              />
-            </div>
-
-            {/* Actions */}
-            <div className="flex flex-wrap gap-3">
-              <Button
-                data-testid="qr-print"
-                variant="primary"
-                startIcon={<Printer className="h-4 w-4" />}
-                onClick={handlePrint}
-              >
-                {t(`owner.qr.print.${kind}`)}
-              </Button>
-              <Button
-                variant="secondary"
-                startIcon={<Download className="h-4 w-4" />}
-                onClick={() => downloadQrSvg(activePayload, qrAlt, data.salonName)}
-              >
-                {t('owner.qr.downloadSvg')}
-              </Button>
-              <Button
-                variant="secondary"
-                startIcon={<ImageIcon className="h-4 w-4" />}
-                onClick={() =>
-                  void downloadQrPng(activePayload, qrAlt, data.salonName)
-                }
-              >
-                {t('owner.qr.downloadPng')}
-              </Button>
-            </div>
-            <p className="text-xs text-muted">{t('owner.qr.printHint')}</p>
           </Card>
 
           {/* ── Per-stylist QR gallery (every bookable stylist at once) ── */}
@@ -762,7 +790,6 @@ export function OwnerQrPage() {
                     data-testid="qr-order-submit"
                     variant="primary"
                     loading={orderStatus === 'submitting'}
-                    disabled={!orderValid}
                     startIcon={<Package className="h-4 w-4" />}
                   >
                     {t('owner.qr.order.submit')}
@@ -783,6 +810,8 @@ export function OwnerQrPage() {
               data-testid="qr-standee-image"
               src={qrDataUri}
               alt={qrAlt}
+              width={200}
+              height={200}
               className="owner-qr-standee__qr"
             />
             <p className="owner-qr-standee__invite">

@@ -224,7 +224,8 @@ function SalonGrid({
             <SalonCard
               slug={salon.slug}
               name={salon.name}
-              coverUrl={salon.coverUrl ?? salon.gallery[0]?.src ?? '/og/default.jpg'}
+              coverUrl={salon.coverUrl ?? salon.gallery[0]?.src ?? '/placeholders/default-salon.svg'}
+              coverAlt={salon.gallery[0]?.alt ?? `تصویر ${salon.name}`}
               rating={salon.rating ?? 0}
               reviewCount={salon.reviewCount ?? 0}
               location={`${salon.neighborhood}، ${salon.address.addressLocality}`}

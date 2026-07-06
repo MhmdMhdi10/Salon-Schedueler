@@ -137,6 +137,34 @@ export interface SalonChannels {
   telegram?: string;
 }
 
+/** A customer review shown on the salon profile. */
+export interface SalonReview {
+  /** Unique id (React key). */
+  id: string;
+  /** Reviewer display name, Persian. */
+  author: string;
+  /** Numeric rating 0–5 for this review. */
+  rating: number;
+  /** Review body text, Persian. */
+  body: string;
+  /** ISO date string for display (converted to Jalali on render). */
+  date: string;
+  /** Optional service name this review relates to. */
+  service?: string;
+}
+
+/** A staff member displayed on the salon profile team section. */
+export interface SalonStaffMember {
+  /** Unique id (React key). */
+  id: string;
+  /** Display name, Persian. */
+  name: string;
+  /** Role / title, Persian (e.g. «آرایشگر ارشد»). */
+  role: string;
+  /** Optional avatar URL. */
+  avatarUrl?: string;
+}
+
 /** A full public salon profile. */
 export interface SalonProfile {
   /** ASCII / transliterated slug — the `/s/:slug` path segment. */
@@ -212,6 +240,20 @@ export interface SalonProfile {
    * when absent.
    */
   coverUrl?: string;
+  /**
+   * Optional category label (Persian) used in the hero header as an eyebrow
+   * (e.g. «سالن زیبایی زنانه»). Defaults to a generic salon label when absent.
+   */
+  category?: string;
+  /**
+   * Customer reviews surfaced on the salon profile (task 5.4; R6.3).
+   * Only real, on-page reviews — never fabricated (seo §5).
+   */
+  reviews?: SalonReview[];
+  /**
+   * Staff members shown on the salon profile "Team" section.
+   */
+  staff?: SalonStaffMember[];
 }
 
 /**
@@ -220,6 +262,235 @@ export interface SalonProfile {
  * `public/` so nothing 404s at runtime.
  */
 const SALON_PROFILES: Record<string, SalonProfile> = {
+  'salon-maryam': {
+    slug: 'salon-maryam',
+    name: 'سالن مریم',
+    bookingSalonId: '22222222-2222-2222-2222-222222222222',
+    citySlug: 'tehran',
+    tagline: 'رزرو آنلاین خدمات زیبایی در سالن مریم، سعادت‌آباد.',
+    description:
+      'سالن زیبایی مریم در سعادت‌آباد تهران با تیمی مجرب خدمات رنگ، کراتین و مراقبت از مو را ارائه می‌دهد.',
+    neighborhood: 'سعادت‌آباد',
+    address: {
+      streetAddress: 'سعادت‌آباد، بلوار دریا، پلاک ۴۵',
+      addressLocality: 'تهران',
+      addressRegion: 'تهران',
+      addressCountry: 'IR',
+    },
+    telephone: '+98-21-2222-3333',
+    priceRange: '$$',
+    geo: { latitude: 35.78, longitude: 51.37 },
+    openingHours: [
+      { day: 'Saturday', opens: '09:00', closes: '21:00' },
+      { day: 'Sunday', opens: '09:00', closes: '21:00' },
+      { day: 'Monday', opens: '09:00', closes: '21:00' },
+      { day: 'Tuesday', opens: '09:00', closes: '21:00' },
+      { day: 'Wednesday', opens: '09:00', closes: '21:00' },
+      { day: 'Thursday', opens: '09:00', closes: '18:00' },
+      { day: 'Friday', closed: true },
+    ],
+    services: [
+      { id: 'color', name: 'رنگ مو', durationMinutes: 120, priceRial: 7500000, category: 'خدمات مو' },
+      { id: 'keratin', name: 'کراتین مو', durationMinutes: 180, priceRial: 15000000, category: 'خدمات مو' },
+      { id: 'haircut', name: 'کوتاهی مو', durationMinutes: 45, priceRial: 2000000, category: 'خدمات مو' },
+    ],
+    gallery: [
+      {
+        src: '/placeholders/salon-maryam.svg',
+        width: 640,
+        height: 360,
+        alt: 'نمای داخلی سالن زیبایی مریم',
+      },
+    ],
+    mapEmbedUrl: 'https://neshan.org/maps/iframe/@35.78,51.37,15z',
+    rating: 4.6,
+    reviewCount: 87,
+    coverUrl: '/placeholders/salon-maryam.svg',
+    category: 'سالن زیبایی زنانه',
+  },
+  'shahin-barbershop': {
+    slug: 'shahin-barbershop',
+    name: 'آرایشگاه شاهین',
+    bookingSalonId: '33333333-3333-3333-3333-333333333333',
+    citySlug: 'tehran',
+    tagline: 'آرایشگاه مردانه شاهین، بهترین خدمات اصلاح و پیرایش در یوسف‌آباد.',
+    description:
+      'آرایشگاه شاهین در یوسف‌آباد با بیش از ده سال تجربه، خدمات اصلاح مو و ریش، فید و اسکین‌فید حرفه‌ای ارائه می‌دهد.',
+    neighborhood: 'یوسف‌آباد',
+    address: {
+      streetAddress: 'یوسف‌آباد، خیابان بیست‌وسوم، پلاک ۱۲',
+      addressLocality: 'تهران',
+      addressRegion: 'تهران',
+      addressCountry: 'IR',
+    },
+    telephone: '+98-21-3333-4444',
+    priceRange: '$',
+    geo: { latitude: 35.73, longitude: 51.40 },
+    openingHours: [
+      { day: 'Saturday', opens: '08:00', closes: '22:00' },
+      { day: 'Sunday', opens: '08:00', closes: '22:00' },
+      { day: 'Monday', opens: '08:00', closes: '22:00' },
+      { day: 'Tuesday', opens: '08:00', closes: '22:00' },
+      { day: 'Wednesday', opens: '08:00', closes: '22:00' },
+      { day: 'Thursday', opens: '08:00', closes: '20:00' },
+      { day: 'Friday', closed: true },
+    ],
+    services: [
+      { id: 'haircut', name: 'اصلاح مو', durationMinutes: 30, priceRial: 1500000, category: 'خدمات مو' },
+      { id: 'beard', name: 'اصلاح ریش', durationMinutes: 20, priceRial: 1000000, category: 'خدمات صورت' },
+    ],
+    gallery: [
+      {
+        src: '/placeholders/salon-shahin.svg',
+        width: 640,
+        height: 360,
+        alt: 'نمای داخلی آرایشگاه شاهین',
+      },
+    ],
+    mapEmbedUrl: 'https://neshan.org/maps/iframe/@35.73,51.40,15z',
+    rating: 4.3,
+    reviewCount: 52,
+    coverUrl: '/placeholders/salon-shahin.svg',
+    category: 'آرایشگاه مردانه',
+  },
+  'salon-niloofar': {
+    slug: 'salon-niloofar',
+    name: 'سالن نیلوفر',
+    bookingSalonId: '44444444-4444-4444-4444-444444444444',
+    citySlug: 'tehran',
+    tagline: 'سالن زیبایی نیلوفر، خدمات تخصصی ناخن و پوست در جردن.',
+    description:
+      'سالن نیلوفر در جردن تهران با متخصصان حرفه‌ای، خدمات کاشت ناخن، مانیکور و پاکسازی پوست صورت ارائه می‌دهد.',
+    neighborhood: 'جردن',
+    address: {
+      streetAddress: 'جردن، خیابان گلفام، پلاک ۸',
+      addressLocality: 'تهران',
+      addressRegion: 'تهران',
+      addressCountry: 'IR',
+    },
+    telephone: '+98-21-4444-5555',
+    priceRange: '$$$',
+    geo: { latitude: 35.77, longitude: 51.42 },
+    openingHours: [
+      { day: 'Saturday', opens: '10:00', closes: '20:00' },
+      { day: 'Sunday', opens: '10:00', closes: '20:00' },
+      { day: 'Monday', opens: '10:00', closes: '20:00' },
+      { day: 'Tuesday', opens: '10:00', closes: '20:00' },
+      { day: 'Wednesday', opens: '10:00', closes: '20:00' },
+      { day: 'Thursday', opens: '10:00', closes: '17:00' },
+      { day: 'Friday', closed: true },
+    ],
+    services: [
+      { id: 'nails', name: 'کاشت ناخن', durationMinutes: 90, priceRial: 5000000, category: 'خدمات ناخن' },
+      { id: 'manicure', name: 'مانیکور', durationMinutes: 60, priceRial: 3000000, category: 'خدمات ناخن' },
+      { id: 'facial', name: 'پاکسازی صورت', durationMinutes: 75, priceRial: 4500000, category: 'خدمات پوست' },
+    ],
+    gallery: [
+      {
+        src: '/placeholders/salon-niloofar.svg',
+        width: 640,
+        height: 360,
+        alt: 'نمونه کار کاشت ناخن در سالن نیلوفر',
+      },
+    ],
+    mapEmbedUrl: 'https://neshan.org/maps/iframe/@35.77,51.42,15z',
+    rating: 4.9,
+    reviewCount: 198,
+    coverUrl: '/placeholders/salon-niloofar.svg',
+    category: 'سالن زیبایی زنانه',
+  },
+  'arash-studio': {
+    slug: 'arash-studio',
+    name: 'استودیو آرش',
+    bookingSalonId: '55555555-5555-5555-5555-555555555555',
+    citySlug: 'tehran',
+    tagline: 'استودیو آرش، خدمات حرفه‌ای گریم داماد و آرایش مردانه در ونک.',
+    description:
+      'استودیو آرش در ونک تهران با سبک مدرن، خدمات اصلاح مو، گریم داماد و مراقبت پوست مردانه ارائه می‌دهد.',
+    neighborhood: 'ونک',
+    address: {
+      streetAddress: 'ونک، خیابان ملاصدرا، پلاک ۳۰',
+      addressLocality: 'تهران',
+      addressRegion: 'تهران',
+      addressCountry: 'IR',
+    },
+    telephone: '+98-21-5555-6666',
+    priceRange: '$$',
+    geo: { latitude: 35.76, longitude: 51.41 },
+    openingHours: [
+      { day: 'Saturday', opens: '10:00', closes: '21:00' },
+      { day: 'Sunday', opens: '10:00', closes: '21:00' },
+      { day: 'Monday', opens: '10:00', closes: '21:00' },
+      { day: 'Tuesday', opens: '10:00', closes: '21:00' },
+      { day: 'Wednesday', opens: '10:00', closes: '21:00' },
+      { day: 'Thursday', opens: '10:00', closes: '19:00' },
+      { day: 'Friday', closed: true },
+    ],
+    services: [
+      { id: 'haircut', name: 'اصلاح مو', durationMinutes: 40, priceRial: 2500000, category: 'خدمات مو' },
+      { id: 'groom', name: 'گریم داماد', durationMinutes: 120, priceRial: 8000000, category: 'گریم' },
+      { id: 'skincare', name: 'پاکسازی پوست مردانه', durationMinutes: 60, priceRial: 4000000, category: 'مراقبت پوست' },
+    ],
+    gallery: [
+      {
+        src: '/placeholders/salon-arash.svg',
+        width: 640,
+        height: 360,
+        alt: 'فضای داخلی استودیو آرش',
+      },
+    ],
+    mapEmbedUrl: 'https://neshan.org/maps/iframe/@35.76,51.41,15z',
+    rating: 4.5,
+    reviewCount: 34,
+    coverUrl: '/placeholders/salon-arash.svg',
+    category: 'آرایشگاه مردانه',
+  },
+  'salon-parisa': {
+    slug: 'salon-parisa',
+    name: 'سالن پریسا',
+    bookingSalonId: '66666666-6666-6666-6666-666666666666',
+    citySlug: 'tehran',
+    tagline: 'سالن پریسا، خدمات لوکس زیبایی و میکاپ عروس در الهیه.',
+    description:
+      'سالن پریسا در الهیه تهران با فضایی مدرن و لوکس، خدمات میکاپ عروس، شینیون و مراقبت از مو ارائه می‌دهد.',
+    neighborhood: 'الهیه',
+    address: {
+      streetAddress: 'الهیه، خیابان فرشته، پلاک ۲۲',
+      addressLocality: 'تهران',
+      addressRegion: 'تهران',
+      addressCountry: 'IR',
+    },
+    telephone: '+98-21-6666-7777',
+    priceRange: '$$$',
+    geo: { latitude: 35.79, longitude: 51.43 },
+    openingHours: [
+      { day: 'Saturday', opens: '09:00', closes: '20:00' },
+      { day: 'Sunday', opens: '09:00', closes: '20:00' },
+      { day: 'Monday', opens: '09:00', closes: '20:00' },
+      { day: 'Tuesday', opens: '09:00', closes: '20:00' },
+      { day: 'Wednesday', opens: '09:00', closes: '20:00' },
+      { day: 'Thursday', opens: '09:00', closes: '17:00' },
+      { day: 'Friday', closed: true },
+    ],
+    services: [
+      { id: 'bridal-makeup', name: 'میکاپ عروس', durationMinutes: 180, priceRial: 25000000, category: 'آرایش صورت' },
+      { id: 'chignon', name: 'شینیون', durationMinutes: 90, priceRial: 10000000, category: 'خدمات مو' },
+      { id: 'haircare', name: 'مراقبت و تقویت مو', durationMinutes: 60, priceRial: 6000000, category: 'خدمات مو' },
+    ],
+    gallery: [
+      {
+        src: '/placeholders/salon-parisa.svg',
+        width: 640,
+        height: 360,
+        alt: 'نمای داخلی سالن پریسا',
+      },
+    ],
+    mapEmbedUrl: 'https://neshan.org/maps/iframe/@35.79,51.43,15z',
+    rating: 4.7,
+    reviewCount: 156,
+    coverUrl: '/placeholders/salon-parisa.svg',
+    category: 'سالن زیبایی زنانه',
+  },
   'salon-rose': {
     slug: 'salon-rose',
     name: 'سالن رز',
@@ -257,18 +528,13 @@ const SALON_PROFILES: Record<string, SalonProfile> = {
     ],
     gallery: [
       {
-        src: '/hero/hero-1280.png',
-        srcSet: '/hero/hero-640.png 640w, /hero/hero-1280.png 1280w',
-        avifSrcSet: '/hero/hero-640.avif 640w, /hero/hero-1280.avif 1280w',
-        webpSrcSet: '/hero/hero-640.webp 640w, /hero/hero-1280.webp 1280w',
-        width: 1280,
-        height: 720,
+        src: '/placeholders/salon-rose.svg',
+        width: 640,
+        height: 360,
         alt: 'نمای داخلی سالن زیبایی رز',
       },
       {
-        src: '/og/default.jpg',
-        avifSrcSet: '/og/default.avif 1200w',
-        webpSrcSet: '/og/default.webp 1200w',
+        src: '/og/default.svg',
         width: 1200,
         height: 630,
         alt: 'نمونه کار رنگ و کوتاهی مو در سالن رز',
@@ -276,7 +542,7 @@ const SALON_PROFILES: Record<string, SalonProfile> = {
     ],
     // Neshan map embed (Iranian map platform, seo §11), lazy-loaded on the page.
     mapEmbedUrl: 'https://neshan.org/maps/iframe/@35.8,51.4,15z',
-    ogImage: '/og/default.jpg',
+    ogImage: '/og/default.svg',
     // Off-page booking channels. Replace the bot handles with the salon's real
     // Bale/Telegram bots; `website` points at the platform home (the public app).
     channels: {
@@ -289,7 +555,7 @@ const SALON_PROFILES: Record<string, SalonProfile> = {
     brandAccent: 'rose',
     rating: 4.8,
     reviewCount: 124,
-    coverUrl: '/hero/hero-1280.png',
+    coverUrl: '/placeholders/salon-rose.svg',
   },
 };
 

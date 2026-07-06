@@ -144,6 +144,17 @@ export const pageTransition: Transition = {
 };
 
 /**
+ * Booking-flow step transition timing — 250ms standard ease.
+ * Slightly faster than the general page transition for a snappier
+ * multi-step feel. Matches the design spec for step-to-step slides.
+ */
+export const stepTransition: Transition = {
+  type: 'tween',
+  duration: 0.25,
+  ease: EASE_STANDARD,
+};
+
+/**
  * Scroll-reveal transition timing — 400ms standard ease.
  * Matches `--dur-enter` + `--ease-standard` tokens.
  */

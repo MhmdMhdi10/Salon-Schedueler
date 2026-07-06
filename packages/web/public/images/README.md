@@ -74,6 +74,31 @@ Or use the build script: `node scripts/generate-placeholder-images.mjs`
 
 ---
 
+## Salon Discovery Cards (`/salons/`)
+
+SVG placeholders for salon cards on discovery pages. Production images should be
+real photography of diverse salon types (hair, nail, spa, barbershop).
+
+| File Pattern | Dimensions | Aspect Ratio |
+|-------------|-----------|--------------|
+| `salon-card-{1-6}-640w.svg` | 640×360 | 16:9 |
+
+See `salons/README.md` for details on each card and production replacement specs.
+
+---
+
+## Marketing Feature Images (`/marketing/`)
+
+SVG placeholders for the "How It Works" and feature showcase sections.
+
+| File Pattern | Dimensions | Aspect Ratio |
+|-------------|-----------|--------------|
+| `feature-{name}-960w.svg` | 960×720 | 4:3 |
+
+See `marketing/README.md` for details.
+
+---
+
 ## Photography Direction
 
 See `docs/design-research/photography-direction.md` for full editorial guidance on:
@@ -81,6 +106,13 @@ See `docs/design-research/photography-direction.md` for full editorial guidance 
 - Salon-specific subject matter
 - Color grading approach
 - Composition rules
+
+See `docs/design-research/image-sourcing.md` for:
+- Recommended free stock sources (Unsplash, Pexels, Pixabay)
+- Curated search terms per image category
+- File naming conventions
+- Image processing pipeline commands
+- Quality checklist for sourced images
 
 ---
 
@@ -91,3 +123,5 @@ All images must have meaningful Persian alt text. Examples:
 - Benefit (no-shows): `«سالن پر از مشتری بدون صندلی خالی»`
 - Benefit (online booking): `«مشتری در حال رزرو آنلاین نوبت»`
 - Benefit (calendar): `«صاحب سالن در حال مدیریت تقویم نوبت‌ها»`
+- Salon cards: `«سالن زیبایی مدرن — نمای داخلی»`
+- Marketing features: `«کشف بهترین سالن‌ها»`

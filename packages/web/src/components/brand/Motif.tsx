@@ -27,41 +27,38 @@ export interface MotifProps {
 }
 
 /**
- * A single petal, drawn from the flower's center (24,24) up to a tip at (24,4)
- * and back — symmetric about the vertical axis. Five rotated copies form the
- * "petal arc" flower. These are **geometry** coordinates (user units), not
- * style literals.
+ * Two crossed straight razor blades in a 48×48 coordinate box, centered at (24,24).
+ * Each blade is a diagonal line with slightly curved razor ends. The blades use
+ * alternating primary/accent tokens; the center diamond uses `currentColor` for
+ * adaptive visibility against any surface.
  */
-const PETAL_PATH = 'M24 24 C 18 16 18 8 24 4 C 30 8 30 16 24 24 Z';
-
-/** The five petal rotations (72° apart) that make up one flower. */
-const PETAL_ANGLES = [0, 72, 144, 216, 288] as const;
-
-/**
- * One "petal arc" flower in a 48×48 coordinate box, centered at (24,24).
- * Petals alternate the brand primary and accent tokens; the hub uses
- * `currentColor` so the mark always has a legible center against any surface.
- */
-function Flower({ idPrefix }: { idPrefix: string }) {
+function CrossedRazors({ idPrefix }: { idPrefix: string }) {
   return (
     <g>
-      {PETAL_ANGLES.map((angle, i) => (
-        <path
-          key={`${idPrefix}-petal-${angle}`}
-          d={PETAL_PATH}
-          transform={`rotate(${angle} 24 24)`}
-          fill={i % 2 === 0 ? 'var(--color-primary)' : 'var(--color-accent)'}
-        />
-      ))}
-      {/* Center hub ties the petals together; currentColor keeps it adaptive. */}
-      <circle cx="24" cy="24" r="4" fill="currentColor" />
+      {/* Blade 1: top-left to bottom-right diagonal */}
+      <path
+        d="M8 8 C 10 12 14 18 22 22 L 26 26 C 34 30 38 36 40 40 L 42 38 C 38 34 34 28 26 24 L 22 22 C 14 16 10 10 10 6 Z"
+        fill="var(--color-primary)"
+        data-motif-part={`${idPrefix}-blade-1`}
+      />
+      {/* Blade 2: top-right to bottom-left diagonal */}
+      <path
+        d="M40 8 C 38 12 34 18 26 22 L 22 26 C 14 30 10 36 8 40 L 6 38 C 10 34 14 28 22 24 L 26 22 C 34 16 38 10 38 6 Z"
+        fill="var(--color-accent)"
+        data-motif-part={`${idPrefix}-blade-2`}
+      />
+      {/* Center diamond where blades cross */}
+      <path
+        d="M24 20 L 28 24 L 24 28 L 20 24 Z"
+        fill="currentColor"
+      />
     </g>
   );
 }
 
 /**
- * Signature brand motif — a token-driven "petal arc" device (design §2, R1.3,
- * R2.5). It uses **only** `var(--color-primary)` / `var(--color-accent)` and
+ * Signature brand motif — a token-driven "crossed razors" device (NYC barbershop
+ * aesthetic). It uses **only** `var(--color-primary)` / `var(--color-accent)` and
  * `currentColor` for color, so a tenant storefront's runtime accent override
  * re-tints it for free and it never hard-codes a hex. Decorative by default.
  */
@@ -81,9 +78,8 @@ export function Motif({
   };
 
   if (variant === 'band') {
-    // An elegant centered flourish: a single petal-arc flower over a hairline
-    // that fades at both ends, framed by two small accent beads. Reads as a
-    // refined section divider — not the old row of repeated marks.
+    // A horizontal line with a small crossed-razors mark centered on it.
+    // Reads as a refined section divider with the barbershop identity.
     const fadeId = `motif-band-fade-${uid}`;
     return (
       <svg
@@ -103,15 +99,15 @@ export function Motif({
             <stop offset="1" stopColor="var(--color-accent)" stopOpacity="0" />
           </linearGradient>
         </defs>
-        {/* Hairline that fades toward both edges, passing behind the flower. */}
+        {/* Hairline that fades toward both edges, passing behind the razors. */}
         <rect x="16" y="23" width="288" height="2" rx="1" fill={`url(#${fadeId})`} />
-        {/* Flanking accent beads. */}
+        {/* Small accent dots flanking the center mark */}
         <circle cx="112" cy="24" r="2" fill="var(--color-accent)" opacity="0.85" />
         <circle cx="208" cy="24" r="2" fill="var(--color-accent)" opacity="0.85" />
-        {/* Centered flower. */}
-        <g transform="translate(160 24) scale(0.92)">
+        {/* Centered crossed razors mark (scaled down) */}
+        <g transform="translate(160 24) scale(0.6)">
           <g transform="translate(-24 -24)">
-            <Flower idPrefix={`band-${uid}`} />
+            <CrossedRazors idPrefix={`band-${uid}`} />
           </g>
         </g>
       </svg>
@@ -119,7 +115,7 @@ export function Motif({
   }
 
   if (variant === 'watermark') {
-    // Faint oversized backdrop: a single flower at low opacity, drawn in
+    // Faint oversized backdrop: crossed razors at low opacity, drawn in
     // currentColor so it sits quietly behind content as a texture.
     return (
       <svg
@@ -131,7 +127,7 @@ export function Motif({
         color="var(--color-primary)"
       >
         <g color="var(--color-primary)">
-          <Flower idPrefix="watermark" />
+          <CrossedRazors idPrefix="watermark" />
         </g>
       </svg>
     );
@@ -145,7 +141,7 @@ export function Motif({
       preserveAspectRatio="xMidYMid meet"
       data-motif="mark"
     >
-      <Flower idPrefix="mark" />
+      <CrossedRazors idPrefix="mark" />
     </svg>
   );
 }

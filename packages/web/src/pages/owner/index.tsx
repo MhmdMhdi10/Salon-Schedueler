@@ -1,7 +1,7 @@
 import { Navigate, useOutletContext } from 'react-router-dom';
-import { CalendarPage } from '../admin/CalendarPage';
-import { AnalyticsPage } from '../admin/AnalyticsPage';
-import { ConfigurationPage } from '../admin/ConfigurationPage';
+import { OwnerConfigPage } from './OwnerConfigurationPage';
+import { OwnerAnalyticsPageContent } from './OwnerAnalyticsPage';
+import { OwnerCalendarPage as OwnerCalendarPageImpl } from './OwnerCalendarPage';
 import { MyQrPage } from './MyQrPage';
 import type { OwnerRole } from '../../api/client';
 
@@ -42,60 +42,58 @@ function OwnerRoleGuard({
 }
 
 /**
- * Calendar section of the owner panel (task 5.2; R2.1, R7.1).
+ * Calendar section of the owner panel (task 7.4; R8.2, R8.6, R8.7, R8.8, R11.5).
  *
- * Reuses the existing admin {@link CalendarPage} verbatim — no rewrite — so its
- * preserved test hooks (`admin-calendar`, the day/week tabs, the
- * loading/error/empty/populated states) and the governing UI tokens, Jalali
- * dates, and RTL layout all carry over unchanged. The page renders inside the
- * {@link OwnerShell}'s single `<main>` via the `OwnerLayout` outlet, keeping the
- * document `dir="rtl"`/`lang="fa"` contract (R2.9) intact.
+ * Redesigned with NYC dark-mode-first calendar: day/week views, vertical time
+ * grid, appointment blocks colored by service type, Framer Motion view-switch
+ * animations, Jalali dates with Persian numerals, and keyboard-operable RTL
+ * date navigation.
  *
  * Calendar is the one destination every role (Owner/Admin/Stylist) may reach,
  * so it carries no role guard.
  *
- * The outer `owner-calendar-page` testID is preserved so the panel
- * routing/RBAC suites stay green alongside the admin page's own hooks.
+ * The `owner-calendar-page` testID is preserved for routing/RBAC suites.
  */
 export function OwnerCalendarPage() {
-  return (
-    <section data-testid="owner-calendar-page">
-      <CalendarPage />
-    </section>
-  );
+  return <OwnerCalendarPageImpl />;
 }
 
 /**
- * Analytics section of the owner panel (task 5.2; R2.1, R7.1).
+ * Analytics section of the owner panel — redesigned with NYC dark-mode
+ * aesthetic, AnimatedCounter metrics cards, and lazy-loaded charts (task 7.5;
+ * R8.3, R8.6, R8.7, R13.5, R11.4, R11.6).
  *
- * Reuses the existing admin {@link AnalyticsPage} (KPI cards, busiest-windows
- * table, lazy chart) unchanged, preserving its `admin-analytics` / `analytics-*`
- * test hooks and token-driven styling. Restricted to Owner/Admin to mirror the
- * shell nav (a Stylist is redirected to the calendar).
+ * Restricted to Owner/Admin to mirror the shell nav (a Stylist is redirected
+ * to the calendar).
  */
 export function OwnerAnalyticsPage() {
   return (
     <OwnerRoleGuard allow={['Owner', 'Admin']}>
       <section data-testid="owner-analytics-page">
-        <AnalyticsPage />
+        <OwnerAnalyticsPageContent />
       </section>
     </OwnerRoleGuard>
   );
 }
 
 /**
- * Configuration section of the owner panel (task 5.2; R2.1, R7.1).
+ * Configuration section of the owner panel (task 7.6; R8.4, R8.6, R8.7, R3.5,
+ * R11.4, R11.5).
  *
- * Reuses the existing admin {@link ConfigurationPage} (staff/chairs/services/
- * holidays, confirm + undo) unchanged, preserving its `admin-configuration` /
- * `config-*` / `*-list` test hooks. Owner-only to mirror the shell nav (Admin
- * and Stylist are redirected to the calendar).
+ * Redesigned with card-based sections for Staff, Services, Chairs/Resources,
+ * Holidays — each with expand/collapse animations (AnimatePresence + chevron
+ * rotation), inline edit affordances, add/remove slide animations, skeleton
+ * loading, error+retry, Persian text, Jalali dates for holidays, and
+ * prefers-reduced-motion handling.
+ *
+ * Owner-only to mirror the shell nav (Admin and Stylist are redirected to the
+ * calendar). Preserves `admin-configuration` / `config-*` / `*-list` testIDs.
  */
 export function OwnerConfigurationPage() {
   return (
     <OwnerRoleGuard allow={['Owner']}>
       <section data-testid="owner-config-page">
-        <ConfigurationPage />
+        <OwnerConfigPage />
       </section>
     </OwnerRoleGuard>
   );
@@ -103,6 +101,9 @@ export function OwnerConfigurationPage() {
 
 /** Subscription management landing — real surface (task 5.3; R3.8, R3.9, R2.1). */
 export { OwnerSubscriptionPage } from './SubscriptionPage';
+
+/** Transactions ledger — «تراکنش‌ها» (appointment + subscription payments). */
+export { OwnerTransactionsPage } from './OwnerTransactionsPage';
 
 /** QR + standee landing — real surface (task 5.4; R4.1, R4.3). */
 export { OwnerQrPage } from './QrPage';

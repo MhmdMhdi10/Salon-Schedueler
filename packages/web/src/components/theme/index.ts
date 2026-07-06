@@ -11,6 +11,8 @@ export {
 export type { Theme, ThemeProviderProps } from './ThemeProvider';
 export { ThemeToggle } from './ThemeToggle';
 export type { ThemeToggleProps } from './ThemeToggle';
+export { OwnerThemeToggle } from './OwnerThemeToggle';
+export type { OwnerThemeToggleProps } from './OwnerThemeToggle';
 
 /**
  * Tenant theming (signature-ui-system R4): a scoped runtime wrapper that

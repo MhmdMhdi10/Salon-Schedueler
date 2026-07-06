@@ -117,31 +117,35 @@ describe('Feature: salon-platform-expansion, Property 7: QR payload stability/ro
 // ─── Campaign-url assertion ──────────────────────────────────────────────────
 
 describe('Feature: salon-platform-expansion, Property 7 (campaign url): utm_source always present', () => {
-  it('buildSalonQrUrl includes the default utm_source=qr for any slug (R4.4)', () => {
+  it('buildSalonQrUrl includes the default utm_source=qr for any token (R4.4)', () => {
     fc.assert(
-      fc.property(slugArb, (slug) => {
+      fc.property(qrTokenArb, (qrToken) => {
         const { prisma } = createMockPrisma([]);
         const service = new QrService(prisma);
 
-        const url = service.buildSalonQrUrl(slug);
+        const url = service.buildSalonQrUrl(qrToken);
         const parsed = new URL(url);
 
         // The campaign source is always attached, defaulting to `qr`.
         expect(parsed.searchParams.get('utm_source')).toBe(DEFAULT_QR_SOURCE);
-        // ...and the slug is preserved (URL-encoded) on the /s/ path.
-        expect(parsed.pathname).toBe(`/s/${encodeURIComponent(slug)}`);
+        // The path segment is the ENCODED codec payload (never the raw
+        // token) — it must resolve back to the original token via
+        // parseSalonQr, otherwise this campaign link 404s as QR_MALFORMED
+        // even though the salon exists (the real bug this test now guards).
+        const encodedPayload = decodeURIComponent(parsed.pathname.replace(/^\/s\//, ''));
+        expect(parseSalonQr(encodedPayload)).toEqual({ kind: 'ok', salonToken: qrToken });
       }),
       { numRuns: 100 },
     );
   });
 
-  it('buildSalonQrUrl includes the supplied campaign source for any slug/source (R4.4)', () => {
+  it('buildSalonQrUrl includes the supplied campaign source for any token/source (R4.4)', () => {
     fc.assert(
-      fc.property(slugArb, sourceArb, (slug, source) => {
+      fc.property(qrTokenArb, sourceArb, (qrToken, source) => {
         const { prisma } = createMockPrisma([]);
         const service = new QrService(prisma);
 
-        const url = service.buildSalonQrUrl(slug, source);
+        const url = service.buildSalonQrUrl(qrToken, source);
         const parsed = new URL(url);
 
         expect(parsed.searchParams.get('utm_source')).toBe(source);

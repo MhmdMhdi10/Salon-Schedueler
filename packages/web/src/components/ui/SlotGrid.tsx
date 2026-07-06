@@ -1,4 +1,5 @@
 import { forwardRef, useId, useRef } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   Check,
   Clock,
@@ -9,6 +10,7 @@ import {
 } from 'lucide-react';
 import { cn } from './cn';
 import { toPersianDigits } from './Num';
+import { easings } from '../../lib/motion-variants';
 
 /**
  * The five slot states (ui-ux §3, R2.6). Each is distinguishable **without
@@ -88,6 +90,10 @@ export interface SlotChipProps
  * set (default/hover/focus-visible/active/disabled). Non-selectable states
  * (held/full/past) render as disabled buttons so they are still announced with
  * their state but cannot be activated.
+ *
+ * Animates on selection with a magenta fill + scale pulse [1, 1.05, 1] using
+ * Framer Motion. Respects prefers-reduced-motion: disables scale animation,
+ * retains color transition. Unavailable slots are visually muted (opacity).
  */
 export const SlotChip = forwardRef<HTMLButtonElement, SlotChipProps>(
   function SlotChip(
@@ -98,30 +104,46 @@ export const SlotChip = forwardRef<HTMLButtonElement, SlotChipProps>(
     const canInteract = interactive[state];
     const localizedLabel = toPersianDigits(label);
     const computedLabel = ariaLabel ?? `${localizedLabel}، ${stateLabel[state]}`;
+    const prefersReduced = useReducedMotion();
+
+    const isSelected = state === 'selected';
+
+    // Scale pulse animation on selection — only when motion is allowed
+    const scaleAnimation =
+      isSelected && !prefersReduced ? { scale: [1, 1.05, 1] } : { scale: 1 };
+
+    // whileTap press feedback for interactive chips (not when reduced motion)
+    const tapAnimation =
+      canInteract && !prefersReduced ? { scale: 0.97 } : undefined;
+
     return (
-      <button
+      <motion.button
         ref={ref}
         type="button"
         role="gridcell"
-        aria-selected={state === 'selected'}
+        aria-selected={isSelected}
         aria-label={computedLabel}
         disabled={disabled ?? !canInteract}
+        animate={scaleAnimation}
+        whileTap={tapAnimation}
+        transition={{ duration: 0.2, ease: easings.standard }}
         className={cn(
           'inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1',
           'rounded-md px-3 py-2 text-sm tabular-nums',
           'transition-colors duration-fast ease-standard',
           'outline-none focus-visible:outline focus-visible:outline-2',
           'focus-visible:outline-offset-2 focus-visible:outline-focus',
-          'active:brightness-95',
           'disabled:cursor-not-allowed',
           stateClasses[state],
+          // Muted opacity for unavailable slots
+          !canInteract && 'opacity-50',
           className,
         )}
-        {...rest}
+        {...(rest as Record<string, unknown>)}
       >
         <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
         <span aria-hidden="true">{localizedLabel}</span>
-      </button>
+      </motion.button>
     );
   },
 );

@@ -83,12 +83,23 @@ export class QrService {
    * Build the public salon profile URL with a campaign source param
    * (Requirements 4.3, 4.4).
    *
-   * Produces `<publicBaseUrl>/s/:slug?utm_source=<source>` so scans arriving
-   * via the QR can be attributed and counted. Defaults the source to `qr`.
+   * Produces `<publicBaseUrl>/s/<encodedPayload>?utm_source=<source>` so scans
+   * arriving via the QR can be attributed and counted. The path segment MUST be
+   * the same `encodeSalonQr` payload the QR image itself encodes (a raw
+   * `qrToken` is never resolvable by `resolveQr`/`parseSalonQr` — they only
+   * understand the versioned+checksummed format) — otherwise this campaign link
+   * 404s as `QR_MALFORMED` even though the salon exists. Defaults the source to
+   * `qr`.
    */
-  buildSalonQrUrl(slug: string, source: string = DEFAULT_QR_SOURCE): string {
+  buildSalonQrUrl(qrToken: string, source: string = DEFAULT_QR_SOURCE): string {
     const query = new URLSearchParams({ utm_source: source }).toString();
-    return `${this.publicBaseUrl}/s/${encodeURIComponent(slug)}?${query}`;
+    // encodeSalonQr returns the FULL deep link (qrDeepLinkBase + payload); this
+    // service always constructs qrDeepLinkBase as `${publicBaseUrl}/s/`, so
+    // stripping that exact prefix back off recovers just the encoded payload —
+    // the only thing resolveQr/parseSalonQr can actually decode.
+    const fullPayloadUrl = encodeSalonQr(qrToken, this.qrDeepLinkBase);
+    const encodedPayload = fullPayloadUrl.slice(this.qrDeepLinkBase.length);
+    return `${this.publicBaseUrl}/s/${encodedPayload}?${query}`;
   }
 
   /**

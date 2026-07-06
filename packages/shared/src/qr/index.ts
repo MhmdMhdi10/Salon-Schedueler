@@ -79,12 +79,11 @@ export function encodeStaffQr(
  * version, and CRC32 checksum. Pass the same base that was used to encode.
  */
 export function parseSalonQr(payload: string, baseUrl: string = QR_BASE_URL): QrParseResult {
-  // Must start with the expected base URL
-  if (!payload.startsWith(baseUrl)) {
-    return { kind: 'malformed' };
-  }
-
-  const path = payload.slice(baseUrl.length);
+  // Accept both the full deep-link URL (as scanned from the QR image) and the
+  // bare path segment (the `/s/:slug` route param from the campaign URL). The
+  // checksum validation below rejects anything that isn't a well-formed
+  // `v1.<token>.<8-hex-checksum>` payload, so stripping an absent base is safe.
+  const path = payload.startsWith(baseUrl) ? payload.slice(baseUrl.length) : payload;
 
   // Expected structure: v1.<token>.<8-hex-checksum>
   // The checksum is always the last 8 hex characters after the final dot.

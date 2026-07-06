@@ -91,6 +91,25 @@
 
 /* ── Order form ──────────────────────────────────────────────────────────── */
 
+/* Two-column studio: controls on the left, live preview on the right (sticky
+   on desktop so it stays visible while adjusting the controls). Stacks to a
+   single column on mobile. */
+.owner-qr-studio-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+@media (min-width: 768px) {
+  .owner-qr-studio-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    align-items: start;
+  }
+  .owner-qr-studio-grid > :nth-child(2) {
+    position: sticky;
+    top: 16px;
+  }
+}
+
 .owner-qr-order__grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

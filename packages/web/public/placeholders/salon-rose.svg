@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8E2F50"/>
+      <stop offset="100%" stop-color="#5C1E35"/>
+    </linearGradient>
+    <pattern id="dots" width="40" height="40" patternUnits="userSpaceOnUse">
+      <circle cx="20" cy="20" r="1.5" fill="white" opacity="0.08"/>
+    </pattern>
+  </defs>
+  <rect width="640" height="360" fill="url(#bg)"/>
+  <rect width="640" height="360" fill="url(#dots)"/>
+  <g opacity="0.12" transform="translate(480, 40)">
+    <path d="M0,60 Q30,0 60,60 Q30,120 0,60" fill="white"/>
+    <path d="M30,50 Q55,0 80,50 Q55,100 30,50" fill="white"/>
+  </g>
+  <text x="320" y="160" text-anchor="middle" dominant-baseline="middle" font-family="Vazirmatn, Tahoma, sans-serif" font-size="36" font-weight="700" fill="white" direction="rtl">سالن رز</text>
+  <text x="320" y="210" text-anchor="middle" dominant-baseline="middle" font-family="Vazirmatn, Tahoma, sans-serif" font-size="16" fill="white" opacity="0.7" direction="rtl">ولنجک، تهران</text>
+  <rect x="260" y="235" width="120" height="3" rx="1.5" fill="white" opacity="0.3"/>
+</svg>

@@ -16,11 +16,15 @@ const IRANIAN_MOBILE = /^09\d{9}$/;
  * questionnaire). Durations/prices arrive as numbers (the web normalizes any
  * Persian digits to Latin before submit). Kept lean on purpose — buffer,
  * deposit and equipment are configured later in the panel.
+ *
+ * `durationMinutes` and `priceRial` are OPTIONAL so an owner can quickly add a
+ * service by name alone during onboarding and fill in the details later in the
+ * panel. They default to 30 minutes / 0 Rial respectively.
  */
 export const RegisterSalonServiceSchema = z.object({
   name: z.string().min(1).max(120),
-  durationMinutes: z.number().int().positive().max(24 * 60),
-  priceRial: z.number().int().nonnegative(),
+  durationMinutes: z.number().int().positive().max(24 * 60).default(30),
+  priceRial: z.number().int().nonnegative().default(0),
 });
 
 export type RegisterSalonService = z.infer<typeof RegisterSalonServiceSchema>;

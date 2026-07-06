@@ -29,24 +29,24 @@ export function MetricsSection() {
       <div className="mt-8 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
         <ScrollReveal delay={0}>
           <AnimatedCounter
-            target={50}
-            suffix="+"
+            target={178}
+            suffix=""
             label={t('marketing.metrics.salons.label')}
           />
         </ScrollReveal>
 
         <ScrollReveal delay={0.05}>
           <AnimatedCounter
-            target={1000}
-            suffix="+"
+            target={12400}
+            suffix=""
             label={t('marketing.metrics.bookings.label')}
           />
         </ScrollReveal>
 
         <ScrollReveal delay={0.1}>
           <AnimatedCounter
-            target={98}
-            suffix="%"
+            target={4.8}
+            suffix=""
             label={t('marketing.metrics.satisfaction.label')}
           />
         </ScrollReveal>

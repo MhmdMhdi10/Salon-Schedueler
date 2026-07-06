@@ -8,12 +8,12 @@ import '../../../i18n';
 /**
  * Component tests for the owner-panel section pages (task 5.2; R2.1, R7.1).
  *
- * Task 5.2 surfaces the *existing* admin pages — {@link CalendarPage},
- * {@link AnalyticsPage}, {@link ConfigurationPage} — inside the owner panel
- * rather than rewriting them. These tests assert that contract:
+ * Task 5.2 surfaces the *existing* admin pages — {@link AnalyticsPage},
+ * {@link ConfigurationPage} — inside the owner panel. The calendar page has been
+ * redesigned (task 7.4) as a standalone OwnerCalendarPage. These tests assert:
  *
  *  1. Each reused admin page renders inside the {@link OwnerShell} (its
- *     preserved root testID — `admin-calendar` / `admin-analytics` /
+ *     preserved root testID — `admin-analytics` /
  *     `admin-configuration` — is present alongside the panel's own
  *     `owner-*-page` section hook).
  *  2. The `dir="rtl"`/`lang="fa"` document contract (R2.9, R8.4) is preserved
@@ -137,19 +137,17 @@ afterEach(() => {
 });
 
 describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
-  it('renders the admin CalendarPage inside the owner calendar section', async () => {
+  it('renders the redesigned OwnerCalendarPage in the owner calendar section', async () => {
     renderOwnerApp('Owner', '/owner/calendar');
 
-    // The panel's section wrapper and the reused admin page's preserved root
-    // hook both resolve — the admin page is surfaced, not rewritten.
+    // The redesigned page has its own testid (no longer wrapping admin CalendarPage).
     expect(
       await screen.findByTestId('owner-calendar-page'),
     ).toBeInTheDocument();
-    expect(await screen.findByTestId('admin-calendar')).toBeInTheDocument();
 
     // Rendered inside the owner shell's single <main>.
     expect(screen.getByRole('main')).toContainElement(
-      screen.getByTestId('admin-calendar'),
+      screen.getByTestId('owner-calendar-page'),
     );
   });
 
@@ -176,14 +174,14 @@ describe('Owner panel — dir/lang contract preserved (R2.9, R8.4)', () => {
   it('keeps dir="rtl"/lang="fa" around the reused admin pages', async () => {
     const { container } = renderOwnerApp('Owner', '/owner/calendar');
 
-    await screen.findByTestId('admin-calendar');
+    await screen.findByTestId('owner-calendar-page');
 
     const root = container.querySelector('.app-root');
     expect(root).toHaveAttribute('dir', 'rtl');
     expect(root).toHaveAttribute('lang', 'fa');
 
-    // The reused admin page lives within that contract, undisturbed.
-    expect(root).toContainElement(screen.getByTestId('admin-calendar'));
+    // The redesigned calendar page lives within that contract.
+    expect(root).toContainElement(screen.getByTestId('owner-calendar-page'));
   });
 });
 
@@ -192,7 +190,7 @@ describe('Owner panel — section routes mirror role-aware nav (R2.3)', () => {
     renderOwnerApp('Stylist', '/owner/analytics');
 
     // Stylist sees calendar only — analytics redirects to the calendar.
-    expect(await screen.findByTestId('admin-calendar')).toBeInTheDocument();
+    expect(await screen.findByTestId('owner-calendar-page')).toBeInTheDocument();
     expect(screen.queryByTestId('owner-analytics-page')).not.toBeInTheDocument();
   });
 
@@ -200,7 +198,7 @@ describe('Owner panel — section routes mirror role-aware nav (R2.3)', () => {
     renderOwnerApp('Admin', '/owner/config');
 
     // Configuration is Owner-only — an Admin is redirected to the calendar.
-    expect(await screen.findByTestId('admin-calendar')).toBeInTheDocument();
+    expect(await screen.findByTestId('owner-calendar-page')).toBeInTheDocument();
     expect(screen.queryByTestId('owner-config-page')).not.toBeInTheDocument();
   });
 

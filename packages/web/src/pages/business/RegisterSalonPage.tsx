@@ -159,21 +159,66 @@ function RegisterSalonContent() {
     if (salonName.trim().length < 1) errors.salonName = t('business.register.errors.salonNameRequired');
     if (ownerName.trim().length < 1) errors.ownerName = t('business.register.errors.ownerNameRequired');
     if (!PHONE_PATTERN.test(normalizedPhone)) errors.phone = t('business.register.errors.invalidPhone');
+    // Block advancing while a duplicate-phone verdict is pending or known.
+    if (phoneCheck === 'checking') errors.phone = t('business.register.info.phoneChecking', { defaultValue: 'در حال بررسی…' });
+    else if (phoneCheck === 'taken') errors.phone = t('business.register.errors.phoneTaken');
     setInfoErrors(errors);
     if (Object.keys(errors).length === 0) setStep('services');
   };
 
+  // ── Live phone-duplicate check ──────────────────────────────────────────
+  // As soon as the phone is format-valid, hit the backend to learn whether it
+  // is already registered — flag the field immediately instead of bouncing the
+  // user all the way back from Submit at Step 3. Debounced + cancels stale
+  // responses so a quick typist never sees a stale "taken" verdict.
+  const [phoneCheck, setPhoneCheck] = useState<'idle' | 'checking' | 'taken'>('idle');
+  useEffect(() => {
+    if (!PHONE_PATTERN.test(normalizedPhone)) {
+      setPhoneCheck('idle');
+      return;
+    }
+    let active = true;
+    setPhoneCheck('checking');
+    const handle = window.setTimeout(() => {
+      registrationApi
+        .checkPhone(normalizedPhone)
+        .then((res) => {
+          if (!active) return;
+          setPhoneCheck(res.available ? 'idle' : 'taken');
+          setInfoErrors((prev) => ({
+            ...prev,
+            phone: res.available ? undefined : t('business.register.errors.phoneTaken'),
+          }));
+        })
+        .catch(() => {
+          if (active) setPhoneCheck('idle');
+        });
+    }, 450);
+    return () => {
+      active = false;
+      window.clearTimeout(handle);
+    };
+  }, [normalizedPhone, t]);
+
   // ── Step 2: add / remove a service ────────────────────────────────────────
+  // Only the name is required — duration/price are optional and default
+  // server-side (30 min / 0 Rial) when left blank, so an owner can quickly
+  // sketch a service list during onboarding and fill details later.
   const handleAddService = () => {
     const name = svcName.trim();
-    const duration = toIntOrZero(svcDuration);
-    if (name.length < 1 || duration <= 0) {
+    if (name.length < 1) {
       setSvcError(t('business.register.services.invalid'));
       return;
     }
+    const duration = toIntOrZero(svcDuration);
     setServices((prev) => [
       ...prev,
-      { key: `${Date.now()}-${prev.length}`, name, durationMinutes: duration, priceRial: toIntOrZero(svcPrice) },
+      {
+        key: `${Date.now()}-${prev.length}`,
+        name,
+        ...(duration > 0 ? { durationMinutes: duration } : {}),
+        priceRial: toIntOrZero(svcPrice) || undefined,
+      },
     ]);
     setSvcName('');
     setSvcDuration('');
@@ -196,8 +241,8 @@ function RegisterSalonContent() {
         brandAccent: accentKey || undefined,
         services: services.map(({ name, durationMinutes, priceRial }) => ({
           name,
-          durationMinutes,
-          priceRial,
+          ...(durationMinutes ? { durationMinutes } : {}),
+          ...(priceRial ? { priceRial } : {}),
         })),
         chairCount: toIntOrZero(chairCount),
       });
@@ -383,7 +428,11 @@ function RegisterSalonContent() {
             <TextField
               id="phone"
               label={t('business.register.info.phoneLabel')}
-              helperText={t('business.register.info.phoneHelper')}
+              helperText={
+                phoneCheck === 'checking'
+                  ? t('business.register.info.phoneChecking', { defaultValue: 'در حال بررسی…' })
+                  : t('business.register.info.phoneHelper')
+              }
               error={infoErrors.phone}
               type="tel"
               inputMode="tel"
@@ -487,8 +536,10 @@ function RegisterSalonContent() {
                       <span className="text-sm font-medium text-text">{s.name}</span>
                       <span className="text-xs text-muted">
                         {t('business.register.services.summary', {
-                          minutes: toPersianDigits(s.durationMinutes),
-                          price: toPersianDigits(s.priceRial.toLocaleString('en-US')),
+                          minutes: toPersianDigits(s.durationMinutes ?? 30),
+                          price: toPersianDigits(
+                            (s.priceRial ?? 0).toLocaleString('en-US'),
+                          ),
                         })}
                       </span>
                     </span>

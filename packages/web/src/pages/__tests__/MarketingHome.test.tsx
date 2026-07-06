@@ -11,8 +11,8 @@ import { SITE_URL } from '../../components/seo';
  * Tests for the public marketing home at `/` (task 5.1; R8.1, R8.2, R8.3, R8.8,
  * R9.1, R9.4). The home is the platform's primary indexable surface: it must
  * opt **in** to indexing, emit unique title/description + canonical + JSON-LD,
- * carry a single `<h1>` and crawlable trust/legal links, and preload an
- * LCP-optimized hero (preloaded image + `fetchpriority="high"`).
+ * carry a single `<h1>` and crawlable trust/legal links. The hero uses a CSS
+ * gradient background (no image dependency) for a NYC noir aesthetic.
  *
  * Requirements: 8.1, 8.2, 8.3, 8.8, 9.1, 9.4
  */
@@ -79,27 +79,28 @@ describe('MarketingHome', () => {
     });
   });
 
-  it('preloads the LCP hero image with fetchpriority high (R9.1, R9.4)', async () => {
-    renderHome();
-    await waitFor(() => {
-      const preload = head('link[rel="preload"][as="image"]');
-      expect(preload).not.toBeNull();
-      expect(preload).toHaveAttribute('fetchpriority', 'high');
-    });
+  it('renders the hero as a light marketplace section (no image, search-focused)', () => {
+    const { getByTestId } = renderHome();
+    // The hero uses bg-bg (light warm cream) and contains a search form.
+    const root = getByTestId('marketing-home');
+    const heroSection = root.querySelector('section');
+    expect(heroSection).not.toBeNull();
+    expect(heroSection!.className).toContain('bg-bg');
+    // No hero image — the search bar is the primary interaction.
+    const heroImg = heroSection!.querySelector('img');
+    expect(heroImg).toBeNull();
+    // Has a search form
+    const form = heroSection!.querySelector('form');
+    expect(form).not.toBeNull();
   });
 
-  it('renders the hero image with explicit dimensions and meaningful alt (R8.8, R9.4)', () => {
+  it('hero search button and icons are marked aria-hidden where decorative', () => {
     const { getByTestId } = renderHome();
-    // The ParallaxHero background layer is aria-hidden (decorative at the
-    // accessibility level — content is conveyed by the foreground text). Query
-    // the DOM directly for the LCP image with fetchpriority="high".
     const root = getByTestId('marketing-home');
-    const img = root.querySelector('img[fetchpriority="high"]') ?? root.querySelector('img');
-    expect(img).not.toBeNull();
-    expect(img!.getAttribute('width')).toBe('1920');
-    expect(img!.getAttribute('height')).toBe('1080');
-    expect(img!.getAttribute('alt')?.trim()).toBeTruthy();
-    expect(img!.getAttribute('fetchpriority')).toBe('high');
+    const heroSection = root.querySelector('section');
+    const decorativeLayers = heroSection!.querySelectorAll('[aria-hidden="true"]');
+    // At least the search icon is decorative
+    expect(decorativeLayers.length).toBeGreaterThanOrEqual(1);
   });
 
   it('exposes crawlable trust/legal links (R8.8)', () => {

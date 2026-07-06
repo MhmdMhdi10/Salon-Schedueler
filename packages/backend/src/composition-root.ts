@@ -11,6 +11,7 @@ import {
   PaymentService,
   ZarinpalAdapter,
   IdPayAdapter,
+  MockGateway,
   type PaymentGateway,
 } from './payment/index.js';
 import { NotificationService } from './notifications/index.js';
@@ -73,9 +74,19 @@ export interface CreatedApp extends Container {
 }
 
 /**
- * Select the payment gateway adapter from configuration (default: Zarinpal).
+ * Select the payment gateway adapter from configuration.
+ *
+ * In development (no real credentials set), uses a MockGateway that always
+ * succeeds and redirects to the payment callback immediately. This allows the
+ * full booking + subscription flow to work without Zarinpal/IDPay connectivity.
  */
 function selectGateway(config: AppConfig): PaymentGateway {
+  // Use mock when no real credentials are configured (dev mode)
+  if (!config.zarinpalMerchantId && !config.idpayApiKey) {
+    console.log('[payment] No gateway credentials configured — using MockGateway (dev mode)');
+    return new MockGateway({ callbackBaseUrl: config.paymentCallbackBaseUrl });
+  }
+
   if (config.paymentGateway === 'idpay') {
     return new IdPayAdapter({ apiKey: config.idpayApiKey });
   }

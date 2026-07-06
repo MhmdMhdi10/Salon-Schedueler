@@ -1,5 +1,6 @@
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { NavLink, Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   Calendar,
   BarChart3,
@@ -10,13 +11,51 @@ import {
   Share2,
   type LucideIcon,
 } from 'lucide-react';
-import { ThemeToggle } from '../theme';
+import { OwnerThemeToggle } from '../theme/OwnerThemeToggle';
 import { Button } from '../ui/Button';
 import { cn } from '../ui/cn';
+import { OwnerSidebar } from '../owner/OwnerSidebar';
+import { OwnerBottomTabs } from './OwnerBottomTabs';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import type { OwnerRole } from '../../api/client';
+import type { Theme } from '../theme';
 
 /** Stable id the owner `<main>` exposes (skip-link target / focus). */
 export const OWNER_CONTENT_ID = 'owner-content';
+
+/** localStorage key for sidebar collapsed state. */
+const SIDEBAR_COLLAPSED_KEY = 'owner-sidebar-collapsed';
+
+/**
+ * Separate localStorage key for the owner panel theme preference (Req 8.1).
+ * Dark-mode-first: defaults to 'dark' when no stored value exists, independent
+ * of the main app theme stored under 'salon-theme'.
+ */
+export const OWNER_THEME_STORAGE_KEY = 'owner-theme';
+
+/**
+ * Reads the persisted owner theme preference from localStorage.
+ * Defaults to 'dark' (dark-mode-first NYC SaaS aesthetic).
+ */
+function getOwnerTheme(): Theme {
+  try {
+    const stored = localStorage.getItem(OWNER_THEME_STORAGE_KEY);
+    return stored === 'light' ? 'light' : 'dark';
+  } catch {
+    return 'dark';
+  }
+}
+
+/**
+ * Persists the owner theme preference to localStorage.
+ */
+function setOwnerThemeStorage(theme: Theme): void {
+  try {
+    localStorage.setItem(OWNER_THEME_STORAGE_KEY, theme);
+  } catch {
+    // Silent — localStorage unavailable
+  }
+}
 
 /** A single owner-panel navigation destination. */
 export interface OwnerNavItem {
@@ -93,21 +132,37 @@ export interface OwnerShellProps {
 }
 
 /**
- * Owner panel **shell** (R2.1, R2.3, R2.9, R2.10; ui-ux §5/§8/§10).
+ * Reads the persisted sidebar collapsed state from localStorage.
+ * Defaults to `false` (expanded) when no stored value exists.
+ */
+function getPersistedCollapsed(): boolean {
+  try {
+    const stored = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+    return stored === 'true';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Owner panel **shell** (R2.1, R2.3, R2.9, R2.10; Req 8.5; Task 7.3).
  *
- * The desktop-first management surface for salon owners. Structurally it mirrors
- * the admin tool shell but is scoped to the `/owner/*` area and adds the
- * panel-level chrome the spec calls for:
+ * Responsive layout wrapper for all `/owner/*` routes:
  *
- *  - a `<header>` with the **salon name**, the **theme toggle**, and a
- *    **sign-out** control;
- *  - a **side navigation** (`lg+`) and a **bottom tab bar** (mobile) whose
- *    destinations are filtered by the authenticated **role** (RBAC, R2.3–R2.6);
- *  - the standard skip-to-content link and a single `<main>` landmark.
+ * - **Desktop (lg+):** header + collapsible `OwnerSidebar` alongside the content
+ *   area in a horizontal flex layout. The sidebar collapsed state is persisted
+ *   to localStorage.
+ * - **Mobile (<lg):** header + content area + fixed `OwnerBottomTabs` at the
+ *   bottom. Content has bottom padding to clear the tab bar.
  *
- * Layout is RTL-first (logical properties only) and token-driven; the active
- * route is marked with `aria-current="page"`. The `dir="rtl"`/`lang="fa"`
- * document contract lives on the app root wrapper in `App.tsx` (R2.9).
+ * Both navigation components are role-filtered (RBAC). The shell retains:
+ * - Skip-to-content link
+ * - `<header>` with salon name, theme toggle, sign-out
+ * - Single `<main>` landmark
+ * - `data-shell="owner"` marker
+ *
+ * Layout uses tokens-only styling, logical properties for RTL correctness,
+ * and env(safe-area-inset-bottom) for bottom tab bar on mobile.
  */
 export function OwnerShell({
   children,
@@ -117,16 +172,71 @@ export function OwnerShell({
   className,
 }: OwnerShellProps) {
   const { t } = useTranslation();
-  const nav = ownerNavForRole(role);
+  const { pathname } = useLocation();
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+
+  // Owner-specific theme state — dark-mode-first (Req 8.1, Task 7.7)
+  const [ownerTheme, setOwnerTheme] = useState<Theme>(getOwnerTheme);
+
+  const toggleOwnerTheme = useCallback(() => {
+    setOwnerTheme((prev) => {
+      const next: Theme = prev === 'dark' ? 'light' : 'dark';
+      setOwnerThemeStorage(next);
+      return next;
+    });
+  }, []);
+
+  // Sync owner theme from localStorage on multi-tab
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === OWNER_THEME_STORAGE_KEY) {
+        setOwnerTheme(e.newValue === 'light' ? 'light' : 'dark');
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  // Sidebar collapsed state — persisted to localStorage
+  const [collapsed, setCollapsed] = useState(getPersistedCollapsed);
+
+  // Persist collapsed state whenever it changes
+  const handleToggleSidebar = useCallback(() => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next));
+      } catch {
+        // Silent — localStorage unavailable (e.g. private mode quota)
+      }
+      return next;
+    });
+  }, []);
+
+  // Map the OwnerRole (capitalized) to the sidebar's lowercase role type
+  const sidebarRole = role.toLowerCase() as 'owner' | 'admin' | 'stylist';
+
+  // Sync collapsed state from localStorage on mount (handles multi-tab)
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === SIDEBAR_COLLAPSED_KEY) {
+        setCollapsed(e.newValue === 'true');
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
   return (
     <div
       data-shell="owner"
+      data-theme={ownerTheme}
       className={cn(
         'flex min-h-screen flex-col overflow-x-hidden bg-bg text-text',
         className,
       )}
     >
+      {/* Skip to content link */}
       <a
         href={`#${OWNER_CONTENT_ID}`}
         className={cn(
@@ -138,6 +248,7 @@ export function OwnerShell({
         {t('app.skipToContent')}
       </a>
 
+      {/* Header */}
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex w-full max-w-container items-center justify-between gap-4 px-4 py-3">
           <Link
@@ -147,7 +258,7 @@ export function OwnerShell({
             {salonName || t('owner.title')}
           </Link>
           <div className="flex items-center gap-2">
-            <ThemeToggle />
+            <OwnerThemeToggle theme={ownerTheme} onToggle={toggleOwnerTheme} />
             <Button
               variant="ghost"
               size="md"
@@ -161,86 +272,39 @@ export function OwnerShell({
         </div>
       </header>
 
-      <div className="mx-auto flex w-full max-w-container flex-1">
-        {/* Desktop side navigation (lg+); the bottom tab bar takes over on mobile. */}
-        <nav
-          aria-label={t('owner.nav.label')}
-          className="hidden w-56 shrink-0 border-e border-border bg-surface px-3 py-5 lg:block"
-        >
-          <ul className="flex flex-col gap-1">
-            {nav.map((item) => {
-              const Icon = item.icon;
-              return (
-                <li key={item.to}>
-                  <NavLink
-                    to={item.to}
-                    end={item.to === '/owner'}
-                    className={({ isActive }) =>
-                      cn(
-                        'flex items-center gap-3 rounded-md px-3 py-2 text-sm no-underline',
-                        'outline-none focus-visible:outline focus-visible:outline-2',
-                        'focus-visible:outline-offset-2 focus-visible:outline-focus',
-                        isActive
-                          ? 'bg-primary font-bold text-primary-contrast'
-                          : 'text-text hover:bg-elevated',
-                      )
-                    }
-                  >
-                    <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-                    <span>{t(item.labelKey)}</span>
-                  </NavLink>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+      {/* Content area: sidebar (desktop) + main */}
+      <div className="flex flex-1">
+        {/* Desktop sidebar — visible only on lg+ */}
+        {isDesktop && (
+          <OwnerSidebar
+            collapsed={collapsed}
+            onToggle={handleToggleSidebar}
+            activeRoute={pathname}
+            role={sidebarRole}
+          />
+        )}
 
+        {/* Main content area */}
         <main
           id={OWNER_CONTENT_ID}
           tabIndex={-1}
           className={cn(
             'min-w-0 flex-1 px-4 py-5',
-            'pb-[calc(var(--space-10)+env(safe-area-inset-bottom))] lg:pb-5',
+            // Cap the content column on desktop so wide pages (calendar, QR)
+            // don't stretch to the full viewport and look consistent with the
+            // narrower pages (config). Full-width on mobile.
+            isDesktop && 'mx-auto w-full max-w-5xl',
+            // On mobile, add bottom padding to clear the fixed bottom tabs
+            !isDesktop &&
+              'pb-[calc(var(--space-10)+env(safe-area-inset-bottom)+12px)]',
           )}
         >
           {children}
         </main>
       </div>
 
-      {/* Mobile bottom tab bar (lg-hidden), clearing the safe-area inset. */}
-      <nav
-        aria-label={t('owner.tabBar')}
-        data-testid="owner-tab-bar"
-        className={cn(
-          'sticky bottom-0 z-nav border-t border-border bg-surface lg:hidden',
-          'pb-[env(safe-area-inset-bottom)]',
-        )}
-      >
-        <ul className="mx-auto flex w-full max-w-container items-stretch justify-around">
-          {nav.map((item) => {
-            const Icon = item.icon;
-            return (
-              <li key={item.to} className="flex-1">
-                <NavLink
-                  to={item.to}
-                  end={item.to === '/owner'}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex min-h-[44px] flex-col items-center justify-center gap-1 px-2 py-2 text-2xs no-underline',
-                      'outline-none focus-visible:outline focus-visible:outline-2',
-                      'focus-visible:-outline-offset-2 focus-visible:outline-focus',
-                      isActive ? 'font-bold text-primary' : 'text-muted',
-                    )
-                  }
-                >
-                  <Icon className="h-5 w-5" aria-hidden="true" />
-                  <span>{t(item.labelKey)}</span>
-                </NavLink>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+      {/* Mobile bottom tabs — visible only below lg */}
+      {!isDesktop && <OwnerBottomTabs />}
     </div>
   );
 }

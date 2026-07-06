@@ -167,8 +167,10 @@ export const meApi = {
 /** One service captured in the onboarding questionnaire. */
 export interface RegisterSalonServiceInput {
   name: string;
-  durationMinutes: number;
-  priceRial: number;
+  /** Optional — defaults to 30 min server-side when omitted. */
+  durationMinutes?: number;
+  /** Optional — defaults to 0 Rial server-side when omitted. */
+  priceRial?: number;
 }
 
 /** Salon self-registration payload (mirrors the backend `RegisterSalonSchema`). */
@@ -203,6 +205,15 @@ export const registrationApi = {
       method: 'POST',
       body: input,
     }),
+  /**
+   * Pre-flight check: is this phone already registered to a salon owner?
+   * Lets the registration wizard flag a duplicate AT the phone field (Step 1)
+   * instead of bouncing the user back from Submit at Step 3.
+   */
+  checkPhone: (phone: string) =>
+    request<{ available: boolean }>(
+      `/register/check-phone?phone=${encodeURIComponent(phone)}`,
+    ),
 };
 
 // Salon endpoints
@@ -442,7 +453,23 @@ export const adminApi = {
     request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/cancel`, {
       method: 'POST',
     }),
+  /** The salon's money transactions (appointment + subscription payments), newest-first. */
+  getTransactions: (salonId: string) =>
+    request<{ transactions: Transaction[] }>(`/salons/${salonId}/transactions`),
 };
+
+/** A single row in the owner-panel transactions ledger. */
+export interface Transaction {
+  id: string;
+  kind: 'appointment' | 'subscription';
+  amountRial: number;
+  status: string;
+  gateway: string;
+  refId: string | null;
+  createdAt: string;
+  /** Service name (appointment) or plan kind (subscription). */
+  label: string | null;
+}
 
 // ─── Approval policy ───────────────────────────────────────────────────────
 // Owner-panel approval-policy surface (auto-confirm vs manual approval). Mirrors

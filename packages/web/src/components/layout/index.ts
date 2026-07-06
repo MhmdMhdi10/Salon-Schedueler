@@ -28,9 +28,13 @@ export {
   OwnerShell,
   OWNER_CONTENT_ID,
   OWNER_NAV,
+  OWNER_THEME_STORAGE_KEY,
   ownerNavForRole,
 } from './OwnerShell';
 export type { OwnerShellProps, OwnerNavItem } from './OwnerShell';
+
+export { OwnerBottomTabs } from './OwnerBottomTabs';
+export type { OwnerBottomTabsProps } from './OwnerBottomTabs';
 
 export { RouteLoader, ROUTE_LOADER_TESTID } from './RouteLoader';
 export type { RouteLoaderProps } from './RouteLoader';

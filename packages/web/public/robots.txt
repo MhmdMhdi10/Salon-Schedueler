@@ -2,6 +2,7 @@ User-agent: *
 Allow: /
 Disallow: /auth
 Disallow: /admin/
+Disallow: /owner/
 Disallow: /salon/*/book
 Disallow: /booking/
 Disallow: /qr/

@@ -27,10 +27,11 @@ import { salonRouter } from './routes/salon.routes.js';
 import { registrationRouter } from './routes/registration.routes.js';
 import { appointmentRouter } from './routes/appointment.routes.js';
 import { cardOrderRouter } from './routes/card-order.routes.js';
+import { transactionRouter } from './routes/transaction.routes.js';
 import { paymentInitiateRouter, paymentCallbackRouter } from './routes/payment.routes.js';
 import { botRouter } from './routes/bot.routes.js';
 import { adminRouter } from './routes/admin.routes.js';
-import { subscriptionRouter } from './routes/subscription.routes.js';
+import { subscriptionRouter, subscriptionCallbackRouter } from './routes/subscription.routes.js';
 import { qrRouter } from './routes/qr.routes.js';
 import { deviceRouter } from './routes/device.routes.js';
 import { errorHandler } from './middleware/error-handler.js';
@@ -150,6 +151,7 @@ export function buildApp(opts: BuildAppOptions): Express {
   app.use('/api', registrationRouter(services));
   app.use('/api', salonRouter(services, optionalAuth));
   app.use('/api', paymentCallbackRouter(services));
+  app.use('/api', subscriptionCallbackRouter(services));
   // Bot webhooks: public (no requireAuth), guarded by a webhook-secret path
   // segment; always answer 200 on a valid secret to avoid retry storms
   // (Requirements 1.1, 1.6, 8.1).
@@ -170,6 +172,7 @@ export function buildApp(opts: BuildAppOptions): Express {
   });
   protectedRouter.use(appointmentRouter(services, requireRole));
   protectedRouter.use(cardOrderRouter(requireRole));
+  protectedRouter.use(transactionRouter(services, requireRole));
   protectedRouter.use(paymentInitiateRouter(services));
   protectedRouter.use(adminRouter(services, requireRole));
   protectedRouter.use(subscriptionRouter(services, requireRole));

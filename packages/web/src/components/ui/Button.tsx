@@ -115,7 +115,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         fullWidth && 'w-full',
         className,
       )}
-      {...rest}
+      {...(rest as Record<string, unknown>)}
     >
       {loading && (
         <span className="absolute inset-0 inline-flex items-center justify-center">

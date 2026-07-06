@@ -63,50 +63,50 @@
 
 ## Task 6: Booking Flow Redesign [Req 7, 10, 12]
 - [x] 6.1 Create `BookingStepper.tsx` — horizontal progress indicator with Persian step labels, RTL flow
-- [ ] 6.2 Add AnimatePresence step transitions to booking flow (directional slide, RTL-aware)
+- [x] 6.2 Add AnimatePresence step transitions to booking flow (directional slide, RTL-aware)
   - depends on: 2.6
-- [ ] 6.3 Enhance service selection with card-based Booksy layout, selection animation (highlight + checkmark)
+- [x] 6.3 Enhance service selection with card-based Booksy layout, selection animation (highlight + checkmark)
   - depends on: 6.1
-- [ ] 6.4 Create `MobileDatePicker.tsx` — bottom-sheet wrapper for `JalaliDatePicker` on mobile
-- [ ] 6.5 Add slot chip selection animation (magenta fill, scale pulse) to `SlotGrid.tsx`
+- [x] 6.4 Create `MobileDatePicker.tsx` — bottom-sheet wrapper for `JalaliDatePicker` on mobile
+- [x] 6.5 Add slot chip selection animation (magenta fill, scale pulse) to `SlotGrid.tsx`
   - depends on: 2.12
-- [ ] 6.6 Redesign `BookingConfirmPage.tsx` as premium receipt-like summary card
-- [ ] 6.7 Enhance `BookingSuccessPage.tsx` with celebration animation (CelebrationRing + ConfettiParticles)
+- [x] 6.6 Redesign `BookingConfirmPage.tsx` as premium receipt-like summary card
+- [x] 6.7 Enhance `BookingSuccessPage.tsx` with celebration animation (CelebrationRing + ConfettiParticles)
   - depends on: 2.9
-- [ ] 6.8 Ensure booking flow is fully keyboard-operable with RTL focus order and maintains state on back-navigation
+- [x] 6.8 Ensure booking flow is fully keyboard-operable with RTL focus order and maintains state on back-navigation
   - depends on: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7
-- [ ] 6.9 Verify booking steps are noindex, thumb-zone CTAs on mobile, error/skeleton states complete
+- [x] 6.9 Verify booking steps are noindex, thumb-zone CTAs on mobile, error/skeleton states complete
   - depends on: 6.8
 
 ## Task 7: Owner Dashboard Redesign [Req 8, 10, 12]
-- [ ] 7.1 Create `OwnerSidebar.tsx` — collapsible sidebar nav with icons-only mode, role-filtered, RTL
-- [ ] 7.2 Create `OwnerBottomTabs.tsx` — mobile bottom tab bar with active indicator animation
-- [ ] 7.3 Rework `OwnerShell.tsx` to use sidebar (desktop) + bottom tabs (mobile) with responsive switching
+- [x] 7.1 Create `OwnerSidebar.tsx` — collapsible sidebar nav with icons-only mode, role-filtered, RTL
+- [x] 7.2 Create `OwnerBottomTabs.tsx` — mobile bottom tab bar with active indicator animation
+- [x] 7.3 Rework `OwnerShell.tsx` to use sidebar (desktop) + bottom tabs (mobile) with responsive switching
   - depends on: 7.1, 7.2
-- [ ] 7.4 Redesign `OwnerCalendarPage.tsx` — day/week views, time grid, appointment blocks, view-switch animation
+- [x] 7.4 Redesign `OwnerCalendarPage.tsx` — day/week views, time grid, appointment blocks, view-switch animation
   - depends on: 7.3
-- [ ] 7.5 Redesign `OwnerAnalyticsPage.tsx` — metrics cards with counter animation, charts with NYC styling, lazy-loaded chart lib
+- [x] 7.5 Redesign `OwnerAnalyticsPage.tsx` — metrics cards with counter animation, charts with NYC styling, lazy-loaded chart lib
   - depends on: 7.3, 2.11
-- [ ] 7.6 Redesign `OwnerConfigurationPage.tsx` — card sections with expand/collapse, inline edit, add/remove animations
+- [x] 7.6 Redesign `OwnerConfigurationPage.tsx` — card sections with expand/collapse, inline edit, add/remove animations
   - depends on: 7.3
-- [ ] 7.7 Apply dark-mode-first styling to all owner surfaces (default dark, overridable)
+- [x] 7.7 Apply dark-mode-first styling to all owner surfaces (default dark, overridable)
   - depends on: 7.4, 7.5, 7.6
-- [ ] 7.8 Verify dashboard: keyboard nav (RTL arrows), skeleton/error states, Jalali dates, Persian numerals, responsive
+- [x] 7.8 Verify dashboard: keyboard nav (RTL arrows), skeleton/error states, Jalali dates, Persian numerals, responsive
   - depends on: 7.7
 
 ## Task 8: Photography & Assets [Req 9]
-- [ ] 8.1 Create `SalonPlaceholder.tsx` — branded placeholder using Motif + signature palette
-- [ ] 8.2 Generate/source NYC editorial salon photography for landing and discovery placeholders
+- [x] 8.1 Create `SalonPlaceholder.tsx` — branded placeholder using Motif + signature palette
+- [x] 8.2 Generate/source NYC editorial salon photography for landing and discovery placeholders
   - depends on: 1.3
-- [ ] 8.3 Process images through AVIF/WebP pipeline with responsive srcset (640w, 960w, 1280w)
+- [x] 8.3 Process images through AVIF/WebP pipeline with responsive srcset (640w, 960w, 1280w)
   - depends on: 8.2
-- [ ] 8.4 Ensure all images have Persian alt text, explicit width/height, correct loading/fetchpriority attributes
+- [x] 8.4 Ensure all images have Persian alt text, explicit width/height, correct loading/fetchpriority attributes
   - depends on: 8.3
 
 ## Task 9: PWA & SEO Polish [Req 14, 15]
-- [ ] 9.1 Update `manifest.json` with NYC magenta theme_color, Persian metadata, maskable icon
-- [ ] 9.2 Verify service worker caching strategy (no auth data leakage, offline shell works)
-- [ ] 9.3 Verify all public pages are prerendered with correct meta, canonical, OG, hreflang, JSON-LD in initial HTML
+- [x] 9.1 Update `manifest.json` with NYC magenta theme_color, Persian metadata, maskable icon
+- [x] 9.2 Verify service worker caching strategy (no auth data leakage, offline shell works)
+- [x] 9.3 Verify all public pages are prerendered with correct meta, canonical, OG, hreflang, JSON-LD in initial HTML
   - depends on: 3.8, 4.6, 5.8
-- [ ] 9.4 Generate branded OG images (1200x630, RTL-correct Persian text, magenta brand)
-- [ ] 9.5 Verify robots.txt + sitemap.xml list only indexable URLs
+- [x] 9.4 Generate branded OG images (1200x630, RTL-correct Persian text, magenta brand)
+- [x] 9.5 Verify robots.txt + sitemap.xml list only indexable URLs

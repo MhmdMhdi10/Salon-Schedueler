@@ -78,40 +78,55 @@ describe('QrService.buildSalonQrPayload', () => {
 });
 
 describe('QrService.buildSalonQrUrl', () => {
+  // The path segment MUST be the same encodeSalonQr payload the QR image
+  // itself encodes — parseSalonQr/resolveQr cannot decode a raw qrToken, so a
+  // campaign link built from the bare token would 404 as QR_MALFORMED even
+  // though the salon exists. Assert against encodeSalonQr's own output rather
+  // than a hand-rolled string so this test tracks the codec, not a snapshot.
   it('builds the public profile URL with the default utm_source=qr (R4.3, R4.4)', () => {
     const { prisma } = createMockPrisma([]);
     const service = new QrService(prisma);
+    const base = `${DEFAULT_PUBLIC_BASE_URL}/s/`;
+    const encodedPayload = encodeSalonQr('my-token', base).slice(base.length);
 
-    expect(service.buildSalonQrUrl('my-salon')).toBe(
-      `${DEFAULT_PUBLIC_BASE_URL}/s/my-salon?utm_source=qr`,
+    expect(service.buildSalonQrUrl('my-token')).toBe(
+      `${DEFAULT_PUBLIC_BASE_URL}/s/${encodedPayload}?utm_source=qr`,
     );
   });
 
   it('honors a custom campaign source', () => {
     const { prisma } = createMockPrisma([]);
     const service = new QrService(prisma);
+    const base = `${DEFAULT_PUBLIC_BASE_URL}/s/`;
+    const encodedPayload = encodeSalonQr('my-token', base).slice(base.length);
 
-    expect(service.buildSalonQrUrl('my-salon', 'instagram')).toBe(
-      `${DEFAULT_PUBLIC_BASE_URL}/s/my-salon?utm_source=instagram`,
+    expect(service.buildSalonQrUrl('my-token', 'instagram')).toBe(
+      `${DEFAULT_PUBLIC_BASE_URL}/s/${encodedPayload}?utm_source=instagram`,
     );
   });
 
   it('honors a configurable public base URL and strips a trailing slash', () => {
     const { prisma } = createMockPrisma([]);
     const service = new QrService(prisma, { publicBaseUrl: 'https://salon.example.com/' });
+    const base = 'https://salon.example.com/s/';
+    const encodedPayload = encodeSalonQr('my-token', base).slice(base.length);
 
-    expect(service.buildSalonQrUrl('my-salon')).toBe(
-      'https://salon.example.com/s/my-salon?utm_source=qr',
+    expect(service.buildSalonQrUrl('my-token')).toBe(
+      `https://salon.example.com/s/${encodedPayload}?utm_source=qr`,
     );
   });
 
-  it('url-encodes the slug', () => {
+  it('produces a URL whose payload segment resolves back via parseSalonQr (R4.2)', () => {
     const { prisma } = createMockPrisma([]);
     const service = new QrService(prisma);
 
-    expect(service.buildSalonQrUrl('a salon/with chars')).toBe(
-      `${DEFAULT_PUBLIC_BASE_URL}/s/a%20salon%2Fwith%20chars?utm_source=qr`,
-    );
+    const url = service.buildSalonQrUrl('a salon/with chars');
+    const encodedPayload = new URL(url).pathname.replace(/^\/s\//, '');
+
+    expect(parseSalonQr(decodeURIComponent(encodedPayload))).toEqual({
+      kind: 'ok',
+      salonToken: 'a salon/with chars',
+    });
   });
 });
 

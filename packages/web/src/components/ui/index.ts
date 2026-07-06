@@ -75,6 +75,8 @@ export { RatingStars } from './RatingStars';
 export type { RatingStarsProps, RatingStarsSize } from './RatingStars';
 export { SalonCard } from './SalonCard';
 export type { SalonCardProps } from './SalonCard';
+export { SalonPlaceholder } from './SalonPlaceholder';
+export type { SalonPlaceholderProps } from './SalonPlaceholder';
 export { Reveal, PageTransition } from './Motion';
 export type { RevealProps, PageTransitionProps } from './Motion';
 export { ScrollReveal } from './ScrollReveal';
@@ -92,6 +94,10 @@ export { ImageCarousel } from './ImageCarousel';
 export type { ImageCarouselProps, CarouselImage } from './ImageCarousel';
 export { BookingStepper } from './BookingStepper';
 export type { BookingStepperProps, BookingStep } from './BookingStepper';
+export { BookingFlowTransition } from './BookingFlowTransition';
+export type { BookingFlowTransitionProps } from './BookingFlowTransition';
+export { ServiceCardList } from './ServiceCardList';
+export type { ServiceCardListProps, ServiceCardItem } from './ServiceCardList';
 
 // Persian formatting & bidi helpers (display-only localization, R7.2–7.5)
 export { Num, toPersianDigits } from './Num';
@@ -106,6 +112,8 @@ export type { DirTextProps } from './DirText';
 // Date & time selection
 export { JalaliDatePicker } from './JalaliDatePicker';
 export type { JalaliDatePickerProps, JalaliDatePickerVariant } from './JalaliDatePicker';
+export { MobileDatePicker } from './MobileDatePicker';
+export type { MobileDatePickerProps } from './MobileDatePicker';
 export { SlotGrid, SlotChip } from './SlotGrid';
 export type { SlotGridProps, SlotChipProps, SlotItem, SlotState } from './SlotGrid';
 export { DayScroller } from './DayScroller';

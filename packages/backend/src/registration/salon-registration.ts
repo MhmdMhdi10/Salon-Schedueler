@@ -95,8 +95,23 @@ export class SalonRegistration {
         },
       });
 
+      // Default working hours for the owner (all 7 weekdays, 09:00–20:00) so a
+      // freshly-registered salon is immediately bookable. The scheduling engine
+      // returns no slots until at least one staff member has working_hours.
+      await tx.workingHours.createMany({
+        data: Array.from({ length: 7 }, (_, weekday) => ({
+          ownerKind: 'staff',
+          ownerId: owner.id,
+          weekday,
+          startTime: new Date('1970-01-01T09:00:00'),
+          endTime: new Date('1970-01-01T20:00:00'),
+        })),
+      });
+
+      // Create the requested services and link each to the owner so the engine
+      // can find qualified staff (service_staff is a hard precondition).
       if (services.length > 0) {
-        await tx.service.createMany({
+        const created = await tx.service.createMany({
           data: services.map((s) => ({
             salonId: salon.id,
             name: s.name,
@@ -105,16 +120,50 @@ export class SalonRegistration {
             priceRial: BigInt(Math.max(0, Math.round(s.priceRial))),
             requiresDeposit: false,
           })),
+          // createMany does not return created rows; fetch them next.
+        });
+        void created;
+        const serviceRows = await tx.service.findMany({
+          where: { salonId: salon.id },
+          select: { id: true },
+        });
+        await tx.serviceStaff.createMany({
+          data: serviceRows.map((s) => ({
+            serviceId: s.id,
+            staffMemberId: owner.id,
+          })),
         });
       }
 
+      // Create the requested chairs and give each default working hours so the
+      // engine can find compatible chairs (chair working_hours is also a hard
+      // precondition).
       if (chairCount > 0) {
-        await tx.chair.createMany({
+        const chairRows = await tx.chair.createManyAndReturn({
           data: Array.from({ length: chairCount }, (_, i) => ({
             salonId: salon.id,
             name: `صندلی ${i + 1}`,
           })),
         });
+        const chairHours: Array<{
+          ownerKind: string;
+          ownerId: string;
+          weekday: number;
+          startTime: Date;
+          endTime: Date;
+        }> = [];
+        for (const chair of chairRows) {
+          for (let weekday = 0; weekday < 7; weekday += 1) {
+            chairHours.push({
+              ownerKind: 'chair',
+              ownerId: chair.id,
+              weekday,
+              startTime: new Date('1970-01-01T09:00:00'),
+              endTime: new Date('1970-01-01T20:00:00'),
+            });
+          }
+        }
+        await tx.workingHours.createMany({ data: chairHours });
       }
 
       return { salon, ownerStaffId: owner.id };
@@ -205,5 +254,19 @@ export class SalonRegistration {
       select: { brandAccent: true },
     });
     return salon?.brandAccent ?? null;
+  }
+
+  /**
+   * Reports whether a phone number is already registered to a staff member
+   * (and thus already owns a salon). Used by the registration wizard to flag a
+   * duplicate phone immediately at Step 1 — instead of bouncing the user all
+   * the way back from Submit at Step 3. Public; returns only a boolean.
+   */
+  async isPhoneTaken(phone: string): Promise<boolean> {
+    const staff = await this.prisma.staffMember.findUnique({
+      where: { phone },
+      select: { id: true },
+    });
+    return staff !== null;
   }
 }

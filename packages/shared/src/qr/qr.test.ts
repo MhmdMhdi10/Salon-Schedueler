@@ -1,4 +1,4 @@
-import { encodeSalonQr, parseSalonQr } from './index';
+import { encodeSalonQr, parseSalonQr, QR_BASE_URL } from './index';
 
 describe('QR payload codec', () => {
   describe('encodeSalonQr', () => {
@@ -81,6 +81,25 @@ describe('QR payload codec', () => {
       const token = 'uuid-4f3a-8b2c-9d1e';
       const payload = encodeSalonQr(token);
       const result = parseSalonQr(payload);
+      expect(result).toEqual({ kind: 'ok', salonToken: token });
+    });
+
+    it('accepts the bare path segment without the base URL prefix', () => {
+      // The campaign URL routes through `/s/:slug`, so resolveQr receives just
+      // `v1.<token>.<checksum>` — the codec must not require the full URL.
+      const token = 'my-salon-token';
+      const full = encodeSalonQr(token);
+      const segment = full.slice(QR_BASE_URL.length);
+      const result = parseSalonQr(segment);
+      expect(result).toEqual({ kind: 'ok', salonToken: token });
+    });
+
+    it('accepts the bare path segment with a custom base stripped', () => {
+      const token = 'dev-token';
+      const base = 'http://localhost:5273/s/';
+      const full = encodeSalonQr(token, base);
+      const segment = full.slice(base.length);
+      const result = parseSalonQr(segment, base);
       expect(result).toEqual({ kind: 'ok', salonToken: token });
     });
   });

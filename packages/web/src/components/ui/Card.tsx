@@ -82,7 +82,8 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
     // Access motion[element] via bracket notation — Framer Motion's proxy
     // supports all valid HTML element strings (div, article, section, etc.)
     const tag = (typeof Component === 'string' ? Component : 'div') as keyof typeof motion;
-    const MotionComponent = motion[tag];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const MotionComponent = motion[tag] as any;
 
     return (
       <MotionComponent

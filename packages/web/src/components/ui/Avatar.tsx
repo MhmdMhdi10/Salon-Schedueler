@@ -78,6 +78,8 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
         <img
           src={src}
           alt={decorative ? '' : (name ?? '')}
+          width={48}
+          height={48}
           onError={() => setFailed(true)}
           className="h-full w-full object-cover"
         />
