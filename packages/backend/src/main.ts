@@ -3,14 +3,55 @@
  *
  * Builds the application via the Composition_Root and starts the HTTP server on
  * the configured PORT (default 3000). The health endpoint is available at
- * GET /healthz (Requirement 2.1).
+ * GET /healthz (Requirement 2.1). The inbox WebSocket endpoint is mounted on the
+ * same HTTP server's 'upgrade' event at /ws/inbox (Requirements 12.x).
  */
+import { createServer } from 'node:http';
+import type { Socket } from 'node:net';
+import { WebSocketServer, type WebSocket as WsSocket } from 'ws';
 import { createApp } from './composition-root.js';
+import { makeWsInboxHandle } from './http/routes/inbox.routes.js';
 
 function bootstrap(): void {
-  const { app, config, prisma } = createApp();
+  const { app, config, prisma, services } = createApp();
 
-  const server = app.listen(config.port, () => {
+  // Single HTTP server used for both REST + WS upgrade hand-off.
+  const server = createServer(app);
+
+  // Inbox WS endpoint: JWT-authenticated per-salon rooms.
+  const wsInbox = makeWsInboxHandle(services, config.jwtAccessSecret);
+  const wss = new WebSocketServer({ noServer: true });
+  server.on('upgrade', (req, socket, head) => {
+    const { url } = req;
+    if (!url || !url.startsWith(wsInbox.path)) {
+      (socket as { destroy: () => void }).destroy();
+      return;
+    }
+    wss.handleUpgrade(req, socket as Socket, head, (ws) => {
+        wsInbox.handleUpgrade(
+          ws as WsSocket,
+          {
+            subprotocol: Array.isArray(req.headers['sec-websocket-protocol'])
+              ? String(req.headers['sec-websocket-protocol'][0] ?? '')
+              : req.headers['sec-websocket-protocol'] ?? undefined,
+            url,
+          },
+          () => {
+            try {
+              (ws as WsSocket & { destroy?: () => void }).destroy?.();
+            } catch {}
+          },
+        );
+        wss.emit('connection', ws, req);
+      },
+    );
+  });
+
+  // Heartbeat to drop dead sockets every 30s.
+  const sweep = setInterval(() => services.wsInboxHub.sweep(), 30_000);
+  sweep.unref?.();
+
+  server.listen(config.port, () => {
     // eslint-disable-next-line no-console
     console.log(`Salon Booking System API listening on port ${config.port}`);
   });
@@ -18,6 +59,8 @@ function bootstrap(): void {
   const shutdown = (signal: string): void => {
     // eslint-disable-next-line no-console
     console.log(`Received ${signal}, shutting down...`);
+    clearInterval(sweep);
+    wss.close();
     server.close(() => {
       void prisma.$disconnect().finally(() => process.exit(0));
     });

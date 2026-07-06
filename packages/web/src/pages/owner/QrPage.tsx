@@ -5,6 +5,7 @@ import {
   Check,
   Copy,
   Download,
+  ExternalLink,
   Image as ImageIcon,
   Lock,
   Package,
@@ -351,9 +352,8 @@ export function OwnerQrPage() {
 
   const handleOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!data) return;
-    // Validate on submit so the button is always tappable and the user gets
-    // explicit field-level feedback instead of a perpetually-greyed button.
+    // No longer require `data` (the QR payload) — the order form is independent
+    // of the subscription-gated QR generation. It only needs the salonId.
     const name = orderName.trim();
     const phone = toLatinDigits(orderPhone).replace(/\D/g, '');
     const address = orderAddress.trim();
@@ -674,6 +674,15 @@ export function OwnerQrPage() {
                 >
                   {copied ? t('owner.qr.copied') : t('owner.qr.copy')}
                 </Button>
+                <a
+                  href={data.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-md border border-border bg-surface px-4 text-sm font-medium text-text no-underline transition-colors duration-fast ease-standard hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                >
+                  <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                  {t('owner.qr.open', { defaultValue: 'باز کردن' })}
+                </a>
               </div>
               <span
                 data-testid="qr-copy-status"
@@ -687,118 +696,125 @@ export function OwnerQrPage() {
           </Card>
 
           {/* ── Order printed cards ── */}
-          <Card
-            as="section"
-            data-testid="qr-order-card"
-            className="owner-qr-screen-only flex flex-col gap-4"
-          >
-            <div className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-primary" aria-hidden="true" />
-              <CardTitle as="h2" className="text-lg font-bold text-text">
-                {t('owner.qr.order.title')}
-              </CardTitle>
-            </div>
+        </>
+      )}
 
-            {orderStatus === 'success' ? (
-              <div
-                data-testid="qr-order-success"
-                role="status"
-                className="owner-qr-order__done"
-              >
-                <Check className="h-6 w-6" aria-hidden="true" />
-                <div className="flex flex-col gap-1">
-                  <strong>{t('owner.qr.order.successTitle')}</strong>
-                  <span className="text-sm">
-                    {t('owner.qr.order.successBody')}
+      {/* Order printed cards — always available (not subscription-gated). */}
+      {status !== 'loading' && status !== 'error' && (
+        <Card
+          as="section"
+          data-testid="qr-order-card"
+          className="owner-qr-screen-only flex flex-col gap-4"
+        >
+          <div className="flex items-center gap-2">
+            <Package className="h-5 w-5 text-primary" aria-hidden="true" />
+            <CardTitle as="h2" className="text-lg font-bold text-text">
+              {t('owner.qr.order.title')}
+            </CardTitle>
+          </div>
+
+          {orderStatus === 'success' ? (
+            <div
+              data-testid="qr-order-success"
+              role="status"
+              className="owner-qr-order__done"
+            >
+              <Check className="h-6 w-6" aria-hidden="true" />
+              <div className="flex flex-col gap-1">
+                <strong>{t('owner.qr.order.successTitle')}</strong>
+                <span className="text-sm">
+                  {t('owner.qr.order.successBody')}
+                </span>
+                {orderId && (
+                  <span className="text-xs text-muted">
+                    {t('owner.qr.order.refLabel')}:{' '}
+                    <DirText dir="ltr" className="select-all">
+                      {orderId}
+                    </DirText>
                   </span>
-                  {orderId && (
-                    <span className="text-xs text-muted">
-                      {t('owner.qr.order.refLabel')}:{' '}
-                      <DirText dir="ltr" className="select-all">
-                        {orderId}
-                      </DirText>
-                    </span>
-                  )}
-                </div>
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setOrderStatus('idle');
-                    setOrderId('');
-                  }}
-                >
-                  {t('owner.qr.order.again')}
-                </Button>
+                )}
               </div>
-            ) : (
-              <form className="flex flex-col gap-4" onSubmit={handleOrder}>
-                <p className="text-sm text-muted">
-                  {t('owner.qr.order.subtitle', {
-                    template: t(`owner.qr.template.${orderTemplate}`),
-                  })}
-                </p>
-                <div className="owner-qr-order__grid">
-                  <Select
-                    label={t('owner.qr.order.qtyLabel')}
-                    value={orderQty}
-                    onValueChange={setOrderQty}
-                    options={qtyOptions}
-                  />
-                  <TextField
-                    label={t('owner.qr.order.nameLabel')}
-                    value={orderName}
-                    onChange={(e) => setOrderName(e.target.value)}
-                    placeholder={t('owner.qr.order.namePlaceholder')}
-                    autoComplete="name"
-                    required
-                  />
-                  <TextField
-                    label={t('owner.qr.order.phoneLabel')}
-                    value={orderPhone}
-                    onChange={(e) => setOrderPhone(e.target.value)}
-                    type="tel"
-                    inputMode="tel"
-                    dir="ltr"
-                    autoComplete="tel"
-                    placeholder="09xxxxxxxxx"
-                    required
-                  />
-                </div>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setOrderStatus('idle');
+                  setOrderId('');
+                }}
+              >
+                {t('owner.qr.order.again')}
+              </Button>
+            </div>
+          ) : (
+            <form className="flex flex-col gap-4" onSubmit={handleOrder}>
+              <p className="text-sm text-muted">
+                {t('owner.qr.order.subtitle', {
+                  template: t(`owner.qr.template.${orderTemplate}`),
+                })}
+              </p>
+              <div className="owner-qr-order__grid">
+                <Select
+                  label={t('owner.qr.order.qtyLabel')}
+                  value={orderQty}
+                  onValueChange={setOrderQty}
+                  options={qtyOptions}
+                />
                 <TextField
-                  label={t('owner.qr.order.addressLabel')}
-                  value={orderAddress}
-                  onChange={(e) => setOrderAddress(e.target.value)}
-                  placeholder={t('owner.qr.order.addressPlaceholder')}
-                  autoComplete="street-address"
+                  label={t('owner.qr.order.nameLabel')}
+                  value={orderName}
+                  onChange={(e) => setOrderName(e.target.value)}
+                  placeholder={t('owner.qr.order.namePlaceholder')}
+                  autoComplete="name"
                   required
                 />
-                <Textarea
-                  label={t('owner.qr.order.notesLabel')}
-                  value={orderNotes}
-                  onChange={(e) => setOrderNotes(e.target.value)}
-                  placeholder={t('owner.qr.order.notesPlaceholder')}
-                  rows={2}
+                <TextField
+                  label={t('owner.qr.order.phoneLabel')}
+                  value={orderPhone}
+                  onChange={(e) => setOrderPhone(e.target.value)}
+                  type="tel"
+                  inputMode="tel"
+                  dir="ltr"
+                  autoComplete="tel"
+                  placeholder="09xxxxxxxxx"
+                  required
                 />
-                {orderStatus === 'error' && (
-                  <p role="alert" className="text-sm text-danger">
-                    {orderError}
-                  </p>
-                )}
-                <div>
-                  <Button
-                    type="submit"
-                    data-testid="qr-order-submit"
-                    variant="primary"
-                    loading={orderStatus === 'submitting'}
-                    startIcon={<Package className="h-4 w-4" />}
-                  >
-                    {t('owner.qr.order.submit')}
-                  </Button>
-                </div>
-              </form>
-            )}
-          </Card>
-
+              </div>
+              <TextField
+                label={t('owner.qr.order.addressLabel')}
+                value={orderAddress}
+                onChange={(e) => setOrderAddress(e.target.value)}
+                placeholder={t('owner.qr.order.addressPlaceholder')}
+                autoComplete="street-address"
+                required
+              />
+              <Textarea
+                label={t('owner.qr.order.notesLabel')}
+                value={orderNotes}
+                onChange={(e) => setOrderNotes(e.target.value)}
+                placeholder={t('owner.qr.order.notesPlaceholder')}
+                rows={2}
+              />
+              {orderStatus === 'error' && (
+                <p role="alert" className="text-sm text-danger">
+                  {orderError}
+                </p>
+              )}
+              <div>
+                <Button
+                  type="submit"
+                  data-testid="qr-order-submit"
+                  variant="primary"
+                  loading={orderStatus === 'submitting'}
+                  startIcon={<Package className="h-4 w-4" />}
+                >
+                  {t('owner.qr.order.submit')}
+                </Button>
+              </div>
+            </form>
+          )}
+        </Card>
+          )}
+      {status === 'success' && data && (
+        <>
           {/* ── Print surface: simple standee (always in DOM; print-only) ── */}
           <section
             data-testid="qr-standee"
@@ -838,5 +854,4 @@ export function OwnerQrPage() {
     </section>
   );
 }
-
 export default OwnerQrPage;

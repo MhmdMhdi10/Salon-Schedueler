@@ -350,12 +350,28 @@
     display: none !important;
   }
 
-  /* Default standee print layout (used when the standee template is selected). */
-  .owner-qr-standee {
+  /* Reset the page layout for print — remove the shell's sidebar/header. */
+  body * {
+    visibility: hidden;
+  }
+  .owner-qr-standee,
+  .owner-qr-standee *,
+  .owner-qr-print-asset,
+  .owner-qr-print-asset * {
+    visibility: visible;
+  }
+  .owner-qr-standee,
+  .owner-qr-print-asset {
+    position: fixed;
+    inset: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+  }
+
+  /* Default standee print layout (used when the standee template is selected). */
+  .owner-qr-standee {
     gap: var(--space-6);
     min-block-size: 100vh;
     padding-block: var(--space-10);
@@ -394,7 +410,7 @@
   }
 
   @page {
-    margin: 12mm;
+    margin: 8mm;
   }
 }
 

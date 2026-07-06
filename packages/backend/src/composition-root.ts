@@ -38,6 +38,8 @@ import { SalonRegistration, ResourceRegistration } from './registration/index.js
 import { AvailabilityConfig } from './availability-config/index.js';
 import { QrService } from './qr/index.js';
 import { SubscriptionService, DEFAULT_SUBSCRIPTION_PRICES } from './subscription/index.js';
+import { SalonInboxService } from './inbox/index.js';
+import { WsInboxHub } from './inbox/ws-inbox-hub.js';
 
 // Application-layer flows (cross-service wiring — Requirement 4.5).
 import { BookingFlow } from './app/booking-flow.js';
@@ -287,11 +289,21 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     },
   });
 
+  // Salon Inbox_Notification_Service: durable row store + realtime WS fan-out.
+  // `WsInboxHub` is the in-process realization of the hub; the same interface
+  // can be backed by Redis pub/sub for a real farm.
+  const wsInboxHub = new WsInboxHub();
+  const salonInboxService = new SalonInboxService(prisma, wsInboxHub);
+
   const authorizer = new Authorizer();
 
   // Application-layer flows wire the framework-agnostic domain services together:
   // booking → confirmation, and cancellation/expiry → waitlist notification.
-  const bookingFlow = new BookingFlow({ schedulingEngine, notificationService });
+  const bookingFlow = new BookingFlow({
+    schedulingEngine,
+    notificationService,
+    inboxService: salonInboxService,
+  });
   const cancellationFlow = new CancellationFlow({
     cancellationService,
     schedulingEngine,
@@ -337,6 +349,8 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     authorizer,
     bookingFlow,
     cancellationFlow,
+    salonInboxService,
+    wsInboxHub,
   };
 
   return { prisma, services, config };

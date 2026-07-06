@@ -27,6 +27,25 @@ export interface ConfirmationNotifier {
 export interface BookingFlowDeps {
   schedulingEngine: BookingEngine;
   notificationService: ConfirmationNotifier;
+  /**
+   * Optional salon-inbox notifier (the realtime dashboard surface). When
+   * present, a `booking.pending` notification is emitted for a new pending
+   * appointment, and `booking.approved`/`booking.rejected` on the matching
+   * admin action. Inbox delivery is best-effort: failures are swallowed.
+   */
+  inboxService?: {
+    emit(input: {
+      salonId: string;
+      audience?: 'owner' | 'admin' | 'stylist' | 'all-staff';
+      staffMemberId?: string | null;
+      type: string;
+      title: string;
+      body: string;
+      payload?:
+        | Record<string, unknown>
+        | null;
+    }): Promise<unknown>;
+  };
   logger?: Logger;
 }
 
@@ -46,11 +65,13 @@ export interface BookingFlowDeps {
 export class BookingFlow {
   private readonly schedulingEngine: BookingEngine;
   private readonly notificationService: ConfirmationNotifier;
+  private readonly inboxService: BookingFlowDeps['inboxService'];
   private readonly logger: Logger;
 
   constructor(deps: BookingFlowDeps) {
     this.schedulingEngine = deps.schedulingEngine;
     this.notificationService = deps.notificationService;
+    this.inboxService = deps.inboxService;
     this.logger = deps.logger ?? console;
   }
 
@@ -70,6 +91,24 @@ export class BookingFlow {
       await this.safelyNotify(() =>
         this.notificationService.sendConfirmation(result.appointment.id),
       );
+    } else if (result.status === 'pending' && this.inboxService) {
+      const a = result.appointment;
+      const inbox = this.inboxService;
+      await this.safelyNotify(() =>
+        inbox.emit({
+          salonId: a.salonId,
+          audience: 'all-staff',
+          staffMemberId: a.staffMemberId,
+          type: 'booking.pending',
+          title: 'نوبت در انتظار تأیید',
+          body: 'یک رزرو جدید ثبت شد و منتظر تأیید شماست.',
+          payload: {
+            appointmentId: a.id,
+            staffMemberId: a.staffMemberId,
+            date: a.startAt.toISOString().slice(0, 10),
+          },
+        }),
+      );
     }
     return result;
   }
@@ -84,6 +123,20 @@ export class BookingFlow {
     await this.safelyNotify(() =>
       this.notificationService.sendConfirmation(appointment.id),
     );
+    if (this.inboxService) {
+      const inbox = this.inboxService;
+      await this.safelyNotify(() =>
+        inbox.emit({
+          salonId: appointment.salonId,
+          audience: 'all-staff',
+          staffMemberId: appointment.staffMemberId,
+          type: 'booking.approved',
+          title: 'نوبت تأیید شد',
+          body: 'رزرو توسط مدیر تأیید شد.',
+          payload: { appointmentId: appointment.id, staffMemberId: appointment.staffMemberId },
+        }),
+      );
+    }
     return appointment;
   }
 
@@ -97,6 +150,20 @@ export class BookingFlow {
     await this.safelyNotify(() =>
       this.notificationService.sendRejection(appointment.id),
     );
+    if (this.inboxService) {
+      const inbox = this.inboxService;
+      await this.safelyNotify(() =>
+        inbox.emit({
+          salonId: appointment.salonId,
+          audience: 'all-staff',
+          staffMemberId: appointment.staffMemberId,
+          type: 'booking.rejected',
+          title: 'نوبت رد شد',
+          body: 'رزرو توسط مدیر رد شد.',
+          payload: { appointmentId: appointment.id, staffMemberId: appointment.staffMemberId },
+        }),
+      );
+    }
     return appointment;
   }
 

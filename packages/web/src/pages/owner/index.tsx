@@ -105,6 +105,9 @@ export { OwnerSubscriptionPage } from './SubscriptionPage';
 /** Transactions ledger — «تراکنش‌ها» (appointment + subscription payments). */
 export { OwnerTransactionsPage } from './OwnerTransactionsPage';
 
+/** Salon inbox notifications — «اعلان‌ها» (live WS + durable list). */
+export { OwnerNotificationsPage } from './OwnerNotificationsPage';
+
 /** QR + standee landing — real surface (task 5.4; R4.1, R4.3). */
 export { OwnerQrPage } from './QrPage';
 

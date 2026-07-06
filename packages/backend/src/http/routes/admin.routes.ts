@@ -380,6 +380,89 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     }),
   );
 
+  // Add a chair to the salon (Owner only). Body: { name }.
+  router.post(
+    '/salons/:id/chairs',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+      if (!name) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'name' });
+        return;
+      }
+      const chair = await services.resourceRegistration.registerChair(req.params.id, name);
+      // Give the new chair default working hours (09:00–20:00 all 7 days) so it
+      // is immediately bookable — mirrors registerSalon's auto-seed.
+      await services.availabilityConfig.setWorkingHours('chair', chair.id, [
+        { weekday: 0, startTime: '09:00', endTime: '20:00' },
+        { weekday: 1, startTime: '09:00', endTime: '20:00' },
+        { weekday: 2, startTime: '09:00', endTime: '20:00' },
+        { weekday: 3, startTime: '09:00', endTime: '20:00' },
+        { weekday: 4, startTime: '09:00', endTime: '20:00' },
+        { weekday: 5, startTime: '09:00', endTime: '20:00' },
+        { weekday: 6, startTime: '09:00', endTime: '20:00' },
+      ]);
+      res.status(201).json({ chair });
+    }),
+  );
+
+  // Add a service to the salon (Owner only). Body: { name, durationMinutes,
+  // priceRial }. Duration/price are optional (default 30 min / 0 Rial). The new
+  // service is auto-linked to the salon's Owner so it is immediately bookable.
+  router.post(
+    '/salons/:id/services',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+      if (!name) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'name' });
+        return;
+      }
+      const durationMinutes =
+        typeof req.body?.durationMinutes === 'number' && req.body.durationMinutes > 0
+          ? req.body.durationMinutes
+          : 30;
+      const priceRial =
+        typeof req.body?.priceRial === 'number' && req.body.priceRial >= 0
+          ? req.body.priceRial
+          : 0;
+      const service = await services.serviceCatalog.createService({
+        salonId: req.params.id,
+        name,
+        durationMinutes,
+        bufferMinutes: 0,
+        priceRial,
+        requiresDeposit: false,
+        requiredEquipmentIds: [],
+      });
+      // Auto-link the service to all active staff so it is immediately bookable
+      // (mirrors registerSalon's auto-seed).
+      const staff = await services.resourceRegistration.listStaff(req.params.id);
+      await services.serviceCatalog.setServiceStaff(
+        service.id,
+        staff.filter((s) => s.active).map((s) => s.id),
+      );
+      res.status(201).json({
+        service: {
+          id: service.id,
+          name: service.name,
+          durationMinutes: service.durationMin,
+          priceRial: Number(service.priceRial),
+        },
+      });
+    }),
+  );
+
+  // Delete a service (Owner only).
+  router.delete(
+    '/salons/:id/services/:serviceId',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      await services.serviceCatalog.deleteService(req.params.serviceId);
+      res.status(200).json({ ok: true });
+    }),
+  );
+
   // Read the salon's approval policy (salon default + per-stylist overrides) for
   // the owner configuration UI (Owner only).
   router.get(

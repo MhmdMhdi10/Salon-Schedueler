@@ -15,6 +15,7 @@ import { OwnerThemeToggle } from '../theme/OwnerThemeToggle';
 import { Button } from '../ui/Button';
 import { cn } from '../ui/cn';
 import { OwnerSidebar } from '../owner/OwnerSidebar';
+import { OwnerInboxBell } from '../owner/OwnerInboxBell';
 import { OwnerBottomTabs } from './OwnerBottomTabs';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import type { OwnerRole } from '../../api/client';
@@ -258,6 +259,7 @@ export function OwnerShell({
             {salonName || t('owner.title')}
           </Link>
           <div className="flex items-center gap-2">
+            <OwnerInboxBell />
             <OwnerThemeToggle theme={ownerTheme} onToggle={toggleOwnerTheme} />
             <Button
               variant="ghost"

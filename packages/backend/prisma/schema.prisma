@@ -98,6 +98,7 @@ model Salon {
   waitlistEntries WaitlistEntry[]
   subscription    Subscription?
   qrScanEvents    QrScanEvent[]
+  salonNotifications SalonNotification[]
 
   @@map("salon")
 }
@@ -131,6 +132,7 @@ model StaffMember {
   customerNotes       CustomerNote[] @relation("NoteAuthor")
   customersPreferring Customer[]     @relation("PreferredStaff")
   botChats            BotChat[]
+  salonNotifications  SalonNotification[]
 
   @@map("staff_member")
 }
@@ -433,6 +435,42 @@ model NotificationLog {
 // ─── Bot Chat ──────────────────────────────────────────────────────────────────
 // شناسهٔ گفت‌وگوی ربات برای یک مشتری یا یک عضو staff (صاحب سالن).
 // یکی از customerId یا staffMemberId پر است.
+
+// ─── Salon Inbox Notification ───────────────────────────────────────────────────
+// رویدادهایی که باید صاحب سالن / staff / ادمین در پنل ببینند (نوبت در انتظار تأیید،
+// تأیید/رد نوبت، سفارش کارت، مشتری جدید ...). realtime تحویل با WebSocket می‌شود
+// و سطر در DB برای Inbox باقی می‌ماند تا لمس خوانده‌شدن track شود.
+
+model SalonNotification {
+  id          String   @id @default(uuid()) @db.Uuid
+  salonId     String   @map("salon_id") @db.Uuid
+  /// Target role scope: 'owner' | 'admin' | 'stylist' | 'all-staff'
+  audience    String   @default("owner") @map("audience")
+  /// For stylist-scoped notifications; null otherwise.
+  staffMemberId String? @map("staff_member_id") @db.Uuid
+  /// Type discriminator used by the UI to resolve an icon + Persian template.
+  /// E.g. 'booking.pending' | 'booking.approved' | 'booking.rejected' |
+  /// 'order.created' | 'subscription.expiring' | 'new.customer' | 'new.review'.
+  type        String
+  /// Human-readable Persian title rendered as the inbox row heading.
+  title       String
+  /// Human-readable Persian body (may be reused verbatim in the toast).
+  body        String
+  /// Optional structured payload (e.g. appointmentId, orderId, customerName).
+  payload     Json?
+  readAt      DateTime? @map("read_at") @db.Timestamptz
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  salon        Salon        @relation(fields: [salonId], references: [id])
+  staffMember  StaffMember? @relation(fields: [staffMemberId], references: [id])
+
+  @@index([salonId, createdAt])
+  @@index([salonId, readAt])
+  @@index([salonId, audience, readAt])
+  @@index([salonId, staffMemberId, readAt])
+
+  @@map("salon_notification")
+}
 
 model BotChat {
   id            String      @id @default(uuid()) @db.Uuid

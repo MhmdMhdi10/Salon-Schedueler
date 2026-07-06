@@ -119,4 +119,12 @@ export class ServiceCatalog {
       }
     });
   }
+
+  /**
+   * Delete a service and all its staff/equipment mappings. Cascading deletes
+   * in the schema handle the join tables; this also removes the service row.
+   */
+  async deleteService(serviceId: string): Promise<void> {
+    await this.prisma.service.delete({ where: { id: serviceId } });
+  }
 }

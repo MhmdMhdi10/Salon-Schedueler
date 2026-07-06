@@ -19,6 +19,8 @@ import type { QrService } from '../qr/index.js';
 import type { SubscriptionService } from '../subscription/index.js';
 import type { BookingFlow } from '../app/booking-flow.js';
 import type { CancellationFlow } from '../app/cancellation-flow.js';
+import type { SalonInboxService } from '../inbox/index.js';
+import type { WsInboxHub } from '../inbox/ws-inbox-hub.js';
 import { makeAuth } from './middleware/auth.js';
 import { makeRbac } from './middleware/rbac.js';
 import { healthRouter } from './routes/health.routes.js';
@@ -34,6 +36,7 @@ import { adminRouter } from './routes/admin.routes.js';
 import { subscriptionRouter, subscriptionCallbackRouter } from './routes/subscription.routes.js';
 import { qrRouter } from './routes/qr.routes.js';
 import { deviceRouter } from './routes/device.routes.js';
+import { inboxRouter } from './routes/inbox.routes.js';
 import { errorHandler } from './middleware/error-handler.js';
 
 /**
@@ -68,6 +71,10 @@ export interface Services {
   bookingFlow: BookingFlow;
   /** Application-layer flow: cancellation/expiry + waitlist notification (Requirement 4.2, 4.3). */
   cancellationFlow: CancellationFlow;
+  /** Salon inbox notification service: persists durable rows + WS fan-out. */
+  salonInboxService: SalonInboxService;
+  /** In-process WS hub; the WS route subscribes new sockets here for live delivery. */
+  wsInboxHub: WsInboxHub;
 }
 
 /** Options for building the Express app. */
@@ -178,6 +185,7 @@ export function buildApp(opts: BuildAppOptions): Express {
   protectedRouter.use(subscriptionRouter(services, requireRole));
   protectedRouter.use(qrRouter(services, requireRole));
   protectedRouter.use(deviceRouter(services));
+  protectedRouter.use(inboxRouter(services, requireRole));
   app.use('/api', protectedRouter);
 
   app.use(errorHandler);

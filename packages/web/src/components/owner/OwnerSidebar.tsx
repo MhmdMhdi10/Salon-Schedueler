@@ -7,6 +7,7 @@ import {
   QrCode,
   CreditCard,
   Receipt,
+  Bell,
   ChevronLeft,
   type LucideIcon,
 } from 'lucide-react';
@@ -67,6 +68,12 @@ const SIDEBAR_NAV_ITEMS: readonly SidebarNavItem[] = [
     label: 'تراکنش‌ها',
     icon: Receipt,
     roles: ['owner', 'admin'],
+  },
+  {
+    to: '/owner/notifications',
+    label: 'اعلان‌ها',
+    icon: Bell,
+    roles: ['owner', 'admin', 'stylist'],
   },
   {
     to: '/owner/subscription',

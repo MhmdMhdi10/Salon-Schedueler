@@ -28,7 +28,50 @@ ALTER TABLE staff_member ADD COLUMN IF NOT EXISTS auto_approve boolean;
 -- Additive + nullable: null = signature default palette. Existing rows unaffected.
 ALTER TABLE salon ADD COLUMN IF NOT EXISTS brand_accent text;
 
--- Salon closures: optional time-of-day window on a holiday row. Both null = the
+-- Salon Inbox Notification table (idempotent). The WebSocket pipe is the realtime
+-- transport; this durable table backs the owner dashboard Inbox + unread badges.
+CREATE TABLE IF NOT EXISTS salon_notification (
+    id              UUID            NOT NULL,
+    salon_id        UUID            NOT NULL,
+    audience        TEXT            NOT NULL DEFAULT 'owner',
+    staff_member_id UUID,
+    type            TEXT            NOT NULL,
+    title           TEXT            NOT NULL,
+    body            TEXT            NOT NULL,
+    payload         JSONB,
+    read_at         TIMESTAMPTZ(6),
+    created_at      TIMESTAMPTZ(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT salon_notification_pkey PRIMARY KEY (id)
+);
+-- FKs (idempotent: do not error if already present)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'salon_notification_salon_id_fkey'
+  ) THEN
+    ALTER TABLE salon_notification
+      ADD CONSTRAINT salon_notification_salon_id_fkey
+      FOREIGN KEY (salon_id) REFERENCES salon(id)
+        ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'salon_notification_staff_member_id_fkey'
+  ) THEN
+    ALTER TABLE salon_notification
+      ADD CONSTRAINT salon_notification_staff_member_id_fkey
+      FOREIGN KEY (staff_member_id) REFERENCES staff_member(id)
+        ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS salon_notification_salon_id_created_at_idx
+    ON salon_notification (salon_id, created_at);
+CREATE INDEX IF NOT EXISTS salon_notification_salon_id_read_at_idx
+    ON salon_notification (salon_id, read_at);
+CREATE INDEX IF NOT EXISTS salon_notification_salon_id_audience_read_at_idx
+    ON salon_notification (salon_id, audience, read_at);
+CREATE INDEX IF NOT EXISTS salon_notification_salon_id_staff_member_id_read_at_idx
+    ON salon_notification (salon_id, staff_member_id, read_at);
+
 -- whole day is closed (prior behavior); both set = only that window on the date
 -- is blocked (partial-day closure / hour-range block). Additive + nullable, so
 -- existing full-day holidays are unaffected. db push only runs on a fresh

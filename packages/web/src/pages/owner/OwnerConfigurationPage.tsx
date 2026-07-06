@@ -9,16 +9,19 @@ import {
   Clock,
   Plus,
   Scissors,
+  ShieldCheck,
   Trash2,
   Users,
   type LucideIcon,
 } from 'lucide-react';
 import {
   adminApi,
+  approvalPolicyApi,
   holidaysApi,
   salonApi,
   staffApi,
   ApiError,
+  type ApprovalPolicyStaff,
   type SalonClosure,
   type SalonStaff,
   type StaffRole,
@@ -43,6 +46,7 @@ import {
   Money,
   Select,
   Skeleton,
+  Spinner,
   Switch,
   TextField,
   ToastProvider,
@@ -1004,6 +1008,216 @@ function HolidaysSection({
   );
 }
 
+// ─── Approval-Policy Section ─────────────────────────────────────────────────
+
+/** Tri-state approval choice for a single stylist (maps to `boolean | null`). */
+type StaffPolicyValue = 'inherit' | 'auto' | 'manual';
+
+function toStaffValue(autoApprove: boolean | null | undefined): StaffPolicyValue {
+  if (autoApprove === null || autoApprove === undefined) return 'inherit';
+  return autoApprove ? 'auto' : 'manual';
+}
+
+function fromStaffValue(value: StaffPolicyValue): boolean | null {
+  if (value === 'inherit') return null;
+  return value === 'auto';
+}
+
+type PolicyStatus = 'loading' | 'success' | 'error';
+
+/**
+ * Approval-policy section for the owner config page. Mirrors the admin
+ * `ApprovalPolicySection` but styled with the owner page's `CollapsibleSection`
+ * wrapper. Lets the owner toggle the salon-wide auto-confirm setting plus an
+ * optional per-stylist override (inherit / auto / manual).
+ */
+function ApprovalPolicySection({ salonId }: { salonId: string }) {
+  const { t } = useTranslation();
+  const { success, error: toastError } = useToast();
+
+  const [status, setStatus] = useState<PolicyStatus>('loading');
+  const [salonAuto, setSalonAuto] = useState(false);
+  const [staff, setStaff] = useState<ApprovalPolicyStaff[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(() => {
+    setStatus('loading');
+    let active = true;
+    approvalPolicyApi
+      .get(salonId)
+      .then((policy) => {
+        if (!active) return;
+        setSalonAuto(policy.autoApprove);
+        setStaff(policy.staff);
+        setStatus('success');
+      })
+      .catch(() => {
+        if (active) setStatus('error');
+      });
+    return () => {
+      active = false;
+    };
+  }, [salonId]);
+
+  useEffect(() => load(), [load]);
+
+  const policyOptions = useMemo(
+    () => [
+      { value: 'inherit', label: t('admin.config.approval.inherit') },
+      { value: 'auto', label: t('admin.config.approval.auto') },
+      { value: 'manual', label: t('admin.config.approval.manual') },
+    ],
+    [t],
+  );
+
+  const handleSalonToggle = async (next: boolean) => {
+    const prev = salonAuto;
+    setSalonAuto(next);
+    setSaving(true);
+    try {
+      await approvalPolicyApi.setSalon(salonId, next);
+      success({ title: t('admin.config.approval.saved') });
+    } catch {
+      setSalonAuto(prev);
+      toastError({ title: t('admin.config.approval.saveFailed') });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleStaffChange = async (staffId: string, value: StaffPolicyValue) => {
+    const next = fromStaffValue(value);
+    const prev = staff;
+    setStaff((list) => list.map((s) => (s.id === staffId ? { ...s, autoApprove: next } : s)));
+    setSaving(true);
+    try {
+      await approvalPolicyApi.setStaff(staffId, next);
+      success({ title: t('admin.config.approval.saved') });
+    } catch {
+      setStaff(prev);
+      toastError({ title: t('admin.config.approval.saveFailed') });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <CollapsibleSection
+      id="approval"
+      icon={ShieldCheck}
+      title={t('admin.config.approval.title')}
+      defaultExpanded={false}
+    >
+      {status === 'loading' && (
+        <div
+          data-testid="approval-loading"
+          role="status"
+          aria-busy="true"
+          aria-label={t('admin.config.approval.loadingLabel')}
+          className="flex flex-col gap-3"
+        >
+          <Skeleton variant="rect" className="h-12" />
+          <Skeleton variant="rect" className="h-10" />
+        </div>
+      )}
+
+      {status === 'error' && (
+        <ErrorState
+          data-testid="approval-error"
+          title={t('admin.config.approval.errorTitle')}
+          retryLabel={t('admin.config.retry')}
+          onRetry={load}
+        />
+      )}
+
+      {status === 'success' && (
+        <div data-testid="approval-policy" className="flex flex-col gap-5">
+          <p className="max-w-[60ch] text-sm text-muted">{t('admin.config.approval.body')}</p>
+
+          <div className="rounded-md border border-border bg-bg p-4">
+            <Switch
+              checked={salonAuto}
+              onCheckedChange={handleSalonToggle}
+              disabled={saving}
+              label={t('admin.config.approval.salonToggleLabel')}
+              helperText={t('admin.config.approval.salonToggleHelper')}
+            />
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-text">
+                {t('admin.config.approval.staffTitle')}
+              </h3>
+              <p className="mt-0.5 max-w-[60ch] text-xs text-muted">
+                {t('admin.config.approval.staffBody')}
+              </p>
+            </div>
+
+            {staff.length === 0 ? (
+              <EmptyState
+                icon={<Users className="h-8 w-8" />}
+                title={t('admin.config.approval.staffEmptyTitle')}
+                description={t('admin.config.approval.staffEmptyBody')}
+              />
+            ) : (
+              <ul
+                data-testid="approval-staff-list"
+                className="flex flex-col divide-y divide-border"
+              >
+                {staff.map((member) => {
+                  const value = toStaffValue(member.autoApprove);
+                  const name = member.fullName ?? member.id;
+                  return (
+                    <li
+                      key={member.id}
+                      className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="flex min-w-0 flex-col gap-0.5">
+                        <span className="break-words text-sm font-medium text-text">{name}</span>
+                        <span className="text-xs text-muted">{t(`app.role.${member.role}`)}</span>
+                      </div>
+                      <div className="flex w-full flex-col gap-2 sm:w-56 sm:shrink-0">
+                        <Select
+                          label={t('admin.config.approval.staffSelectLabel', { name })}
+                          labelHidden
+                          value={value}
+                          onValueChange={(v) => handleStaffChange(member.id, v as StaffPolicyValue)}
+                          options={policyOptions}
+                          disabled={saving}
+                          helperText={
+                            value === 'inherit'
+                              ? salonAuto
+                                ? t('admin.config.approval.effectiveAuto')
+                                : t('admin.config.approval.effectiveManual')
+                              : undefined
+                          }
+                          containerClassName="w-full"
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            {saving && (
+              <p
+                role="status"
+                aria-live="polite"
+                className="flex items-center gap-2 text-xs text-muted"
+              >
+                <Spinner size="sm" />
+                {t('common.saving')}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </CollapsibleSection>
+  );
+}
+
 // ─── Skeleton Loading State ──────────────────────────────────────────────────
 
 function ConfigSkeleton() {
@@ -1139,15 +1353,18 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
 
           <ServicesSection
             services={services}
-            onAdd={(service) =>
-              setServices((prev) => [
-                ...prev,
-                { id: `service-${Date.now()}`, ...service },
-              ])
-            }
+            onAdd={(service) => {
+              adminApi
+                .createService(salonId, service)
+                .then((res) => {
+                  setServices((prev) => [...prev, res.service]);
+                })
+                .catch(() => {})
+            }}
             onRemove={(id) => {
               const removed = services.find((s) => s.id === id);
               setServices((prev) => prev.filter((s) => s.id !== id));
+              adminApi.deleteService(salonId, id).catch(() => {});
               if (removed) {
                 const idx = services.findIndex((s) => s.id === id);
                 undoToast(removed.name, () =>
@@ -1164,9 +1381,14 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
 
           <ChairsSection
             chairs={chairs}
-            onAdd={(label) =>
-              setChairs((prev) => [...prev, { id: `chair-${Date.now()}`, label }])
-            }
+            onAdd={(label) => {
+              adminApi
+                .createChair(salonId, { name: label })
+                .then((res) => {
+                  setChairs((prev) => [...prev, res.chair]);
+                })
+                .catch(() => {})
+            }}
             onRemove={(id) => {
               const removed = chairs.find((c) => c.id === id);
               setChairs((prev) => prev.filter((e) => e.id !== id));
@@ -1185,6 +1407,8 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
           />
 
           <HolidaysSection salonId={salonId} requestDelete={setPendingDelete} />
+
+          <ApprovalPolicySection salonId={salonId} />
         </div>
       )}
 

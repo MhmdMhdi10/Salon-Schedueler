@@ -419,7 +419,12 @@ export const cardOrderApi = {
 
 // Admin endpoints
 export const adminApi = {
-  getCalendar: (salonId: string, from: string, to: string, view: 'day' | 'week' | 'month') =>
+  getCalendar: (
+    salonId: string,
+    from: string,
+    to: string,
+    view: 'day' | 'week' | 'month' | 'list',
+  ) =>
     request<{ appointments: unknown[] }>(
       `/salons/${salonId}/calendar?from=${from}&to=${to}&view=${view}`,
     ),
@@ -456,6 +461,23 @@ export const adminApi = {
   /** The salon's money transactions (appointment + subscription payments), newest-first. */
   getTransactions: (salonId: string) =>
     request<{ transactions: Transaction[] }>(`/salons/${salonId}/transactions`),
+  /** Create a service (Owner only). Duration/price optional (default 30/0). */
+  createService: (salonId: string, body: { name: string; durationMinutes?: number; priceRial?: number }) =>
+    request<{ service: { id: string; name: string; durationMinutes: number; priceRial: number } }>(
+      `/salons/${salonId}/services`,
+      { method: 'POST', body },
+    ),
+  /** Delete a service (Owner only). */
+  deleteService: (salonId: string, serviceId: string) =>
+    request<{ ok: boolean }>(`/salons/${salonId}/services/${serviceId}`, {
+      method: 'DELETE',
+    }),
+  /** Create a chair (Owner only). */
+  createChair: (salonId: string, body: { name: string }) =>
+    request<{ chair: { id: string; name: string; active: boolean } }>(
+      `/salons/${salonId}/chairs`,
+      { method: 'POST', body },
+    ),
 };
 
 /** A single row in the owner-panel transactions ledger. */
@@ -688,5 +710,54 @@ export const staffApi = {
     request<{ staff: SalonStaff }>(`/staff/${staffId}`, {
       method: 'PATCH',
       body: patch,
+    }),
+};
+
+// ─── Salon Inbox Notifications ───────────────────────────────────────────────
+// Owner/dashboard in-app inbox surface. Durable rows persisted on the backend
+// (table `salon_notification`); delivered live over the WS channel at
+// /ws/inbox?token=. The REST surface below is the durable/query side.
+
+export interface SalonNotification {
+  id: string;
+  salonId: string;
+  audience: string;
+  staffMemberId: string | null;
+  type: string;
+  title: string;
+  body: string;
+  payload:
+    | {
+        appointmentId?: string;
+        orderId?: string;
+        staffMemberId?: string;
+        customerId?: string;
+        date?: string;
+        [key: string]: unknown;
+      }
+    | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export const inboxApi = {
+  list: (salonId: string, opts?: { onlyUnread?: boolean; limit?: number }) => {
+    const params = new URLSearchParams();
+    if (opts?.onlyUnread) params.set('onlyUnread', 'true');
+    if (opts?.limit) params.set('limit', String(opts.limit));
+    const qs = params.toString();
+    return request<{ notifications: SalonNotification[] }>(
+      `/salons/${salonId}/notifications${qs ? `?${qs}` : ''}`,
+    );
+  },
+  unreadCount: (salonId: string) =>
+    request<{ count: number }>(`/salons/${salonId}/notifications/unread-count`),
+  markRead: (id: string) =>
+    request<{ notification: SalonNotification }>(`/notifications/${id}/read`, {
+      method: 'PATCH',
+    }),
+  markAllRead: (salonId: string) =>
+    request<{ ok: boolean; count: number }>(`/salons/${salonId}/notifications/read-all`, {
+      method: 'POST',
     }),
 };
