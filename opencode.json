@@ -22,6 +22,19 @@
           "name": "glm-5.2"
         }
       }
+    },
+    "api.iamhc.cn": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "IAMHC (OpenAI Compatible)",
+      "options": {
+        "baseURL": "https://api.iamhc.cn/v1",
+        "apiKey": "sk-YwKqRMAyXQFlCkwkLvjQfnBanLfoe7rOzowv11OlbulyrylV"
+      },
+      "models": {
+        "glm-5.2": {
+          "name": "glm-5.2"
+        }
+      }
     }
   }
 }
