@@ -82,22 +82,25 @@
 :root {
   color-scheme: light;
 
-  /* Color — semantic roles (light): Booksy-inspired magenta on clean white */
+  /* Color — semantic roles (light): Booksy_Identity — clean high-contrast
+     black/white foundation, deep interactive teal action color, bright
+     signature teal reserved as a large decorative fill. Byte-identical to
+     `@salon/shared` lightColors; AA-verified in contrast.test.ts. */
   --color-bg: #FFFFFF;
-  --color-surface: #F6F7F9;
+  --color-surface: #F5F6F7;
   --color-elevated: #FFFFFF;
-  --color-text: #1A1D23;
-  --color-text-muted: #5B6573;
-  --color-border: #E6E8EC;
-  --color-primary: #D81B60;
+  --color-text: #111417;
+  --color-text-muted: #586170;
+  --color-border: #E4E7EA;
+  --color-primary: #0B7A68;
   --color-primary-contrast: #FFFFFF;
-  --color-secondary: #1F8A70;
-  --color-accent: #FF6B35;
+  --color-secondary: #116E60;
+  --color-accent: #05CFA6;
   --color-success: #1F7A43;
   --color-warning: #9A5B12;
   --color-danger: #B3261E;
   --color-info: #1F5FAE;
-  --color-focus-ring: #D81B60;
+  --color-focus-ring: #0B7A68;
 
   /* Typography scale (rem, base 16px) */
   --font-2xs: 0.75rem;
@@ -158,7 +161,7 @@
   --shadow-1: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.1);
   --shadow-2: 0 4px 8px rgba(16, 24, 40, 0.08), 0 2px 4px rgba(16, 24, 40, 0.06);
   --shadow-3: 0 12px 24px rgba(16, 24, 40, 0.12), 0 4px 8px rgba(16, 24, 40, 0.08);
-  --shadow-glow: 0 0 24px rgba(216, 27, 96, 0.1); /* subtle magenta glow (light mode) */
+  --shadow-glow: 0 0 24px rgba(11, 122, 104, 0.08); /* faint teal glow (light mode, understated) */
 
   /* Z-index ladder */
   --z-base: 0;
@@ -185,29 +188,32 @@
 [data-theme='dark'] {
   color-scheme: dark;
 
-  /* Color — semantic roles (dark "Instagram": near-black ground so magenta glows
-     and white text reads crisply). AA-verified in contrast.test.ts. */
-  --color-bg: #121212;
-  --color-surface: #181818;
-  --color-elevated: #1F1F1F;
-  --color-text: #FAFAFA;
-  --color-text-muted: #A8A8A8;
-  --color-border: #262626;
-  --color-primary: #FF6B9D;
-  --color-primary-contrast: #121212;
-  --color-secondary: #79C9BB;
-  --color-accent: #ECA486;
+  /* Color — semantic roles (dark): Booksy_Identity dark — near-black surfaces,
+     luminous text, luminous teal highlights preserving the high-contrast
+     minimal character. Byte-identical to `@salon/shared` darkColors;
+     AA-verified in contrast.test.ts. */
+  --color-bg: #0F1111;
+  --color-surface: #181B1B;
+  --color-elevated: #222626;
+  --color-text: #F4F6F6;
+  --color-text-muted: #A6ADAD;
+  --color-border: #2A2F2F;
+  --color-primary: #2DE0BE;
+  --color-primary-contrast: #0F1111;
+  --color-secondary: #4FE3C8;
+  --color-accent: #38E0C0;
   --color-success: #69D08C;
   --color-warning: #E7B45C;
   --color-danger: #F2938C;
   --color-info: #86B6F0;
-  --color-focus-ring: #FF6B9D;
+  --color-focus-ring: #2DE0BE;
 
-  /* NYC noir: deeper, colored shadows with magenta glow hints */
-  --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 107, 157, 0.04);
-  --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 107, 157, 0.06);
-  --shadow-3: 0 12px 32px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 107, 157, 0.08);
-  --shadow-glow: 0 0 24px rgba(255, 107, 157, 0.15); /* hero glow */
+  /* Booksy dark: understated chrome — depth from near-black shadow + a hairline
+     border rather than a colored glow. */
+  --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --shadow-3: 0 12px 32px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --shadow-glow: 0 0 24px rgba(45, 224, 190, 0.1); /* faint teal glow (dark mode) */
 }
 
 /* ------------------------------------------------------------------ *

@@ -19,8 +19,8 @@ import { ensureAaFill } from '../../styles/contrast';
  * Validates: Requirements 4.6
  */
 
-/** The signature default theme color (no per-salon accent). */
-const SIGNATURE_THEME_COLOR = '#D81B60';
+/** The signature default theme color (Booksy_Identity --color-primary). */
+const SIGNATURE_THEME_COLOR = '#0B7A68';
 
 let lastManifestJson = '';
 const RealBlob = globalThis.Blob;

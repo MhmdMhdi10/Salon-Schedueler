@@ -13,44 +13,44 @@ import {
 } from './index';
 
 describe('Shared design tokens', () => {
-  describe('color palettes (verbatim from ui-ux-skills.md)', () => {
-    it('light palette matches the authoritative hex values', () => {
+  describe('color palettes (Booksy_Identity — teal/black-white)', () => {
+    it('light palette matches the authoritative Booksy_Identity hex values', () => {
       expect(lightColors).toEqual({
         bg: '#FFFFFF',
-        surface: '#F6F7F9',
+        surface: '#F5F6F7',
         elevated: '#FFFFFF',
-        text: '#1A1D23',
-        textMuted: '#5B6573',
-        border: '#E6E8EC',
-        primary: '#D81B60',
+        text: '#111417',
+        textMuted: '#586170',
+        border: '#E4E7EA',
+        primary: '#0B7A68',
         primaryContrast: '#FFFFFF',
-        secondary: '#1F8A70',
-        accent: '#FF6B35',
+        secondary: '#116E60',
+        accent: '#05CFA6',
         success: '#1F7A43',
         warning: '#9A5B12',
         danger: '#B3261E',
         info: '#1F5FAE',
-        focusRing: '#D81B60',
+        focusRing: '#0B7A68',
       });
     });
 
-    it('dark palette matches the authoritative hex values', () => {
+    it('dark palette matches the authoritative Booksy_Identity hex values', () => {
       expect(darkColors).toEqual({
-        bg: '#121212',
-        surface: '#181818',
-        elevated: '#1F1F1F',
-        text: '#FAFAFA',
-        textMuted: '#A8A8A8',
-        border: '#262626',
-        primary: '#FF6B9D',
-        primaryContrast: '#121212',
-        secondary: '#79C9BB',
-        accent: '#ECA486',
+        bg: '#0F1111',
+        surface: '#181B1B',
+        elevated: '#222626',
+        text: '#F4F6F6',
+        textMuted: '#A6ADAD',
+        border: '#2A2F2F',
+        primary: '#2DE0BE',
+        primaryContrast: '#0F1111',
+        secondary: '#4FE3C8',
+        accent: '#38E0C0',
         success: '#69D08C',
         warning: '#E7B45C',
         danger: '#F2938C',
         info: '#86B6F0',
-        focusRing: '#FF6B9D',
+        focusRing: '#2DE0BE',
       });
     });
 
@@ -58,8 +58,8 @@ describe('Shared design tokens', () => {
       expect(Object.keys(lightColors).sort()).toEqual(Object.keys(darkColors).sort());
     });
 
-    it('uses the Booksy magenta primary #D81B60 for text-bearing actions in light mode', () => {
-      expect(lightColors.primary).toBe('#D81B60');
+    it('uses the deep teal primary #0B7A68 for text-bearing actions in light mode', () => {
+      expect(lightColors.primary).toBe('#0B7A68');
     });
   });
 

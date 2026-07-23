@@ -6,7 +6,7 @@
   "matcher": "fs_write|str_replace",
   "action": {
     "type": "advisory",
-    "message": "Signature design language: salon-luxe palette tokens only; no indigo→purple gradient; display tokens for titles; motif on brand surfaces; logical properties only; tenant accent via runtime vars. See .kiro/steering/signature-design-language.md.",
+    "message": "Signature design language (Booksy_Identity): teal-action / black-white palette tokens only; no indigo→purple gradient; display tokens for titles; motif on brand surfaces; logical properties only; tenant accent via runtime vars. See .kiro/steering/signature-design-language.md.",
     "blocking": false
   }
 }

@@ -37,12 +37,12 @@ export const THEME_STORAGE_KEY = 'salon-theme';
 /**
  * Fallback `theme-color` values used only when the `--color-bg` token can't be
  * read from the cascade (e.g. jsdom in tests, or before styles load). They
- * mirror the NYC brand primary for light and the dark-mode bg so the PWA chrome
- * shows the brand accent in light mode.
+ * mirror the Booksy_Identity page background per theme (clean white in light,
+ * near-black in dark) so the PWA chrome matches the real surface.
  */
 const FALLBACK_THEME_COLOR: Record<Theme, string> = {
-  light: '#D81B60',
-  dark: '#121212',
+  light: '#FFFFFF',
+  dark: '#0F1111',
 };
 
 interface ThemeContextValue {

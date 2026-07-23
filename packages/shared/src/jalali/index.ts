@@ -26,6 +26,49 @@ export function jalaliToGregorian(j: JalaliDate): GregorianDate {
   return { year: gy, month: gm, day: gd };
 }
 
+// ---------------------------------------------------------------------------
+// API-boundary convenience: ISO string ⇄ JalaliDate
+// ---------------------------------------------------------------------------
+
+/**
+ * Parses an ISO date string (`YYYY-MM-DD` or a full ISO-8601 datetime) into a
+ * Jalali date. Used at the **inbound** API boundary: the backend returns ISO
+ * strings, the UI converts once on receipt and works in Jalali everywhere else.
+ *
+ * Total: throws a `RangeError` for unparseable input so the caller can surface
+ * a user-facing error rather than silently returning NaN fields.
+ *
+ * @param iso - An ISO date string (e.g. "2025-07-22" or "2025-07-22T10:30:00Z")
+ * @returns JalaliDate with jy, jm (1-12), jd
+ */
+export function isoToJalali(iso: string): JalaliDate {
+  const d = dayjs(iso);
+  if (!d.isValid()) {
+    throw new RangeError(`Invalid ISO date string: "${iso}"`);
+  }
+  return gregorianToJalali({
+    year: d.year(),
+    month: d.month() + 1,
+    day: d.date(),
+  });
+}
+
+/**
+ * Converts a Jalali date back to an ISO date string (`YYYY-MM-DD`). Used at the
+ * **outbound** API boundary: the UI works in Jalali internally and converts to
+ * ISO only when sending data to the backend.
+ *
+ * Lossless round-trip: `jalaliToIso(isoToJalali(s))` recovers the original
+ * date portion of `s` for any valid calendar date (Property 8).
+ *
+ * @param j - Jalali date with jy, jm (1-12), jd
+ * @returns ISO date string "YYYY-MM-DD"
+ */
+export function jalaliToIso(j: JalaliDate): string {
+  const { year, month, day } = jalaliToGregorian(j);
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
 /**
  * Formats a Jalali date as a display string.
  * Uses dayjs for consistent formatting and jalaali-js for conversion.

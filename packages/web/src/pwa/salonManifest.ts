@@ -24,11 +24,10 @@ import { useEffect } from 'react';
  */
 
 /**
- * Signature default PWA `theme_color` — the salon-luxe `--color-primary`
- * (`tokens.css` `:root`). Used when no per-salon accent color is supplied. The
- * old hard-coded indigo `#6366f1` is gone (signature-ui-system R4.6).
+ * Signature default PWA `theme_color` — Booksy_Identity `--color-primary`
+ * (`tokens.css` `:root`). Used when no per-salon accent color is supplied.
  */
-const SIGNATURE_THEME_COLOR = '#D81B60';
+const SIGNATURE_THEME_COLOR = '#0B7A68';
 
 /** Shared, static fields mirrored from `public/manifest.json`. */
 const SHARED_MANIFEST = {

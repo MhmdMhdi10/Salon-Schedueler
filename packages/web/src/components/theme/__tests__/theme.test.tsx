@@ -137,8 +137,8 @@ describe('ThemeProvider', () => {
     );
 
     // jsdom can't resolve the CSS var, so the mirrored fallback applies — the
-    // NYC dark-mode bg.
-    expect(getThemeColorMeta()).toBe('#121212');
+    // Booksy_Identity dark-mode bg.
+    expect(getThemeColorMeta()).toBe('#0F1111');
   });
 
   it('does NOT auto-follow OS scheme changes (visitor must opt in)', () => {

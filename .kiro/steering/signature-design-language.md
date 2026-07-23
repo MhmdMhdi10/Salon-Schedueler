@@ -5,20 +5,22 @@ fileMatchPattern: 'packages/web/src/**/*.{ts,tsx,css}'
 
 # Signature Design Language — enforceable rules
 
-Anti-generic rules for the salon-luxe signature UI. These are the **floor**, not the
+Anti-generic rules for the Booksy_Identity signature UI (clean high-contrast black/white
+foundation with a teal action color). These are the **floor**, not the
 whole story: the full narrative (palette tables, type pairing, motif recurrence, layout
 primitives) lives in `.kiro/steering/ui-ux-skills.md` → "Signature Design Language", and
 several rules below are machine-enforced by `packages/web/src/styles/distinctiveness.test.ts`.
 When in doubt, prefer a token over a literal and a logical property over a physical one.
 
-- **Salon-luxe tokens only.** Style through the semantic palette tokens (`--color-primary`,
+- **Booksy_Identity tokens only.** Style through the semantic palette tokens (`--color-primary`,
   `--color-accent`, `--color-surface`, `--color-text`, …). Never reintroduce the generic
   indigo/purple family — `#6366f1`, `#818cf8`, `#a855f7`, `#8b5cf6`, `#d946ef`, `#e879f9`
   (or `indigo`/`purple`/`violet`/`fuchsia` utility colors). _(guardrail-enforced)_
 
 - **No default indigo→purple hero gradient.** Derive hero/brand backgrounds from palette
   tokens or the brand motif (solid `--color-surface`, a token-driven `Motif variant="band"`,
-  or a warm `--color-primary`/`--color-accent` wash) — never a `linear-gradient(...)` of the
+  photography with a scrim, or a teal `--color-primary`/`--color-accent` wash) — never a
+  `linear-gradient(...)` of the
   indigo/purple family or `from-indigo`/`to-purple` gradient stops. _(guardrail-enforced)_
 
 - **Editorial layout for 3+ peer features.** When a surface presents three or more peer

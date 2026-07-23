@@ -6,9 +6,9 @@ import { contrastRatio, AA_TEXT, AA_LARGE_OR_NONTEXT } from './contrast';
  * Token contrast verification — WCAG 2.2 AA
  * (task 2.13 booksy-newyork-redesign; Req 2.6, 12.1; design §2).
  *
- * Validates the **NYC-inspired palette** (Booksy + New York redesign):
- *  - Light: magenta primary (#D81B60) on white (#FFFFFF) / cool-gray surfaces
- *  - Dark: neon-magenta (#FF6B9D) on near-black (#121212) / dark surfaces
+ * Validates the **Booksy_Identity palette** (deep interactive teal):
+ *  - Light: deep teal primary (#0B7A68) on white (#FFFFFF) / clean surfaces
+ *  - Dark: luminous teal (#2DE0BE) on near-black (#0F1111) / dark surfaces
  *
  * axe-core **cannot compute `color-contrast` under jsdom** (it has no layout /
  * computed-color engine — see `src/test/a11y.tsx`, which intentionally ignores

@@ -771,7 +771,7 @@ function CalendarSkeleton({ view }: { view: CalendarView }) {
       className="flex flex-col rounded-lg border border-border"
     >
       {Array.from({ length: 8 }).map((_, i) => (
-        <div key={i} className="flex border-b border-border/50" style={{ height: '60px' }}>
+        <div key={i} className="flex h-[60px] border-b border-border/50">
           <Skeleton variant="text" className="h-4 w-14 shrink-0 self-start ms-2 mt-2" />
           <div className="flex-1 p-2">
             {i % 3 === 0 && <Skeleton variant="rect" className="h-10 rounded-md" />}

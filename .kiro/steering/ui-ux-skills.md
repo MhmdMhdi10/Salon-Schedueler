@@ -32,9 +32,10 @@ no visual design — treat every screen as greenfield and apply this guide.
 ## Signature Design Language
 
 > **This is the signature layer that governs every screen.** It elevates the tokenized,
-> RTL-first foundation documented below (§1–§14) into a distinctive, premium **salon-luxe**
-> identity — a plum-wine primary with a terracotta-clay accent over warm bone/sand neutrals and
-> espresso ink — that reads unmistakably as a beauty brand and never as a generic, default
+> RTL-first foundation documented below (§1–§14) into a distinctive **Booksy_Identity** —
+> faithful to the real booksy.com: a deep interactive teal action color over a clean,
+> high-contrast black/white minimal foundation, with photography carrying the color — that
+> reads unmistakably as a modern beauty-booking platform and never as a generic, default
 > AI-template UI. It is a *layering*, not a rewrite: every component keeps consuming the same
 > semantic token names; only the token **values**, the display-type pairing, the brand motif,
 > and the layout rhythm change.
@@ -46,34 +47,36 @@ this file. **Where this document and the shipped tokens disagree, this steering 
 keep all three in lockstep.** The palette below is the shipped identity and is the same one
 tabulated in §2.
 
-### Salon-luxe palette — light & dark (shipped)
+### Booksy_Identity palette — light & dark (shipped)
 
 Byte-identical to the semantic color table in §2 and to `tokens.css` / `@salon/shared`;
 reproduced here as the signature reference.
 
 | Token | Light | Dark | Role |
 | --- | --- | --- | --- |
-| `--color-bg` | `#FBF7F2` | `#1A1117` | Warm porcelain / wine-noir page bg |
-| `--color-surface` | `#F4ECE1` | `#271A22` | Warm sand / deep-wine cards, sheets |
-| `--color-elevated` | `#FFFFFF` | `#33232C` | Menus, dialogs, popovers |
-| `--color-text` | `#241C18` | `#F7EBF0` | Espresso / rose-bone primary ink |
-| `--color-text-muted` | `#6E5C50` | `#C6ABB5` | Warm taupe / mauve secondary text |
-| `--color-border` | `#E4D8CB` | `#402E38` | Warm dividers, input borders |
-| `--color-primary` | `#8E2F50` | `#EAA0B8` | Plum-wine brand action / CTA |
-| `--color-primary-contrast` | `#FFFFFF` | `#1A1117` | Text/icon on primary |
-| `--color-secondary` | `#2E6E63` | `#79C9BB` | Deep-eucalyptus secondary action |
-| `--color-accent` | `#A6452A` | `#ECA486` | Terracotta-clay highlight / badge |
+| `--color-bg` | `#FFFFFF` | `#0F1111` | Clean white / near-black page bg |
+| `--color-surface` | `#F5F6F7` | `#181B1B` | Cards, sheets, alt sections |
+| `--color-elevated` | `#FFFFFF` | `#222626` | Menus, dialogs, popovers |
+| `--color-text` | `#111417` | `#F4F6F6` | Near-black / luminous primary ink |
+| `--color-text-muted` | `#586170` | `#A6ADAD` | Secondary / help text |
+| `--color-border` | `#E4E7EA` | `#2A2F2F` | Dividers, input borders |
+| `--color-primary` | `#0B7A68` | `#2DE0BE` | Deep / luminous teal action, CTA, links |
+| `--color-primary-contrast` | `#FFFFFF` | `#0F1111` | Text/icon on primary |
+| `--color-secondary` | `#116E60` | `#4FE3C8` | Secondary emphasis, completed-step badge |
+| `--color-accent` | `#05CFA6` | `#38E0C0` | Bright signature teal — large fills only, dark ink |
 | `--color-success` | `#1F7A43` | `#69D08C` | Booked, paid, confirmed |
 | `--color-warning` | `#9A5B12` | `#E7B45C` | Expiring OTP, low slots |
 | `--color-danger` | `#B3261E` | `#F2938C` | Failed pay, cancel, errors |
 | `--color-info` | `#1F5FAE` | `#86B6F0` | Neutral notices |
-| `--color-focus-ring` | `#8E2F50` | `#EAA0B8` | Focus outline |
+| `--color-focus-ring` | `#0B7A68` | `#2DE0BE` | Focus outline |
 
-The plum-wine `--color-primary` is deliberately dark and saturated because it is used **both**
-as a fill (white text on it) *and* as colored text on near-white surfaces, so it must clear WCAG
-AA (4.5:1) in **both** directions; the accent is a warm clay terracotta (not magenta) so it
-stays usable as badge text (≥ 4.5:1 on bg/surface). Every shipped pairing is verified in
-`packages/web/src/styles/contrast.test.ts` against `@salon/shared`.
+booksy's literal signature teal `#05CFA6` fails WCAG AA (2.0:1 on white) as small text, so the
+identity uses a **two-tier teal**: `--color-primary` is a deep teal `#0B7A68` that clears 4.5:1
+in **both** directions (as colored text on white *and* as a fill under white text), used for
+CTAs, links, small teal text, icons, and the focus ring; `--color-accent` is booksy's bright
+`#05CFA6`, preserved but used **only as a large decorative fill with dark ink overlaid**, never
+as small text or a standalone non-text indicator on a light surface. Every shipped pairing is
+verified in `packages/web/src/styles/contrast.test.ts` against `@salon/shared`.
 
 ### Display ⇄ body type pairing
 
@@ -178,35 +181,36 @@ review**. Treat every automated pass as a floor, never as proof of conformance (
 
 Define tokens once as CSS custom properties on `:root`, theme via `[data-theme="dark"]`.
 Components consume **only** tokens — never raw hex, px, or ms literals. The signature palette
-is a warm **salon-luxe** direction — a plum-wine primary with a terracotta-clay accent over
-warm bone/sand neutrals and espresso ink — replacing the original indigo seed. (The PWA
-`theme_color` in `manifest.json` is derived from this primary.)
+is the **Booksy_Identity** — a deep interactive teal action color over a clean, high-contrast
+black/white minimal foundation, faithful to the real booksy.com — replacing the original
+indigo seed. (The PWA `theme_color` in `manifest.json` is derived from this primary.)
 
 ### Color — semantic roles (not literal names)
 
 | Token | Light | Dark | Use |
 | --- | --- | --- | --- |
-| `--color-bg` | `#FBF7F2` | `#1A1117` | Page background |
-| `--color-surface` | `#F4ECE1` | `#271A22` | Cards, sheets |
-| `--color-elevated` | `#FFFFFF` | `#33232C` | Menus, dialogs, popovers |
-| `--color-text` | `#241C18` | `#F7EBF0` | Primary text |
-| `--color-text-muted` | `#6E5C50` | `#C6ABB5` | Secondary/help text |
-| `--color-border` | `#E4D8CB` | `#402E38` | Dividers, input borders |
-| `--color-primary` | `#8E2F50` | `#EAA0B8` | Brand actions, CTAs |
-| `--color-primary-contrast` | `#FFFFFF` | `#1A1117` | Text/icon on primary |
-| `--color-secondary` | `#2E6E63` | `#79C9BB` | Secondary actions |
-| `--color-accent` | `#A6452A` | `#ECA486` | Highlights, badges |
+| `--color-bg` | `#FFFFFF` | `#0F1111` | Page background |
+| `--color-surface` | `#F5F6F7` | `#181B1B` | Cards, sheets |
+| `--color-elevated` | `#FFFFFF` | `#222626` | Menus, dialogs, popovers |
+| `--color-text` | `#111417` | `#F4F6F6` | Primary text |
+| `--color-text-muted` | `#586170` | `#A6ADAD` | Secondary/help text |
+| `--color-border` | `#E4E7EA` | `#2A2F2F` | Dividers, input borders |
+| `--color-primary` | `#0B7A68` | `#2DE0BE` | Brand actions, CTAs, links |
+| `--color-primary-contrast` | `#FFFFFF` | `#0F1111` | Text/icon on primary |
+| `--color-secondary` | `#116E60` | `#4FE3C8` | Secondary actions |
+| `--color-accent` | `#05CFA6` | `#38E0C0` | Bright signature-teal large fills (dark ink) |
 | `--color-success` | `#1F7A43` | `#69D08C` | Booked, paid, confirmed |
 | `--color-warning` | `#9A5B12` | `#E7B45C` | Expiring OTP, low slots |
 | `--color-danger` | `#B3261E` | `#F2938C` | Failed pay, cancel, errors |
 | `--color-info` | `#1F5FAE` | `#86B6F0` | Neutral notices |
-| `--color-focus-ring` | `#8E2F50` | `#EAA0B8` | Focus outline |
+| `--color-focus-ring` | `#0B7A68` | `#2DE0BE` | Focus outline |
 
 > Pick the **primary** shade so body-size text on it clears WCAG AA **in both directions** —
 > the primary is used both as a white-text fill *and* as colored text on near-white surfaces.
-> The salon-luxe plum-wine `#8E2F50` clears 4.5:1 both ways (its dark-mode counterpart
-> `#E59CB3` carries the dark `--color-primary-contrast` ink). Every shipped pairing is
-> verified in `packages/web/src/styles/contrast.test.ts` against `@salon/shared`.
+> The deep teal `#0B7A68` clears 4.5:1 both ways (its dark-mode counterpart `#2DE0BE` carries
+> the dark `--color-primary-contrast` ink). booksy's bright `#05CFA6` accent is reserved for
+> large decorative fills with dark ink — it is not AA as small text on white. Every shipped
+> pairing is verified in `packages/web/src/styles/contrast.test.ts` against `@salon/shared`.
 
 ### Typography scale (rem, base 16px)
 
