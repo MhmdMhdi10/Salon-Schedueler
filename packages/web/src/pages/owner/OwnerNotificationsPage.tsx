@@ -186,7 +186,7 @@ export function OwnerNotificationsPage() {
         </div>
 
         {unreadCount > 0 && (
-          <Button variant="secondary" size="sm" onClick={markAll} disabled={busy}>
+          <Button variant="secondary" size="md" onClick={markAll} disabled={busy}>
             <CheckCheck className="h-4 w-4" aria-hidden="true" />
             {t('owner.inbox.markAllRead', { defaultValue: 'خواندن همه' })}
           </Button>

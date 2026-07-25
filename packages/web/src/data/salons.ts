@@ -296,7 +296,7 @@ const SALON_PROFILES: Record<string, SalonProfile> = {
     ],
     gallery: [
       {
-        src: '/placeholders/salon-maryam.svg',
+        src: '/images/salons/salon-card-1-640w.webp',
         width: 640,
         height: 360,
         alt: 'نمای داخلی سالن زیبایی مریم',
@@ -305,7 +305,7 @@ const SALON_PROFILES: Record<string, SalonProfile> = {
     mapEmbedUrl: 'https://neshan.org/maps/iframe/@35.78,51.37,15z',
     rating: 4.6,
     reviewCount: 87,
-    coverUrl: '/placeholders/salon-maryam.svg',
+    coverUrl: '/images/salons/salon-card-1-640w.webp',
     category: 'سالن زیبایی زنانه',
   },
   'shahin-barbershop': {
@@ -341,7 +341,7 @@ const SALON_PROFILES: Record<string, SalonProfile> = {
     ],
     gallery: [
       {
-        src: '/placeholders/salon-shahin.svg',
+        src: '/images/salons/salon-card-2-640w.webp',
         width: 640,
         height: 360,
         alt: 'نمای داخلی آرایشگاه شاهین',
@@ -350,7 +350,7 @@ const SALON_PROFILES: Record<string, SalonProfile> = {
     mapEmbedUrl: 'https://neshan.org/maps/iframe/@35.73,51.40,15z',
     rating: 4.3,
     reviewCount: 52,
-    coverUrl: '/placeholders/salon-shahin.svg',
+    coverUrl: '/images/salons/salon-card-2-640w.webp',
     category: 'آرایشگاه مردانه',
   },
   'salon-niloofar': {
@@ -387,7 +387,7 @@ const SALON_PROFILES: Record<string, SalonProfile> = {
     ],
     gallery: [
       {
-        src: '/placeholders/salon-niloofar.svg',
+        src: '/images/salons/salon-card-3-640w.webp',
         width: 640,
         height: 360,
         alt: 'نمونه کار کاشت ناخن در سالن نیلوفر',
@@ -396,7 +396,7 @@ const SALON_PROFILES: Record<string, SalonProfile> = {
     mapEmbedUrl: 'https://neshan.org/maps/iframe/@35.77,51.42,15z',
     rating: 4.9,
     reviewCount: 198,
-    coverUrl: '/placeholders/salon-niloofar.svg',
+    coverUrl: '/images/salons/salon-card-3-640w.webp',
     category: 'سالن زیبایی زنانه',
   },
   'arash-studio': {
@@ -433,7 +433,7 @@ const SALON_PROFILES: Record<string, SalonProfile> = {
     ],
     gallery: [
       {
-        src: '/placeholders/salon-arash.svg',
+        src: '/images/salons/salon-card-4-640w.webp',
         width: 640,
         height: 360,
         alt: 'فضای داخلی استودیو آرش',
@@ -442,7 +442,7 @@ const SALON_PROFILES: Record<string, SalonProfile> = {
     mapEmbedUrl: 'https://neshan.org/maps/iframe/@35.76,51.41,15z',
     rating: 4.5,
     reviewCount: 34,
-    coverUrl: '/placeholders/salon-arash.svg',
+    coverUrl: '/images/salons/salon-card-4-640w.webp',
     category: 'آرایشگاه مردانه',
   },
   'salon-parisa': {
@@ -479,7 +479,7 @@ const SALON_PROFILES: Record<string, SalonProfile> = {
     ],
     gallery: [
       {
-        src: '/placeholders/salon-parisa.svg',
+        src: '/images/salons/salon-card-5-640w.webp',
         width: 640,
         height: 360,
         alt: 'نمای داخلی سالن پریسا',
@@ -488,7 +488,7 @@ const SALON_PROFILES: Record<string, SalonProfile> = {
     mapEmbedUrl: 'https://neshan.org/maps/iframe/@35.79,51.43,15z',
     rating: 4.7,
     reviewCount: 156,
-    coverUrl: '/placeholders/salon-parisa.svg',
+    coverUrl: '/images/salons/salon-card-5-640w.webp',
     category: 'سالن زیبایی زنانه',
   },
   'salon-rose': {
@@ -528,7 +528,7 @@ const SALON_PROFILES: Record<string, SalonProfile> = {
     ],
     gallery: [
       {
-        src: '/placeholders/salon-rose.svg',
+        src: '/images/salons/salon-card-6-640w.webp',
         width: 640,
         height: 360,
         alt: 'نمای داخلی سالن زیبایی رز',
@@ -555,7 +555,7 @@ const SALON_PROFILES: Record<string, SalonProfile> = {
     brandAccent: 'rose',
     rating: 4.8,
     reviewCount: 124,
-    coverUrl: '/placeholders/salon-rose.svg',
+    coverUrl: '/images/salons/salon-card-6-640w.webp',
   },
 };
 

@@ -145,17 +145,22 @@ export function StylistQrGallery({
             return (
               <li
                 key={item.id}
-                className="flex flex-col items-center gap-3 rounded-md border border-border bg-surface p-3"
+                className="owner-qr-person flex flex-col items-center gap-3"
               >
                 {item.payload ? (
-                  <img
-                    data-testid="qr-stylist-image"
-                    src={qrImageDataUri(item.payload, alt)}
-                    alt={alt}
-                    width={160}
-                    height={160}
-                    className="h-40 w-40 rounded-md border border-border bg-white p-2"
-                  />
+                  <div className="owner-qr-person__code">
+                    <span className="owner-qr-person__monogram" aria-hidden="true">
+                      {item.name.trim().charAt(0)}
+                    </span>
+                    <img
+                      data-testid="qr-stylist-image"
+                      src={qrImageDataUri(item.payload, alt)}
+                      alt={alt}
+                      width={160}
+                      height={160}
+                      className="h-40 w-40 bg-white p-2"
+                    />
+                  </div>
                 ) : (
                   <div className="flex h-40 w-40 items-center justify-center rounded-md border border-border bg-surface p-2 text-center text-xs text-muted">
                     {t('owner.qr.gallery.qrUnavailable')}

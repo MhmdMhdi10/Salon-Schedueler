@@ -43,16 +43,15 @@ afterEach(() => {
 // 1. LCP Optimization
 // ---------------------------------------------------------------------------
 describe('LCP optimization', () => {
-  it('hero uses token bg (no image dependency, no broken LCP element)', () => {
+  it('hero uses an eagerly loaded reference-clone LCP image', () => {
     const { getByTestId } = renderHome();
     const root = getByTestId('marketing-home');
-    // The hero section uses bg-bg (light token background), not an image.
     const heroSection = root.querySelector('section');
     expect(heroSection).not.toBeNull();
-    expect(heroSection!.className).toContain('bg-bg');
-    // No image element in the hero — LCP is the text/search, not a broken image.
     const heroImg = heroSection!.querySelector('img');
-    expect(heroImg).toBeNull();
+    expect(heroImg).not.toBeNull();
+    expect(heroImg).toHaveAttribute('loading', 'eager');
+    expect(heroImg).toHaveAttribute('fetchpriority', 'high');
   });
 
   it('hero has a search form as the primary interaction', () => {
@@ -81,13 +80,14 @@ describe('LCP optimization', () => {
     expect(appContent).toMatch(/lazy\(\(\)\s*=>\s*\n?\s*import\(['"]\.\/pages\/owner/);
   });
 
-  it('vite.config splits vendor-react, vendor-radix, and vendor-motion into separate chunks', () => {
+  it('vite.config isolates heavy vendors without forcing all UI into shared chunks', () => {
     const viteContent = readFileSync(resolve(__dirname, '../../../vite.config.ts'), 'utf-8');
     expect(viteContent).toContain("'vendor-react'");
     expect(viteContent).toContain("'vendor-radix'");
     expect(viteContent).toContain("'vendor-motion'");
-    expect(viteContent).toContain("'ui-overlays'");
-    expect(viteContent).toContain("'ui-core'");
+    expect(viteContent).toContain('onlyExplicitManualChunks: true');
+    expect(viteContent).not.toContain("return 'ui-overlays'");
+    expect(viteContent).not.toContain("return 'ui-core'");
   });
 });
 
@@ -180,11 +180,11 @@ describe('responsive design (no horizontal overflow)', () => {
     expect(ownerCta).not.toBeNull();
   });
 
-  it('all sections use max-w-container + px-4 for bounded width with padding', () => {
+  it('all major sections mirror the reference max-w-7xl + px-4 container', () => {
     const { getByTestId } = renderHome();
     const root = getByTestId('marketing-home');
     // The page wraps content in max-w-container containers with px-4 padding
-    const containers = root.querySelectorAll('.max-w-container');
+    const containers = root.querySelectorAll('.max-w-7xl');
     expect(containers.length).toBeGreaterThanOrEqual(5);
     for (const container of containers) {
       expect(container.className).toContain('px-4');
@@ -225,21 +225,14 @@ describe('performance budget and loading strategy', () => {
     const allImages = root.querySelectorAll('img');
     let lazyCount = 0;
     for (const img of allImages) {
-      // With a CSS gradient hero, all remaining images are below-fold
-      // and should be lazy-loaded.
-      if (img.getAttribute('loading') === 'lazy') {
+    if (img.getAttribute('loading') === 'lazy') {
         lazyCount++;
       }
     }
     // There should be at least some lazy images (benefit section images, salon cards)
     expect(lazyCount).toBeGreaterThan(0);
-    // All images should be lazy since there's no eager hero image anymore
-    for (const img of allImages) {
-      expect(
-        img.getAttribute('loading'),
-        `Image ${img.getAttribute('src')} should be lazy`,
-      ).toBe('lazy');
-    }
+    expect(allImages[0]).toHaveAttribute('loading', 'eager');
+    for (const img of Array.from(allImages).slice(1)) expect(img).toHaveAttribute('loading', 'lazy');
   });
 
   it('animation system uses only compositor-friendly properties (transform, opacity)', () => {

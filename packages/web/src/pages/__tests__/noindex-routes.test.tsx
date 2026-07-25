@@ -54,6 +54,11 @@ vi.mock('../../api/client', () => {
       get: vi.fn().mockResolvedValue({ brandAccent: null }),
       set: vi.fn().mockResolvedValue({ ok: true, brandAccent: null }),
     },
+    holidaysApi: {
+      list: vi.fn().mockResolvedValue({ holidays: [] }),
+      add: vi.fn().mockResolvedValue({ holiday: {} }),
+      remove: vi.fn().mockResolvedValue({ ok: true }),
+    },
     bookingApi: {
       create: vi.fn().mockResolvedValue({ status: 'confirmed' }),
     },

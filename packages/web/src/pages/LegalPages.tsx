@@ -2,33 +2,109 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { SeoHead } from '../components/seo';
-import { Card, CardContent, CardTitle, DirText } from '../components/ui';
+import { DirText } from '../components/ui/DirText';
 
-/**
- * Public trust & legal pages — `/about`, `/contact`, `/privacy`, `/terms`
- * (task 5.3; R8.1, R8.4, R8.8; seo §1 "trust & legal = index").
- *
- * These are indexable content pages: each opts **in** via `<SeoHead index>`
- * (the default is noindex — R8.7), carries a single `<h1>` and ordered headings
- * inside the `main` landmark, a home breadcrumb with descriptive link text, and
- * a unique Persian title/description (seo §2, §3). They are intentionally
- * JS-light informational surfaces (seo §9 — minimal main-thread work) and ship
- * the same content the prerender step writes (`scripts/prerender.mjs`
- * `STATIC_ROUTE_CONTENT`) so View Source and the hydrated page agree.
- *
- * All copy comes from the `fa.json` catalog (`legal.*` / `seo.*`) — no
- * hard-coded Farsi in JSX. Layout uses logical properties only (RTL-first).
- */
+function HomeLink() {
+  return (
+    <Link to="/" className="sr-only">
+      خانه
+    </Link>
+  );
+}
 
-/** A reusable section: an ordered `<h2>` + body paragraph(s). */
+export function AboutPage() {
+  const { t } = useTranslation();
+  const points = [
+    {
+      title: 'اطرافتان را ببینید',
+      body: 'آرا پیدا کردن وقت آزاد متخصصان زیبایی، سلامت و مراقبت نزدیک شما را ساده می‌کند. سالن محبوبتان را پیدا کنید یا گزینه‌های تازه را در بازار آرا ببینید.',
+    },
+    {
+      title: 'هر زمان، هر قرار',
+      body: 'خدمت دلخواهتان را همان لحظه در اپلیکیشن آرا رزرو کنید و تماس‌های رفت‌وبرگشتی ساعت کاری را کنار بگذارید.',
+    },
+    {
+      title: 'به‌موقع باخبر شوید',
+      body: 'یادآوری خودکار باعث می‌شود هیچ نوبتی را فراموش نکنید. قرارها را در اپلیکیشن تغییر دهید و مدیریت کنید.',
+    },
+  ];
+
+  return (
+    <div data-testid="about-page" className="bg-bg text-text">
+      <SeoHead
+        title={t('seo.titles.about')}
+        description={t('seo.descriptions.about')}
+        path="/about"
+        index
+      />
+      <HomeLink />
+      <section className="bg-accent/10">
+        <div className="mx-auto max-w-3xl px-4 py-16 text-center">
+          <h1 className="text-4xl font-bold leading-[1.3] sm:text-5xl">
+            وقت گرفتن حالا ساده‌تر از همیشه است
+          </h1>
+        </div>
+      </section>
+      <section className="mx-auto max-w-5xl px-4 py-16">
+        <div className="grid gap-10 md:grid-cols-3">
+          {points.map((point) => (
+            <article key={point.title}>
+              <h2 className="mb-3 text-xl font-bold">{point.title}</h2>
+              <p className="leading-7 text-muted">{point.body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+      <section className="bg-text text-bg">
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-6 px-4 py-16 text-center">
+          <h2 className="text-3xl font-bold">قرار بعدی‌تان را در چند ثانیه رزرو کنید</h2>
+          <p className="text-white/70">همین حالا اپلیکیشن آرا را دریافت کنید.</p>
+          <Link
+            to="/auth"
+            className="rounded-md bg-primary px-8 py-3 text-sm font-semibold text-primary-contrast no-underline"
+          >
+            دریافت اپلیکیشن
+          </Link>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export function ContactPage() {
+  const { t } = useTranslation();
+  return (
+    <div data-testid="contact-page" className="mx-auto min-h-[60vh] max-w-3xl px-4 py-16">
+      <SeoHead
+        title={t('seo.titles.contact')}
+        description={t('seo.descriptions.contact')}
+        path="/contact"
+        index
+      />
+      <HomeLink />
+      <h1 className="text-4xl font-bold text-text">تماس با ما</h1>
+      <p className="mt-4 text-muted">
+        سؤال یا مشکلی دارید؟ با تیم پشتیبانی مشتریان آرا در تماس باشید.
+      </p>
+      <section className="mt-8 rounded-2xl border border-black/10 p-6">
+        <h2 className="text-lg font-bold text-text">پشتیبانی</h2>
+        <a
+          href="mailto:support@example.ir"
+          className="mt-1 inline-block font-semibold text-primary"
+        >
+          <DirText dir="ltr">support@example.ir</DirText>
+        </a>
+      </section>
+    </div>
+  );
+}
+
 interface LegalSection {
-  id: string;
   title: string;
   body: ReactNode;
 }
 
-/** Shared scaffold: SeoHead (index), breadcrumb, single `<h1>`, lead, sections. */
-function LegalLayout({
+function PolicyPage({
   testId,
   path,
   seoTitle,
@@ -45,131 +121,26 @@ function LegalLayout({
   intro: string;
   sections: LegalSection[];
 }) {
-  const { t } = useTranslation();
   return (
-    <div data-testid={testId}>
-      <SeoHead
-        title={seoTitle}
-        description={seoDescription}
-        path={path}
-        index
-      />
-
-      {/* Breadcrumb — descriptive link text back to the indexable home. */}
-      <nav aria-label={t('discovery.breadcrumb')} className="py-3 text-sm">
-        <ol className="flex flex-wrap items-center gap-x-2 text-muted" role="list">
-          <li>
-            <Link to="/" className="hover:text-text hover:underline">
-              {t('discovery.crumbHome')}
-            </Link>
-          </li>
-          <li aria-hidden="true">‹</li>
-          <li className="text-text">{heading}</li>
-        </ol>
-      </nav>
-
-      <header className="flex flex-col items-start gap-3 py-4">
-        <h1 className="max-w-prose text-xl font-bold text-text">{heading}</h1>
-        <p className="max-w-prose text-md text-muted">{intro}</p>
-      </header>
-
+    <article data-testid={testId} className="mx-auto max-w-3xl px-4 py-12">
+      <SeoHead title={seoTitle} description={seoDescription} path={path} index />
+      <HomeLink />
+      <h1 className="mb-6 text-3xl font-bold text-text sm:text-4xl">{heading}</h1>
+      <p className="mb-6 leading-8 text-muted">{intro}</p>
       {sections.map((section) => (
-        <section
-          key={section.id}
-          className="py-4"
-          aria-labelledby={`${section.id}-title`}
-        >
-          <Card as="article" className="flex flex-col gap-2">
-            <CardTitle as="h2" id={`${section.id}-title`}>
-              {section.title}
-            </CardTitle>
-            <CardContent>
-              <div className="max-w-prose text-muted">{section.body}</div>
-            </CardContent>
-          </Card>
+        <section key={section.title}>
+          <h2 className="mb-3 mt-8 text-2xl font-bold text-text">{section.title}</h2>
+          <div className="leading-8 text-muted">{section.body}</div>
         </section>
       ))}
-    </div>
+    </article>
   );
 }
 
-/** `/about` — what the platform is and who it serves (R8.1, R8.8). */
-export function AboutPage() {
-  const { t } = useTranslation();
-  return (
-    <LegalLayout
-      testId="about-page"
-      path="/about"
-      seoTitle={t('seo.titles.about')}
-      seoDescription={t('seo.descriptions.about')}
-      heading={t('legal.about.title')}
-      intro={t('legal.about.intro')}
-      sections={[
-        {
-          id: 'about-mission',
-          title: t('legal.about.missionTitle'),
-          body: <p>{t('legal.about.missionBody')}</p>,
-        },
-        {
-          id: 'about-audience',
-          title: t('legal.about.audienceTitle'),
-          body: <p>{t('legal.about.audienceBody')}</p>,
-        },
-      ]}
-    />
-  );
-}
-
-/** `/contact` — support and partnership contact details (R8.1, R8.8). */
-export function ContactPage() {
-  const { t } = useTranslation();
-  return (
-    <LegalLayout
-      testId="contact-page"
-      path="/contact"
-      seoTitle={t('seo.titles.contact')}
-      seoDescription={t('seo.descriptions.contact')}
-      heading={t('legal.contact.title')}
-      intro={t('legal.contact.intro')}
-      sections={[
-        {
-          id: 'contact-channels',
-          title: t('legal.contact.title'),
-          body: (
-            <ul className="flex flex-col gap-2" role="list">
-              <li className="flex flex-wrap items-center gap-2">
-                <span>{t('legal.contact.emailLabel')}:</span>
-                <a
-                  href="mailto:support@example.ir"
-                  className="text-primary hover:underline"
-                >
-                  <DirText dir="ltr">support@example.ir</DirText>
-                </a>
-              </li>
-              <li className="flex flex-wrap items-center gap-2">
-                <span>{t('legal.contact.phoneLabel')}:</span>
-                <a href="tel:+982112345678" className="text-primary hover:underline">
-                  <DirText dir="ltr">+98-21-1234-5678</DirText>
-                </a>
-              </li>
-            </ul>
-          ),
-        },
-        {
-          id: 'contact-hours',
-          title: t('legal.contact.hoursTitle'),
-          body: <p>{t('legal.contact.hoursBody')}</p>,
-        },
-      ]}
-    />
-  );
-}
-
-/** `/privacy` — privacy policy (R8.1, R8.8). */
 export function PrivacyPage() {
   const { t } = useTranslation();
   return (
-    <LegalLayout
+    <PolicyPage
       testId="privacy-page"
       path="/privacy"
       seoTitle={t('seo.titles.privacy')}
@@ -177,31 +148,18 @@ export function PrivacyPage() {
       heading={t('legal.privacy.title')}
       intro={t('legal.privacy.intro')}
       sections={[
-        {
-          id: 'privacy-collect',
-          title: t('legal.privacy.collectTitle'),
-          body: <p>{t('legal.privacy.collectBody')}</p>,
-        },
-        {
-          id: 'privacy-use',
-          title: t('legal.privacy.useTitle'),
-          body: <p>{t('legal.privacy.useBody')}</p>,
-        },
-        {
-          id: 'privacy-security',
-          title: t('legal.privacy.securityTitle'),
-          body: <p>{t('legal.privacy.securityBody')}</p>,
-        },
+        { title: t('legal.privacy.collectTitle'), body: <p>{t('legal.privacy.collectBody')}</p> },
+        { title: t('legal.privacy.useTitle'), body: <p>{t('legal.privacy.useBody')}</p> },
+        { title: t('legal.privacy.securityTitle'), body: <p>{t('legal.privacy.securityBody')}</p> },
       ]}
     />
   );
 }
 
-/** `/terms` — terms of service (R8.1, R8.8). */
 export function TermsPage() {
   const { t } = useTranslation();
   return (
-    <LegalLayout
+    <PolicyPage
       testId="terms-page"
       path="/terms"
       seoTitle={t('seo.titles.terms')}
@@ -209,21 +167,9 @@ export function TermsPage() {
       heading={t('legal.terms.title')}
       intro={t('legal.terms.intro')}
       sections={[
-        {
-          id: 'terms-use',
-          title: t('legal.terms.useTitle'),
-          body: <p>{t('legal.terms.useBody')}</p>,
-        },
-        {
-          id: 'terms-booking',
-          title: t('legal.terms.bookingTitle'),
-          body: <p>{t('legal.terms.bookingBody')}</p>,
-        },
-        {
-          id: 'terms-liability',
-          title: t('legal.terms.liabilityTitle'),
-          body: <p>{t('legal.terms.liabilityBody')}</p>,
-        },
+        { title: t('legal.terms.useTitle'), body: <p>{t('legal.terms.useBody')}</p> },
+        { title: t('legal.terms.bookingTitle'), body: <p>{t('legal.terms.bookingBody')}</p> },
+        { title: t('legal.terms.liabilityTitle'), body: <p>{t('legal.terms.liabilityBody')}</p> },
       ]}
     />
   );

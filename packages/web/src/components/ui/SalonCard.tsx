@@ -52,7 +52,7 @@ function resolveCardData(props: SalonCardProps) {
     return {
       slug: s.slug,
       name: s.name,
-      coverUrl: s.coverUrl ?? s.gallery[0]?.src ?? '/placeholders/default-salon.svg',
+      coverUrl: s.coverUrl ?? s.gallery[0]?.src ?? '/images/salons/salon-card-1-640w.webp',
       coverAlt: s.gallery[0]?.alt ?? `تصویر ${s.name}`,
       rating: s.rating ?? 0,
       reviewCount: s.reviewCount ?? 0,
@@ -64,7 +64,7 @@ function resolveCardData(props: SalonCardProps) {
   return {
     slug: props.slug ?? '',
     name: props.name ?? '',
-    coverUrl: props.coverUrl ?? '/placeholders/default-salon.svg',
+    coverUrl: props.coverUrl ?? '/images/salons/salon-card-1-640w.webp',
     coverAlt: props.coverAlt ?? `تصویر ${props.name ?? ''}`,
     rating: props.rating ?? 0,
     reviewCount: props.reviewCount ?? 0,

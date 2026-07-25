@@ -127,9 +127,9 @@ describe('OwnerShell — mobile (<lg)', () => {
   it('shows tabs for Calendar, Analytics, and Config', () => {
     renderOwner({ role: 'Owner' });
     const tabBar = screen.getByTestId('owner-bottom-tabs');
-    expect(within(tabBar).getByRole('button', { name: 'تقویم' })).toBeInTheDocument();
-    expect(within(tabBar).getByRole('button', { name: 'آمار' })).toBeInTheDocument();
-    expect(within(tabBar).getByRole('button', { name: 'تنظیمات سالن' })).toBeInTheDocument();
+    expect(within(tabBar).getByRole('link', { name: 'تقویم' })).toBeInTheDocument();
+    expect(within(tabBar).getByRole('link', { name: 'آمار' })).toBeInTheDocument();
+    expect(within(tabBar).getByRole('link', { name: 'تنظیمات سالن' })).toBeInTheDocument();
   });
 
   it('does NOT render the sidebar on mobile', () => {
@@ -141,7 +141,7 @@ describe('OwnerShell — mobile (<lg)', () => {
   it('marks the active tab with aria-current="page"', () => {
     renderOwner({ role: 'Owner' }, '/owner/calendar');
     const tabBar = screen.getByTestId('owner-bottom-tabs');
-    const calendarBtn = within(tabBar).getByRole('button', { name: 'تقویم' });
+    const calendarBtn = within(tabBar).getByRole('link', { name: 'تقویم' });
     expect(calendarBtn).toHaveAttribute('aria-current', 'page');
   });
 
@@ -192,10 +192,9 @@ describe('OwnerShell — desktop (lg+)', () => {
 
   it('persists sidebar collapsed state to localStorage', () => {
     renderDesktop({ role: 'Owner' });
-    // Toggle button label contains ZWNJ — use the exact Unicode string
-    const toggleBtn = screen.getByLabelText('جمع\u200Cکردن ناوبری');
+    const toggleBtn = screen.getByLabelText('گسترش ناوبری');
     fireEvent.click(toggleBtn);
-    expect(localStorage.getItem('owner-sidebar-collapsed')).toBe('true');
+    expect(localStorage.getItem('owner-sidebar-collapsed')).toBe('false');
   });
 
   it('restores collapsed state from localStorage', () => {
@@ -260,21 +259,20 @@ describe('ownerNavForRole (RBAC matrix)', () => {
   });
 });
 
-// ─── Dark-mode-first (Task 7.7; Req 8.1) ─────────────────────────────────────
+// ─── Booksy-style light default (Req 8.1) ────────────────────────────────────
 
-describe('OwnerShell — dark-mode-first (Task 7.7)', () => {
-  it('defaults to data-theme="dark" on first visit (no stored preference)', () => {
+describe('OwnerShell — Booksy-style light default', () => {
+  it('defaults to data-theme="light" on first visit (no stored preference)', () => {
     const { container } = renderOwner();
     const shell = container.querySelector('[data-shell="owner"]');
-    expect(shell).toHaveAttribute('data-theme', 'dark');
+    expect(shell).toHaveAttribute('data-theme', 'light');
   });
 
   it('uses a separate localStorage key (owner-theme) independent of main app theme', () => {
-    // Main app theme is light, but owner panel should still default dark
-    localStorage.setItem('salon-theme', 'light');
+    localStorage.setItem('salon-theme', 'dark');
     const { container } = renderOwner();
     const shell = container.querySelector('[data-shell="owner"]');
-    expect(shell).toHaveAttribute('data-theme', 'dark');
+    expect(shell).toHaveAttribute('data-theme', 'light');
   });
 
   it('respects stored owner-theme="light" preference', () => {
@@ -284,20 +282,7 @@ describe('OwnerShell — dark-mode-first (Task 7.7)', () => {
     expect(shell).toHaveAttribute('data-theme', 'light');
   });
 
-  it('toggles from dark to light and persists to owner-theme key', () => {
-    const { container } = renderOwner();
-    const shell = container.querySelector('[data-shell="owner"]');
-    expect(shell).toHaveAttribute('data-theme', 'dark');
-
-    const toggle = screen.getByTestId('owner-theme-toggle');
-    fireEvent.click(toggle);
-
-    expect(shell).toHaveAttribute('data-theme', 'light');
-    expect(localStorage.getItem(OWNER_THEME_STORAGE_KEY)).toBe('light');
-  });
-
-  it('toggles back from light to dark', () => {
-    localStorage.setItem(OWNER_THEME_STORAGE_KEY, 'light');
+  it('toggles from light to dark and persists to owner-theme key', () => {
     const { container } = renderOwner();
     const shell = container.querySelector('[data-shell="owner"]');
     expect(shell).toHaveAttribute('data-theme', 'light');
@@ -307,6 +292,19 @@ describe('OwnerShell — dark-mode-first (Task 7.7)', () => {
 
     expect(shell).toHaveAttribute('data-theme', 'dark');
     expect(localStorage.getItem(OWNER_THEME_STORAGE_KEY)).toBe('dark');
+  });
+
+  it('toggles back from dark to light', () => {
+    localStorage.setItem(OWNER_THEME_STORAGE_KEY, 'dark');
+    const { container } = renderOwner();
+    const shell = container.querySelector('[data-shell="owner"]');
+    expect(shell).toHaveAttribute('data-theme', 'dark');
+
+    const toggle = screen.getByTestId('owner-theme-toggle');
+    fireEvent.click(toggle);
+
+    expect(shell).toHaveAttribute('data-theme', 'light');
+    expect(localStorage.getItem(OWNER_THEME_STORAGE_KEY)).toBe('light');
   });
 
   it('does not modify the main app theme key when toggling', () => {

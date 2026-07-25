@@ -1400,7 +1400,7 @@ function CalendarPageContent({ salonId: salonIdProp }: { salonId?: string }) {
   // are the salon closures; for a granted Stylist, their own availability blocks.
   const [blocked, setBlocked] = useState<SalonClosure[]>([]);
 
-  const [view, setView] = useState<CalendarView>('month');
+  const [view, setView] = useState<CalendarView>('day');
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [error, setError] = useState('');
   const [appointments, setAppointments] = useState<Appointment[]>([]);

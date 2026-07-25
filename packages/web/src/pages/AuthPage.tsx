@@ -1,19 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowRight, Phone, ShieldCheck } from 'lucide-react';
+import { AlertCircle, ArrowRight } from 'lucide-react';
 import { authApi, setAccessToken, setRefreshToken } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { SeoHead } from '../components/seo';
 import { normalizeDigits } from '@salon/shared';
-import {
-  Button,
-  TextField,
-  ToastProvider,
-  cn,
-  toPersianDigits,
-  useToast,
-} from '../components/ui';
+import { Button, ToastProvider, cn, toPersianDigits, useToast } from '../components/ui';
 
 /** Iranian mobile pattern: `09` followed by 9 digits (ui-ux §7). */
 const PHONE_PATTERN = /^09\d{9}$/;
@@ -55,12 +48,10 @@ function roleFromAccessToken(token: string): string | undefined {
   try {
     const payload = token.split('.')[1];
     if (!payload) return undefined;
-    const json = JSON.parse(
-      atob(payload.replace(/-/g, '+').replace(/_/g, '/')),
-    ) as { role?: unknown };
-    return typeof json.role === 'string' && STAFF_ROLES.has(json.role)
-      ? json.role
-      : undefined;
+    const json = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as {
+      role?: unknown;
+    };
+    return typeof json.role === 'string' && STAFF_ROLES.has(json.role) ? json.role : undefined;
   } catch {
     return undefined;
   }
@@ -189,8 +180,7 @@ function AuthPageContent() {
       const returnTo = (location.state as { returnTo?: string } | null)?.returnTo;
       if (typeof returnTo === 'string' && returnTo) {
         const returnState =
-          (location.state as { returnState?: Record<string, unknown> } | null)
-            ?.returnState ?? {};
+          (location.state as { returnState?: Record<string, unknown> } | null)?.returnState ?? {};
         navigate(returnTo, {
           state: { ...returnState, autoConfirm: true },
           replace: true,
@@ -218,10 +208,7 @@ function AuthPageContent() {
     }
   };
 
-  const handleOtpChange = (
-    index: number,
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleOtpChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = normalizeDigits(e.target.value).replace(/\D/g, '');
     if (!raw) {
       setDigit(index, '');
@@ -231,10 +218,7 @@ function AuthPageContent() {
     setDigit(index, raw[raw.length - 1]);
   };
 
-  const handleOtpPaste = (
-    index: number,
-    e: React.ClipboardEvent<HTMLInputElement>,
-  ) => {
+  const handleOtpPaste = (index: number, e: React.ClipboardEvent<HTMLInputElement>) => {
     const pasted = normalizeDigits(e.clipboardData.getData('text'))
       .replace(/\D/g, '')
       .slice(0, OTP_LENGTH - index);
@@ -252,10 +236,7 @@ function AuthPageContent() {
     otpRefs.current[lastFilled]?.focus();
   };
 
-  const handleOtpKeyDown = (
-    index: number,
-    e: React.KeyboardEvent<HTMLInputElement>,
-  ) => {
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Backspace' && !code[index] && index > 0) {
       e.preventDefault();
       otpRefs.current[index - 1]?.focus();
@@ -271,34 +252,28 @@ function AuthPageContent() {
 
   return (
     <div
-      className="auth-page mx-auto flex w-full max-w-funnel flex-col items-center gap-5 py-6"
+      className="auth-page mx-auto flex min-h-screen w-full max-w-funnel flex-col items-center justify-center gap-5 px-4 py-12"
       data-testid="auth-page"
     >
       <SeoHead title={t('seo.titles.auth')} />
 
-      <div
-        className="flex h-12 w-12 items-center justify-center rounded-pill bg-primary/10 text-primary"
-        aria-hidden="true"
-      >
-        {step === 'phone' ? (
-          <Phone className="h-6 w-6" />
-        ) : (
-          <ShieldCheck className="h-6 w-6" />
-        )}
-      </div>
+      <a href="/" className="text-2xl font-extrabold text-text no-underline" aria-label="آرا">
+        آرا
+      </a>
 
-      <div className="text-center">
-        <h1 className="text-xl font-bold text-text">{t('auth.title')}</h1>
-        <p className="mt-2 text-sm text-muted">
-          {step === 'phone'
-            ? hasBookingReturnIntent
-              ? t('auth.bookingIntentSubtitle')
-              : t('auth.phoneStepSubtitle')
-            : t('auth.otpStepSubtitle', { phone: toPersianDigits(normalizedPhone) })}
-        </p>
-      </div>
-
-      <div className="w-full rounded-lg border border-border bg-surface p-5 shadow-1">
+      <div className="w-full rounded-2xl border border-border bg-elevated px-6 py-6 shadow-1">
+        <div className="mb-5 text-start">
+          <h1 className="text-lg font-bold leading-display text-text">
+            {step === 'phone' ? 'ورود یا ثبت‌نام' : t('auth.otpLabel')}
+          </h1>
+          <p className="mt-1 text-sm leading-5 text-muted">
+            {step === 'phone'
+              ? hasBookingReturnIntent
+                ? t('auth.bookingIntentSubtitle')
+                : 'برای ادامه در آرا، شماره موبایل خود را وارد کنید.'
+              : t('auth.otpStepSubtitle', { phone: toPersianDigits(normalizedPhone) })}
+          </p>
+        </div>
         {step === 'phone' ? (
           <form
             className="flex flex-col gap-4"
@@ -307,23 +282,42 @@ function AuthPageContent() {
               handleRequestOtp();
             }}
           >
-            <TextField
-              id="phone"
-              label={t('auth.phoneLabel')}
-              helperText={t('auth.phoneHelper')}
-              error={phoneError || undefined}
-              type="tel"
-              inputMode="tel"
-              dir="ltr"
-              autoComplete="tel"
-              maxLength={13}
-              placeholder={t('auth.phonePlaceholder')}
-              value={phone}
-              onChange={(e) => {
-                setPhone(e.target.value);
-                if (phoneError) setPhoneError('');
-              }}
-            />
+            <div>
+              <label htmlFor="phone" className="sr-only">
+                {t('auth.phoneLabel')}
+              </label>
+              <div className="flex min-h-12 overflow-hidden rounded-md border border-border bg-elevated">
+                <span
+                  className="flex items-center border-e border-border px-3 text-sm text-text"
+                  dir="ltr"
+                >
+                  +98
+                </span>
+                <input
+                  id="phone"
+                  aria-invalid={phoneError ? true : undefined}
+                  aria-describedby={phoneError ? 'phone-error' : undefined}
+                  type="tel"
+                  inputMode="tel"
+                  dir="ltr"
+                  autoComplete="tel"
+                  maxLength={13}
+                  placeholder={t('auth.phonePlaceholder')}
+                  value={phone}
+                  style={{ unicodeBidi: 'isolate' }}
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    if (phoneError) setPhoneError('');
+                  }}
+                  className="min-w-0 flex-1 px-3 text-sm text-text outline-none"
+                />
+              </div>
+              {phoneError && (
+                <p id="phone-error" role="alert" className="mt-1 text-xs text-danger">
+                  {phoneError}
+                </p>
+              )}
+            </div>
             <Button type="submit" size="lg" fullWidth loading={loading}>
               {t('auth.requestOtp')}
             </Button>
@@ -341,12 +335,17 @@ function AuthPageContent() {
                 {t('auth.otpLabel')}
               </legend>
               {/* Six single-digit boxes — the EXPLICIT inline `direction: ltr`
-                  (not the `dir` attribute alone) is what cascade-proofs this row
-                  against inherited RTL from `<html dir="rtl">`. This guarantees
-                  reading order == index order (index 0 = leftmost box), so
-                  `code.join('')` submits digits in the order the user sees them.
-                  Do NOT remove the inline style or reverse the join. */}
-              <div className="flex flex-row justify-center gap-2" dir="ltr" style={{ direction: 'ltr' }}>
+                  + `unicode-bidi: isolate` cascade-proofs this row against
+                  inherited RTL from `<html dir="rtl">` and bidi-isolates the
+                  LTR numeric content. This guarantees reading order == index
+                  order (index 0 = leftmost box), so `code.join('')` submits
+                  digits in the order the user sees them. Do NOT remove the
+                  inline style or reverse the join. */}
+              <div
+                className="flex flex-row justify-center gap-2"
+                dir="ltr"
+                style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
+              >
                 {code.map((digit, index) => (
                   <input
                     // eslint-disable-next-line react/no-array-index-key
@@ -362,6 +361,8 @@ function AuthPageContent() {
                     aria-label={t('auth.otpDigitLabel', {
                       index: toPersianDigits(index + 1),
                     })}
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={error ? 'otp-error' : undefined}
                     value={digit}
                     onChange={(e) => handleOtpChange(index, e)}
                     onPaste={(e) => handleOtpPaste(index, e)}
@@ -373,18 +374,13 @@ function AuthPageContent() {
                       'focus-visible:outline-offset-2 focus-visible:outline-focus',
                       error ? 'border-danger' : 'border-border',
                     )}
+                    style={{ unicodeBidi: 'isolate' }}
                   />
                 ))}
               </div>
             </fieldset>
 
-            <Button
-              type="submit"
-              size="lg"
-              fullWidth
-              loading={loading}
-              disabled={!codeIsComplete}
-            >
+            <Button type="submit" size="lg" fullWidth loading={loading} disabled={!codeIsComplete}>
               {t('auth.verify')}
             </Button>
 
@@ -417,14 +413,41 @@ function AuthPageContent() {
           </form>
         )}
 
-        {/* Inline, friendly error — preserves the existing `role="alert"`
-            pattern and never clears the user's input (R4.2). */}
+        {step === 'phone' && (
+          <>
+            <div className="my-5 flex h-5 items-center gap-3 text-xs leading-5 text-muted">
+              <span className="h-px flex-1 bg-border" />
+              یا
+              <span className="h-px flex-1 bg-border" />
+            </div>
+            <div className="grid gap-3">
+              {['ادامه با گوگل', 'ادامه با اپل', 'ادامه با فیسبوک'].map((label) => (
+                <button
+                  key={label}
+                  type="button"
+                  className="h-12 rounded-md border border-border bg-elevated text-sm text-text"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="mt-5 text-center text-xs leading-5 text-muted">
+              با ادامه، با <a href="/terms" className="text-primary">شرایط استفاده</a> و{' '}
+              <a href="/privacy" className="text-primary">حریم خصوصی</a> آرا موافقت می‌کنید.
+            </p>
+          </>
+        )}
+
+        {/* Inline, friendly error — icon + text (never color-only), wired to
+            OTP inputs via `aria-describedby`; preserves entered data (R4.2). */}
         {error && (
           <p
+            id="otp-error"
             className="error mt-4 flex items-center gap-1 text-sm text-danger"
             role="alert"
           >
-            {error}
+            <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>{error}</span>
           </p>
         )}
       </div>

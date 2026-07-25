@@ -2,7 +2,6 @@ import { useTranslation } from 'react-i18next';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { LogIn, LogOut } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
-import { ownerNavForRole } from './OwnerShell';
 import { Button } from '../ui/Button';
 import { cn } from '../ui/cn';
 
@@ -23,6 +22,15 @@ interface HeaderNavItem {
 const CUSTOMER_NAV: readonly HeaderNavItem[] = [
   { labelKey: 'app.nav.home', to: '/', end: true },
 ];
+
+const STAFF_NAV = [
+  { labelKey: 'owner.nav.calendar', to: '/owner/calendar', roles: ['Owner', 'Admin', 'Stylist'] },
+  { labelKey: 'owner.nav.analytics', to: '/owner/analytics', roles: ['Owner', 'Admin'] },
+  { labelKey: 'owner.nav.configuration', to: '/owner/config', roles: ['Owner'] },
+  { labelKey: 'owner.nav.subscription', to: '/owner/subscription', roles: ['Owner', 'Admin'] },
+  { labelKey: 'owner.nav.qr', to: '/owner/qr', roles: ['Owner', 'Admin'] },
+  { labelKey: 'owner.nav.myQr', to: '/owner/my-qr', roles: ['Owner', 'Admin', 'Stylist'] },
+] as const;
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   cn(
@@ -75,7 +83,10 @@ export function HeaderAuthNav() {
 
   const items: HeaderNavItem[] =
     isStaff && role
-      ? ownerNavForRole(role).map((item) => ({ labelKey: item.labelKey, to: item.to }))
+      ? STAFF_NAV.filter((item) => item.roles.some((allowedRole) => allowedRole === role)).map(({ labelKey, to }) => ({
+          labelKey,
+          to,
+        }))
       : [...CUSTOMER_NAV];
 
   const roleLabel = t(`app.role.${role ?? 'Customer'}`);

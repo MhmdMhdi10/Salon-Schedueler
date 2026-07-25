@@ -104,7 +104,7 @@ const WIDTH_COLLAPSED = 64;
  * Desktop (lg+) sidebar with:
  * - Icons-only mode when collapsed (44×44px touch targets)
  * - Smooth width transition via Framer Motion `motion.aside`
- * - Active indicator: magenta bar on inline-start edge (logical properties)
+ * - Active indicator: brand-accent bar on inline-start edge (logical properties)
  * - Role-filtered: Stylist sees only calendar
  * - RTL-aware chevron toggle
  * - `prefers-reduced-motion` respected
@@ -151,6 +151,7 @@ export function OwnerSidebar({
             const linkContent = (
               <NavLink
                 to={item.to}
+                aria-label={collapsed ? item.label : undefined}
                 aria-current={isActive ? 'page' : undefined}
                 className={cn(
                   'group relative flex items-center gap-3 rounded-md no-underline',
@@ -164,7 +165,7 @@ export function OwnerSidebar({
                   collapsed && 'justify-center px-0',
                 )}
               >
-                {/* Active indicator — magenta bar on inline-start edge */}
+                {/* Active indicator — brand-accent bar on inline-start edge */}
                 {isActive && (
                   <span
                     aria-hidden="true"
@@ -196,7 +197,7 @@ export function OwnerSidebar({
             return (
               <li key={item.to}>
                 {collapsed ? (
-                  <Tooltip content={item.label} side="end">
+                  <Tooltip content={item.label} side="right">
                     {linkContent}
                   </Tooltip>
                 ) : (

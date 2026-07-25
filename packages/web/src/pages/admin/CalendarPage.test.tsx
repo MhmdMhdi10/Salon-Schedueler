@@ -29,8 +29,17 @@ vi.mock('../../api/client', () => {
     ApiError,
     adminApi: {
       getCalendar: vi.fn(),
+      getPending: vi.fn().mockResolvedValue({ appointments: [] }),
       approveAppointment: vi.fn(),
       rejectAppointment: vi.fn(),
+    },
+    holidaysApi: {
+      list: vi.fn().mockResolvedValue({ holidays: [] }),
+      add: vi.fn().mockResolvedValue({ holiday: {} }),
+      remove: vi.fn().mockResolvedValue({ ok: true }),
+    },
+    staffAvailabilityApi: {
+      list: vi.fn().mockResolvedValue({ blocks: [] }),
     },
   };
 });
@@ -40,7 +49,10 @@ vi.mock('../../api/client', () => {
 // pre-existing cases rely on; the new cases override it per test.
 const mockGetRole = vi.fn(() => undefined as OwnerRole | undefined);
 vi.mock('../../auth/AuthContext', () => ({
-  useAuth: () => ({ role: mockGetRole() }),
+  useAuth: () => {
+    const role = mockGetRole();
+    return { role, isStaff: role === 'Owner' || role === 'Admin' || role === 'Stylist' };
+  },
 }));
 
 function deferred<T>() {
@@ -186,8 +198,8 @@ describe('CalendarPage — approve/reject (manage_appointments)', () => {
     );
   });
 
-  it.each(['Stylist', undefined] as const)(
-    'hides approve/reject for non-managers (role=%s)',
+  it.each([undefined] as const)(
+    'hides approve/reject for non-staff sessions (role=%s)',
     async (role) => {
       mockGetRole.mockReturnValue(role);
       vi.mocked(adminApi.getCalendar).mockResolvedValue({

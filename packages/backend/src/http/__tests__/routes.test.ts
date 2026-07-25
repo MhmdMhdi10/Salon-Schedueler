@@ -735,18 +735,26 @@ describe('HTTP routes', () => {
     });
   });
 
-  // ── Analytics (protected, RBAC configure_salon — Owner only) ──────────────────
+  // ── Analytics (protected, RBAC manage_appointments — Owner/Admin) ─────────────
   describe('GET /api/salons/:id/analytics', () => {
     const query = { from: '2024-03-01T00:00:00.000Z', to: '2024-03-31T00:00:00.000Z' };
 
-    it('returns 403 FORBIDDEN for a non-Owner (Admin)', async () => {
+    it('returns 200 for an Admin', async () => {
       const res = await request(app)
         .get('/api/salons/salon-1/analytics')
         .query(query)
         .set('Authorization', `Bearer ${staffToken('Admin')}`);
+      expect(res.status).toBe(200);
+      expect(res.body.revenue).toEqual({ totalRial: 1000, appointmentCount: 2 });
+    });
+
+    it('returns 403 FORBIDDEN for a Stylist', async () => {
+      const res = await request(app)
+        .get('/api/salons/salon-1/analytics')
+        .query(query)
+        .set('Authorization', `Bearer ${staffToken('Stylist')}`);
       expect(res.status).toBe(403);
       expect(res.body).toEqual({ code: 'FORBIDDEN' });
-      expect(fake.analyticsService.revenue).not.toHaveBeenCalled();
     });
 
     it('returns 200 with utilization/revenue/busiestWindows for an Owner', async () => {

@@ -74,6 +74,7 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
+        onlyExplicitManualChunks: true,
         // Split heavy third-party libraries into their own vendor chunks so
         // they load **only** on the routes that import them (task 11.1; R9.3;
         // seo §9, ui-ux §12). Without this, Rollup merges the shared UI
@@ -96,39 +97,14 @@ export default defineConfig({
               return 'vendor-react';
             }
             if (id.includes('@radix-ui')) return 'vendor-radix';
-            if (id.includes('framer-motion') || id.includes('motion-dom') || id.includes('motion-utils')) {
+            if (
+              id.includes('framer-motion') ||
+              id.includes('motion-dom') ||
+              id.includes('motion-utils')
+            ) {
               return 'vendor-motion';
             }
             return undefined;
-          }
-          // Keep the Radix-consuming UI primitives (overlays/selection controls)
-          // in their own chunk, separate from the light display primitives
-          // (Card, DirText, SeoHead, Num, Money, …) that public pages use. Both
-          // are shared across routes, so Rollup would otherwise merge them into
-          // a single shared chunk — and because that chunk would statically
-          // import `vendor-radix`, every public page would transitively pull
-          // Radix in and blow the ~150KB budget. Isolating them ensures the
-          // public marketing/profile/discovery/legal pages download only the
-          // Radix-free primitives.
-          if (
-            /[\\/]components[\\/]ui[\\/](Toast|Dialog|Sheet|Select|Tabs|Tooltip|Checkbox|RadioGroup|Switch|JalaliDatePicker|SlotGrid)\.tsx$/.test(
-              id,
-            )
-          ) {
-            return 'ui-overlays';
-          }
-          // The Radix-free shared primitives (Button, IconButton, Card,
-          // Skeleton, Num, Money, JalaliDate, DirText, Badge, Empty/ErrorState,
-          // …) go in their own chunk. They are imported from the always-loaded
-          // app shell and from the public pages; keeping them separate from
-          // `ui-overlays` stops Rollup from merging them into the
-          // Radix-importing chunk (which would transitively pull Radix onto
-          // every public page). The barrel (`index.ts`) is intentionally NOT
-          // matched: leaving it un-chunked lets Rollup hoist its pure
-          // re-exports so a consumer that imports only `Card` never creates a
-          // hard chunk dependency on the overlay modules it does not use.
-          if (/[\\/]components[\\/]ui[\\/][^\\/]+\.tsx$/.test(id)) {
-            return 'ui-core';
           }
           return undefined;
         },
@@ -161,9 +137,10 @@ export default defineConfig({
       : undefined,
     proxy: {
       '/api': {
-        // In Docker dev this is set to http://backend:3000; locally it defaults
-        // to a backend on localhost:3000.
-        target: process.env.VITE_PROXY_TARGET || 'http://localhost:3000',
+        // In Docker dev this is set to http://backend:3000. Native Vite uses
+        // the host port from docker-compose.override.yml, where this project's
+        // backend is published on 3110 to avoid local port collisions.
+        target: process.env.VITE_PROXY_TARGET || 'http://localhost:3110',
         changeOrigin: true,
       },
     },
@@ -172,5 +149,6 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    testTimeout: 15_000,
   },
 });

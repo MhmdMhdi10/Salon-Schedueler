@@ -91,7 +91,7 @@ export interface SlotChipProps
  * (held/full/past) render as disabled buttons so they are still announced with
  * their state but cannot be activated.
  *
- * Animates on selection with a magenta fill + scale pulse [1, 1.05, 1] using
+ * Animates on selection with a brand fill + scale pulse [1, 1.05, 1] using
  * Framer Motion. Respects prefers-reduced-motion: disables scale animation,
  * retains color transition. Unavailable slots are visually muted (opacity).
  */
@@ -276,4 +276,3 @@ export const SlotGrid = forwardRef<HTMLDivElement, SlotGridProps>(
     );
   },
 );
-

@@ -53,38 +53,38 @@ describe('OwnerBottomTabs', () => {
 
   it('sets aria-current="page" on the active tab based on route', () => {
     renderTabs('/owner/analytics');
-    const buttons = screen.getAllByRole('button');
+    const buttons = screen.getAllByRole('link');
     // Calendar tab (index 0) — not active
     expect(buttons[0]).not.toHaveAttribute('aria-current');
     // Analytics tab (index 1) — active
     expect(buttons[1]).toHaveAttribute('aria-current', 'page');
-    // Config tab (index 2) — not active
-    expect(buttons[2]).not.toHaveAttribute('aria-current');
+    // Config tab (index 3) — not active
+    expect(buttons[3]).not.toHaveAttribute('aria-current');
   });
 
   it('highlights the calendar tab when on /owner/calendar', () => {
     renderTabs('/owner/calendar');
-    const buttons = screen.getAllByRole('button');
+    const buttons = screen.getAllByRole('link');
     expect(buttons[0]).toHaveAttribute('aria-current', 'page');
   });
 
   it('highlights the config tab when on a config sub-route', () => {
     renderTabs('/owner/config/services');
-    const buttons = screen.getAllByRole('button');
-    expect(buttons[2]).toHaveAttribute('aria-current', 'page');
+    const buttons = screen.getAllByRole('link');
+    expect(buttons[3]).toHaveAttribute('aria-current', 'page');
   });
 
   it('navigates to the correct route when a tab is clicked', () => {
     renderTabs('/owner/calendar');
-    const buttons = screen.getAllByRole('button');
+    const buttons = screen.getAllByRole('link');
     // Click analytics tab
     fireEvent.click(buttons[1]);
-    expect(mockedNavigate).toHaveBeenCalledWith('/owner/analytics');
+    expect(buttons[1]).toHaveAttribute('aria-current', 'page');
   });
 
   it('touch targets are at least 44px (min-h-[44px] class)', () => {
     const { container } = renderTabs();
-    const buttons = container.querySelectorAll('button');
+    const buttons = container.querySelectorAll('a');
     buttons.forEach((btn) => {
       expect(btn.className).toContain('min-h-[44px]');
     });

@@ -3,7 +3,7 @@
  * (task 4.5 / 5.1 / 11.2; R9.1, R9.4, R9.5, R9.6, R11.1, R11.2):
  *
  *  - the 192/512 "any" PWA icons + 512×512 maskable icon (manifest chrome),
- *  - the install screenshots,
+ *  - the آرا bloom PWA icons,
  *  - the **marketing hero** at two responsive widths (the LCP image), and
  *  - the default Open Graph share image,
  *
@@ -12,18 +12,16 @@
  * `width`/`height` stays CLS-safe regardless of the format the browser picks.
  *
  * The hero + OG are a real **salon-luxe** illustration (warm porcelain ground,
- * a plum-wine arched mirror, a terracotta "petal-arc" floral bloom and a few
+ * a teal arched mirror, a turquoise "petal-arc" floral bloom and a few
  * glam sparkles) — drawn as an SVG in the shipped palette and rasterized with
- * `sharp` — not a flat brand swatch. The icons/screenshots remain solid brand
- * placeholders (install-UI chrome, not page content). The base bitmaps are
- * authored with pure Node + zlib; the SVG + AVIF/WebP steps use `sharp`. Run:
+ * `sharp` — not a flat brand swatch. Install screenshots are real captures
+ * committed under `public/screenshots/`; this script never overwrites them. Run:
  * `node scripts/generate-pwa-assets.mjs`.
  *
  * NOTE: the salon-luxe palette below is duplicated as plain hex *data* for this
  * build-time asset (it never enters scanned `src/**` styles); the authoritative
  * tokens live in `styles/tokens.css` / `@salon/shared`.
  */
-import { deflateSync } from 'node:zlib';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -31,68 +29,6 @@ import sharp from 'sharp';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PUBLIC = resolve(HERE, '../public');
-
-// Solid brand placeholder color for install chrome — the shipped plum-wine
-// primary (#8E2F50), NOT the old generic indigo. The maskable safe-zone uses a
-// deeper plum so the full-bleed icon reads on any launcher background.
-const BRAND = [0x8e, 0x2f, 0x50]; // #8E2F50 plum-wine primary
-const MASKABLE_BG = [0x6e, 0x24, 0x40]; // #6E2440 deep plum (full-bleed safe zone)
-
-// ---------------------------------------------------------------------------
-// Minimal solid-color PNG encoder (pure Node + zlib) — for icons/screenshots.
-// ---------------------------------------------------------------------------
-
-function crc32(buf) {
-  let c = ~0;
-  for (let i = 0; i < buf.length; i++) {
-    c ^= buf[i];
-    for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1));
-  }
-  return (~c) >>> 0;
-}
-
-function chunk(type, data) {
-  const typeBuf = Buffer.from(type, 'ascii');
-  const len = Buffer.alloc(4);
-  len.writeUInt32BE(data.length, 0);
-  const crc = Buffer.alloc(4);
-  crc.writeUInt32BE(crc32(Buffer.concat([typeBuf, data])), 0);
-  return Buffer.concat([len, typeBuf, data, crc]);
-}
-
-/** Builds a solid-color RGB PNG of the given size. */
-function solidPng(width, height, [r, g, b]) {
-  const sig = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(width, 0);
-  ihdr.writeUInt32BE(height, 4);
-  ihdr[8] = 8; // bit depth
-  ihdr[9] = 2; // color type: truecolor RGB
-  ihdr[10] = 0; // compression
-  ihdr[11] = 0; // filter
-  ihdr[12] = 0; // interlace
-
-  const rowLen = width * 3;
-  const raw = Buffer.alloc((rowLen + 1) * height);
-  for (let y = 0; y < height; y++) {
-    const off = y * (rowLen + 1);
-    raw[off] = 0; // filter type: none
-    for (let x = 0; x < width; x++) {
-      const p = off + 1 + x * 3;
-      raw[p] = r;
-      raw[p + 1] = g;
-      raw[p + 2] = b;
-    }
-  }
-
-  return Buffer.concat([
-    sig,
-    chunk('IHDR', ihdr),
-    chunk('IDAT', deflateSync(raw, { level: 9 })),
-    chunk('IEND', Buffer.alloc(0)),
-  ]);
-}
 
 function write(relPath, buf) {
   const out = resolve(PUBLIC, relPath);
@@ -111,15 +47,15 @@ const ART = {
   creamTop: '#FCEFE6',
   creamBot: '#EFDCC9',
   sand: '#E7D2BD',
-  plumLight: '#A23A5C',
-  plum: '#8E2F50',
-  plumDark: '#6A2340',
-  clay: '#A6452A',
-  clayLight: '#C9764D',
-  blush: '#EBBFC6',
-  blushSoft: '#F5DCD7',
-  mirrorTop: '#F7E4DF',
-  mirrorBot: '#D9A0AC',
+  tealLight: '#10A990',
+  teal: '#0B7A68',
+  tealDark: '#075348',
+  clay: '#05CFA6',
+  clayLight: '#45E6C5',
+  blush: '#B8EDE5',
+  blushSoft: '#DDF8F3',
+  mirrorTop: '#DDF8F3',
+  mirrorBot: '#75DCC8',
   cream: '#FFF7EF',
   white: '#FFFFFF',
 };
@@ -147,8 +83,8 @@ function sparkle({ cx, cy, s, fill, opacity = 1 }) {
 
 /**
  * The hero illustration at 1280×720. An editorial salon-luxe composition: a
- * warm porcelain ground with a soft glow, an arched plum "mirror" with a glassy
- * rose interior, a terracotta/plum floral bloom that overlaps the arch, fine
+ * warm porcelain ground with a soft glow, an arched teal mirror with a glassy
+ * mint interior, a turquoise floral bloom that overlaps the arch, fine
  * ripple arcs, and a scatter of glam sparkles + blush bokeh in the calm corner.
  */
 function buildHeroSvg() {
@@ -162,9 +98,9 @@ function buildHeroSvg() {
       <stop offset="0" stop-color="${ART.white}" stop-opacity="0.7"/>
       <stop offset="1" stop-color="${ART.white}" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="plum" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="${ART.plumLight}"/>
-      <stop offset="1" stop-color="${ART.plumDark}"/>
+    <linearGradient id="teal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${ART.tealLight}"/>
+      <stop offset="1" stop-color="${ART.tealDark}"/>
     </linearGradient>
     <linearGradient id="mirror" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="${ART.mirrorTop}"/>
@@ -184,13 +120,13 @@ function buildHeroSvg() {
   <circle cx="300" cy="470" r="20" fill="${ART.blush}" opacity="0.4"/>
 
   <!-- Arch (mirror) contact shadow -->
-  <ellipse cx="930" cy="608" rx="214" ry="18" fill="${ART.plumDark}" opacity="0.12"/>
+  <ellipse cx="930" cy="608" rx="214" ry="18" fill="${ART.tealDark}" opacity="0.12"/>
 
   <!-- Outer arch frame stroke -->
   <path d="M716 606 L716 270 A214 214 0 0 1 1144 270 L1144 606" fill="none" stroke="${ART.clay}" stroke-width="3" opacity="0.45"/>
 
   <!-- Arch (mirror) -->
-  <path d="M730 606 L730 278 A200 200 0 0 1 1130 278 L1130 606 Z" fill="url(#plum)"/>
+  <path d="M730 606 L730 278 A200 200 0 0 1 1130 278 L1130 606 Z" fill="url(#teal)"/>
   <!-- Glassy mirror interior (offset inset) -->
   <path d="M752 606 L752 292 A178 178 0 0 1 1108 292 L1108 606 Z" fill="url(#mirror)" opacity="0.95"/>
   <!-- A soft highlight streak on the glass -->
@@ -201,19 +137,19 @@ function buildHeroSvg() {
   <circle cx="724" cy="486" r="190" fill="none" stroke="${ART.clay}" stroke-width="2" opacity="0.1"/>
 
   <!-- Bloom contact shadow -->
-  <ellipse cx="724" cy="606" rx="150" ry="16" fill="${ART.plumDark}" opacity="0.1"/>
+  <ellipse cx="724" cy="606" rx="150" ry="16" fill="${ART.tealDark}" opacity="0.1"/>
 
   <!-- Floral bloom (brand petal-arc motif) -->
-  ${flower({ cx: 560, cy: 470, s: 1.7, a: ART.plumLight, b: ART.clay, hub: ART.cream, rot: 12, opacity: 0.92 })}
-  ${flower({ cx: 648, cy: 566, s: 2.7, a: ART.clay, b: ART.plumLight, hub: ART.cream, rot: -8, opacity: 0.96 })}
-  ${flower({ cx: 724, cy: 470, s: 4.2, a: ART.plum, b: ART.clay, hub: ART.cream, rot: 0 })}
-  ${flower({ cx: 868, cy: 540, s: 1.5, a: ART.clayLight, b: ART.plum, hub: ART.cream, rot: 18, opacity: 0.9 })}
+  ${flower({ cx: 560, cy: 470, s: 1.7, a: ART.tealLight, b: ART.clay, hub: ART.cream, rot: 12, opacity: 0.92 })}
+  ${flower({ cx: 648, cy: 566, s: 2.7, a: ART.clay, b: ART.tealLight, hub: ART.cream, rot: -8, opacity: 0.96 })}
+  ${flower({ cx: 724, cy: 470, s: 4.2, a: ART.teal, b: ART.clay, hub: ART.cream, rot: 0 })}
+  ${flower({ cx: 868, cy: 540, s: 1.5, a: ART.clayLight, b: ART.teal, hub: ART.cream, rot: 18, opacity: 0.9 })}
 
   <!-- Glam sparkles -->
   ${sparkle({ cx: 1044, cy: 168, s: 2.3, fill: ART.clayLight, opacity: 0.9 })}
-  ${sparkle({ cx: 980, cy: 120, s: 1.3, fill: ART.plum, opacity: 0.8 })}
+  ${sparkle({ cx: 980, cy: 120, s: 1.3, fill: ART.teal, opacity: 0.8 })}
   ${sparkle({ cx: 700, cy: 250, s: 1.7, fill: ART.clay, opacity: 0.85 })}
-  ${sparkle({ cx: 596, cy: 360, s: 1.0, fill: ART.plumLight, opacity: 0.8 })}
+  ${sparkle({ cx: 596, cy: 360, s: 1.0, fill: ART.tealLight, opacity: 0.8 })}
   ${sparkle({ cx: 940, cy: 470, s: 1.4, fill: ART.cream, opacity: 0.85 })}
 </svg>`;
 }
@@ -222,16 +158,30 @@ function buildHeroSvg() {
 // Emit assets.
 // ---------------------------------------------------------------------------
 
-// Solid brand placeholders — install chrome only (not page content).
-const SOLID_ASSETS = [
-  ['icons/icon-192.png', solidPng(192, 192, BRAND)],
-  ['icons/icon-512.png', solidPng(512, 512, BRAND)],
-  ['icons/icon-512-maskable.png', solidPng(512, 512, MASKABLE_BG)],
-  ['screenshots/booking-mobile.png', solidPng(1080, 1920, BRAND)],
-  ['screenshots/admin-desktop.png', solidPng(1920, 1080, BRAND)],
-];
-for (const [rel, buf] of SOLID_ASSETS) {
-  write(rel, buf);
+function buildIconSvg(maskable) {
+  const inset = maskable ? 112 : 72;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+    <defs>
+      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#0B7A68"/>
+        <stop offset="1" stop-color="#05CFA6"/>
+      </linearGradient>
+    </defs>
+    <rect width="512" height="512" rx="${maskable ? 0 : 112}" fill="url(#bg)"/>
+    <g transform="translate(${inset} ${inset}) scale(${(512 - inset * 2) / 256})" fill="#FFFFFF">
+      <path d="M18 130C44 54 92 22 128 22c2 52-22 100-72 130-20 12-38 3-38-22Z"/>
+      <path d="M238 130c-26-76-74-108-110-108-2 52 22 100 72 130 20 12 38 3 38-22Z" opacity=".92"/>
+      <path d="M57 178c18-58 45-88 71-108 26 20 53 50 71 108 8 27-7 50-31 50H88c-24 0-39-23-31-50Z" opacity=".82"/>
+      <circle cx="128" cy="151" r="19"/>
+    </g>
+  </svg>`;
+}
+
+for (const size of [192, 512]) {
+  const icon = await sharp(Buffer.from(buildIconSvg(false))).resize(size, size).png().toBuffer();
+  const maskable = await sharp(Buffer.from(buildIconSvg(true))).resize(size, size).png().toBuffer();
+  write(`icons/icon-${size}.png`, icon);
+  write(`icons/icon-${size}-maskable.png`, maskable);
 }
 
 // Marketing hero (task 5.1; R9.1, R9.4) — the LCP image. A real salon-luxe
@@ -267,7 +217,7 @@ write('og/default.jpg', og);
 
 // eslint-disable-next-line no-console
 console.log(
-  `[pwa-assets] wrote ${SOLID_ASSETS.length} solid placeholders, ` +
+  `[pwa-assets] wrote 4 آرا bloom icons, ` +
     `${HERO_VARIANTS.length} hero PNGs + ${modernCount} AVIF/WebP variants, ` +
     `and the OG share image to public/`,
 );

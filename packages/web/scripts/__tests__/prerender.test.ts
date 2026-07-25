@@ -55,8 +55,8 @@ const TEMPLATE = `<!doctype html>
 </html>`;
 
 describe('title + escaping helpers', () => {
-  it('builds the «{صفحه} | رزرو سالن» title template', () => {
-    expect(pageTitle('درباره ما')).toBe('درباره ما | رزرو سالن');
+  it('builds the «{صفحه} | آرا» title template', () => {
+    expect(pageTitle('درباره ما')).toBe('درباره ما | آرا');
   });
 
   it('falls back to the bare site name when no page name', () => {

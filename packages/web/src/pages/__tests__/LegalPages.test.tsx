@@ -64,7 +64,7 @@ describe.each(PAGES)('LegalPage: $name', ({ testId, Comp, path }) => {
   it('emits a unique title and description (R8.8)', async () => {
     renderPage(Comp, path);
     await waitFor(() => {
-      expect(document.title).toContain('رزرو سالن');
+      expect(document.title).toContain('آرا');
       expect(head('meta[name="description"]')?.getAttribute('content')?.trim()).toBeTruthy();
     });
   });

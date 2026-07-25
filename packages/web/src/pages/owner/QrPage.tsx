@@ -96,14 +96,25 @@ function QrAsset({
   imgTestId?: string;
 }) {
   const qr = (
-    <span className="asset__qr">
-      <img
-        src={qrDataUri}
-        alt={qrAlt}
-        width={200}
-        height={200}
-        {...(imgTestId ? { 'data-testid': imgTestId } : {})}
-      />
+    <span className="asset__qr-wrap">
+      <span className="asset__qr-orbit" aria-hidden="true" />
+      <span className="asset__qr-corner asset__qr-corner--a" aria-hidden="true" />
+      <span className="asset__qr-corner asset__qr-corner--b" aria-hidden="true" />
+      <span className="asset__qr-corner asset__qr-corner--c" aria-hidden="true" />
+      <span className="asset__qr-corner asset__qr-corner--d" aria-hidden="true" />
+      <span className="asset__qr">
+        <img
+          src={qrDataUri}
+          alt={qrAlt}
+          width={200}
+          height={200}
+          {...(imgTestId ? { 'data-testid': imgTestId } : {})}
+        />
+      </span>
+      <span className="asset__qr-chip">
+        <Sparkles aria-hidden="true" />
+        {t('owner.qr.customBadge')}
+      </span>
     </span>
   );
   const brand = (
@@ -214,7 +225,7 @@ export function OwnerQrPage() {
 
   // Studio state.
   const [kind, setKind] = useState<AssetKind>('card');
-  const [accentKey, setAccentKey] = useState<string>(ACCENTS[0].key);
+  const [accentKey, setAccentKey] = useState<string>('jade');
   const [tagline, setTagline] = useState('');
 
   // QR target: '' = the whole salon (default), or a specific stylist's id. A
@@ -407,7 +418,7 @@ export function OwnerQrPage() {
       <SeoHead title={t('owner.qr.title')} />
 
       <header className="flex flex-col gap-2 owner-qr-screen-only">
-        <h1 className="text-xl font-bold text-text">{t('owner.qr.title')}</h1>
+        <h1 className="text-xl text-display text-text">{t('owner.qr.title')}</h1>
         <p className="max-w-[60ch] text-sm text-muted">{t('owner.qr.subtitle')}</p>
       </header>
 
@@ -465,13 +476,22 @@ export function OwnerQrPage() {
           <Card
             as="section"
             data-testid="qr-studio"
-            className="owner-qr-screen-only flex flex-col gap-5"
+            className="owner-qr-studio-card owner-qr-screen-only flex flex-col gap-5"
           >
-            <div className="flex flex-col gap-1">
-              <CardTitle as="h2" className="text-lg font-bold text-text">
-                {t('owner.qr.studioTitle')}
-              </CardTitle>
-              <p className="text-sm text-muted">{t('owner.qr.studioSubtitle')}</p>
+            <div className="owner-qr-studio-head">
+              <span className="owner-qr-studio-icon" aria-hidden="true">
+                <Sparkles className="h-5 w-5" />
+              </span>
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <CardTitle as="h2" className="text-lg font-bold text-text">
+                  {t('owner.qr.studioTitle')}
+                </CardTitle>
+                <p className="text-sm text-muted">{t('owner.qr.studioSubtitle')}</p>
+              </div>
+              <span className="owner-qr-live-badge">
+                <span aria-hidden="true" />
+                {t('owner.qr.livePreview')}
+              </span>
             </div>
 
             <div className="owner-qr-studio-grid">
@@ -621,20 +641,24 @@ export function OwnerQrPage() {
           <Card
             as="section"
             data-testid="qr-card"
-            className="flex flex-col items-center gap-4 owner-qr-screen-only"
+            className="owner-qr-raw-card flex flex-col items-center gap-4 owner-qr-screen-only"
           >
             <CardTitle as="h2" className="text-lg font-medium text-text">
               {t('owner.qr.previewTitle')}
             </CardTitle>
             <CardContent className="flex flex-col items-center gap-4">
-              <img
-                data-testid="qr-image"
-                src={qrDataUri}
-                alt={qrAlt}
-                width={224}
-                height={224}
-                className="h-56 w-56 rounded-md border border-border bg-white p-3"
-              />
+              <div className="owner-qr-raw-frame">
+                <span aria-hidden="true">{t('owner.qr.brand')}</span>
+                <img
+                  data-testid="qr-image"
+                  src={qrDataUri}
+                  alt={qrAlt}
+                  width={224}
+                  height={224}
+                  className="h-56 w-56 bg-white p-3"
+                />
+                <small>{t('owner.qr.customBadge')}</small>
+              </div>
               <p className="max-w-[42ch] text-center text-sm text-muted">
                 {t('owner.qr.previewHint')}
               </p>

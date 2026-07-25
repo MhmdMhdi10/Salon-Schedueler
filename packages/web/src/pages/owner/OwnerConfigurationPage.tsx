@@ -938,9 +938,9 @@ function HolidaysSection({
           )}
 
           {/* Add closure form */}
-          <form onSubmit={handleAdd} className="flex flex-col gap-3 border-t border-border pt-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <div className="sm:flex-1">
+          <form onSubmit={handleAdd} className="flex flex-col gap-4 border-t border-border pt-5">
+            <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="min-w-0">
                 <JalaliDatePicker
                   label={t('admin.config.closures.fromDateLabel')}
                   value={date || null}
@@ -948,7 +948,7 @@ function HolidaysSection({
                   variant="sheet"
                 />
               </div>
-              <div className="sm:flex-1">
+              <div className="min-w-0">
                 <JalaliDatePicker
                   label={t('admin.config.closures.toDateLabel')}
                   value={toDate || null}
@@ -963,19 +963,19 @@ function HolidaysSection({
                 value={mode}
                 onValueChange={(v) => setMode(v as 'full' | 'range')}
                 options={modeOptions}
-                containerClassName="sm:w-52"
+                containerClassName="w-full"
               />
             </div>
 
             {mode === 'range' && (
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <TextField
                   type="time"
                   dir="ltr"
                   label={t('admin.config.closures.startLabel')}
                   value={start}
                   onChange={(e) => setStart(e.target.value)}
-                  containerClassName="sm:flex-1"
+                  containerClassName="w-full"
                 />
                 <TextField
                   type="time"
@@ -983,7 +983,7 @@ function HolidaysSection({
                   label={t('admin.config.closures.endLabel')}
                   value={end}
                   onChange={(e) => setEnd(e.target.value)}
-                  containerClassName="sm:flex-1"
+                  containerClassName="w-full"
                 />
               </div>
             )}
@@ -1302,7 +1302,10 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
   );
 
   return (
-    <div data-testid="admin-configuration" className="flex flex-col gap-5">
+    <div
+      data-testid="admin-configuration"
+      className="mx-auto flex w-full max-w-6xl flex-col gap-6"
+    >
       <SeoHead title={t('seo.titles.adminConfiguration')} />
 
       {/* Page header */}
@@ -1323,7 +1326,7 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
           </ol>
         </nav>
 
-        <h1 className="text-xl font-bold text-text">{t('admin.configuration')}</h1>
+        <h1 className="text-xl text-display text-text">{t('admin.configuration')}</h1>
         <p className="max-w-[60ch] text-sm text-muted">{t('admin.config.subtitle')}</p>
       </header>
 
@@ -1385,7 +1388,7 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
               adminApi
                 .createChair(salonId, { name: label })
                 .then((res) => {
-                  setChairs((prev) => [...prev, res.chair]);
+                  setChairs((prev) => [...prev, toEntry(res.chair, res.chair.id)]);
                 })
                 .catch(() => {})
             }}

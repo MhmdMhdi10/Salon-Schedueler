@@ -22,7 +22,7 @@ import '../../../i18n';
  */
 
 /** The platform identifier (`app.title`), which must be subordinate. */
-const PLATFORM_IDENTIFIER = 'سامانه رزرو سالن';
+const PLATFORM_IDENTIFIER = 'آرا';
 
 afterEach(() => cleanup());
 

@@ -29,21 +29,21 @@ const SIDEBAR_COLLAPSED_KEY = 'owner-sidebar-collapsed';
 
 /**
  * Separate localStorage key for the owner panel theme preference (Req 8.1).
- * Dark-mode-first: defaults to 'dark' when no stored value exists, independent
+ * Defaults to Booksy's light workspace when no stored value exists, independent
  * of the main app theme stored under 'salon-theme'.
  */
 export const OWNER_THEME_STORAGE_KEY = 'owner-theme';
 
 /**
  * Reads the persisted owner theme preference from localStorage.
- * Defaults to 'dark' (dark-mode-first NYC SaaS aesthetic).
+ * Defaults to light to match Booksy's management workspace.
  */
 function getOwnerTheme(): Theme {
   try {
     const stored = localStorage.getItem(OWNER_THEME_STORAGE_KEY);
-    return stored === 'light' ? 'light' : 'dark';
+    return stored === 'dark' ? 'dark' : 'light';
   } catch {
-    return 'dark';
+    return 'light';
   }
 }
 
@@ -134,14 +134,14 @@ export interface OwnerShellProps {
 
 /**
  * Reads the persisted sidebar collapsed state from localStorage.
- * Defaults to `false` (expanded) when no stored value exists.
+ * Defaults to `true` (compact rail) when no stored value exists.
  */
 function getPersistedCollapsed(): boolean {
   try {
     const stored = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
-    return stored === 'true';
+    return stored == null ? true : stored === 'true';
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -176,7 +176,7 @@ export function OwnerShell({
   const { pathname } = useLocation();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
 
-  // Owner-specific theme state — dark-mode-first (Req 8.1, Task 7.7)
+  // Owner-specific theme state — light workspace by default.
   const [ownerTheme, setOwnerTheme] = useState<Theme>(getOwnerTheme);
 
   const toggleOwnerTheme = useCallback(() => {
@@ -251,7 +251,7 @@ export function OwnerShell({
 
       {/* Header */}
       <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex w-full max-w-container items-center justify-between gap-4 px-4 py-3">
+        <div className="flex w-full items-center justify-between gap-4 px-4 py-3">
           <Link
             to="/owner"
             className="rounded-md text-md font-bold text-text no-underline"
@@ -292,10 +292,7 @@ export function OwnerShell({
           tabIndex={-1}
           className={cn(
             'min-w-0 flex-1 px-4 py-5',
-            // Cap the content column on desktop so wide pages (calendar, QR)
-            // don't stretch to the full viewport and look consistent with the
-            // narrower pages (config). Full-width on mobile.
-            isDesktop && 'mx-auto w-full max-w-5xl',
+            isDesktop && 'w-full',
             // On mobile, add bottom padding to clear the fixed bottom tabs
             !isDesktop &&
               'pb-[calc(var(--space-10)+env(safe-area-inset-bottom)+12px)]',
@@ -306,7 +303,7 @@ export function OwnerShell({
       </div>
 
       {/* Mobile bottom tabs — visible only below lg */}
-      {!isDesktop && <OwnerBottomTabs />}
+      {!isDesktop && <OwnerBottomTabs role={role} />}
     </div>
   );
 }

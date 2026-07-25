@@ -12,6 +12,7 @@ interface RequestOptions {
 }
 
 let accessToken: string | null = null;
+let refreshInFlight: Promise<boolean> | null = null;
 
 export function setAccessToken(token: string | null): void {
   accessToken = token;
@@ -85,7 +86,11 @@ export function signOut(): void {
   setRefreshToken(null);
 }
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+async function request<T>(
+  path: string,
+  options: RequestOptions = {},
+  canRefresh = true,
+): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...options.headers,
@@ -100,6 +105,18 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
+
+  // Owner sessions commonly stay open longer than the 15-minute access-token
+  // lifetime. Refresh once, shared across concurrent requests, then replay the
+  // original call. Never retry the refresh endpoint itself.
+  if (response.status === 401 && canRefresh && path !== '/auth/refresh' && getRefreshToken()) {
+    refreshInFlight ??= bootstrapAuth().finally(() => {
+      refreshInFlight = null;
+    });
+    if (await refreshInFlight) {
+      return request<T>(path, options, false);
+    }
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Request failed' }));

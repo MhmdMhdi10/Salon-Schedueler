@@ -617,7 +617,7 @@ describe('Responsive layout', () => {
       });
 
       const configRoot = screen.getByTestId('admin-configuration');
-      expect(configRoot.className).toContain('max-w-3xl');
+      expect(configRoot.className).toContain('max-w-6xl');
     });
   });
 });

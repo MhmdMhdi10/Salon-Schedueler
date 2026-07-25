@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Bell,
   Check,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -11,6 +11,7 @@ import {
   User,
   Scissors,
   X,
+  XCircle,
 } from 'lucide-react';
 import { adminApi } from '../../api/client';
 import { useSalonId } from '../../auth/useSalonId';
@@ -63,12 +64,12 @@ const PERSIAN_WEEKDAYS = [
 
 /** Service-type color map for appointment blocks (token-driven) */
 const SERVICE_COLORS: Record<string, string> = {
-  haircut: 'bg-primary/20 border-primary text-primary',
-  color: 'bg-accent/20 border-accent text-accent',
-  makeup: 'bg-secondary/20 border-secondary text-secondary',
-  nail: 'bg-warning/20 border-warning text-warning',
-  facial: 'bg-info/20 border-info text-info',
-  default: 'bg-primary/15 border-primary/60 text-text',
+  haircut: 'border-s-primary',
+  color: 'border-s-accent',
+  makeup: 'border-s-secondary',
+  nail: 'border-s-warning',
+  facial: 'border-s-info',
+  default: 'border-s-primary',
 };
 
 /** Derive a color class from a service name string. */
@@ -246,6 +247,42 @@ interface AppointmentBlockProps {
   positioned?: boolean;
 }
 
+/** Status icon + ARIA label for non-color status (Goal 14). */
+function statusIndicator(status: string | undefined): {
+  icon: React.ReactNode;
+  label: string;
+  ariaState: string;
+} {
+  switch (status) {
+    case 'pending':
+      return {
+        icon: <Hourglass className="inline-block h-3 w-3 shrink-0" aria-hidden="true" />,
+        label: 'در انتظار',
+        ariaState: 'pending',
+      };
+    case 'cancelled':
+    case 'rejected':
+      return {
+        icon: <XCircle className="inline-block h-3 w-3 shrink-0" aria-hidden="true" />,
+        label: 'لغو شده',
+        ariaState: 'cancelled',
+      };
+    case 'confirmed':
+    case 'approved':
+      return {
+        icon: <CheckCircle2 className="inline-block h-3 w-3 shrink-0" aria-hidden="true" />,
+        label: 'تأیید شده',
+        ariaState: 'confirmed',
+      };
+    default:
+      return {
+        icon: <CheckCircle2 className="inline-block h-3 w-3 shrink-0" aria-hidden="true" />,
+        label: 'رزرو شده',
+        ariaState: 'booked',
+      };
+  }
+}
+
 function AppointmentBlock({
   appt,
   height,
@@ -253,44 +290,76 @@ function AppointmentBlock({
   positioned = false,
 }: AppointmentBlockProps) {
   const isPending = appt.status === 'pending';
+  const isCancelled = appt.status === 'cancelled' || appt.status === 'rejected';
   const colorClass = isPending
-    ? 'bg-warning/15 border-warning/70 border-dashed text-warning'
-    : serviceColorClass(appt.serviceName);
+    ? 'border-s-warning'
+    : isCancelled
+      ? 'border-s-danger opacity-70'
+      : serviceColorClass(appt.serviceName);
   const start = clockTime(appt.startAt);
   const end = clockTime(appt.endAt);
   const service = appt.serviceName ?? '—';
   const customer = appt.customerName;
+  const { icon: statusIcon, label: statusLabel, ariaState } = statusIndicator(appt.status);
+  const compact = positioned && (height ?? 0) < 70;
+  const statusClass = isPending
+    ? 'bg-warning/15 text-warning'
+    : isCancelled
+      ? 'bg-danger/10 text-danger'
+      : 'bg-success/10 text-success';
 
   const positionStyle = positioned
-    ? { position: 'absolute' as const, top: `${top}px`, height: `${height}px`, insetInlineStart: '4px', insetInlineEnd: '4px' }
+    ? {
+        position: 'absolute' as const,
+        top: `${top}px`,
+        height: `${height}px`,
+        insetInlineStart: '7px',
+        insetInlineEnd: '7px',
+      }
     : undefined;
 
   return (
     <div
       className={cn(
-        'flex flex-col justify-center gap-0.5 overflow-hidden rounded-md border px-2 py-1',
+        'flex flex-col justify-start gap-1 overflow-hidden rounded-lg border border-border border-s-4 bg-surface px-2.5 py-2 text-text shadow-1',
         'transition-all duration-fast ease-standard',
-        'hover:shadow-1 hover:scale-[1.01]',
+        'hover:-translate-y-px hover:border-primary/40 hover:shadow-2',
         colorClass,
-        positioned ? 'absolute z-base' : '',
+        positioned ? 'absolute z-20' : '',
       )}
       style={positionStyle}
-      title={`${service} — ${customer ?? ''}`}
+      role="article"
+      aria-label={`${service} — ${customer ?? ''} — ${statusLabel}`}
+      data-status={ariaState}
     >
-      <span className="truncate text-xs font-medium leading-tight">
-        <Scissors className="inline-block h-3 w-3 shrink-0 opacity-70" aria-hidden="true" />{' '}
-        {service}
+      <span className="flex min-w-0 items-center gap-1.5">
+        <Scissors className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+        <strong className="min-w-0 flex-1 truncate text-xs leading-tight">
+          {service}
+        </strong>
+        {start && (
+          <span className="shrink-0 rounded-full bg-bg px-1.5 py-0.5 text-[0.62rem] tabular-nums text-muted">
+            <Clock className="me-0.5 inline-block h-2.5 w-2.5" aria-hidden="true" />
+            <Num value={start} />
+            {end && !compact && <>–<Num value={end} /></>}
+          </span>
+        )}
       </span>
-      {customer && (
-        <span className="truncate text-[0.65rem] leading-tight opacity-80">
+      {customer && !compact && (
+        <span className="truncate text-[0.68rem] leading-tight text-muted">
           <User className="inline-block h-2.5 w-2.5 shrink-0 opacity-60" aria-hidden="true" />{' '}
           {customer}
         </span>
       )}
-      {start && !positioned && (
-        <span className="text-[0.6rem] tabular-nums opacity-60">
-          <Num value={start} />
-          {end && <> – <Num value={end} /></>}
+      {/* Status indicator: icon + text label (non-color, Goal 14) */}
+      {!compact && (
+        <span
+          className={cn(
+            'inline-flex w-fit items-center gap-1 rounded-full px-1.5 py-0.5 text-[0.6rem] font-medium leading-tight',
+            statusClass,
+          )}
+        >
+          {statusIcon} {statusLabel}
         </span>
       )}
     </div>
@@ -307,6 +376,8 @@ const SLOT_HEIGHT = 30 * PX_PER_MIN; // 60px
 function DayView({ appointments, anchor }: { appointments: Appointment[]; anchor: Date }) {
   const { t } = useTranslation();
   const gridRef = useRef<HTMLDivElement>(null);
+  const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [focusedRow, setFocusedRow] = useState<number | null>(null);
   const anchorKey = dateKey(anchor);
 
   const dayAppts = useMemo(
@@ -324,26 +395,61 @@ function DayView({ appointments, anchor }: { appointments: Appointment[]; anchor
   /** Grid starts at 07:00 = minute 420 */
   const gridStartMin = 7 * 60;
 
+  /** RTL vertical grid nav: ArrowUp/ArrowDown for time rows */
+  const handleGridKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const current = focusedRow ?? 0;
+      let next = current;
+
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        next = Math.max(current - 1, 0);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        next = Math.min(current + 1, TIME_SLOTS.length - 1);
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        next = 0;
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        next = TIME_SLOTS.length - 1;
+      } else {
+        return;
+      }
+
+      setFocusedRow(next);
+      rowRefs.current[next]?.focus();
+    },
+    [focusedRow],
+  );
+
   return (
     <div
       ref={gridRef}
       role="grid"
       aria-label={t('owner.calendar.dayGridLabel', { defaultValue: 'نمای روزانه' })}
       data-testid="owner-calendar-day"
-      className="relative overflow-x-auto rounded-lg border border-border bg-surface"
+      className="relative overflow-x-auto overflow-y-auto rounded-lg border border-border bg-surface"
+      onKeyDown={handleGridKeyDown}
     >
       <div className="relative min-w-[20rem]">
         {/* Time rows */}
         {TIME_SLOTS.map((slot, idx) => {
           const timeStr = `${String(slot.hour).padStart(2, '0')}:${String(slot.minute).padStart(2, '0')}`;
           const isHour = slot.minute === 0;
+          const isFocused = focusedRow === idx;
           return (
             <div
               key={`slot-${idx}`}
+              ref={(el) => { rowRefs.current[idx] = el; }}
               role="row"
+              tabIndex={isFocused || (focusedRow === null && idx === 0) ? 0 : -1}
+              aria-label={timeStr}
+              onFocus={() => setFocusedRow(idx)}
               className={cn(
                 'flex items-start border-b border-border/50',
                 'transition-colors duration-fast ease-standard hover:bg-elevated/40',
+                'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-focus',
               )}
               style={{ height: `${SLOT_HEIGHT}px` }}
             >
@@ -401,6 +507,8 @@ function DayView({ appointments, anchor }: { appointments: Appointment[]; anchor
 function WeekView({ appointments, anchor }: { appointments: Appointment[]; anchor: Date }) {
   const { t } = useTranslation();
   const weekStart = useMemo(() => startOfIranianWeek(anchor), [anchor]);
+  const cellRefs = useRef<(HTMLElement | null)[]>([]);
+  const [focusedIdx, setFocusedIdx] = useState<number | null>(null);
 
   const days = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => {
@@ -421,23 +529,59 @@ function WeekView({ appointments, anchor }: { appointments: Appointment[]; ancho
 
   const todayKey = dateKey(new Date());
 
+  /** RTL grid keyboard navigation: ArrowLeft = forward (next cell), ArrowRight = back */
+  const handleGridKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const current = focusedIdx ?? 0;
+      let next = current;
+
+      if (e.key === 'ArrowLeft') {
+        // RTL: Left = forward in reading order = next day
+        e.preventDefault();
+        next = Math.min(current + 1, 6);
+      } else if (e.key === 'ArrowRight') {
+        // RTL: Right = back in reading order = previous day
+        e.preventDefault();
+        next = Math.max(current - 1, 0);
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        next = 0;
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        next = 6;
+      } else {
+        return;
+      }
+
+      setFocusedIdx(next);
+      cellRefs.current[next]?.focus();
+    },
+    [focusedIdx],
+  );
+
   return (
     <div
       role="grid"
       aria-label={t('owner.calendar.weekGridLabel', { defaultValue: 'نمای هفتگی' })}
       data-testid="owner-calendar-week"
       className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7"
+      onKeyDown={handleGridKeyDown}
     >
-      {days.map((day) => {
+      {days.map((day, idx) => {
         const isToday = day.iso === todayKey;
+        const isFocused = focusedIdx === idx;
         return (
           <section
             key={day.iso}
+            ref={(el) => { cellRefs.current[idx] = el; }}
             role="gridcell"
+            tabIndex={isFocused || (focusedIdx === null && idx === 0) ? 0 : -1}
             aria-label={`${PERSIAN_WEEKDAYS[day.dayIndex]} ${day.jalali.jd}`}
+            onFocus={() => setFocusedIdx(idx)}
             className={cn(
               'flex min-h-[10rem] flex-col gap-2 rounded-lg border p-3',
               'transition-colors duration-fast ease-standard hover:bg-elevated/30',
+              'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
               isToday
                 ? 'border-primary/60 bg-primary/5'
                 : 'border-border bg-surface',
@@ -793,68 +937,37 @@ function ViewToggle({
 }) {
   const { t } = useTranslation();
 
+  const tabs: { key: CalendarView; label: string; shortcut: string }[] = [
+    { key: 'day', label: t('owner.calendar.dayTab', { defaultValue: 'روز' }), shortcut: 'd' },
+    { key: 'week', label: t('owner.calendar.weekTab', { defaultValue: 'هفته' }), shortcut: 'w' },
+    { key: 'month', label: t('owner.calendar.monthTab', { defaultValue: 'ماه' }), shortcut: 'm' },
+    { key: 'list', label: t('owner.calendar.listTab', { defaultValue: 'فهرست' }), shortcut: 'l' },
+  ];
+
   return (
     <div
       role="tablist"
       aria-label={t('owner.calendar.viewToggle', { defaultValue: 'تغییر نما' })}
       className="inline-flex rounded-lg border border-border bg-bg p-1"
     >
-      <button
-        role="tab"
-        aria-selected={view === 'day'}
-        className={cn(
-          'relative rounded-md px-4 py-1.5 text-sm font-medium transition-colors duration-fast ease-standard',
-          'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
-          view === 'day'
-            ? 'bg-primary text-primary-contrast shadow-1'
-            : 'text-muted hover:text-text hover:bg-elevated/50',
-        )}
-        onClick={() => onViewChange('day')}
-      >
-        {t('owner.calendar.dayTab', { defaultValue: 'روز' })}
-      </button>
-      <button
-        role="tab"
-        aria-selected={view === 'week'}
-        className={cn(
-          'relative rounded-md px-4 py-1.5 text-sm font-medium transition-colors duration-fast ease-standard',
-          'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
-          view === 'week'
-            ? 'bg-primary text-primary-contrast shadow-1'
-            : 'text-muted hover:text-text hover:bg-elevated/50',
-        )}
-        onClick={() => onViewChange('week')}
-      >
-        {t('owner.calendar.weekTab', { defaultValue: 'هفته' })}
-      </button>
-      <button
-        role="tab"
-        aria-selected={view === 'month'}
-        className={cn(
-          'relative rounded-md px-4 py-1.5 text-sm font-medium transition-colors duration-fast ease-standard',
-          'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
-          view === 'month'
-            ? 'bg-primary text-primary-contrast shadow-1'
-            : 'text-muted hover:text-text hover:bg-elevated/50',
-        )}
-        onClick={() => onViewChange('month')}
-      >
-        {t('owner.calendar.monthTab', { defaultValue: 'ماه' })}
-      </button>
-      <button
-        role="tab"
-        aria-selected={view === 'list'}
-        className={cn(
-          'relative rounded-md px-4 py-1.5 text-sm font-medium transition-colors duration-fast ease-standard',
-          'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
-          view === 'list'
-            ? 'bg-primary text-primary-contrast shadow-1'
-            : 'text-muted hover:text-text hover:bg-elevated/50',
-        )}
-        onClick={() => onViewChange('list')}
-      >
-        {t('owner.calendar.listTab', { defaultValue: 'فهرست' })}
-      </button>
+      {tabs.map((tab) => (
+        <button
+          key={tab.key}
+          role="tab"
+          aria-selected={view === tab.key}
+          aria-keyshortcuts={tab.shortcut}
+          className={cn(
+            'relative rounded-md px-4 py-1.5 text-sm font-medium transition-colors duration-fast ease-standard',
+            'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+            view === tab.key
+              ? 'bg-primary text-primary-contrast shadow-1'
+              : 'text-muted hover:text-text hover:bg-elevated/50',
+          )}
+          onClick={() => onViewChange(tab.key)}
+        >
+          {tab.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -975,6 +1088,15 @@ function ApprovalQueue({
   const load = useCallback(() => {
     let active = true;
     setLoading(true);
+    // Some embedded/test hosts expose the calendar API without the optional
+    // approval-queue methods. Keep the calendar usable in that capability set.
+    if (typeof adminApi.getPending !== 'function') {
+      setPending([]);
+      setLoading(false);
+      return () => {
+        active = false;
+      };
+    }
     adminApi
       .getPending(salonId)
       .then((res) => {
@@ -1088,7 +1210,7 @@ function ApprovalQueue({
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <Button
-                  size="sm"
+                  size="md"
                   variant="danger"
                   onClick={() => handleAction(appt.id, 'reject')}
                   disabled={isBusy}
@@ -1099,7 +1221,7 @@ function ApprovalQueue({
                     : t('owner.calendar.reject', { defaultValue: 'رد' })}
                 </Button>
                 <Button
-                  size="sm"
+                  size="md"
                   variant="primary"
                   onClick={() => handleAction(appt.id, 'approve')}
                   disabled={isBusy}
@@ -1151,7 +1273,10 @@ export function OwnerCalendarPage() {
   const handleViewChange = useCallback(
     (newView: CalendarView) => {
       if (newView === view) return;
-      setViewDirection(newView === 'week' ? 1 : -1);
+      const order: CalendarView[] = ['day', 'week', 'month', 'list'];
+      const oldIdx = order.indexOf(view);
+      const newIdx = order.indexOf(newView);
+      setViewDirection(newIdx > oldIdx ? 1 : -1);
       setView(newView);
     },
     [view],
@@ -1178,6 +1303,43 @@ export function OwnerCalendarPage() {
     },
     [view],
   );
+
+  // ─── Keyboard view switching (D/W/M/L) ────────────────────────────────────
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      // Skip if user is typing in an input/textarea
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      switch (e.key.toLowerCase()) {
+        case 'd':
+          e.preventDefault();
+          handleViewChange('day');
+          break;
+        case 'w':
+          e.preventDefault();
+          handleViewChange('week');
+          break;
+        case 'm':
+          e.preventDefault();
+          handleViewChange('month');
+          break;
+        case 'l':
+          e.preventDefault();
+          handleViewChange('list');
+          break;
+        case 't':
+          // "T" for today
+          e.preventDefault();
+          handleNavigate(0);
+          break;
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [handleViewChange, handleNavigate]);
 
   // ─── Data Fetch ──────────────────────────────────────────────────────────
 

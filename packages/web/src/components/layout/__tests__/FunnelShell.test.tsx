@@ -37,7 +37,7 @@ describe('FunnelShell', () => {
 
   it('falls back to the app title when no salon name is provided', () => {
     renderFunnel();
-    expect(screen.getByText('سامانه رزرو سالن')).toBeInTheDocument();
+    expect(screen.getByText('آرا')).toBeInTheDocument();
   });
 
   it('exposes a single <main> with the funnel content id', () => {

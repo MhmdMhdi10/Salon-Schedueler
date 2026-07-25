@@ -88,6 +88,35 @@ describe('bootstrapAuth', () => {
   });
 });
 
+describe('expired access token recovery', () => {
+  it('refreshes once and retries the failed authenticated request', async () => {
+    const client = await import('../client');
+    client.setAccessToken('access-expired');
+    client.setRefreshToken('refresh-1');
+    mockFetch
+      .mockResolvedValueOnce(
+        jsonResponse({ code: 'UNAUTHORIZED', message: 'expired' }, false, 401),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ accessToken: 'access-new', refreshToken: 'refresh-2' }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ utilization: {}, revenue: {}, busiestWindows: [] }),
+      );
+
+    await client.adminApi.getAnalytics('salon-1', '2026-06-25', '2026-07-25');
+
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+    expect(mockFetch.mock.calls[1]?.[0]).toContain('/auth/refresh');
+    expect(mockFetch.mock.calls[2]?.[1]).toEqual(
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: 'Bearer access-new' }),
+      }),
+    );
+    expect(client.getRefreshToken()).toBe('refresh-2');
+  });
+});
+
 describe('signOut', () => {
   it('clears the in-memory access token and the stored refresh token', async () => {
     const client = await import('../client');

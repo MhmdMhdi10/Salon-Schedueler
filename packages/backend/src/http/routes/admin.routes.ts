@@ -236,7 +236,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
 
   router.get(
     '/salons/:id/analytics',
-    requireRole('configure_salon'),
+    requireRole('manage_appointments'),
     asyncRoute(async (req, res) => {
       if (!validateRequired(res, req.query as Record<string, unknown>, ['from', 'to'])) {
         return;

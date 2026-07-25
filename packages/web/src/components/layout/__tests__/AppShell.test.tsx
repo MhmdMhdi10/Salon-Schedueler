@@ -15,7 +15,7 @@ import { renderRtl, expectNoSeriousA11yViolations } from '../../../test/a11y';
 function renderShell(children: React.ReactNode = <p>محتوا</p>) {
   return render(
     <ThemeProvider defaultTheme="light">
-      <MemoryRouter>
+      <MemoryRouter initialEntries={['/about']}>
         <div dir="rtl" lang="fa">
           <AppShell>{children}</AppShell>
         </div>
@@ -52,7 +52,7 @@ describe('AppShell', () => {
   it('provides a primary navigation landmark with a home link', () => {
     renderShell();
     const nav = screen.getByRole('navigation', { name: 'ناوبری اصلی' });
-    const home = within(nav).getByRole('link', { name: 'سامانه رزرو سالن' });
+    const home = within(nav).getByRole('link', { name: 'آرا' });
     expect(home).toHaveAttribute('href', '/');
   });
 
@@ -73,7 +73,7 @@ describe('AppShell', () => {
   it('has no serious/critical a11y violations in RTL', async () => {
     const { rtlContainer } = renderRtl(
       <ThemeProvider defaultTheme="light">
-        <MemoryRouter>
+        <MemoryRouter initialEntries={['/about']}>
           <AppShell>
             <h1>عنوان صفحه</h1>
           </AppShell>

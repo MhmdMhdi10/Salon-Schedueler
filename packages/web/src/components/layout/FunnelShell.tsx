@@ -92,14 +92,8 @@ export function FunnelShell({
       )}
     >
       {/* Minimal top bar: back affordance (inline-start) + salon name. */}
-      <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex w-full max-w-funnel items-center gap-3 px-4 py-3">
-          {onBack ? (
-            <IconButton aria-label={t('funnel.back')} onClick={onBack}>
-              {/* Directional icon: mirrors automatically under dir="rtl". */}
-              <ChevronRight className="h-5 w-5 rtl:-scale-x-100" />
-            </IconButton>
-          ) : null}
+      <header className="border-b border-border bg-elevated">
+        <div className="mx-auto flex h-14 w-full max-w-2xl items-center gap-5 px-4">
           {brandMark ? (
             <div className="flex min-w-0 items-center gap-2">
               {logoUrl ? (
@@ -123,13 +117,32 @@ export function FunnelShell({
               {t('app.title')}
             </span>
           )}
+          <div className="flex flex-1 gap-1" aria-hidden="true">
+            {FUNNEL_STEPS.map((step, index) => (
+              <span
+                key={step}
+                className={cn(
+                  'h-1 flex-1 rounded-pill',
+                  index <= currentIndex ? 'bg-primary' : 'bg-border',
+                )}
+              />
+            ))}
+          </div>
+          {onBack ? (
+            <IconButton aria-label={t('funnel.back')} onClick={onBack}>
+              {/* Directional icon: mirrors automatically under dir="rtl". */}
+              <ChevronRight className="h-5 w-5 rtl:-scale-x-100" />
+            </IconButton>
+          ) : (
+            <span className="size-10" aria-hidden="true" />
+          )}
         </div>
       </header>
 
       {/* Stepper progress indicator (ui-ux §8). An ordered list communicates
           sequence; aria-current marks the active step for AT. */}
-      <nav aria-label={t('funnel.progress')} className="bg-surface">
-        <ol className="mx-auto flex w-full max-w-funnel items-center gap-1 px-4 py-3">
+      <nav aria-label={t('funnel.progress')} className="sr-only">
+        <ol>
           {FUNNEL_STEPS.map((step, index) => {
             const isComplete = index < currentIndex;
             const isCurrent = index === currentIndex;
@@ -137,7 +150,7 @@ export function FunnelShell({
               <li
                 key={step}
                 aria-current={isCurrent ? 'step' : undefined}
-                className="flex flex-1 items-center gap-2"
+                className="flex items-center gap-2"
               >
                 <span
                   aria-hidden="true"
@@ -170,19 +183,17 @@ export function FunnelShell({
         </p>
       </nav>
 
-      {/* Centered content card, capped at the funnel width (≈480px). */}
+      {/* Centered Booksy-style form column. */}
       <main
         id={FUNNEL_CONTENT_ID}
         tabIndex={-1}
         className={cn(
-          'mx-auto w-full max-w-funnel flex-1 px-4 py-5',
+          'mx-auto w-full max-w-2xl flex-1 px-4 py-10',
           // Reserve room so the sticky CTA never covers the card's tail.
           cta && 'pb-[calc(var(--space-10)+env(safe-area-inset-bottom))]',
         )}
       >
-        <div className="rounded-lg border border-border bg-surface p-4 shadow-1">
-          {children}
-        </div>
+        {children}
       </main>
 
       {/* Sticky bottom CTA bar in the thumb zone, clearing the safe-area. */}
@@ -194,7 +205,7 @@ export function FunnelShell({
             'pb-[env(safe-area-inset-bottom)]',
           )}
         >
-          <div className="mx-auto w-full max-w-funnel px-4 py-3">{cta}</div>
+          <div className="mx-auto w-full max-w-2xl px-4 py-3">{cta}</div>
         </div>
       ) : null}
     </div>

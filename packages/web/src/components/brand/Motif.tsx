@@ -26,39 +26,33 @@ export interface MotifProps {
   'aria-hidden'?: boolean;
 }
 
-/**
- * Two crossed straight razor blades in a 48×48 coordinate box, centered at (24,24).
- * Each blade is a diagonal line with slightly curved razor ends. The blades use
- * alternating primary/accent tokens; the center diamond uses `currentColor` for
- * adaptive visibility against any surface.
- */
-function CrossedRazors({ idPrefix }: { idPrefix: string }) {
+/** آرا bloom: three overlapping adornment petals, token-colored. */
+function AraBloom({ idPrefix }: { idPrefix: string }) {
   return (
     <g>
-      {/* Blade 1: top-left to bottom-right diagonal */}
       <path
-        d="M8 8 C 10 12 14 18 22 22 L 26 26 C 34 30 38 36 40 40 L 42 38 C 38 34 34 28 26 24 L 22 22 C 14 16 10 10 10 6 Z"
+        d="M24 5C13 11 10 22 24 30C38 22 35 11 24 5Z"
         fill="var(--color-primary)"
-        data-motif-part={`${idPrefix}-blade-1`}
+        data-motif-part={`${idPrefix}-petal-center`}
       />
-      {/* Blade 2: top-right to bottom-left diagonal */}
       <path
-        d="M40 8 C 38 12 34 18 26 22 L 22 26 C 14 30 10 36 8 40 L 6 38 C 10 34 14 28 22 24 L 26 22 C 34 16 38 10 38 6 Z"
+        d="M8 18C9 31 16 39 24 30C21 17 14 14 8 18Z"
         fill="var(--color-accent)"
-        data-motif-part={`${idPrefix}-blade-2`}
+        data-motif-part={`${idPrefix}-petal-start`}
       />
-      {/* Center diamond where blades cross */}
       <path
-        d="M24 20 L 28 24 L 24 28 L 20 24 Z"
-        fill="currentColor"
+        d="M40 18C39 31 32 39 24 30C27 17 34 14 40 18Z"
+        fill="var(--color-accent)"
+        data-motif-part={`${idPrefix}-petal-end`}
       />
+      <circle cx="24" cy="31" r="3" fill="currentColor" />
     </g>
   );
 }
 
 /**
- * Signature brand motif — a token-driven "crossed razors" device (NYC barbershop
- * aesthetic). It uses **only** `var(--color-primary)` / `var(--color-accent)` and
+ * Signature آرا adornment motif — a token-driven petal/bloom arc. It uses
+ * **only** `var(--color-primary)` / `var(--color-accent)` and
  * `currentColor` for color, so a tenant storefront's runtime accent override
  * re-tints it for free and it never hard-codes a hex. Decorative by default.
  */
@@ -78,8 +72,7 @@ export function Motif({
   };
 
   if (variant === 'band') {
-    // A horizontal line with a small crossed-razors mark centered on it.
-    // Reads as a refined section divider with the barbershop identity.
+    // A horizontal line with a small bloom centered on it.
     const fadeId = `motif-band-fade-${uid}`;
     return (
       <svg
@@ -99,15 +92,15 @@ export function Motif({
             <stop offset="1" stopColor="var(--color-accent)" stopOpacity="0" />
           </linearGradient>
         </defs>
-        {/* Hairline that fades toward both edges, passing behind the razors. */}
+        {/* Hairline that fades toward both edges, passing behind the bloom. */}
         <rect x="16" y="23" width="288" height="2" rx="1" fill={`url(#${fadeId})`} />
         {/* Small accent dots flanking the center mark */}
         <circle cx="112" cy="24" r="2" fill="var(--color-accent)" opacity="0.85" />
         <circle cx="208" cy="24" r="2" fill="var(--color-accent)" opacity="0.85" />
-        {/* Centered crossed razors mark (scaled down) */}
+        {/* Centered bloom mark (scaled down) */}
         <g transform="translate(160 24) scale(0.6)">
           <g transform="translate(-24 -24)">
-            <CrossedRazors idPrefix={`band-${uid}`} />
+            <AraBloom idPrefix={`band-${uid}`} />
           </g>
         </g>
       </svg>
@@ -115,7 +108,7 @@ export function Motif({
   }
 
   if (variant === 'watermark') {
-    // Faint oversized backdrop: crossed razors at low opacity, drawn in
+    // Faint oversized bloom backdrop at low opacity, drawn in
     // currentColor so it sits quietly behind content as a texture.
     return (
       <svg
@@ -127,7 +120,7 @@ export function Motif({
         color="var(--color-primary)"
       >
         <g color="var(--color-primary)">
-          <CrossedRazors idPrefix="watermark" />
+          <AraBloom idPrefix="watermark" />
         </g>
       </svg>
     );
@@ -141,7 +134,7 @@ export function Motif({
       preserveAspectRatio="xMidYMid meet"
       data-motif="mark"
     >
-      <CrossedRazors idPrefix="mark" />
+      <AraBloom idPrefix="mark" />
     </svg>
   );
 }

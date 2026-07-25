@@ -40,6 +40,14 @@ vi.mock('../../api/client', () => {
     adminApi: {
       getCalendar: vi.fn(),
     },
+    holidaysApi: {
+      list: vi.fn().mockResolvedValue({ holidays: [] }),
+      add: vi.fn().mockResolvedValue({ holiday: {} }),
+      remove: vi.fn().mockResolvedValue({ ok: true }),
+    },
+    staffAvailabilityApi: {
+      list: vi.fn().mockResolvedValue({ blocks: [] }),
+    },
   };
 });
 
@@ -124,7 +132,7 @@ describe('CalendarPage — view-switch by keyboard', () => {
     // Arrow keys move the roving focus across the tab list (keyboard operable),
     // and Radix activates the focused tab.
     dayTab.focus();
-    fireEvent.keyDown(dayTab, { key: 'ArrowRight' });
+    fireEvent.keyDown(dayTab, { key: 'ArrowLeft' });
 
     await waitFor(() =>
       expect(weekTab).toHaveAttribute('aria-selected', 'true'),

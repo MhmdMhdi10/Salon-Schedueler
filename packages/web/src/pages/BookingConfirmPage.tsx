@@ -5,9 +5,9 @@ import { CalendarClock, Clock, CreditCard, Scissors, Store } from 'lucide-react'
 import { motion, useReducedMotion } from 'framer-motion';
 import { bookingApi, salonApi } from '../api/client';
 import { SeoHead } from '../components/seo';
+import { FunnelShell } from '../components/layout';
 import { readSalonName } from '../utils/salonName';
 import {
-  BookingStepper,
   Button,
   EmptyState,
   ErrorState,
@@ -68,25 +68,19 @@ function isAuthFailure(err: unknown): boolean {
   return !!e && (e.status === 401 || e.code === 'UNAUTHORIZED');
 }
 
-/** Booking stepper steps (step 3 = confirm). */
-const BOOKING_STEPS = [
-  { key: 'service', label: 'خدمت' },
-  { key: 'datetime', label: 'تاریخ' },
-  { key: 'confirm', label: 'تایید' },
-];
-
 /**
  * Customer **booking-confirm** step at `/salon/:salonId/book/confirm`
  * (R4.5, R7.2, R7.5; ui-ux Booking-Confirm recipe, §6, §8, §12).
  *
- * Redesigned as a premium receipt-like summary card with:
- * - BookingStepper showing step 3 active
- * - Elevated card (shadow-2, rounded-lg) with receipt styling
- * - Dotted dividers between sections (token-driven border)
- * - Labeled rows: service, date (Jalali), time, price (Rial), salon name
- * - All text Persian, Persian digits, Jalali dates
- * - CTA in thumb zone (bottom third of viewport on mobile)
- * - Token-only styling, logical properties for RTL
+ * Wrapped in `FunnelShell` (no nav chrome, sticky bottom CTA in thumb reach —
+ * آرا Design Goals 12, 15, 17). Summary card shows:
+ * - Service name
+ * - Jalali date (Persian)
+ * - Time (Persian digits)
+ * - Rial price (Persian numerals)
+ * - Salon name
+ *
+ * Keyboard-operable RTL focus order (tab through summary → CTA). `noindex`.
  */
 export function BookingConfirmPage() {
   const { t } = useTranslation();
@@ -201,207 +195,204 @@ export function BookingConfirmPage() {
   // Guard: arriving here without a selection (e.g. a direct deep link)
   if (!state) {
     return (
-      <div
-        data-testid="booking-confirm"
-        className="mx-auto flex w-full max-w-funnel flex-col gap-6 py-6"
-      >
-        <SeoHead title={t('seo.titles.confirm')} />
-        <h1 className="text-xl font-bold text-text">{t('booking.confirmHeading')}</h1>
-        <EmptyState
-          icon={<CalendarClock className="h-8 w-8" />}
-          title={t('booking.missingSelectionTitle')}
-          description={t('booking.missingSelectionBody')}
-          action={
-            <Button variant="secondary" onClick={backToBooking}>
-              {t('booking.backToBooking')}
-            </Button>
-          }
-        />
-      </div>
+      <FunnelShell currentStep="confirm" salonName={salonName ?? undefined} onBack={backToBooking}>
+        <div data-testid="booking-confirm">
+          <SeoHead title={t('seo.titles.confirm')} />
+          <h1 className="text-xl font-bold text-text">{t('booking.confirmHeading')}</h1>
+          <EmptyState
+            icon={<CalendarClock className="h-8 w-8" />}
+            title={t('booking.missingSelectionTitle')}
+            description={t('booking.missingSelectionBody')}
+            action={
+              <Button variant="secondary" onClick={backToBooking}>
+                {t('booking.backToBooking')}
+              </Button>
+            }
+          />
+        </div>
+      </FunnelShell>
     );
   }
 
   const time = toPersianDigits(timeLabel(state.startAt));
 
-  return (
-    <div
-      data-testid="booking-confirm"
-      className="mx-auto flex w-full max-w-funnel flex-col gap-6 px-4 py-6"
+  // Sticky CTA button rendered in FunnelShell's thumb-zone bar
+  const ctaButton = (
+    <Button
+      fullWidth
+      size="lg"
+      onClick={handleConfirm}
+      loading={confirmStatus === 'submitting' || confirmStatus === 'redirecting'}
+      disabled={detailsStatus !== 'ready'}
+      startIcon={<CreditCard className="h-5 w-5" />}
     >
-      <SeoHead title={t('seo.titles.confirm')} />
+      {t('booking.confirm')}
+    </Button>
+  );
 
-      {/* Page heading — visually styled as stepper context */}
-      <h1 className="sr-only">{t('booking.confirmHeading')}</h1>
+  return (
+    <FunnelShell
+      currentStep="confirm"
+      salonName={salonName ?? undefined}
+      onBack={backToBooking}
+      cta={ctaButton}
+    >
+      <div data-testid="booking-confirm" className="flex flex-col gap-6">
+        <SeoHead title={t('seo.titles.confirm')} />
 
-      {/* Progress stepper — step 3 (confirm) active */}
-      <BookingStepper steps={BOOKING_STEPS} currentStep={2} className="mb-2" />
+        {/* Page heading — sr-only since the stepper provides visual context */}
+        <h1 className="sr-only">{t('booking.confirmHeading')}</h1>
 
-      {/* Receipt-like summary card */}
-      <section aria-labelledby="summary-title">
-        <h2 id="summary-title" className="sr-only">
-          {t('booking.summaryTitle')}
-        </h2>
+        {/* Receipt-like summary card */}
+        <section aria-labelledby="summary-title">
+          <h2 id="summary-title" className="sr-only">
+            {t('booking.summaryTitle')}
+          </h2>
 
-        {detailsStatus === 'loading' && (
-          <div
-            className="rounded-lg border border-border bg-elevated p-6 shadow-2"
-            role="status"
-            aria-label={t('booking.detailsLoadingLabel')}
-          >
-            <Skeleton variant="text" className="mb-4 w-1/3" />
-            <div className="flex flex-col gap-4">
-              <Skeleton variant="text" className="w-full" />
-              <Skeleton variant="text" className="w-full" />
-              <Skeleton variant="text" className="w-full" />
-              <Skeleton variant="text" className="w-2/3" />
+          {detailsStatus === 'loading' && (
+            <div
+              className="rounded-lg border border-border bg-elevated p-6 shadow-2"
+              role="status"
+              aria-label={t('booking.detailsLoadingLabel')}
+            >
+              <Skeleton variant="text" className="mb-4 w-1/3" />
+              <div className="flex flex-col gap-4">
+                <Skeleton variant="text" className="w-full" />
+                <Skeleton variant="text" className="w-full" />
+                <Skeleton variant="text" className="w-full" />
+                <Skeleton variant="text" className="w-2/3" />
+              </div>
             </div>
-          </div>
+          )}
+
+          {detailsStatus === 'error' && (
+            <ErrorState
+              title={t('booking.detailsErrorTitle')}
+              description={t('booking.detailsErrorBody')}
+              retryLabel={t('common.retry')}
+              onRetry={loadDetails}
+            />
+          )}
+
+          {detailsStatus === 'ready' && service && (
+            <motion.div
+              className="overflow-hidden rounded-lg border border-border bg-elevated shadow-2"
+              initial={prefersReduced ? false : { opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, ease: [0.2, 0, 0, 1] }}
+            >
+              {/* Card header */}
+              <div className="border-b border-dashed border-border px-6 py-4">
+                <h3 className="text-lg font-bold text-text">
+                  {t('booking.receiptTitle')}
+                </h3>
+              </div>
+
+              {/* Receipt rows */}
+              <dl className="px-6 py-4">
+                {/* Service */}
+                <div className="flex items-center justify-between gap-4 py-3">
+                  <dt className="flex items-center gap-2 text-sm text-text-muted">
+                    <Scissors className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    {t('booking.serviceLabel')}
+                  </dt>
+                  <dd className="text-sm font-semibold text-text">{service.name}</dd>
+                </div>
+
+                {/* Dotted divider */}
+                <div className="border-t border-dashed border-border" aria-hidden="true" />
+
+                {/* Date */}
+                <div className="flex items-center justify-between gap-4 py-3">
+                  <dt className="flex items-center gap-2 text-sm text-text-muted">
+                    <CalendarClock className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    {t('booking.dateLabel')}
+                  </dt>
+                  <dd className="text-sm font-semibold text-text">
+                    <JalaliDate value={state.startAt} withWeekday />
+                  </dd>
+                </div>
+
+                {/* Dotted divider */}
+                <div className="border-t border-dashed border-border" aria-hidden="true" />
+
+                {/* Time */}
+                <div className="flex items-center justify-between gap-4 py-3">
+                  <dt className="flex items-center gap-2 text-sm text-text-muted">
+                    <Clock className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    {t('booking.timeLabel')}
+                  </dt>
+                  <dd className="text-sm font-semibold text-text">
+                    {t('booking.timeAt', { time })}
+                  </dd>
+                </div>
+
+                {/* Dotted divider */}
+                <div className="border-t border-dashed border-border" aria-hidden="true" />
+
+                {/* Price */}
+                <div className="flex items-center justify-between gap-4 py-3">
+                  <dt className="flex items-center gap-2 text-sm text-text-muted">
+                    <CreditCard className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    {t('booking.priceLabel')}
+                  </dt>
+                  <dd className="text-base font-bold text-text">
+                    <Money amountRial={service.priceRial} />
+                  </dd>
+                </div>
+
+                {/* Salon name (if available) */}
+                {salonName && (
+                  <>
+                    {/* Dotted divider */}
+                    <div
+                      className="border-t border-dashed border-border"
+                      aria-hidden="true"
+                    />
+
+                    <div className="flex items-center justify-between gap-4 py-3">
+                      <dt className="flex items-center gap-2 text-sm text-text-muted">
+                        <Store className="h-4 w-4 shrink-0" aria-hidden="true" />
+                        {t('booking.salonLabel')}
+                      </dt>
+                      <dd className="text-sm font-semibold text-text">{salonName}</dd>
+                    </div>
+                  </>
+                )}
+              </dl>
+
+              {/* Deposit/payment notice */}
+              <div className="border-t border-dashed border-border px-6 py-4">
+                <p className="rounded-md bg-surface p-3 text-xs text-text-muted">
+                  {t('booking.depositNotice')}
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </section>
+
+        {/* Explicit payment-redirect surface */}
+        {confirmStatus === 'redirecting' && (
+          <p
+            role="status"
+            aria-live="polite"
+            className="flex items-center justify-center gap-2 text-sm font-medium text-text"
+          >
+            <Spinner size="sm" />
+            {t('booking.paymentRedirect')}
+          </p>
         )}
 
-        {detailsStatus === 'error' && (
+        {/* Confirm failure: friendly cause + retry */}
+        {confirmStatus === 'error' && (
           <ErrorState
-            title={t('booking.detailsErrorTitle')}
-            description={t('booking.detailsErrorBody')}
+            title={t('booking.confirmErrorTitle')}
+            description={t('booking.confirmErrorBody')}
             retryLabel={t('common.retry')}
-            onRetry={loadDetails}
+            onRetry={handleConfirm}
           />
         )}
-
-        {detailsStatus === 'ready' && service && (
-          <motion.div
-            className="overflow-hidden rounded-lg border border-border bg-elevated shadow-2"
-            initial={prefersReduced ? false : { opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: [0.2, 0, 0, 1] }}
-          >
-            {/* Card header */}
-            <div className="border-b border-dashed border-border px-6 py-4">
-              <h3 className="text-lg font-bold text-text">
-                {t('booking.receiptTitle')}
-              </h3>
-            </div>
-
-            {/* Receipt rows */}
-            <dl className="px-6 py-4">
-              {/* Service */}
-              <div className="flex items-center justify-between gap-4 py-3">
-                <dt className="flex items-center gap-2 text-sm text-text-muted">
-                  <Scissors className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  {t('booking.serviceLabel')}
-                </dt>
-                <dd className="text-sm font-semibold text-text">{service.name}</dd>
-              </div>
-
-              {/* Dotted divider */}
-              <div className="border-t border-dashed border-border" aria-hidden="true" />
-
-              {/* Date */}
-              <div className="flex items-center justify-between gap-4 py-3">
-                <dt className="flex items-center gap-2 text-sm text-text-muted">
-                  <CalendarClock className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  {t('booking.dateLabel')}
-                </dt>
-                <dd className="text-sm font-semibold text-text">
-                  <JalaliDate value={state.startAt} withWeekday />
-                </dd>
-              </div>
-
-              {/* Dotted divider */}
-              <div className="border-t border-dashed border-border" aria-hidden="true" />
-
-              {/* Time */}
-              <div className="flex items-center justify-between gap-4 py-3">
-                <dt className="flex items-center gap-2 text-sm text-text-muted">
-                  <Clock className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  {t('booking.timeLabel')}
-                </dt>
-                <dd className="text-sm font-semibold text-text">
-                  {t('booking.timeAt', { time })}
-                </dd>
-              </div>
-
-              {/* Dotted divider */}
-              <div className="border-t border-dashed border-border" aria-hidden="true" />
-
-              {/* Price */}
-              <div className="flex items-center justify-between gap-4 py-3">
-                <dt className="flex items-center gap-2 text-sm text-text-muted">
-                  <CreditCard className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  {t('booking.priceLabel')}
-                </dt>
-                <dd className="text-base font-bold text-text">
-                  <Money amountRial={service.priceRial} />
-                </dd>
-              </div>
-
-              {/* Salon name (if available) */}
-              {salonName && (
-                <>
-                  {/* Dotted divider */}
-                  <div
-                    className="border-t border-dashed border-border"
-                    aria-hidden="true"
-                  />
-
-                  <div className="flex items-center justify-between gap-4 py-3">
-                    <dt className="flex items-center gap-2 text-sm text-text-muted">
-                      <Store className="h-4 w-4 shrink-0" aria-hidden="true" />
-                      {t('booking.salonLabel')}
-                    </dt>
-                    <dd className="text-sm font-semibold text-text">{salonName}</dd>
-                  </div>
-                </>
-              )}
-            </dl>
-
-            {/* Deposit/payment notice */}
-            <div className="border-t border-dashed border-border px-6 py-4">
-              <p className="rounded-md bg-surface p-3 text-xs text-text-muted">
-                {t('booking.depositNotice')}
-              </p>
-            </div>
-          </motion.div>
-        )}
-      </section>
-
-      {/* Explicit payment-redirect surface */}
-      {confirmStatus === 'redirecting' && (
-        <p
-          role="status"
-          aria-live="polite"
-          className="flex items-center justify-center gap-2 text-sm font-medium text-text"
-        >
-          <Spinner size="sm" />
-          {t('booking.paymentRedirect')}
-        </p>
-      )}
-
-      {/* Confirm failure: friendly cause + retry */}
-      {confirmStatus === 'error' && (
-        <ErrorState
-          title={t('booking.confirmErrorTitle')}
-          description={t('booking.confirmErrorBody')}
-          retryLabel={t('common.retry')}
-          onRetry={handleConfirm}
-        />
-      )}
-
-      {/* Sticky bottom CTA «تایید رزرو» — thumb zone, clearing safe-area */}
-      <div
-        data-testid="booking-confirm-cta"
-        className="sticky bottom-0 z-sticky -mx-4 mt-auto border-t border-border bg-bg px-4 pb-[env(safe-area-inset-bottom)] pt-4"
-      >
-        <Button
-          fullWidth
-          size="lg"
-          onClick={handleConfirm}
-          loading={confirmStatus === 'submitting' || confirmStatus === 'redirecting'}
-          disabled={detailsStatus !== 'ready'}
-          startIcon={<CreditCard className="h-5 w-5" />}
-        >
-          {t('booking.confirm')}
-        </Button>
       </div>
-    </div>
+    </FunnelShell>
   );
 }

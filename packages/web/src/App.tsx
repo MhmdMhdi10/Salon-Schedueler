@@ -1,9 +1,9 @@
 import { lazy, Suspense } from 'react';
 import { HelmetProvider } from 'react-helmet-async';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { ThemeProvider, FunnelTenantTheme } from './components/theme';
-import { AppShell, RouteLoader } from './components/layout';
-import { PageTransition } from './components/ui';
+import { ThemeProvider } from './components/theme/ThemeProvider';
+import { AppShell } from './components/layout/AppShell';
+import { RouteLoader } from './components/layout/RouteLoader';
 import { AuthProvider } from './auth/AuthContext';
 
 /**
@@ -93,6 +93,11 @@ const BookingSuccessPage = lazy(() =>
     default: m.BookingSuccessPage,
   })),
 );
+const FunnelTenantTheme = lazy(() =>
+  import('./components/theme/FunnelTenantTheme').then((m) => ({
+    default: m.FunnelTenantTheme,
+  })),
+);
 
 // Admin surfaces are served by the owner panel (see pages/owner), which adds
 // auth bootstrap + per-role route guards. The legacy `/admin/*` paths redirect
@@ -155,13 +160,25 @@ export function App() {
                     <Route path="my-qr" element={<OwnerMyQrPage />} />
                   </Route>
 
+                  {/*
+                   * Booking funnel (آرا Design Goals 12, 15, 17, 19):
+                   * `/salon/:salonId/book/*` and `/booking/success` render
+                   * OUTSIDE `AppShell` in their own `FunnelShell` (no nav chrome,
+                   * sticky mobile CTA in thumb reach). `FunnelTenantTheme`
+                   * resolves the salon's Brand_Accent and scopes it to the
+                   * funnel subtree (R4.2).
+                   */}
+                  <Route path="/salon/:salonId/book" element={<FunnelTenantTheme />}>
+                    <Route index element={<AvailabilityPage />} />
+                    <Route path="confirm" element={<BookingConfirmPage />} />
+                  </Route>
+                  <Route path="/booking/success" element={<BookingSuccessPage />} />
+
                   {/* Public + customer + admin surfaces, inside the app shell. */}
                   <Route
                     element={
                       <AppShell>
-                        <PageTransition>
-                          <Outlet />
-                        </PageTransition>
+                        <Outlet />
                       </AppShell>
                     }
                   >
@@ -191,16 +208,9 @@ export function App() {
                     <Route path="/auth" element={<AuthPage />} />
                     <Route path="/qr/:payload" element={<QrLandingPage />} />
                     {/*
-                     * Booking funnel — wrapped in the storefront theming boundary
-                     * (R4.2): it resolves the salon's Brand_Accent by id and scopes
-                     * it to the funnel subtree so any visitor sees the storefront's
-                     * accent. The steps render inside the boundary's <Outlet />.
+                     * Booking funnel + success live outside AppShell (above)
+                     * for the FunnelShell no-chrome pattern (آرا Design Goal 17).
                      */}
-                    <Route path="/salon/:salonId/book" element={<FunnelTenantTheme />}>
-                      <Route index element={<AvailabilityPage />} />
-                      <Route path="confirm" element={<BookingConfirmPage />} />
-                    </Route>
-                    <Route path="/booking/success" element={<BookingSuccessPage />} />
 
                     {/* Legacy admin paths → consolidated into the owner panel,
                       which bootstraps auth and guards by role. */}

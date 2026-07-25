@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { CalendarClock, Clock, Scissors, Users } from 'lucide-react';
 import { salonApi } from '../api/client';
 import { SeoHead } from '../components/seo';
+import { FunnelShell } from '../components/layout';
 import {
-  BookingStepper,
   DayScroller,
   type DayScrollerItem,
   EmptyState,
@@ -20,6 +20,7 @@ import {
   type ServiceCardItem,
 } from '../components/ui';
 import { gregorianToJalali, getJalaliMonthName } from '@salon/shared';
+import { readSalonName } from '../utils/salonName';
 
 /** A bookable service as returned by the salon services endpoint (unchanged contract). */
 interface Service {
@@ -148,13 +149,6 @@ function slotLabel(iso: string): string {
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
-
-/** Booking stepper steps (step 1 = service/date/time selection). */
-const BOOKING_STEPS = [
-  { key: 'service', label: 'خدمت' },
-  { key: 'datetime', label: 'تاریخ' },
-  { key: 'confirm', label: 'تایید' },
-];
 
 /**
  * Reports whether the viewport is phone-sized (below the `md` breakpoint), so
@@ -339,6 +333,10 @@ export function AvailabilityPage() {
     return { id: slot.startAt, label: slotLabel(slot.startAt), state };
   });
 
+  // Compute the stepper's active step index based on user progress:
+  // 0 = selecting service, 1 = selecting date, 2 = selecting time slot.
+  const activeStep = !selectedService ? 0 : !date ? 1 : 2;
+
   // Map services to ServiceCardItem for the Booksy-style card list
   const serviceCardItems: ServiceCardItem[] = services.map((service) => ({
     id: service.id,
@@ -358,15 +356,13 @@ export function AvailabilityPage() {
   ];
 
   return (
-    <div
-      data-testid="availability-page"
-      className="mx-auto flex w-full max-w-funnel flex-col gap-6 px-4 py-6 pb-[env(safe-area-inset-bottom)]"
+    <FunnelShell
+      currentStep={activeStep === 0 ? 'service' : activeStep === 1 ? 'date' : 'time'}
+      salonName={readSalonName(salonId) ?? undefined}
     >
+    <div data-testid="availability-page" className="flex w-full flex-col gap-8">
       <SeoHead title={t('seo.titles.availability')} />
       <h1 className="text-xl font-bold text-text">{t('booking.heading')}</h1>
-
-      {/* Progress stepper — step 1 (service/date/time) active */}
-      <BookingStepper steps={BOOKING_STEPS} currentStep={0} className="mb-2" />
 
       {/* Service selector — card radio list with loading / error / empty / ready. */}
       <section aria-labelledby="service-section-title" className="flex flex-col gap-3">
@@ -531,5 +527,6 @@ export function AvailabilityPage() {
         )}
       </section>
     </div>
+    </FunnelShell>
   );
 }

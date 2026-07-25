@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Download, QrCode, ScanLine, Scissors, Store } from 'lucide-react';
+import { Download, ScanLine, Scissors, Store } from 'lucide-react';
 import { salonApi } from '../api/client';
 import { SeoHead } from '../components/seo';
 import { Button, Card, ErrorState, Skeleton } from '../components/ui';
+import { Motif } from '../components/brand';
 import { writeSalonName } from '../utils/salonName';
 import { usePwaInstall } from '../pwa/usePwaInstall';
 import { useSalonManifest } from '../pwa/salonManifest';
@@ -191,13 +192,13 @@ export function QrLandingPage() {
           className="flex h-12 w-12 items-center justify-center rounded-pill bg-primary/10 text-primary"
           aria-hidden="true"
         >
-          {staff ? <Scissors className="h-6 w-6" /> : <QrCode className="h-6 w-6" />}
+          {staff ? <Scissors className="h-6 w-6" /> : <Motif variant="mark" className="h-6 w-6" />}
         </div>
         <div>
           <p className="text-xs font-medium text-muted">
             {staff ? t('salon.qr.stylistWelcome') : t('salon.qr.welcome')}
           </p>
-          <h1 className="mt-1 text-xl font-bold text-text">{salon?.name}</h1>
+          <h1 className="mt-1 text-display text-xl text-text">{salon?.name}</h1>
           {stylistName && (
             <p className="mt-1 text-sm font-medium text-primary">
               {t('salon.qr.withStylist', { name: stylistName })}
@@ -207,6 +208,10 @@ export function QrLandingPage() {
         <p className="text-sm text-muted">
           {staff ? t('salon.qr.stylistReassurance') : t('salon.qr.reassurance')}
         </p>
+
+        {/* Signature motif band — a token-driven brand divider. */}
+        <Motif variant="band" className="h-5 w-full max-w-xs text-primary" />
+
         <Button size="lg" fullWidth onClick={() => navigate(bookPath)}>
           {t('booking.selectService')}
         </Button>

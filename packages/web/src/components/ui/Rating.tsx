@@ -30,7 +30,7 @@ const textSize: Record<NonNullable<RatingProps['size']>, string> = {
 /**
  * Star rating + review count — the Booksy signature social-proof primitive.
  *
- * Renders five star glyphs; filled stars use `--color-primary` (Booksy magenta)
+ * Renders five star glyphs; filled stars use the آرا primary token.
  * so the rating reads as brand-tinted, never color-only — the numeric value is
  * always present as accessible text. Half-stars are represented by a 50%-width
  * overlay so the visual granularity matches the value.

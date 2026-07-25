@@ -108,7 +108,7 @@ describe('business landing — indexable head in initial HTML (R5.4; seo §3/§4
     const html = injectIntoTemplate(TEMPLATE, route, DEFAULT_SITE_URL);
     const fullTitle = pageTitle(route.title);
 
-    // Unique, templated «{صفحه} | رزرو سالن» title swapped in.
+    // Unique, templated «{صفحه} | آرا» title swapped in.
     expect(html).toContain(`<title>${fullTitle}</title>`);
     expect(html).not.toContain('<title>سامانه رزرو سالن</title>');
 

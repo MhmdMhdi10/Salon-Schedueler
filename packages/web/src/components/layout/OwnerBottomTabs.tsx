@@ -1,8 +1,9 @@
-import { useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, useReducedMotion } from 'framer-motion';
 import { CalendarDays, BarChart3, QrCode, Settings } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import type { OwnerRole } from '../../api/client';
 import { cn } from '../ui/cn';
 
 // ─── Tab Definitions ─────────────────────────────────────────────────────────
@@ -12,6 +13,7 @@ interface TabDef {
   labelKey: string;
   to: string;
   icon: LucideIcon;
+  roles: readonly OwnerRole[];
 }
 
 /**
@@ -19,10 +21,10 @@ interface TabDef {
  * Order: Calendar → Analytics → QR/Link → Settings.
  */
 const TABS: readonly TabDef[] = [
-  { key: 'calendar', labelKey: 'owner.nav.calendar', to: '/owner/calendar', icon: CalendarDays },
-  { key: 'analytics', labelKey: 'owner.nav.analytics', to: '/owner/analytics', icon: BarChart3 },
-  { key: 'qr', labelKey: 'owner.nav.qr', to: '/owner/qr', icon: QrCode },
-  { key: 'config', labelKey: 'owner.nav.configuration', to: '/owner/config', icon: Settings },
+  { key: 'calendar', labelKey: 'owner.nav.calendar', to: '/owner/calendar', icon: CalendarDays, roles: ['Owner', 'Admin', 'Stylist'] },
+  { key: 'analytics', labelKey: 'owner.nav.analytics', to: '/owner/analytics', icon: BarChart3, roles: ['Owner', 'Admin'] },
+  { key: 'qr', labelKey: 'owner.nav.qr', to: '/owner/qr', icon: QrCode, roles: ['Owner', 'Admin'] },
+  { key: 'config', labelKey: 'owner.nav.configuration', to: '/owner/config', icon: Settings, roles: ['Owner'] },
 ] as const;
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -30,13 +32,15 @@ const TABS: readonly TabDef[] = [
 export interface OwnerBottomTabsProps {
   /** Optional className applied to the outermost nav element. */
   className?: string;
+  /** Authenticated role used to hide unauthorized destinations. */
+  role?: OwnerRole;
 }
 
 /**
  * Mobile bottom tab bar for the owner dashboard (Req 8.5, 8.6, 10.6).
  *
  * Renders a fixed bottom nav with 3 tabs (Calendar, Analytics, Settings),
- * each with a Lucide icon and Persian label. An animated magenta indicator
+ * each with a Lucide icon and Persian label. An animated brand indicator
  * slides between tabs using Framer Motion `layoutId`. The indicator motion
  * respects `prefers-reduced-motion` — when reduced motion is preferred, the
  * indicator jumps instantly rather than animating.
@@ -49,14 +53,14 @@ export interface OwnerBottomTabsProps {
  *
  * Styling: tokens-only, logical properties for RTL correctness.
  */
-export function OwnerBottomTabs({ className }: OwnerBottomTabsProps) {
+export function OwnerBottomTabs({ className, role = 'Owner' }: OwnerBottomTabsProps) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
-  const navigate = useNavigate();
   const prefersReduced = useReducedMotion();
 
   /** Determine which tab is active based on the current route. */
-  const activeIndex = TABS.findIndex((tab) => pathname.startsWith(tab.to));
+  const visibleTabs = TABS.filter((tab) => tab.roles.includes(role));
+  const activeIndex = visibleTabs.findIndex((tab) => pathname.startsWith(tab.to));
 
   return (
     <nav
@@ -69,15 +73,14 @@ export function OwnerBottomTabs({ className }: OwnerBottomTabsProps) {
       )}
     >
       <ul className="relative mx-auto flex w-full max-w-container items-stretch justify-around">
-        {TABS.map((tab, index) => {
+        {visibleTabs.map((tab, index) => {
           const Icon = tab.icon;
           const isActive = index === activeIndex;
 
           return (
             <li key={tab.key} className="relative flex-1">
-              <button
-                type="button"
-                onClick={() => navigate(tab.to)}
+              <NavLink
+                to={tab.to}
                 aria-current={isActive ? 'page' : undefined}
                 className={cn(
                   'relative flex min-h-[44px] w-full flex-col items-center justify-center gap-1',
@@ -103,7 +106,7 @@ export function OwnerBottomTabs({ className }: OwnerBottomTabsProps) {
                 )}
                 <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
                 <span className="text-2xs leading-tight">{t(tab.labelKey)}</span>
-              </button>
+              </NavLink>
             </li>
           );
         })}

@@ -1,5 +1,4 @@
 import { forwardRef } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from './cn';
 import { Spinner } from './Spinner';
 
@@ -93,21 +92,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   ref,
 ) {
   const isDisabled = disabled || loading;
-  const prefersReduced = useReducedMotion();
-
-  // Only apply whileTap scale when the button is interactive and motion is OK
-  const tapAnimation =
-    !isDisabled && !prefersReduced ? { scale: 0.97 } : undefined;
 
   return (
-    <motion.button
+    <button
       ref={ref}
       type={type}
       disabled={isDisabled}
       aria-busy={loading || undefined}
       data-loading={loading || undefined}
-      whileTap={tapAnimation}
-      transition={{ duration: 0.15, ease: [0.2, 0, 0, 1] }}
       className={cn(
         base,
         sizeClasses[size],
@@ -115,7 +107,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         fullWidth && 'w-full',
         className,
       )}
-      {...(rest as Record<string, unknown>)}
+      {...rest}
     >
       {loading && (
         <span className="absolute inset-0 inline-flex items-center justify-center">
@@ -137,6 +129,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
           </span>
         )}
       </span>
-    </motion.button>
+    </button>
   );
 });

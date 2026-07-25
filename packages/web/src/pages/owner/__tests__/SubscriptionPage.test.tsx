@@ -199,7 +199,10 @@ describe('OwnerSubscriptionPage — purchase redirect (R3.6)', () => {
     fireEvent.click(screen.getByTestId('subscription-purchase'));
 
     await waitFor(() =>
-      expect(initiatePurchase).toHaveBeenCalledWith('salon-1', 'annual'),
+      expect(initiatePurchase).toHaveBeenCalledWith(
+        '11111111-1111-1111-1111-111111111111',
+        'annual',
+      ),
     );
     await waitFor(() =>
       expect(assigned).toContain('https://zarinpal.example/pay/sub-123'),

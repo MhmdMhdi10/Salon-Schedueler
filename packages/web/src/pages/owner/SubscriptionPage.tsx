@@ -189,7 +189,7 @@ export function OwnerSubscriptionPage() {
       <SeoHead title={t('owner.subscription.title')} />
 
       <header className="flex flex-col gap-2">
-        <h1 className="text-xl font-bold text-text">
+        <h1 className="text-xl text-display text-text">
           {t('owner.subscription.title')}
         </h1>
         <p className="max-w-[60ch] text-sm text-muted">

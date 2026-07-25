@@ -33,7 +33,7 @@ export interface DayScrollerProps {
  *
  * Renders a horizontally scrollable row of compact day chips (weekday label
  * above the day number) so a customer can swipe through the next ~14 days and
- * tap to select. The selected day takes the primary magenta fill; days with no
+ * tap to select. The selected day takes the primary teal fill; days with no
  * open slots are dimmed but still focusable so the empty-state copy can fire.
  *
  * RTL-aware: under `dir="rtl"` the row scrolls start-to-end naturally. Keyboard

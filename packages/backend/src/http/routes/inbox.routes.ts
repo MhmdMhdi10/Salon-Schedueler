@@ -100,7 +100,10 @@ export function inboxRouter(
    */
   router.get(
     '/salons/:id/notifications',
-    requireRole('view_own_appointments', (req) => ({ salonId: req.params.id })),
+    requireRole('view_own_appointments', (req) => ({
+      salonId: req.params.id,
+      staffMemberId: req.principal?.staffMemberId,
+    })),
     async (req, res) => {
       const principal = req.principal!;
       const onlyUnread = req.query.onlyUnread === 'true' || req.query.onlyUnread === '1';
@@ -119,7 +122,10 @@ export function inboxRouter(
   /** GET /salons/:id/notifications/unread-count — drives the badge. */
   router.get(
     '/salons/:id/notifications/unread-count',
-    requireRole('view_own_appointments', (req) => ({ salonId: req.params.id })),
+    requireRole('view_own_appointments', (req) => ({
+      salonId: req.params.id,
+      staffMemberId: req.principal?.staffMemberId,
+    })),
     async (req, res) => {
       const principal = req.principal!;
       const count = await services.salonInboxService.countUnread(req.params.id, {
@@ -143,7 +149,10 @@ export function inboxRouter(
   /** POST /salons/:id/notifications/read-all — clear the unread badge. */
   router.post(
     '/salons/:id/notifications/read-all',
-    requireRole('view_own_appointments', (req) => ({ salonId: req.params.id })),
+    requireRole('view_own_appointments', (req) => ({
+      salonId: req.params.id,
+      staffMemberId: req.principal?.staffMemberId,
+    })),
     async (req, res) => {
       const principal = req.principal!;
       const count = await services.salonInboxService.markAllRead(req.params.id, {

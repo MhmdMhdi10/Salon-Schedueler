@@ -95,6 +95,11 @@ vi.mock('../../../api/client', () => {
       get: vi.fn().mockResolvedValue({ brandAccent: null }),
       set: vi.fn().mockResolvedValue({ ok: true, brandAccent: null }),
     },
+    holidaysApi: {
+      list: vi.fn().mockResolvedValue({ holidays: [] }),
+      add: vi.fn().mockResolvedValue({ holiday: {} }),
+      remove: vi.fn().mockResolvedValue({ ok: true }),
+    },
     subscriptionApi: {
       getStatus: (...args: unknown[]) => getSubStatus(...args),
       getPlans: (...args: unknown[]) => getPlans(...args),
@@ -210,9 +215,8 @@ describe('Owner panel a11y — OwnerLayout / OwnerShell chrome (R7.1)', () => {
     // its toggle (aria-pressed) semantics; an icon-only control must be named.
     const header = rtlContainer.querySelector('[data-shell="owner"] > header');
     expect(header).toBeTruthy();
-    const toggle = within(header as HTMLElement).getByRole('button', {
-      pressed: false,
-    });
+    const toggle = within(header as HTMLElement).getByTestId('owner-theme-toggle');
+    expect(toggle).toHaveAttribute('aria-pressed');
     expect(toggle).toHaveAccessibleName();
   });
 

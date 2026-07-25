@@ -33,7 +33,7 @@ export interface AccentTheme {
  */
 export const ACCENTS: readonly AccentTheme[] = [
   { key: 'violet', from: '#6d5efc', to: '#a855f7', soft: '#efeafe', ink: '#2e1065' },
-  { key: 'magenta', from: '#ec4899', to: '#8b5cf6', soft: '#fdeaf5', ink: '#500724' },
+  { key: 'jade', from: '#0B7A68', to: '#05CFA6', soft: '#E2F7F2', ink: '#073F36' },
   { key: 'teal', from: '#0ea5a4', to: '#0284c7', soft: '#e2fbfb', ink: '#083344' },
   { key: 'rose', from: '#fb7185', to: '#ef4444', soft: '#ffe9ec', ink: '#4c0519' },
   { key: 'amber', from: '#f59e0b', to: '#ea580c', soft: '#fdf0d5', ink: '#451a03' },

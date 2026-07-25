@@ -257,7 +257,7 @@ export function OwnerInboxBell() {
           <footer className="border-t border-border p-2">
             <Button
               variant="ghost"
-              size="sm"
+              size="md"
               onClick={() => {
                 setOpen(false);
                 navigate('/owner/notifications');

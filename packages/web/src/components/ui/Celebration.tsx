@@ -54,7 +54,7 @@ const particles = generateParticles();
 /**
  * Confetti particle burst for the booking success celebration.
  *
- * Renders 10 small magenta/accent colored dots that burst outward radially
+ * Renders 10 small brand-accent dots that burst outward radially
  * from center and fade out. Each particle gets a deterministic direction
  * (angle) and distance, with a small stagger for a natural burst feel.
  *

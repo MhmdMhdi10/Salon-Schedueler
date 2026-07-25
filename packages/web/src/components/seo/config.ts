@@ -18,9 +18,9 @@
  */
 
 /** Brand/site name — the right-hand side of the title template, and `og:site_name`. */
-export const SITE_NAME = 'رزرو سالن';
+export const SITE_NAME = 'آرا';
 
-/** Suffix appended to every page title: «{صفحه} | رزرو سالن» (seo §3). */
+/** Suffix appended to every page title: «{صفحه} | آرا» (seo §3). */
 export const TITLE_TEMPLATE_SUFFIX = ` | ${SITE_NAME}`;
 
 /** Declared content locale (seo §6). */
@@ -39,7 +39,7 @@ export const SITE_URL: string = normalizeOrigin(
 
 /**
  * Branded default Open Graph image (1200×630, seo §4). Absolute on the site host.
- * Source template: public/og/default.svg (RTL-correct Persian text, magenta brand).
+ * Source template: public/og/default.svg (RTL-correct Persian text, آرا teal brand).
  * Raster variants: default.jpg, default.webp, default.avif (generated via scripts/generate-og-images.ts).
  * Social platforms require raster formats — always serve .jpg in og:image meta.
  */

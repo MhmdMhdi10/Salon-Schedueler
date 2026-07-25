@@ -27,7 +27,7 @@ export interface AnalyticsChartProps {
  * Non-color-only encoding (R5.2): every bar is paired with a visible text label
  * (the window name) and a visible numeric value (the count), so no metric is
  * conveyed by color alone. The bar fill inherits `--color-primary` (the
- * signature plum-wine) via `bg-primary`. Each row also carries a screen-reader
+ * signature teal) via `bg-primary`. Each row also carries a screen-reader
  * accessible label combining the window + count for AT users. The chart links
  * to the accessible busiest-windows table via `aria-describedby`.
  *

@@ -27,18 +27,20 @@ import { containerVariants, itemVariants } from '../../lib/motion-variants';
 import type { ChartDatum } from '../admin/AnalyticsChart';
 
 /**
- * Owner analytics page — redesigned with the NYC dark-mode-first aesthetic,
- * animated counter metrics, and lazy-loaded charts (Req 8.3, 8.6, 8.7, 13.5,
- * 11.4, 11.6).
+ * Owner analytics page — آرا minimal-chrome charts with teal highlights,
+ * animated counter metrics, and lazy-loaded charts (Goal 15; Design §Per-Surface
+ * Composition).
  *
  * Design direction:
- * - 4 metric cards at the top in a responsive 2x2 → 4-col grid
+ * - 4 metric cards at the top in a responsive 2×2 → 4-col grid
  * - Each metric card uses AnimatedCounter with Persian numerals
- * - Icons + labels in Persian + trend indicators
- * - Dark surface cards with magenta accent for key data
- * - Chart section: lazy-loaded with React.lazy + Suspense
+ * - Icons + labels in Persian + trend indicators (teal highlights)
+ * - Clean surface cards with token-driven teal accent for key data
+ * - Utilization %, Rial/Persian-numeral revenue, busiest windows
+ * - Chart section: lazy-loaded with React.lazy + Suspense (code-split)
  * - Skeleton state for loading, error state with retry
  * - All numbers in Persian, Rial formatting
+ * - noindex (owner area); token-driven styles; logical properties for RTL
  */
 
 type LoadStatus = 'loading' | 'success' | 'error';
@@ -161,7 +163,7 @@ interface MetricCardProps {
 
 /**
  * A single metrics card with AnimatedCounter, icon, trend indicator.
- * NYC aesthetic: dark surface card, magenta accent, bold numbers.
+ * آرا aesthetic: clean surface card, teal highlights, bold Persian numbers.
  */
 function MetricCard({
   testId,
@@ -224,7 +226,7 @@ function MetricCard({
               {t('admin.analyticsPage.noData')}
             </p>
           ) : isRial ? (
-            <div className="text-2xl font-bold tabular-nums [font-feature-settings:'tnum'] text-text text-display">
+            <div className="whitespace-nowrap text-[clamp(1.25rem,2vw,1.75rem)] font-bold tabular-nums [font-feature-settings:'tnum'] text-text">
               <Money amountRial={value} />
             </div>
           ) : (

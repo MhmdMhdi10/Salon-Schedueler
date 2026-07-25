@@ -93,7 +93,7 @@ import {
 export { DEFAULT_SITE_URL, STATIC_INDEXABLE_PATHS };
 
 /** Brand/site name — the right-hand side of the title template (seo §3). */
-export const SITE_NAME = 'رزرو سالن';
+export const SITE_NAME = 'آرا';
 
 /** Declared content locale (seo §6). */
 export const OG_LOCALE = 'fa_IR';
@@ -101,7 +101,7 @@ export const OG_LOCALE = 'fa_IR';
 /** Branded default Open Graph image (1200×630, seo §4), relative to the host. */
 export const DEFAULT_OG_IMAGE_PATH = '/og/default.jpg';
 
-/** Builds the «{صفحه} | رزرو سالن» title, or the bare site name when no page name. */
+/** Builds the «{صفحه} | آرا» title, or the bare site name when no page name. */
 export function pageTitle(name) {
   const trimmed = name == null ? '' : String(name).trim();
   return trimmed === '' ? SITE_NAME : `${trimmed} | ${SITE_NAME}`;
@@ -151,31 +151,31 @@ const STATIC_ROUTE_CONTENT = {
     title: 'پلتفرم مدیریت و رزرو آنلاین برای صاحبان سالن زیبایی',
     heading: 'سالن خود را آنلاین کنید و نوبت‌ها را هوشمند مدیریت کنید',
     description:
-      'با رزرو سالن، نوبت‌دهی آنلاین، تقویم، یادآوری پیامک و ربات، و گزارش‌های مدیریتی را یک‌جا داشته باشید؛ همین حالا با دورهٔ آزمایشی رایگان شروع کنید.',
+      'با آرا، نوبت‌دهی آنلاین، تقویم، یادآوری پیامک و ربات، و گزارش‌های مدیریتی را یک‌جا داشته باشید؛ همین حالا با دورهٔ آزمایشی رایگان شروع کنید.',
   },
   '/about': {
     title: 'درباره ما',
-    heading: 'درباره رزرو سالن',
+    heading: 'درباره آرا',
     description:
-      'رزرو سالن، سامانه آنلاین رزرو نوبت سالن‌های زیبایی در ایران است؛ ساده، سریع و قابل اعتماد برای مشتریان و صاحبان سالن.',
+      'آرا، سامانه آنلاین رزرو نوبت سالن‌های زیبایی در ایران است؛ ساده، سریع و قابل اعتماد برای مشتریان و صاحبان سالن.',
   },
   '/contact': {
     title: 'تماس با ما',
     heading: 'تماس با ما',
     description:
-      'برای پشتیبانی، همکاری یا افزودن سالن خود به رزرو سالن با ما در ارتباط باشید.',
+      'برای پشتیبانی، همکاری یا افزودن سالن خود به آرا با ما در ارتباط باشید.',
   },
   '/privacy': {
     title: 'حریم خصوصی',
     heading: 'سیاست حریم خصوصی',
     description:
-      'نحوه گردآوری، نگه‌داری و محافظت از اطلاعات کاربران در سامانه رزرو سالن.',
+      'نحوه گردآوری، نگه‌داری و محافظت از اطلاعات کاربران در آرا.',
   },
   '/terms': {
     title: 'قوانین و مقررات',
     heading: 'قوانین و مقررات',
     description:
-      'شرایط استفاده از سامانه رزرو سالن برای مشتریان و صاحبان سالن‌های زیبایی.',
+      'شرایط استفاده از آرا برای مشتریان و صاحبان سالن‌های زیبایی.',
   },
 };
 

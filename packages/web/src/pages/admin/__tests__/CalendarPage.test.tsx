@@ -29,7 +29,7 @@ vi.mock('../../../api/client', () => ({
   },
   holidaysApi: {
     add: (...a: unknown[]) => addHoliday(...a),
-    list: vi.fn(),
+    list: vi.fn().mockResolvedValue({ holidays: [] }),
     remove: vi.fn(),
   },
 }));

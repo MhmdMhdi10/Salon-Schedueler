@@ -11,8 +11,8 @@ import { SITE_URL } from '../../components/seo';
  * Tests for the public marketing home at `/` (task 5.1; R8.1, R8.2, R8.3, R8.8,
  * R9.1, R9.4). The home is the platform's primary indexable surface: it must
  * opt **in** to indexing, emit unique title/description + canonical + JSON-LD,
- * carry a single `<h1>` and crawlable trust/legal links. The hero uses a CSS
- * gradient background (no image dependency) for a NYC noir aesthetic.
+ * carry a single `<h1>` and crawlable trust/legal links. Hero uses the real
+ * reference-clone photography asset as its eagerly loaded LCP element.
  *
  * Requirements: 8.1, 8.2, 8.3, 8.8, 9.1, 9.4
  */
@@ -60,7 +60,7 @@ describe('MarketingHome', () => {
   it('emits a unique title, description, and self-referencing home canonical (R8.2, R8.3)', async () => {
     renderHome();
     await waitFor(() => {
-      expect(document.title).toContain('رزرو سالن');
+      expect(document.title).toContain('آرا');
       expect(head('meta[name="description"]')?.getAttribute('content')).toBeTruthy();
       // The home canonical collapses to the bare host.
       expect(head('link[rel="canonical"]')).toHaveAttribute('href', SITE_URL);
@@ -79,17 +79,14 @@ describe('MarketingHome', () => {
     });
   });
 
-  it('renders the hero as a light marketplace section (no image, search-focused)', () => {
+  it('renders a photography hero with search as the primary interaction', () => {
     const { getByTestId } = renderHome();
-    // The hero uses bg-bg (light warm cream) and contains a search form.
     const root = getByTestId('marketing-home');
     const heroSection = root.querySelector('section');
     expect(heroSection).not.toBeNull();
-    expect(heroSection!.className).toContain('bg-bg');
-    // No hero image — the search bar is the primary interaction.
     const heroImg = heroSection!.querySelector('img');
-    expect(heroImg).toBeNull();
-    // Has a search form
+    expect(heroImg).not.toBeNull();
+    expect(heroImg).toHaveAttribute('loading', 'eager');
     const form = heroSection!.querySelector('form');
     expect(form).not.toBeNull();
   });

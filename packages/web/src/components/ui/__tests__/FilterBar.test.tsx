@@ -41,7 +41,7 @@ describe('FilterBar', () => {
   it('renders rating chips', () => {
     renderFilterBar();
     // Rating chips with Persian numerals (i18n formats numbers to Persian)
-    expect(screen.getByRole('button', { name: /ستاره/ })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /ستاره/ })).toHaveLength(3);
   });
 
   it('renders the toolbar with proper accessibility role and label', () => {

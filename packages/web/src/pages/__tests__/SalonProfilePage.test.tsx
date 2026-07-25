@@ -182,7 +182,7 @@ describe('buildSalonJsonLd', () => {
     expect(ohs.some((o) => o.dayOfWeek === 'Friday')).toBe(false);
 
     const crumb = nodes.find((n) => n['@type'] === 'BreadcrumbList')!;
-    expect((crumb.itemListElement as unknown[]).length).toBe(2);
+    expect((crumb.itemListElement as unknown[]).length).toBe(3);
   });
 });
 
@@ -321,6 +321,17 @@ describe('SalonProfilePage — SEO indexable (task 5.8)', () => {
     expect(types).toContain('BeautySalon');
     expect(types).toContain('Service');
     expect(types).toContain('BreadcrumbList');
+  });
+
+  it('uses HairSalon type for barbershops (آرایشگاه مردانه)', () => {
+    const salon = getSalonProfile('shahin-barbershop')!;
+    const nodes = buildSalonJsonLd(salon);
+    const types = nodes.map((n) => n['@type']);
+    expect(types).toContain('HairSalon');
+    expect(types).not.toContain('BeautySalon');
+    // Service provider type also uses HairSalon
+    const service = nodes.find((n) => n['@type'] === 'Service')!;
+    expect((service.provider as Record<string, unknown>)['@type']).toBe('HairSalon');
   });
 
   it('the single <h1> contains the salon name', () => {

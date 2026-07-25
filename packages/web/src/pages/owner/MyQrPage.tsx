@@ -128,7 +128,7 @@ export function MyQrPage() {
       <SeoHead title={t('owner.myQr.title')} />
 
       <header className="flex flex-col gap-2">
-        <h1 className="text-xl font-bold text-text">{t('owner.myQr.title')}</h1>
+        <h1 className="text-xl text-display text-text">{t('owner.myQr.title')}</h1>
         <p className="max-w-[60ch] text-sm text-muted">{t('owner.myQr.subtitle')}</p>
       </header>
 

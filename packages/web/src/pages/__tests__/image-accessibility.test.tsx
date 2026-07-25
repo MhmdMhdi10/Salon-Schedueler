@@ -30,6 +30,7 @@ vi.mock('../../api/client', () => ({
 import { MarketingHome } from '../MarketingHome';
 import { SalonProfilePage } from '../SalonProfilePage';
 import { BusinessLanding } from '../BusinessLanding';
+import { Picture } from '../../components/ui/Picture';
 
 function wrap(ui: React.ReactElement, initialPath = '/') {
   return (
@@ -156,14 +157,15 @@ describe('Image accessibility — SalonProfilePage', () => {
     expect(eagerImg!.getAttribute('fetchpriority')).toBe('high');
   });
 
-  it('gallery below-fold images have loading="lazy"', () => {
+  it('all non-LCP gallery images have loading="lazy"', () => {
     const { getByTestId } = renderProfile();
     const root = getByTestId('salon-profile');
-    // Gallery section images (outside the carousel hero) should be lazy
+    // Gallery is the hero mosaic: first image is the LCP candidate; the rest
+    // must stay lazy.
     const gallerySection = root.querySelector('[aria-labelledby="salon-gallery-title"]');
     if (gallerySection) {
       const galleryImages = Array.from(gallerySection.querySelectorAll('img'));
-      for (const img of galleryImages) {
+      for (const img of galleryImages.slice(1)) {
         expect(img.getAttribute('loading')).toBe('lazy');
       }
     }
@@ -178,17 +180,16 @@ describe('Image accessibility — BusinessLanding', () => {
     return render(wrap(<BusinessLanding />, '/business'));
   }
 
-  it('all images have Persian alt text and explicit width/height', () => {
+  it('matches the reference image-free business hero', () => {
     const { getByTestId } = renderBusiness();
-    auditImages(getByTestId('business-landing'));
+    expect(getByTestId('business-landing').querySelectorAll('img')).toHaveLength(0);
   });
 
-  it('hero image has loading="eager" and fetchpriority="high"', () => {
+  it('does not add an off-reference hero image', () => {
     const { getByTestId } = renderBusiness();
     const root = getByTestId('business-landing');
     const heroImg = root.querySelector('img[fetchpriority="high"]');
-    expect(heroImg).not.toBeNull();
-    expect(heroImg!.getAttribute('loading')).toBe('eager');
+    expect(heroImg).toBeNull();
   });
 });
 
@@ -205,7 +206,6 @@ describe('Picture component enforces width/height as required props', () => {
     type AssertRequiredHeight = import('../../components/ui/Picture').PictureProps['height'] extends number ? true : false;
 
     // Runtime: render a Picture and confirm width/height are on the <img>
-    const { Picture } = require('../../components/ui/Picture');
     const { container } = render(
       <Picture
         sources={[]}

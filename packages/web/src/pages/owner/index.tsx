@@ -59,9 +59,9 @@ export function OwnerCalendarPage() {
 }
 
 /**
- * Analytics section of the owner panel — redesigned with NYC dark-mode
- * aesthetic, AnimatedCounter metrics cards, and lazy-loaded charts (task 7.5;
- * R8.3, R8.6, R8.7, R13.5, R11.4, R11.6).
+ * Analytics section of the owner panel — آرا minimal-chrome charts with teal
+ * highlights, AnimatedCounter metrics cards, and lazy-loaded charts (Goal 15;
+ * Design §Per-Surface Composition).
  *
  * Restricted to Owner/Admin to mirror the shell nav (a Stylist is redirected
  * to the calendar).

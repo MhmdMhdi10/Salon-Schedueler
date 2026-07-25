@@ -76,7 +76,7 @@ describe('BusinessLanding', () => {
   it('emits a unique title, description, and self-referencing canonical (R5.4)', async () => {
     renderLanding();
     await waitFor(() => {
-      expect(document.title).toContain('رزرو سالن');
+      expect(document.title).toContain('آرا');
       expect(
         head('meta[name="description"]')?.getAttribute('content'),
       ).toBeTruthy();
@@ -98,22 +98,14 @@ describe('BusinessLanding', () => {
     });
   });
 
-  it('preloads the LCP hero image with fetchpriority high (R5.6)', async () => {
-    renderLanding();
-    await waitFor(() => {
-      const preload = head('link[rel="preload"][as="image"]');
-      expect(preload).not.toBeNull();
-      expect(preload).toHaveAttribute('fetchpriority', 'high');
-    });
-  });
-
-  it('renders the hero image with explicit dimensions and meaningful alt (R5.6)', () => {
+  it('matches the reference business hero: centered copy on a mint field', () => {
     const { getByTestId } = renderLanding();
-    const img = within(getByTestId('business-landing')).getByRole('img');
-    expect(img).toHaveAttribute('width', '1280');
-    expect(img).toHaveAttribute('height', '720');
-    expect(img.getAttribute('alt')?.trim()).toBeTruthy();
-    expect(img).toHaveAttribute('fetchpriority', 'high');
+    const hero = within(getByTestId('business-landing')).getByRole('heading', {
+      level: 1,
+    }).closest('[data-hero]');
+    expect(hero).not.toBeNull();
+    expect(hero!.className).toContain('bg-accent/10');
+    expect(hero!.querySelector('img')).toBeNull();
   });
 
   it('has no serious or critical accessibility violations', async () => {

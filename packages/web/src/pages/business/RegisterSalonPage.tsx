@@ -21,10 +21,8 @@ import {
 } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { SeoHead } from '../../components/seo';
-import { Motif } from '../../components/brand';
 import {
   Button,
-  Card,
   TextField,
   ToastProvider,
   cn,
@@ -41,8 +39,8 @@ const OTP_LENGTH = 6;
 const RESEND_SECONDS = 45;
 
 /** The visible onboarding steps, in order. `otp` is the final sign-in step. */
-type Step = 'info' | 'services' | 'setup' | 'otp';
-const STEP_ORDER: readonly Step[] = ['info', 'services', 'setup', 'otp'] as const;
+type Step = 'category' | 'info' | 'services' | 'setup' | 'otp';
+const STEP_ORDER: readonly Step[] = ['category', 'info', 'services', 'setup', 'otp'] as const;
 
 /**
  * Normalizes a raw phone entry to canonical `09xxxxxxxxx` before validation:
@@ -107,7 +105,8 @@ function RegisterSalonContent() {
   const { success } = useToast();
   const { refresh: refreshAuth } = useAuth();
 
-  const [step, setStep] = useState<Step>('info');
+  const [step, setStep] = useState<Step>('category');
+  const [category, setCategory] = useState('');
 
   // Step 1 — identity (required).
   const [salonName, setSalonName] = useState('');
@@ -338,58 +337,95 @@ function RegisterSalonContent() {
 
   return (
     <div
-      className="mx-auto flex w-full max-w-funnel flex-col gap-5 py-6"
+      className="flex min-h-screen w-full flex-col bg-bg"
       data-testid="register-salon-page"
     >
       <SeoHead title={t('business.register.title')} />
 
-      <header className="flex flex-col items-center gap-3 text-center">
-        <span
-          className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-accent"
-        >
-          <Motif variant="mark" className="h-4 w-4" />
-          {t('business.register.eyebrow')}
-        </span>
-        <h1 className="text-xl leading-display text-display text-text">
-          {t('business.register.title')}
-        </h1>
-        <p className="max-w-prose text-sm text-muted">
-          {t('business.register.subtitle')}
-        </p>
+      <header className="border-b border-border bg-elevated">
+        <div className="mx-auto flex h-14 w-full max-w-2xl items-center gap-5 px-4">
+          <Link to="/business" className="text-2xl font-extrabold text-text no-underline">
+            آرا
+          </Link>
+          <div className="flex flex-1 gap-1" aria-label={t('business.register.progressLabel')}>
+            {STEP_ORDER.map((item, index) => (
+              <span
+                key={item}
+                className={cn(
+                  'h-1 flex-1 rounded-pill',
+                  index <= stepIndex ? 'bg-primary' : 'bg-border',
+                )}
+                aria-hidden="true"
+              />
+            ))}
+          </div>
+          {step !== 'category' ? (
+            <button
+              type="button"
+              onClick={() => setStep(STEP_ORDER[Math.max(0, stepIndex - 1)])}
+              className="inline-flex size-10 items-center justify-center rounded-md text-text"
+              aria-label={t('business.register.back')}
+            >
+              <ArrowRight className="size-5 rtl:-scale-x-100" aria-hidden="true" />
+            </button>
+          ) : (
+            <span className="size-10" aria-hidden="true" />
+          )}
+        </div>
       </header>
 
-      {/* Progress stepper — ordered, with the active step marked aria-current. */}
-      <ol className="flex items-center justify-center gap-2" aria-label={t('business.register.progressLabel')}>
-        {STEP_ORDER.map((s, i) => {
-          const done = i < stepIndex;
-          const current = i === stepIndex;
-          return (
-            <li key={s} className="flex items-center gap-2">
-              <span
-                aria-current={current ? 'step' : undefined}
-                className={cn(
-                  'flex h-7 min-w-7 items-center justify-center rounded-pill px-2 text-xs font-bold transition-colors duration-fast ease-standard',
-                  current
-                    ? 'bg-primary text-primary-contrast'
-                    : done
-                      ? 'bg-primary/15 text-primary'
-                      : 'bg-surface text-muted',
-                )}
-              >
-                {done ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : toPersianDigits(i + 1)}
-              </span>
-              <span className={cn('text-xs', current ? 'font-medium text-text' : 'text-muted')}>
-                {t(`business.register.steps.${s}`)}
-              </span>
-              {i < STEP_ORDER.length - 1 && (
-                <span className="h-px w-4 bg-border" aria-hidden="true" />
-              )}
-            </li>
-          );
-        })}
-      </ol>
+      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-10">
+        <p className="text-sm font-medium text-primary">
+          مرحله {toPersianDigits(stepIndex + 1)} از {toPersianDigits(STEP_ORDER.length)}
+        </p>
+        <h1 className="mt-3 text-2xl leading-display text-display text-text">
+          {step === 'category'
+            ? 'چه نوع کسب‌وکاری دارید؟'
+            : step === 'info'
+              ? t('business.register.info.title')
+              : step === 'services'
+                ? t('business.register.services.title')
+                : step === 'setup'
+                  ? t('business.register.setup.title')
+                  : t('business.register.verify.title')}
+        </h1>
+        <p className="mt-2 text-sm text-muted">
+          {step === 'category'
+            ? 'با انتخاب حوزه کاری، آرا را متناسب با نیازهای شما آماده می‌کنیم.'
+            : t('business.register.subtitle')}
+        </p>
 
-      <Card as="section" elevated className="flex flex-col gap-5">
+        {step === 'category' ? (
+          <section className="flex flex-1 flex-col pt-8">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {BUSINESS_CATEGORIES.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setCategory(item)}
+                  aria-pressed={category === item}
+                  className={cn(
+                    'flex min-h-14 items-center rounded-lg border-2 bg-elevated px-5 text-start font-medium text-text transition-colors duration-fast',
+                    category === item ? 'border-primary' : 'border-border',
+                  )}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+            <Button
+              type="button"
+              size="lg"
+              fullWidth
+              disabled={!category}
+              onClick={() => setStep('info')}
+              className="mt-auto"
+            >
+              {t('business.register.next')}
+            </Button>
+          </section>
+        ) : (
+      <section className="mt-8 flex flex-col gap-5">
         {step === 'info' && (
           <form
             className="flex flex-col gap-4"
@@ -725,10 +761,11 @@ function RegisterSalonContent() {
             )}
           </form>
         )}
-      </Card>
+      </section>
+        )}
 
       {/* Already have an account? */}
-      {step !== 'otp' && (
+      {step !== 'otp' && step !== 'category' && (
         <p className="text-center text-sm text-muted">
           {t('business.register.haveAccount')}{' '}
           <Link
@@ -739,9 +776,20 @@ function RegisterSalonContent() {
           </Link>
         </p>
       )}
+      </div>
     </div>
   );
 }
+
+const BUSINESS_CATEGORIES = [
+  'آرایشگاه مردانه',
+  'سالن مو و زیبایی',
+  'سالن ناخن',
+  'اسپا و سلامت',
+  'ابرو و مژه',
+  'تتو و پیرسینگ',
+  'سایر',
+] as const;
 
 /** Quick-add service presets (keys map to `business.register.services.presets.*`). */
 const SERVICE_PRESETS = ['haircut', 'color', 'highlights', 'blowout', 'makeup', 'nails'] as const;
