@@ -21,10 +21,28 @@ interface TabDef {
  * Order: Calendar → Analytics → QR/Link → Settings.
  */
 const TABS: readonly TabDef[] = [
-  { key: 'calendar', labelKey: 'owner.nav.calendar', to: '/owner/calendar', icon: CalendarDays, roles: ['Owner', 'Admin', 'Stylist'] },
-  { key: 'analytics', labelKey: 'owner.nav.analytics', to: '/owner/analytics', icon: BarChart3, roles: ['Owner', 'Admin'] },
+  {
+    key: 'calendar',
+    labelKey: 'owner.nav.calendar',
+    to: '/owner/calendar',
+    icon: CalendarDays,
+    roles: ['Owner', 'Admin', 'Stylist'],
+  },
+  {
+    key: 'analytics',
+    labelKey: 'owner.nav.analytics',
+    to: '/owner/analytics',
+    icon: BarChart3,
+    roles: ['Owner', 'Admin'],
+  },
   { key: 'qr', labelKey: 'owner.nav.qr', to: '/owner/qr', icon: QrCode, roles: ['Owner', 'Admin'] },
-  { key: 'config', labelKey: 'owner.nav.configuration', to: '/owner/config', icon: Settings, roles: ['Owner'] },
+  {
+    key: 'config',
+    labelKey: 'owner.nav.configuration',
+    to: '/owner/config',
+    icon: Settings,
+    roles: ['Owner'],
+  },
 ] as const;
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -88,7 +106,7 @@ export function OwnerBottomTabs({ className, role = 'Owner' }: OwnerBottomTabsPr
                   'focus-visible:outline focus-visible:outline-2',
                   'focus-visible:-outline-offset-2 focus-visible:outline-focus',
                   'transition-colors',
-                  isActive ? 'text-primary font-bold' : 'text-text-muted',
+                  isActive ? 'text-primary font-bold' : 'text-muted',
                 )}
               >
                 {/* Animated active indicator — slides between tabs */}

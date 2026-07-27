@@ -78,11 +78,7 @@ function collectSourceFiles(dir: string): string[] {
 }
 
 /** Patterns that signal a consumer of the reserved emphasized motion. */
-const EMPHASIZED_PATTERNS = [
-  /--ease-emphasized/,
-  /\bease-emphasized\b/,
-  /\banimate-success-pop\b/,
-];
+const EMPHASIZED_PATTERNS = [/--ease-emphasized/, /\bease-emphasized\b/, /\banimate-success-pop\b/];
 
 describe('Property 18 — motion stays within the token band', () => {
   const allTokens = parseDurationTokens(readFileSync(TOKENS_CSS, 'utf8'));
@@ -109,12 +105,7 @@ describe('Property 18 — motion stays within the token band', () => {
 
   it('declares the expected --dur-* animation tokens', () => {
     const names = animationTokens.map((t) => t.name).sort();
-    expect(names).toEqual([
-      '--dur-celebration',
-      '--dur-enter',
-      '--dur-exit',
-      '--dur-stagger',
-    ]);
+    expect(names).toEqual(['--dur-celebration', '--dur-enter', '--dur-exit', '--dur-stagger']);
   });
 
   it('every interaction duration token is within the 150–300ms band', () => {

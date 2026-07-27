@@ -15,10 +15,11 @@ import { easings } from '../lib/motion-variants';
 
 /**
  * Display-only booking summary handed over from the confirm step via router
- * state (R4.6 "confirm the booking with its details"). Every field is optional
- * so the receipt still renders if it is reached without state (e.g. a direct
- * deep link or a hard refresh) — the success moment + next action never depend
- * on the summary being present.
+ * state (R4.6 "confirm the booking with its details"), and mirrored into
+ * sessionStorage so a hard refresh keeps showing the *real* outcome instead of
+ * silently downgrading a confirmed booking to «در انتظار تایید». Without either
+ * source the page never fabricates a receipt — it renders an honest
+ * «رزرو فعالی یافت نشد» state (this is the single most trust-sensitive screen).
  */
 interface BookingSuccessState {
   /** Booking outcome: `confirmed` (auto-approved) or `pending` (awaiting approval). */
@@ -29,6 +30,30 @@ interface BookingSuccessState {
   startAt?: string;
   /** Where — the salon name. */
   salonName?: string;
+}
+
+/** sessionStorage key holding the last real booking outcome (refresh-proof). */
+export const LAST_BOOKING_KEY = 'ara-last-booking';
+
+/** Best-effort read of the persisted outcome; malformed/missing → null. */
+function readPersistedBooking(): BookingSuccessState | null {
+  try {
+    const raw = sessionStorage.getItem(LAST_BOOKING_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as BookingSuccessState;
+    return parsed && (parsed.status === 'confirmed' || parsed.status === 'pending') ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Best-effort persist (quota/private-mode failures are silently ignored). */
+function writePersistedBooking(state: BookingSuccessState): void {
+  try {
+    sessionStorage.setItem(LAST_BOOKING_KEY, JSON.stringify(state));
+  } catch {
+    // sessionStorage unavailable — the summary simply won't survive refresh.
+  }
 }
 
 /** Formats an ISO instant to an `HH:mm` label; digits are localized for display. */
@@ -66,13 +91,46 @@ export function BookingSuccessPage() {
   const location = useLocation();
   const prefersReduced = useReducedMotion();
 
-  const details = (location.state as BookingSuccessState | null) ?? {};
+  // Hydrate from router state (the real handoff from the confirm step) or,
+  // on refresh, from the persisted copy. A fresh handoff refreshes the copy.
+  const routed = location.state as BookingSuccessState | null;
+  const details: BookingSuccessState = routed?.status ? routed : (readPersistedBooking() ?? {});
+  if (routed?.status) writePersistedBooking(routed);
+
   const { serviceName, startAt, salonName } = details;
   const hasSummary = Boolean(serviceName || startAt || salonName);
   // The receipt presents two server-decided outcomes: an auto-approved booking
   // (confirmed — success green + check) or one awaiting admin approval (pending —
-  // warning amber + clock). Default to pending (the common, non-success case).
+  // warning amber + clock).
   const isConfirmed = details.status === 'confirmed';
+
+  // Direct visits / refreshes with no known booking: never fabricate a
+  // receipt — render an honest empty state with the home CTA instead.
+  if (!details.status) {
+    return (
+      <div
+        data-testid="booking-success"
+        data-shell="funnel-success"
+        className="flex min-h-screen flex-col overflow-x-hidden bg-bg text-text"
+      >
+        <SeoHead title={t('seo.titles.success')} />
+        <main
+          id="funnel-content"
+          tabIndex={-1}
+          className="mx-auto flex w-full max-w-funnel flex-1 flex-col items-center justify-center gap-4 px-4 py-8 text-center"
+        >
+          <span className="inline-flex h-16 w-16 items-center justify-center rounded-pill bg-elevated text-muted">
+            <CalendarClock className="h-9 w-9" aria-hidden="true" />
+          </span>
+          <h1 className="text-xl font-bold text-text">{t('booking.noRecentTitle')}</h1>
+          <p className="max-w-[40ch] text-sm text-muted">{t('booking.noRecentBody')}</p>
+          <Button size="lg" onClick={() => navigate('/')}>
+            {t('booking.successCta')}
+          </Button>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -95,8 +153,14 @@ export function BookingSuccessPage() {
         <div className="relative flex flex-col items-center gap-3">
           {/* Celebration effects — decorative, pointer-events-none, aria-hidden */}
           <div className="relative flex items-center justify-center">
-            <CelebrationRing />
-            <ConfettiParticles />
+            {/* Celebrate ONLY a confirmed outcome — confetti over the amber
+                «در انتظار تایید» state would misrepresent the server truth. */}
+            {isConfirmed && (
+              <>
+                <CelebrationRing />
+                <ConfettiParticles />
+              </>
+            )}
 
             {/* Status icon with emphasized easing pop — the ONE special moment.
                 Under reduced-motion the transform never runs (opacity only).
@@ -107,9 +171,7 @@ export function BookingSuccessPage() {
               }`}
               role="img"
               aria-label={
-                isConfirmed
-                  ? t('booking.successIconLabel')
-                  : t('booking.pendingIconLabel')
+                isConfirmed ? t('booking.successIconLabel') : t('booking.pendingIconLabel')
               }
               initial={prefersReduced ? false : { scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}

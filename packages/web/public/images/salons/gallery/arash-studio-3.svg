@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img">
+  <defs>
+    <linearGradient id="bg-arash-studio-3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#12241a"/><stop offset="1" stop-color="#245239"/>
+    </linearGradient>
+    <radialGradient id="glow-arash-studio-3" cx="0.5" cy="0.4" r="0.7">
+      <stop offset="0" stop-color="#c8e6c9" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#c8e6c9" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="arc-arash-studio-3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#43a047" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#43a047" stop-opacity="0.35"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#bg-arash-studio-3)"/>
+    <rect x="0" y="250" width="640" height="110" fill="#43a047" opacity="0.22"/>
+    <circle cx="320" cy="140" r="120" fill="url(#glow-arash-studio-3)"/>
+    <circle cx="320" cy="140" r="78" fill="none" stroke="#c8e6c9" stroke-width="2.5" opacity="0.75"/>
+    <circle cx="320" cy="140" r="54" fill="url(#arc-arash-studio-3)"/>
+    <circle cx="110" cy="260" r="26" fill="#c8e6c9" opacity="0.35"/>
+    <circle cx="540" cy="240" r="18" fill="#c8e6c9" opacity="0.3"/>
+</svg>

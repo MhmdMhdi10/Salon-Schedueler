@@ -52,10 +52,12 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
   router.get(
     '/salons/:id/brand',
     asyncRoute(async (req, res) => {
-      const brandAccent = await services.salonRegistration.getSalonBrandAccent(
-        req.params.id,
-      );
-      res.status(200).json({ brandAccent });
+      // Additive: `name` lets a deep-linked funnel show the salon as the
+      // primary brand mark (R4.5) without a second request. Existing
+      // `{ brandAccent }` consumers are unaffected.
+      const { name, brandAccent } =
+        await services.salonRegistration.getSalonPublicBrand(req.params.id);
+      res.status(200).json({ brandAccent, name });
     }),
   );
 
@@ -89,6 +91,11 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
           name: s.name,
           durationMinutes: s.durationMin,
           priceRial: Number(s.priceRial),
+          // Additive deposit fields so the confirm step can show the deposit
+          // notice (with its amount) ONLY for services that actually require
+          // one, instead of a blanket payment claim (ui-ux §12 honesty).
+          requiresDeposit: s.requiresDeposit,
+          depositRial: s.depositRial != null ? Number(s.depositRial) : null,
         })),
       });
     }),
@@ -105,6 +112,9 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
         salonId: req.params.id,
         serviceId: String(req.query.serviceId),
         date: String(req.query.date),
+        // Optional stylist filter (R14.3): `&staffId=` narrows the slots to
+        // ones that specific staff member can personally serve.
+        staffId: req.query.staffId ? String(req.query.staffId) : undefined,
       });
       res.status(200).json({ slots });
     }),

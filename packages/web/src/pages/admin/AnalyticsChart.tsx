@@ -52,7 +52,6 @@ export function AnalyticsChart({ data, tableId }: AnalyticsChartProps) {
         const pct = max > 0 ? Math.round((datum.value / max) * 100) : 0;
         return (
           <div
-            // eslint-disable-next-line react/no-array-index-key
             key={`${datum.label}-${index}`}
             className="flex items-center gap-3"
             role="group"
@@ -62,9 +61,7 @@ export function AnalyticsChart({ data, tableId }: AnalyticsChartProps) {
             })}
           >
             {/* Visible text label — non-color encoding for the window name */}
-            <span className="w-28 shrink-0 truncate text-xs text-muted">
-              {datum.label}
-            </span>
+            <span className="w-28 shrink-0 truncate text-xs text-muted">{datum.label}</span>
             {/* Bar: fill inherits --color-primary; decorative (meaning conveyed by text) */}
             <div className="relative h-5 flex-1 overflow-hidden rounded-sm bg-surface">
               <div

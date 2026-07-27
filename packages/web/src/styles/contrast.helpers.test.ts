@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  contrastRatio,
-  onAccentForeground,
-  ensureAaFill,
-  AA_TEXT,
-} from './contrast';
+import { contrastRatio, onAccentForeground, ensureAaFill, AA_TEXT } from './contrast';
 import { ACCENTS } from '../pages/owner/marketing-assets';
 
 /**
@@ -91,9 +86,7 @@ describe('onAccentForeground', () => {
     const fg = onAccentForeground('#6E5C50', '#241C18');
     const ink = '#241C18';
     const better =
-      contrastRatio('#FFFFFF', '#6E5C50') >= contrastRatio(ink, '#6E5C50')
-        ? '#FFFFFF'
-        : ink;
+      contrastRatio('#FFFFFF', '#6E5C50') >= contrastRatio(ink, '#6E5C50') ? '#FFFFFF' : ink;
     expect(fg).toBe(better);
   });
 

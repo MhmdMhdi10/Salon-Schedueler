@@ -24,17 +24,11 @@ export interface OwnerThemeToggleProps {
  * Built on `IconButton` — keeps ≥44×44 target, focus-visible ring, and variant
  * styling. Sun and moon are universal icons — not mirrored in RTL.
  */
-export function OwnerThemeToggle({
-  theme,
-  onToggle,
-  className,
-}: OwnerThemeToggleProps) {
+export function OwnerThemeToggle({ theme, onToggle, className }: OwnerThemeToggleProps) {
   const { t } = useTranslation();
   const isDark = theme === 'dark';
 
-  const label = isDark
-    ? t('common.theme.switchToLight')
-    : t('common.theme.switchToDark');
+  const label = isDark ? t('common.theme.switchToLight') : t('common.theme.switchToDark');
 
   return (
     <IconButton
@@ -45,11 +39,7 @@ export function OwnerThemeToggle({
       className={className}
       data-testid="owner-theme-toggle"
     >
-      {isDark ? (
-        <Sun aria-hidden="true" size={20} />
-      ) : (
-        <Moon aria-hidden="true" size={20} />
-      )}
+      {isDark ? <Sun aria-hidden="true" size={20} /> : <Moon aria-hidden="true" size={20} />}
     </IconButton>
   );
 }

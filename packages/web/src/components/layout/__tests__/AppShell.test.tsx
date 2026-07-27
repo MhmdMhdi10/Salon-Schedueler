@@ -3,6 +3,7 @@ import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AppShell, MAIN_CONTENT_ID } from '..';
 import { ThemeProvider } from '../../theme';
+import { DISCOVERY_CATEGORIES } from '../../../data/taxonomy';
 import '../../../i18n';
 import { renderRtl, expectNoSeriousA11yViolations } from '../../../test/a11y';
 
@@ -59,15 +60,64 @@ describe('AppShell', () => {
   it('hosts the theme toggle in the header', () => {
     renderShell();
     const banner = screen.getByRole('banner');
-    expect(
-      within(banner).getByRole('button', { name: /تغییر به حالت/ }),
-    ).toBeInTheDocument();
+    expect(within(banner).getByRole('button', { name: /تغییر به حالت/ })).toBeInTheDocument();
   });
 
   it('renders the routed page content inside main', () => {
     renderShell(<p data-testid="page-body">صفحه آزمایشی</p>);
     const main = screen.getByRole('main');
     expect(within(main).getByTestId('page-body')).toBeInTheDocument();
+  });
+
+  it('feeds the category rail from the canonical taxonomy (no dead slugs)', () => {
+    renderShell();
+    const rail = screen.getByRole('navigation', { name: 'دسته‌بندی خدمات' });
+    for (const { slug, label } of DISCOVERY_CATEGORIES) {
+      expect(within(rail).getByRole('link', { name: label })).toHaveAttribute(
+        'href',
+        `/services/${slug}`,
+      );
+    }
+    // «بیشتر...» goes to the real search surface, not a dead /services/all.
+    expect(within(rail).getByRole('link', { name: 'بیشتر...' })).toHaveAttribute('href', '/search');
+  });
+
+  it('footer contains only real link targets (no #download, no dead anchors)', () => {
+    renderShell();
+    const footer = screen.getByRole('contentinfo');
+    const links = within(footer).getAllByRole('link');
+    expect(links.length).toBeGreaterThan(0);
+    for (const link of links) {
+      const href = link.getAttribute('href') ?? '';
+      // Every footer destination is an internal route — never a hash stub.
+      expect(href.startsWith('/'), `dead footer link: ${href}`).toBe(true);
+    }
+  });
+
+  it('home (transparent) header shows a sign-in entry and no fake country selector', () => {
+    render(
+      <ThemeProvider defaultTheme="light">
+        <MemoryRouter initialEntries={['/']}>
+          <div dir="rtl" lang="fa">
+            <AppShell>
+              <p>محتوا</p>
+            </AppShell>
+          </div>
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
+    const banner = screen.getByRole('banner');
+    // Visible sign-in entry on the landing chrome.
+    expect(within(banner).getByTestId('header-sign-in')).toBeInTheDocument();
+    // The inert flag/country dropdown is gone.
+    expect(within(banner).queryByText('ایران')).not.toBeInTheDocument();
+    // Theme toggle is reachable from home too.
+    expect(within(banner).getByRole('button', { name: /تغییر به حالت/ })).toBeInTheDocument();
+    // One B2B CTA pill.
+    expect(within(banner).getByRole('link', { name: 'ثبت سالن' })).toHaveAttribute(
+      'href',
+      '/business',
+    );
   });
 
   it('has no serious/critical a11y violations in RTL', async () => {

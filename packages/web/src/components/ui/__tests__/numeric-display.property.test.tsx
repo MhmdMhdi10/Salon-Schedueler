@@ -63,10 +63,7 @@ describe('Property 14 — <Num> renders Persian digits with tabular figures', ()
 
   it('localizes pre-formatted numeric strings (times, dates) without ASCII digits', () => {
     const numericString = fc
-      .tuple(
-        fc.integer({ min: 0, max: 23 }),
-        fc.integer({ min: 0, max: 59 }),
-      )
+      .tuple(fc.integer({ min: 0, max: 23 }), fc.integer({ min: 0, max: 59 }))
       .map(([h, m]) => `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
 
     fc.assert(
@@ -88,9 +85,7 @@ describe('Property 14 — <Num> renders Persian digits with tabular figures', ()
   it('preserves the tabular treatment when caller appends classes', () => {
     fc.assert(
       fc.property(fc.integer(), (value) => {
-        const { container, unmount } = render(
-          <Num value={value} className="text-muted text-sm" />,
-        );
+        const { container, unmount } = render(<Num value={value} className="text-muted text-sm" />);
         try {
           const bdi = container.querySelector('bdi');
           expectPersianAndTabular(bdi);
@@ -131,24 +126,21 @@ describe('Property 14 — <Money> renders Persian digits + grouping with tabular
 
   it('uses the Persian group separator for amounts ≥ 1000 (never the Latin comma)', () => {
     fc.assert(
-      fc.property(
-        fc.bigInt({ min: 1000n, max: 10n ** 15n }),
-        (amountRial) => {
-          const { container, unmount } = render(
-            <Money amountRial={amountRial} unit="rial" hideUnit />,
-          );
-          try {
-            const bdi = container.querySelector('bdi');
-            expectPersianAndTabular(bdi);
-            const text = bdi!.textContent ?? '';
-            // Grouping uses the Arabic thousands separator (U+066C), not ','.
-            expect(text).toContain('٬');
-            expect(text).not.toContain(',');
-          } finally {
-            unmount();
-          }
-        },
-      ),
+      fc.property(fc.bigInt({ min: 1000n, max: 10n ** 15n }), (amountRial) => {
+        const { container, unmount } = render(
+          <Money amountRial={amountRial} unit="rial" hideUnit />,
+        );
+        try {
+          const bdi = container.querySelector('bdi');
+          expectPersianAndTabular(bdi);
+          const text = bdi!.textContent ?? '';
+          // Grouping uses the Arabic thousands separator (U+066C), not ','.
+          expect(text).toContain('٬');
+          expect(text).not.toContain(',');
+        } finally {
+          unmount();
+        }
+      }),
       { numRuns: 200 },
     );
   });
@@ -159,9 +151,7 @@ describe('Property 14 — <Money> renders Persian digits + grouping with tabular
         fc.bigInt({ min: 0n, max: 10n ** 12n }),
         fc.constantFrom(...UNITS),
         (amountRial, unit) => {
-          const { container, unmount } = render(
-            <Money amountRial={amountRial} unit={unit} />,
-          );
+          const { container, unmount } = render(<Money amountRial={amountRial} unit={unit} />);
           try {
             const bdi = container.querySelector('bdi');
             expectPersianAndTabular(bdi);

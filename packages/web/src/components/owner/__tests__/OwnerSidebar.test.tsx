@@ -3,10 +3,15 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { TooltipProvider } from '../../ui/Tooltip';
 import { OwnerSidebar } from '../OwnerSidebar';
-import type { OwnerSidebarRole } from '../OwnerSidebar';
+import type { OwnerRole } from '../../../api/client';
+import '../../../i18n';
 
 /**
  * Unit tests for the OwnerSidebar component (Task 7.1).
+ *
+ * The sidebar consumes `ownerNavForRole` (components/owner/ownerNav.ts) — the
+ * single source of truth for owner-panel destinations — with i18n labels under
+ * `owner.nav.*` and the API `OwnerRole` ('Owner' | 'Admin' | 'Stylist').
  *
  * Covers: role filtering, collapsed/expanded states, accessibility
  * (nav landmark, aria-label, aria-current), toggle button, RTL-aware
@@ -20,7 +25,7 @@ function renderSidebar(props: Partial<React.ComponentProps<typeof OwnerSidebar>>
     collapsed: false,
     onToggle: vi.fn(),
     activeRoute: '/owner/calendar',
-    role: 'owner' as OwnerSidebarRole,
+    role: 'Owner' as OwnerRole,
   };
   return render(
     <MemoryRouter initialEntries={[props.activeRoute || defaultProps.activeRoute]}>
@@ -46,27 +51,31 @@ describe('OwnerSidebar', () => {
       expect(aside).toBeInTheDocument();
     });
 
-    it('renders all three nav items for owner role', () => {
-      renderSidebar({ role: 'owner' });
+    it('renders calendar, analytics, and configuration for Owner role', () => {
+      renderSidebar({ role: 'Owner' });
       expect(screen.getByText('تقویم')).toBeInTheDocument();
       expect(screen.getByText('آمار')).toBeInTheDocument();
-      expect(screen.getByText('تنظیمات')).toBeInTheDocument();
+      expect(screen.getByText('تنظیمات سالن')).toBeInTheDocument();
     });
 
-    it('renders all three nav items for admin role', () => {
-      renderSidebar({ role: 'admin' });
+    it('renders calendar and analytics but NOT configuration for Admin role', () => {
+      // Configuration is Owner-only (matches the OwnerRoleGuard on /owner/config)
+      renderSidebar({ role: 'Admin' });
       expect(screen.getByText('تقویم')).toBeInTheDocument();
       expect(screen.getByText('آمار')).toBeInTheDocument();
-      expect(screen.getByText('تنظیمات')).toBeInTheDocument();
+      expect(screen.queryByText('تنظیمات سالن')).not.toBeInTheDocument();
     });
   });
 
   describe('role filtering', () => {
-    it('stylist sees only Calendar', () => {
-      renderSidebar({ role: 'stylist' });
+    it('Stylist sees only calendar, notifications, and personal QR', () => {
+      renderSidebar({ role: 'Stylist' });
       expect(screen.getByText('تقویم')).toBeInTheDocument();
+      expect(screen.getByText('اعلان‌ها')).toBeInTheDocument();
+      expect(screen.getByText('بارکد من')).toBeInTheDocument();
       expect(screen.queryByText('آمار')).not.toBeInTheDocument();
-      expect(screen.queryByText('تنظیمات')).not.toBeInTheDocument();
+      expect(screen.queryByText('تنظیمات سالن')).not.toBeInTheDocument();
+      expect(screen.queryByText('تراکنش‌ها')).not.toBeInTheDocument();
     });
   });
 
@@ -83,7 +92,7 @@ describe('OwnerSidebar', () => {
       expect(analyticsLink).not.toHaveAttribute('aria-current');
     });
 
-    it('renders magenta active indicator bar on active item', () => {
+    it('renders brand-token active indicator bar on active item', () => {
       const { container } = renderSidebar({ activeRoute: '/owner/analytics' });
       // The active indicator is a span with inline-start positioning
       const indicators = container.querySelectorAll('[aria-hidden="true"]');
@@ -103,14 +112,14 @@ describe('OwnerSidebar', () => {
       // Labels should not be in the DOM when collapsed
       expect(screen.queryByText('تقویم')).not.toBeInTheDocument();
       expect(screen.queryByText('آمار')).not.toBeInTheDocument();
-      expect(screen.queryByText('تنظیمات')).not.toBeInTheDocument();
+      expect(screen.queryByText('تنظیمات سالن')).not.toBeInTheDocument();
     });
 
     it('shows text labels when expanded', () => {
       renderSidebar({ collapsed: false });
       expect(screen.getByText('تقویم')).toBeInTheDocument();
       expect(screen.getByText('آمار')).toBeInTheDocument();
-      expect(screen.getByText('تنظیمات')).toBeInTheDocument();
+      expect(screen.getByText('تنظیمات سالن')).toBeInTheDocument();
     });
   });
 

@@ -16,13 +16,7 @@ import {
 import { adminApi } from '../../api/client';
 import { useSalonId } from '../../auth/useSalonId';
 import { gregorianToJalali, getJalaliMonthName } from '@salon/shared';
-import {
-  Button,
-  ErrorState,
-  Num,
-  Skeleton,
-  cn,
-} from '../../components/ui';
+import { Button, ErrorState, Num, Skeleton, cn } from '../../components/ui';
 import { easings } from '../../lib/motion-variants';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -78,14 +72,11 @@ function serviceColorClass(serviceName?: string): string {
   const lower = serviceName.toLowerCase();
   if (lower.includes('کوتاه') || lower.includes('hair') || lower.includes('cut'))
     return SERVICE_COLORS.haircut;
-  if (lower.includes('رنگ') || lower.includes('color'))
-    return SERVICE_COLORS.color;
+  if (lower.includes('رنگ') || lower.includes('color')) return SERVICE_COLORS.color;
   if (lower.includes('میکاپ') || lower.includes('makeup') || lower.includes('آرایش'))
     return SERVICE_COLORS.makeup;
-  if (lower.includes('ناخن') || lower.includes('nail'))
-    return SERVICE_COLORS.nail;
-  if (lower.includes('پوست') || lower.includes('facial'))
-    return SERVICE_COLORS.facial;
+  if (lower.includes('ناخن') || lower.includes('nail')) return SERVICE_COLORS.nail;
+  if (lower.includes('پوست') || lower.includes('facial')) return SERVICE_COLORS.facial;
   return SERVICE_COLORS.default;
 }
 
@@ -162,10 +153,7 @@ function toAppointment(appt: unknown, fallbackId: string): Appointment {
 }
 
 /** Compute fetch range based on view. */
-function rangeFor(
-  view: CalendarView,
-  anchor: Date,
-): { from: string; to: string } {
+function rangeFor(view: CalendarView, anchor: Date): { from: string; to: string } {
   if (view === 'day') {
     return { from: isoDate(anchor, 0), to: isoDate(anchor, 1) };
   }
@@ -283,12 +271,7 @@ function statusIndicator(status: string | undefined): {
   }
 }
 
-function AppointmentBlock({
-  appt,
-  height,
-  top,
-  positioned = false,
-}: AppointmentBlockProps) {
+function AppointmentBlock({ appt, height, top, positioned = false }: AppointmentBlockProps) {
   const isPending = appt.status === 'pending';
   const isCancelled = appt.status === 'cancelled' || appt.status === 'rejected';
   const colorClass = isPending
@@ -334,14 +317,16 @@ function AppointmentBlock({
     >
       <span className="flex min-w-0 items-center gap-1.5">
         <Scissors className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
-        <strong className="min-w-0 flex-1 truncate text-xs leading-tight">
-          {service}
-        </strong>
+        <strong className="min-w-0 flex-1 truncate text-xs leading-tight">{service}</strong>
         {start && (
           <span className="shrink-0 rounded-full bg-bg px-1.5 py-0.5 text-[0.62rem] tabular-nums text-muted">
             <Clock className="me-0.5 inline-block h-2.5 w-2.5" aria-hidden="true" />
             <Num value={start} />
-            {end && !compact && <>–<Num value={end} /></>}
+            {end && !compact && (
+              <>
+                –<Num value={end} />
+              </>
+            )}
           </span>
         )}
       </span>
@@ -441,7 +426,9 @@ function DayView({ appointments, anchor }: { appointments: Appointment[]; anchor
           return (
             <div
               key={`slot-${idx}`}
-              ref={(el) => { rowRefs.current[idx] = el; }}
+              ref={(el) => {
+                rowRefs.current[idx] = el;
+              }}
               role="row"
               tabIndex={isFocused || (focusedRow === null && idx === 0) ? 0 : -1}
               aria-label={timeStr}
@@ -473,10 +460,7 @@ function DayView({ appointments, anchor }: { appointments: Appointment[]; anchor
         })}
 
         {/* Positioned appointment blocks */}
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{ insetInlineStart: '4rem' }}
-        >
+        <div className="pointer-events-none absolute inset-0" style={{ insetInlineStart: '4rem' }}>
           {dayAppts.map((appt) => {
             const startMin = minutesOf(appt.startAt);
             const endMin = minutesOf(appt.endAt);
@@ -487,12 +471,7 @@ function DayView({ appointments, anchor }: { appointments: Appointment[]; anchor
             if (topPx < 0) return null;
             return (
               <div key={appt.id} className="pointer-events-auto">
-                <AppointmentBlock
-                  appt={appt}
-                  positioned
-                  top={topPx}
-                  height={heightPx}
-                />
+                <AppointmentBlock appt={appt} positioned top={topPx} height={heightPx} />
               </div>
             );
           })}
@@ -573,7 +552,9 @@ function WeekView({ appointments, anchor }: { appointments: Appointment[]; ancho
         return (
           <section
             key={day.iso}
-            ref={(el) => { cellRefs.current[idx] = el; }}
+            ref={(el) => {
+              cellRefs.current[idx] = el;
+            }}
             role="gridcell"
             tabIndex={isFocused || (focusedIdx === null && idx === 0) ? 0 : -1}
             aria-label={`${PERSIAN_WEEKDAYS[day.dayIndex]} ${day.jalali.jd}`}
@@ -582,9 +563,7 @@ function WeekView({ appointments, anchor }: { appointments: Appointment[]; ancho
               'flex min-h-[10rem] flex-col gap-2 rounded-lg border p-3',
               'transition-colors duration-fast ease-standard hover:bg-elevated/30',
               'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
-              isToday
-                ? 'border-primary/60 bg-primary/5'
-                : 'border-border bg-surface',
+              isToday ? 'border-primary/60 bg-primary/5' : 'border-border bg-surface',
             )}
           >
             {/* Day header */}
@@ -595,9 +574,7 @@ function WeekView({ appointments, anchor }: { appointments: Appointment[]; ancho
               <span
                 className={cn(
                   'flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold tabular-nums',
-                  isToday
-                    ? 'bg-primary text-primary-contrast'
-                    : 'text-text',
+                  isToday ? 'bg-primary text-primary-contrast' : 'text-text',
                 )}
               >
                 <Num value={day.jalali.jd} />
@@ -784,10 +761,7 @@ function ListView({ appointments, anchor }: { appointments: Appointment[]; ancho
         const dayIdx = iranianDayIndex(d);
         const isToday = dayKey === dateKey(new Date());
         return (
-          <li
-            key={dayKey}
-            className="rounded-lg border border-border bg-surface p-3"
-          >
+          <li key={dayKey} className="rounded-lg border border-border bg-surface p-3">
             <header className="mb-2 flex items-center gap-2 border-b border-border/50 pb-2">
               <span
                 className={cn(
@@ -798,11 +772,9 @@ function ListView({ appointments, anchor }: { appointments: Appointment[]; ancho
                 <Num value={jalali.jd} />
               </span>
               <div className="flex flex-col">
-                <span className="text-sm font-semibold text-text">
-                  {PERSIAN_WEEKDAYS[dayIdx]}
-                </span>
+                <span className="text-sm font-semibold text-text">{PERSIAN_WEEKDAYS[dayIdx]}</span>
                 <span className="text-xs text-muted">
-                  {getJalaliMonthName(jalali.jm)}{' '}<Num value={jalali.jy} />
+                  {getJalaliMonthName(jalali.jm)} <Num value={jalali.jy} />
                 </span>
               </div>
             </header>
@@ -892,10 +864,7 @@ function CalendarSkeleton({ view }: { view: CalendarView }) {
         className="flex flex-col gap-3"
       >
         {Array.from({ length: 4 }).map((_, i) => (
-          <div
-            key={i}
-            className="rounded-lg border border-border bg-surface p-3"
-          >
+          <div key={i} className="rounded-lg border border-border bg-surface p-3">
             <Skeleton variant="text" className="mb-2 h-6 w-32" />
             <Skeleton variant="rect" className="h-12 rounded-md" />
             <Skeleton variant="rect" className="mt-1.5 h-10 rounded-md" />
@@ -1046,12 +1015,7 @@ function DateNav({
         <ChevronLeft className="h-4 w-4" aria-hidden="true" />
       </Button>
 
-      <Button
-        variant="ghost"
-        size="md"
-        onClick={() => onNavigate(0)}
-        className="ms-1"
-      >
+      <Button variant="ghost" size="md" onClick={() => onNavigate(0)} className="ms-1">
         {t('owner.calendar.today', { defaultValue: 'امروز' })}
       </Button>
     </nav>
@@ -1060,12 +1024,6 @@ function DateNav({
 
 // ─── Approval Queue (Pending Bookings) ───────────────────────────────────────
 
-interface PendingAction {
-  id: string;
-  onApprove: (id: string) => void;
-  onReject: (id: string) => void;
-}
-
 /**
  * Approval queue displayed at the top of the calendar page. Lists salon-wide
  * pending bookings (calls `adminApi.getPending`) with one-tap Approve/Reject
@@ -1073,13 +1031,7 @@ interface PendingAction {
  * actionable UI surface — the inbox bell link + this card together close the
  * "auto-approve off → I need to confirm" loop.
  */
-function ApprovalQueue({
-  salonId,
-  onResolved,
-}: {
-  salonId: string;
-  onResolved: () => void;
-}) {
+function ApprovalQueue({ salonId, onResolved }: { salonId: string; onResolved: () => void }) {
   const { t } = useTranslation();
   const [pending, setPending] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1203,8 +1155,7 @@ function ApprovalQueue({
                 {start && dateLabel && (
                   <span className="flex items-center gap-1 text-xs tabular-nums text-muted">
                     <Clock className="h-3 w-3" aria-hidden="true" />
-                    <Num value={dateLabel} /> <span aria-hidden>·</span>{' '}
-                    <Num value={start} />
+                    <Num value={dateLabel} /> <span aria-hidden>·</span> <Num value={start} />
                   </span>
                 )}
               </div>
@@ -1353,9 +1304,7 @@ export function OwnerCalendarPage() {
       .getCalendar(salonId, from, to, view)
       .then((res) => {
         if (!active) return;
-        setAppointments(
-          res.appointments.map((appt, i) => toAppointment(appt, `appt-${i + 1}`)),
-        );
+        setAppointments(res.appointments.map((appt, i) => toAppointment(appt, `appt-${i + 1}`)));
         setStatus('success');
       })
       .catch(() => {
@@ -1390,64 +1339,55 @@ export function OwnerCalendarPage() {
 
       {/* Pending approval queue — surfaced at top of calendar so owners can
           one-tap Approve/Reject without leaving the calendar view. */}
-      <ApprovalQueue
-        salonId={salonId}
-        onResolved={() => setReloadToken((n) => n + 1)}
-      />
+      <ApprovalQueue salonId={salonId} onResolved={() => setReloadToken((n) => n + 1)} />
 
-        {/* Calendar content with animated transitions */}
-        <div className="relative min-h-[20rem]">
-          {status === 'loading' && <CalendarSkeleton view={view} />}
+      {/* Calendar content with animated transitions */}
+      <div className="relative min-h-[20rem]">
+        {status === 'loading' && <CalendarSkeleton view={view} />}
 
-          {status === 'error' && (
-            <ErrorState
-              data-testid="owner-calendar-error"
-              title={t('owner.calendar.errorTitle', { defaultValue: 'خطا در بارگذاری تقویم' })}
-              description={t('owner.calendar.errorBody', { defaultValue: 'امکان نمایش نوبت‌ها وجود ندارد. لطفاً دوباره تلاش کنید.' })}
-              retryLabel={t('owner.calendar.retry', { defaultValue: 'تلاش مجدد' })}
-              onRetry={() => setReloadToken((n) => n + 1)}
-            />
-          )}
+        {status === 'error' && (
+          <ErrorState
+            data-testid="owner-calendar-error"
+            title={t('owner.calendar.errorTitle', { defaultValue: 'خطا در بارگذاری تقویم' })}
+            description={t('owner.calendar.errorBody', {
+              defaultValue: 'امکان نمایش نوبت‌ها وجود ندارد. لطفاً دوباره تلاش کنید.',
+            })}
+            retryLabel={t('owner.calendar.retry', { defaultValue: 'تلاش مجدد' })}
+            onRetry={() => setReloadToken((n) => n + 1)}
+          />
+        )}
 
-          {status === 'success' && (
-            <AnimatePresence mode="wait" custom={viewDirection}>
-              <motion.div
-                key={`${view}-container`}
-                custom={viewDirection}
-                variants={viewSwitchVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={viewSwitchTransition}
-              >
-                <AnimatePresence mode="wait" custom={dateDirection}>
-                  <motion.div
-                    key={dateKey_}
-                    custom={dateDirection}
-                    variants={dateSlideVariants}
-                    initial="enter"
-                    animate="center"
-                    exit="exit"
-                    transition={dateSlideTransition}
-                  >
-                    {view === 'day' && (
-                      <DayView appointments={appointments} anchor={anchor} />
-                    )}
-                    {view === 'week' && (
-                      <WeekView appointments={appointments} anchor={anchor} />
-                    )}
-                    {view === 'month' && (
-                      <MonthView appointments={appointments} anchor={anchor} />
-                    )}
-                    {view === 'list' && (
-                      <ListView appointments={appointments} anchor={anchor} />
-                    )}
-                  </motion.div>
-                </AnimatePresence>
-              </motion.div>
-            </AnimatePresence>
-          )}
-        </div>
+        {status === 'success' && (
+          <AnimatePresence mode="wait" custom={viewDirection}>
+            <motion.div
+              key={`${view}-container`}
+              custom={viewDirection}
+              variants={viewSwitchVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={viewSwitchTransition}
+            >
+              <AnimatePresence mode="wait" custom={dateDirection}>
+                <motion.div
+                  key={dateKey_}
+                  custom={dateDirection}
+                  variants={dateSlideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={dateSlideTransition}
+                >
+                  {view === 'day' && <DayView appointments={appointments} anchor={anchor} />}
+                  {view === 'week' && <WeekView appointments={appointments} anchor={anchor} />}
+                  {view === 'month' && <MonthView appointments={appointments} anchor={anchor} />}
+                  {view === 'list' && <ListView appointments={appointments} anchor={anchor} />}
+                </motion.div>
+              </AnimatePresence>
+            </motion.div>
+          </AnimatePresence>
+        )}
+      </div>
     </section>
   );
 }

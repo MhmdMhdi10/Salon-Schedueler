@@ -1,11 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-  cleanup,
-} from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import '../../i18n';
@@ -43,6 +37,7 @@ vi.mock('../../api/client', () => ({
 }));
 
 import { AuthPage } from '../AuthPage';
+import { ToastProvider } from '../../components/ui/Toast';
 
 const VALID_PHONE = '09123456789';
 
@@ -50,7 +45,9 @@ function renderAuth() {
   return render(
     <HelmetProvider>
       <MemoryRouter initialEntries={['/auth']}>
-        <AuthPage />
+        <ToastProvider>
+          <AuthPage />
+        </ToastProvider>
       </MemoryRouter>
     </HelmetProvider>,
   );
@@ -72,7 +69,14 @@ async function advanceToOtp() {
  * submit button «تایید و ورود».
  */
 async function enterDigitsInReadingOrderAndSubmit(digits: string[]) {
-  const persianLabels = ['رقم ۱ کد تایید', 'رقم ۲ کد تایید', 'رقم ۳ کد تایید', 'رقم ۴ کد تایید', 'رقم ۵ کد تایید', 'رقم ۶ کد تایید'];
+  const persianLabels = [
+    'رقم ۱ کد تایید',
+    'رقم ۲ کد تایید',
+    'رقم ۳ کد تایید',
+    'رقم ۴ کد تایید',
+    'رقم ۵ کد تایید',
+    'رقم ۶ کد تایید',
+  ];
 
   for (let i = 0; i < digits.length; i++) {
     const input = screen.getByLabelText(persianLabels[i]);

@@ -4,6 +4,8 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom
 import { ThemeProvider } from './components/theme/ThemeProvider';
 import { AppShell } from './components/layout/AppShell';
 import { RouteLoader } from './components/layout/RouteLoader';
+import { PageTransition } from './components/ui/Motion';
+import { ToastProvider } from './components/ui/Toast';
 import { AuthProvider } from './auth/AuthContext';
 
 /**
@@ -98,6 +100,12 @@ const FunnelTenantTheme = lazy(() =>
     default: m.FunnelTenantTheme,
   })),
 );
+const SearchPage = lazy(() =>
+  import('./pages/SearchPage').then((m) => ({ default: m.SearchPage })),
+);
+const NotFoundPage = lazy(() =>
+  import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })),
+);
 
 // Admin surfaces are served by the owner panel (see pages/owner), which adds
 // auth bootstrap + per-role route guards. The legacy `/admin/*` paths redirect
@@ -138,96 +146,121 @@ export function App() {
       <ThemeProvider>
         <BrowserRouter>
           <AuthProvider>
-            <div dir="rtl" lang="fa" className="app-root">
-              <Suspense fallback={<RouteLoader />}>
-                <Routes>
-                  {/*
-                   * Owner panel (R2.1): `/owner/*` brings its own `OwnerShell`
-                   * (header / single `<main>` / role-filtered nav) so it renders
-                   * OUTSIDE `AppShell` — exactly one `<main>` landmark per page.
-                   * `OwnerLayout` gates the area (auth bootstrap + RBAC) and the
-                   * nested pages render inside its `<Outlet>`.
-                   */}
-                  <Route path="/owner" element={<OwnerLayout />}>
-                    <Route index element={<Navigate to="/owner/calendar" replace />} />
-                    <Route path="calendar" element={<OwnerCalendarPage />} />
-                    <Route path="analytics" element={<OwnerAnalyticsPage />} />
-                    <Route path="config" element={<OwnerConfigurationPage />} />
-                    <Route path="subscription" element={<OwnerSubscriptionPage />} />
-                    <Route path="transactions" element={<OwnerTransactionsPage />} />
-                    <Route path="notifications" element={<OwnerNotificationsPage />} />
-                    <Route path="qr" element={<OwnerQrPage />} />
-                    <Route path="my-qr" element={<OwnerMyQrPage />} />
-                  </Route>
-
-                  {/*
-                   * Booking funnel (آرا Design Goals 12, 15, 17, 19):
-                   * `/salon/:salonId/book/*` and `/booking/success` render
-                   * OUTSIDE `AppShell` in their own `FunnelShell` (no nav chrome,
-                   * sticky mobile CTA in thumb reach). `FunnelTenantTheme`
-                   * resolves the salon's Brand_Accent and scopes it to the
-                   * funnel subtree (R4.2).
-                   */}
-                  <Route path="/salon/:salonId/book" element={<FunnelTenantTheme />}>
-                    <Route index element={<AvailabilityPage />} />
-                    <Route path="confirm" element={<BookingConfirmPage />} />
-                  </Route>
-                  <Route path="/booking/success" element={<BookingSuccessPage />} />
-
-                  {/* Public + customer + admin surfaces, inside the app shell. */}
-                  <Route
-                    element={
-                      <AppShell>
-                        <Outlet />
-                      </AppShell>
-                    }
-                  >
-                    {/* Public marketing home (indexable) */}
-                    <Route path="/" element={<MarketingHome />} />
-
-                    {/* Owner-acquisition marketing landing (indexable) */}
-                    <Route path="/business" element={<BusinessLanding />} />
-
-                    {/* Salon self-registration onboarding wizard (noindex) */}
-                    <Route path="/business/register" element={<RegisterSalonPage />} />
-
-                    {/* Public salon profile (indexable) */}
-                    <Route path="/s/:slug" element={<SalonProfilePage />} />
-
-                    {/* Public discovery pages (indexable) */}
-                    <Route path="/city/:city" element={<CityPage />} />
-                    <Route path="/services/:type" element={<ServicePage />} />
-
-                    {/* Public trust & legal pages (indexable) */}
-                    <Route path="/about" element={<AboutPage />} />
-                    <Route path="/contact" element={<ContactPage />} />
-                    <Route path="/privacy" element={<PrivacyPage />} />
-                    <Route path="/terms" element={<TermsPage />} />
-
-                    {/* Customer flows */}
-                    <Route path="/auth" element={<AuthPage />} />
-                    <Route path="/qr/:payload" element={<QrLandingPage />} />
+            {/* Single app-level ToastProvider: `useToast` works on every route
+             * and a toast survives page navigation. (Pages must NOT mount
+             * their own nested ToastProvider — the nearest provider wins and
+             * a nested one would silo its toasts to that page.) */}
+            <ToastProvider>
+              <div dir="rtl" lang="fa" className="app-root">
+                <Suspense fallback={<RouteLoader />}>
+                  <Routes>
                     {/*
-                     * Booking funnel + success live outside AppShell (above)
-                     * for the FunnelShell no-chrome pattern (آرا Design Goal 17).
+                     * Owner panel (R2.1): `/owner/*` brings its own `OwnerShell`
+                     * (header / single `<main>` / role-filtered nav) so it renders
+                     * OUTSIDE `AppShell` — exactly one `<main>` landmark per page.
+                     * `OwnerLayout` gates the area (auth bootstrap + RBAC) and the
+                     * nested pages render inside its `<Outlet>`.
                      */}
+                    <Route path="/owner" element={<OwnerLayout />}>
+                      <Route index element={<Navigate to="/owner/calendar" replace />} />
+                      <Route path="calendar" element={<OwnerCalendarPage />} />
+                      <Route path="analytics" element={<OwnerAnalyticsPage />} />
+                      <Route path="config" element={<OwnerConfigurationPage />} />
+                      <Route path="subscription" element={<OwnerSubscriptionPage />} />
+                      <Route path="transactions" element={<OwnerTransactionsPage />} />
+                      <Route path="notifications" element={<OwnerNotificationsPage />} />
+                      <Route path="qr" element={<OwnerQrPage />} />
+                      <Route path="my-qr" element={<OwnerMyQrPage />} />
+                    </Route>
 
-                    {/* Legacy admin paths → consolidated into the owner panel,
+                    {/*
+                     * Booking funnel (آرا Design Goals 12, 15, 17, 19):
+                     * `/salon/:salonId/book/*` and `/booking/success` render
+                     * OUTSIDE `AppShell` in their own `FunnelShell` (no nav chrome,
+                     * sticky mobile CTA in thumb reach). `FunnelTenantTheme`
+                     * resolves the salon's Brand_Accent and scopes it to the
+                     * funnel subtree (R4.2).
+                     */}
+                    <Route path="/salon/:salonId/book" element={<FunnelTenantTheme />}>
+                      <Route index element={<AvailabilityPage />} />
+                      <Route path="confirm" element={<BookingConfirmPage />} />
+                    </Route>
+                    <Route path="/booking/success" element={<BookingSuccessPage />} />
+
+                    {/* Public + customer + admin surfaces, inside the app shell.
+                     * The INNER Suspense keeps the shell chrome (sticky header,
+                     * footer) mounted while a page chunk loads — only the main
+                     * region shows the RouteLoader skeleton. `PageTransition`
+                     * adds the enter-only route crossfade (reduced-motion safe).
+                     */}
+                    <Route
+                      element={
+                        <AppShell>
+                          <PageTransition>
+                            <Suspense fallback={<RouteLoader />}>
+                              <Outlet />
+                            </Suspense>
+                          </PageTransition>
+                        </AppShell>
+                      }
+                    >
+                      {/* Public marketing home (indexable) */}
+                      <Route path="/" element={<MarketingHome />} />
+
+                      {/* Owner-acquisition marketing landing (indexable) */}
+                      <Route path="/business" element={<BusinessLanding />} />
+
+                      {/* Salon self-registration onboarding wizard (noindex) */}
+                      <Route path="/business/register" element={<RegisterSalonPage />} />
+
+                      {/* Public salon profile (indexable) */}
+                      <Route path="/s/:slug" element={<SalonProfilePage />} />
+
+                      {/* Public discovery pages (indexable) */}
+                      <Route path="/city/:city" element={<CityPage />} />
+                      <Route path="/services/:type" element={<ServicePage />} />
+
+                      {/* Search results — the home hero submits here (noindex) */}
+                      <Route path="/search" element={<SearchPage />} />
+
+                      {/* Public trust & legal pages (indexable) */}
+                      <Route path="/about" element={<AboutPage />} />
+                      <Route path="/contact" element={<ContactPage />} />
+                      <Route path="/privacy" element={<PrivacyPage />} />
+                      <Route path="/terms" element={<TermsPage />} />
+
+                      {/* Customer flows */}
+                      <Route path="/auth" element={<AuthPage />} />
+                      <Route path="/qr/:payload" element={<QrLandingPage />} />
+                      {/*
+                       * Booking funnel + success live outside AppShell (above)
+                       * for the FunnelShell no-chrome pattern (آرا Design Goal 17).
+                       */}
+
+                      {/* Legacy admin paths → consolidated into the owner panel,
                       which bootstraps auth and guards by role. */}
-                    <Route path="/admin" element={<Navigate to="/owner" replace />} />
-                    <Route path="/admin/config" element={<Navigate to="/owner/config" replace />} />
-                    <Route
-                      path="/admin/calendar"
-                      element={<Navigate to="/owner/calendar" replace />}
-                    />
-                    <Route
-                      path="/admin/analytics"
-                      element={<Navigate to="/owner/analytics" replace />}
-                    />
-                  </Route>
-                </Routes>
-              </Suspense>
-            </div>
+                      <Route path="/admin" element={<Navigate to="/owner" replace />} />
+                      <Route
+                        path="/admin/config"
+                        element={<Navigate to="/owner/config" replace />}
+                      />
+                      <Route
+                        path="/admin/calendar"
+                        element={<Navigate to="/owner/calendar" replace />}
+                      />
+                      <Route
+                        path="/admin/analytics"
+                        element={<Navigate to="/owner/analytics" replace />}
+                      />
+
+                      {/* Catch-all 404 (noindex) — polished, with search + home
+                      + category links so a dead URL still converts. */}
+                      <Route path="*" element={<NotFoundPage />} />
+                    </Route>
+                  </Routes>
+                </Suspense>
+              </div>
+            </ToastProvider>
           </AuthProvider>
         </BrowserRouter>
       </ThemeProvider>

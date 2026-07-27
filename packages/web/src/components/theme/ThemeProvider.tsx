@@ -1,22 +1,14 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useState,
-} from 'react';
+import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useState } from 'react';
 
 /**
  * Light/dark theming for the PWA (R1.8, R3.3, R3.4, R11.4).
  *
  * Resolution order on first load: stored user choice (`localStorage`) →
  * **light default**. The OS `prefers-color-scheme` is intentionally **not**
- * auto-followed: a Persian beauty/salon storefront should land on the warm
- * porcelain palette every time regardless of the visitor's OS scheme (so a
- * dark-OS visitor doesn't see a stark night-mode brand on first paint).
- * Users opt in to dark via the explicit toggle, and that choice persists.
+ * auto-followed: the storefront should land on the clean light Booksy_Identity
+ * surface every time regardless of the visitor's OS scheme (so a dark-OS
+ * visitor doesn't see a stark night-mode brand on first paint). Users opt in
+ * to dark via the explicit toggle, and that choice persists.
  *
  * The active theme is written as `data-theme` on `<html>` (the hook the token
  * stylesheet and Tailwind's `darkMode: ['class','[data-theme="dark"]']` config
@@ -53,8 +45,9 @@ interface ThemeContextValue {
   /** Flip between light and dark, persisting the result. */
   toggleTheme: () => void;
   /**
-   * Whether the user has made an explicit choice (persisted). When false the
-   * app follows the OS `prefers-color-scheme` and reacts to its changes.
+   * Whether the user has made an explicit, persisted choice. When false the
+   * app is on the light default (the OS `prefers-color-scheme` is intentionally
+   * never consulted — see the module doc).
    */
   hasExplicitChoice: boolean;
 }
@@ -72,8 +65,8 @@ function readStoredTheme(): Theme | null {
 }
 
 /** localStorage → light. The OS `prefers-color-scheme` is intentionally not
- * consulted; a dark-OS visitor still lands on the warm porcelain palette on
- * first paint and only flips to dark if they explicitly toggle. */
+ * consulted; a dark-OS visitor still lands on the light Booksy_Identity
+ * surface on first paint and only flips to dark if they explicitly toggle. */
 function resolveInitialTheme(): Theme {
   return readStoredTheme() ?? 'light';
 }
@@ -84,9 +77,7 @@ function applyTheme(theme: Theme): void {
   const root = document.documentElement;
   root.setAttribute('data-theme', theme);
 
-  let meta = document.head.querySelector<HTMLMetaElement>(
-    'meta[name="theme-color"]',
-  );
+  let meta = document.head.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
   if (!meta) {
     meta = document.createElement('meta');
     meta.setAttribute('name', 'theme-color');
@@ -105,13 +96,11 @@ export interface ThemeProviderProps {
 }
 
 /**
- * Provides theme state to the tree, applies it to the document, and follows the
- * OS preference until the user makes an explicit choice.
+ * Provides theme state to the tree and applies it to the document (light
+ * default; explicit user choice persists — the OS preference is not followed).
  */
 export function ThemeProvider({ children, defaultTheme }: ThemeProviderProps) {
-  const [theme, setThemeState] = useState<Theme>(
-    () => defaultTheme ?? resolveInitialTheme(),
-  );
+  const [theme, setThemeState] = useState<Theme>(() => defaultTheme ?? resolveInitialTheme());
   const [hasExplicitChoice, setHasExplicitChoice] = useState<boolean>(
     () => defaultTheme != null || readStoredTheme() !== null,
   );
@@ -144,9 +133,7 @@ export function ThemeProvider({ children, defaultTheme }: ThemeProviderProps) {
     [theme, setTheme, toggleTheme, hasExplicitChoice],
   );
 
-  return (
-    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 /**
@@ -159,4 +146,53 @@ export function useTheme(): ThemeContextValue {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;
+}
+
+/* ------------------------------------------------------------------------- *
+ * Scoped theming (owner panel / any subtree with its own theme)
+ * ------------------------------------------------------------------------- */
+
+const ThemeScopeContext = createContext<Theme | null>(null);
+
+export interface ThemeScopeProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** The theme this subtree renders in, independent of the document theme. */
+  theme: Theme;
+  children: React.ReactNode;
+}
+
+/**
+ * Scope a subtree to its own theme, **portal-safely**.
+ *
+ * Setting `data-theme` on a wrapper div themes in-flow descendants, but Radix
+ * overlays (Dialog/Sheet/Select/Tooltip/Toast/popovers) portal to
+ * `document.body` — *outside* the wrapper — so they would render in the
+ * document theme instead (e.g. a light dialog over the dark owner panel).
+ *
+ * `ThemeScope` therefore does two things:
+ *  1. renders a `data-theme` wrapper for in-flow content, and
+ *  2. provides the scope theme via context; every shared portaled primitive
+ *     reads it with {@link useThemeScope} and stamps the same `data-theme` on
+ *     its portaled root, so tokens resolve identically inside the portal.
+ *
+ * Used by the owner panel shell (`OwnerShell`) — replace a raw
+ * `<div data-theme={theme}>` with `<ThemeScope theme={theme}>` and portals
+ * follow the scope for free.
+ */
+export function ThemeScope({ theme, children, ...rest }: ThemeScopeProps) {
+  return (
+    <ThemeScopeContext.Provider value={theme}>
+      <div data-theme={theme} {...rest}>
+        {children}
+      </div>
+    </ThemeScopeContext.Provider>
+  );
+}
+
+/**
+ * The nearest scoped theme, or `undefined` when the subtree follows the
+ * document theme. Portaled primitives stamp the returned value as `data-theme`
+ * on their portal content (`undefined` → no attribute → inherit `<html>`).
+ */
+export function useThemeScope(): Theme | undefined {
+  return useContext(ThemeScopeContext) ?? undefined;
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useInView, useMotionValue, useReducedMotion, animate } from 'framer-motion';
 import { toPersianDigits } from './Num';
+import { counterTransition } from '../../lib/motion-variants';
 import { cn } from './cn';
 
 /**
@@ -15,9 +16,7 @@ const PERSIAN_GROUP_SEPARATOR = '٬';
  */
 function formatPersianNumber(n: number): string {
   const rounded = Math.round(n);
-  const grouped = rounded
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, PERSIAN_GROUP_SEPARATOR);
+  const grouped = rounded.toString().replace(/\B(?=(\d{3})+(?!\d))/g, PERSIAN_GROUP_SEPARATOR);
   return toPersianDigits(grouped);
 }
 
@@ -72,8 +71,7 @@ export function AnimatedCounter({
 
     if (isInView) {
       const controls = animate(motionValue, target, {
-        duration: 1.2,
-        ease: [0, 0, 0.2, 1], // --ease-decelerate
+        ...counterTransition,
         onUpdate(latest) {
           setDisplayValue(formatPersianNumber(latest));
         },

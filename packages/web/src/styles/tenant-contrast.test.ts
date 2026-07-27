@@ -55,9 +55,7 @@ describe('tenant accent contrast (WCAG AA) — every ACCENTS entry', () => {
       it('focus ring (= primary fill) clears non-text AA on the page bg (≥ 3:1)', () => {
         // The signature light/dark page bg the storefront sits on. The accent
         // wrapper never overrides bg, so the ring is judged against it.
-        expect(ratio(focusRing, '#FFFFFF')).toBeGreaterThanOrEqual(
-          AA_LARGE_OR_NONTEXT,
-        );
+        expect(ratio(focusRing, '#FFFFFF')).toBeGreaterThanOrEqual(AA_LARGE_OR_NONTEXT);
       });
     });
   }

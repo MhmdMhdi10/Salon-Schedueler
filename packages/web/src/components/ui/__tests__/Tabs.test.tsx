@@ -41,10 +41,7 @@ describe('Tabs', () => {
     fireEvent.mouseDown(screen.getByRole('tab', { name: 'هفته' }), {
       button: 0,
     });
-    expect(screen.getByRole('tab', { name: 'هفته' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
+    expect(screen.getByRole('tab', { name: 'هفته' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tabpanel')).toHaveTextContent('نمای هفته');
   });
 

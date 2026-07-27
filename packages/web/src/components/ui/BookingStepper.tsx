@@ -86,15 +86,11 @@ export function BookingStepper({ steps, currentStep, className }: BookingStepper
                       'text-sm font-bold transition-colors',
                       isCompleted && 'bg-primary text-primary-contrast',
                       isCurrent && 'bg-primary text-primary-contrast',
-                      isUpcoming && 'border-2 border-border text-text-muted bg-surface',
+                      isUpcoming && 'border-2 border-border text-muted bg-surface',
                     )}
                     initial={false}
                     animate={
-                      prefersReduced
-                        ? {}
-                        : isCompleted || isCurrent
-                          ? { scale: 1 }
-                          : { scale: 1 }
+                      prefersReduced ? {} : isCompleted || isCurrent ? { scale: 1 } : { scale: 1 }
                     }
                     transition={{ duration: 0.3, ease: easings.standard }}
                   >
@@ -132,7 +128,7 @@ export function BookingStepper({ steps, currentStep, className }: BookingStepper
                     'text-xs whitespace-nowrap',
                     isCompleted && 'text-primary font-medium',
                     isCurrent && 'text-primary font-bold',
-                    isUpcoming && 'text-text-muted',
+                    isUpcoming && 'text-muted',
                   )}
                 >
                   {step.label}
@@ -146,9 +142,7 @@ export function BookingStepper({ steps, currentStep, className }: BookingStepper
                   <div
                     className={cn(
                       'h-0.5 w-full',
-                      index < currentStep
-                        ? 'bg-primary'
-                        : 'border-t-2 border-dashed border-border',
+                      index < currentStep ? 'bg-primary' : 'border-t-2 border-dashed border-border',
                     )}
                     aria-hidden="true"
                   />

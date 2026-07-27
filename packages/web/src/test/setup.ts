@@ -26,8 +26,7 @@ if (!('ResizeObserver' in globalThis)) {
     unobserve(): void {}
     disconnect(): void {}
   }
-  (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver =
-    ResizeObserver;
+  (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = ResizeObserver;
 }
 
 // IntersectionObserver is used by the infinite scroll hook and scroll-reveal
@@ -38,10 +37,18 @@ if (!('IntersectionObserver' in globalThis)) {
     observe(): void {}
     unobserve(): void {}
     disconnect(): void {}
-    get root(): Element | null { return null; }
-    get rootMargin(): string { return ''; }
-    get thresholds(): ReadonlyArray<number> { return []; }
-    takeRecords(): IntersectionObserverEntry[] { return []; }
+    get root(): Element | null {
+      return null;
+    }
+    get rootMargin(): string {
+      return '';
+    }
+    get thresholds(): ReadonlyArray<number> {
+      return [];
+    }
+    takeRecords(): IntersectionObserverEntry[] {
+      return [];
+    }
   }
   (globalThis as unknown as { IntersectionObserver: unknown }).IntersectionObserver =
     IntersectionObserver;
@@ -50,9 +57,7 @@ if (!('IntersectionObserver' in globalThis)) {
 type MatchMediaFn = (query: string) => MediaQueryList;
 
 if (!('matchMedia' in window)) {
-  (window as unknown as { matchMedia: MatchMediaFn }).matchMedia = ((
-    query: string,
-  ) => ({
+  (window as unknown as { matchMedia: MatchMediaFn }).matchMedia = ((query: string) => ({
     matches: false,
     media: query,
     onchange: null,

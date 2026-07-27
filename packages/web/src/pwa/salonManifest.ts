@@ -79,7 +79,10 @@ function canUseObjectUrls(): boolean {
 }
 
 /** Get (or create) a `<meta name>` element, returning it and its prior content. */
-function upsertMeta(name: string, content: string): { el: HTMLMetaElement; prev: string | null; created: boolean } {
+function upsertMeta(
+  name: string,
+  content: string,
+): { el: HTMLMetaElement; prev: string | null; created: boolean } {
   let el = document.head.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
   const created = !el;
   const prev = el ? el.getAttribute('content') : null;

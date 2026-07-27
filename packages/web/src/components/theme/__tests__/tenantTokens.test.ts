@@ -1,12 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { deriveTenantTokens } from '../tenantTokens';
 import { ACCENTS, resolveAccent } from '../../../pages/owner/marketing-assets';
-import {
-  ensureAaFill,
-  onAccentForeground,
-  contrastRatio,
-  AA_TEXT,
-} from '../../../styles/contrast';
+import { ensureAaFill, onAccentForeground, contrastRatio, AA_TEXT } from '../../../styles/contrast';
 
 /**
  * Unit tests for `deriveTenantTokens` (signature-ui-system task 9.7; Property 5,
@@ -36,9 +31,7 @@ describe('deriveTenantTokens', () => {
 
     const expectedPrimary = ensureAaFill(accent.from);
     expect(map['--color-primary']).toBe(expectedPrimary);
-    expect(map['--color-primary-contrast']).toBe(
-      onAccentForeground(expectedPrimary, accent.ink),
-    );
+    expect(map['--color-primary-contrast']).toBe(onAccentForeground(expectedPrimary, accent.ink));
     expect(map['--color-accent']).toBe(accent.to);
     expect(map['--color-focus-ring']).toBe(expectedPrimary);
   });

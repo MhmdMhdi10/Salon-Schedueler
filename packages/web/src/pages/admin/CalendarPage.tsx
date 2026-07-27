@@ -37,7 +37,6 @@ import {
   TabsList,
   TabsTrigger,
   TextField,
-  ToastProvider,
   cn,
   useToast,
   type BadgeStatus,
@@ -317,12 +316,9 @@ function AppointmentBlock({
   const showActions = canManage && normalizedStatus === 'pending';
   // A confirmed/held booking can be cancelled by a manager. A pending one uses
   // reject instead; cancelled/completed/no-show are terminal (no cancel).
-  const showCancel =
-    canManage && (normalizedStatus === 'confirmed' || normalizedStatus === 'held');
+  const showCancel = canManage && (normalizedStatus === 'confirmed' || normalizedStatus === 'held');
   const busy =
-    actionStatus === 'approving' ||
-    actionStatus === 'rejecting' ||
-    actionStatus === 'cancelling';
+    actionStatus === 'approving' || actionStatus === 'rejecting' || actionStatus === 'cancelling';
 
   const runAction = async (kind: 'approve' | 'reject') => {
     setActionStatus(kind === 'approve' ? 'approving' : 'rejecting');
@@ -885,7 +881,10 @@ function MonthGrid({
                 </span>
                 {(isClosed || isPartial) && (
                   <CalendarOff
-                    className={cn('h-3.5 w-3.5 shrink-0', isClosed ? 'text-danger' : 'text-warning')}
+                    className={cn(
+                      'h-3.5 w-3.5 shrink-0',
+                      isClosed ? 'text-danger' : 'text-warning',
+                    )}
                     aria-hidden="true"
                   />
                 )}
@@ -1674,14 +1673,10 @@ function CalendarPageContent({ salonId: salonIdProp }: { salonId?: string }) {
 }
 
 /**
- * Public entry point. Hosts its own {@link ToastProvider} so the cancel /
- * closure confirmations work whether the calendar is mounted standalone (as in
- * the component tests) or inside the owner shell.
+ * Public entry point. The cancel / closure confirmation toasts surface through
+ * the app-root `ToastProvider` in App.tsx — a nested per-page provider would
+ * silo them from the app host (component tests supply their own provider).
  */
 export function CalendarPage({ salonId }: { salonId?: string }) {
-  return (
-    <ToastProvider>
-      <CalendarPageContent salonId={salonId} />
-    </ToastProvider>
-  );
+  return <CalendarPageContent salonId={salonId} />;
 }

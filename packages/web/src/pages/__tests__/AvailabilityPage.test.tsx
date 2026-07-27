@@ -125,9 +125,7 @@ describe('AvailabilityPage — date picker', () => {
     await screen.findByTestId('availability-page');
     // The native <input type="date"> is gone; a labelled trigger replaces it.
     expect(container.querySelector('input[type="date"]')).toBeNull();
-    expect(
-      screen.getByRole('button', { name: /انتخاب تاریخ/ }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /انتخاب تاریخ/ })).toBeInTheDocument();
   });
 });
 
@@ -136,9 +134,10 @@ describe('AvailabilityPage — slot grid states', () => {
     getServices.mockResolvedValue({ services: SERVICES });
     let resolveSlots: (v: { slots: typeof SLOTS }) => void = () => {};
     getAvailability.mockImplementation(
-      () => new Promise((resolve) => {
-        resolveSlots = resolve as typeof resolveSlots;
-      }),
+      () =>
+        new Promise((resolve) => {
+          resolveSlots = resolve as typeof resolveSlots;
+        }),
     );
     renderPage();
 

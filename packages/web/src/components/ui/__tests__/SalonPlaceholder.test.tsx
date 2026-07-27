@@ -36,9 +36,7 @@ describe('SalonPlaceholder', () => {
   });
 
   it('accepts className for custom sizing (aspect-ratio, width, height)', () => {
-    const { container } = render(
-      <SalonPlaceholder className="aspect-square w-full h-48" />,
-    );
+    const { container } = render(<SalonPlaceholder className="aspect-square w-full h-48" />);
     const wrapper = container.firstElementChild!;
     expect(wrapper.className).toContain('aspect-square');
     expect(wrapper.className).toContain('w-full');
@@ -59,9 +57,7 @@ describe('SalonPlaceholder', () => {
   });
 
   it('has no serious/critical a11y violations (meaningful mode)', async () => {
-    const { rtlContainer } = renderRtl(
-      <SalonPlaceholder alt="سالن بدون تصویر" />,
-    );
+    const { rtlContainer } = renderRtl(<SalonPlaceholder alt="سالن بدون تصویر" />);
     await expectNoSeriousA11yViolations(rtlContainer);
   });
 });

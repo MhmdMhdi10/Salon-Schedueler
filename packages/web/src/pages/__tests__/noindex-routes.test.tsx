@@ -66,9 +66,7 @@ vi.mock('../../api/client', () => {
       getStaff: vi.fn().mockResolvedValue({ staff: [] }),
       getChairs: vi.fn().mockResolvedValue({ chairs: [] }),
       getCalendar: vi.fn().mockResolvedValue({ appointments: [] }),
-      getAnalytics: vi
-        .fn()
-        .mockResolvedValue({ utilization: {}, revenue: 0, busiestWindows: [] }),
+      getAnalytics: vi.fn().mockResolvedValue({ utilization: {}, revenue: 0, busiestWindows: [] }),
     },
   };
 });
@@ -81,6 +79,7 @@ import { BookingSuccessPage } from '../BookingSuccessPage';
 import { ConfigurationPage } from '../admin/ConfigurationPage';
 import { CalendarPage } from '../admin/CalendarPage';
 import { AnalyticsPage } from '../admin/AnalyticsPage';
+import { ToastProvider } from '../../components/ui/Toast';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -109,7 +108,12 @@ function renderAt(path: string, element: React.ReactElement, route = path) {
 
 describe('private routes emit noindex,follow (R8.7)', () => {
   it('`/auth` (the login surface) is noindex', async () => {
-    renderAt('/auth', <AuthPage />);
+    renderAt(
+      '/auth',
+      <ToastProvider>
+        <AuthPage />
+      </ToastProvider>,
+    );
     await waitFor(() => expect(robotsContent()).toBe('noindex,follow'));
   });
 
@@ -124,11 +128,7 @@ describe('private routes emit noindex,follow (R8.7)', () => {
   });
 
   it('`/salon/:salonId/book/confirm` is noindex', async () => {
-    renderAt(
-      '/salon/salon-1/book/confirm',
-      <BookingConfirmPage />,
-      '/salon/:salonId/book/confirm',
-    );
+    renderAt('/salon/salon-1/book/confirm', <BookingConfirmPage />, '/salon/:salonId/book/confirm');
     await waitFor(() => expect(robotsContent()).toBe('noindex,follow'));
   });
 
@@ -138,12 +138,22 @@ describe('private routes emit noindex,follow (R8.7)', () => {
   });
 
   it('`/admin/config` is noindex', async () => {
-    renderAt('/admin/config', <ConfigurationPage salonId="salon-1" />);
+    renderAt(
+      '/admin/config',
+      <ToastProvider>
+        <ConfigurationPage salonId="salon-1" />
+      </ToastProvider>,
+    );
     await waitFor(() => expect(robotsContent()).toBe('noindex,follow'));
   });
 
   it('`/admin/calendar` is noindex', async () => {
-    renderAt('/admin/calendar', <CalendarPage salonId="salon-1" />);
+    renderAt(
+      '/admin/calendar',
+      <ToastProvider>
+        <CalendarPage salonId="salon-1" />
+      </ToastProvider>,
+    );
     await waitFor(() => expect(robotsContent()).toBe('noindex,follow'));
   });
 

@@ -1,13 +1,8 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import * as RadixToast from '@radix-ui/react-toast';
 import { CheckCircle2, Info, XCircle, X, type LucideIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useThemeScope } from '../theme/ThemeProvider';
 import { cn } from './cn';
 import { IconButton } from './IconButton';
 
@@ -109,6 +104,11 @@ export function ToastProvider({
   duration = 5000,
   swipeDirection = 'right',
 }: ToastProviderProps) {
+  // `t` is taken by the toast record in the render map, so alias the i18n fn.
+  const { t: translate } = useTranslation();
+  const scopeTheme = useThemeScope();
+  const undoFallback = translate('common.undo', 'بازگردانی');
+  const closeFallback = translate('common.close', 'بستن');
   const [toasts, setToasts] = useState<ToastRecord[]>([]);
   const idRef = useRef(0);
 
@@ -118,9 +118,7 @@ export function ToastProvider({
 
   const dismiss = useCallback(
     (id: number) => {
-      setToasts((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, open: false } : t)),
-      );
+      setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, open: false } : t)));
       // Drop from state after the close transition settles so the exit
       // crossfade can play (and is a no-op under reduced motion).
       window.setTimeout(() => remove(id), 200);
@@ -165,9 +163,16 @@ export function ToastProvider({
                 'flex items-start gap-3 rounded-md border border-border bg-elevated p-3 shadow-3',
                 'transition-opacity duration-base ease-standard',
                 'data-[state=closed]:opacity-0',
+                // Slide-up entrance from the bottom edge (token keyframe);
+                // exit stays the opacity crossfade above. Motion-safe gated
+                // and clamped globally under prefers-reduced-motion.
+                'motion-safe:animate-toast-in',
               )}
             >
-              <span className={cn('mt-0.5 inline-flex shrink-0', statusAccent[status])} aria-hidden="true">
+              <span
+                className={cn('mt-0.5 inline-flex shrink-0', statusAccent[status])}
+                aria-hidden="true"
+              >
                 <Icon className="h-5 w-5" />
               </span>
               <div className="flex-1">
@@ -183,7 +188,7 @@ export function ToastProvider({
               {t.onUndo && (
                 <RadixToast.Action
                   asChild
-                  altText={t.undoLabel ?? 'بازگردانی'}
+                  altText={t.undoLabel ?? undoFallback}
                   onClick={() => {
                     t.onUndo?.();
                     dismiss(t.id);
@@ -198,13 +203,13 @@ export function ToastProvider({
                       'focus-visible:outline-offset-2 focus-visible:outline-focus',
                     )}
                   >
-                    {t.undoLabel ?? 'بازگردانی'}
+                    {t.undoLabel ?? undoFallback}
                   </button>
                 </RadixToast.Action>
               )}
               <RadixToast.Close asChild>
                 <IconButton
-                  aria-label="بستن"
+                  aria-label={closeFallback}
                   variant="ghost"
                   className="h-8 min-h-0 w-8 min-w-0 shrink-0"
                 >
@@ -215,8 +220,11 @@ export function ToastProvider({
           );
         })}
         <RadixToast.Viewport
+          data-theme={scopeTheme}
           className={cn(
             'fixed bottom-0 z-toast m-0 flex w-full max-w-sm list-none flex-col gap-2 p-4',
+            // Clear the home indicator / notch on standalone-PWA phones.
+            'pb-[max(var(--space-4),env(safe-area-inset-bottom))]',
             // Anchor to the inline-start so it sits correctly in RTL.
             'start-0 outline-none',
           )}

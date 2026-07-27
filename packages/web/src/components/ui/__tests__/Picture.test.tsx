@@ -35,9 +35,7 @@ describe('Picture', () => {
   it('emits AVIF and WebP <source>s ordered most-compressed first (R9.5)', () => {
     const { container } = renderHero();
     const picture = container.querySelector('picture')!;
-    const types = Array.from(picture.querySelectorAll('source')).map((s) =>
-      s.getAttribute('type'),
-    );
+    const types = Array.from(picture.querySelectorAll('source')).map((s) => s.getAttribute('type'));
     expect(types).toEqual(['image/avif', 'image/webp']);
   });
 

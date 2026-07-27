@@ -1,21 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
-import {
-  Calendar,
-  BarChart3,
-  Settings,
-  CreditCard,
-  QrCode,
-  LogOut,
-  Share2,
-  type LucideIcon,
-} from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { OwnerThemeToggle } from '../theme/OwnerThemeToggle';
+import { ThemeScope } from '../theme';
 import { Button } from '../ui/Button';
 import { cn } from '../ui/cn';
 import { OwnerSidebar } from '../owner/OwnerSidebar';
 import { OwnerInboxBell } from '../owner/OwnerInboxBell';
+import { OWNER_NAV, ownerNavForRole, type OwnerNavItem } from '../owner/ownerNav';
 import { OwnerBottomTabs } from './OwnerBottomTabs';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import type { OwnerRole } from '../../api/client';
@@ -58,66 +51,24 @@ function setOwnerThemeStorage(theme: Theme): void {
   }
 }
 
-/** A single owner-panel navigation destination. */
-export interface OwnerNavItem {
-  /** i18n key under `owner.nav.*` for the visible label. */
-  labelKey: string;
-  to: string;
-  icon: LucideIcon;
-  /** Roles allowed to see this destination. */
-  roles: readonly OwnerRole[];
-}
-
 /**
- * Owner-panel destinations (R2.4, R2.6, R2.7, R2.8). The full management
- * surfaces — calendar, analytics, configuration, subscription, QR/standee — are
- * reserved for `Owner`/`Admin`; a `Stylist` only sees their own appointments
- * (R2.5). The actual page bodies arrive in tasks 5.2–5.4; this list drives both
- * the desktop side nav and the mobile bottom tab bar so the two stay in sync.
+ * Keep `<meta name="theme-color">` in sync with the currently applied theme so
+ * the PWA chrome matches the owner workspace (ui-ux §2). Mirrors the app-wide
+ * ThemeProvider helper: prefer the live `--color-bg` token, no hardcoded hex.
  */
-export const OWNER_NAV: readonly OwnerNavItem[] = [
-  {
-    labelKey: 'owner.nav.calendar',
-    to: '/owner/calendar',
-    icon: Calendar,
-    roles: ['Owner', 'Admin', 'Stylist'],
-  },
-  {
-    labelKey: 'owner.nav.analytics',
-    to: '/owner/analytics',
-    icon: BarChart3,
-    roles: ['Owner', 'Admin'],
-  },
-  {
-    labelKey: 'owner.nav.configuration',
-    to: '/owner/config',
-    icon: Settings,
-    roles: ['Owner'],
-  },
-  {
-    labelKey: 'owner.nav.subscription',
-    to: '/owner/subscription',
-    icon: CreditCard,
-    roles: ['Owner', 'Admin'],
-  },
-  {
-    labelKey: 'owner.nav.qr',
-    to: '/owner/qr',
-    icon: QrCode,
-    roles: ['Owner', 'Admin'],
-  },
-  {
-    labelKey: 'owner.nav.myQr',
-    to: '/owner/my-qr',
-    icon: Share2,
-    roles: ['Owner', 'Admin', 'Stylist'],
-  },
-] as const;
-
-/** Returns the nav destinations a given role may see. */
-export function ownerNavForRole(role: OwnerRole): OwnerNavItem[] {
-  return OWNER_NAV.filter((item) => item.roles.includes(role));
+function syncMetaThemeColor(): void {
+  if (typeof document === 'undefined') return;
+  const meta = document.head.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+  if (!meta) return;
+  const tokenBg = getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim();
+  if (tokenBg) meta.setAttribute('content', tokenBg);
 }
+
+// The nav definition lives in `components/owner/ownerNav.ts` (the single
+// source of truth for sidebar + bottom tabs); re-exported here so existing
+// imports of `OWNER_NAV`/`ownerNavForRole` from the shell keep working.
+export { OWNER_NAV, ownerNavForRole };
+export type { OwnerNavItem };
 
 export interface OwnerShellProps {
   /** Routed owner page content rendered inside the single `<main>`. */
@@ -165,13 +116,7 @@ function getPersistedCollapsed(): boolean {
  * Layout uses tokens-only styling, logical properties for RTL correctness,
  * and env(safe-area-inset-bottom) for bottom tab bar on mobile.
  */
-export function OwnerShell({
-  children,
-  role,
-  salonName,
-  onSignOut,
-  className,
-}: OwnerShellProps) {
+export function OwnerShell({ children, role, salonName, onSignOut, className }: OwnerShellProps) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
@@ -198,6 +143,26 @@ export function OwnerShell({
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
+  // The owner-scoped theme must also win over the *document* theme: tokens.css
+  // defines light on `:root` and dark under `[data-theme='dark']` only, so a
+  // nested light wrapper can never override an app-dark `<html>` (the panel
+  // would render dark while the toggle claims light), and Radix portals mount
+  // on `document.body` — outside any wrapper. While /owner/* is mounted we
+  // therefore stamp the owner theme on the document root (restoring the app
+  // theme on unmount) and keep the PWA `theme-color` chrome in sync. The
+  // ThemeScope below additionally carries the theme to scoped portal content.
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    const previous = root.getAttribute('data-theme');
+    root.setAttribute('data-theme', ownerTheme);
+    syncMetaThemeColor();
+    return () => {
+      if (previous === null) root.removeAttribute('data-theme');
+      else root.setAttribute('data-theme', previous);
+      syncMetaThemeColor();
+    };
+  }, [ownerTheme]);
+
   // Sidebar collapsed state — persisted to localStorage
   const [collapsed, setCollapsed] = useState(getPersistedCollapsed);
 
@@ -214,9 +179,6 @@ export function OwnerShell({
     });
   }, []);
 
-  // Map the OwnerRole (capitalized) to the sidebar's lowercase role type
-  const sidebarRole = role.toLowerCase() as 'owner' | 'admin' | 'stylist';
-
   // Sync collapsed state from localStorage on mount (handles multi-tab)
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
@@ -229,11 +191,13 @@ export function OwnerShell({
   }, []);
 
   return (
-    <div
+    <ThemeScope
+      theme={ownerTheme}
       data-shell="owner"
-      data-theme={ownerTheme}
       className={cn(
-        'flex min-h-screen flex-col overflow-x-hidden bg-bg text-text',
+        // Booksy Biz app frame: the shell never page-scrolls — panes scroll
+        // internally (design directive §h.1).
+        'flex h-screen flex-col overflow-hidden bg-bg text-text',
         className,
       )}
     >
@@ -250,12 +214,9 @@ export function OwnerShell({
       </a>
 
       {/* Header */}
-      <header className="border-b border-border bg-surface">
+      <header className="shrink-0 border-b border-border bg-surface">
         <div className="flex w-full items-center justify-between gap-4 px-4 py-3">
-          <Link
-            to="/owner"
-            className="rounded-md text-md font-bold text-text no-underline"
-          >
+          <Link to="/owner" className="rounded-md text-md font-bold text-text no-underline">
             {salonName || t('owner.title')}
           </Link>
           <div className="flex items-center gap-2">
@@ -274,28 +235,27 @@ export function OwnerShell({
         </div>
       </header>
 
-      {/* Content area: sidebar (desktop) + main */}
-      <div className="flex flex-1">
+      {/* Content area: sidebar (desktop) + main — panes scroll internally */}
+      <div className="flex min-h-0 flex-1">
         {/* Desktop sidebar — visible only on lg+ */}
         {isDesktop && (
           <OwnerSidebar
             collapsed={collapsed}
             onToggle={handleToggleSidebar}
             activeRoute={pathname}
-            role={sidebarRole}
+            role={role}
           />
         )}
 
-        {/* Main content area */}
+        {/* Main content area — the single scrolling pane of the app frame */}
         <main
           id={OWNER_CONTENT_ID}
           tabIndex={-1}
           className={cn(
-            'min-w-0 flex-1 px-4 py-5',
+            'min-w-0 flex-1 overflow-y-auto px-4 py-5',
             isDesktop && 'w-full',
             // On mobile, add bottom padding to clear the fixed bottom tabs
-            !isDesktop &&
-              'pb-[calc(var(--space-10)+env(safe-area-inset-bottom)+12px)]',
+            !isDesktop && 'pb-[calc(var(--space-10)+env(safe-area-inset-bottom)+12px)]',
           )}
         >
           {children}
@@ -304,7 +264,7 @@ export function OwnerShell({
 
       {/* Mobile bottom tabs — visible only below lg */}
       {!isDesktop && <OwnerBottomTabs role={role} />}
-    </div>
+    </ThemeScope>
   );
 }
 

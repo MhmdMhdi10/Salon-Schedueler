@@ -49,7 +49,6 @@ import {
   Spinner,
   Switch,
   TextField,
-  ToastProvider,
   cn,
   useToast,
 } from '../../components/ui';
@@ -188,11 +187,7 @@ function CollapsibleSection({
         </span>
         <motion.span
           animate={{ rotate: expanded ? 180 : 0 }}
-          transition={
-            prefersReduced
-              ? { duration: 0 }
-              : { duration: 0.25, ease: [0.2, 0, 0, 1] }
-          }
+          transition={prefersReduced ? { duration: 0 } : { duration: 0.25, ease: [0.2, 0, 0, 1] }}
           className="shrink-0 text-muted"
         >
           <ChevronDown className="h-5 w-5" aria-hidden="true" />
@@ -209,16 +204,10 @@ function CollapsibleSection({
             animate="expanded"
             exit="collapsed"
             variants={prefersReduced ? {} : collapseVariants}
-            transition={
-              prefersReduced
-                ? { duration: 0 }
-                : { duration: 0.3, ease: [0.2, 0, 0, 1] }
-            }
+            transition={prefersReduced ? { duration: 0 } : { duration: 0.3, ease: [0.2, 0, 0, 1] }}
             style={{ overflow: 'hidden' }}
           >
-            <div className="flex flex-col gap-4 px-5 pb-5">
-              {children}
-            </div>
+            <div className="flex flex-col gap-4 px-5 pb-5">{children}</div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -232,44 +221,22 @@ function CollapsibleSection({
  * Wraps a list with AnimatePresence so items animate in/out.
  * Each child must have a unique `key` prop.
  */
-function AnimatedList({
-  children,
-  testId,
-}: {
-  children: React.ReactNode;
-  testId: string;
-}) {
+function AnimatedList({ children, testId }: { children: React.ReactNode; testId: string }) {
   const prefersReduced = useReducedMotion();
 
   return (
     <ul data-testid={testId} className="flex flex-col divide-y divide-border">
-      <AnimatePresence initial={false}>
-        {prefersReduced ? (
-          children
-        ) : (
-          children
-        )}
-      </AnimatePresence>
+      <AnimatePresence initial={false}>{prefersReduced ? children : children}</AnimatePresence>
     </ul>
   );
 }
 
 /** Animated list item with slide-in/out transitions. */
-function AnimatedListItem({
-  id,
-  children,
-}: {
-  id: string;
-  children: React.ReactNode;
-}) {
+function AnimatedListItem({ id, children }: { id: string; children: React.ReactNode }) {
   const prefersReduced = useReducedMotion();
 
   if (prefersReduced) {
-    return (
-      <li className="flex items-center justify-between gap-3 py-3">
-        {children}
-      </li>
-    );
+    return <li className="flex items-center justify-between gap-3 py-3">{children}</li>;
   }
 
   return (
@@ -356,9 +323,7 @@ function StaffSection({
 
   const patchStaff = async (id: string, patch: StaffUpdateInput) => {
     const prev = staff;
-    onChange((list) =>
-      list.map((s) => (s.id === id ? ({ ...s, ...patch } as SalonStaff) : s)),
-    );
+    onChange((list) => list.map((s) => (s.id === id ? ({ ...s, ...patch } as SalonStaff) : s)));
     try {
       await staffApi.update(id, patch);
       success({ title: t('admin.config.staff.saved') });
@@ -407,7 +372,9 @@ function StaffSection({
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted">
                       <span>{t(`app.role.${member.role}`)}</span>
                       {member.phone ? (
-                        <span dir="ltr" className="tabular-nums">{member.phone}</span>
+                        <span dir="ltr" className="tabular-nums">
+                          {member.phone}
+                        </span>
                       ) : (
                         <span>{t('admin.config.staff.noLogin')}</span>
                       )}
@@ -493,7 +460,9 @@ function StaffSection({
           onChange={(e) => setPhone(e.target.value)}
         />
         {formError && (
-          <p role="alert" className="text-sm text-danger">{formError}</p>
+          <p role="alert" className="text-sm text-danger">
+            {formError}
+          </p>
         )}
         <Button
           type="submit"
@@ -560,9 +529,7 @@ function ServicesSection({
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <button
                   type="button"
-                  onClick={() =>
-                    setEditingId(editingId === service.id ? null : service.id)
-                  }
+                  onClick={() => setEditingId(editingId === service.id ? null : service.id)}
                   className={cn(
                     'inline-flex items-start text-start text-sm font-medium text-text',
                     'rounded px-1 -mx-1 transition-colors duration-fast',
@@ -675,9 +642,7 @@ function ChairsSection({
         <AnimatedList testId="chairs-list">
           {chairs.map((entry) => (
             <AnimatedListItem key={entry.id} id={entry.id}>
-              <span className="min-w-0 break-words text-sm text-text">
-                {entry.label}
-              </span>
+              <span className="min-w-0 break-words text-sm text-text">{entry.label}</span>
               <IconButton
                 variant="danger"
                 aria-label={t('admin.config.removeItem', { name: entry.label })}
@@ -698,7 +663,10 @@ function ChairsSection({
       )}
 
       {/* Add form */}
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-end">
+      <form
+        onSubmit={handleSubmit}
+        className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-end"
+      >
         <TextField
           label={t('admin.config.chairs.addLabel')}
           placeholder={t('admin.config.chairs.addPlaceholder')}
@@ -750,7 +718,9 @@ function HolidaysSection({
       .catch(() => {
         if (active) setStatus('error');
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [salonId]);
 
   useEffect(() => load(), [load]);
@@ -841,12 +811,8 @@ function HolidaysSection({
                     startTime: c.startTime,
                     endTime: c.endTime,
                   })
-                  .then((res) =>
-                    setClosures((l) => sortClosures([...l, res.holiday])),
-                  )
-                  .catch(() =>
-                    toastError({ title: t('admin.config.closures.addFailed') }),
-                  );
+                  .then((res) => setClosures((l) => sortClosures([...l, res.holiday])))
+                  .catch(() => toastError({ title: t('admin.config.closures.addFailed') }));
               },
             });
           })
@@ -865,9 +831,7 @@ function HolidaysSection({
       title={t('admin.holidays')}
       defaultExpanded={false}
     >
-      <p className="max-w-[60ch] text-sm text-muted">
-        {t('admin.config.closures.body')}
-      </p>
+      <p className="max-w-[60ch] text-sm text-muted">{t('admin.config.closures.body')}</p>
 
       {status === 'loading' && (
         <div
@@ -906,10 +870,7 @@ function HolidaysSection({
                 <AnimatedListItem key={c.id} id={c.id}>
                   <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                     <span className="inline-flex items-center gap-1 text-sm font-medium text-text">
-                      <CalendarOff
-                        className="h-4 w-4 shrink-0 text-muted"
-                        aria-hidden="true"
-                      />
+                      <CalendarOff className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
                       <JalaliDate value={c.onDate} withWeekday variant="numeric" />
                     </span>
                     {c.startTime && c.endTime ? (
@@ -919,9 +880,7 @@ function HolidaysSection({
                         </span>
                       </Badge>
                     ) : (
-                      <Badge status="danger">
-                        {t('admin.config.closures.fullDay')}
-                      </Badge>
+                      <Badge status="danger">{t('admin.config.closures.fullDay')}</Badge>
                     )}
                   </span>
                   <IconButton
@@ -989,7 +948,9 @@ function HolidaysSection({
             )}
 
             {formError && (
-              <p role="alert" className="text-sm text-danger">{formError}</p>
+              <p role="alert" className="text-sm text-danger">
+                {formError}
+              </p>
             )}
 
             <Button
@@ -1285,7 +1246,9 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
         setStatus('error');
       });
 
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [salonId, t]);
 
   useEffect(() => load(), [load]);
@@ -1302,10 +1265,7 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
   );
 
   return (
-    <div
-      data-testid="admin-configuration"
-      className="mx-auto flex w-full max-w-6xl flex-col gap-6"
-    >
+    <div data-testid="admin-configuration" className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <SeoHead title={t('seo.titles.adminConfiguration')} />
 
       {/* Page header */}
@@ -1362,7 +1322,7 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
                 .then((res) => {
                   setServices((prev) => [...prev, res.service]);
                 })
-                .catch(() => {})
+                .catch(() => {});
             }}
             onRemove={(id) => {
               const removed = services.find((s) => s.id === id);
@@ -1390,7 +1350,7 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
                 .then((res) => {
                   setChairs((prev) => [...prev, toEntry(res.chair, res.chair.id)]);
                 })
-                .catch(() => {})
+                .catch(() => {});
             }}
             onRemove={(id) => {
               const removed = chairs.find((c) => c.id === id);
@@ -1427,9 +1387,7 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
             <DialogTitle>
               {t('admin.config.confirmDeleteTitle', { name: pendingDelete.label })}
             </DialogTitle>
-            <DialogDescription>
-              {t('admin.config.confirmDeleteBody')}
-            </DialogDescription>
+            <DialogDescription>{t('admin.config.confirmDeleteBody')}</DialogDescription>
             <div className="mt-5 flex items-center justify-end gap-2">
               <DialogClose asChild>
                 <Button variant="secondary">{t('common.cancel')}</Button>
@@ -1467,9 +1425,7 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
  * `staff-list`, `chairs-list`, `services-list`, `holidays-list`.
  */
 export function OwnerConfigPage({ salonId }: { salonId?: string }) {
-  return (
-    <ToastProvider>
-      <OwnerConfigPageContent salonId={salonId} />
-    </ToastProvider>
-  );
+  // Toasts surface through the app-root <ToastProvider> in App.tsx — a nested
+  // per-page provider would silo this page's toasts from the app host.
+  return <OwnerConfigPageContent salonId={salonId} />;
 }

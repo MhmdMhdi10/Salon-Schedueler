@@ -10,7 +10,7 @@ import { writeSalonName } from '../utils/salonName';
 import { usePwaInstall } from '../pwa/usePwaInstall';
 import { useSalonManifest } from '../pwa/salonManifest';
 import { ensureAaFill } from '../styles/contrast';
-import { ACCENTS, resolveAccent } from '../pages/owner/marketing-assets';
+import { ACCENTS, resolveAccent } from '../components/theme/accents';
 
 /** Resolved salon identity returned by the QR resolver. */
 type ResolvedSalon = { id: string; name: string; brandAccent?: string | null };
@@ -154,17 +154,9 @@ export function QrLandingPage() {
         <SeoHead title={t('seo.titles.qr')} />
         <Card as="section" className="w-full" data-testid={`qr-error-${errorKind}`}>
           <ErrorState
-            icon={
-              isMalformed ? (
-                <ScanLine className="h-8 w-8" />
-              ) : (
-                <Store className="h-8 w-8" />
-              )
-            }
+            icon={isMalformed ? <ScanLine className="h-8 w-8" /> : <Store className="h-8 w-8" />}
             title={isMalformed ? t('salon.qr.malformedTitle') : t('salon.qr.notFoundTitle')}
-            description={
-              isMalformed ? t('salon.qr.malformedBody') : t('salon.qr.notFoundBody')
-            }
+            description={isMalformed ? t('salon.qr.malformedBody') : t('salon.qr.notFoundBody')}
           />
           <div className="mt-2 flex justify-center">
             <Link
@@ -219,9 +211,7 @@ export function QrLandingPage() {
         {/* Save this salon/stylist to the phone for one-tap re-booking. Hidden
             once already installed; on iOS we reveal manual instructions. */}
         {installed ? (
-          <p className="text-xs font-medium text-success">
-            {t('salon.qr.install.installed')}
-          </p>
+          <p className="text-xs font-medium text-success">{t('salon.qr.install.installed')}</p>
         ) : (
           <div className="flex flex-col items-center gap-1.5">
             <button
@@ -232,14 +222,10 @@ export function QrLandingPage() {
               <Download className="h-4 w-4" aria-hidden="true" />
               {t('salon.qr.install.cta')}
             </button>
-            <p className="max-w-[42ch] text-2xs text-muted">
-              {t('salon.qr.install.body')}
-            </p>
+            <p className="max-w-[42ch] text-2xs text-muted">{t('salon.qr.install.body')}</p>
             {showInstallHelp && (
               <p role="note" className="max-w-[42ch] text-2xs text-muted">
-                <span className="font-medium text-text">
-                  {t('salon.qr.install.manualTitle')}:{' '}
-                </span>
+                <span className="font-medium text-text">{t('salon.qr.install.manualTitle')}: </span>
                 {t('salon.qr.install.manualBody')}
               </p>
             )}

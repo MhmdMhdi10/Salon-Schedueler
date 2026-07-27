@@ -257,6 +257,25 @@ export class SalonRegistration {
   }
 
   /**
+   * Public brand identity for the storefront funnel: the salon's display name
+   * plus its Brand_Accent, in one read. Lets a deep-linked visitor's funnel
+   * header show the salon as the primary brand mark (R4.5) without an extra
+   * request. Returns nulls for an unknown salon so callers degrade gracefully.
+   */
+  async getSalonPublicBrand(
+    salonId: string,
+  ): Promise<{ name: string | null; brandAccent: string | null }> {
+    const salon = await this.prisma.salon.findUnique({
+      where: { id: salonId },
+      select: { name: true, brandAccent: true },
+    });
+    return {
+      name: salon?.name ?? null,
+      brandAccent: salon?.brandAccent ?? null,
+    };
+  }
+
+  /**
    * Reports whether a phone number is already registered to a staff member
    * (and thus already owns a salon). Used by the registration wizard to flag a
    * duplicate phone immediately at Step 1 — instead of bouncing the user all

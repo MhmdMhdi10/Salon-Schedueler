@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { render, cleanup, within } from '@testing-library/react';
+import { render, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import '../../i18n';
@@ -9,12 +9,16 @@ import { BusinessLanding } from '../BusinessLanding';
 /**
  * Unit tests for hero CTA prominence and routing (task 12.5; R3.1, R3.6).
  *
- * Verifies:
- *  1. MarketingHome (/) has exactly ONE element with `data-cta="primary"`
- *  2. That primary CTA links to `/s/salon-rose` (the booking entry) with no interstitial
- *  3. BusinessLanding (/business) has exactly ONE element with `data-cta="primary"` in the hero
- *  4. That primary CTA links to `/owner` with no interstitial
- *  5. The primary CTA is visually more prominent than secondary CTAs (bg-primary class)
+ * Verifies (against the *visible* UI — no sr-only stand-ins):
+ *  1. MarketingHome (/) has exactly ONE element with `data-cta="primary"` —
+ *     the hero search submit button (search-as-hero, directive §b): visible,
+ *     filled, and it submits the hero form to `/search`.
+ *  2. The home secondary CTA is a quiet visible link into discovery
+ *     (`/city/tehran`) — never competing with the primary.
+ *  3. BusinessLanding (/business) has exactly ONE `data-cta="primary"` in the
+ *     hero routing straight to `/business/register` with no interstitial.
+ *  4. Primary CTAs are visually more prominent than secondary CTAs
+ *     (filled `bg-primary` + `shadow-1` vs quiet/outlined styling).
  *
  * Requirements: 3.1, 3.6
  */
@@ -52,18 +56,33 @@ describe('Hero CTA prominence and routing (R3.1, R3.6)', () => {
       expect(primaryCtas).toHaveLength(1);
     });
 
-    it('primary CTA routes to /s/salon-rose (booking entry) with no interstitial', () => {
+    it('primary CTA is the visible hero search submit button (search-as-hero)', () => {
       const { getByTestId } = renderHome();
       const root = getByTestId('marketing-home');
       const primaryCta = root.querySelector('[data-cta="primary"]');
       expect(primaryCta).not.toBeNull();
-      // Direct link — no interstitial, no onClick handler that could prevent navigation
-      expect(primaryCta!.getAttribute('href')).toBe('/s/salon-rose');
-      // It's a plain <a> (rendered by react-router Link) — no button wrapping
-      expect(primaryCta!.tagName.toLowerCase()).toBe('a');
+      // The search bar IS the hero: its submit button is the primary CTA.
+      expect(primaryCta!.tagName.toLowerCase()).toBe('button');
+      expect(primaryCta!.getAttribute('type')).toBe('submit');
+      // It lives inside the hero search form (submits to /search?q=).
+      const form = primaryCta!.closest('form');
+      expect(form).not.toBeNull();
+      expect(form!.getAttribute('role')).toBe('search');
+      // Visible — NOT an sr-only stand-in for the test's sake.
+      expect(primaryCta!.className).not.toContain('sr-only');
     });
 
-    it('primary CTA is visually more prominent than secondary CTAs (bg-primary, larger)', () => {
+    it('secondary CTA is a visible quiet link into discovery (/city/tehran)', () => {
+      const { getByTestId } = renderHome();
+      const root = getByTestId('marketing-home');
+      const secondaryCta = root.querySelector('[data-cta="secondary"]');
+      expect(secondaryCta).not.toBeNull();
+      expect(secondaryCta!.tagName.toLowerCase()).toBe('a');
+      expect(secondaryCta!.getAttribute('href')).toBe('/city/tehran');
+      expect(secondaryCta!.className).not.toContain('sr-only');
+    });
+
+    it('primary CTA is visually more prominent than the secondary CTA', () => {
       const { getByTestId } = renderHome();
       const root = getByTestId('marketing-home');
       const primaryCta = root.querySelector('[data-cta="primary"]');
@@ -71,21 +90,14 @@ describe('Hero CTA prominence and routing (R3.1, R3.6)', () => {
       expect(primaryCta).not.toBeNull();
       expect(secondaryCta).not.toBeNull();
 
-      const primaryClasses = primaryCta!.className;
-      const secondaryClasses = secondaryCta!.className;
+      // Primary: filled brand background, contrast text, elevation.
+      expect(primaryCta!.classList.contains('bg-primary')).toBe(true);
+      expect(primaryCta!.classList.contains('text-primary-contrast')).toBe(true);
+      expect(primaryCta!.classList.contains('shadow-1')).toBe(true);
 
-      // Primary has a filled background (bg-primary) — the single most-prominent element
-      expect(primaryClasses).toContain('bg-primary');
-      // Primary has contrasting text
-      expect(primaryClasses).toContain('text-primary-contrast');
-      // Primary has shadow for elevation
-      expect(primaryClasses).toContain('shadow-1');
-
-      // Secondary does NOT have bg-primary — it is visually subordinate
-      expect(secondaryClasses).not.toContain('bg-primary');
-      // Secondary uses a quieter text-only style
-      expect(secondaryClasses).toContain('text-primary');
-      expect(secondaryClasses).not.toContain('text-primary-contrast');
+      // Secondary: quiet — no filled brand background, no contrast text.
+      expect(secondaryCta!.classList.contains('bg-primary')).toBe(false);
+      expect(secondaryCta!.classList.contains('text-primary-contrast')).toBe(false);
     });
   });
 
@@ -113,7 +125,7 @@ describe('Hero CTA prominence and routing (R3.1, R3.6)', () => {
       expect(primaryCta!.tagName.toLowerCase()).toBe('a');
     });
 
-    it('hero primary CTA is visually more prominent than secondary CTAs (bg-primary, larger)', () => {
+    it('hero primary CTA is visually more prominent than the outlined secondary CTA', () => {
       const { getByTestId } = renderBusiness();
       const root = getByTestId('business-landing');
       const hero = root.querySelector('[data-hero]');
@@ -123,21 +135,15 @@ describe('Hero CTA prominence and routing (R3.1, R3.6)', () => {
       expect(primaryCta).not.toBeNull();
       expect(secondaryCta).not.toBeNull();
 
-      const primaryClasses = primaryCta!.className;
-      const secondaryClasses = secondaryCta!.className;
+      // Primary: filled brand background, contrast text, elevation.
+      expect(primaryCta!.classList.contains('bg-primary')).toBe(true);
+      expect(primaryCta!.classList.contains('text-primary-contrast')).toBe(true);
+      expect(primaryCta!.classList.contains('shadow-1')).toBe(true);
 
-      // Primary has a filled background (bg-primary) — the single most-prominent element
-      expect(primaryClasses).toContain('bg-primary');
-      // Primary has contrasting text
-      expect(primaryClasses).toContain('text-primary-contrast');
-      // Primary has shadow for elevation
-      expect(primaryClasses).toContain('shadow-1');
-
-      // Secondary does NOT have bg-primary — it is visually subordinate
-      expect(secondaryClasses).not.toContain('bg-primary');
-      // Secondary uses a quieter text-only style
-      expect(secondaryClasses).toContain('text-primary');
-      expect(secondaryClasses).not.toContain('text-primary-contrast');
+      // Secondary: outlined-brand tier — no fill, no contrast text.
+      expect(secondaryCta!.classList.contains('bg-primary')).toBe(false);
+      expect(secondaryCta!.classList.contains('text-primary-contrast')).toBe(false);
+      expect(secondaryCta!.classList.contains('text-primary')).toBe(true);
     });
   });
 });

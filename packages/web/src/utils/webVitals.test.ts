@@ -40,9 +40,7 @@ describe('hasAnalyticsConsent (default-deny opt-in, seo §12)', () => {
   });
 
   it('is true only for the exact "granted" value', () => {
-    expect(
-      hasAnalyticsConsent({ getItem: () => CONSENT_GRANTED }),
-    ).toBe(true);
+    expect(hasAnalyticsConsent({ getItem: () => CONSENT_GRANTED })).toBe(true);
   });
 
   it('is false for any other value (e.g. "denied", stale, typo)', () => {
@@ -73,16 +71,12 @@ describe('hasAnalyticsConsent (default-deny opt-in, seo §12)', () => {
 
 describe('sanitizePath (PII-free, low-cardinality route templates, seo §12)', () => {
   it('collapses the QR payload (which can encode a phone number) to a template', () => {
-    expect(sanitizePath('/qr/09123456789-some-encoded-payload')).toBe(
-      '/qr/:payload',
-    );
+    expect(sanitizePath('/qr/09123456789-some-encoded-payload')).toBe('/qr/:payload');
   });
 
   it('collapses salon id funnel routes to templates', () => {
     expect(sanitizePath('/salon/abc-123/book')).toBe('/salon/:salonId/book');
-    expect(sanitizePath('/salon/abc-123/book/confirm')).toBe(
-      '/salon/:salonId/book/confirm',
-    );
+    expect(sanitizePath('/salon/abc-123/book/confirm')).toBe('/salon/:salonId/book/confirm');
   });
 
   it('collapses public profile/discovery slugs to templates', () => {
@@ -92,9 +86,7 @@ describe('sanitizePath (PII-free, low-cardinality route templates, seo §12)', (
   });
 
   it('strips the query string and hash fragment', () => {
-    expect(sanitizePath('/about?utm_source=x&phone=09123456789#section')).toBe(
-      '/about',
-    );
+    expect(sanitizePath('/about?utm_source=x&phone=09123456789#section')).toBe('/about');
   });
 
   it('normalizes empty/relative paths and trailing slashes', () => {
@@ -129,10 +121,7 @@ describe('buildReport (PII-free payload, seo §12)', () => {
   });
 
   it('never includes the raw url, query, hash, or any phone-like value', () => {
-    const report = buildReport(
-      makeMetric(),
-      '/salon/abc/book/confirm?phone=09123456789#pay',
-    );
+    const report = buildReport(makeMetric(), '/salon/abc/book/confirm?phone=09123456789#pay');
     const serialized = JSON.stringify(report);
     expect(serialized).not.toContain('09123456789');
     expect(serialized).not.toContain('phone');
@@ -168,9 +157,7 @@ describe('sendReport (best-effort beacon)', () => {
 
   it('returns false when no transport exists, without throwing', () => {
     const report = buildReport(makeMetric(), '/about');
-    expect(sendReport(report, { navigatorRef: null, fetchRef: null })).toBe(
-      false,
-    );
+    expect(sendReport(report, { navigatorRef: null, fetchRef: null })).toBe(false);
   });
 });
 

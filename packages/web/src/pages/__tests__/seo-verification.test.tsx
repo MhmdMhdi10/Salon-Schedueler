@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any --
+ * JSON-LD nodes are parsed from dynamic script tags; the assertions probe
+ * arbitrary schema.org shapes, so `any` is the honest type here. */
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, waitFor, cleanup } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -45,9 +48,7 @@ function headAll(selector: string): Element[] {
 }
 
 function getJsonLdScripts(): object[] {
-  return headAll('script[type="application/ld+json"]').map((el) =>
-    JSON.parse(el.textContent!),
-  );
+  return headAll('script[type="application/ld+json"]').map((el) => JSON.parse(el.textContent!));
 }
 
 /** Route patterns mapped to their path param shapes for MemoryRouter matching. */
@@ -128,9 +129,7 @@ async function assertFullSeoHead(expectedPath: string) {
     expect(head('meta[property="og:url"]')!.getAttribute('content')).toBe(canonicalHref);
 
     // 6. Twitter Card: summary_large_image
-    expect(head('meta[name="twitter:card"]')!.getAttribute('content')).toBe(
-      'summary_large_image',
-    );
+    expect(head('meta[name="twitter:card"]')!.getAttribute('content')).toBe('summary_large_image');
     expect(head('meta[name="twitter:title"]')).not.toBeNull();
     expect(head('meta[name="twitter:image"]')).not.toBeNull();
 

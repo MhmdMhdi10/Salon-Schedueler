@@ -87,9 +87,7 @@ describe('OwnerSubscriptionPage — load + status (R3.4, R3.5)', () => {
       expiresAt: '2025-05-07T00:00:00.000Z',
     });
     renderPage();
-    expect(
-      await screen.findByTestId('owner-subscription-page'),
-    ).toBeInTheDocument();
+    expect(await screen.findByTestId('owner-subscription-page')).toBeInTheDocument();
   });
 
   it('shows a skeleton while loading', () => {
@@ -204,9 +202,7 @@ describe('OwnerSubscriptionPage — purchase redirect (R3.6)', () => {
         'annual',
       ),
     );
-    await waitFor(() =>
-      expect(assigned).toContain('https://zarinpal.example/pay/sub-123'),
-    );
+    await waitFor(() => expect(assigned).toContain('https://zarinpal.example/pay/sub-123'));
     // The explicit redirect surface is shown during hand-off.
     expect(screen.getByTestId('subscription-redirecting')).toBeInTheDocument();
 
@@ -225,12 +221,8 @@ describe('OwnerSubscriptionPage — purchase redirect (R3.6)', () => {
     fireEvent.click(screen.getByRole('radio', { name: /ماهانه/ }));
     fireEvent.click(screen.getByTestId('subscription-purchase'));
 
-    expect(
-      await screen.findByTestId('subscription-purchase-error'),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByTestId('subscription-redirecting'),
-    ).not.toBeInTheDocument();
+    expect(await screen.findByTestId('subscription-purchase-error')).toBeInTheDocument();
+    expect(screen.queryByTestId('subscription-redirecting')).not.toBeInTheDocument();
   });
 });
 
@@ -247,14 +239,10 @@ describe('OwnerSubscriptionPage — expired → renewal (R3.5, 402 contract)', (
     const renewal = await screen.findByTestId('subscription-renewal');
     expect(renewal).toBeInTheDocument();
     // Status reads "expired".
-    expect(screen.getByTestId('subscription-status')).toHaveTextContent(
-      'منقضی‌شده',
-    );
+    expect(screen.getByTestId('subscription-status')).toHaveTextContent('منقضی‌شده');
     // The CTA is framed as "renew" rather than a plain purchase.
     fireEvent.click(screen.getByRole('radio', { name: /ماهانه/ }));
-    expect(screen.getByTestId('subscription-purchase')).toHaveTextContent(
-      'تمدید اشتراک',
-    );
+    expect(screen.getByTestId('subscription-purchase')).toHaveTextContent('تمدید اشتراک');
   });
 
   it('does not show the renewal callout for an active subscription', async () => {

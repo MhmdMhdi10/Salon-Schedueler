@@ -451,6 +451,149 @@ ON CONFLICT (id) DO UPDATE SET
   read_at = EXCLUDED.read_at,
   created_at = EXCLUDED.created_at;
 
+-- ─── Marketplace demo salons (booking-data UUID contract) ────────────────────
+-- Every demo profile in packages/web/src/data/salons.ts points its
+-- `bookingSalonId` at one of these FIXED UUIDs (implementation contract):
+--   salon-maryam      → aa000001-0000-4000-8000-000000000001
+--   shahin-barbershop → aa000002-0000-4000-8000-000000000002
+--   salon-niloofar    → aa000003-0000-4000-8000-000000000003
+--   arash-studio      → aa000004-0000-4000-8000-000000000004
+--   salon-parisa      → aa000005-0000-4000-8000-000000000005
+-- Each salon gets: a salon row (qr_token = its public profile slug), 1–2 staff,
+-- 1 chair, services MIRRORING that profile's service list (names/durations/
+-- prices), service_staff links, and working hours for every weekday — so every
+-- «رزرو نوبت» CTA on the marketplace lands in a bookable funnel. Idempotent.
+--
+-- Deterministic child UUIDs (n = salon number 1–5):
+--   staff    ab0n0000-0000-4000-8000-00000000000o   (o = staff ordinal)
+--   chair    ac0n0000-0000-4000-8000-000000000001
+--   service  ad0n0000-0000-4000-8000-00000000000k   (k = service ordinal)
+--   hours    ae0n0o00-0000-4000-8000-00000000000d   (d = weekday 0–6)
+
+INSERT INTO salon (id, name, qr_token, timezone, auto_approve, created_at)
+VALUES
+  ('aa000001-0000-4000-8000-000000000001'::uuid, 'سالن مریم',       'salon-maryam',      'Asia/Tehran', false, NOW()),
+  ('aa000002-0000-4000-8000-000000000002'::uuid, 'آرایشگاه شاهین',  'shahin-barbershop', 'Asia/Tehran', true,  NOW()),
+  ('aa000003-0000-4000-8000-000000000003'::uuid, 'سالن نیلوفر',     'salon-niloofar',    'Asia/Tehran', false, NOW()),
+  ('aa000004-0000-4000-8000-000000000004'::uuid, 'استودیو آرش',     'arash-studio',      'Asia/Tehran', true,  NOW()),
+  ('aa000005-0000-4000-8000-000000000005'::uuid, 'سالن پریسا',      'salon-parisa',      'Asia/Tehran', false, NOW())
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  qr_token = EXCLUDED.qr_token,
+  auto_approve = EXCLUDED.auto_approve;
+
+INSERT INTO staff_member (id, salon_id, full_name, role, active, phone)
+VALUES
+  ('ab010000-0000-4000-8000-000000000001'::uuid, 'aa000001-0000-4000-8000-000000000001'::uuid, 'مریم رضوی',   'Owner',   true, '09120000101'),
+  ('ab010000-0000-4000-8000-000000000002'::uuid, 'aa000001-0000-4000-8000-000000000001'::uuid, 'آیدا شریفی',  'Stylist', true, '09120000102'),
+  ('ab020000-0000-4000-8000-000000000001'::uuid, 'aa000002-0000-4000-8000-000000000002'::uuid, 'شاهین قاسمی', 'Owner',   true, '09120000201'),
+  ('ab030000-0000-4000-8000-000000000001'::uuid, 'aa000003-0000-4000-8000-000000000003'::uuid, 'نیلوفر صادقی','Owner',   true, '09120000301'),
+  ('ab030000-0000-4000-8000-000000000002'::uuid, 'aa000003-0000-4000-8000-000000000003'::uuid, 'مینا جلالی',  'Stylist', true, '09120000302'),
+  ('ab040000-0000-4000-8000-000000000001'::uuid, 'aa000004-0000-4000-8000-000000000004'::uuid, 'آرش کمالی',   'Owner',   true, '09120000401'),
+  ('ab050000-0000-4000-8000-000000000001'::uuid, 'aa000005-0000-4000-8000-000000000005'::uuid, 'پریسا نعمتی', 'Owner',   true, '09120000501'),
+  ('ab050000-0000-4000-8000-000000000002'::uuid, 'aa000005-0000-4000-8000-000000000005'::uuid, 'شبنم راد',    'Stylist', true, '09120000502')
+ON CONFLICT (id) DO UPDATE SET
+  full_name = EXCLUDED.full_name,
+  role = EXCLUDED.role,
+  active = EXCLUDED.active,
+  phone = EXCLUDED.phone;
+
+INSERT INTO chair (id, salon_id, name, active)
+VALUES
+  ('ac010000-0000-4000-8000-000000000001'::uuid, 'aa000001-0000-4000-8000-000000000001'::uuid, 'صندلی ۱', true),
+  ('ac020000-0000-4000-8000-000000000001'::uuid, 'aa000002-0000-4000-8000-000000000002'::uuid, 'صندلی ۱', true),
+  ('ac030000-0000-4000-8000-000000000001'::uuid, 'aa000003-0000-4000-8000-000000000003'::uuid, 'صندلی ۱', true),
+  ('ac040000-0000-4000-8000-000000000001'::uuid, 'aa000004-0000-4000-8000-000000000004'::uuid, 'صندلی ۱', true),
+  ('ac050000-0000-4000-8000-000000000001'::uuid, 'aa000005-0000-4000-8000-000000000005'::uuid, 'صندلی ۱', true)
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, active = EXCLUDED.active;
+
+-- Services mirror data/salons.ts service lists exactly (names/durations/prices).
+INSERT INTO service (id, salon_id, name, duration_min, buffer_min, price_rial, requires_deposit, deposit_rial)
+VALUES
+  -- salon-maryam
+  ('ad010000-0000-4000-8000-000000000001'::uuid, 'aa000001-0000-4000-8000-000000000001'::uuid, 'رنگ مو',                 120, 10,  7500000, false, NULL),
+  ('ad010000-0000-4000-8000-000000000002'::uuid, 'aa000001-0000-4000-8000-000000000001'::uuid, 'کراتین مو',              180, 15, 15000000, false, NULL),
+  ('ad010000-0000-4000-8000-000000000003'::uuid, 'aa000001-0000-4000-8000-000000000001'::uuid, 'کوتاهی مو',               45,  5,  2000000, false, NULL),
+  -- shahin-barbershop
+  ('ad020000-0000-4000-8000-000000000001'::uuid, 'aa000002-0000-4000-8000-000000000002'::uuid, 'اصلاح مو',                30,  5,  1500000, false, NULL),
+  ('ad020000-0000-4000-8000-000000000002'::uuid, 'aa000002-0000-4000-8000-000000000002'::uuid, 'اصلاح ریش',               20,  5,  1000000, false, NULL),
+  -- salon-niloofar
+  ('ad030000-0000-4000-8000-000000000001'::uuid, 'aa000003-0000-4000-8000-000000000003'::uuid, 'کاشت ناخن',               90, 10,  5000000, false, NULL),
+  ('ad030000-0000-4000-8000-000000000002'::uuid, 'aa000003-0000-4000-8000-000000000003'::uuid, 'مانیکور',                 60,  5,  3000000, false, NULL),
+  ('ad030000-0000-4000-8000-000000000003'::uuid, 'aa000003-0000-4000-8000-000000000003'::uuid, 'پاکسازی صورت',            75, 10,  4500000, false, NULL),
+  -- arash-studio
+  ('ad040000-0000-4000-8000-000000000001'::uuid, 'aa000004-0000-4000-8000-000000000004'::uuid, 'اصلاح مو',                40,  5,  2500000, false, NULL),
+  ('ad040000-0000-4000-8000-000000000002'::uuid, 'aa000004-0000-4000-8000-000000000004'::uuid, 'گریم داماد',             120, 15,  8000000, false, NULL),
+  ('ad040000-0000-4000-8000-000000000003'::uuid, 'aa000004-0000-4000-8000-000000000004'::uuid, 'پاکسازی پوست مردانه',     60, 10,  4000000, false, NULL),
+  -- salon-parisa
+  ('ad050000-0000-4000-8000-000000000001'::uuid, 'aa000005-0000-4000-8000-000000000005'::uuid, 'میکاپ عروس',             180, 15, 25000000, true, 5000000),
+  ('ad050000-0000-4000-8000-000000000002'::uuid, 'aa000005-0000-4000-8000-000000000005'::uuid, 'شینیون',                  90, 10, 10000000, false, NULL),
+  ('ad050000-0000-4000-8000-000000000003'::uuid, 'aa000005-0000-4000-8000-000000000005'::uuid, 'مراقبت و تقویت مو',       60,  5,  6000000, false, NULL)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  duration_min = EXCLUDED.duration_min,
+  buffer_min = EXCLUDED.buffer_min,
+  price_rial = EXCLUDED.price_rial,
+  requires_deposit = EXCLUDED.requires_deposit,
+  deposit_rial = EXCLUDED.deposit_rial;
+
+-- Every service is performable by every staff member of its salon.
+INSERT INTO service_staff (service_id, staff_member_id)
+SELECT s.id, st.id
+FROM service s
+JOIN staff_member st ON st.salon_id = s.salon_id
+WHERE s.salon_id IN (
+  'aa000001-0000-4000-8000-000000000001'::uuid,
+  'aa000002-0000-4000-8000-000000000002'::uuid,
+  'aa000003-0000-4000-8000-000000000003'::uuid,
+  'aa000004-0000-4000-8000-000000000004'::uuid,
+  'aa000005-0000-4000-8000-000000000005'::uuid
+)
+ON CONFLICT (service_id, staff_member_id) DO NOTHING;
+
+-- Working hours 09:00–20:00 every weekday for each new staff member + chair.
+-- Rebuilt each run (delete then insert) so the block stays idempotent.
+DELETE FROM working_hours
+WHERE owner_id IN (
+  'ab010000-0000-4000-8000-000000000001'::uuid,
+  'ab010000-0000-4000-8000-000000000002'::uuid,
+  'ab020000-0000-4000-8000-000000000001'::uuid,
+  'ab030000-0000-4000-8000-000000000001'::uuid,
+  'ab030000-0000-4000-8000-000000000002'::uuid,
+  'ab040000-0000-4000-8000-000000000001'::uuid,
+  'ab050000-0000-4000-8000-000000000001'::uuid,
+  'ab050000-0000-4000-8000-000000000002'::uuid,
+  'ac010000-0000-4000-8000-000000000001'::uuid,
+  'ac020000-0000-4000-8000-000000000001'::uuid,
+  'ac030000-0000-4000-8000-000000000001'::uuid,
+  'ac040000-0000-4000-8000-000000000001'::uuid,
+  'ac050000-0000-4000-8000-000000000001'::uuid
+);
+
+INSERT INTO working_hours (id, owner_kind, owner_id, weekday, start_time, end_time)
+SELECT
+  (o.id_prefix || d::text)::uuid,
+  o.kind,
+  o.owner_id,
+  d, TIME '09:00', TIME '20:00'
+FROM (
+  VALUES
+    ('staff', 'ab010000-0000-4000-8000-000000000001'::uuid, 'ae010100-0000-4000-8000-00000000000'),
+    ('staff', 'ab010000-0000-4000-8000-000000000002'::uuid, 'ae010200-0000-4000-8000-00000000000'),
+    ('staff', 'ab020000-0000-4000-8000-000000000001'::uuid, 'ae020100-0000-4000-8000-00000000000'),
+    ('staff', 'ab030000-0000-4000-8000-000000000001'::uuid, 'ae030100-0000-4000-8000-00000000000'),
+    ('staff', 'ab030000-0000-4000-8000-000000000002'::uuid, 'ae030200-0000-4000-8000-00000000000'),
+    ('staff', 'ab040000-0000-4000-8000-000000000001'::uuid, 'ae040100-0000-4000-8000-00000000000'),
+    ('staff', 'ab050000-0000-4000-8000-000000000001'::uuid, 'ae050100-0000-4000-8000-00000000000'),
+    ('staff', 'ab050000-0000-4000-8000-000000000002'::uuid, 'ae050200-0000-4000-8000-00000000000'),
+    ('chair', 'ac010000-0000-4000-8000-000000000001'::uuid, 'ae010300-0000-4000-8000-00000000000'),
+    ('chair', 'ac020000-0000-4000-8000-000000000001'::uuid, 'ae020300-0000-4000-8000-00000000000'),
+    ('chair', 'ac030000-0000-4000-8000-000000000001'::uuid, 'ae030300-0000-4000-8000-00000000000'),
+    ('chair', 'ac040000-0000-4000-8000-000000000001'::uuid, 'ae040300-0000-4000-8000-00000000000'),
+    ('chair', 'ac050000-0000-4000-8000-000000000001'::uuid, 'ae050300-0000-4000-8000-00000000000')
+) AS o(kind, owner_id, id_prefix)
+CROSS JOIN generate_series(0, 6) AS d;
+
 -- ─── Subscription ────────────────────────────────────────────────────────────
 -- An ACTIVE annual subscription for the dev salon so the owner panel's «اشتراک»
 -- surface shows real data (status + expiry + plan). expires_at is set ~1 year

@@ -75,7 +75,6 @@ describe('PWA Configuration', () => {
   });
 });
 
-
 /**
  * Service worker caching strategy verification (Req 15.2, 15.4).
  * Ensures:
@@ -92,7 +91,9 @@ describe('Service Worker Caching Strategy', () => {
       // Must check for authorization header and bypass cache
       expect(swContent).toContain("request.headers.has('authorization')");
       // Must respond with fetch only (no cache fallback)
-      expect(swContent).toMatch(/headers\.has\(['"]authorization['"]\)[\s\S]*?respondWith\(fetch\(request\)\)/);
+      expect(swContent).toMatch(
+        /headers\.has\(['"]authorization['"]\)[\s\S]*?respondWith\(fetch\(request\)\)/,
+      );
     });
 
     it('never caches private API routes', () => {
@@ -138,7 +139,9 @@ describe('Service Worker Caching Strategy', () => {
 
     it('serves precached shell assets cache-first with network fallback', () => {
       // Same-origin non-API, non-image, non-font requests use cache-first
-      expect(swContent).toContain('caches.match(request).then((cached) => cached || fetch(request))');
+      expect(swContent).toContain(
+        'caches.match(request).then((cached) => cached || fetch(request))',
+      );
     });
   });
 

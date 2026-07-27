@@ -194,8 +194,8 @@ describe('renderHeadTags (initial-HTML meta — seo §3/§4/§6)', () => {
   it('emits index,follow, canonical, hreflang and OG for an indexable page', () => {
     const [home] = buildRoutes({ siteUrl: DEFAULT_SITE_URL, salons: [] });
     const head = renderHeadTags(home, DEFAULT_SITE_URL);
-    expect(head).toContain('<meta name="robots" content="index,follow" />');
-    expect(head).toContain(`<link rel="canonical" href="${DEFAULT_SITE_URL}" />`);
+    expect(head).toContain('<meta data-prerender name="robots" content="index,follow" />');
+    expect(head).toContain(`<link data-prerender rel="canonical" href="${DEFAULT_SITE_URL}" />`);
     expect(head).toContain('hreflang="fa"');
     expect(head).toContain('hreflang="fa-IR"');
     expect(head).toContain('hreflang="x-default"');
@@ -234,7 +234,7 @@ describe('injectIntoTemplate (full prerendered document)', () => {
     expect(html).not.toContain('<title>سامانه رزرو سالن</title>');
 
     // Head SEO present in the initial HTML.
-    expect(html).toContain('<meta name="robots" content="index,follow" />');
+    expect(html).toContain('<meta data-prerender name="robots" content="index,follow" />');
     expect(html).toContain('application/ld+json');
 
     // #root carries real content (not empty) — View Source would see it.
@@ -257,7 +257,7 @@ describe('injectIntoTemplate (full prerendered document)', () => {
     });
     for (const r of routes) {
       const html = injectIntoTemplate(TEMPLATE, r, DEFAULT_SITE_URL);
-      expect((html.match(/<meta name="robots"/g) || []).length).toBe(1);
+      expect((html.match(/<meta data-prerender name="robots"/g) || []).length).toBe(1);
       expect((html.match(/id="root"/g) || []).length).toBe(1);
     }
   });
@@ -298,10 +298,10 @@ describe('property: prerender contract holds for arbitrary salon lists', () => {
           const html = injectIntoTemplate(TEMPLATE, route, DEFAULT_SITE_URL);
 
           // index,follow in the initial HTML.
-          expect(html).toContain('<meta name="robots" content="index,follow" />');
+          expect(html).toContain('<meta data-prerender name="robots" content="index,follow" />');
           // Self-referencing absolute canonical.
           expect(html).toContain(
-            `<link rel="canonical" href="${route.canonical}" />`,
+            `<link data-prerender rel="canonical" href="${route.canonical}" />`,
           );
           // Exactly one <h1>; content present in #root.
           expect((html.match(/<h1>/g) || []).length).toBe(1);

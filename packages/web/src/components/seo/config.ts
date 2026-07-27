@@ -32,8 +32,7 @@ export const HTML_LANG = 'fa';
  * env so deployments can override it; defaults to the steering placeholder.
  */
 export const SITE_URL: string = normalizeOrigin(
-  (typeof import.meta !== 'undefined' &&
-    (import.meta as ImportMeta).env?.VITE_PUBLIC_SITE_URL) ||
+  (typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env?.VITE_PUBLIC_SITE_URL) ||
     'https://example.ir',
 );
 
@@ -71,9 +70,7 @@ export function absoluteCanonical(path: string): string {
   if (/^https?:\/\//i.test(trimmedOfParams)) {
     return trimmedOfParams.replace(/\/+$/, '') || trimmedOfParams;
   }
-  const pathname = trimmedOfParams.startsWith('/')
-    ? trimmedOfParams
-    : `/${trimmedOfParams}`;
+  const pathname = trimmedOfParams.startsWith('/') ? trimmedOfParams : `/${trimmedOfParams}`;
   // Root → bare host without trailing slash.
   if (pathname === '/') return SITE_URL;
   return `${SITE_URL}${pathname.replace(/\/+$/, '')}`;

@@ -37,7 +37,7 @@ describe('QR-to-Booking-to-Confirmation Integration', () => {
     expect(result.salon.name).toBe('سالن زیبایی');
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining('/salons/by-qr/'),
-      expect.objectContaining({ method: 'GET' })
+      expect.objectContaining({ method: 'GET' }),
     );
   });
 
@@ -84,7 +84,7 @@ describe('QR-to-Booking-to-Confirmation Integration', () => {
     expect(result.status).toBe('pending');
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining('/appointments'),
-      expect.objectContaining({ method: 'POST' })
+      expect.objectContaining({ method: 'POST' }),
     );
   });
 
@@ -120,7 +120,7 @@ describe('QR-to-Booking-to-Confirmation Integration', () => {
     const { bookingApi } = await import('../api/client');
 
     await expect(
-      bookingApi.create({ salonId, serviceId, startAt: '2024-03-15T09:00:00Z' })
+      bookingApi.create({ salonId, serviceId, startAt: '2024-03-15T09:00:00Z' }),
     ).rejects.toThrow();
   });
 

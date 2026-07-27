@@ -1,5 +1,6 @@
 import { forwardRef } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
+import { microTransition } from '../../lib/motion-variants';
 import { cn } from './cn';
 import { Skeleton } from './Skeleton';
 
@@ -75,8 +76,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
   // When hoverLift is enabled, wrap in a motion component for micro-interactions
   if (hoverLift) {
     // Determine motion behavior based on reduced-motion preference
-    const hoverAnimation =
-      !prefersReduced ? { y: -4, boxShadow: 'var(--shadow-2)' } : undefined;
+    const hoverAnimation = !prefersReduced ? { y: -4, boxShadow: 'var(--shadow-2)' } : undefined;
     const tapAnimation = !prefersReduced ? { scale: 0.98 } : undefined;
 
     // Access motion[element] via bracket notation — Framer Motion's proxy
@@ -91,7 +91,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
         aria-busy={loading || undefined}
         whileHover={hoverAnimation}
         whileTap={tapAnimation}
-        transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+        transition={microTransition}
         className={cardClassName}
         {...rest}
       >
@@ -102,30 +102,24 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
 
   // Non-hoverable cards: plain element (no motion overhead)
   return (
-    <Component
-      ref={ref}
-      aria-busy={loading || undefined}
-      className={cardClassName}
-      {...rest}
-    >
+    <Component ref={ref} aria-busy={loading || undefined} className={cardClassName} {...rest}>
       {cardContent}
     </Component>
   );
 });
 
 /** Optional header region for a Card (title + actions row). */
-export const CardHeader = forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(function CardHeader({ className, ...rest }, ref) {
-  return (
-    <div
-      ref={ref}
-      className={cn('mb-3 flex items-start justify-between gap-3', className)}
-      {...rest}
-    />
-  );
-});
+export const CardHeader = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  function CardHeader({ className, ...rest }, ref) {
+    return (
+      <div
+        ref={ref}
+        className={cn('mb-3 flex items-start justify-between gap-3', className)}
+        {...rest}
+      />
+    );
+  },
+);
 
 /** Card title — renders an `<h3>` by default; override via `as` for hierarchy. */
 export const CardTitle = forwardRef<
@@ -133,32 +127,26 @@ export const CardTitle = forwardRef<
   React.HTMLAttributes<HTMLHeadingElement> & { as?: React.ElementType }
 >(function CardTitle({ as: Component = 'h3', className, ...rest }, ref) {
   return (
-    <Component
-      ref={ref}
-      className={cn('text-lg font-medium text-text', className)}
-      {...rest}
-    />
+    <Component ref={ref} className={cn('text-lg font-medium text-text', className)} {...rest} />
   );
 });
 
 /** Card body content region. */
-export const CardContent = forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(function CardContent({ className, ...rest }, ref) {
-  return <div ref={ref} className={cn('text-sm text-text', className)} {...rest} />;
-});
+export const CardContent = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  function CardContent({ className, ...rest }, ref) {
+    return <div ref={ref} className={cn('text-sm text-text', className)} {...rest} />;
+  },
+);
 
 /** Card footer — actions aligned to the inline-end by default. */
-export const CardFooter = forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(function CardFooter({ className, ...rest }, ref) {
-  return (
-    <div
-      ref={ref}
-      className={cn('mt-4 flex items-center justify-end gap-2', className)}
-      {...rest}
-    />
-  );
-});
+export const CardFooter = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  function CardFooter({ className, ...rest }, ref) {
+    return (
+      <div
+        ref={ref}
+        className={cn('mt-4 flex items-center justify-end gap-2', className)}
+        {...rest}
+      />
+    );
+  },
+);

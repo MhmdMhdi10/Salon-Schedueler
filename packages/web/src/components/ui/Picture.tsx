@@ -15,8 +15,10 @@ export interface PictureSource {
   srcSet: string;
 }
 
-export interface PictureProps
-  extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, 'src' | 'srcSet'> {
+export interface PictureProps extends Omit<
+  React.ImgHTMLAttributes<HTMLImageElement>,
+  'src' | 'srcSet'
+> {
   /** Modern-format sources, most-compressed first (AVIF, then WebP). */
   sources: PictureSource[];
   /** Fallback `<img src>` (a universally-supported PNG/JPG). */
@@ -67,12 +69,7 @@ export const Picture = forwardRef<HTMLImageElement, PictureProps>(function Pictu
   return (
     <picture className={pictureClassName}>
       {sources.map((source) => (
-        <source
-          key={source.type}
-          type={source.type}
-          srcSet={source.srcSet}
-          sizes={sizes}
-        />
+        <source key={source.type} type={source.type} srcSet={source.srcSet} sizes={sizes} />
       ))}
       <img
         ref={ref}

@@ -1,10 +1,10 @@
 import { forwardRef } from 'react';
 import { AlertTriangle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from './cn';
 import { Button } from './Button';
 
-export interface ErrorStateProps
-  extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
+export interface ErrorStateProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
   /**
    * Short, human title for the failure. e.g. «بارگذاری نوبت‌ها ناموفق بود».
    * Never a raw stack trace or HTTP status code (ui-ux §6).
@@ -29,34 +29,31 @@ export interface ErrorStateProps
  * live regions). Surfaces a friendly cause and a retry affordance — never a raw
  * stack/HTTP code.
  */
-export const ErrorState = forwardRef<HTMLDivElement, ErrorStateProps>(
-  function ErrorState(
-    { title, description, onRetry, retryLabel = 'تلاش مجدد', icon, className, ...rest },
-    ref,
-  ) {
-    return (
-      <div
-        ref={ref}
-        role="alert"
-        className={cn(
-          'flex flex-col items-center justify-center gap-3 px-4 py-8 text-center',
-          className,
-        )}
-        {...rest}
-      >
-        <span className="inline-flex text-danger" aria-hidden="true">
-          {icon ?? <AlertTriangle className="h-8 w-8" />}
-        </span>
-        <p className="text-md font-medium text-text">{title}</p>
-        {description && (
-          <p className="max-w-[40ch] text-sm text-muted">{description}</p>
-        )}
-        {onRetry && (
-          <Button variant="secondary" onClick={onRetry} className="mt-1">
-            {retryLabel}
-          </Button>
-        )}
-      </div>
-    );
-  },
-);
+export const ErrorState = forwardRef<HTMLDivElement, ErrorStateProps>(function ErrorState(
+  { title, description, onRetry, retryLabel, icon, className, ...rest },
+  ref,
+) {
+  const { t } = useTranslation();
+  return (
+    <div
+      ref={ref}
+      role="alert"
+      className={cn(
+        'flex flex-col items-center justify-center gap-3 px-4 py-8 text-center',
+        className,
+      )}
+      {...rest}
+    >
+      <span className="inline-flex text-danger" aria-hidden="true">
+        {icon ?? <AlertTriangle className="h-8 w-8" />}
+      </span>
+      <p className="text-md font-medium text-text">{title}</p>
+      {description && <p className="max-w-[40ch] text-sm text-muted">{description}</p>}
+      {onRetry && (
+        <Button variant="secondary" onClick={onRetry} className="mt-1">
+          {retryLabel ?? t('common.retry', 'تلاش مجدد')}
+        </Button>
+      )}
+    </div>
+  );
+});

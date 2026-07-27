@@ -22,9 +22,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
   const { t } = useTranslation();
   const isDark = theme === 'dark';
 
-  const label = isDark
-    ? t('common.theme.switchToLight')
-    : t('common.theme.switchToDark');
+  const label = isDark ? t('common.theme.switchToLight') : t('common.theme.switchToDark');
 
   return (
     <IconButton
@@ -34,11 +32,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
       onClick={toggleTheme}
       className={className}
     >
-      {isDark ? (
-        <Sun aria-hidden="true" size={20} />
-      ) : (
-        <Moon aria-hidden="true" size={20} />
-      )}
+      {isDark ? <Sun aria-hidden="true" size={20} /> : <Moon aria-hidden="true" size={20} />}
     </IconButton>
   );
 }

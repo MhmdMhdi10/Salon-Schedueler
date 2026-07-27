@@ -1,28 +1,12 @@
-import {
-  forwardRef,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-  useEffect,
-} from 'react';
+import { forwardRef, useId, useMemo, useRef, useState, useEffect } from 'react';
 import * as RadixPopover from '@radix-ui/react-popover';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
-import {
-  gregorianToJalali,
-  jalaliToGregorian,
-  getJalaliMonthName,
-} from '@salon/shared';
+import { gregorianToJalali, jalaliToGregorian, getJalaliMonthName } from '@salon/shared';
 import { cn } from './cn';
 import { IconButton } from './IconButton';
 import { toPersianDigits } from './Num';
 import { formatJalaliDisplay } from './JalaliDate';
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-  SheetTrigger,
-} from './Sheet';
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from './Sheet';
 import { FieldLabel, FieldHelper, FieldError } from './field';
 
 /**
@@ -148,13 +132,7 @@ interface JalaliCalendarProps {
  *  - Enter/Space → select the focused day.
  * A roving tabindex keeps a single tab stop; the focused day owns the grid focus.
  */
-function JalaliCalendar({
-  selected,
-  min,
-  max,
-  onSelect,
-  labelId,
-}: JalaliCalendarProps) {
+function JalaliCalendar({ selected, min, max, onSelect, labelId }: JalaliCalendarProps) {
   const today = useMemo(() => startOfDay(new Date()), []);
   const initial = selected ?? today;
   const [view, setView] = useState<JalaliYM>(() => ymOf(initial));
@@ -176,9 +154,7 @@ function JalaliCalendar({
   useEffect(() => {
     if (!shouldFocusRef.current) return;
     shouldFocusRef.current = false;
-    const el = gridRef.current?.querySelector<HTMLButtonElement>(
-      '[data-focused="true"]',
-    );
+    const el = gridRef.current?.querySelector<HTMLButtonElement>('[data-focused="true"]');
     el?.focus();
   });
 
@@ -286,52 +262,57 @@ function JalaliCalendar({
         ))}
       </div>
 
-      {/* Day grid. role="grid" + roving tabindex for keyboard operation. */}
+      {/* Day grid. role="grid" → role="row" → role="gridcell" nesting satisfies
+          the ARIA required-children contract (mirrors SlotGrid; R2.9/R10.4) —
+          gridcells must never sit directly inside the grid container. Roving
+          tabindex keeps keyboard operation on one tab stop. */}
       <div
         ref={gridRef}
         role="grid"
         aria-labelledby={labelId}
-        className="grid grid-cols-7 gap-1"
+        className="flex flex-col gap-1"
         onKeyDown={handleKeyDown}
       >
-        {cells.map((cell, index) => {
-          if (!cell) {
-            return <span key={`blank-${index}`} aria-hidden="true" />;
-          }
-          const disabled = isDisabled(cell.date);
-          const isSelected = selected != null && sameDay(cell.date, selected);
-          const isFocusTarget = sameDay(cell.date, focusDate);
-          const isToday = sameDay(cell.date, today);
-          return (
-            <button
-              key={cell.date.getTime()}
-              type="button"
-              role="gridcell"
-              data-focused={isFocusTarget || undefined}
-              aria-selected={isSelected}
-              aria-current={isToday ? 'date' : undefined}
-              aria-label={formatJalaliDisplay(cell.date, 'long', true)}
-              tabIndex={isFocusTarget ? 0 : -1}
-              disabled={disabled}
-              onClick={() => onSelect(cell.date)}
-              onFocus={() => setFocusDate(cell.date)}
-              className={cn(
-                'flex h-10 min-h-0 w-full min-w-0 items-center justify-center',
-                'rounded-md text-sm tabular-nums',
-                'outline-none focus-visible:outline focus-visible:outline-2',
-                'focus-visible:outline-offset-2 focus-visible:outline-focus',
-                'transition-colors duration-fast ease-standard',
-                'disabled:cursor-not-allowed disabled:opacity-40',
-                isSelected
-                  ? 'bg-primary text-primary-contrast'
-                  : 'text-text hover:bg-surface',
-                !isSelected && isToday && 'ring-1 ring-inset ring-border',
-              )}
-            >
-              {toPersianDigits(cell.jd)}
-            </button>
-          );
-        })}
+        {Array.from({ length: Math.ceil(cells.length / 7) }, (_, weekIndex) => (
+          <div key={`week-${weekIndex}`} role="row" className="grid grid-cols-7 gap-1">
+            {cells.slice(weekIndex * 7, weekIndex * 7 + 7).map((cell, index) => {
+              if (!cell) {
+                return <span key={`blank-${weekIndex}-${index}`} aria-hidden="true" />;
+              }
+              const disabled = isDisabled(cell.date);
+              const isSelected = selected != null && sameDay(cell.date, selected);
+              const isFocusTarget = sameDay(cell.date, focusDate);
+              const isToday = sameDay(cell.date, today);
+              return (
+                <button
+                  key={cell.date.getTime()}
+                  type="button"
+                  role="gridcell"
+                  data-focused={isFocusTarget || undefined}
+                  aria-selected={isSelected}
+                  aria-current={isToday ? 'date' : undefined}
+                  aria-label={formatJalaliDisplay(cell.date, 'long', true)}
+                  tabIndex={isFocusTarget ? 0 : -1}
+                  disabled={disabled}
+                  onClick={() => onSelect(cell.date)}
+                  onFocus={() => setFocusDate(cell.date)}
+                  className={cn(
+                    'flex h-10 min-h-0 w-full min-w-0 items-center justify-center',
+                    'rounded-md text-sm tabular-nums',
+                    'outline-none focus-visible:outline focus-visible:outline-2',
+                    'focus-visible:outline-offset-2 focus-visible:outline-focus',
+                    'transition-colors duration-fast ease-standard',
+                    'disabled:cursor-not-allowed disabled:opacity-40',
+                    isSelected ? 'bg-primary text-primary-contrast' : 'text-text hover:bg-surface',
+                    !isSelected && isToday && 'ring-1 ring-inset ring-border',
+                  )}
+                >
+                  {toPersianDigits(cell.jd)}
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -407,8 +388,7 @@ export const JalaliDatePicker = forwardRef<HTMLButtonElement, JalaliDatePickerPr
     const maxDate = parseValue(max);
     const hasError = Boolean(error);
 
-    const describedBy =
-      cn(helperText && helperId, hasError && errorId) || undefined;
+    const describedBy = cn(helperText && helperId, hasError && errorId) || undefined;
 
     const handleSelect = (date: Date) => {
       onChange(toISODate(date));
@@ -429,9 +409,7 @@ export const JalaliDatePicker = forwardRef<HTMLButtonElement, JalaliDatePickerPr
     const triggerInner = (
       <>
         <span className={cn(!selected && 'text-muted')}>
-          {selected
-            ? formatJalaliDisplay(selected, 'long', true)
-            : placeholder}
+          {selected ? formatJalaliDisplay(selected, 'long', true) : placeholder}
         </span>
         <Calendar className="h-5 w-5 shrink-0 text-muted" aria-hidden="true" />
       </>
@@ -507,9 +485,7 @@ export const JalaliDatePicker = forwardRef<HTMLButtonElement, JalaliDatePickerPr
           </RadixPopover.Root>
         )}
 
-        {helperText && !hasError && (
-          <FieldHelper id={helperId}>{helperText}</FieldHelper>
-        )}
+        {helperText && !hasError && <FieldHelper id={helperId}>{helperText}</FieldHelper>}
         {hasError && <FieldError id={errorId}>{error}</FieldError>}
       </div>
     );

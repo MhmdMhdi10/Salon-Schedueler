@@ -1,22 +1,19 @@
 import { NavLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { motion, useReducedMotion } from 'framer-motion';
-import {
-  Calendar,
-  BarChart3,
-  Settings,
-  QrCode,
-  CreditCard,
-  Receipt,
-  Bell,
-  ChevronLeft,
-  type LucideIcon,
-} from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { Tooltip } from '../ui/Tooltip';
 import { cn } from '../ui/cn';
+import { ownerNavForRole } from './ownerNav';
+import type { OwnerRole } from '../../api/client';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type OwnerSidebarRole = 'owner' | 'admin' | 'stylist';
+/**
+ * @deprecated The sidebar now consumes the API `OwnerRole` directly
+ * (`'Owner' | 'Admin' | 'Stylist'`) so all nav surfaces share one role type.
+ */
+export type OwnerSidebarRole = OwnerRole;
 
 export interface OwnerSidebarProps {
   /** Whether the sidebar is in collapsed (icons-only) mode. */
@@ -26,68 +23,10 @@ export interface OwnerSidebarProps {
   /** Currently active route path (e.g. `/owner/calendar`). */
   activeRoute: string;
   /** Authenticated role — filters which nav items are visible. */
-  role: OwnerSidebarRole;
+  role: OwnerRole;
   /** Optional className for the root aside element. */
   className?: string;
 }
-
-// ─── Nav Item Definition ─────────────────────────────────────────────────────
-
-interface SidebarNavItem {
-  /** Route path. */
-  to: string;
-  /** Persian label. */
-  label: string;
-  /** Icon component. */
-  icon: LucideIcon;
-  /** Roles that may see this item. */
-  roles: readonly OwnerSidebarRole[];
-}
-
-const SIDEBAR_NAV_ITEMS: readonly SidebarNavItem[] = [
-  {
-    to: '/owner/calendar',
-    label: 'تقویم',
-    icon: Calendar,
-    roles: ['owner', 'admin', 'stylist'],
-  },
-  {
-    to: '/owner/analytics',
-    label: 'آمار',
-    icon: BarChart3,
-    roles: ['owner', 'admin'],
-  },
-  {
-    to: '/owner/qr',
-    label: 'بارکد و لینک',
-    icon: QrCode,
-    roles: ['owner', 'admin'],
-  },
-  {
-    to: '/owner/transactions',
-    label: 'تراکنش‌ها',
-    icon: Receipt,
-    roles: ['owner', 'admin'],
-  },
-  {
-    to: '/owner/notifications',
-    label: 'اعلان‌ها',
-    icon: Bell,
-    roles: ['owner', 'admin', 'stylist'],
-  },
-  {
-    to: '/owner/subscription',
-    label: 'اشتراک',
-    icon: CreditCard,
-    roles: ['owner', 'admin'],
-  },
-  {
-    to: '/owner/config',
-    label: 'تنظیمات',
-    icon: Settings,
-    roles: ['owner', 'admin'],
-  },
-];
 
 // ─── Widths (tokens-based) ───────────────────────────────────────────────────
 
@@ -119,10 +58,9 @@ export function OwnerSidebar({
   role,
   className,
 }: OwnerSidebarProps) {
+  const { t } = useTranslation();
   const prefersReduced = useReducedMotion();
-  const visibleItems = SIDEBAR_NAV_ITEMS.filter((item) =>
-    item.roles.includes(role),
-  );
+  const visibleItems = ownerNavForRole(role);
 
   const width = collapsed ? WIDTH_COLLAPSED : WIDTH_EXPANDED;
 
@@ -136,9 +74,7 @@ export function OwnerSidebar({
       )}
       animate={{ width }}
       transition={
-        prefersReduced
-          ? { duration: 0 }
-          : { type: 'tween', duration: 0.25, ease: [0.2, 0, 0, 1] }
+        prefersReduced ? { duration: 0 } : { type: 'tween', duration: 0.25, ease: [0.2, 0, 0, 1] }
       }
     >
       {/* Navigation links */}
@@ -146,12 +82,13 @@ export function OwnerSidebar({
         <ul className="flex flex-col gap-1" role="list">
           {visibleItems.map((item) => {
             const Icon = item.icon;
+            const label = t(item.labelKey);
             const isActive = activeRoute === item.to;
 
             const linkContent = (
               <NavLink
                 to={item.to}
-                aria-label={collapsed ? item.label : undefined}
+                aria-label={collapsed ? label : undefined}
                 aria-current={isActive ? 'page' : undefined}
                 className={cn(
                   'group relative flex items-center gap-3 rounded-md no-underline',
@@ -161,7 +98,7 @@ export function OwnerSidebar({
                   'transition-colors',
                   isActive
                     ? 'bg-elevated text-text font-bold'
-                    : 'text-text-muted hover:bg-elevated hover:text-text',
+                    : 'text-muted hover:bg-elevated hover:text-text',
                   collapsed && 'justify-center px-0',
                 )}
               >
@@ -184,20 +121,15 @@ export function OwnerSidebar({
                     }}
                   />
                 )}
-                <Icon
-                  className="h-5 w-5 shrink-0"
-                  aria-hidden="true"
-                />
-                {!collapsed && (
-                  <span className="truncate text-sm">{item.label}</span>
-                )}
+                <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+                {!collapsed && <span className="truncate text-sm">{label}</span>}
               </NavLink>
             );
 
             return (
               <li key={item.to}>
                 {collapsed ? (
-                  <Tooltip content={item.label} side="right">
+                  <Tooltip content={label} side="right">
                     {linkContent}
                   </Tooltip>
                 ) : (
@@ -218,7 +150,7 @@ export function OwnerSidebar({
           className={cn(
             'flex items-center justify-center rounded-md',
             'min-h-[44px] min-w-[44px] w-full',
-            'text-text-muted hover:bg-elevated hover:text-text',
+            'text-muted hover:bg-elevated hover:text-text',
             'outline-none focus-visible:outline focus-visible:outline-2',
             'focus-visible:outline-offset-2 focus-visible:outline-focus',
             'transition-colors',

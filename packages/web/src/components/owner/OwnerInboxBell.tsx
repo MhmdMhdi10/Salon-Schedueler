@@ -20,7 +20,10 @@ function typeIcon(type: string): string {
 }
 
 /** Format a relative "x دقیقه پیش" / "x ساعت پیش" / date label. */
-function relativeTime(iso: string, t: (k: string, opts?: any) => string): string {
+function relativeTime(
+  iso: string,
+  t: (k: string, opts?: Record<string, unknown>) => string,
+): string {
   const now = Date.now();
   const then = new Date(iso).getTime();
   const diffMs = Math.max(0, now - then);
@@ -124,7 +127,9 @@ export function OwnerInboxBell() {
   const markOne = useCallback(async (id: string) => {
     setBusy(true);
     setUnread((u) => Math.max(0, u - 1));
-    setRecent((list) => list.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n)));
+    setRecent((list) =>
+      list.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n)),
+    );
     try {
       await inboxApi.markRead(id);
     } catch {
@@ -155,10 +160,7 @@ export function OwnerInboxBell() {
         {recent.map((n) => (
           <li
             key={n.id}
-            className={cn(
-              'flex flex-col gap-1 px-3 py-2.5',
-              !n.readAt && 'bg-primary/5',
-            )}
+            className={cn('flex flex-col gap-1 px-3 py-2.5', !n.readAt && 'bg-primary/5')}
           >
             <div className="flex items-start gap-2">
               <span className="mt-0.5 text-base leading-none">{typeIcon(n.type)}</span>
@@ -170,7 +172,9 @@ export function OwnerInboxBell() {
                       type="button"
                       onClick={() => markOne(n.id)}
                       disabled={busy}
-                      aria-label={t('owner.inbox.markRead', { defaultValue: 'علامت‌گذاری به خوانده‌شده' })}
+                      aria-label={t('owner.inbox.markRead', {
+                        defaultValue: 'علامت‌گذاری به خوانده‌شده',
+                      })}
                       className="shrink-0 rounded p-1 text-muted hover:bg-elevated hover:text-text"
                     >
                       <Check className="h-3.5 w-3.5" aria-hidden="true" />

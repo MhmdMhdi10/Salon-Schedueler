@@ -60,6 +60,12 @@ function redirectToGateway(url: string): void {
 }
 
 /**
+ * How long the «در حال انتقال به درگاه پرداخت…» state may last before we treat
+ * the gateway navigation as failed and return the CTA to an actionable state.
+ */
+const GATEWAY_REDIRECT_FALLBACK_MS = 10_000;
+
+/**
  * Duck-types a rejection as an authentication failure (not signed in / token
  * expired) without depending on the `ApiError` class.
  */
@@ -89,9 +95,7 @@ export function BookingConfirmPage() {
   const navigate = useNavigate();
   const prefersReduced = useReducedMotion();
 
-  const state = location.state as
-    | (ConfirmSelection & { autoConfirm?: boolean })
-    | undefined;
+  const state = location.state as (ConfirmSelection & { autoConfirm?: boolean }) | undefined;
 
   const [service, setService] = useState<Service | null>(null);
   const [detailsStatus, setDetailsStatus] = useState<DetailsStatus>('loading');
@@ -101,9 +105,19 @@ export function BookingConfirmPage() {
 
   const isPending = confirmStatus === 'submitting' || confirmStatus === 'redirecting';
 
+  // While a booking request is in flight we warn against closing the tab —
+  // but the payment-gateway redirect is itself a navigation, and the listener
+  // attached during 'submitting' is still live when `window.location.href` is
+  // assigned (React has not re-run effects yet). `allowUnloadRef` lets the
+  // redirect opt out synchronously so the customer is never blocked by a
+  // native «Leave site?» dialog mid-payment.
+  const allowUnloadRef = useRef(false);
+  const gatewayFallbackTimer = useRef<number | undefined>(undefined);
+
   useEffect(() => {
     if (!isPending) return undefined;
     const warn = (event: BeforeUnloadEvent) => {
+      if (allowUnloadRef.current) return undefined;
       event.preventDefault();
       event.returnValue = t('booking.abandonWarning');
       return event.returnValue;
@@ -111,6 +125,8 @@ export function BookingConfirmPage() {
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
   }, [isPending, t]);
+
+  useEffect(() => () => window.clearTimeout(gatewayFallbackTimer.current), []);
 
   const loadDetails = useCallback(() => {
     if (!salonId || !state) return;
@@ -139,7 +155,6 @@ export function BookingConfirmPage() {
       didAutoConfirmRef.current = true;
       void handleConfirm();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, detailsStatus]);
 
   const handleConfirm = async () => {
@@ -154,7 +169,16 @@ export function BookingConfirmPage() {
       });
 
       if (result.status === 'held' && result.paymentRedirectUrl) {
+        // Let the gateway navigation through the beforeunload guard, then
+        // arm a fallback: if the browser never actually leaves (blocked
+        // popup policy, bad URL, ...), surface the error state instead of
+        // spinning on «در حال انتقال…» forever.
+        allowUnloadRef.current = true;
         setConfirmStatus('redirecting');
+        gatewayFallbackTimer.current = window.setTimeout(() => {
+          allowUnloadRef.current = false;
+          setConfirmStatus('error');
+        }, GATEWAY_REDIRECT_FALLBACK_MS);
         redirectToGateway(result.paymentRedirectUrl);
       } else if (result.status === 'pending' || result.status === 'confirmed') {
         navigate('/booking/success', {
@@ -283,16 +307,14 @@ export function BookingConfirmPage() {
             >
               {/* Card header */}
               <div className="border-b border-dashed border-border px-6 py-4">
-                <h3 className="text-lg font-bold text-text">
-                  {t('booking.receiptTitle')}
-                </h3>
+                <h3 className="text-lg font-bold text-text">{t('booking.receiptTitle')}</h3>
               </div>
 
               {/* Receipt rows */}
               <dl className="px-6 py-4">
                 {/* Service */}
                 <div className="flex items-center justify-between gap-4 py-3">
-                  <dt className="flex items-center gap-2 text-sm text-text-muted">
+                  <dt className="flex items-center gap-2 text-sm text-muted">
                     <Scissors className="h-4 w-4 shrink-0" aria-hidden="true" />
                     {t('booking.serviceLabel')}
                   </dt>
@@ -304,7 +326,7 @@ export function BookingConfirmPage() {
 
                 {/* Date */}
                 <div className="flex items-center justify-between gap-4 py-3">
-                  <dt className="flex items-center gap-2 text-sm text-text-muted">
+                  <dt className="flex items-center gap-2 text-sm text-muted">
                     <CalendarClock className="h-4 w-4 shrink-0" aria-hidden="true" />
                     {t('booking.dateLabel')}
                   </dt>
@@ -318,7 +340,7 @@ export function BookingConfirmPage() {
 
                 {/* Time */}
                 <div className="flex items-center justify-between gap-4 py-3">
-                  <dt className="flex items-center gap-2 text-sm text-text-muted">
+                  <dt className="flex items-center gap-2 text-sm text-muted">
                     <Clock className="h-4 w-4 shrink-0" aria-hidden="true" />
                     {t('booking.timeLabel')}
                   </dt>
@@ -332,7 +354,7 @@ export function BookingConfirmPage() {
 
                 {/* Price */}
                 <div className="flex items-center justify-between gap-4 py-3">
-                  <dt className="flex items-center gap-2 text-sm text-text-muted">
+                  <dt className="flex items-center gap-2 text-sm text-muted">
                     <CreditCard className="h-4 w-4 shrink-0" aria-hidden="true" />
                     {t('booking.priceLabel')}
                   </dt>
@@ -345,13 +367,10 @@ export function BookingConfirmPage() {
                 {salonName && (
                   <>
                     {/* Dotted divider */}
-                    <div
-                      className="border-t border-dashed border-border"
-                      aria-hidden="true"
-                    />
+                    <div className="border-t border-dashed border-border" aria-hidden="true" />
 
                     <div className="flex items-center justify-between gap-4 py-3">
-                      <dt className="flex items-center gap-2 text-sm text-text-muted">
+                      <dt className="flex items-center gap-2 text-sm text-muted">
                         <Store className="h-4 w-4 shrink-0" aria-hidden="true" />
                         {t('booking.salonLabel')}
                       </dt>
@@ -363,7 +382,7 @@ export function BookingConfirmPage() {
 
               {/* Deposit/payment notice */}
               <div className="border-t border-dashed border-border px-6 py-4">
-                <p className="rounded-md bg-surface p-3 text-xs text-text-muted">
+                <p className="rounded-md bg-surface p-3 text-xs text-muted">
                   {t('booking.depositNotice')}
                 </p>
               </div>

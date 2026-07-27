@@ -1,8 +1,14 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { SeoHead } from '../components/seo';
+import { SeoHead, SITE_URL } from '../components/seo';
+import { Motif } from '../components/brand/Motif';
 import { DirText } from '../components/ui/DirText';
+
+/** Support address on the canonical project domain (same origin the sitemap and
+ *  SEO config publish), so staging/production builds advertise a consistent,
+ *  real contact host — never a hardcoded placeholder. */
+const SUPPORT_EMAIL = `support@${new URL(SITE_URL).host}`;
 
 function HomeLink() {
   return (
@@ -21,11 +27,11 @@ export function AboutPage() {
     },
     {
       title: 'هر زمان، هر قرار',
-      body: 'خدمت دلخواهتان را همان لحظه در اپلیکیشن آرا رزرو کنید و تماس‌های رفت‌وبرگشتی ساعت کاری را کنار بگذارید.',
+      body: 'خدمت دلخواهتان را همان لحظه در وب‌اپ آرا رزرو کنید و تماس‌های رفت‌وبرگشتی ساعت کاری را کنار بگذارید.',
     },
     {
       title: 'به‌موقع باخبر شوید',
-      body: 'یادآوری خودکار باعث می‌شود هیچ نوبتی را فراموش نکنید. قرارها را در اپلیکیشن تغییر دهید و مدیریت کنید.',
+      body: 'یادآوری خودکار باعث می‌شود هیچ نوبتی را فراموش نکنید. قرارها را در وب‌اپ تغییر دهید و مدیریت کنید.',
     },
   ];
 
@@ -40,30 +46,55 @@ export function AboutPage() {
       <HomeLink />
       <section className="bg-accent/10">
         <div className="mx-auto max-w-3xl px-4 py-16 text-center">
-          <h1 className="text-4xl font-bold leading-[1.3] sm:text-5xl">
+          <h1 className="text-3xl text-display leading-display sm:text-4xl">
             وقت گرفتن حالا ساده‌تر از همیشه است
           </h1>
+          <div className="mt-8 flex justify-center text-primary">
+            <Motif variant="band" className="h-8 w-64" aria-hidden />
+          </div>
         </div>
       </section>
       <section className="mx-auto max-w-5xl px-4 py-16">
         <div className="grid gap-10 md:grid-cols-3">
           {points.map((point) => (
             <article key={point.title}>
-              <h2 className="mb-3 text-xl font-bold">{point.title}</h2>
+              <h2 className="mb-3 text-xl text-display leading-display">{point.title}</h2>
               <p className="leading-7 text-muted">{point.body}</p>
             </article>
           ))}
         </div>
       </section>
-      <section className="bg-text text-bg">
+      {/* Mission/audience — the legal.about.* catalog content (single source of
+          truth with fa.json, reconciled instead of drifting). */}
+      <section className="bg-surface">
+        <div className="mx-auto grid max-w-5xl gap-10 px-4 py-16 md:grid-cols-2">
+          <article>
+            <h2 className="mb-3 text-xl text-display leading-display">
+              {t('legal.about.missionTitle')}
+            </h2>
+            <p className="leading-8 text-muted">{t('legal.about.missionBody')}</p>
+          </article>
+          <article>
+            <h2 className="mb-3 text-xl text-display leading-display">
+              {t('legal.about.audienceTitle')}
+            </h2>
+            <p className="leading-8 text-muted">{t('legal.about.audienceBody')}</p>
+          </article>
+        </div>
+      </section>
+      {/* Closing band on the ink tokens — deliberately dark in BOTH themes; the
+          CTA promises exactly what it does: online booking via the web app. */}
+      <section className="bg-ink text-ink-contrast">
         <div className="mx-auto flex max-w-5xl flex-col items-center gap-6 px-4 py-16 text-center">
-          <h2 className="text-3xl font-bold">قرار بعدی‌تان را در چند ثانیه رزرو کنید</h2>
-          <p className="text-white/70">همین حالا اپلیکیشن آرا را دریافت کنید.</p>
+          <h2 className="text-2xl text-display leading-display sm:text-3xl">
+            قرار بعدی‌تان را در چند ثانیه رزرو کنید
+          </h2>
+          <p className="text-ink-muted">بدون تماس تلفنی — همین حالا آنلاین نوبت بگیرید.</p>
           <Link
             to="/auth"
-            className="rounded-md bg-primary px-8 py-3 text-sm font-semibold text-primary-contrast no-underline"
+            className="rounded-md bg-primary px-8 py-3 text-sm font-semibold text-primary-contrast no-underline transition-opacity duration-fast ease-standard hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           >
-            دریافت اپلیکیشن
+            همین حالا رزرو کنید
           </Link>
         </div>
       </section>
@@ -82,18 +113,41 @@ export function ContactPage() {
         index
       />
       <HomeLink />
-      <h1 className="text-4xl font-bold text-text">تماس با ما</h1>
-      <p className="mt-4 text-muted">
-        سؤال یا مشکلی دارید؟ با تیم پشتیبانی مشتریان آرا در تماس باشید.
-      </p>
-      <section className="mt-8 rounded-2xl border border-black/10 p-6">
-        <h2 className="text-lg font-bold text-text">پشتیبانی</h2>
-        <a
-          href="mailto:support@example.ir"
-          className="mt-1 inline-block font-semibold text-primary"
+      <h1 className="text-3xl text-display leading-display text-text sm:text-4xl">
+        {t('legal.contact.title')}
+      </h1>
+      <p className="mt-4 text-muted">{t('legal.contact.intro')}</p>
+
+      <section className="mt-8 rounded-2xl border border-border p-6">
+        <h2 className="text-lg text-display leading-display text-text">
+          {t('legal.contact.supportTitle')}
+        </h2>
+        <div className="mt-3 flex flex-col gap-1">
+          <span className="text-sm text-muted">{t('legal.contact.emailLabel')}</span>
+          <a
+            href={`mailto:${SUPPORT_EMAIL}`}
+            className="inline-block w-fit rounded-sm font-semibold text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          >
+            <DirText dir="ltr">{SUPPORT_EMAIL}</DirText>
+          </a>
+        </div>
+        <div className="mt-4">
+          <h3 className="text-sm font-semibold text-text">{t('legal.contact.hoursTitle')}</h3>
+          <p className="mt-1 text-sm text-muted">{t('legal.contact.hoursBody')}</p>
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-2xl border border-border p-6">
+        <h2 className="text-lg text-display leading-display text-text">
+          {t('legal.contact.businessTitle')}
+        </h2>
+        <p className="mt-2 text-sm leading-7 text-muted">{t('legal.contact.businessBody')}</p>
+        <Link
+          to="/business"
+          className="mt-3 inline-block rounded-sm font-semibold text-primary underline underline-offset-4 transition-opacity duration-fast ease-standard hover:opacity-80"
         >
-          <DirText dir="ltr">support@example.ir</DirText>
-        </a>
+          {t('legal.contact.businessCta')}
+        </Link>
       </section>
     </div>
   );
@@ -111,6 +165,7 @@ function PolicyPage({
   seoDescription,
   heading,
   intro,
+  updated,
   sections,
 }: {
   testId: string;
@@ -119,21 +174,42 @@ function PolicyPage({
   seoDescription: string;
   heading: string;
   intro: string;
+  /** Persian-digit «آخرین به‌روزرسانی» date line rendered under the heading. */
+  updated?: string;
   sections: LegalSection[];
 }) {
+  const { t } = useTranslation();
   return (
     <article data-testid={testId} className="mx-auto max-w-3xl px-4 py-12">
       <SeoHead title={seoTitle} description={seoDescription} path={path} index />
       <HomeLink />
-      <h1 className="mb-6 text-3xl font-bold text-text sm:text-4xl">{heading}</h1>
+      <h1 className="mb-3 text-3xl text-display leading-display text-text sm:text-4xl">
+        {heading}
+      </h1>
+      {updated ? (
+        <p className="mb-4 text-sm text-muted">
+          {t('legal.updatedLabel')}: {updated}
+        </p>
+      ) : null}
       <p className="mb-6 leading-8 text-muted">{intro}</p>
       {sections.map((section) => (
         <section key={section.title}>
-          <h2 className="mb-3 mt-8 text-2xl font-bold text-text">{section.title}</h2>
+          <h2 className="mb-3 mt-8 text-2xl text-display leading-display text-text">
+            {section.title}
+          </h2>
           <div className="leading-8 text-muted">{section.body}</div>
         </section>
       ))}
     </article>
+  );
+}
+
+/** Inline accent link to the contact page used by policy bodies. */
+function ContactInlineLink() {
+  return (
+    <Link to="/contact" className="font-semibold text-primary">
+      تماس با ما
+    </Link>
   );
 }
 
@@ -147,10 +223,29 @@ export function PrivacyPage() {
       seoDescription={t('seo.descriptions.privacy')}
       heading={t('legal.privacy.title')}
       intro={t('legal.privacy.intro')}
+      updated={t('legal.privacy.updated')}
       sections={[
         { title: t('legal.privacy.collectTitle'), body: <p>{t('legal.privacy.collectBody')}</p> },
         { title: t('legal.privacy.useTitle'), body: <p>{t('legal.privacy.useBody')}</p> },
+        {
+          title: t('legal.privacy.thirdPartiesTitle'),
+          body: <p>{t('legal.privacy.thirdPartiesBody')}</p>,
+        },
+        { title: t('legal.privacy.cookiesTitle'), body: <p>{t('legal.privacy.cookiesBody')}</p> },
+        {
+          title: t('legal.privacy.retentionTitle'),
+          body: <p>{t('legal.privacy.retentionBody')}</p>,
+        },
         { title: t('legal.privacy.securityTitle'), body: <p>{t('legal.privacy.securityBody')}</p> },
+        { title: t('legal.privacy.rightsTitle'), body: <p>{t('legal.privacy.rightsBody')}</p> },
+        {
+          title: t('legal.privacy.contactTitle'),
+          body: (
+            <p>
+              {t('legal.privacy.contactBody')} <ContactInlineLink />
+            </p>
+          ),
+        },
       ]}
     />
   );
@@ -166,10 +261,20 @@ export function TermsPage() {
       seoDescription={t('seo.descriptions.terms')}
       heading={t('legal.terms.title')}
       intro={t('legal.terms.intro')}
+      updated={t('legal.terms.updated')}
       sections={[
         { title: t('legal.terms.useTitle'), body: <p>{t('legal.terms.useBody')}</p> },
         { title: t('legal.terms.bookingTitle'), body: <p>{t('legal.terms.bookingBody')}</p> },
+        {
+          title: t('legal.terms.cancellationTitle'),
+          body: <p>{t('legal.terms.cancellationBody')}</p>,
+        },
+        {
+          title: t('legal.terms.subscriptionTitle'),
+          body: <p>{t('legal.terms.subscriptionBody')}</p>,
+        },
         { title: t('legal.terms.liabilityTitle'), body: <p>{t('legal.terms.liabilityBody')}</p> },
+        { title: t('legal.terms.lawTitle'), body: <p>{t('legal.terms.lawBody')}</p> },
       ]}
     />
   );

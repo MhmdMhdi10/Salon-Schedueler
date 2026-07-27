@@ -3,8 +3,10 @@ import { cn } from './cn';
 import { Spinner } from './Spinner';
 import type { ButtonVariant } from './Button';
 
-export interface IconButtonProps
-  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'aria-label'> {
+export interface IconButtonProps extends Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  'aria-label'
+> {
   /** Visual style. Defaults to `ghost` (icon-only controls are usually subtle). */
   variant?: ButtonVariant;
   /**
@@ -55,38 +57,28 @@ const variantClasses: Record<ButtonVariant, string> = {
  * Icon-only button. Same variants/states as `Button` but requires `aria-label`
  * since there is no visible text. Keeps the ≥44×44 minimum target.
  */
-export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
-  function IconButton(
-    {
-      variant = 'ghost',
-      loading = false,
-      disabled,
-      type = 'button',
-      className,
-      children,
-      ...rest
-    },
-    ref,
-  ) {
-    const isDisabled = disabled || loading;
-    return (
-      <button
-        ref={ref}
-        type={type}
-        disabled={isDisabled}
-        aria-busy={loading || undefined}
-        data-loading={loading || undefined}
-        className={cn(base, variantClasses[variant], className)}
-        {...rest}
-      >
-        {loading ? (
-          <Spinner size="sm" />
-        ) : (
-          <span className="inline-flex" aria-hidden="true">
-            {children}
-          </span>
-        )}
-      </button>
-    );
-  },
-);
+export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
+  { variant = 'ghost', loading = false, disabled, type = 'button', className, children, ...rest },
+  ref,
+) {
+  const isDisabled = disabled || loading;
+  return (
+    <button
+      ref={ref}
+      type={type}
+      disabled={isDisabled}
+      aria-busy={loading || undefined}
+      data-loading={loading || undefined}
+      className={cn(base, variantClasses[variant], className)}
+      {...rest}
+    >
+      {loading ? (
+        <Spinner size="sm" />
+      ) : (
+        <span className="inline-flex" aria-hidden="true">
+          {children}
+        </span>
+      )}
+    </button>
+  );
+});

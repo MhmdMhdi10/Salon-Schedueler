@@ -9,11 +9,10 @@ export interface RadioOption {
   disabled?: boolean;
 }
 
-export interface RadioGroupProps
-  extends Omit<
-    React.ComponentPropsWithoutRef<typeof RadixRadioGroup.Root>,
-    'children'
-  > {
+export interface RadioGroupProps extends Omit<
+  React.ComponentPropsWithoutRef<typeof RadixRadioGroup.Root>,
+  'children'
+> {
   /** Accessible group label (rendered as a legend). */
   label?: React.ReactNode;
   /** Hide the group label visually but keep it for assistive tech. */
@@ -48,10 +47,7 @@ export const RadioGroup = forwardRef<
       {label && (
         <p
           id={labelId}
-          className={cn(
-            'mb-1 block text-xs font-medium text-text',
-            labelHidden && 'sr-only',
-          )}
+          className={cn('mb-1 block text-xs font-medium text-text', labelHidden && 'sr-only')}
         >
           {label}
         </p>
@@ -74,6 +70,8 @@ export const RadioGroup = forwardRef<
                 aria-describedby={option.helperText ? helperId : undefined}
                 className={cn(
                   'mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center',
+                  // Invisible ≥44×44 hit area around the 20px visual control.
+                  "relative after:absolute after:-inset-3 after:content-['']",
                   'rounded-pill border border-border bg-bg',
                   'transition-colors duration-fast ease-standard',
                   'outline-none focus-visible:outline focus-visible:outline-2',
@@ -82,13 +80,10 @@ export const RadioGroup = forwardRef<
                   'disabled:cursor-not-allowed disabled:opacity-60',
                 )}
               >
-                <RadixRadioGroup.Indicator className="inline-flex h-2.5 w-2.5 items-center justify-center rounded-pill bg-primary" />
+                <RadixRadioGroup.Indicator className="inline-flex h-2.5 w-2.5 items-center justify-center rounded-pill bg-primary motion-safe:animate-scale-in" />
               </RadixRadioGroup.Item>
               <div className="min-w-0">
-                <label
-                  htmlFor={itemId}
-                  className="block cursor-pointer text-sm text-text"
-                >
+                <label htmlFor={itemId} className="block cursor-pointer text-sm text-text">
                   {option.label}
                 </label>
                 {option.helperText && (

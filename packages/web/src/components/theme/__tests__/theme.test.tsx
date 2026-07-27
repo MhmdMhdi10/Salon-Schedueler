@@ -1,18 +1,6 @@
-import {
-  describe,
-  it,
-  expect,
-  beforeEach,
-  afterEach,
-  vi,
-} from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import {
-  ThemeProvider,
-  ThemeToggle,
-  useTheme,
-  THEME_STORAGE_KEY,
-} from '..';
+import { ThemeProvider, ThemeToggle, useTheme, THEME_STORAGE_KEY } from '..';
 import '../../../i18n';
 import { renderRtl, expectNoSeriousA11yViolations } from '../../../test/a11y';
 
@@ -23,9 +11,7 @@ import { renderRtl, expectNoSeriousA11yViolations } from '../../../test/a11y';
  */
 
 function getThemeColorMeta(): string | null {
-  return document.head
-    .querySelector('meta[name="theme-color"]')
-    ?.getAttribute('content') ?? null;
+  return document.head.querySelector('meta[name="theme-color"]')?.getAttribute('content') ?? null;
 }
 
 /** Install a matchMedia mock whose `matches` reflects `prefersDark`, capturing
@@ -36,19 +22,13 @@ function mockMatchMedia(prefersDark: boolean) {
     matches: prefersDark,
     media: '(prefers-color-scheme: dark)',
     onchange: null,
-    addEventListener: (_: string, cb: (e: MediaQueryListEvent) => void) =>
-      listeners.add(cb),
-    removeEventListener: (_: string, cb: (e: MediaQueryListEvent) => void) =>
-      listeners.delete(cb),
+    addEventListener: (_: string, cb: (e: MediaQueryListEvent) => void) => listeners.add(cb),
+    removeEventListener: (_: string, cb: (e: MediaQueryListEvent) => void) => listeners.delete(cb),
     addListener: (cb: (e: MediaQueryListEvent) => void) => listeners.add(cb),
-    removeListener: (cb: (e: MediaQueryListEvent) => void) =>
-      listeners.delete(cb),
+    removeListener: (cb: (e: MediaQueryListEvent) => void) => listeners.delete(cb),
     dispatchEvent: () => false,
   };
-  vi.stubGlobal(
-    'matchMedia',
-    vi.fn(() => mql) as unknown as typeof window.matchMedia,
-  );
+  vi.stubGlobal('matchMedia', vi.fn(() => mql) as unknown as typeof window.matchMedia);
   return {
     emit(nowDark: boolean) {
       mql.matches = nowDark;
@@ -72,9 +52,7 @@ describe('ThemeProvider', () => {
   beforeEach(() => {
     localStorage.clear();
     document.documentElement.removeAttribute('data-theme');
-    document.head
-      .querySelectorAll('meta[name="theme-color"]')
-      .forEach((m) => m.remove());
+    document.head.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.remove());
   });
 
   afterEach(() => {
@@ -188,9 +166,7 @@ describe('ThemeProvider', () => {
 
   it('throws when useTheme is used outside a provider', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    expect(() => render(<ThemeReadout />)).toThrow(
-      /useTheme must be used within a ThemeProvider/,
-    );
+    expect(() => render(<ThemeReadout />)).toThrow(/useTheme must be used within a ThemeProvider/);
     spy.mockRestore();
   });
 });
@@ -199,9 +175,7 @@ describe('ThemeToggle', () => {
   beforeEach(() => {
     localStorage.clear();
     document.documentElement.removeAttribute('data-theme');
-    document.head
-      .querySelectorAll('meta[name="theme-color"]')
-      .forEach((m) => m.remove());
+    document.head.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.remove());
   });
 
   afterEach(() => {
@@ -240,16 +214,12 @@ describe('ThemeToggle', () => {
     );
 
     // Light active → offers switching to dark.
-    expect(
-      screen.getByRole('button', { name: 'تغییر به حالت تاریک' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'تغییر به حالت تاریک' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button'));
 
     // Dark active → offers switching to light.
-    expect(
-      screen.getByRole('button', { name: 'تغییر به حالت روشن' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'تغییر به حالت روشن' })).toBeInTheDocument();
   });
 
   it('has no serious/critical a11y violations', async () => {

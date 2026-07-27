@@ -1,32 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { AlertCircle, ArrowRight } from 'lucide-react';
+import { Trans, useTranslation } from 'react-i18next';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { AlertCircle, ArrowRight, Check } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion';
 import { authApi, setAccessToken, setRefreshToken } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { OtpInput, OTP_LENGTH, type OtpInputHandle } from '../auth/OtpInput';
+import { normalizePhone, PHONE_PATTERN } from '../auth/phone';
 import { SeoHead } from '../components/seo';
-import { normalizeDigits } from '@salon/shared';
-import { Button, ToastProvider, cn, toPersianDigits, useToast } from '../components/ui';
+import { Button, TextField, cn, toPersianDigits, useToast } from '../components/ui';
+import { durations, stepTransition, stepVariants } from '../lib/motion-variants';
 
-/** Iranian mobile pattern: `09` followed by 9 digits (ui-ux §7). */
-const PHONE_PATTERN = /^09\d{9}$/;
-/** Number of digits in the SMS one-time code. */
-const OTP_LENGTH = 6;
+export { normalizePhone } from '../auth/phone';
+
 /** Resend cooldown in seconds — the «ارسال مجدد تا ۰:۴۵» timer (ui-ux §7). */
 const RESEND_SECONDS = 45;
-
-/**
- * Normalizes a raw phone entry to the canonical `09xxxxxxxxx` form before
- * validation: localizes digits, strips spacing/punctuation, and rewrites the
- * `+98` / `0098` / `98` country-code prefixes to a leading `0` (ui-ux §7).
- */
-export function normalizePhone(raw: string): string {
-  let v = normalizeDigits(raw).replace(/[\s()-]/g, '');
-  if (v.startsWith('+98')) v = `0${v.slice(3)}`;
-  else if (v.startsWith('0098')) v = `0${v.slice(4)}`;
-  else if (v.startsWith('98') && v.length === 12) v = `0${v.slice(2)}`;
-  return v;
-}
 
 /** Formats remaining seconds as `m:ss` with Persian digits for the resend timer. */
 function formatCountdown(totalSeconds: number): string {
@@ -57,70 +45,71 @@ function roleFromAccessToken(token: string): string | undefined {
   }
 }
 
+/** Reduced-motion step variants: opacity-only crossfade, no transform. */
+const fadeStepVariants: Variants = {
+  enter: { opacity: 0 },
+  center: { opacity: 1 },
+  exit: { opacity: 0 },
+};
+
 /**
- * Phone + OTP authentication page (R4.1, R4.2, R7.6; ui-ux Auth recipe, §7, §10,
- * §11).
+ * Phone + OTP authentication page (R4.1, R4.2, R7.6; ui-ux Auth recipe, §7,
+ * §10, §11; Booksy directive §auth).
  *
- * A centered card on a calm background with two steps:
+ * A single centered `max-w-md` card on a neutral wash — the card is the whole
+ * composition (no split-pane imagery, no dead social CTAs). Two steps with an
+ * RTL-aware directional slide between them:
  *
- *  - **Phone step** — a single direction-isolated LTR numeric field
- *    (`type=tel inputMode=tel dir=ltr autoComplete=tel`) validated against the
- *    Iranian mobile pattern `^09\d{9}$` (pasted `+98`/Persian digits are
- *    normalized first), with a primary «دریافت کد» CTA that shows an in-button
- *    loading state. A successful send raises a «کد ارسال شد» toast.
- *  - **OTP step** — six single-digit boxes (`inputMode=numeric`
- *    `autoComplete=one-time-code` `dir=ltr`) with auto-advance, full-paste,
- *    backspace-to-previous, and a resend timer rendered in Persian digits that
- *    disables resend until it elapses.
+ *  - **Phone step** — one labelled LTR tel field (`09xxxxxxxxx`, pasted
+ *    `+98`/Persian digits normalized) + full-width primary «دریافت کد» and the
+ *    terms/privacy consent line.
+ *  - **OTP step** — the shared {@link OtpInput} six-box entry (survives fast
+ *    typing, OS one-time-code autofill, and paste), resend cooldown with a
+ *    draining progress bar, and expiry-aware error copy.
  *
- * Failures surface as an inline, friendly error in a `role="alert"` region
- * **without** discarding what the user typed (R4.2). The legacy `auth-page`
- * testID and the `role="alert"` error pattern are preserved so the existing
- * tests stay green. The auth API client calls are unchanged.
+ * Already-authenticated visitors are redirected away (`/owner` for staff, `/`
+ * for customers, honoring any mid-booking `returnTo`). Verify failures branch
+ * on the server error code: `OTP_EXPIRED` → «کد منقضی شده…» + resend unlocked;
+ * network failure → connection copy; anything else → «کد نامعتبر است». Errors
+ * render inline in a `role="alert"` region without discarding entered data.
  *
- * The OTP login wall has no public content and must never be indexed; it renders
- * `<SeoHead>` with the `noindex` default so the route emits `noindex,follow`
- * (seo §1, R8.7). The login surface lives fully at `/auth`; the public marketing
- * home owns `/` (task 5.1).
- *
- * The page hosts its own {@link ToastProvider} so the «کد ارسال شد» confirmation
- * works whether the route is mounted standalone or inside the app shell.
+ * The OTP login wall has no public content and must never be indexed; the
+ * `<SeoHead>` default emits `noindex,follow` (seo §1, R8.7). Toasts come from
+ * the app-root `ToastProvider` (no page-level provider).
  */
 export function AuthPage() {
-  return (
-    <ToastProvider>
-      <AuthPageContent />
-    </ToastProvider>
-  );
-}
-
-function AuthPageContent() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { success } = useToast();
-  const { refresh: refreshAuth } = useAuth();
+  const { status, role, refresh: refreshAuth } = useAuth();
+  const prefersReduced = useReducedMotion();
 
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState<string[]>(() => Array(OTP_LENGTH).fill(''));
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const [direction, setDirection] = useState(1);
   const [phoneError, setPhoneError] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [verified, setVerified] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
 
-  const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const otpRef = useRef<OtpInputHandle | null>(null);
+  const redirectTimer = useRef<number | undefined>(undefined);
+  const lastAccessToken = useRef('');
   const normalizedPhone = useMemo(() => normalizePhone(phone), [phone]);
   const phoneIsValid = PHONE_PATTERN.test(normalizedPhone);
   const codeValue = code.join('');
   const codeIsComplete = codeValue.length === OTP_LENGTH;
 
-  // True when we arrived here mid-booking (BookingConfirmPage bounced an
-  // anonymous customer to log in). Drives the phone-step subtitle copy and the
-  // return-intent routing after a successful OTP verification.
-  const hasBookingReturnIntent = Boolean(
-    (location.state as { returnTo?: string } | null)?.returnTo,
-  );
+  // Where to land after auth. `returnTo` means we arrived mid-booking
+  // (BookingConfirmPage bounced an anonymous customer to log in) — it drives
+  // the phone-step subtitle copy and the post-verify routing.
+  const returnTo = (location.state as { returnTo?: string } | null)?.returnTo;
+  const returnState =
+    (location.state as { returnState?: Record<string, unknown> } | null)?.returnState ?? {};
+  const hasBookingReturnIntent = typeof returnTo === 'string' && returnTo.length > 0;
 
   // Resend countdown: ticks once per second while the cooldown is active.
   useEffect(() => {
@@ -131,16 +120,36 @@ function AuthPageContent() {
     return () => window.clearInterval(timer);
   }, [secondsLeft]);
 
+  useEffect(() => () => window.clearTimeout(redirectTimer.current), []);
+
+  // Signed-in users have nothing to do here: route them to their surface
+  // instead of re-showing the login form. Suppressed while the just-verified
+  // success beat plays (its own timer performs the same navigation).
+  if (status === 'authenticated' && !verified) {
+    return hasBookingReturnIntent ? (
+      <Navigate to={returnTo!} state={{ ...returnState, autoConfirm: true }} replace />
+    ) : (
+      <Navigate to={role ? '/owner' : '/'} replace />
+    );
+  }
+
+  const goToDestination = () => {
+    if (hasBookingReturnIntent) {
+      navigate(returnTo!, { state: { ...returnState, autoConfirm: true }, replace: true });
+    } else {
+      navigate(roleFromAccessToken(lastAccessToken.current) ? '/owner' : '/', { replace: true });
+    }
+  };
+
   const sendOtp = async () => {
     setLoading(true);
     setError('');
     try {
       await authApi.requestOtp(normalizedPhone);
+      setDirection(1);
       setStep('otp');
       setSecondsLeft(RESEND_SECONDS);
       success({ title: t('auth.otpSent') });
-      // Focus the first OTP box once the step renders.
-      window.setTimeout(() => otpRefs.current[0]?.focus(), 0);
     } catch {
       setError(t('auth.requestFailed'));
     } finally {
@@ -154,13 +163,14 @@ function AuthPageContent() {
       return;
     }
     setPhoneError('');
-    sendOtp();
+    void sendOtp();
   };
 
   const handleResend = () => {
     if (secondsLeft > 0 || loading) return;
     setCode(Array(OTP_LENGTH).fill(''));
-    sendOtp();
+    otpRef.current?.focus();
+    void sendOtp();
   };
 
   const handleVerifyOtp = async () => {
@@ -170,138 +180,91 @@ function AuthPageContent() {
       const result = await authApi.verifyOtp(normalizedPhone, codeValue);
       setAccessToken(result.accessToken);
       setRefreshToken(result.refreshToken);
-      // Update the app-wide session in the background (drives the header), and
-      // route by the token's role without blocking on a /me round-trip: staff
-      // land in the management panel, customers in the public/booking app.
+      lastAccessToken.current = result.accessToken;
+      // Update the app-wide session in the background (drives the header).
       void refreshAuth();
-      // If we were sent here mid-booking, route back to the funnel and let it
-      // resume automatically (`autoConfirm`). Otherwise fall back to role-based
-      // routing: staff → management panel, customers → public/booking app.
-      const returnTo = (location.state as { returnTo?: string } | null)?.returnTo;
-      if (typeof returnTo === 'string' && returnTo) {
-        const returnState =
-          (location.state as { returnState?: Record<string, unknown> } | null)?.returnState ?? {};
-        navigate(returnTo, {
-          state: { ...returnState, autoConfirm: true },
-          replace: true,
-        });
+      // Show a brief in-button success beat (motion-safe), then route: back to
+      // the funnel with `autoConfirm` when we arrived mid-booking, otherwise by
+      // the token's role (staff → panel, customers → public app).
+      setVerified(true);
+      if (prefersReduced) {
+        goToDestination();
       } else {
-        navigate(roleFromAccessToken(result.accessToken) ? '/owner' : '/');
+        redirectTimer.current = window.setTimeout(goToDestination, durations.slow * 1000);
       }
-    } catch {
-      setError(t('auth.invalidOtp'));
-    } finally {
+    } catch (err) {
+      const errCode = (err as { code?: unknown } | null)?.code;
+      const errStatus = (err as { status?: unknown } | null)?.status;
+      if (errCode === 'OTP_EXPIRED') {
+        // The correct-but-late case: say so, and unlock resend immediately.
+        setError(t('auth.expiredOtp'));
+        setSecondsLeft(0);
+      } else if (typeof errStatus !== 'number') {
+        setError(t('auth.networkError'));
+      } else {
+        setError(t('auth.invalidOtp'));
+      }
       setLoading(false);
     }
   };
 
-  /** Sets one OTP box, then advances focus to the next empty box. */
-  const setDigit = (index: number, digit: string) => {
-    setError('');
-    setCode((prev) => {
-      const next = [...prev];
-      next[index] = digit;
-      return next;
-    });
-    if (digit && index < OTP_LENGTH - 1) {
-      otpRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleOtpChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = normalizeDigits(e.target.value).replace(/\D/g, '');
-    if (!raw) {
-      setDigit(index, '');
-      return;
-    }
-    // Typing into a box: keep the last entered digit and advance.
-    setDigit(index, raw[raw.length - 1]);
-  };
-
-  const handleOtpPaste = (index: number, e: React.ClipboardEvent<HTMLInputElement>) => {
-    const pasted = normalizeDigits(e.clipboardData.getData('text'))
-      .replace(/\D/g, '')
-      .slice(0, OTP_LENGTH - index);
-    if (!pasted) return;
-    e.preventDefault();
-    setError('');
-    setCode((prev) => {
-      const next = [...prev];
-      for (let i = 0; i < pasted.length; i += 1) {
-        next[index + i] = pasted[i];
-      }
-      return next;
-    });
-    const lastFilled = Math.min(index + pasted.length, OTP_LENGTH - 1);
-    otpRefs.current[lastFilled]?.focus();
-  };
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !code[index] && index > 0) {
-      e.preventDefault();
-      otpRefs.current[index - 1]?.focus();
-      setDigit(index - 1, '');
-    }
-  };
-
   const backToPhone = () => {
+    setDirection(-1);
     setStep('phone');
     setError('');
     setCode(Array(OTP_LENGTH).fill(''));
   };
 
+  const variants = prefersReduced ? fadeStepVariants : stepVariants;
+
   return (
     <div
-      className="auth-page mx-auto flex min-h-screen w-full max-w-funnel flex-col items-center justify-center gap-5 px-4 py-12"
+      className="auth-page mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center gap-5 px-4 py-12"
       data-testid="auth-page"
     >
       <SeoHead title={t('seo.titles.auth')} />
 
-      <a href="/" className="text-2xl font-extrabold text-text no-underline" aria-label="آرا">
+      <Link to="/" className="text-2xl font-extrabold text-text no-underline">
         آرا
-      </a>
+      </Link>
 
-      <div className="w-full rounded-2xl border border-border bg-elevated px-6 py-6 shadow-1">
-        <div className="mb-5 text-start">
-          <h1 className="text-lg font-bold leading-display text-text">
-            {step === 'phone' ? 'ورود یا ثبت‌نام' : t('auth.otpLabel')}
-          </h1>
-          <p className="mt-1 text-sm leading-5 text-muted">
-            {step === 'phone'
-              ? hasBookingReturnIntent
-                ? t('auth.bookingIntentSubtitle')
-                : 'برای ادامه در آرا، شماره موبایل خود را وارد کنید.'
-              : t('auth.otpStepSubtitle', { phone: toPersianDigits(normalizedPhone) })}
-          </p>
-        </div>
-        {step === 'phone' ? (
-          <form
-            className="flex flex-col gap-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleRequestOtp();
-            }}
-          >
-            <div>
-              <label htmlFor="phone" className="sr-only">
-                {t('auth.phoneLabel')}
-              </label>
-              <div className="flex min-h-12 overflow-hidden rounded-md border border-border bg-elevated">
-                <span
-                  className="flex items-center border-e border-border px-3 text-sm text-text"
-                  dir="ltr"
-                >
-                  +98
-                </span>
-                <input
+      <div className="w-full overflow-hidden rounded-2xl border border-border bg-elevated p-6 shadow-1 sm:p-8">
+        <AnimatePresence mode="wait" initial={false} custom={direction}>
+          {step === 'phone' ? (
+            <motion.div
+              key="phone"
+              custom={direction}
+              variants={variants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={stepTransition}
+            >
+              <div className="mb-5 text-start">
+                <h1 className="text-lg font-bold leading-display text-text">{t('auth.title')}</h1>
+                <p className="mt-1 text-sm leading-5 text-muted">
+                  {hasBookingReturnIntent
+                    ? t('auth.bookingIntentSubtitle')
+                    : t('auth.phoneStepSubtitle')}
+                </p>
+              </div>
+              <form
+                className="flex flex-col gap-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleRequestOtp();
+                }}
+              >
+                <TextField
                   id="phone"
-                  aria-invalid={phoneError ? true : undefined}
-                  aria-describedby={phoneError ? 'phone-error' : undefined}
+                  label={t('auth.phoneLabel')}
+                  helperText={t('auth.phoneHelper')}
+                  error={phoneError}
                   type="tel"
                   inputMode="tel"
                   dir="ltr"
                   autoComplete="tel"
-                  maxLength={13}
+                  maxLength={20}
                   placeholder={t('auth.phonePlaceholder')}
                   value={phone}
                   style={{ unicodeBidi: 'isolate' }}
@@ -309,147 +272,148 @@ function AuthPageContent() {
                     setPhone(e.target.value);
                     if (phoneError) setPhoneError('');
                   }}
-                  className="min-w-0 flex-1 px-3 text-sm text-text outline-none"
                 />
-              </div>
-              {phoneError && (
-                <p id="phone-error" role="alert" className="mt-1 text-xs text-danger">
-                  {phoneError}
+                <Button type="submit" size="lg" fullWidth loading={loading}>
+                  {t('auth.requestOtp')}
+                </Button>
+              </form>
+              {/* Inline, friendly send-failure error — icon + text (never
+                  color-only); the entered phone stays in the field (R4.2). */}
+              {error && (
+                <p className="error mt-4 flex items-center gap-1 text-sm text-danger" role="alert">
+                  <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  {error}
                 </p>
               )}
-            </div>
-            <Button type="submit" size="lg" fullWidth loading={loading}>
-              {t('auth.requestOtp')}
-            </Button>
-          </form>
-        ) : (
-          <form
-            className="flex flex-col gap-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleVerifyOtp();
-            }}
-          >
-            <fieldset className="m-0 border-0 p-0">
-              <legend className="mb-1 block text-xs font-medium text-text">
-                {t('auth.otpLabel')}
-              </legend>
-              {/* Six single-digit boxes — the EXPLICIT inline `direction: ltr`
-                  + `unicode-bidi: isolate` cascade-proofs this row against
-                  inherited RTL from `<html dir="rtl">` and bidi-isolates the
-                  LTR numeric content. This guarantees reading order == index
-                  order (index 0 = leftmost box), so `code.join('')` submits
-                  digits in the order the user sees them. Do NOT remove the
-                  inline style or reverse the join. */}
-              <div
-                className="flex flex-row justify-center gap-2"
-                dir="ltr"
-                style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-              >
-                {code.map((digit, index) => (
-                  <input
-                    // eslint-disable-next-line react/no-array-index-key
-                    key={index}
-                    ref={(el) => {
-                      otpRefs.current[index] = el;
-                    }}
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete={index === 0 ? 'one-time-code' : 'off'}
-                    dir="ltr"
-                    maxLength={1}
-                    aria-label={t('auth.otpDigitLabel', {
-                      index: toPersianDigits(index + 1),
-                    })}
-                    aria-invalid={error ? true : undefined}
-                    aria-describedby={error ? 'otp-error' : undefined}
-                    value={digit}
-                    onChange={(e) => handleOtpChange(index, e)}
-                    onPaste={(e) => handleOtpPaste(index, e)}
-                    onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                    className={cn(
-                      'h-12 w-11 rounded-md border bg-bg text-center text-lg font-bold text-text',
-                      'transition-colors duration-fast ease-standard',
-                      'outline-none focus-visible:outline focus-visible:outline-2',
-                      'focus-visible:outline-offset-2 focus-visible:outline-focus',
-                      error ? 'border-danger' : 'border-border',
-                    )}
-                    style={{ unicodeBidi: 'isolate' }}
-                  />
-                ))}
+              <p className="mt-5 text-center text-2xs leading-5 text-muted">
+                <Trans
+                  i18nKey="auth.consent"
+                  components={{
+                    terms: <Link to="/terms" className="text-primary" />,
+                    privacy: <Link to="/privacy" className="text-primary" />,
+                  }}
+                />
+              </p>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="otp"
+              custom={direction}
+              variants={variants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={stepTransition}
+            >
+              <div className="mb-5 text-start">
+                <h1 className="text-lg font-bold leading-display text-text">
+                  {t('auth.otpLabel')}
+                </h1>
+                <p className="mt-1 text-sm leading-5 text-muted">
+                  {t('auth.otpStepSubtitle', { phone: toPersianDigits(normalizedPhone) })}
+                </p>
               </div>
-            </fieldset>
-
-            <Button type="submit" size="lg" fullWidth loading={loading} disabled={!codeIsComplete}>
-              {t('auth.verify')}
-            </Button>
-
-            <div className="flex items-center justify-between gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="md"
-                startIcon={<ArrowRight className="h-4 w-4 rtl:-scale-x-100" />}
-                onClick={backToPhone}
+              <form
+                className="flex flex-col gap-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void handleVerifyOtp();
+                }}
               >
-                {t('auth.changePhone')}
-              </Button>
-              {secondsLeft > 0 ? (
-                <span className="text-xs text-muted" aria-live="polite">
-                  {t('auth.resendIn', { time: formatCountdown(secondsLeft) })}
-                </span>
-              ) : (
+                <fieldset className="m-0 border-0 p-0">
+                  <legend className="mb-1 block text-xs font-medium text-text">
+                    {t('auth.otpLabel')}
+                  </legend>
+                  <OtpInput
+                    ref={otpRef}
+                    value={code}
+                    onChange={(next) => {
+                      setError('');
+                      setCode(next);
+                    }}
+                    invalid={Boolean(error)}
+                    describedBy="otp-error"
+                    autoFocus
+                  />
+                </fieldset>
+
                 <Button
-                  type="button"
-                  variant="ghost"
-                  size="md"
-                  onClick={handleResend}
-                  disabled={loading}
+                  type="submit"
+                  size="lg"
+                  fullWidth
+                  loading={loading && !verified}
+                  disabled={!codeIsComplete || verified}
+                  startIcon={
+                    verified ? <Check className="h-4 w-4" aria-hidden="true" /> : undefined
+                  }
                 >
-                  {t('auth.resend')}
+                  {verified ? t('auth.verified') : t('auth.verify')}
                 </Button>
-              )}
-            </div>
-          </form>
-        )}
 
-        {step === 'phone' && (
-          <>
-            <div className="my-5 flex h-5 items-center gap-3 text-xs leading-5 text-muted">
-              <span className="h-px flex-1 bg-border" />
-              یا
-              <span className="h-px flex-1 bg-border" />
-            </div>
-            <div className="grid gap-3">
-              {['ادامه با گوگل', 'ادامه با اپل', 'ادامه با فیسبوک'].map((label) => (
-                <button
-                  key={label}
-                  type="button"
-                  className="h-12 rounded-md border border-border bg-elevated text-sm text-text"
+                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="md"
+                    // In RTL the back affordance points RIGHT (steering §8) —
+                    // ArrowRight is already correct, so no rtl flip.
+                    startIcon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
+                    onClick={backToPhone}
+                  >
+                    {t('auth.changePhone')}
+                  </Button>
+                  {secondsLeft > 0 ? (
+                    <span className="flex shrink-0 flex-col items-end gap-1 text-xs text-muted">
+                      {t('auth.resendIn', { time: formatCountdown(secondsLeft) })}
+                      {!prefersReduced && (
+                        <span
+                          className="block h-0.5 w-full overflow-hidden rounded-pill bg-border"
+                          aria-hidden="true"
+                        >
+                          <motion.span
+                            className="block h-full w-full bg-primary"
+                            initial={{ scaleX: secondsLeft / RESEND_SECONDS }}
+                            animate={{ scaleX: 0 }}
+                            transition={{ duration: secondsLeft, ease: 'linear' }}
+                          />
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="md"
+                      onClick={handleResend}
+                      disabled={loading}
+                    >
+                      {t('auth.resend')}
+                    </Button>
+                  )}
+                  {/* Announce cooldown transitions ONCE each (start / ready)
+                      instead of every ticking second. */}
+                  <span className="sr-only" role="status">
+                    {secondsLeft > 0 ? t('auth.resendCooldownStarted') : t('auth.resendReady')}
+                  </span>
+                </div>
+              </form>
+
+              {/* Inline, friendly error — icon + text (never color-only), wired
+                  to the OTP inputs via `aria-describedby`; preserves entered
+                  data (R4.2). */}
+              {error && (
+                <p
+                  id="otp-error"
+                  className={cn('error mt-4 flex items-center gap-1 text-sm text-danger')}
+                  role="alert"
                 >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <p className="mt-5 text-center text-xs leading-5 text-muted">
-              با ادامه، با <a href="/terms" className="text-primary">شرایط استفاده</a> و{' '}
-              <a href="/privacy" className="text-primary">حریم خصوصی</a> آرا موافقت می‌کنید.
-            </p>
-          </>
-        )}
-
-        {/* Inline, friendly error — icon + text (never color-only), wired to
-            OTP inputs via `aria-describedby`; preserves entered data (R4.2). */}
-        {error && (
-          <p
-            id="otp-error"
-            className="error mt-4 flex items-center gap-1 text-sm text-danger"
-            role="alert"
-          >
-            <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-            <span>{error}</span>
-          </p>
-        )}
+                  <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>{error}</span>
+                </p>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

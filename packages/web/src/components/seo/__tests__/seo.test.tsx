@@ -76,22 +76,15 @@ describe('SeoHead', () => {
   });
 
   it('writes an absolute canonical on the single host with params stripped', async () => {
-    renderWithHelmet(
-      <SeoHead title="سالن رز" path="/s/salon-rose?utm_source=x" index />,
-    );
+    renderWithHelmet(<SeoHead title="سالن رز" path="/s/salon-rose?utm_source=x" index />);
     await waitFor(() => {
-      expect(head('link[rel="canonical"]')).toHaveAttribute(
-        'href',
-        `${SITE_URL}/s/salon-rose`,
-      );
+      expect(head('link[rel="canonical"]')).toHaveAttribute('href', `${SITE_URL}/s/salon-rose`);
     });
   });
 
   it('emits the meta description on OG and Twitter as well', async () => {
     const desc = 'رزرو آنلاین نوبت کوتاهی، رنگ و میکاپ در سالن رز در ولنجک تهران.';
-    renderWithHelmet(
-      <SeoHead title="سالن رز" description={desc} path="/s/salon-rose" index />,
-    );
+    renderWithHelmet(<SeoHead title="سالن رز" description={desc} path="/s/salon-rose" index />);
     await waitFor(() => {
       expect(head('meta[name="description"]')).toHaveAttribute('content', desc);
       expect(head('meta[property="og:description"]')).toHaveAttribute('content', desc);
@@ -107,19 +100,14 @@ describe('SeoHead', () => {
       expect(head('meta[property="og:type"]')).toHaveAttribute('content', 'website');
       expect(head('meta[property="og:image:width"]')).toHaveAttribute('content', '1200');
       expect(head('meta[property="og:image:height"]')).toHaveAttribute('content', '630');
-      expect(head('meta[name="twitter:card"]')).toHaveAttribute(
-        'content',
-        'summary_large_image',
-      );
+      expect(head('meta[name="twitter:card"]')).toHaveAttribute('content', 'summary_large_image');
     });
   });
 
   it('declares hreflang self-reference (fa, fa-IR) and x-default → home', async () => {
     renderWithHelmet(<SeoHead title="سالن رز" path="/s/salon-rose" index />);
     await waitFor(() => {
-      const alternates = Array.from(
-        document.head.querySelectorAll('link[rel="alternate"]'),
-      );
+      const alternates = Array.from(document.head.querySelectorAll('link[rel="alternate"]'));
       const byLang = Object.fromEntries(
         alternates.map((el) => [el.getAttribute('hreflang'), el.getAttribute('href')]),
       );
@@ -130,9 +118,7 @@ describe('SeoHead', () => {
   });
 
   it('honors an explicit canonical override (normalized)', async () => {
-    renderWithHelmet(
-      <SeoHead title="خانه" path="/page/2" canonical="/page?ref=x" index />,
-    );
+    renderWithHelmet(<SeoHead title="خانه" path="/page/2" canonical="/page?ref=x" index />);
     await waitFor(() => {
       expect(head('link[rel="canonical"]')).toHaveAttribute('href', `${SITE_URL}/page`);
     });
@@ -171,9 +157,7 @@ describe('JsonLd validation helpers', () => {
 
 describe('JsonLd component', () => {
   it('injects a valid node as an application/ld+json script', async () => {
-    renderWithHelmet(
-      <JsonLd data={{ '@type': 'WebSite', name: SITE_NAME, url: SITE_URL }} />,
-    );
+    renderWithHelmet(<JsonLd data={{ '@type': 'WebSite', name: SITE_NAME, url: SITE_URL }} />);
     await waitFor(() => {
       const script = head('script[type="application/ld+json"]');
       expect(script).not.toBeNull();
@@ -194,9 +178,7 @@ describe('JsonLd component', () => {
       />,
     );
     await waitFor(() => {
-      const scripts = document.head.querySelectorAll(
-        'script[type="application/ld+json"]',
-      );
+      const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
       expect(scripts.length).toBe(2);
     });
   });
@@ -204,17 +186,10 @@ describe('JsonLd component', () => {
   it('drops invalid nodes and warns in dev', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     renderWithHelmet(
-      <JsonLd
-        data={[
-          { '@type': 'WebSite', name: 'ok' },
-          { name: 'missing-type' } as never,
-        ]}
-      />,
+      <JsonLd data={[{ '@type': 'WebSite', name: 'ok' }, { name: 'missing-type' } as never]} />,
     );
     await waitFor(() => {
-      const scripts = document.head.querySelectorAll(
-        'script[type="application/ld+json"]',
-      );
+      const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
       expect(scripts.length).toBe(1);
     });
     warn.mockRestore();

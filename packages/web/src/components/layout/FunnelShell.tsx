@@ -86,36 +86,24 @@ export function FunnelShell({
   return (
     <div
       data-shell="funnel"
-      className={cn(
-        'flex min-h-screen flex-col overflow-x-hidden bg-bg text-text',
-        className,
-      )}
+      className={cn('flex min-h-screen flex-col overflow-x-hidden bg-bg text-text', className)}
     >
       {/* Minimal top bar: back affordance (inline-start) + salon name. */}
       <header className="border-b border-border bg-elevated">
         <div className="mx-auto flex h-14 w-full max-w-2xl items-center gap-5 px-4">
           {brandMark ? (
             <div className="flex min-w-0 items-center gap-2">
-              {logoUrl ? (
-                <Avatar src={logoUrl} name={brandMark} size="sm" decorative />
-              ) : null}
+              {logoUrl ? <Avatar src={logoUrl} name={brandMark} size="sm" decorative /> : null}
               <span className="flex min-w-0 flex-col leading-tight">
-                <span
-                  data-funnel-brand-mark
-                  className="truncate text-md font-bold text-text"
-                >
+                <span data-funnel-brand-mark className="truncate text-md font-bold text-text">
                   {brandMark}
                 </span>
                 {/* Subordinate platform byline (R4.5). */}
-                <span className="truncate text-2xs font-medium text-muted">
-                  {t('app.title')}
-                </span>
+                <span className="truncate text-2xs font-medium text-muted">{t('app.title')}</span>
               </span>
             </div>
           ) : (
-            <span className="truncate text-md font-bold text-text">
-              {t('app.title')}
-            </span>
+            <span className="truncate text-md font-bold text-text">{t('app.title')}</span>
           )}
           <div className="flex flex-1 gap-1" aria-hidden="true">
             {FUNNEL_STEPS.map((step, index) => (
@@ -158,9 +146,7 @@ export function FunnelShell({
                     'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-pill text-xs font-bold',
                     isCurrent && 'bg-primary text-primary-contrast',
                     isComplete && 'bg-secondary text-primary-contrast',
-                    !isCurrent &&
-                      !isComplete &&
-                      'border border-border bg-bg text-muted',
+                    !isCurrent && !isComplete && 'border border-border bg-bg text-muted',
                   )}
                 >
                   <Num value={index + 1} />
@@ -178,9 +164,7 @@ export function FunnelShell({
           })}
         </ol>
         {/* A concise textual position for screen readers / small viewports. */}
-        <p className="sr-only">
-          {t('funnel.stepLabel', { current: currentIndex + 1, total })}
-        </p>
+        <p className="sr-only">{t('funnel.stepLabel', { current: currentIndex + 1, total })}</p>
       </nav>
 
       {/* Centered Booksy-style form column. */}

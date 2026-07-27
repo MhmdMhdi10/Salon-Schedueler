@@ -37,10 +37,7 @@ declare module 'animejs' {
     length: number;
   }
 
-  export function animate(
-    targets: unknown,
-    params: AnimationParams,
-  ): unknown;
+  export function animate(targets: unknown, params: AnimationParams): unknown;
 
   export function createScope(opts: { root: React.RefObject<HTMLElement | null> }): ScopeInstance;
 

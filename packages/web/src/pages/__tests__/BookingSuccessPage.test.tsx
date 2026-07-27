@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
@@ -15,6 +15,7 @@ import { BookingSuccessPage } from '../BookingSuccessPage';
  */
 
 const SUMMARY = {
+  status: 'pending',
   serviceName: 'کوتاهی مو',
   startAt: '2999-03-15T09:30:00.000Z',
   salonName: 'سالن رز',
@@ -26,10 +27,7 @@ function HomeProbe() {
 }
 
 function renderPage(state: unknown = undefined) {
-  const entry =
-    state === undefined
-      ? '/booking/success'
-      : { pathname: '/booking/success', state };
+  const entry = state === undefined ? '/booking/success' : { pathname: '/booking/success', state };
   return render(
     <HelmetProvider>
       <MemoryRouter initialEntries={[entry]}>
@@ -43,6 +41,7 @@ function renderPage(state: unknown = undefined) {
 }
 
 afterEach(() => {
+  sessionStorage.clear();
   cleanup();
 });
 
@@ -53,12 +52,32 @@ describe('BookingSuccessPage — success moment', () => {
   });
 
   it('shows a "request submitted, awaiting approval" confirmation with a labelled pending icon', () => {
-    renderPage();
-    expect(
-      screen.getByRole('heading', { name: 'درخواست رزرو شما ثبت شد' }),
-    ).toBeInTheDocument();
+    renderPage({ status: 'pending' });
+    expect(screen.getByRole('heading', { name: 'درخواست رزرو شما ثبت شد' })).toBeInTheDocument();
     // The animated pending mark is exposed to assistive tech with a label.
     expect(screen.getByRole('img', { name: 'در انتظار تایید سالن' })).toBeInTheDocument();
+  });
+
+  it('never fabricates a receipt on a direct visit — shows the honest empty state', () => {
+    // No router state and no persisted outcome: the page must NOT claim a
+    // booking was registered (trust-critical), and must offer the home CTA.
+    renderPage();
+    expect(screen.getByRole('heading', { name: 'رزرو فعالی یافت نشد' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'درخواست رزرو شما ثبت شد' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'بازگشت به خانه' })).toBeInTheDocument();
+  });
+
+  it('keeps showing the real outcome after a refresh (persisted, not downgraded)', () => {
+    // First visit arrives with a confirmed outcome via router state...
+    const first = renderPage({ ...SUMMARY, status: 'confirmed' });
+    expect(screen.getByRole('heading', { name: 'رزرو شما با موفقیت ثبت شد' })).toBeInTheDocument();
+    first.unmount();
+    // ...a refresh (no router state) hydrates from sessionStorage and must
+    // still show CONFIRMED — never the amber pending downgrade.
+    renderPage();
+    expect(screen.getByRole('heading', { name: 'رزرو شما با موفقیت ثبت شد' })).toBeInTheDocument();
   });
 });
 
@@ -73,10 +92,10 @@ describe('BookingSuccessPage — what/when/where summary', () => {
     expect(screen.getByText('سالن رز')).toBeInTheDocument();
   });
 
-  it('omits the summary card entirely when reached with no details', () => {
-    renderPage();
+  it('omits the summary card entirely when the outcome has no details', () => {
+    renderPage({ status: 'pending' });
     expect(screen.getByTestId('booking-success')).toBeInTheDocument();
-    // No summary section / time element when state is absent.
+    // No summary section / time element when the details are absent.
     expect(document.querySelector('time')).toBeNull();
     expect(screen.queryByText('کوتاهی مو')).not.toBeInTheDocument();
   });

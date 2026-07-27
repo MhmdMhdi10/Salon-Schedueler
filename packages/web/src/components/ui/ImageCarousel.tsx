@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from 'react';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from './cn';
 
@@ -27,6 +21,8 @@ export interface ImageCarouselProps {
    * `fetchpriority="high"` for LCP optimization. Subsequent images lazy-load.
    */
   eagerFirst?: boolean;
+  /** Slide index to start on (e.g. a lightbox opening at a tapped tile). */
+  initialIndex?: number;
 }
 
 /* ─── Helpers ──────────────────────────────────────────────────────────── */
@@ -34,8 +30,10 @@ export interface ImageCarouselProps {
 /** Returns true if the document direction is RTL. */
 function isRtl(): boolean {
   if (typeof document === 'undefined') return true; // Default to RTL (Persian app)
-  return document.documentElement.dir === 'rtl' ||
-    getComputedStyle(document.documentElement).direction === 'rtl';
+  return (
+    document.documentElement.dir === 'rtl' ||
+    getComputedStyle(document.documentElement).direction === 'rtl'
+  );
 }
 
 /* ─── Component ────────────────────────────────────────────────────────── */
@@ -59,8 +57,11 @@ export function ImageCarousel({
   images,
   className,
   eagerFirst = true,
+  initialIndex = 0,
 }: ImageCarouselProps) {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(() =>
+    Math.max(0, Math.min(initialIndex, images.length - 1)),
+  );
   const [containerWidth, setContainerWidth] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const prefersReduced = useReducedMotion();
@@ -110,18 +111,17 @@ export function ImageCarousel({
     [rtl, goNext, goPrev],
   );
 
-  // Calculate the translate offset for the current slide.
-  // In RTL: slides flow right-to-left, so offset is positive.
-  // In LTR: slides flow left-to-right, so offset is negative.
-  const offset = rtl
-    ? currentIndex * containerWidth
-    : -(currentIndex * containerWidth);
+  // Calculate the translate offset for the current slide. The slide track is
+  // forced LTR (`direction: 'ltr'` below), so slides always overflow to the
+  // RIGHT regardless of the document direction — the offset is therefore
+  // always negative. (A positive offset in RTL would translate the track away
+  // from the slides and reveal blank frames; only the arrow/keyboard mapping
+  // differs per direction, handled above.)
+  const offset = -(currentIndex * containerWidth);
 
-  // Drag constraints: how far the track can be dragged
+  // Drag constraints: how far the (always-LTR) track can be dragged.
   const maxDrag = (slideCount - 1) * containerWidth;
-  const dragConstraints = rtl
-    ? { left: 0, right: maxDrag }
-    : { left: -maxDrag, right: 0 };
+  const dragConstraints = { left: -maxDrag, right: 0 };
 
   // Handle drag end: snap to nearest slide
   const handleDragEnd = useCallback(
@@ -133,10 +133,7 @@ export function ImageCarousel({
       const velocity = info.velocity.x;
 
       let direction = 0;
-      if (
-        Math.abs(dragOffset) > swipeThreshold ||
-        Math.abs(velocity) > velocityThreshold
-      ) {
+      if (Math.abs(dragOffset) > swipeThreshold || Math.abs(velocity) > velocityThreshold) {
         // In RTL: dragging right (positive x) = go to previous
         //         dragging left (negative x) = go to next
         // In LTR: dragging left (negative x) = go to next
@@ -175,9 +172,7 @@ export function ImageCarousel({
         onDragEnd={prefersReduced ? undefined : handleDragEnd}
         animate={{ x: offset }}
         transition={
-          prefersReduced
-            ? { duration: 0 }
-            : { type: 'spring', stiffness: 300, damping: 30 }
+          prefersReduced ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 30 }
         }
       >
         {images.map((img, i) => (
@@ -197,9 +192,7 @@ export function ImageCarousel({
               loading={eagerFirst && i === 0 ? 'eager' : 'lazy'}
               className="h-full w-full object-cover select-none"
               draggable={false}
-              {...(eagerFirst && i === 0
-                ? { fetchpriority: 'high' as const }
-                : {})}
+              {...(eagerFirst && i === 0 ? { fetchpriority: 'high' as const } : {})}
             />
           </div>
         ))}
@@ -290,7 +283,7 @@ export function ImageCarousel({
       {/* Navigation dots */}
       {slideCount > 1 && (
         <div
-          className="absolute bottom-3 inset-inline-0 flex justify-center gap-2"
+          className="absolute bottom-3 start-0 end-0 flex justify-center gap-2"
           role="tablist"
           aria-label="انتخاب تصویر"
         >

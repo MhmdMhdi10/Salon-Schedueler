@@ -1,6 +1,8 @@
 import { forwardRef } from 'react';
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useThemeScope } from '../theme/ThemeProvider';
 import { cn } from './cn';
 import { IconButton } from './IconButton';
 
@@ -46,8 +48,9 @@ export const SheetDescription = forwardRef<
 
 export type SheetSide = 'bottom' | 'inline-end';
 
-export interface SheetContentProps
-  extends React.ComponentPropsWithoutRef<typeof RadixDialog.Content> {
+export interface SheetContentProps extends React.ComponentPropsWithoutRef<
+  typeof RadixDialog.Content
+> {
   /**
    * Placement. `bottom` (default) is a bottom sheet on all sizes; `inline-end`
    * is a bottom sheet on mobile that becomes a side drawer at `sm`+.
@@ -79,28 +82,38 @@ export const SheetContent = forwardRef<
   React.ElementRef<typeof RadixDialog.Content>,
   SheetContentProps
 >(function SheetContent(
-  {
-    className,
-    children,
-    side = 'bottom',
-    showCloseButton = true,
-    closeLabel = 'بستن',
-    ...rest
-  },
+  { className, children, side = 'bottom', showCloseButton = true, closeLabel, ...rest },
   ref,
 ) {
+  const { t } = useTranslation();
+  const scopeTheme = useThemeScope();
   return (
     <RadixDialog.Portal>
-      <RadixDialog.Overlay className="fixed inset-0 z-overlay bg-black/50" />
+      <RadixDialog.Overlay
+        data-theme={scopeTheme}
+        className={cn(
+          'fixed inset-0 z-overlay bg-overlay',
+          'motion-safe:data-[state=open]:animate-fade-in',
+          'motion-safe:data-[state=closed]:animate-fade-out',
+        )}
+      />
       <RadixDialog.Content
         ref={ref}
         // Radix isolates the modal via `aria-hidden` on siblings; we also set
         // `aria-modal` explicitly so the modal contract is announced directly
         // on the sheet (ui-ux §10, R2.5).
         aria-modal="true"
+        data-theme={scopeTheme}
         className={cn(
           'fixed z-dialog bg-elevated p-5 text-text shadow-3 outline-none',
           'max-h-[90vh] overflow-y-auto',
+          // Enter: bottom sheets slide up (`toast-in`), side drawers slide in
+          // from the inline-end; exits are an opacity fade. All motion-safe
+          // gated and clamped globally under prefers-reduced-motion.
+          side === 'bottom'
+            ? 'motion-safe:data-[state=open]:animate-toast-in'
+            : 'motion-safe:data-[state=open]:animate-slide-in-end',
+          'motion-safe:data-[state=closed]:animate-fade-out',
           side === 'bottom' ? bottomClasses : inlineEndClasses,
           className,
         )}
@@ -110,7 +123,7 @@ export const SheetContent = forwardRef<
         {showCloseButton && (
           <RadixDialog.Close asChild>
             <IconButton
-              aria-label={closeLabel}
+              aria-label={closeLabel ?? t('common.close', 'بستن')}
               variant="ghost"
               className="absolute end-2 top-2 h-9 min-h-0 w-9 min-w-0"
             >

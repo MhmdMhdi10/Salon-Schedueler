@@ -74,7 +74,11 @@ export function ConfettiParticles() {
       {particles.map((particle) => (
         <motion.span
           key={particle.id}
-          className={particle.id % 2 === 0 ? 'absolute h-2 w-2 rounded-full bg-primary' : 'absolute h-2 w-2 rounded-full bg-accent'}
+          className={
+            particle.id % 2 === 0
+              ? 'absolute h-2 w-2 rounded-full bg-primary'
+              : 'absolute h-2 w-2 rounded-full bg-accent'
+          }
           initial={{ scale: 0, opacity: 1, x: 0, y: 0 }}
           animate={{
             scale: [0, 1.2, 0.8],

@@ -1,8 +1,5 @@
 import { useMediaQuery } from '../../hooks/useMediaQuery';
-import {
-  JalaliDatePicker,
-  type JalaliDatePickerProps,
-} from './JalaliDatePicker';
+import { JalaliDatePicker, type JalaliDatePickerProps } from './JalaliDatePicker';
 
 /**
  * Props for `MobileDatePicker`. Passes through all `JalaliDatePickerProps`
@@ -37,10 +34,5 @@ export type MobileDatePickerProps = Omit<JalaliDatePickerProps, 'variant'>;
 export function MobileDatePicker(props: MobileDatePickerProps) {
   const isMobile = useMediaQuery('(max-width: 767px)');
 
-  return (
-    <JalaliDatePicker
-      {...props}
-      variant={isMobile ? 'sheet' : 'popover'}
-    />
-  );
+  return <JalaliDatePicker {...props} variant={isMobile ? 'sheet' : 'popover'} />;
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { ThemeProvider } from '../../../components/theme';
@@ -56,9 +56,7 @@ vi.mock('../../../api/client', () => {
     // calendar/analytics/config endpoints — stub them so the panel mounts.
     adminApi: {
       getCalendar: vi.fn().mockResolvedValue({ appointments: [] }),
-      getAnalytics: vi
-        .fn()
-        .mockResolvedValue({ utilization: {}, revenue: 0, busiestWindows: [] }),
+      getAnalytics: vi.fn().mockResolvedValue({ utilization: {}, revenue: 0, busiestWindows: [] }),
       getStaff: vi.fn().mockResolvedValue({ staff: [] }),
       getChairs: vi.fn().mockResolvedValue({ chairs: [] }),
     },
@@ -93,12 +91,9 @@ vi.mock('../../../api/client', () => {
 });
 
 import { OwnerLayout } from '../OwnerLayout';
-import {
-  OwnerCalendarPage,
-  OwnerAnalyticsPage,
-  OwnerConfigurationPage,
-} from '..';
+import { OwnerCalendarPage, OwnerAnalyticsPage, OwnerConfigurationPage } from '..';
 import type { OwnerRole } from '../../../api/client';
+import { ToastProvider } from '../../../components/ui/Toast';
 
 /**
  * Mounts the owner panel at `initialPath` for the given `role`. The app-root
@@ -113,15 +108,17 @@ function renderOwnerApp(role: OwnerRole, initialPath: string) {
     <HelmetProvider>
       <ThemeProvider defaultTheme="light">
         <div dir="rtl" lang="fa" className="app-root">
-          <MemoryRouter initialEntries={[initialPath]}>
-            <Routes>
-              <Route path="/owner" element={<OwnerLayout />}>
-                <Route path="calendar" element={<OwnerCalendarPage />} />
-                <Route path="analytics" element={<OwnerAnalyticsPage />} />
-                <Route path="config" element={<OwnerConfigurationPage />} />
-              </Route>
-            </Routes>
-          </MemoryRouter>
+          <ToastProvider>
+            <MemoryRouter initialEntries={[initialPath]}>
+              <Routes>
+                <Route path="/owner" element={<OwnerLayout />}>
+                  <Route path="calendar" element={<OwnerCalendarPage />} />
+                  <Route path="analytics" element={<OwnerAnalyticsPage />} />
+                  <Route path="config" element={<OwnerConfigurationPage />} />
+                </Route>
+              </Routes>
+            </MemoryRouter>
+          </ToastProvider>
         </div>
       </ThemeProvider>
     </HelmetProvider>,
@@ -141,22 +138,16 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
     renderOwnerApp('Owner', '/owner/calendar');
 
     // The redesigned page has its own testid (no longer wrapping admin CalendarPage).
-    expect(
-      await screen.findByTestId('owner-calendar-page'),
-    ).toBeInTheDocument();
+    expect(await screen.findByTestId('owner-calendar-page')).toBeInTheDocument();
 
     // Rendered inside the owner shell's single <main>.
-    expect(screen.getByRole('main')).toContainElement(
-      screen.getByTestId('owner-calendar-page'),
-    );
+    expect(screen.getByRole('main')).toContainElement(screen.getByTestId('owner-calendar-page'));
   });
 
   it('renders the admin AnalyticsPage inside the owner analytics section', async () => {
     renderOwnerApp('Owner', '/owner/analytics');
 
-    expect(
-      await screen.findByTestId('owner-analytics-page'),
-    ).toBeInTheDocument();
+    expect(await screen.findByTestId('owner-analytics-page')).toBeInTheDocument();
     expect(await screen.findByTestId('admin-analytics')).toBeInTheDocument();
   });
 
@@ -164,9 +155,7 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
     renderOwnerApp('Owner', '/owner/config');
 
     expect(await screen.findByTestId('owner-config-page')).toBeInTheDocument();
-    expect(
-      await screen.findByTestId('admin-configuration'),
-    ).toBeInTheDocument();
+    expect(await screen.findByTestId('admin-configuration')).toBeInTheDocument();
   });
 });
 
@@ -205,9 +194,7 @@ describe('Owner panel — section routes mirror role-aware nav (R2.3)', () => {
   it('lets an Admin reach analytics', async () => {
     renderOwnerApp('Admin', '/owner/analytics');
 
-    expect(
-      await screen.findByTestId('owner-analytics-page'),
-    ).toBeInTheDocument();
+    expect(await screen.findByTestId('owner-analytics-page')).toBeInTheDocument();
     expect(await screen.findByTestId('admin-analytics')).toBeInTheDocument();
   });
 });

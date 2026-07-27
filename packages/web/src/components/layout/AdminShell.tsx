@@ -63,20 +63,13 @@ export interface AdminShellProps {
  * side nav hidden below it, so exactly one navigation surface shows per
  * breakpoint with no horizontal overflow at 360px.
  */
-export function AdminShell({
-  children,
-  breadcrumbs,
-  className,
-}: AdminShellProps) {
+export function AdminShell({ children, breadcrumbs, className }: AdminShellProps) {
   const { t } = useTranslation();
 
   return (
     <div
       data-shell="admin"
-      className={cn(
-        'flex min-h-screen flex-col overflow-x-hidden bg-bg text-text',
-        className,
-      )}
+      className={cn('flex min-h-screen flex-col overflow-x-hidden bg-bg text-text', className)}
     >
       <a
         href={`#${ADMIN_CONTENT_ID}`}
@@ -147,16 +140,10 @@ export function AdminShell({
         >
           {/* Desktop breadcrumbs (ui-ux §8). Hidden on mobile to save space. */}
           {breadcrumbs && breadcrumbs.length > 0 ? (
-            <nav
-              aria-label={t('admin.breadcrumb')}
-              className="mb-4 hidden lg:block"
-            >
+            <nav aria-label={t('admin.breadcrumb')} className="mb-4 hidden lg:block">
               <ol className="flex flex-wrap items-center gap-2 text-xs text-muted">
                 <li>
-                  <Link
-                    to="/admin/calendar"
-                    className="text-muted no-underline hover:text-text"
-                  >
+                  <Link to="/admin/calendar" className="text-muted no-underline hover:text-text">
                     {t('admin.home')}
                   </Link>
                 </li>
@@ -167,10 +154,7 @@ export function AdminShell({
                       {/* Logical separator; flips with direction via the glyph. */}
                       <span aria-hidden="true">›</span>
                       {crumb.to && !isLast ? (
-                        <Link
-                          to={crumb.to}
-                          className="text-muted no-underline hover:text-text"
-                        >
+                        <Link to={crumb.to} className="text-muted no-underline hover:text-text">
                           {crumb.label}
                         </Link>
                       ) : (

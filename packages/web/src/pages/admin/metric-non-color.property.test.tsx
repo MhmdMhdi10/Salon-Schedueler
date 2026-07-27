@@ -129,23 +129,15 @@ describe('Feature: signature-ui-system, Property 13: Every metric has a non-colo
         renderPage();
 
         // Wait for the populated state (KPI cards) to replace the skeleton.
-        await waitFor(() =>
-          expect(screen.getByTestId('analytics-utilization')).toBeTruthy(),
-        );
+        await waitFor(() => expect(screen.getByTestId('analytics-utilization')).toBeTruthy());
 
         /* --- (1) Each KPI metric has a text label + text value --- */
         expectLabeledMetric(
           'analytics-utilization',
           i18n.t('admin.analyticsPage.kpi.utilizationTitle'),
         );
-        expectLabeledMetric(
-          'analytics-revenue',
-          i18n.t('admin.analyticsPage.kpi.revenueTitle'),
-        );
-        expectLabeledMetric(
-          'analytics-busiest',
-          i18n.t('admin.analyticsPage.kpi.busiestTitle'),
-        );
+        expectLabeledMetric('analytics-revenue', i18n.t('admin.analyticsPage.kpi.revenueTitle'));
+        expectLabeledMetric('analytics-busiest', i18n.t('admin.analyticsPage.kpi.busiestTitle'));
 
         /* --- (2) An accessible TABLE equivalent exists for the chart data --- */
         const table = screen.getByTestId('analytics-table');
@@ -166,9 +158,7 @@ describe('Feature: signature-ui-system, Property 13: Every metric has a non-colo
         const chart = await screen.findByRole('img', {
           name: i18n.t('admin.analyticsPage.chart.label'),
         });
-        expect(chart.getAttribute('aria-describedby')).toBe(
-          'analytics-busiest-table',
-        );
+        expect(chart.getAttribute('aria-describedby')).toBe('analytics-busiest-table');
         // The referenced table actually exists in the document.
         expect(document.getElementById('analytics-busiest-table')).not.toBeNull();
 

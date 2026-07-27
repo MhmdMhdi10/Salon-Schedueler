@@ -7,6 +7,7 @@ import '../../i18n';
 import { CalendarPage } from './CalendarPage';
 import { AnalyticsPage } from './AnalyticsPage';
 import { adminApi, ApiError } from '../../api/client';
+import { ToastProvider } from '../../components/ui/Toast';
 
 /**
  * Property 11: Data-surface lifecycle shows skeleton then the resolved state
@@ -90,15 +91,14 @@ const arbAnalyticsPopulated = fc.record({
     totalRial: fc.integer({ min: 1000, max: 50000000 }),
     appointmentCount: fc.integer({ min: 1, max: 100 }),
   }),
-  busiestWindows: fc
-    .array(
-      fc.record({
-        startAt: fc.constant('2024-03-15T09:00:00Z'),
-        endAt: fc.constant('2024-03-15T12:00:00Z'),
-        concurrentCount: fc.integer({ min: 1, max: 20 }),
-      }),
-      { minLength: 1, maxLength: 3 },
-    ),
+  busiestWindows: fc.array(
+    fc.record({
+      startAt: fc.constant('2024-03-15T09:00:00Z'),
+      endAt: fc.constant('2024-03-15T12:00:00Z'),
+      concurrentCount: fc.integer({ min: 1, max: 20 }),
+    }),
+    { minLength: 1, maxLength: 3 },
+  ),
 });
 
 /** Analytics response with zero data. */
@@ -129,10 +129,12 @@ describe('Feature: signature-ui-system, Property 11: Data-surface lifecycle — 
         const d = deferred<{ appointments: unknown[] }>();
         vi.mocked(adminApi.getCalendar).mockReturnValue(d.promise);
 
-        const { container } = render(
+        render(
           <HelmetProvider>
             <MemoryRouter>
-              <CalendarPage salonId="salon-prop" />
+              <ToastProvider>
+                <CalendarPage salonId="salon-prop" />
+              </ToastProvider>
             </MemoryRouter>
           </HelmetProvider>,
         );
@@ -162,7 +164,9 @@ describe('Feature: signature-ui-system, Property 11: Data-surface lifecycle — 
         render(
           <HelmetProvider>
             <MemoryRouter>
-              <CalendarPage salonId="salon-prop" />
+              <ToastProvider>
+                <CalendarPage salonId="salon-prop" />
+              </ToastProvider>
             </MemoryRouter>
           </HelmetProvider>,
         );
@@ -196,7 +200,9 @@ describe('Feature: signature-ui-system, Property 11: Data-surface lifecycle — 
         render(
           <HelmetProvider>
             <MemoryRouter>
-              <CalendarPage salonId="salon-prop" />
+              <ToastProvider>
+                <CalendarPage salonId="salon-prop" />
+              </ToastProvider>
             </MemoryRouter>
           </HelmetProvider>,
         );
@@ -228,7 +234,9 @@ describe('Feature: signature-ui-system, Property 11: Data-surface lifecycle — 
         render(
           <HelmetProvider>
             <MemoryRouter>
-              <CalendarPage salonId="salon-prop" />
+              <ToastProvider>
+                <CalendarPage salonId="salon-prop" />
+              </ToastProvider>
             </MemoryRouter>
           </HelmetProvider>,
         );

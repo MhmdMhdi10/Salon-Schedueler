@@ -74,16 +74,10 @@ export function ServiceCardList({
   const formatDuration = durationLabel ?? ((m: number) => `${toPersianDigits(m)} دقیقه`);
 
   return (
-    <div
-      role="radiogroup"
-      aria-label={ariaLabel}
-      className={cn('flex flex-col gap-3', className)}
-    >
+    <div role="radiogroup" aria-label={ariaLabel} className={cn('flex flex-col gap-3', className)}>
       {Object.entries(grouped).map(([category, items]) => (
         <div key={category || '__uncategorized'} className="flex flex-col gap-2">
-          {category && (
-            <h3 className="text-sm font-bold text-text-muted px-1">{category}</h3>
-          )}
+          {category && <h3 className="text-sm font-bold text-muted px-1">{category}</h3>}
           {items.map((service) => {
             const isSelected = value === service.id;
             const cardId = `${groupId}-service-${service.id}`;
@@ -110,7 +104,7 @@ export function ServiceCardList({
                   'min-h-[3.5rem]', // ≥ 44px touch target (56px with padding)
                   isSelected
                     ? 'border-primary bg-surface shadow-1'
-                    : 'border-border bg-surface hover:border-text-muted',
+                    : 'border-border bg-surface hover:border-muted',
                 )}
               >
                 <div className="flex items-center justify-between gap-3">
@@ -124,7 +118,7 @@ export function ServiceCardList({
                     >
                       {service.name}
                     </span>
-                    <span className="flex items-center gap-2 text-xs text-text-muted">
+                    <span className="flex items-center gap-2 text-xs text-muted">
                       <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                       <bdi>{formatDuration(service.durationMinutes)}</bdi>
                     </span>
@@ -147,16 +141,10 @@ export function ServiceCardList({
                           <motion.div
                             key="check"
                             initial={
-                              prefersReduced
-                                ? { opacity: 1, scale: 1 }
-                                : { opacity: 0, scale: 0.5 }
+                              prefersReduced ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.5 }
                             }
                             animate={{ opacity: 1, scale: 1 }}
-                            exit={
-                              prefersReduced
-                                ? { opacity: 0 }
-                                : { opacity: 0, scale: 0.5 }
-                            }
+                            exit={prefersReduced ? { opacity: 0 } : { opacity: 0, scale: 0.5 }}
                             transition={{
                               duration: prefersReduced ? 0.01 : 0.2,
                               ease: easings.emphasized,
@@ -167,10 +155,7 @@ export function ServiceCardList({
                             )}
                             aria-hidden="true"
                           >
-                            <Check
-                              className="h-3.5 w-3.5 text-primary-contrast"
-                              strokeWidth={3}
-                            />
+                            <Check className="h-3.5 w-3.5 text-primary-contrast" strokeWidth={3} />
                           </motion.div>
                         )}
                       </AnimatePresence>

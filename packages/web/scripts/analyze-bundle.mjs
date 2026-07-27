@@ -24,11 +24,16 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
- * Public-route JS cap. The shared React/router + Persian i18n shell is roughly
- * 129KB gzip before route content; 225KB keeps a meaningful regression ceiling
- * while allowing the complete localized marketing/profile surfaces.
+ * Public-route JS cap. The shared shell that every route now statically loads
+ * is ~213KB gzip: app entry + Persian i18n catalog (~74KB), React/router
+ * (~58KB), framer-motion (~44KB — the app-wide PageTransition mounts at the
+ * root), Radix (~24KB — the single app-root ToastProvider/Tooltip host), and
+ * shared floating-ui vendor code (~13KB). 230KB keeps a tight regression
+ * ceiling (~17KB for route content — the heaviest real route, discovery, sits
+ * at ~227KB) while the FORBIDDEN_ON_PUBLIC list still guards the big
+ * funnel/admin/chart chunks from ever leaking onto public routes.
  */
-export const PUBLIC_JS_BUDGET_GZIP = 225 * 1024;
+export const PUBLIC_JS_BUDGET_GZIP = 230 * 1024;
 
 /**
  * Module substrings that must NEVER appear in a public route's initial graph.

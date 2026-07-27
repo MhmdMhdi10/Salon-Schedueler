@@ -167,9 +167,7 @@ describe('ImageCarousel', () => {
 
   it('has no serious/critical a11y violations', async () => {
     document.documentElement.dir = 'rtl';
-    const { rtlContainer } = renderRtl(
-      <ImageCarousel images={sampleImages} />,
-    );
+    const { rtlContainer } = renderRtl(<ImageCarousel images={sampleImages} />);
     await expectNoSeriousA11yViolations(rtlContainer);
   });
 });

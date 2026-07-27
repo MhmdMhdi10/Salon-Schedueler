@@ -76,8 +76,7 @@ export interface ConsentStore {
 export function hasAnalyticsConsent(store?: ConsentStore | null): boolean {
   let resolved: ConsentStore | null | undefined = store;
   if (resolved === undefined) {
-    resolved =
-      typeof window !== 'undefined' ? (window.localStorage ?? null) : null;
+    resolved = typeof window !== 'undefined' ? (window.localStorage ?? null) : null;
   }
   if (!resolved) return false;
   try {
@@ -122,16 +121,11 @@ export function sanitizePath(rawPath: string | null | undefined): string {
 }
 
 /** Builds the PII-free report payload from a `web-vitals` metric + a pathname. */
-export function buildReport(
-  metric: Metric,
-  rawPath?: string | null,
-): WebVitalsReport {
+export function buildReport(metric: Metric, rawPath?: string | null): WebVitalsReport {
   const path =
     rawPath !== undefined
       ? sanitizePath(rawPath)
-      : sanitizePath(
-          typeof window !== 'undefined' ? window.location.pathname : '/',
-        );
+      : sanitizePath(typeof window !== 'undefined' ? window.location.pathname : '/');
   return {
     name: metric.name,
     value: metric.value,
@@ -158,10 +152,7 @@ export interface SendOptions {
  * `fetch` with `keepalive`. Returns whether a send was dispatched. Never
  * throws: a reporting failure must never affect the page.
  */
-export function sendReport(
-  report: WebVitalsReport,
-  opts: SendOptions = {},
-): boolean {
+export function sendReport(report: WebVitalsReport, opts: SendOptions = {}): boolean {
   const endpoint = opts.endpoint ?? WEB_VITALS_ENDPOINT;
   const body = JSON.stringify(report);
 
@@ -180,12 +171,7 @@ export function sendReport(
     // Fall through to fetch.
   }
 
-  const doFetch =
-    'fetchRef' in opts
-      ? opts.fetchRef
-      : typeof fetch !== 'undefined'
-        ? fetch
-        : null;
+  const doFetch = 'fetchRef' in opts ? opts.fetchRef : typeof fetch !== 'undefined' ? fetch : null;
   if (doFetch) {
     try {
       void doFetch(endpoint, {
@@ -223,8 +209,7 @@ export function reportWebVitals(opts: ReportWebVitalsOptions = {}): boolean {
   if (typeof window === 'undefined') return false;
   if (!hasAnalyticsConsent(opts.consentStore)) return false;
 
-  const sink =
-    opts.onReport ?? ((report: WebVitalsReport) => sendReport(report, opts));
+  const sink = opts.onReport ?? ((report: WebVitalsReport) => sendReport(report, opts));
 
   const handle = (metric: Metric): void => {
     sink(buildReport(metric));

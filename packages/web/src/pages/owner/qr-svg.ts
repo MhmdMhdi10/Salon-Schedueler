@@ -26,12 +26,12 @@ const ECC_MEDIUM = { ordinal: 0, formatBits: 0 } as const;
 // Subset of the QR spec tables — index by version (1..40). We only need the
 // MEDIUM level. Values from ISO/IEC 18004 (Nayuki reference tables).
 const ECC_CODEWORDS_PER_BLOCK_M = [
-  -1, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26,
-  26, 26, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28,
+  -1, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26, 26, 28, 28,
+  28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28,
 ];
 const NUM_ERROR_CORRECTION_BLOCKS_M = [
-  -1, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9, 10, 10, 11, 13, 14, 16, 17, 17,
-  18, 20, 21, 23, 25, 26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49,
+  -1, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9, 10, 10, 11, 13, 14, 16, 17, 17, 18, 20, 21, 23, 25,
+  26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49,
 ];
 
 /** Galois-field multiply over GF(2^8) with the QR primitive polynomial. */
@@ -148,10 +148,7 @@ function buildMatrix(version: number, allCodewords: number[]): QrMatrix {
   const getAlignmentPatternPositions = (): number[] => {
     if (version === 1) return [];
     const numAlign = Math.floor(version / 7) + 2;
-    const step =
-      version === 32
-        ? 26
-        : Math.ceil((version * 4 + 4) / (numAlign * 2 - 2)) * 2;
+    const step = version === 32 ? 26 : Math.ceil((version * 4 + 4) / (numAlign * 2 - 2)) * 2;
     const result: number[] = [6];
     for (let pos = size - 7; result.length < numAlign; pos -= step) {
       result.splice(1, 0, pos);
@@ -161,11 +158,7 @@ function buildMatrix(version: number, allCodewords: number[]): QrMatrix {
   const drawAlignment = (x: number, y: number): void => {
     for (let dy = -2; dy <= 2; dy++) {
       for (let dx = -2; dx <= 2; dx++) {
-        setFunctionModule(
-          x + dx,
-          y + dy,
-          Math.max(Math.abs(dx), Math.abs(dy)) !== 1,
-        );
+        setFunctionModule(x + dx, y + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
       }
     }
   };
@@ -196,13 +189,10 @@ function buildMatrix(version: number, allCodewords: number[]): QrMatrix {
     setFunctionModule(8, 7, ((bits >>> 6) & 1) !== 0);
     setFunctionModule(8, 8, ((bits >>> 7) & 1) !== 0);
     setFunctionModule(7, 8, ((bits >>> 8) & 1) !== 0);
-    for (let i = 9; i < 15; i++)
-      setFunctionModule(14 - i, 8, ((bits >>> i) & 1) !== 0);
+    for (let i = 9; i < 15; i++) setFunctionModule(14 - i, 8, ((bits >>> i) & 1) !== 0);
 
-    for (let i = 0; i < 8; i++)
-      setFunctionModule(size - 1 - i, 8, ((bits >>> i) & 1) !== 0);
-    for (let i = 8; i < 15; i++)
-      setFunctionModule(8, size - 15 + i, ((bits >>> i) & 1) !== 0);
+    for (let i = 0; i < 8; i++) setFunctionModule(size - 1 - i, 8, ((bits >>> i) & 1) !== 0);
+    for (let i = 8; i < 15; i++) setFunctionModule(8, size - 15 + i, ((bits >>> i) & 1) !== 0);
     setFunctionModule(8, size - 8, true); // Always-dark module.
   };
   drawFormatBits(0); // Reserve cells; real mask written later.
@@ -245,15 +235,32 @@ function buildMatrix(version: number, allCodewords: number[]): QrMatrix {
         if (isFunction[y][x]) continue;
         let invert: boolean;
         switch (mask) {
-          case 0: invert = (x + y) % 2 === 0; break;
-          case 1: invert = y % 2 === 0; break;
-          case 2: invert = x % 3 === 0; break;
-          case 3: invert = (x + y) % 3 === 0; break;
-          case 4: invert = (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0; break;
-          case 5: invert = ((x * y) % 2) + ((x * y) % 3) === 0; break;
-          case 6: invert = (((x * y) % 2) + ((x * y) % 3)) % 2 === 0; break;
-          case 7: invert = (((x + y) % 2) + ((x * y) % 3)) % 2 === 0; break;
-          default: invert = false;
+          case 0:
+            invert = (x + y) % 2 === 0;
+            break;
+          case 1:
+            invert = y % 2 === 0;
+            break;
+          case 2:
+            invert = x % 3 === 0;
+            break;
+          case 3:
+            invert = (x + y) % 3 === 0;
+            break;
+          case 4:
+            invert = (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0;
+            break;
+          case 5:
+            invert = ((x * y) % 2) + ((x * y) % 3) === 0;
+            break;
+          case 6:
+            invert = (((x * y) % 2) + ((x * y) % 3)) % 2 === 0;
+            break;
+          case 7:
+            invert = (((x + y) % 2) + ((x * y) % 3)) % 2 === 0;
+            break;
+          default:
+            invert = false;
         }
         if (invert) modules[y][x] = !modules[y][x];
       }

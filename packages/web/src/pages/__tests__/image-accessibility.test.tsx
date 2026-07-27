@@ -16,7 +16,11 @@ import '../../i18n';
 // ---- API client mock ----
 vi.mock('../../api/client', () => ({
   ApiError: class extends Error {
-    constructor(public status: number, public code: string, message: string) {
+    constructor(
+      public status: number,
+      public code: string,
+      message: string,
+    ) {
       super(message);
     }
   },
@@ -56,7 +60,7 @@ const PERSIAN_REGEX = /[\u0600-\u06FF]/;
  * 2. Explicit `width` and `height` attributes (CLS prevention)
  * 3. Meaningful images have non-empty Persian alt text
  */
-function auditImages(root: HTMLElement, options?: { allowDecorativeEmpty?: boolean }) {
+function auditImages(root: HTMLElement, _options?: { allowDecorativeEmpty?: boolean }) {
   const images = Array.from(root.querySelectorAll('img'));
   expect(images.length).toBeGreaterThan(0);
 
@@ -64,10 +68,7 @@ function auditImages(root: HTMLElement, options?: { allowDecorativeEmpty?: boole
     const src = img.getAttribute('src') ?? '';
 
     // 1. alt attribute must be present
-    expect(
-      img.hasAttribute('alt'),
-      `<img src="${src}"> is missing alt attribute`,
-    ).toBe(true);
+    expect(img.hasAttribute('alt'), `<img src="${src}"> is missing alt attribute`).toBe(true);
 
     // 2. Explicit width and height (CLS-safe)
     expect(
@@ -117,9 +118,7 @@ describe('Image accessibility — MarketingHome', () => {
     const root = getByTestId('marketing-home');
     // All images that are not the hero should be lazy
     const allImages = Array.from(root.querySelectorAll('img'));
-    const lazyImages = allImages.filter(
-      (img) => img.getAttribute('loading') === 'lazy',
-    );
+    const lazyImages = allImages.filter((img) => img.getAttribute('loading') === 'lazy');
     // There should be at least the 3 benefit section images
     expect(lazyImages.length).toBeGreaterThanOrEqual(3);
     for (const img of lazyImages) {
@@ -201,19 +200,15 @@ describe('Picture component enforces width/height as required props', () => {
     // This is a compile-time check — TypeScript will fail the build if
     // width/height become optional. We import the type to verify it here.
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    type AssertRequiredWidth = import('../../components/ui/Picture').PictureProps['width'] extends number ? true : false;
+    type AssertRequiredWidth =
+      import('../../components/ui/Picture').PictureProps['width'] extends number ? true : false;
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    type AssertRequiredHeight = import('../../components/ui/Picture').PictureProps['height'] extends number ? true : false;
+    type AssertRequiredHeight =
+      import('../../components/ui/Picture').PictureProps['height'] extends number ? true : false;
 
     // Runtime: render a Picture and confirm width/height are on the <img>
     const { container } = render(
-      <Picture
-        sources={[]}
-        src="/test.jpg"
-        alt="تست"
-        width={800}
-        height={600}
-      />,
+      <Picture sources={[]} src="/test.jpg" alt="تست" width={800} height={600} />,
     );
     const img = container.querySelector('img');
     expect(img).not.toBeNull();

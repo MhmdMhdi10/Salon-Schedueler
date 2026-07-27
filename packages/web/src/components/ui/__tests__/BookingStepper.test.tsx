@@ -91,7 +91,7 @@ describe('BookingStepper', () => {
   it('applies muted color classes to upcoming step labels', () => {
     render(<BookingStepper steps={STEPS} currentStep={0} />);
     const confirmLabel = screen.getByText('تایید');
-    expect(confirmLabel.className).toContain('text-text-muted');
+    expect(confirmLabel.className).toContain('text-muted');
   });
 
   it('renders correctly with a single step', () => {

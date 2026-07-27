@@ -140,18 +140,13 @@ export function OwnerSubscriptionPage() {
         // Only paid plans are purchasable; keep them in a stable display order.
         const paid = plansRes.plans
           .filter((p) => p.kind !== 'trial')
-          .sort(
-            (a, b) =>
-              PAID_PLAN_ORDER.indexOf(a.kind) - PAID_PLAN_ORDER.indexOf(b.kind),
-          );
+          .sort((a, b) => PAID_PLAN_ORDER.indexOf(a.kind) - PAID_PLAN_ORDER.indexOf(b.kind));
         setPlans(paid);
         setStatus('success');
       })
       .catch((err: unknown) => {
         if (!active) return;
-        setError(
-          err instanceof ApiError ? err.message : t('owner.subscription.errorTitle'),
-        );
+        setError(err instanceof ApiError ? err.message : t('owner.subscription.errorTitle'));
         setStatus('error');
       });
 
@@ -171,10 +166,7 @@ export function OwnerSubscriptionPage() {
     if (!selectedPlan) return;
     setPurchaseStatus('submitting');
     try {
-      const { redirectUrl } = await subscriptionApi.initiatePurchase(
-        salonId,
-        selectedPlan,
-      );
+      const { redirectUrl } = await subscriptionApi.initiatePurchase(salonId, selectedPlan);
       // Money is confirmed by the server (activation callback); show the
       // explicit redirect surface and hand off to the gateway (§12).
       setPurchaseStatus('redirecting');
@@ -189,12 +181,8 @@ export function OwnerSubscriptionPage() {
       <SeoHead title={t('owner.subscription.title')} />
 
       <header className="flex flex-col gap-2">
-        <h1 className="text-xl text-display text-text">
-          {t('owner.subscription.title')}
-        </h1>
-        <p className="max-w-[60ch] text-sm text-muted">
-          {t('owner.subscription.subtitle')}
-        </p>
+        <h1 className="text-xl text-display text-text">{t('owner.subscription.title')}</h1>
+        <p className="max-w-[60ch] text-sm text-muted">{t('owner.subscription.subtitle')}</p>
       </header>
 
       {status === 'loading' && <SubscriptionSkeleton />}
@@ -298,9 +286,7 @@ export function OwnerSubscriptionPage() {
                   label={t('owner.subscription.plansLabel')}
                   labelHidden
                   value={selectedPlan ?? ''}
-                  onValueChange={(value) =>
-                    setSelectedPlan(value as SubscriptionPlanKind)
-                  }
+                  onValueChange={(value) => setSelectedPlan(value as SubscriptionPlanKind)}
                   options={plans.map((plan) => ({
                     value: plan.kind,
                     label: (
@@ -337,10 +323,7 @@ export function OwnerSubscriptionPage() {
                         role="alert"
                         className="flex items-center gap-2 text-sm text-danger"
                       >
-                        <AlertTriangle
-                          className="h-4 w-4 shrink-0"
-                          aria-hidden="true"
-                        />
+                        <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
                         {t('owner.subscription.purchaseError')}
                       </p>
                     )}

@@ -1,48 +1,37 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { JsonLd, SeoHead, SITE_NAME, SITE_URL } from '../components/seo';
+import { Motif } from '../components/brand/Motif';
+import { FeatureMosaic } from '../components/layout/FeatureMosaic';
+import { ScrollReveal } from '../components/ui/ScrollReveal';
 
-const BENEFITS = [
-  {
-    title: 'همیشه رزرو بمانید، بدون رفت‌وبرگشت',
-    body: 'مشتری‌ها ۲۴ ساعته رزرو می‌کنند و شما به جای تلفن، روی صندلی و مشتری تمرکز می‌کنید.',
-  },
-  {
-    title: 'از کارهای تکراری خلاص شوید',
-    body: 'یادآوری، پرداخت و رزرو مجدد را خودکار کنید تا وقت بیشتری برای کار دلخواهتان داشته باشید.',
-  },
-  {
-    title: 'کسب‌وکاری بسازید که به آن افتخار کنید',
-    body: 'با نظر مشتریان، بازاریابی و بازار مشتریان تازه، برند سالن خود را رشد دهید.',
-  },
-] as const;
+/** i18n keys of the 3-col plain-text value props (#why — directive §g.3). */
+const WHY_KEYS = ['booked', 'busywork', 'brand'] as const;
 
-const FEATURES = [
-  {
-    title: 'تقویم و نوبت‌ها',
-    body: 'روزتان را با تقویم هوشمند مدیریت کنید؛ ثبت، جابه‌جایی و پیگیری همه نوبت‌ها در یک‌جا.',
-  },
-  {
-    title: 'پرداخت سریع، ساده و امن',
-    body: 'پرداخت حضوری یا آنلاین، صدور صورت‌حساب و تسویه سریع‌تر با پرداخت آرا.',
-  },
-  {
-    title: 'ابزارهای بازاریابی داخلی',
-    body: 'با یادآوری، پیشنهاد ویژه و لینک رزرو شبکه‌های اجتماعی، تقویمتان را پر کنید.',
-  },
-  {
-    title: 'محافظت در برابر عدم حضور',
-    body: 'با بیعانه، قوانین لغو و یادآوری خودکار، نوبت‌های از‌دست‌رفته را کاهش دهید.',
-  },
-] as const;
+/** i18n keys of the feature mosaic tiles; the first is the lead tile. */
+const FEATURE_KEYS = ['calendar', 'payments', 'marketing', 'noShows'] as const;
 
-const METRICS = [
-  ['۳۳۰٬۰۰۰', 'متخصص زیبایی'],
-  ['۴۴+ میلیون', 'مشتری'],
-  ['۲۰٪ بیشتر', 'رزرو'],
-  ['۲۵٪ کاهش', 'عدم حضور'],
-] as const;
+/**
+ * i18n keys of the dark solutions band. Content-honesty policy (contract):
+ * NO invented adoption statistics — these sell real product capabilities with
+ * truthful outcome copy instead of made-up user counts, so there is no
+ * AnimatedCounter here until a genuine number exists to count.
+ */
+const SOLUTION_KEYS = ['online', 'reminders', 'deposits', 'reports'] as const;
 
+/**
+ * Owner-acquisition landing (`/business`) — the 6-section Booksy biz skeleton
+ * (directive §g) in Ara tokens:
+ *
+ *  1. Sticky product header (AppShell `business` variant — logo + «بیز» badge,
+ *     anchors to the section ids this page owns: #why / #features /
+ *     #solutions / #pricing).
+ *  2. Tinted hero with dual CTA (primary sign-up + outlined live demo).
+ *  3. 3-col plain-text value props (#why) — no icons, no cards.
+ *  4. Feature mosaic on the surface wash (#features) — asymmetric lead tile.
+ *  5. ONE dark ink band (#solutions) — honest capabilities, dark in both themes.
+ *  6. Pricing (#pricing) + final centered CTA; the primary CTA repeats 3×.
+ */
 export function BusinessLanding() {
   const { t } = useTranslation();
 
@@ -63,87 +52,153 @@ export function BusinessLanding() {
 
       <section
         data-hero
-        className="flex min-h-[55vh] items-center bg-accent/10 px-4 py-16 text-center"
+        className="flex min-h-[55vh] items-center bg-accent/10 px-4 py-20 text-center"
       >
         <div className="mx-auto max-w-3xl">
-          <h1 className="text-2xl font-bold leading-display sm:text-3xl">
-            اپلیکیشن کسب‌وکار برای آرایشگران، استایلیست‌ها و صاحبان سالن
+          <h1 className="text-2xl text-display leading-display sm:text-3xl">
+            {t('business.hero.title')}
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted">
-            چه مستقل کار کنید و چه یک سالن کامل داشته باشید، آرا در هر طرح همه امکانات
-            را به شما می‌دهد: زمان‌بندی، پرداخت، بازاریابی مشتری و بازاری از مشتریان
-            محلی که دنبال شما هستند.
+            {t('business.hero.subtitle')}
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               to="/business/register"
               data-cta="primary"
-              className="inline-flex min-h-12 items-center rounded-md bg-primary px-8 font-semibold text-primary-contrast no-underline shadow-1"
+              className="inline-flex min-h-12 items-center rounded-md bg-primary px-8 font-semibold text-primary-contrast no-underline shadow-1 transition-opacity duration-fast ease-standard hover:opacity-90"
             >
-              رایگان شروع کنید
+              {t('business.hero.primaryCta')}
             </Link>
             <Link
-              to="/"
+              to="/auth"
               data-cta="secondary"
-              className="inline-flex min-h-12 items-center rounded-md border border-text px-8 font-semibold text-primary no-underline"
+              className="inline-flex min-h-12 items-center rounded-md border border-primary px-8 font-semibold text-primary no-underline transition-colors duration-fast ease-standard hover:bg-accent/10"
             >
-              مشاهده نسخه مشتری
+              {t('business.hero.secondaryCta')}
             </Link>
+          </div>
+          <p className="mx-auto mt-4 max-w-xl text-sm text-muted">
+            {t('business.hero.demoHint')}
+          </p>
+          <Link
+            to="/"
+            className="mt-2 inline-block rounded-sm text-sm font-semibold text-primary underline underline-offset-4 transition-opacity duration-fast ease-standard hover:opacity-80"
+          >
+            {t('business.hero.customerLink')}
+          </Link>
+          {/* Signature motif band closes the brand hero. */}
+          <div className="mt-8 flex justify-center text-primary">
+            <Motif variant="band" className="h-8 w-64" aria-hidden />
           </div>
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-10 px-4 py-20 md:grid-cols-3">
-        {BENEFITS.map((benefit) => (
-          <article key={benefit.title}>
-            <h2 className="text-xl font-semibold leading-8">{benefit.title}</h2>
-            <p className="mt-3 leading-7 text-muted">{benefit.body}</p>
-          </article>
+      {/* #why — 3-col plain-text value props (directive §g.3: no icons, no cards) */}
+      <section
+        id="why"
+        className="mx-auto grid max-w-7xl scroll-mt-20 gap-10 px-4 py-20 md:grid-cols-3"
+      >
+        {WHY_KEYS.map((key, index) => (
+          <ScrollReveal key={key} delay={index * 0.05}>
+            <article>
+              <h2 className="text-xl text-display leading-display">
+                {t(`business.why.items.${key}.title`)}
+              </h2>
+              <p className="mt-3 leading-7 text-muted">{t(`business.why.items.${key}.body`)}</p>
+            </article>
+          </ScrollReveal>
         ))}
       </section>
 
-      <section id="features" className="bg-surface py-20">
+      {/* #features — asymmetric mosaic (signature layout rule: 3+ peer features
+          never render as a row of equal cards; the lead tile dominates). */}
+      <section id="features" className="scroll-mt-20 bg-surface py-20">
         <div className="mx-auto max-w-7xl px-4">
-          <h2 className="text-center text-xl font-bold">همه امکانات در همه طرح‌ها</h2>
-          <div className="mt-10 grid gap-6 md:grid-cols-2">
-            {FEATURES.map((feature) => (
-              <article
-                key={feature.title}
-                className="rounded-2xl border border-black/10 bg-white p-6"
-              >
-                <h3 className="text-lg font-semibold">{feature.title}</h3>
-                <p className="mt-3 leading-7 text-muted">{feature.body}</p>
-              </article>
-            ))}
-          </div>
+          <ScrollReveal>
+            <h2 className="text-center text-2xl text-display leading-display">
+              {t('business.features.title')}
+            </h2>
+          </ScrollReveal>
+          <ScrollReveal delay={0.05}>
+            <FeatureMosaic className="mt-10">
+              {FEATURE_KEYS.map((key, index) => (
+                <article
+                  key={key}
+                  className="flex h-full flex-col justify-center rounded-2xl border border-border bg-elevated p-6"
+                >
+                  <h3
+                    className={
+                      index === 0
+                        ? 'text-xl text-display leading-display'
+                        : 'text-lg font-semibold'
+                    }
+                  >
+                    {t(`business.features.items.${key}.title`)}
+                  </h3>
+                  <p className="mt-3 leading-7 text-muted">
+                    {t(`business.features.items.${key}.body`)}
+                  </p>
+                </article>
+              ))}
+            </FeatureMosaic>
+          </ScrollReveal>
         </div>
       </section>
 
-      <section className="bg-text px-4 py-20 text-bg">
+      {/* #solutions — the single dark ink band (stays dark in BOTH themes).
+          Honest capability claims, not invented adoption numbers. */}
+      <section id="solutions" className="scroll-mt-20 bg-ink px-4 py-20 text-ink-contrast">
         <div className="mx-auto max-w-7xl">
-          <h2 className="text-center text-xl font-bold">آرا به روایت عددها</h2>
-          <div className="mt-12 grid grid-cols-2 gap-8 text-center md:grid-cols-4">
-            {METRICS.map(([value, label]) => (
-              <div key={label}>
-                <div className="text-2xl font-medium text-accent">{value}</div>
-                <div className="mt-1 text-sm text-white/80">{label}</div>
-              </div>
+          <ScrollReveal>
+            <h2 className="text-center text-2xl text-display leading-display">
+              {t('business.solutions.title')}
+            </h2>
+          </ScrollReveal>
+          <div className="mt-12 grid grid-cols-1 gap-8 text-center sm:grid-cols-2 md:grid-cols-4">
+            {SOLUTION_KEYS.map((key, index) => (
+              <ScrollReveal key={key} delay={index * 0.05}>
+                <div className="text-lg font-bold text-accent">
+                  {t(`business.solutions.items.${key}.claim`)}
+                </div>
+                <div className="mt-2 text-sm leading-6 text-ink-muted">
+                  {t(`business.solutions.items.${key}.outcome`)}
+                </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="px-4 py-20 text-center">
-        <h2 className="text-xl font-bold">آرا برای کسب‌وکار شما</h2>
-        <p className="mt-4 text-muted">
-          به هزاران متخصص زیبایی بپیوندید که همین حالا با آرا رشد می‌کنند.
-        </p>
-        <Link
-          to="/business/register"
-          className="mt-8 inline-flex min-h-12 items-center rounded-md bg-primary px-8 font-semibold text-primary-contrast no-underline"
-        >
-          رایگان شروع کنید
-        </Link>
+      {/* #pricing — honest model: free trial, then subscription; no fabricated
+          price table (plans/prices live in the owner panel, env-configured). */}
+      <section id="pricing" className="scroll-mt-20 px-4 py-20">
+        <div className="mx-auto max-w-3xl text-center">
+          <ScrollReveal>
+            <h2 className="text-2xl text-display leading-display">{t('business.pricing.title')}</h2>
+            <p className="mx-auto mt-4 max-w-2xl leading-8 text-muted">
+              {t('business.pricing.body')}
+            </p>
+            <Link
+              to="/business/register"
+              className="mt-8 inline-flex min-h-12 items-center rounded-md bg-primary px-8 font-semibold text-primary-contrast no-underline shadow-1 transition-opacity duration-fast ease-standard hover:opacity-90"
+            >
+              {t('business.hero.primaryCta')}
+            </Link>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      <section className="bg-surface px-4 py-20 text-center">
+        <ScrollReveal>
+          <h2 className="text-2xl text-display leading-display">{t('business.cta.title')}</h2>
+          <p className="mt-4 text-muted">{t('business.cta.body')}</p>
+          <Link
+            to="/business/register"
+            className="mt-8 inline-flex min-h-12 items-center rounded-md bg-primary px-8 font-semibold text-primary-contrast no-underline shadow-1 transition-opacity duration-fast ease-standard hover:opacity-90"
+          >
+            {t('business.cta.ownerCta')}
+          </Link>
+        </ScrollReveal>
       </section>
     </div>
   );

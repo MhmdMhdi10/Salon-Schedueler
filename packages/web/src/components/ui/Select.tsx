@@ -1,14 +1,10 @@
 import { forwardRef } from 'react';
 import * as RadixSelect from '@radix-ui/react-select';
 import { Check, ChevronDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useThemeScope } from '../theme/ThemeProvider';
 import { cn } from './cn';
-import {
-  FieldError,
-  FieldHelper,
-  FieldLabel,
-  useFieldIds,
-  type FieldOwnProps,
-} from './field';
+import { FieldError, FieldHelper, FieldLabel, useFieldIds, type FieldOwnProps } from './field';
 
 export interface SelectOption {
   /** Machine value submitted/returned via `onValueChange`. */
@@ -74,13 +70,11 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(function Select
   },
   ref,
 ) {
+  const { t } = useTranslation();
+  const scopeTheme = useThemeScope();
   const hasError = Boolean(error);
   const hasHelper = Boolean(helperText);
-  const { controlId, helperId, errorId, describedBy } = useFieldIds(
-    id,
-    hasHelper,
-    hasError,
-  );
+  const { controlId, helperId, errorId, describedBy } = useFieldIds(id, hasHelper, hasError);
 
   return (
     <div className={cn('w-full', containerClassName)}>
@@ -122,6 +116,7 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(function Select
           <RadixSelect.Content
             position="popper"
             sideOffset={4}
+            data-theme={scopeTheme}
             className={cn(
               // z-dialog (not z-overlay) so the dropdown renders ABOVE a Radix
               // Dialog (which sits on z-dialog); on z-overlay it would open
@@ -130,12 +125,17 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(function Select
               'z-dialog overflow-hidden rounded-md bg-elevated text-text shadow-2',
               'border border-border',
               'min-w-[var(--radix-select-trigger-width)]',
+              // Scale-fade from the trigger edge; motion-safe gated. The
+              // transform-origin follows Radix's computed popper origin.
+              'origin-[var(--radix-select-content-transform-origin)]',
+              'motion-safe:data-[state=open]:animate-scale-in',
+              'motion-safe:data-[state=closed]:animate-fade-out',
             )}
           >
             <RadixSelect.Viewport className="p-1">
               {options.length === 0 ? (
                 <div className="px-3 py-2 text-xs text-muted" role="presentation">
-                  {emptyText ?? 'موردی موجود نیست'}
+                  {emptyText ?? t('common.noOptions', 'موردی موجود نیست')}
                 </div>
               ) : (
                 options.map((option) => (

@@ -38,17 +38,18 @@ const DEFAULT_FILL: Record<ButtonVariant, RegExp[]> = {
   danger: [/\bbg-danger\b/, /\btext-primary-contrast\b/],
 };
 
-/** Per-variant HOVER — a token-driven hover affordance (brightness or token bg). */
+/** Per-variant HOVER — a token-driven hover affordance (opacity dip or token bg). */
 const HOVER: Record<ButtonVariant, RegExp> = {
-  primary: /\bhover:brightness-110\b/,
+  primary: /\bhover:opacity-90\b/,
   secondary: /\bhover:bg-elevated\b/,
   ghost: /\bhover:bg-surface\b/,
-  danger: /\bhover:brightness-110\b/,
+  danger: /\bhover:opacity-90\b/,
 };
 
 /** Shared, variant-independent state styling (all token-mapped utilities). */
 const FOCUS_VISIBLE = /\bfocus-visible:outline-focus\b/; // uses --color-focus-ring
-const ACTIVE = /\bactive:brightness-95\b/;
+// Press feel: the shared 1px settle on :active (Booksy press affordance).
+const ACTIVE = /\bactive:translate-y-px\b/;
 const DISABLED_OPACITY = /\bdisabled:opacity-60\b/;
 const DISABLED_CURSOR = /\bdisabled:cursor-not-allowed\b/;
 /** Motion is token-driven (`--dur-*`/`--ease-*`), not a raw ms literal. */
@@ -115,7 +116,7 @@ describe('Property 17 — Button defines all six interactive states with signatu
             // (3) focus-visible — visible ring via the focus-ring token.
             expect(className, 'focus-visible ring').toMatch(FOCUS_VISIBLE);
 
-            // (4) active/pressed — token brightness shift.
+            // (4) active/pressed — the shared press-settle affordance.
             expect(className, 'active/pressed').toMatch(ACTIVE);
 
             // (5) disabled — token opacity + cursor, independent of the
@@ -129,10 +130,7 @@ describe('Property 17 — Button defines all six interactive states with signatu
             if (loading) {
               expect(button!.getAttribute('aria-busy')).toBe('true');
               expect(button!.getAttribute('data-loading')).toBe('true');
-              expect(
-                button!.querySelector('svg.animate-spin'),
-                'loading spinner',
-              ).not.toBeNull();
+              expect(button!.querySelector('svg.animate-spin'), 'loading spinner').not.toBeNull();
             } else {
               expect(button!.getAttribute('aria-busy')).toBeNull();
               expect(button!.querySelector('svg.animate-spin')).toBeNull();

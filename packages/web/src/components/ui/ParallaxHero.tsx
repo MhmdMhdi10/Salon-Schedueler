@@ -65,12 +65,7 @@ export function ParallaxHero({
   const prefersReduced = useReducedMotion();
 
   return (
-    <div
-      className={cn(
-        'relative min-h-[80vh] overflow-hidden',
-        className,
-      )}
-    >
+    <div className={cn('relative min-h-[80vh] overflow-hidden', className)}>
       {/* Parallax background layer */}
       <motion.div
         className="absolute inset-0"
@@ -106,9 +101,7 @@ export function ParallaxHero({
       </motion.div>
 
       {/* Foreground content — positioned at the bottom of the hero */}
-      <div className="relative z-10 flex h-full min-h-[80vh] items-end pb-10">
-        {children}
-      </div>
+      <div className="relative z-10 flex h-full min-h-[80vh] items-end pb-10">{children}</div>
     </div>
   );
 }

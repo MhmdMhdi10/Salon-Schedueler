@@ -1,12 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-  cleanup,
-  within,
-} from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, cleanup, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import '../../i18n';
@@ -35,12 +28,15 @@ vi.mock('../../api/client', () => ({
 }));
 
 import { AuthPage, normalizePhone } from '../AuthPage';
+import { ToastProvider } from '../../components/ui/Toast';
 
 function renderAuth() {
   return render(
     <HelmetProvider>
       <MemoryRouter initialEntries={['/auth']}>
-        <AuthPage />
+        <ToastProvider>
+          <AuthPage />
+        </ToastProvider>
       </MemoryRouter>
     </HelmetProvider>,
   );
@@ -148,13 +144,9 @@ describe('AuthPage — OTP step', () => {
     fireEvent.paste(first, {
       clipboardData: { getData: () => '123456' },
     });
-    await waitFor(() =>
-      expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('6'),
-    );
+    await waitFor(() => expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('6'));
     fireEvent.click(screen.getByRole('button', { name: 'تایید و ورود' }));
-    await waitFor(() =>
-      expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '123456'),
-    );
+    await waitFor(() => expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '123456'));
   });
 
   it('moves focus to the previous box on backspace in an empty box', async () => {
@@ -170,9 +162,7 @@ describe('AuthPage — OTP step', () => {
     await advanceToOtp();
     const first = screen.getByLabelText('رقم ۱ کد تایید') as HTMLInputElement;
     fireEvent.paste(first, { clipboardData: { getData: () => '000000' } });
-    await waitFor(() =>
-      expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('0'),
-    );
+    await waitFor(() => expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('0'));
     fireEvent.click(screen.getByRole('button', { name: 'تایید و ورود' }));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     // Still on the OTP step.
@@ -184,15 +174,15 @@ describe('AuthPage — OTP step', () => {
     // Right after sending, the resend cooldown is active: the timer text shows
     // (with Persian digits) and the resend button is not yet available.
     expect(screen.getByText(/ارسال مجدد تا/)).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: 'ارسال مجدد کد' }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'ارسال مجدد کد' })).not.toBeInTheDocument();
   });
 
   it('lets the user go back to the phone step to edit the number', async () => {
     await advanceToOtp();
     fireEvent.click(screen.getByRole('button', { name: 'ویرایش شماره موبایل' }));
-    expect(screen.getByLabelText('شماره موبایل')).toBeInTheDocument();
+    // AnimatePresence mode="wait" plays the OTP step's exit before the phone
+    // step re-enters — await the field rather than expecting it synchronously.
+    expect(await screen.findByLabelText('شماره موبایل')).toBeInTheDocument();
   });
 });
 
@@ -221,11 +211,15 @@ describe('AuthPage — booking return intent', () => {
           ]}
         >
           <Routes>
-            <Route path="/auth" element={<AuthPage />} />
             <Route
-              path="/salon/:salonId/book/confirm"
-              element={<ReturnProbe />}
+              path="/auth"
+              element={
+                <ToastProvider>
+                  <AuthPage />
+                </ToastProvider>
+              }
             />
+            <Route path="/salon/:salonId/book/confirm" element={<ReturnProbe />} />
           </Routes>
         </MemoryRouter>
       </HelmetProvider>,
@@ -240,9 +234,7 @@ describe('AuthPage — booking return intent', () => {
     // OTP step → paste the 6 digits and verify.
     const first = await screen.findByLabelText('رقم ۱ کد تایید');
     fireEvent.paste(first, { clipboardData: { getData: () => '123456' } });
-    await waitFor(() =>
-      expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('6'),
-    );
+    await waitFor(() => expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('6'));
     fireEvent.click(screen.getByRole('button', { name: 'تایید و ورود' }));
 
     // Landed back on the booking funnel with the selection + the resume flag.

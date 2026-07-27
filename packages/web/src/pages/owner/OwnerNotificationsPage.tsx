@@ -20,7 +20,10 @@ function typeIcon(type: string): string {
   return '🔔';
 }
 
-function relativeTime(iso: string, t: (k: string, opts?: any) => string): string {
+function relativeTime(
+  iso: string,
+  t: (k: string, opts?: Record<string, unknown>) => string,
+): string {
   const now = Date.now();
   const then = new Date(iso).getTime();
   const diffMs = Math.max(0, now - then);
@@ -65,7 +68,10 @@ export function OwnerNotificationsPage() {
       })
       .catch((e) => {
         if (!active) return;
-        setError(e?.message ?? t('owner.inbox.errorBody', { defaultValue: 'بارگذاری اعلان‌ها ناموفق بود' }));
+        setError(
+          e?.message ??
+            t('owner.inbox.errorBody', { defaultValue: 'بارگذاری اعلان‌ها ناموفق بود' }),
+        );
         setStatus('error');
       });
     return () => {
@@ -83,7 +89,9 @@ export function OwnerNotificationsPage() {
   const markOne = useCallback(async (id: string) => {
     setBusy(true);
     setUnreadCount((u) => Math.max(0, u - 1));
-    setItems((list) => list.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n)));
+    setItems((list) =>
+      list.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n)),
+    );
     try {
       await inboxApi.markRead(id);
     } catch {
@@ -145,10 +153,7 @@ export function OwnerNotificationsPage() {
 
       {/* Toolbar: filter tabs + mark-all */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div
-          role="tablist"
-          className="inline-flex rounded-lg border border-border bg-bg p-1"
-        >
+        <div role="tablist" className="inline-flex rounded-lg border border-border bg-bg p-1">
           <button
             type="button"
             role="tab"
@@ -232,10 +237,7 @@ export function OwnerNotificationsPage() {
       )}
 
       {status === 'success' && items.length > 0 && (
-        <ol
-          data-testid="owner-notifications-list"
-          className="flex flex-col gap-2"
-        >
+        <ol data-testid="owner-notifications-list" className="flex flex-col gap-2">
           {busy && (
             <div
               role="status"
@@ -289,7 +291,9 @@ export function OwnerNotificationsPage() {
                     type="button"
                     onClick={() => markOne(n.id)}
                     disabled={busy}
-                    aria-label={t('owner.inbox.markRead', { defaultValue: 'علامت‌گذاری به خوانده‌شده' })}
+                    aria-label={t('owner.inbox.markRead', {
+                      defaultValue: 'علامت‌گذاری به خوانده‌شده',
+                    })}
                     className={cn(
                       'shrink-0 rounded-md p-2 text-muted hover:bg-elevated hover:text-text',
                       'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',

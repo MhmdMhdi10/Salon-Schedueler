@@ -2,14 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, Image as ImageIcon, Users } from 'lucide-react';
 import { qrApi, salonApi } from '../../api/client';
-import {
-  Button,
-  Card,
-  CardTitle,
-  EmptyState,
-  ErrorState,
-  Skeleton,
-} from '../../components/ui';
+import { Button, Card, CardTitle, EmptyState, ErrorState, Skeleton } from '../../components/ui';
 import { downloadQrPng, downloadQrSvg, qrImageDataUri } from './marketing-assets';
 
 /** Data-surface state for the per-stylist QR gallery (ui-ux §6). */
@@ -35,13 +28,7 @@ interface GalleryItem {
  * retry / populated) and degrades per-tile: a stylist whose QR fetch fails shows
  * a placeholder with disabled downloads rather than failing the whole gallery.
  */
-export function StylistQrGallery({
-  salonId,
-  salonName,
-}: {
-  salonId: string;
-  salonName: string;
-}) {
+export function StylistQrGallery({ salonId, salonName }: { salonId: string; salonName: string }) {
   const { t } = useTranslation();
   const [status, setStatus] = useState<GalleryStatus>('loading');
   const [items, setItems] = useState<GalleryItem[]>([]);
@@ -143,10 +130,7 @@ export function StylistQrGallery({
               stylist: item.name,
             });
             return (
-              <li
-                key={item.id}
-                className="owner-qr-person flex flex-col items-center gap-3"
-              >
+              <li key={item.id} className="owner-qr-person flex flex-col items-center gap-3">
                 {item.payload ? (
                   <div className="owner-qr-person__code">
                     <span className="owner-qr-person__monogram" aria-hidden="true">
@@ -178,8 +162,7 @@ export function StylistQrGallery({
                     startIcon={<Download className="h-4 w-4" />}
                     disabled={!item.payload}
                     onClick={() =>
-                      item.payload &&
-                      downloadQrSvg(item.payload, alt, `${salonName} ${item.name}`)
+                      item.payload && downloadQrSvg(item.payload, alt, `${salonName} ${item.name}`)
                     }
                   >
                     {t('owner.qr.downloadSvg')}
@@ -190,11 +173,7 @@ export function StylistQrGallery({
                     disabled={!item.payload}
                     onClick={() =>
                       item.payload &&
-                      void downloadQrPng(
-                        item.payload,
-                        alt,
-                        `${salonName} ${item.name}`,
-                      )
+                      void downloadQrPng(item.payload, alt, `${salonName} ${item.name}`)
                     }
                   >
                     {t('owner.qr.downloadPng')}

@@ -1,11 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-  cleanup,
-} from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import '../../i18n';
@@ -36,6 +30,7 @@ vi.mock('../../api/client', () => ({
 }));
 
 import { AuthPage } from '../AuthPage';
+import { ToastProvider } from '../../components/ui/Toast';
 
 const VALID_PHONE = '09123456789';
 
@@ -43,7 +38,9 @@ function renderAuth() {
   return render(
     <HelmetProvider>
       <MemoryRouter initialEntries={['/auth']}>
-        <AuthPage />
+        <ToastProvider>
+          <AuthPage />
+        </ToastProvider>
       </MemoryRouter>
     </HelmetProvider>,
   );
@@ -119,9 +116,7 @@ describe('AuthPage — Preservation: Phone normalization (Req 3.1)', () => {
     // Paste the 6-digit code and submit
     const first = screen.getByLabelText('رقم ۱ کد تایید') as HTMLInputElement;
     fireEvent.paste(first, { clipboardData: { getData: () => '123456' } });
-    await waitFor(() =>
-      expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('6'),
-    );
+    await waitFor(() => expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('6'));
     fireEvent.click(screen.getByRole('button', { name: 'تایید و ورود' }));
 
     await waitFor(() => {
@@ -273,9 +268,7 @@ describe('AuthPage — Preservation: RTL layout and chrome (Req 3.5)', () => {
     // Fill all boxes and submit
     const first = screen.getByLabelText('رقم ۱ کد تایید') as HTMLInputElement;
     fireEvent.paste(first, { clipboardData: { getData: () => '999999' } });
-    await waitFor(() =>
-      expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('9'),
-    );
+    await waitFor(() => expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('9'));
     fireEvent.click(screen.getByRole('button', { name: 'تایید و ورود' }));
 
     // Error alert appears

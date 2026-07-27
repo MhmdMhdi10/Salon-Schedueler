@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img">
+  <defs>
+    <linearGradient id="bg-salon-niloofar-1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#40241a"/><stop offset="1" stop-color="#7a4633"/>
+    </linearGradient>
+    <radialGradient id="glow-salon-niloofar-1" cx="0.5" cy="0.4" r="0.7">
+      <stop offset="0" stop-color="#f2cc8f" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#f2cc8f" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="arc-salon-niloofar-1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e07a5f" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#e07a5f" stop-opacity="0.35"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#bg-salon-niloofar-1)"/>
+    <circle cx="470" cy="150" r="130" fill="url(#glow-salon-niloofar-1)"/>
+    <path d="M120 360 L120 200 A90 90 0 0 1 300 200 L300 360 Z" fill="url(#arc-salon-niloofar-1)"/>
+    <path d="M160 360 L160 215 A50 50 0 0 1 260 215 L260 360 Z" fill="#f2cc8f" opacity="0.25"/>
+    <circle cx="470" cy="150" r="58" fill="none" stroke="#f2cc8f" stroke-width="2.5" opacity="0.7"/>
+    <circle cx="470" cy="150" r="40" fill="#e07a5f" opacity="0.35"/>
+</svg>

@@ -75,20 +75,11 @@ export function Motif({
     // A horizontal line with a small bloom centered on it.
     const fadeId = `motif-band-fade-${uid}`;
     return (
-      <svg
-        {...common}
-        viewBox="0 0 320 48"
-        preserveAspectRatio="xMidYMid meet"
-        data-motif="band"
-      >
+      <svg {...common} viewBox="0 0 320 48" preserveAspectRatio="xMidYMid meet" data-motif="band">
         <defs>
           <linearGradient id={fadeId} x1="0" y1="0" x2="1" y2="0">
             <stop offset="0" stopColor="var(--color-accent)" stopOpacity="0" />
-            <stop
-              offset="0.5"
-              stopColor="var(--color-accent)"
-              stopOpacity="0.55"
-            />
+            <stop offset="0.5" stopColor="var(--color-accent)" stopOpacity="0.55" />
             <stop offset="1" stopColor="var(--color-accent)" stopOpacity="0" />
           </linearGradient>
         </defs>
@@ -128,12 +119,7 @@ export function Motif({
 
   // `mark` — the logo-scale signature shape.
   return (
-    <svg
-      {...common}
-      viewBox="0 0 48 48"
-      preserveAspectRatio="xMidYMid meet"
-      data-motif="mark"
-    >
+    <svg {...common} viewBox="0 0 48 48" preserveAspectRatio="xMidYMid meet" data-motif="mark">
       <AraBloom idPrefix="mark" />
     </svg>
   );

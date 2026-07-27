@@ -50,34 +50,28 @@ const safeText = fc
 describe('Feature: signature-ui-system, Property 8: Brand mark uses the salon display identity', () => {
   it('renders displayName ?? name as the primary mark, platform identifier subordinate', () => {
     fc.assert(
-      fc.property(
-        safeText,
-        fc.option(safeText, { nil: undefined }),
-        (name, displayName) => {
-          cleanup();
-          renderFunnel({ salonName: name, displayName });
+      fc.property(safeText, fc.option(safeText, { nil: undefined }), (name, displayName) => {
+        cleanup();
+        renderFunnel({ salonName: name, displayName });
 
-          const expected = displayName ?? name;
-          const mark = document.querySelector('[data-funnel-brand-mark]');
-          expect(mark).not.toBeNull();
-          expect(mark?.textContent).toBe(expected);
+        const expected = displayName ?? name;
+        const mark = document.querySelector('[data-funnel-brand-mark]');
+        expect(mark).not.toBeNull();
+        expect(mark?.textContent).toBe(expected);
 
-          // The platform identifier is present but NOT the brand mark — it sits
-          // in a separate, subordinate byline element.
-          const platform = screen.getByText(PLATFORM_IDENTIFIER);
-          expect(platform).not.toBe(mark);
-          expect(mark?.textContent).not.toBe(PLATFORM_IDENTIFIER);
-        },
-      ),
+        // The platform identifier is present but NOT the brand mark — it sits
+        // in a separate, subordinate byline element.
+        const platform = screen.getByText(PLATFORM_IDENTIFIER);
+        expect(platform).not.toBe(mark);
+        expect(mark?.textContent).not.toBe(PLATFORM_IDENTIFIER);
+      }),
       { numRuns: 100 },
     );
   });
 
   it('falls back to the salon name when no display name is configured', () => {
     renderFunnel({ salonName: 'سالن رز' });
-    expect(
-      document.querySelector('[data-funnel-brand-mark]')?.textContent,
-    ).toBe('سالن رز');
+    expect(document.querySelector('[data-funnel-brand-mark]')?.textContent).toBe('سالن رز');
   });
 
   it('with no salon identity, shows only the platform identifier (no brand mark)', () => {

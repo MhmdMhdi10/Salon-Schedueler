@@ -6,6 +6,7 @@ import '../../i18n';
 import { renderRtl } from '../../test/a11y';
 import { CalendarPage } from './CalendarPage';
 import { adminApi } from '../../api/client';
+import { ToastProvider } from '../../components/ui/Toast';
 
 /**
  * Keyboard-navigation tests for the admin CalendarPage (R5.3).
@@ -90,7 +91,9 @@ function renderCalendar() {
   return renderRtl(
     <HelmetProvider>
       <MemoryRouter>
-        <CalendarPage salonId="salon-kb" />
+        <ToastProvider>
+          <CalendarPage salonId="salon-kb" />
+        </ToastProvider>
       </MemoryRouter>
     </HelmetProvider>,
   );
@@ -134,9 +137,7 @@ describe('CalendarPage — view-switch by keyboard', () => {
     dayTab.focus();
     fireEvent.keyDown(dayTab, { key: 'ArrowLeft' });
 
-    await waitFor(() =>
-      expect(weekTab).toHaveAttribute('aria-selected', 'true'),
-    );
+    await waitFor(() => expect(weekTab).toHaveAttribute('aria-selected', 'true'));
   });
 
   it('switches to the week view via keyboard and refetches it', async () => {
@@ -149,9 +150,7 @@ describe('CalendarPage — view-switch by keyboard', () => {
     // (automatic activation), which is exactly the keyboard experience.
     fireEvent.focus(weekTab);
 
-    await waitFor(() =>
-      expect(weekTab).toHaveAttribute('aria-selected', 'true'),
-    );
+    await waitFor(() => expect(weekTab).toHaveAttribute('aria-selected', 'true'));
     await waitFor(() =>
       expect(adminApi.getCalendar).toHaveBeenCalledWith(
         'salon-kb',
@@ -204,9 +203,7 @@ describe('CalendarPage — date navigation by keyboard (RTL)', () => {
 describe('CalendarPage — grid cell focus with RTL-correct arrow keys', () => {
   /** The cell at [row, col] within the day grid. */
   function cell(container: HTMLElement, row: number, col: number): HTMLElement {
-    const el = container.querySelector(
-      `[role="gridcell"][data-row="${row}"][data-col="${col}"]`,
-    );
+    const el = container.querySelector(`[role="gridcell"][data-row="${row}"][data-col="${col}"]`);
     expect(el, `cell [${row}, ${col}] should exist`).toBeTruthy();
     return el as HTMLElement;
   }
@@ -242,9 +239,7 @@ describe('CalendarPage — grid cell focus with RTL-correct arrow keys', () => {
 
     // End jumps to the last row + last column; Home returns to [0, 0].
     fireEvent.keyDown(grid, { key: 'End' });
-    const lastCellTabIndex = rtlContainer.querySelectorAll(
-      '[role="gridcell"][tabindex="0"]',
-    );
+    const lastCellTabIndex = rtlContainer.querySelectorAll('[role="gridcell"][tabindex="0"]');
     expect(lastCellTabIndex).toHaveLength(1);
     expect(lastCellTabIndex[0]).toHaveFocus();
     expect(lastCellTabIndex[0]).toHaveAttribute('data-col', '1');
@@ -276,9 +271,7 @@ describe('CalendarPage — reduced-motion preference', () => {
     stubReducedMotion();
 
     // Confirm the preference is observable to the component tree.
-    expect(
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-    ).toBe(true);
+    expect(window.matchMedia('(prefers-reduced-motion: reduce)').matches).toBe(true);
 
     const { rtlContainer } = renderCalendar();
     await waitForDayGrid();

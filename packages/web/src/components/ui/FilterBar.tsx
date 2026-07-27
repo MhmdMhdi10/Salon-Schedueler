@@ -7,13 +7,24 @@ import { cn } from './cn';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type SortOption = 'rating' | 'distance' | 'price';
+/**
+ * Sort orders the discovery surface actually implements. `distance` is
+ * deliberately absent until geolocation ships — a sort chip that visibly
+ * activates but reorders nothing erodes trust in every other filter.
+ */
+export type SortOption = 'rating' | 'price';
 
 export interface FilterBarProps {
-  /** Available service type slugs to filter by (e.g. ['haircut', 'color', 'makeup']). */
+  /** Available service type slugs to filter by (e.g. ['hair', 'nails']). */
   serviceTypes: string[];
   /** Display labels for each service type slug, keyed by slug. */
   serviceTypeLabels?: Record<string, string>;
+  /**
+   * Presentation: `bar` (default) is the sticky toolbar with its own border
+   * and backdrop; `panel` is a plain block for embedding inside a Sheet/
+   * popover that already owns the surface chrome.
+   */
+  variant?: 'bar' | 'panel';
   /** Custom className for the outer wrapper. */
   className?: string;
 }
@@ -26,7 +37,7 @@ const PARAM_SORT = 'sort';
 
 // ─── Sort options list ───────────────────────────────────────────────────────
 
-const SORT_OPTIONS: SortOption[] = ['rating', 'distance', 'price'];
+const SORT_OPTIONS: SortOption[] = ['rating', 'price'];
 const RATING_OPTIONS = [3, 4, 5];
 
 // ─── Animation Variants ──────────────────────────────────────────────────────
@@ -64,7 +75,7 @@ const collapseTransition = {
  * Features:
  * - Service type chips (single-select, clearable)
  * - Minimum rating filter (3+, 4+, 5 stars)
- * - Sort order (rating, distance, price)
+ * - Sort order (rating, price)
  * - Clear-all button when any filter is active
  * - Chips animate in/out with Framer Motion `AnimatePresence`
  * - Respects `prefers-reduced-motion`
@@ -80,7 +91,12 @@ const collapseTransition = {
  * />
  * ```
  */
-export function FilterBar({ serviceTypes, serviceTypeLabels, className }: FilterBarProps) {
+export function FilterBar({
+  serviceTypes,
+  serviceTypeLabels,
+  variant = 'bar',
+  className,
+}: FilterBarProps) {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const prefersReduced = useReducedMotion();
@@ -143,12 +159,7 @@ export function FilterBar({ serviceTypes, serviceTypeLabels, className }: Filter
   }, [setSearchParams]);
 
   // ── Chip renderer ──
-  const renderChip = (
-    label: string,
-    isActive: boolean,
-    onPress: () => void,
-    key: string,
-  ) => (
+  const renderChip = (label: string, isActive: boolean, onPress: () => void, key: string) => (
     <motion.button
       key={key}
       type="button"
@@ -173,13 +184,7 @@ export function FilterBar({ serviceTypes, serviceTypeLabels, className }: Filter
       )}
     >
       {label}
-      {isActive && (
-        <X
-          size={14}
-          aria-hidden="true"
-          className="shrink-0"
-        />
-      )}
+      {isActive && <X size={14} aria-hidden="true" className="shrink-0" />}
     </motion.button>
   );
 
@@ -226,9 +231,7 @@ export function FilterBar({ serviceTypes, serviceTypeLabels, className }: Filter
   return (
     <div
       className={cn(
-        'sticky top-0 z-sticky',
-        'border-b border-border bg-bg/95 backdrop-blur-sm',
-        'px-4 py-3',
+        variant === 'bar' && 'sticky top-0 z-sticky border-b border-border bg-bg/95 px-4 py-3 backdrop-blur-sm',
         className,
       )}
       role="toolbar"
@@ -268,7 +271,7 @@ export function FilterBar({ serviceTypes, serviceTypeLabels, className }: Filter
             )}
           </AnimatePresence>
 
-          {/* Expand/collapse toggle — visible only on mobile */}
+          {/* Expand/collapse toggle — visible only on mobile (bar variant) */}
           <button
             type="button"
             onClick={() => setExpanded((prev) => !prev)}
@@ -276,6 +279,7 @@ export function FilterBar({ serviceTypes, serviceTypeLabels, className }: Filter
             aria-controls="filter-bar-expandable"
             className={cn(
               'inline-flex items-center gap-1 md:hidden',
+              variant === 'panel' && 'hidden',
               'min-h-[44px] min-w-[44px] px-3 py-2',
               'rounded-pill text-sm font-medium',
               'text-muted bg-transparent border border-border',
@@ -297,20 +301,17 @@ export function FilterBar({ serviceTypes, serviceTypeLabels, className }: Filter
       </div>
 
       {/* Always-visible first row of chips */}
-      <AnimatePresence mode="popLayout">
-        {firstRowContent}
-      </AnimatePresence>
+      <AnimatePresence mode="popLayout">{firstRowContent}</AnimatePresence>
 
-      {/* Service type chips — always visible on md+, expandable on mobile */}
-      <div className="hidden md:block mt-2">
-        <AnimatePresence mode="popLayout">
-          {expandableContent}
-        </AnimatePresence>
+      {/* Service type chips — always visible on md+ (and always in a panel),
+          expandable on mobile in the bar variant */}
+      <div className={cn('mt-2', variant === 'panel' ? 'block' : 'hidden md:block')}>
+        <AnimatePresence mode="popLayout">{expandableContent}</AnimatePresence>
       </div>
 
-      {/* Mobile collapsible section */}
+      {/* Mobile collapsible section (bar variant only) */}
       <AnimatePresence>
-        {expanded && (
+        {variant === 'bar' && expanded && (
           <motion.div
             id="filter-bar-expandable"
             variants={prefersReduced ? undefined : collapseVariants}

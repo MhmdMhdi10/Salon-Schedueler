@@ -56,13 +56,7 @@ describe('ServiceCardList', () => {
   });
 
   it('marks selected card with aria-checked', () => {
-    render(
-      <ServiceCardList
-        services={mockServices}
-        value="svc-2"
-        onValueChange={() => {}}
-      />,
-    );
+    render(<ServiceCardList services={mockServices} value="svc-2" onValueChange={() => {}} />);
 
     const radios = screen.getAllByRole('radio');
     expect(radios[0]).toHaveAttribute('aria-checked', 'false');
@@ -72,13 +66,7 @@ describe('ServiceCardList', () => {
 
   it('calls onValueChange when a card is clicked', () => {
     const onChange = vi.fn();
-    render(
-      <ServiceCardList
-        services={mockServices}
-        value=""
-        onValueChange={onChange}
-      />,
-    );
+    render(<ServiceCardList services={mockServices} value="" onValueChange={onChange} />);
 
     fireEvent.click(screen.getByText('رنگ مو'));
     expect(onChange).toHaveBeenCalledWith('svc-2');
@@ -99,26 +87,14 @@ describe('ServiceCardList', () => {
   });
 
   it('groups services by category when categories are provided', () => {
-    render(
-      <ServiceCardList
-        services={mockGroupedServices}
-        value=""
-        onValueChange={() => {}}
-      />,
-    );
+    render(<ServiceCardList services={mockGroupedServices} value="" onValueChange={() => {}} />);
 
     expect(screen.getByText('مو')).toBeInTheDocument();
     expect(screen.getByText('صورت')).toBeInTheDocument();
   });
 
   it('applies selected styles (border-primary) to the active card', () => {
-    render(
-      <ServiceCardList
-        services={mockServices}
-        value="svc-1"
-        onValueChange={() => {}}
-      />,
-    );
+    render(<ServiceCardList services={mockServices} value="svc-1" onValueChange={() => {}} />);
 
     const selectedRadio = screen.getAllByRole('radio')[0];
     expect(selectedRadio.className).toContain('border-primary');
@@ -126,11 +102,7 @@ describe('ServiceCardList', () => {
 
   it('renders checkmark for selected service', () => {
     const { container } = render(
-      <ServiceCardList
-        services={mockServices}
-        value="svc-1"
-        onValueChange={() => {}}
-      />,
+      <ServiceCardList services={mockServices} value="svc-1" onValueChange={() => {}} />,
     );
 
     // Checkmark is rendered as a circle with Check icon
@@ -140,11 +112,7 @@ describe('ServiceCardList', () => {
 
   it('does not render checkmark for unselected services', () => {
     const { container } = render(
-      <ServiceCardList
-        services={mockServices}
-        value="svc-1"
-        onValueChange={() => {}}
-      />,
+      <ServiceCardList services={mockServices} value="svc-1" onValueChange={() => {}} />,
     );
 
     // Only one checkmark should exist (for the selected service)

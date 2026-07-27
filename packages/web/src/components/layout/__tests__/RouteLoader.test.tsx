@@ -46,9 +46,7 @@ describe('RouteLoader', () => {
     expect(screen.getByTestId(ROUTE_LOADER_TESTID)).toBeInTheDocument();
 
     // Then the resolved chunk replaces it.
-    await waitFor(() =>
-      expect(screen.getByTestId('lazy-page')).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByTestId('lazy-page')).toBeInTheDocument());
     expect(screen.queryByTestId(ROUTE_LOADER_TESTID)).not.toBeInTheDocument();
   });
 

@@ -14,14 +14,7 @@ import {
 import { adminApi } from '../../api/client';
 import { useSalonId } from '../../auth/useSalonId';
 import { SeoHead } from '../../components/seo';
-import {
-  Card,
-  CardContent,
-  ErrorState,
-  Money,
-  Num,
-  Skeleton,
-} from '../../components/ui';
+import { Card, CardContent, ErrorState, Money, Num, Skeleton } from '../../components/ui';
 import { AnimatedCounter } from '../../components/ui/AnimatedCounter';
 import { containerVariants, itemVariants } from '../../lib/motion-variants';
 import type { ChartDatum } from '../admin/AnalyticsChart';
@@ -203,11 +196,7 @@ function MetricCard({
               className={`inline-flex items-center gap-0.5 text-xs font-medium ${
                 trend > 0 ? 'text-success' : 'text-danger'
               }`}
-              aria-label={
-                trend > 0
-                  ? t('owner.analytics.trendUp')
-                  : t('owner.analytics.trendDown')
-              }
+              aria-label={trend > 0 ? t('owner.analytics.trendUp') : t('owner.analytics.trendDown')}
             >
               {trend > 0 ? (
                 <TrendingUp className="w-3.5 h-3.5" aria-hidden="true" />
@@ -222,9 +211,7 @@ function MetricCard({
         {/* Big number with counter animation */}
         <CardContent className="flex flex-col gap-1">
           {value == null ? (
-            <p className="text-xl font-bold text-muted">
-              {t('admin.analyticsPage.noData')}
-            </p>
+            <p className="text-xl font-bold text-muted">{t('admin.analyticsPage.noData')}</p>
           ) : isRial ? (
             <div className="whitespace-nowrap text-[clamp(1.25rem,2vw,1.75rem)] font-bold tabular-nums [font-feature-settings:'tnum'] text-text">
               <Money amountRial={value} />
@@ -239,9 +226,7 @@ function MetricCard({
             />
           )}
 
-          {detail && (
-            <p className="text-xs text-muted mt-1">{detail}</p>
-          )}
+          {detail && <p className="text-xs text-muted mt-1">{detail}</p>}
         </CardContent>
       </Card>
     </motion.div>
@@ -333,12 +318,8 @@ export function OwnerAnalyticsPageContent({ salonId: salonIdProp }: { salonId?: 
 
       {/* Page header */}
       <header className="flex flex-col gap-1">
-        <h1 className="text-xl font-bold text-text text-display">
-          {t('admin.analytics')}
-        </h1>
-        <p className="max-w-[60ch] text-sm text-muted">
-          {t('admin.analyticsPage.subtitle')}
-        </p>
+        <h1 className="text-xl font-bold text-text text-display">{t('admin.analytics')}</h1>
+        <p className="max-w-[60ch] text-sm text-muted">{t('admin.analyticsPage.subtitle')}</p>
       </header>
 
       {status === 'loading' && <OwnerAnalyticsSkeleton />}
@@ -369,9 +350,7 @@ export function OwnerAnalyticsPageContent({ salonId: salonIdProp }: { salonId?: 
               icon={<Percent className="h-4 w-4" />}
               label={t('admin.analyticsPage.kpi.utilizationTitle')}
               value={
-                model.utilization.ratio != null
-                  ? Math.round(model.utilization.ratio * 100)
-                  : null
+                model.utilization.ratio != null ? Math.round(model.utilization.ratio * 100) : null
               }
               suffix="٪"
               detail={
@@ -427,20 +406,10 @@ export function OwnerAnalyticsPageContent({ salonId: salonIdProp }: { salonId?: 
           </motion.section>
 
           {/* ── Chart Section (lazy-loaded) ────────────────────────────── */}
-          <motion.div
-            variants={itemVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            <Card
-              as="section"
-              className="flex flex-col gap-4 p-5 border border-border"
-            >
+          <motion.div variants={itemVariants} initial="hidden" animate="visible">
+            <Card as="section" className="flex flex-col gap-4 p-5 border border-border">
               <div className="flex items-center gap-2">
-                <BarChart3
-                  className="h-5 w-5 text-primary"
-                  aria-hidden="true"
-                />
+                <BarChart3 className="h-5 w-5 text-primary" aria-hidden="true" />
                 <h2 className="text-lg font-bold text-text text-display">
                   {t('admin.analyticsPage.chart.title')}
                 </h2>
@@ -496,10 +465,7 @@ export function OwnerAnalyticsPageContent({ salonId: salonIdProp }: { salonId?: 
                       />
                     }
                   >
-                    <AnalyticsChart
-                      data={chartData}
-                      tableId="owner-analytics-busiest-table"
-                    />
+                    <AnalyticsChart data={chartData} tableId="owner-analytics-busiest-table" />
                   </Suspense>
                 </>
               )}

@@ -26,20 +26,14 @@ describe('JalaliDatePicker', () => {
   });
 
   it('shows the selected date as a Jalali string', () => {
-    render(
-      <JalaliDatePicker value="2025-05-07" onChange={() => {}} label="تاریخ" />,
-    );
+    render(<JalaliDatePicker value="2025-05-07" onChange={() => {}} label="تاریخ" />);
     // 2025-05-07 → چهارشنبه ۱۷ اردیبهشت ۱۴۰۴.
-    expect(screen.getByRole('button', { name: /تاریخ/ })).toHaveTextContent(
-      /۱۷ اردیبهشت ۱۴۰۴/,
-    );
+    expect(screen.getByRole('button', { name: /تاریخ/ })).toHaveTextContent(/۱۷ اردیبهشت ۱۴۰۴/);
   });
 
   it('opens the calendar dialog and selecting a day emits an ISO date', async () => {
     const onChange = vi.fn();
-    render(
-      <JalaliDatePicker value="2025-05-07" onChange={onChange} label="تاریخ" />,
-    );
+    render(<JalaliDatePicker value="2025-05-07" onChange={onChange} label="تاریخ" />);
     fireEvent.click(screen.getByRole('button', { name: /تاریخ/ }));
     const grid = await screen.findByRole('grid');
     expect(grid).toBeInTheDocument();
@@ -54,9 +48,7 @@ describe('JalaliDatePicker', () => {
   });
 
   it('mirrors the directional month-navigation chevrons (prev/next) under RTL', async () => {
-    renderRtl(
-      <JalaliDatePicker value="2025-05-07" onChange={() => {}} label="تاریخ" />,
-    );
+    renderRtl(<JalaliDatePicker value="2025-05-07" onChange={() => {}} label="تاریخ" />);
     fireEvent.click(screen.getByRole('button', { name: /تاریخ/ }));
     const dialog = await screen.findByRole('dialog');
     await screen.findByRole('grid');
@@ -71,9 +63,7 @@ describe('JalaliDatePicker', () => {
     const monthLabel = within(dialog).getByText(/اردیبهشت/);
     fireEvent.click(next);
     // Advancing a month moves to خرداد.
-    await waitFor(() =>
-      expect(within(dialog).getByText(/خرداد/)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(within(dialog).getByText(/خرداد/)).toBeInTheDocument());
     expect(monthLabel).not.toHaveTextContent('اردیبهشت');
   });
 

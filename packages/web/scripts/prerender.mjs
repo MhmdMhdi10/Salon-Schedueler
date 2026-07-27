@@ -82,13 +82,13 @@ import {
   DEFAULT_SITE_URL,
   STATIC_INDEXABLE_PATHS,
   resolveSiteUrl,
+  warnIfPlaceholder,
   absoluteUrl,
   salonPath,
   cityPath,
   servicePath,
-  readSalons,
-  readDiscovery,
 } from './generate-sitemap.mjs';
+import { loadSiteData } from './site-data.mjs';
 
 export { DEFAULT_SITE_URL, STATIC_INDEXABLE_PATHS };
 
@@ -200,9 +200,11 @@ export function homeJsonLd(siteUrl) {
 
 /**
  * `BeautySalon` + `BreadcrumbList` (+ `Service` per offering when present)
- * JSON-LD for a salon profile (seo §5). Only fields actually known at build
- * time are emitted — we never fabricate address/geo/reviews (seo §5 honesty
- * rule); richer markup arrives with the real profile data (task 5.2).
+ * JSON-LD for a salon profile (seo §5). Only fields actually present in the
+ * salon's own data are emitted — we never fabricate address/geo/reviews
+ * (seo §5 honesty rule). With the route data now loaded straight from
+ * `src/data/salons.ts`, the NAP here mirrors the visible page block and the
+ * client `buildSalonJsonLd()` (seo §11 — NAP identical everywhere).
  */
 export function salonJsonLd(salon, siteUrl) {
   const name = salon.name || slugToName(salon.slug);
@@ -214,8 +216,43 @@ export function salonJsonLd(salon, siteUrl) {
     name,
     url,
   };
-  if (salon.image) beautySalon.image = salon.image;
+  if (salon.image) {
+    beautySalon.image = /^https?:\/\//i.test(salon.image)
+      ? salon.image
+      : `${siteUrl}${salon.image}`;
+  }
   if (salon.telephone) beautySalon.telephone = salon.telephone;
+  if (salon.priceRange) beautySalon.priceRange = salon.priceRange;
+  if (salon.address && salon.address.streetAddress) {
+    beautySalon.address = {
+      '@type': 'PostalAddress',
+      streetAddress: salon.address.streetAddress,
+      addressLocality: salon.address.addressLocality,
+      addressRegion: salon.address.addressRegion,
+      addressCountry: salon.address.addressCountry,
+    };
+  }
+  if (
+    salon.geo &&
+    typeof salon.geo.latitude === 'number' &&
+    typeof salon.geo.longitude === 'number'
+  ) {
+    beautySalon.geo = {
+      '@type': 'GeoCoordinates',
+      latitude: salon.geo.latitude,
+      longitude: salon.geo.longitude,
+    };
+  }
+  if (Array.isArray(salon.openingHours) && salon.openingHours.length > 0) {
+    beautySalon.openingHoursSpecification = salon.openingHours
+      .filter((h) => h && h.day && !h.closed && h.opens && h.closes)
+      .map((h) => ({
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: h.day,
+        opens: h.opens,
+        closes: h.closes,
+      }));
+  }
 
   const breadcrumb = {
     '@context': 'https://schema.org',
@@ -380,49 +417,148 @@ export function buildRoutes({ siteUrl, salons = [], cities = [], serviceTypes = 
 }
 
 /**
+ * Prerendered **noindex** shells that are deliberately NOT in the sitemap
+ * (`buildRoutes` stays the exact sitemap mirror the tests pin):
+ *
+ *  - `/search` — the home hero submits here. Without its own prerendered file a
+ *    non-JS crawler fetching `/search` would receive the HOME document (robots
+ *    `index,follow` + the home canonical) via the SPA fallback — exactly the
+ *    conflicting-signal problem this step exists to prevent. The shell carries
+ *    `noindex,follow` and no canonical; robots.txt additionally disallows it.
+ *
+ *  - `404.html` — the hosting fallback document for unknown URLs. It is the
+ *    same Vite template (so React mounts and renders `NotFoundPage` for
+ *    whatever URL was requested) but its initial HTML asserts `noindex,follow`
+ *    and shows the not-found scaffold instead of the home page's content. See
+ *    {@link SERVER_REWRITE_NOTE} for how hosts should serve it.
+ */
+export function buildNoindexRoutes() {
+  return [
+    {
+      path: '/search',
+      outputPath: 'search/index.html',
+      title: 'جستجوی سالن‌ها',
+      heading: 'جستجوی سالن‌ها',
+      description:
+        'جستجوی خدمت، سالن یا شهر — نتایج با بارگذاری برنامه نمایش داده می‌شوند.',
+      robots: 'noindex,follow',
+      ogType: 'website',
+      jsonLd: [],
+      links: [
+        { href: '/', text: 'بازگشت به خانه' },
+        { href: '/city/tehran', text: 'سالن‌های تهران' },
+      ],
+    },
+    {
+      path: '/404',
+      outputPath: '404.html',
+      title: 'صفحه پیدا نشد',
+      heading: 'این صفحه پیدا نشد',
+      description:
+        'آدرسی که وارد کرده‌اید وجود ندارد یا جابه‌جا شده است. از پیوندهای زیر ادامه دهید.',
+      robots: 'noindex,follow',
+      ogType: 'website',
+      jsonLd: [],
+      links: [
+        { href: '/', text: 'بازگشت به خانه' },
+        { href: '/search', text: 'جستجوی سالن‌ها' },
+        { href: '/business', text: 'ثبت سالن' },
+      ],
+    },
+  ];
+}
+
+/**
  * Renders the `<head>` SEO tags for a route (everything the crawler must see in
- * the initial HTML): canonical, robots `index,follow`, hreflang self-reference
- * + `x-default`, and the Open Graph / Twitter card set (seo §3, §4, §6). Title
- * is handled separately by template substitution.
+ * the initial HTML): canonical, robots, hreflang self-reference + `x-default`,
+ * and the Open Graph / Twitter card set (seo §3, §4, §6). Title is handled
+ * separately by template substitution.
+ *
+ * Every tag carries a bare `data-prerender` attribute so `src/main.tsx` can
+ * remove the whole static set just before React mounts — after hydration
+ * `react-helmet-async` owns the head exclusively, and the DOM never holds two
+ * conflicting canonicals/robots/OG sets (the duplication a JS-rendering crawler
+ * would otherwise index).
+ *
+ * Routes with `robots: 'noindex,follow'` (the prerendered `/search` shell and
+ * the `404.html` hosting fallback) emit ONLY title/description/robots — no
+ * canonical, hreflang, OG, or JSON-LD, since those pages must carry no indexing
+ * signals (a canonical on the 404 fallback document would be actively wrong
+ * when a host serves it for arbitrary unknown URLs).
  */
 export function renderHeadTags(route, siteUrl) {
   const fullTitle = pageTitle(route.title);
+  const robots = route.robots || 'index,follow';
+  const lines = [
+    `<meta data-prerender name="description" content="${escapeHtml(route.description)}" />`,
+    `<meta data-prerender name="robots" content="${robots}" />`,
+  ];
+
+  if (robots.startsWith('noindex')) {
+    return lines.map((l) => `  ${l}`).join('\n');
+  }
+
   const image = `${siteUrl}${DEFAULT_OG_IMAGE_PATH}`;
   const c = route.canonical;
-  const lines = [
-    `<meta name="description" content="${escapeHtml(route.description)}" />`,
-    `<meta name="robots" content="index,follow" />`,
-    `<link rel="canonical" href="${escapeHtml(c)}" />`,
-    `<link rel="alternate" hreflang="fa" href="${escapeHtml(c)}" />`,
-    `<link rel="alternate" hreflang="fa-IR" href="${escapeHtml(c)}" />`,
-    `<link rel="alternate" hreflang="x-default" href="${escapeHtml(siteUrl)}" />`,
-    `<meta property="og:type" content="${escapeHtml(route.ogType)}" />`,
-    `<meta property="og:site_name" content="${escapeHtml(SITE_NAME)}" />`,
-    `<meta property="og:locale" content="${OG_LOCALE}" />`,
-    `<meta property="og:title" content="${escapeHtml(fullTitle)}" />`,
-    `<meta property="og:description" content="${escapeHtml(route.description)}" />`,
-    `<meta property="og:url" content="${escapeHtml(c)}" />`,
-    `<meta property="og:image" content="${escapeHtml(image)}" />`,
-    `<meta property="og:image:width" content="1200" />`,
-    `<meta property="og:image:height" content="630" />`,
-    `<meta name="twitter:card" content="summary_large_image" />`,
-    `<meta name="twitter:title" content="${escapeHtml(fullTitle)}" />`,
-    `<meta name="twitter:description" content="${escapeHtml(route.description)}" />`,
-    `<meta name="twitter:image" content="${escapeHtml(image)}" />`,
-  ];
+  lines.push(
+    `<link data-prerender rel="canonical" href="${escapeHtml(c)}" />`,
+    `<link data-prerender rel="alternate" hreflang="fa" href="${escapeHtml(c)}" />`,
+    `<link data-prerender rel="alternate" hreflang="fa-IR" href="${escapeHtml(c)}" />`,
+    `<link data-prerender rel="alternate" hreflang="x-default" href="${escapeHtml(siteUrl)}" />`,
+    `<meta data-prerender property="og:type" content="${escapeHtml(route.ogType)}" />`,
+    `<meta data-prerender property="og:site_name" content="${escapeHtml(SITE_NAME)}" />`,
+    `<meta data-prerender property="og:locale" content="${OG_LOCALE}" />`,
+    `<meta data-prerender property="og:title" content="${escapeHtml(fullTitle)}" />`,
+    `<meta data-prerender property="og:description" content="${escapeHtml(route.description)}" />`,
+    `<meta data-prerender property="og:url" content="${escapeHtml(c)}" />`,
+    `<meta data-prerender property="og:image" content="${escapeHtml(image)}" />`,
+    `<meta data-prerender property="og:image:width" content="1200" />`,
+    `<meta data-prerender property="og:image:height" content="630" />`,
+    `<meta data-prerender name="twitter:card" content="summary_large_image" />`,
+    `<meta data-prerender name="twitter:title" content="${escapeHtml(fullTitle)}" />`,
+    `<meta data-prerender name="twitter:description" content="${escapeHtml(route.description)}" />`,
+    `<meta data-prerender name="twitter:image" content="${escapeHtml(image)}" />`,
+  );
   for (const node of route.jsonLd) {
     lines.push(
-      `<script type="application/ld+json">${serializeJsonLd(node)}</script>`,
+      `<script data-prerender type="application/ld+json">${serializeJsonLd(node)}</script>`,
     );
   }
   return lines.map((l) => `  ${l}`).join('\n');
 }
 
 /**
+ * Scoped styles for the pre-hydration scaffold, injected into `<head>` with the
+ * other `data-prerender` tags (and removed with them when React mounts). The
+ * rules consume the design tokens from the built stylesheet (`--color-*`,
+ * `--font-family-sans` from tokens.css, which IS linked in the template), so on
+ * a slow connection the crawlable scaffold paints in the brand type/palette —
+ * centered, height-reserving — instead of flashing browser-default serif text.
+ * All values are CSS custom properties except structural literals, which live
+ * in this build script (never authored `src/**` styles), outside the
+ * distinctiveness guardrail's scan scope.
+ */
+export const PRERENDER_STYLE = `<style data-prerender>
+  .prerender-content{min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:var(--color-bg);color:var(--color-text);font-family:var(--font-family-sans)}
+  .prerender-content main{max-width:40rem;padding:var(--space-6,32px) var(--space-4,16px);text-align:center}
+  .prerender-content h1{font-size:var(--font-xl);font-weight:var(--font-weight-display,800);
+    line-height:var(--line-height-display,1.2);margin:0 0 var(--space-4,16px)}
+  .prerender-content p{font-size:var(--font-xs);line-height:1.8;color:var(--color-text-muted);
+    margin:0 0 var(--space-5,24px)}
+  .prerender-content nav ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;
+    gap:var(--space-3,12px);justify-content:center}
+  .prerender-content nav a{display:inline-block;padding:var(--space-2,8px) var(--space-4,16px);
+    border:1px solid var(--color-border);border-radius:999px;color:var(--color-primary);
+    text-decoration:none;font-size:var(--font-xs)}
+</style>`;
+
+/**
  * Renders the in-`#root` body content: a semantic SEO scaffold with a single
  * `<h1>`, the description, and crawlable internal links inside the existing
  * `header`/`main`/`footer` landmark contract. React replaces this on mount; it
- * exists so View Source / non-JS crawlers see real content (seo §2, §8).
+ * exists so View Source / non-JS crawlers see real content (seo §2, §8), and
+ * {@link PRERENDER_STYLE} keeps it on-brand until hydration.
  */
 export function renderBody(route) {
   const linkItems = route.links
@@ -461,7 +597,10 @@ export function injectIntoTemplate(template, route, siteUrl) {
   );
 
   const headTags = renderHeadTags(route, siteUrl);
-  html = html.replace(/<\/head>/, () => `${headTags}\n</head>`);
+  html = html.replace(
+    /<\/head>/,
+    () => `${headTags}\n  ${PRERENDER_STYLE}\n</head>`,
+  );
 
   const body = renderBody(route);
   html = html.replace(
@@ -475,23 +614,38 @@ export function injectIntoTemplate(template, route, siteUrl) {
 /** Example server config the deployment can reuse for the deep-link rewrite. */
 export const SERVER_REWRITE_NOTE = `# Deep-link rewrite for prerendered public routes (seo §7, §8).
 # Serve the matching prerendered file when it exists; fall back to the SPA
-# shell (index.html) only for the noindex app/admin/funnel routes.
+# document only for routes without their own file.
+#
+# The build emits /404.html — the same app shell with a noindex head and a
+# not-found scaffold. Use IT (not index.html) as the unknown-URL fallback so
+# React still mounts (and renders NotFoundPage for the requested URL) while
+# crawlers see noindex instead of the home document. Known noindex app routes
+# (auth, /salon/:id/book funnel, /qr, /owner) also land on this fallback; their
+# client <SeoHead> keeps them noindex either way.
 #
 # Nginx:
-#   location / { try_files $uri $uri/ $uri/index.html /index.html; }
+#   location / { try_files $uri $uri/ $uri/index.html /404.html; }
 #
 # Caddy:
-#   try_files {path} {path}/ {path}/index.html /index.html
+#   try_files {path} {path}/ {path}/index.html /404.html
+#
+# Netlify/static hosts that only support an index.html SPA fallback: keep the
+# index.html fallback — NotFoundPage still renders after hydration; 404.html is
+# then only used by hosts (GitHub Pages, S3 error document) that pick it up
+# automatically.
 #
 # Pick one canonical host (apex OR www) and 301 the other so every absolute
 # canonical resolves to a 200.`;
 
-/** CLI entry: read the built template + salon list, prerender every public route. */
-export function main() {
+/**
+ * CLI entry: read the built template + the route data from the app source
+ * (src/data via `site-data.mjs`), prerender every public route plus the
+ * noindex `/search` and `404.html` shells.
+ */
+export async function main() {
   const here = dirname(fileURLToPath(import.meta.url));
   const distDir = resolve(here, '../dist');
   const templatePath = resolve(distDir, 'index.html');
-  const salonsPath = resolve(here, 'salons.json');
 
   // Read the pristine Vite template ONCE up front; reuse it for every route so
   // overwriting dist/index.html (the home output) can't double-inject.
@@ -508,11 +662,11 @@ export function main() {
   }
 
   const siteUrl = resolveSiteUrl();
-  const salons = readSalons(salonsPath);
-  const { cities, serviceTypes } = readDiscovery(
-    resolve(here, 'discovery.json'),
-  );
-  const routes = buildRoutes({ siteUrl, salons, cities, serviceTypes });
+  const { salons, cities, serviceTypes } = await loadSiteData();
+  const routes = [
+    ...buildRoutes({ siteUrl, salons, cities, serviceTypes }),
+    ...buildNoindexRoutes(),
+  ];
 
   for (const route of routes) {
     const outPath = resolve(distDir, route.outputPath);
@@ -520,14 +674,16 @@ export function main() {
     writeFileSync(outPath, injectIntoTemplate(template, route, siteUrl), 'utf-8');
   }
 
+  warnIfPlaceholder(siteUrl, 'prerender');
   // eslint-disable-next-line no-console
   console.log(
     `[prerender] wrote ${routes.length} static pages ` +
-      `(${STATIC_INDEXABLE_PATHS.length} static + ${routes.length - STATIC_INDEXABLE_PATHS.length} dynamic, host ${siteUrl})`,
+      `(${STATIC_INDEXABLE_PATHS.length} static + ${salons.length} salon + ` +
+      `${cities.length} city + ${serviceTypes.length} service + 2 noindex shells, host ${siteUrl})`,
   );
 }
 
 // Run only when invoked directly, not when imported by tests.
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
-  main();
+  await main();
 }

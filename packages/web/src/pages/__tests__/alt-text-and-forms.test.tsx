@@ -54,6 +54,7 @@ vi.mock('../../api/client', () => {
 import { AuthPage } from '../AuthPage';
 import { MarketingHome } from '../MarketingHome';
 import { SalonProfilePage } from '../SalonProfilePage';
+import { ToastProvider } from '../../components/ui/Toast';
 
 function wrap(ui: React.ReactElement, initialPath = '/') {
   return (
@@ -151,9 +152,7 @@ describe('Text alternatives — Avatar decorative vs labelled (R10.5)', () => {
 
 describe('Forms — programmatic labels & error identification (R10.6)', () => {
   it('TextField links a visible label and identifies errors programmatically', () => {
-    render(
-      <TextField label="شماره موبایل" error="شماره نامعتبر است" helperText="مثال ۰۹۱۲" />,
-    );
+    render(<TextField label="شماره موبایل" error="شماره نامعتبر است" helperText="مثال ۰۹۱۲" />);
     const input = screen.getByLabelText('شماره موبایل');
     // Error identification: aria-invalid + describedby → role=alert (text+icon).
     expect(input).toHaveAttribute('aria-invalid', 'true');
@@ -187,7 +186,14 @@ describe('Forms — programmatic labels & error identification (R10.6)', () => {
   });
 
   it('AuthPage phone field has a programmatic label and the OTP boxes are labelled', () => {
-    render(wrap(<AuthPage />, '/auth'));
+    render(
+      wrap(
+        <ToastProvider>
+          <AuthPage />
+        </ToastProvider>,
+        '/auth',
+      ),
+    );
     // Phone step: the input is reachable by its visible label.
     expect(screen.getByLabelText(/شماره موبایل/)).toBeInTheDocument();
   });

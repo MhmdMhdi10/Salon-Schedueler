@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img">
+  <defs>
+    <linearGradient id="bg-shahin-barbershop-2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#16181d"/><stop offset="1" stop-color="#2b313b"/>
+    </linearGradient>
+    <radialGradient id="glow-shahin-barbershop-2" cx="0.5" cy="0.4" r="0.7">
+      <stop offset="0" stop-color="#dee3ea" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#dee3ea" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="arc-shahin-barbershop-2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8d99ae" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#8d99ae" stop-opacity="0.35"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#bg-shahin-barbershop-2)"/>
+    <circle cx="180" cy="120" r="150" fill="url(#glow-shahin-barbershop-2)"/>
+    <circle cx="180" cy="120" r="86" fill="none" stroke="#dee3ea" stroke-width="2" opacity="0.6"/>
+    <circle cx="180" cy="120" r="64" fill="#8d99ae" opacity="0.3"/>
+    <path d="M380 360 L380 170 A80 80 0 0 1 540 170 L540 360 Z" fill="url(#arc-shahin-barbershop-2)"/>
+    <path d="M415 360 L415 185 A45 45 0 0 1 505 185 L505 360 Z" fill="#dee3ea" opacity="0.22"/>
+</svg>

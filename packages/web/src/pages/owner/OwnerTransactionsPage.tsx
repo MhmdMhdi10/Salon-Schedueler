@@ -135,9 +135,7 @@ export function OwnerTransactionsPage() {
               >
                 <div className="flex min-w-0 flex-col gap-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-text">
-                      {txLabel(tx)}
-                    </span>
+                    <span className="text-sm font-medium text-text">{txLabel(tx)}</span>
                     <Badge status={statusBadge(tx.status)}>
                       {statusLabel[tx.status] ?? tx.status}
                     </Badge>
@@ -154,7 +152,10 @@ export function OwnerTransactionsPage() {
                     )}
                   </span>
                 </div>
-                <Money amountRial={tx.amountRial} className="shrink-0 text-sm font-bold text-text" />
+                <Money
+                  amountRial={tx.amountRial}
+                  className="shrink-0 text-sm font-bold text-text"
+                />
               </li>
             ))}
           </ul>

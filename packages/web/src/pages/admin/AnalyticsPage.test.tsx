@@ -23,7 +23,7 @@ vi.mock('../../api/client', () => {
     constructor(
       public status: number,
       public code: string,
-      message: string
+      message: string,
     ) {
       super(message);
       this.name = 'ApiError';
@@ -57,7 +57,11 @@ afterEach(() => {
 
 describe('AnalyticsPage', () => {
   it('shows loading then renders utilization, revenue, and busiest-window KPI cards', async () => {
-    const analyticsD = deferred<{ utilization: unknown; revenue: unknown; busiestWindows: unknown }>();
+    const analyticsD = deferred<{
+      utilization: unknown;
+      revenue: unknown;
+      busiestWindows: unknown;
+    }>();
     vi.mocked(adminApi.getAnalytics).mockReturnValue(analyticsD.promise);
 
     render(
@@ -65,14 +69,14 @@ describe('AnalyticsPage', () => {
         <MemoryRouter>
           <AnalyticsPage salonId="salon-3" />
         </MemoryRouter>
-      </HelmetProvider>
+      </HelmetProvider>,
     );
 
     expect(screen.getByTestId('analytics-loading')).toBeTruthy();
     expect(adminApi.getAnalytics).toHaveBeenCalledWith(
       'salon-3',
       expect.any(String),
-      expect.any(String)
+      expect.any(String),
     );
 
     // The wire contract: utilization report, revenue { totalRial, count },
@@ -99,7 +103,11 @@ describe('AnalyticsPage', () => {
   });
 
   it('renders empty figures and an empty table when there is no data', async () => {
-    const analyticsD = deferred<{ utilization: unknown; revenue: unknown; busiestWindows: unknown }>();
+    const analyticsD = deferred<{
+      utilization: unknown;
+      revenue: unknown;
+      busiestWindows: unknown;
+    }>();
     vi.mocked(adminApi.getAnalytics).mockReturnValue(analyticsD.promise);
 
     render(
@@ -107,7 +115,7 @@ describe('AnalyticsPage', () => {
         <MemoryRouter>
           <AnalyticsPage salonId="salon-3" />
         </MemoryRouter>
-      </HelmetProvider>
+      </HelmetProvider>,
     );
 
     analyticsD.resolve({
@@ -121,7 +129,11 @@ describe('AnalyticsPage', () => {
   });
 
   it('shows an error state when analytics fails to load', async () => {
-    const analyticsD = deferred<{ utilization: unknown; revenue: unknown; busiestWindows: unknown }>();
+    const analyticsD = deferred<{
+      utilization: unknown;
+      revenue: unknown;
+      busiestWindows: unknown;
+    }>();
     vi.mocked(adminApi.getAnalytics).mockReturnValue(analyticsD.promise);
 
     render(
@@ -129,7 +141,7 @@ describe('AnalyticsPage', () => {
         <MemoryRouter>
           <AnalyticsPage salonId="salon-3" />
         </MemoryRouter>
-      </HelmetProvider>
+      </HelmetProvider>,
     );
 
     expect(screen.getByTestId('analytics-loading')).toBeTruthy();

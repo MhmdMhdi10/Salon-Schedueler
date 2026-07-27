@@ -40,38 +40,45 @@ const base = cn(
   'min-h-[44px] min-w-[44px]',
   'font-medium text-sm leading-none',
   'select-none whitespace-nowrap',
-  'transition-[background-color,border-color,color,box-shadow] duration-fast ease-standard',
+  'transition-[background-color,border-color,color,box-shadow,opacity] duration-fast ease-standard',
   'outline-none focus-visible:outline focus-visible:outline-2',
   'focus-visible:outline-offset-2 focus-visible:outline-focus',
+  // Booksy press feel: a 1px settle on :active (shared by every variant).
+  'active:translate-y-px',
   'disabled:cursor-not-allowed disabled:opacity-60',
 );
 
+// Radius communicates the interaction tier (Booksy §c): solid CTAs are the
+// signature pill; quieter secondary/ghost controls sit on the md radius so
+// they pair with IconButton. Declared per-variant — never in both size and
+// variant maps — so no conflicting radius classes are emitted.
 const sizeClasses: Record<ButtonSize, string> = {
-  md: 'px-5 py-2 rounded-pill',
-  lg: 'px-6 py-3 text-md rounded-pill',
+  md: 'px-5 py-2',
+  lg: 'px-6 py-3 text-md',
 };
 
 const variantClasses: Record<ButtonVariant, string> = {
-  // Text-bearing fills use the AA-safe primary shade from tokens. Booksy pill.
+  // Text-bearing fills use the AA-safe primary shade from tokens. Booksy pill;
+  // hover is the restrained opacity dip (directive §e tier 1).
   primary: cn(
-    'bg-primary text-primary-contrast shadow-1',
-    'hover:brightness-110 active:brightness-95',
-    'disabled:hover:brightness-100',
+    'rounded-pill bg-primary text-primary-contrast shadow-1',
+    'hover:opacity-90',
+    'disabled:hover:opacity-60',
   ),
   secondary: cn(
-    'bg-surface text-text border border-border rounded-md',
-    'hover:bg-elevated active:brightness-95',
+    'rounded-md bg-surface text-text border border-border',
+    'hover:bg-elevated',
     'disabled:hover:bg-surface',
   ),
   ghost: cn(
-    'bg-transparent text-text rounded-md',
-    'hover:bg-surface active:brightness-95',
+    'rounded-md bg-transparent text-text',
+    'hover:bg-surface',
     'disabled:hover:bg-transparent',
   ),
   danger: cn(
-    'bg-danger text-primary-contrast shadow-1',
-    'hover:brightness-110 active:brightness-95',
-    'disabled:hover:brightness-100',
+    'rounded-pill bg-danger text-primary-contrast shadow-1',
+    'hover:opacity-90',
+    'disabled:hover:opacity-60',
   ),
 };
 

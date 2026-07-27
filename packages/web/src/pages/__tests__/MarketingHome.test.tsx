@@ -4,6 +4,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import '../../i18n';
 import { MarketingHome } from '../MarketingHome';
+import { AppShell } from '../../components/layout/AppShell';
+import { ThemeProvider } from '../../components/theme';
 import { expectNoSeriousA11yViolations } from '../../test/a11y';
 import { SITE_URL } from '../../components/seo';
 
@@ -44,9 +46,7 @@ describe('MarketingHome', () => {
     expect(h1s).toHaveLength(1);
 
     // Primary CTA links to the auth/booking entry point.
-    const ctas = getAllByRole('link').filter(
-      (a) => a.getAttribute('href') === '/auth',
-    );
+    const ctas = getAllByRole('link').filter((a) => a.getAttribute('href') === '/auth');
     expect(ctas.length).toBeGreaterThan(0);
   });
 
@@ -100,12 +100,22 @@ describe('MarketingHome', () => {
     expect(decorativeLayers.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('exposes crawlable trust/legal links (R8.8)', () => {
-    const { getAllByRole } = renderHome();
-    const hrefs = getAllByRole('link').map((a) => a.getAttribute('href'));
-    expect(hrefs).toEqual(
-      expect.arrayContaining(['/about', '/contact', '/privacy', '/terms']),
+  it('exposes crawlable trust/legal links via the real page chrome (R8.8)', () => {
+    // The trust links live in the AppShell footer (rendered on every public
+    // page) — assert the real shipped composition, not sr-only stand-ins.
+    const { getAllByRole } = render(
+      <HelmetProvider>
+        <ThemeProvider defaultTheme="light">
+          <MemoryRouter initialEntries={['/']}>
+            <AppShell>
+              <MarketingHome />
+            </AppShell>
+          </MemoryRouter>
+        </ThemeProvider>
+      </HelmetProvider>,
     );
+    const hrefs = getAllByRole('link').map((a) => a.getAttribute('href'));
+    expect(hrefs).toEqual(expect.arrayContaining(['/about', '/contact', '/privacy', '/terms']));
   });
 
   it('has no serious or critical accessibility violations', async () => {

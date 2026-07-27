@@ -102,6 +102,24 @@
   --color-info: #1F5FAE;
   --color-focus-ring: #0B7A68;
 
+  /* Ink surface — the deliberately-dark band (footer, stats band, dark hero
+     chrome) that stays dark in BOTH themes, Booksy-style. `ink-contrast` /
+     `ink-muted` are the on-ink text roles; `ink-border` is the on-ink hairline.
+     Exposed in tailwind.config.js as `bg-ink` / `text-ink-contrast` /
+     `text-ink-muted` / `border-ink-border` so components never hard-code
+     white/black utilities for dark bands. */
+  --color-ink: #111417;
+  --color-ink-contrast: #F4F6F6;
+  --color-ink-muted: #A6ADAD;
+  --color-ink-border: rgba(244, 246, 246, 0.14);
+
+  /* Overlay scrim behind modal surfaces (Dialog/Sheet) and photo scrims. */
+  --color-overlay: rgba(15, 17, 17, 0.5);
+
+  /* Skeleton shimmer gloss — theme-tuned so the sweep is visible on the light
+     `--color-border` fill too (a white 8% gloss reads as static in light). */
+  --shimmer-gloss: rgba(255, 255, 255, 0.65);
+
   /* Typography scale (rem, base 16px) */
   --font-2xs: 0.75rem;
   --font-xs: 0.875rem;
@@ -128,7 +146,9 @@
   --font-weight-body: 400;
   --font-weight-display: 800;
   --line-height-display: 1.15;
-  --tracking-display: -0.02em;
+  /* Byte-identical to `@salon/shared` typography.tracking.display (-0.01em)
+     and the steering token table — the three sources must not drift. */
+  --tracking-display: -0.01em;
 
   /* NYC editorial tracking — heroic headlines only */
   --tracking-tight: -0.03em;
@@ -207,6 +227,18 @@
   --color-danger: #F2938C;
   --color-info: #86B6F0;
   --color-focus-ring: #2DE0BE;
+
+  /* Ink band stays dark in dark mode too — slightly lifted off the page bg so
+     the footer/stats band still reads as a distinct surface. */
+  --color-ink: #181B1B;
+  --color-ink-contrast: #F4F6F6;
+  --color-ink-muted: #A6ADAD;
+  --color-ink-border: rgba(244, 246, 246, 0.12);
+
+  --color-overlay: rgba(0, 0, 0, 0.6);
+
+  /* Dark mode: a faint gloss is enough over the near-black border fill. */
+  --shimmer-gloss: rgba(255, 255, 255, 0.07);
 
   /* Booksy dark: understated chrome — depth from near-black shadow + a hairline
      border rather than a colored glow. */

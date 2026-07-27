@@ -19,9 +19,7 @@ interface HeaderNavItem {
  * staff panel; their surface is the public/booking app, so we point them at the
  * home page where they start a booking.
  */
-const CUSTOMER_NAV: readonly HeaderNavItem[] = [
-  { labelKey: 'app.nav.home', to: '/', end: true },
-];
+const CUSTOMER_NAV: readonly HeaderNavItem[] = [{ labelKey: 'app.nav.home', to: '/', end: true }];
 
 const STAFF_NAV = [
   { labelKey: 'owner.nav.calendar', to: '/owner/calendar', roles: ['Owner', 'Admin', 'Stylist'] },
@@ -32,13 +30,30 @@ const STAFF_NAV = [
   { labelKey: 'owner.nav.myQr', to: '/owner/my-qr', roles: ['Owner', 'Admin', 'Stylist'] },
 ] as const;
 
-const linkClass = ({ isActive }: { isActive: boolean }) =>
-  cn(
-    'rounded-md px-3 py-2 text-sm no-underline',
-    'outline-none focus-visible:outline focus-visible:outline-2',
-    'focus-visible:outline-offset-2 focus-visible:outline-focus',
-    isActive ? 'bg-primary font-bold text-primary-contrast' : 'text-text hover:bg-elevated',
-  );
+/**
+ * Visual tone: `default` for the standard light/dark header chrome, `inverse`
+ * for the transparent-over-hero header where the nav sits on dark photography
+ * (uses the `ink-contrast` on-dark tokens).
+ */
+export type HeaderAuthNavTone = 'default' | 'inverse';
+
+export interface HeaderAuthNavProps {
+  tone?: HeaderAuthNavTone;
+}
+
+const linkClass =
+  (tone: HeaderAuthNavTone) =>
+  ({ isActive }: { isActive: boolean }) =>
+    cn(
+      'rounded-md px-3 py-2 text-sm no-underline',
+      'outline-none focus-visible:outline focus-visible:outline-2',
+      'focus-visible:outline-offset-2 focus-visible:outline-focus',
+      isActive
+        ? 'bg-primary font-bold text-primary-contrast'
+        : tone === 'inverse'
+          ? 'text-ink-contrast hover:bg-ink-contrast/10'
+          : 'text-text hover:bg-elevated',
+    );
 
 /**
  * Role-aware account navigation rendered in the app shell header.
@@ -53,10 +68,11 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
  * the app shell. Outside an `AuthProvider` (isolated tests) the context's
  * default anonymous value is used, so it renders the signed-out state safely.
  */
-export function HeaderAuthNav() {
+export function HeaderAuthNav({ tone = 'default' }: HeaderAuthNavProps = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { status, role, isStaff, signOut } = useAuth();
+  const inverse = tone === 'inverse';
 
   // Avoid a signed-out → signed-in flash while the session is being restored.
   if (status === 'loading') {
@@ -69,8 +85,8 @@ export function HeaderAuthNav() {
         to="/auth"
         data-testid="header-sign-in"
         className={cn(
-          'inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm no-underline',
-          'text-text hover:bg-elevated',
+          'inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold no-underline',
+          inverse ? 'text-ink-contrast hover:bg-ink-contrast/10' : 'text-text hover:bg-elevated',
           'outline-none focus-visible:outline focus-visible:outline-2',
           'focus-visible:outline-offset-2 focus-visible:outline-focus',
         )}
@@ -83,10 +99,12 @@ export function HeaderAuthNav() {
 
   const items: HeaderNavItem[] =
     isStaff && role
-      ? STAFF_NAV.filter((item) => item.roles.some((allowedRole) => allowedRole === role)).map(({ labelKey, to }) => ({
-          labelKey,
-          to,
-        }))
+      ? STAFF_NAV.filter((item) => item.roles.some((allowedRole) => allowedRole === role)).map(
+          ({ labelKey, to }) => ({
+            labelKey,
+            to,
+          }),
+        )
       : [...CUSTOMER_NAV];
 
   const roleLabel = t(`app.role.${role ?? 'Customer'}`);
@@ -105,7 +123,7 @@ export function HeaderAuthNav() {
       <ul className="hidden items-center gap-1 md:flex">
         {items.map((item) => (
           <li key={item.to}>
-            <NavLink to={item.to} end={item.end} className={linkClass}>
+            <NavLink to={item.to} end={item.end} className={linkClass(tone)}>
               {t(item.labelKey)}
             </NavLink>
           </li>
@@ -114,7 +132,10 @@ export function HeaderAuthNav() {
 
       <span
         data-testid="header-role-badge"
-        className="rounded-pill border border-border px-2 py-1 text-2xs text-muted"
+        className={cn(
+          'rounded-pill border px-2 py-1 text-2xs',
+          inverse ? 'border-ink-border text-ink-muted' : 'border-border text-muted',
+        )}
       >
         {roleLabel}
       </span>
@@ -125,6 +146,7 @@ export function HeaderAuthNav() {
         startIcon={<LogOut className="h-4 w-4 rtl:-scale-x-100" />}
         onClick={handleSignOut}
         data-testid="header-sign-out"
+        className={cn(inverse && 'text-ink-contrast hover:bg-ink-contrast/10')}
       >
         {t('app.signOut')}
       </Button>

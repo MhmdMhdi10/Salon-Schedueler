@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  lightColors,
-  darkColors,
-  typography,
-  type ColorPalette,
-} from '@salon/shared';
+import { lightColors, darkColors, typography, type ColorPalette } from '@salon/shared';
 
 /**
  * Token completeness + display-vs-body distinctiveness guardrail
@@ -93,15 +88,11 @@ describe('Property 2: token completeness across both themes', () => {
  */
 describe('Property 3: display type is always distinct from body type', () => {
   it('display weight is strictly heavier than body weight', () => {
-    expect(typography.fontWeights.display).toBeGreaterThan(
-      typography.fontWeights.body,
-    );
+    expect(typography.fontWeights.display).toBeGreaterThan(typography.fontWeights.body);
   });
 
   it('display line-height is strictly tighter than body line-height', () => {
-    expect(typography.lineHeight.display).toBeLessThan(
-      typography.lineHeight.body,
-    );
+    expect(typography.lineHeight.display).toBeLessThan(typography.lineHeight.body);
   });
 
   it('both relationships hold together (no uniform-with-body exception)', () => {

@@ -94,10 +94,7 @@ export function MyQrPage() {
 
   const staffName = data?.staffName ?? '';
   const alt = t('owner.myQr.imageAlt', { name: staffName });
-  const qrDataUri = useMemo(
-    () => (data ? qrImageDataUri(data.payload, alt) : ''),
-    [data, alt],
-  );
+  const qrDataUri = useMemo(() => (data ? qrImageDataUri(data.payload, alt) : ''), [data, alt]);
 
   /**
    * Share the personal booking link. Prefers the native share sheet when the

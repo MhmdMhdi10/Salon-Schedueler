@@ -13,16 +13,14 @@ export interface InboxNotification {
   type: string;
   title: string;
   body: string;
-  payload:
-    | {
-        appointmentId?: string;
-        orderId?: string;
-        staffMemberId?: string;
-        customerId?: string;
-        date?: string;
-        [key: string]: unknown;
-      }
-    | null;
+  payload: {
+    appointmentId?: string;
+    orderId?: string;
+    staffMemberId?: string;
+    customerId?: string;
+    date?: string;
+    [key: string]: unknown;
+  } | null;
   readAt: string | null;
   createdAt: string;
 }
@@ -43,8 +41,7 @@ export interface UseInboxWsResult {
  */
 function resolveWsUrl(token: string): string {
   const apiBase =
-    (import.meta as { env?: { VITE_API_BASE_URL?: string } }).env
-      ?.VITE_API_BASE_URL || '/api';
+    (import.meta as { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL || '/api';
   if (apiBase.startsWith('http')) {
     const wsBase = apiBase
       .replace(/^http:/, 'ws:')
@@ -134,7 +131,9 @@ export function useInboxWs(salonId: string | null | undefined): UseInboxWsResult
         ws.onopen = null;
         try {
           ws.close();
-        } catch {}
+        } catch {
+          // Socket already closed — nothing to release.
+        }
       }
       wsRef.current = null;
     };

@@ -146,9 +146,7 @@ describe('OwnerQrPage — campaign URL (R4.3)', () => {
   it('shows the campaign URL as selectable text', async () => {
     renderPage();
     const url = await screen.findByTestId('qr-url');
-    expect(url).toHaveTextContent(
-      'https://book.salon.app/s/salon-rose?utm_source=qr',
-    );
+    expect(url).toHaveTextContent('https://book.salon.app/s/salon-rose?utm_source=qr');
     // Bidi-isolated LTR run so the URL renders correctly inside the RTL layout.
     expect(url.tagName.toLowerCase()).toBe('bdi');
     expect(url).toHaveAttribute('dir', 'ltr');
@@ -164,14 +162,10 @@ describe('OwnerQrPage — campaign URL (R4.3)', () => {
     fireEvent.click(screen.getByTestId('qr-copy'));
 
     await waitFor(() =>
-      expect(writeText).toHaveBeenCalledWith(
-        'https://book.salon.app/s/salon-rose?utm_source=qr',
-      ),
+      expect(writeText).toHaveBeenCalledWith('https://book.salon.app/s/salon-rose?utm_source=qr'),
     );
     // The live region announces the copy result.
-    await waitFor(() =>
-      expect(screen.getByTestId('qr-copy-status')).toHaveTextContent('کپی شد'),
-    );
+    await waitFor(() => expect(screen.getByTestId('qr-copy-status')).toHaveTextContent('کپی شد'));
   });
 });
 

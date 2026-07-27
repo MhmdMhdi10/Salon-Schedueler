@@ -48,8 +48,7 @@ vi.mock('../../../auth/AuthContext', () => ({
 const downloadQrSvg = vi.fn();
 const downloadQrPng = vi.fn();
 vi.mock('../marketing-assets', async () => {
-  const actual =
-    await vi.importActual<typeof import('../marketing-assets')>('../marketing-assets');
+  const actual = await vi.importActual<typeof import('../marketing-assets')>('../marketing-assets');
   return {
     ...actual,
     downloadQrSvg: (...args: unknown[]) => downloadQrSvg(...args),
@@ -103,9 +102,7 @@ describe('MyQrPage — success (R4.1)', () => {
 
     expect(screen.getByText('زهرا')).toBeInTheDocument();
     expect(screen.getByText('سالن رز')).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'اشتراک‌گذاری' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'اشتراک‌گذاری' })).toBeInTheDocument();
     // The QR is scoped to the signed-in stylist.
     expect(getStaffQr).toHaveBeenCalledWith(expect.any(String), 'staff-9');
   });
@@ -122,9 +119,7 @@ describe('MyQrPage — share action', () => {
     fireEvent.click(screen.getByRole('button', { name: 'اشتراک‌گذاری' }));
 
     await waitFor(() =>
-      expect(share).toHaveBeenCalledWith(
-        expect.objectContaining({ url: STAFF_QR.payload }),
-      ),
+      expect(share).toHaveBeenCalledWith(expect.objectContaining({ url: STAFF_QR.payload })),
     );
   });
 
@@ -138,9 +133,7 @@ describe('MyQrPage — share action', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'اشتراک‌گذاری' }));
 
-    await waitFor(() =>
-      expect(writeText).toHaveBeenCalledWith(STAFF_QR.payload),
-    );
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(STAFF_QR.payload));
     await waitFor(() =>
       expect(screen.getByTestId('my-qr-copy-status')).toHaveTextContent('کپی شد'),
     );
@@ -154,11 +147,7 @@ describe('MyQrPage — download action', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'دانلود QR (SVG)' }));
 
-    expect(downloadQrSvg).toHaveBeenCalledWith(
-      STAFF_QR.payload,
-      expect.any(String),
-      'زهرا',
-    );
+    expect(downloadQrSvg).toHaveBeenCalledWith(STAFF_QR.payload, expect.any(String), 'زهرا');
   });
 });
 

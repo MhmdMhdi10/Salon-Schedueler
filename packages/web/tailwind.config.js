@@ -11,6 +11,27 @@
 // a gap appears — none required so far.
 import plugin from 'tailwindcss/plugin';
 
+/**
+ * Token color with real alpha-utility support.
+ *
+ * Tailwind cannot derive `bg-success/10` from a plain `var(--color-success)`
+ * string (it needs channels to inject an alpha into), so every opacity-modified
+ * token utility used to compile to NOTHING. This helper keeps `tokens.css` as
+ * the single source of truth (no duplicated RGB triplets, and runtime overrides
+ * like the funnel tenant accent keep working) by resolving the modifier through
+ * `color-mix()`:
+ *
+ *  - `bg-success`     → `color-mix(in srgb, var(--color-success) calc(var(--tw-bg-opacity) * 100%), transparent)`
+ *  - `bg-success/10`  → `color-mix(in srgb, var(--color-success) calc(0.1 * 100%), transparent)`
+ *  - gradient stops (`from-bg/80`) receive the literal alpha the same way.
+ *
+ * `color-mix` toward `transparent` in sRGB is exactly `rgb(color / alpha)`.
+ */
+const withAlpha = (variable) => ({ opacityValue }) => {
+  if (opacityValue === undefined) return `var(${variable})`;
+  return `color-mix(in srgb, var(${variable}) calc(${opacityValue} * 100%), transparent)`;
+};
+
 export default {
   // Dark mode is driven by the `data-theme="dark"` attribute the ThemeProvider
   // sets on <html>, matching the steering theming hook.
@@ -19,23 +40,33 @@ export default {
   theme: {
     extend: {
       colors: {
-        bg: 'var(--color-bg)',
-        surface: 'var(--color-surface)',
-        elevated: 'var(--color-elevated)',
-        text: 'var(--color-text)',
-        muted: 'var(--color-text-muted)',
-        border: 'var(--color-border)',
+        bg: withAlpha('--color-bg'),
+        surface: withAlpha('--color-surface'),
+        elevated: withAlpha('--color-elevated'),
+        text: withAlpha('--color-text'),
+        muted: withAlpha('--color-text-muted'),
+        border: withAlpha('--color-border'),
         primary: {
-          DEFAULT: 'var(--color-primary)',
-          contrast: 'var(--color-primary-contrast)',
+          DEFAULT: withAlpha('--color-primary'),
+          contrast: withAlpha('--color-primary-contrast'),
         },
-        secondary: 'var(--color-secondary)',
-        accent: 'var(--color-accent)',
-        success: 'var(--color-success)',
-        warning: 'var(--color-warning)',
-        danger: 'var(--color-danger)',
-        info: 'var(--color-info)',
-        focus: 'var(--color-focus-ring)',
+        secondary: withAlpha('--color-secondary'),
+        accent: withAlpha('--color-accent'),
+        success: withAlpha('--color-success'),
+        warning: withAlpha('--color-warning'),
+        danger: withAlpha('--color-danger'),
+        info: withAlpha('--color-info'),
+        focus: withAlpha('--color-focus-ring'),
+        // Deliberately-dark band roles (footer, stats band, dark hero chrome):
+        // dark in BOTH themes. `ink-contrast`/`ink-muted` are on-ink text.
+        ink: {
+          DEFAULT: withAlpha('--color-ink'),
+          contrast: withAlpha('--color-ink-contrast'),
+          muted: withAlpha('--color-ink-muted'),
+          border: withAlpha('--color-ink-border'),
+        },
+        // Modal/photo scrim (already carries its alpha in the token).
+        overlay: 'var(--color-overlay)',
       },
       spacing: {
         0: 'var(--space-0)',
@@ -176,6 +207,20 @@ export default {
           '40%': { transform: 'scale(0.97)' },
           '100%': { transform: 'scale(1)' },
         },
+        // Exit counterparts — Radix keeps `data-[state=closed]` mounted while a
+        // CSS animation runs, so overlays get a graceful opacity-led exit.
+        'fade-out': {
+          '0%': { opacity: '1' },
+          '100%': { opacity: '0' },
+        },
+        'scale-out': {
+          '0%': { opacity: '1', transform: 'scale(1)' },
+          '100%': { opacity: '0', transform: 'scale(0.97)' },
+        },
+        'toast-out': {
+          '0%': { opacity: '1', transform: 'translateY(0)' },
+          '100%': { opacity: '0', transform: 'translateY(8px)' },
+        },
       },
       animation: {
         'success-pop': 'success-pop var(--dur-slow) var(--ease-emphasized) both',
@@ -186,6 +231,9 @@ export default {
         shimmer: 'shimmer 1.6s var(--ease-standard) infinite',
         'toast-in': 'toast-in var(--dur-base) var(--ease-emphasized) both',
         'tap-pulse': 'tap-pulse var(--dur-fast) var(--ease-standard)',
+        'fade-out': 'fade-out var(--dur-exit) var(--ease-standard) both',
+        'scale-out': 'scale-out var(--dur-exit) var(--ease-standard) both',
+        'toast-out': 'toast-out var(--dur-exit) var(--ease-standard) both',
       },
     },
   },
@@ -207,10 +255,12 @@ export default {
       });
       // `.shimmer-bg` — the gradient + mask the `animate-shimmer` keyframe
       // sweeps across. Applied to `Skeleton` (see `components/ui/Skeleton.tsx`).
+      // The gloss color is the theme-tuned `--shimmer-gloss` token so the sweep
+      // stays visible over the light-mode `--color-border` fill too.
       addUtilities({
         '.shimmer-bg': {
           backgroundImage:
-            'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%)',
+            'linear-gradient(90deg, transparent 0%, var(--shimmer-gloss) 50%, transparent 100%)',
           backgroundSize: '200% 100%',
           backgroundRepeat: 'no-repeat',
         },

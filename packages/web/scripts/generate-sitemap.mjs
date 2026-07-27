@@ -15,17 +15,23 @@
  * The core string-building functions are pure and exported so they can be unit-
  * and property-tested without touching the filesystem (see
  * `scripts/__tests__/generate-sitemap.test.ts`). Running this module directly
- * (`node scripts/generate-sitemap.mjs`) reads `scripts/salons.json` and writes
- * `public/sitemap.xml`.
+ * (`node scripts/generate-sitemap.mjs`) enumerates the route data from the app
+ * source (`scripts/site-data.mjs` → src/data/{salons,discovery,taxonomy}.ts)
+ * and writes `public/sitemap.xml` AND `public/robots.txt` — robots is generated
+ * from the same origin helper so the `Sitemap:` line can never drift from the
+ * canonical host.
  *
- * The canonical host mirrors `src/components/seo/config.ts`: it is read from the
- * build-time `VITE_PUBLIC_SITE_URL` env, falling back to the documented
- * steering placeholder, so staging/production point at the real origin.
+ * The canonical host mirrors `src/components/seo/config.ts`: it is read from
+ * the build-time `VITE_SITE_ORIGIN` env (legacy alias `VITE_PUBLIC_SITE_URL`),
+ * falling back to the documented steering placeholder. Deployments MUST set the
+ * real origin — `main()` prints a loud warning when the placeholder ships.
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { loadSiteData } from './site-data.mjs';
 
 /** The documented placeholder origin used across the SEO steering examples. */
 export const DEFAULT_SITE_URL = 'https://example.ir';
@@ -49,9 +55,21 @@ export function normalizeOrigin(origin) {
   return String(origin).replace(/\/+$/, '');
 }
 
-/** The single canonical host, honoring `VITE_PUBLIC_SITE_URL` like config.ts. */
+/**
+ * The single canonical host. Honors `VITE_SITE_ORIGIN` (the documented deploy
+ * knob) with `VITE_PUBLIC_SITE_URL` as a legacy alias — exactly the order
+ * `src/components/seo/config.ts` uses — so every emitter (SeoHead, JSON-LD,
+ * sitemap, robots, prerender) resolves the same origin from one env var.
+ */
 export function resolveSiteUrl(env = process.env) {
-  return normalizeOrigin(env.VITE_PUBLIC_SITE_URL || DEFAULT_SITE_URL);
+  return normalizeOrigin(
+    env.VITE_SITE_ORIGIN || env.VITE_PUBLIC_SITE_URL || DEFAULT_SITE_URL,
+  );
+}
+
+/** True when the resolved origin is still the placeholder (not deploy-ready). */
+export function isPlaceholderSiteUrl(siteUrl) {
+  return normalizeOrigin(siteUrl) === DEFAULT_SITE_URL;
 }
 
 /**
@@ -156,47 +174,60 @@ export function buildSitemap({ siteUrl, salons = [], cities = [], serviceTypes =
   );
 }
 
-/** Reads and parses the build-time salon list, tolerating a missing file. */
-export function readSalons(salonsPath) {
-  try {
-    const raw = readFileSync(salonsPath, 'utf-8');
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed.salons) ? parsed.salons : [];
-  } catch (err) {
-    if (err && err.code === 'ENOENT') return [];
-    throw err;
-  }
+// NOTE: the legacy `scripts/salons.json` / `scripts/discovery.json` readers are
+// gone — the route data now comes from `scripts/site-data.mjs`, which loads the
+// live `src/data/{salons,discovery,taxonomy}.ts` modules so the sitemap and the
+// rendered pages can never enumerate different slugs.
+
+/**
+ * Builds `robots.txt` from the same origin helper the sitemap uses (seo §7).
+ * Disallows exactly the noindex/transactional surfaces: auth, admin/owner
+ * panels, the booking funnel, QR landings, the API, the salon-registration
+ * wizard, and internal search results (crawl-budget hygiene; the routes also
+ * emit `noindex` client-side as belt-and-braces).
+ */
+export function buildRobots(siteUrl) {
+  const origin = normalizeOrigin(siteUrl);
+  return [
+    'User-agent: *',
+    'Allow: /',
+    'Disallow: /auth',
+    'Disallow: /admin/',
+    'Disallow: /owner/',
+    'Disallow: /salon/*/book',
+    'Disallow: /booking/',
+    'Disallow: /qr/',
+    'Disallow: /api/',
+    'Disallow: /business/register',
+    'Disallow: /search',
+    `Sitemap: ${origin}/sitemap.xml`,
+    '',
+  ].join('\n');
+}
+
+/** Loud, actionable warning when a build still points at the placeholder host. */
+export function warnIfPlaceholder(siteUrl, label) {
+  if (!isPlaceholderSiteUrl(siteUrl)) return;
+  // eslint-disable-next-line no-console
+  console.warn(
+    `\n[${label}] WARNING: canonical host is the placeholder ${DEFAULT_SITE_URL}.\n` +
+      `[${label}]          Set VITE_SITE_ORIGIN=https://<real-domain> in the build\n` +
+      `[${label}]          environment before publishing — every canonical, OG URL,\n` +
+      `[${label}]          JSON-LD url, sitemap <loc> and robots Sitemap line uses it.\n`,
+  );
 }
 
 /**
- * Reads the build-time discovery list (`{ cities, serviceTypes }`), tolerating
- * a missing file. Drives the `/city/:slug` and `/services/:slug` sitemap +
- * prerender entries (seo §1, §7).
+ * CLI entry: enumerate the route data from the app source (src/data via
+ * `site-data.mjs`), then write `public/sitemap.xml` + `public/robots.txt`.
  */
-export function readDiscovery(discoveryPath) {
-  try {
-    const raw = readFileSync(discoveryPath, 'utf-8');
-    const parsed = JSON.parse(raw);
-    return {
-      cities: Array.isArray(parsed.cities) ? parsed.cities : [],
-      serviceTypes: Array.isArray(parsed.serviceTypes) ? parsed.serviceTypes : [],
-    };
-  } catch (err) {
-    if (err && err.code === 'ENOENT') return { cities: [], serviceTypes: [] };
-    throw err;
-  }
-}
-
-/** CLI entry: read the salon list, build the sitemap, write `public/sitemap.xml`. */
-export function main() {
+export async function main() {
   const here = dirname(fileURLToPath(import.meta.url));
-  const salonsPath = resolve(here, 'salons.json');
-  const discoveryPath = resolve(here, 'discovery.json');
-  const outPath = resolve(here, '../public/sitemap.xml');
+  const sitemapPath = resolve(here, '../public/sitemap.xml');
+  const robotsPath = resolve(here, '../public/robots.txt');
 
   const siteUrl = resolveSiteUrl();
-  const salons = readSalons(salonsPath);
-  const { cities, serviceTypes } = readDiscovery(discoveryPath);
+  const { salons, cities, serviceTypes } = await loadSiteData();
   const xml = buildSitemap({
     siteUrl,
     salons,
@@ -205,15 +236,18 @@ export function main() {
     buildDate: new Date(),
   });
 
-  writeFileSync(outPath, xml, 'utf-8');
+  writeFileSync(sitemapPath, xml, 'utf-8');
+  writeFileSync(robotsPath, buildRobots(siteUrl), 'utf-8');
+  warnIfPlaceholder(siteUrl, 'sitemap');
   // eslint-disable-next-line no-console
   console.log(
-    `[sitemap] wrote ${outPath} (${STATIC_INDEXABLE_PATHS.length} static + ` +
-      `${salons.length} salon + ${cities.length} city + ${serviceTypes.length} service URLs, host ${siteUrl})`,
+    `[sitemap] wrote ${sitemapPath} (${STATIC_INDEXABLE_PATHS.length} static + ` +
+      `${salons.length} salon + ${cities.length} city + ${serviceTypes.length} service URLs, host ${siteUrl})\n` +
+      `[sitemap] wrote ${robotsPath} from the same origin helper`,
   );
 }
 
 // Run only when invoked directly, not when imported by tests.
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
-  main();
+  await main();
 }

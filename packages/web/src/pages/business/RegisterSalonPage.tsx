@@ -1,15 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
-import {
-  ArrowRight,
-  Check,
-  Plus,
-  Scissors,
-  ShieldCheck,
-  Store,
-  Trash2,
-} from 'lucide-react';
+import { ArrowRight, Check, Plus, Scissors, ShieldCheck, Store, Trash2 } from 'lucide-react';
 import { normalizeDigits } from '@salon/shared';
 import {
   ApiError,
@@ -21,15 +13,8 @@ import {
 } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { SeoHead } from '../../components/seo';
-import {
-  Button,
-  TextField,
-  ToastProvider,
-  cn,
-  toPersianDigits,
-  useToast,
-} from '../../components/ui';
-import { ACCENTS, accentVars } from '../owner/marketing-assets';
+import { Button, TextField, cn, toPersianDigits, useToast } from '../../components/ui';
+import { ACCENTS, accentVars } from '../../components/theme/accents';
 
 /** Iranian mobile pattern: `09` followed by 9 digits (ui-ux §7). */
 const PHONE_PATTERN = /^09\d{9}$/;
@@ -92,11 +77,9 @@ interface DraftService extends RegisterSalonServiceInput {
  * (`business.register.*`). Noindex (a form flow, not a search surface).
  */
 export function RegisterSalonPage() {
-  return (
-    <ToastProvider>
-      <RegisterSalonContent />
-    </ToastProvider>
-  );
+  // Toasts surface through the app-root <ToastProvider> in App.tsx — a nested
+  // per-page provider would silo this page's toasts from the app host.
+  return <RegisterSalonContent />;
 }
 
 function RegisterSalonContent() {
@@ -155,11 +138,15 @@ function RegisterSalonContent() {
   // ── Step 1: validate identity, then advance ──────────────────────────────
   const handleInfoNext = () => {
     const errors: typeof infoErrors = {};
-    if (salonName.trim().length < 1) errors.salonName = t('business.register.errors.salonNameRequired');
-    if (ownerName.trim().length < 1) errors.ownerName = t('business.register.errors.ownerNameRequired');
-    if (!PHONE_PATTERN.test(normalizedPhone)) errors.phone = t('business.register.errors.invalidPhone');
+    if (salonName.trim().length < 1)
+      errors.salonName = t('business.register.errors.salonNameRequired');
+    if (ownerName.trim().length < 1)
+      errors.ownerName = t('business.register.errors.ownerNameRequired');
+    if (!PHONE_PATTERN.test(normalizedPhone))
+      errors.phone = t('business.register.errors.invalidPhone');
     // Block advancing while a duplicate-phone verdict is pending or known.
-    if (phoneCheck === 'checking') errors.phone = t('business.register.info.phoneChecking', { defaultValue: 'در حال بررسی…' });
+    if (phoneCheck === 'checking')
+      errors.phone = t('business.register.info.phoneChecking', { defaultValue: 'در حال بررسی…' });
     else if (phoneCheck === 'taken') errors.phone = t('business.register.errors.phoneTaken');
     setInfoErrors(errors);
     if (Object.keys(errors).length === 0) setStep('services');
@@ -336,10 +323,7 @@ function RegisterSalonContent() {
   };
 
   return (
-    <div
-      className="flex min-h-screen w-full flex-col bg-bg"
-      data-testid="register-salon-page"
-    >
+    <div className="flex min-h-screen w-full flex-col bg-bg" data-testid="register-salon-page">
       <SeoHead title={t('business.register.title')} />
 
       <header className="border-b border-border bg-elevated">
@@ -425,357 +409,377 @@ function RegisterSalonContent() {
             </Button>
           </section>
         ) : (
-      <section className="mt-8 flex flex-col gap-5">
-        {step === 'info' && (
-          <form
-            className="flex flex-col gap-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleInfoNext();
-            }}
-          >
-            <StepHeading
-              icon={<Store className="h-5 w-5" aria-hidden="true" />}
-              title={t('business.register.info.title')}
-              subtitle={t('business.register.info.subtitle')}
-            />
-            <TextField
-              id="salonName"
-              label={t('business.register.info.salonNameLabel')}
-              placeholder={t('business.register.info.salonNamePlaceholder')}
-              error={infoErrors.salonName}
-              value={salonName}
-              onChange={(e) => {
-                setSalonName(e.target.value);
-                if (infoErrors.salonName) setInfoErrors((p) => ({ ...p, salonName: undefined }));
-              }}
-            />
-            <TextField
-              id="ownerName"
-              label={t('business.register.info.ownerNameLabel')}
-              placeholder={t('business.register.info.ownerNamePlaceholder')}
-              error={infoErrors.ownerName}
-              value={ownerName}
-              onChange={(e) => {
-                setOwnerName(e.target.value);
-                if (infoErrors.ownerName) setInfoErrors((p) => ({ ...p, ownerName: undefined }));
-              }}
-            />
-            <TextField
-              id="phone"
-              label={t('business.register.info.phoneLabel')}
-              helperText={
-                phoneCheck === 'checking'
-                  ? t('business.register.info.phoneChecking', { defaultValue: 'در حال بررسی…' })
-                  : t('business.register.info.phoneHelper')
-              }
-              error={infoErrors.phone}
-              type="tel"
-              inputMode="tel"
-              dir="ltr"
-              autoComplete="tel"
-              maxLength={13}
-              placeholder={t('auth.phonePlaceholder')}
-              value={phone}
-              onChange={(e) => {
-                setPhone(e.target.value);
-                if (infoErrors.phone) setInfoErrors((p) => ({ ...p, phone: undefined }));
-              }}
-            />
-            <Button type="submit" size="lg" fullWidth>
-              {t('business.register.next')}
-            </Button>
-          </form>
-        )}
-
-        {step === 'services' && (
-          <div className="flex flex-col gap-4">
-            <StepHeading
-              icon={<Scissors className="h-5 w-5" aria-hidden="true" />}
-              title={t('business.register.services.title')}
-              subtitle={t('business.register.services.subtitle')}
-            />
-
-            {/* Quick-add presets fill the service-name draft. */}
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-medium text-muted">
-                {t('business.register.services.presetsLabel')}
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {SERVICE_PRESETS.map((presetKey) => (
-                  <button
-                    key={presetKey}
-                    type="button"
-                    onClick={() => setSvcName(t(`business.register.services.presets.${presetKey}`))}
-                    className="inline-flex min-h-9 items-center gap-1 rounded-pill border border-border bg-bg px-3 py-1 text-xs text-text transition-colors duration-fast ease-standard hover:border-primary hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                  >
-                    <Plus className="h-3 w-3" aria-hidden="true" />
-                    {t(`business.register.services.presets.${presetKey}`)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto]">
-              <TextField
-                id="svcName"
-                label={t('business.register.services.nameLabel')}
-                placeholder={t('business.register.services.namePlaceholder')}
-                value={svcName}
-                onChange={(e) => setSvcName(e.target.value)}
-              />
-              <TextField
-                id="svcDuration"
-                label={t('business.register.services.durationLabel')}
-                inputMode="numeric"
-                dir="ltr"
-                placeholder="۳۰"
-                containerClassName="sm:w-28"
-                value={svcDuration}
-                onChange={(e) => setSvcDuration(e.target.value)}
-              />
-              <TextField
-                id="svcPrice"
-                label={t('business.register.services.priceLabel')}
-                inputMode="numeric"
-                dir="ltr"
-                placeholder="۵۰۰۰۰۰"
-                containerClassName="sm:w-36"
-                value={svcPrice}
-                onChange={(e) => setSvcPrice(e.target.value)}
-              />
-            </div>
-            {svcError && (
-              <p className="flex items-center gap-1 text-sm text-danger" role="alert">
-                {svcError}
-              </p>
-            )}
-            <div>
-              <Button
-                type="button"
-                variant="secondary"
-                startIcon={<Plus className="h-4 w-4" />}
-                onClick={handleAddService}
+          <section className="mt-8 flex flex-col gap-5">
+            {step === 'info' && (
+              <form
+                className="flex flex-col gap-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleInfoNext();
+                }}
               >
-                {t('business.register.services.addCta')}
-              </Button>
-            </div>
-
-            {services.length > 0 && (
-              <ul className="flex flex-col gap-2" aria-label={t('business.register.services.listLabel')}>
-                {services.map((s) => (
-                  <li
-                    key={s.key}
-                    className="flex items-center justify-between gap-3 rounded-md border border-border bg-bg px-3 py-2"
-                  >
-                    <span className="flex flex-col">
-                      <span className="text-sm font-medium text-text">{s.name}</span>
-                      <span className="text-xs text-muted">
-                        {t('business.register.services.summary', {
-                          minutes: toPersianDigits(s.durationMinutes ?? 30),
-                          price: toPersianDigits(
-                            (s.priceRial ?? 0).toLocaleString('en-US'),
-                          ),
-                        })}
-                      </span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveService(s.key)}
-                      aria-label={t('business.register.services.remove', { name: s.name })}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted transition-colors duration-fast ease-standard hover:bg-surface hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                    >
-                      <Trash2 className="h-4 w-4" aria-hidden="true" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            <StepNav
-              onBack={() => setStep('info')}
-              onNext={() => setStep('setup')}
-              onSkip={() => setStep('setup')}
-              nextLabel={t('business.register.next')}
-              skipLabel={t('business.register.skip')}
-              backLabel={t('business.register.back')}
-            />
-          </div>
-        )}
-
-        {step === 'setup' && (
-          <div className="flex flex-col gap-5">
-            <StepHeading
-              icon={<Store className="h-5 w-5" aria-hidden="true" />}
-              title={t('business.register.setup.title')}
-              subtitle={t('business.register.setup.subtitle')}
-            />
-
-            <TextField
-              id="chairCount"
-              label={t('business.register.setup.chairsLabel')}
-              helperText={t('business.register.setup.chairsHelper')}
-              inputMode="numeric"
-              dir="ltr"
-              placeholder="۳"
-              containerClassName="max-w-[10rem]"
-              value={chairCount}
-              onChange={(e) => setChairCount(e.target.value)}
-            />
-
-            {/* Brand-accent picker — themes the storefront + booking funnel. */}
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-medium text-muted">
-                {t('business.register.setup.accentLabel')}
-              </span>
-              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t('business.register.setup.accentLabel')}>
-                <AccentSwatch
-                  selected={accentKey === ''}
-                  onSelect={() => setAccentKey('')}
-                  label={t('business.register.setup.accentDefault')}
+                <StepHeading
+                  icon={<Store className="h-5 w-5" aria-hidden="true" />}
+                  title={t('business.register.info.title')}
+                  subtitle={t('business.register.info.subtitle')}
                 />
-                {ACCENTS.map((accent) => (
-                  <AccentSwatch
-                    key={accent.key}
-                    accentStyle={accentVars(accent)}
-                    selected={accentKey === accent.key}
-                    onSelect={() => setAccentKey(accent.key)}
-                    label={t(`admin.config.brand.accents.${accent.key}`, accent.key)}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Compact summary so the owner can confirm before submitting. */}
-            <dl className="flex flex-col gap-2 rounded-md border border-border bg-bg p-3 text-sm">
-              <SummaryRow label={t('business.register.review.salon')} value={salonName} />
-              <SummaryRow label={t('business.register.review.owner')} value={ownerName} />
-              <SummaryRow
-                label={t('business.register.review.phone')}
-                value={toPersianDigits(normalizedPhone)}
-                dir="ltr"
-              />
-              <SummaryRow
-                label={t('business.register.review.services')}
-                value={
-                  services.length > 0
-                    ? t('business.register.review.servicesCount', {
-                        count: toPersianDigits(services.length),
-                      })
-                    : t('business.register.review.none')
-                }
-              />
-            </dl>
-
-            {submitError && (
-              <p className="flex items-center gap-1 text-sm text-danger" role="alert">
-                {submitError}
-              </p>
-            )}
-
-            <StepNav
-              onBack={() => setStep('services')}
-              onNext={() => void handleSubmit()}
-              onSkip={() => void handleSubmit()}
-              nextLabel={t('business.register.submit')}
-              skipLabel={t('business.register.skipSetup')}
-              backLabel={t('business.register.back')}
-              loading={submitting}
-            />
-          </div>
-        )}
-
-        {step === 'otp' && (
-          <form
-            className="flex flex-col gap-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleVerifyOtp();
-            }}
-          >
-            <StepHeading
-              icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
-              title={t('business.register.verify.title')}
-              subtitle={t('business.register.verify.subtitle', {
-                phone: toPersianDigits(normalizedPhone),
-              })}
-            />
-            <fieldset className="m-0 border-0 p-0">
-              <legend className="mb-1 block text-xs font-medium text-text">
-                {t('auth.otpLabel')}
-              </legend>
-              <div
-                className="flex flex-row justify-center gap-2"
-                dir="ltr"
-                style={{ direction: 'ltr' }}
-              >
-                {code.map((digit, index) => (
-                  <input
-                    // eslint-disable-next-line react/no-array-index-key
-                    key={index}
-                    ref={(el) => {
-                      otpRefs.current[index] = el;
-                    }}
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete={index === 0 ? 'one-time-code' : 'off'}
-                    dir="ltr"
-                    maxLength={1}
-                    aria-label={t('auth.otpDigitLabel', { index: toPersianDigits(index + 1) })}
-                    value={digit}
-                    onChange={(e) => handleOtpChange(index, e)}
-                    onPaste={(e) => handleOtpPaste(index, e)}
-                    onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                    className={cn(
-                      'h-12 w-11 rounded-md border bg-bg text-center text-lg font-bold text-text',
-                      'transition-colors duration-fast ease-standard',
-                      'outline-none focus-visible:outline focus-visible:outline-2',
-                      'focus-visible:outline-offset-2 focus-visible:outline-focus',
-                      otpError ? 'border-danger' : 'border-border',
-                    )}
-                  />
-                ))}
-              </div>
-            </fieldset>
-
-            <Button type="submit" size="lg" fullWidth loading={otpLoading} disabled={!codeIsComplete}>
-              {t('business.register.verify.cta')}
-            </Button>
-
-            <div className="flex items-center justify-center">
-              {secondsLeft > 0 ? (
-                <span className="text-xs text-muted" aria-live="polite">
-                  {t('auth.resendIn', { time: formatCountdown(secondsLeft) })}
-                </span>
-              ) : (
-                <Button type="button" variant="ghost" size="md" onClick={() => void resendOtp()} disabled={otpLoading}>
-                  {t('auth.resend')}
+                <TextField
+                  id="salonName"
+                  label={t('business.register.info.salonNameLabel')}
+                  placeholder={t('business.register.info.salonNamePlaceholder')}
+                  error={infoErrors.salonName}
+                  value={salonName}
+                  onChange={(e) => {
+                    setSalonName(e.target.value);
+                    if (infoErrors.salonName)
+                      setInfoErrors((p) => ({ ...p, salonName: undefined }));
+                  }}
+                />
+                <TextField
+                  id="ownerName"
+                  label={t('business.register.info.ownerNameLabel')}
+                  placeholder={t('business.register.info.ownerNamePlaceholder')}
+                  error={infoErrors.ownerName}
+                  value={ownerName}
+                  onChange={(e) => {
+                    setOwnerName(e.target.value);
+                    if (infoErrors.ownerName)
+                      setInfoErrors((p) => ({ ...p, ownerName: undefined }));
+                  }}
+                />
+                <TextField
+                  id="phone"
+                  label={t('business.register.info.phoneLabel')}
+                  helperText={
+                    phoneCheck === 'checking'
+                      ? t('business.register.info.phoneChecking', { defaultValue: 'در حال بررسی…' })
+                      : t('business.register.info.phoneHelper')
+                  }
+                  error={infoErrors.phone}
+                  type="tel"
+                  inputMode="tel"
+                  dir="ltr"
+                  autoComplete="tel"
+                  maxLength={13}
+                  placeholder={t('auth.phonePlaceholder')}
+                  value={phone}
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    if (infoErrors.phone) setInfoErrors((p) => ({ ...p, phone: undefined }));
+                  }}
+                />
+                <Button type="submit" size="lg" fullWidth>
+                  {t('business.register.next')}
                 </Button>
-              )}
-            </div>
-
-            {otpError && (
-              <p className="mt-1 flex items-center gap-1 text-sm text-danger" role="alert">
-                {otpError}
-              </p>
+              </form>
             )}
-          </form>
-        )}
-      </section>
+
+            {step === 'services' && (
+              <div className="flex flex-col gap-4">
+                <StepHeading
+                  icon={<Scissors className="h-5 w-5" aria-hidden="true" />}
+                  title={t('business.register.services.title')}
+                  subtitle={t('business.register.services.subtitle')}
+                />
+
+                {/* Quick-add presets fill the service-name draft. */}
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs font-medium text-muted">
+                    {t('business.register.services.presetsLabel')}
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {SERVICE_PRESETS.map((presetKey) => (
+                      <button
+                        key={presetKey}
+                        type="button"
+                        onClick={() =>
+                          setSvcName(t(`business.register.services.presets.${presetKey}`))
+                        }
+                        className="inline-flex min-h-9 items-center gap-1 rounded-pill border border-border bg-bg px-3 py-1 text-xs text-text transition-colors duration-fast ease-standard hover:border-primary hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                      >
+                        <Plus className="h-3 w-3" aria-hidden="true" />
+                        {t(`business.register.services.presets.${presetKey}`)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto]">
+                  <TextField
+                    id="svcName"
+                    label={t('business.register.services.nameLabel')}
+                    placeholder={t('business.register.services.namePlaceholder')}
+                    value={svcName}
+                    onChange={(e) => setSvcName(e.target.value)}
+                  />
+                  <TextField
+                    id="svcDuration"
+                    label={t('business.register.services.durationLabel')}
+                    inputMode="numeric"
+                    dir="ltr"
+                    placeholder="۳۰"
+                    containerClassName="sm:w-28"
+                    value={svcDuration}
+                    onChange={(e) => setSvcDuration(e.target.value)}
+                  />
+                  <TextField
+                    id="svcPrice"
+                    label={t('business.register.services.priceLabel')}
+                    inputMode="numeric"
+                    dir="ltr"
+                    placeholder="۵۰۰۰۰۰"
+                    containerClassName="sm:w-36"
+                    value={svcPrice}
+                    onChange={(e) => setSvcPrice(e.target.value)}
+                  />
+                </div>
+                {svcError && (
+                  <p className="flex items-center gap-1 text-sm text-danger" role="alert">
+                    {svcError}
+                  </p>
+                )}
+                <div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    startIcon={<Plus className="h-4 w-4" />}
+                    onClick={handleAddService}
+                  >
+                    {t('business.register.services.addCta')}
+                  </Button>
+                </div>
+
+                {services.length > 0 && (
+                  <ul
+                    className="flex flex-col gap-2"
+                    aria-label={t('business.register.services.listLabel')}
+                  >
+                    {services.map((s) => (
+                      <li
+                        key={s.key}
+                        className="flex items-center justify-between gap-3 rounded-md border border-border bg-bg px-3 py-2"
+                      >
+                        <span className="flex flex-col">
+                          <span className="text-sm font-medium text-text">{s.name}</span>
+                          <span className="text-xs text-muted">
+                            {t('business.register.services.summary', {
+                              minutes: toPersianDigits(s.durationMinutes ?? 30),
+                              price: toPersianDigits((s.priceRial ?? 0).toLocaleString('en-US')),
+                            })}
+                          </span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveService(s.key)}
+                          aria-label={t('business.register.services.remove', { name: s.name })}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted transition-colors duration-fast ease-standard hover:bg-surface hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <StepNav
+                  onBack={() => setStep('info')}
+                  onNext={() => setStep('setup')}
+                  onSkip={() => setStep('setup')}
+                  nextLabel={t('business.register.next')}
+                  skipLabel={t('business.register.skip')}
+                  backLabel={t('business.register.back')}
+                />
+              </div>
+            )}
+
+            {step === 'setup' && (
+              <div className="flex flex-col gap-5">
+                <StepHeading
+                  icon={<Store className="h-5 w-5" aria-hidden="true" />}
+                  title={t('business.register.setup.title')}
+                  subtitle={t('business.register.setup.subtitle')}
+                />
+
+                <TextField
+                  id="chairCount"
+                  label={t('business.register.setup.chairsLabel')}
+                  helperText={t('business.register.setup.chairsHelper')}
+                  inputMode="numeric"
+                  dir="ltr"
+                  placeholder="۳"
+                  containerClassName="max-w-[10rem]"
+                  value={chairCount}
+                  onChange={(e) => setChairCount(e.target.value)}
+                />
+
+                {/* Brand-accent picker — themes the storefront + booking funnel. */}
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs font-medium text-muted">
+                    {t('business.register.setup.accentLabel')}
+                  </span>
+                  <div
+                    className="flex flex-wrap gap-2"
+                    role="radiogroup"
+                    aria-label={t('business.register.setup.accentLabel')}
+                  >
+                    <AccentSwatch
+                      selected={accentKey === ''}
+                      onSelect={() => setAccentKey('')}
+                      label={t('business.register.setup.accentDefault')}
+                    />
+                    {ACCENTS.map((accent) => (
+                      <AccentSwatch
+                        key={accent.key}
+                        accentStyle={accentVars(accent)}
+                        selected={accentKey === accent.key}
+                        onSelect={() => setAccentKey(accent.key)}
+                        label={t(`admin.config.brand.accents.${accent.key}`, accent.key)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Compact summary so the owner can confirm before submitting. */}
+                <dl className="flex flex-col gap-2 rounded-md border border-border bg-bg p-3 text-sm">
+                  <SummaryRow label={t('business.register.review.salon')} value={salonName} />
+                  <SummaryRow label={t('business.register.review.owner')} value={ownerName} />
+                  <SummaryRow
+                    label={t('business.register.review.phone')}
+                    value={toPersianDigits(normalizedPhone)}
+                    dir="ltr"
+                  />
+                  <SummaryRow
+                    label={t('business.register.review.services')}
+                    value={
+                      services.length > 0
+                        ? t('business.register.review.servicesCount', {
+                            count: toPersianDigits(services.length),
+                          })
+                        : t('business.register.review.none')
+                    }
+                  />
+                </dl>
+
+                {submitError && (
+                  <p className="flex items-center gap-1 text-sm text-danger" role="alert">
+                    {submitError}
+                  </p>
+                )}
+
+                <StepNav
+                  onBack={() => setStep('services')}
+                  onNext={() => void handleSubmit()}
+                  onSkip={() => void handleSubmit()}
+                  nextLabel={t('business.register.submit')}
+                  skipLabel={t('business.register.skipSetup')}
+                  backLabel={t('business.register.back')}
+                  loading={submitting}
+                />
+              </div>
+            )}
+
+            {step === 'otp' && (
+              <form
+                className="flex flex-col gap-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleVerifyOtp();
+                }}
+              >
+                <StepHeading
+                  icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
+                  title={t('business.register.verify.title')}
+                  subtitle={t('business.register.verify.subtitle', {
+                    phone: toPersianDigits(normalizedPhone),
+                  })}
+                />
+                <fieldset className="m-0 border-0 p-0">
+                  <legend className="mb-1 block text-xs font-medium text-text">
+                    {t('auth.otpLabel')}
+                  </legend>
+                  <div
+                    className="flex flex-row justify-center gap-2"
+                    dir="ltr"
+                    style={{ direction: 'ltr' }}
+                  >
+                    {code.map((digit, index) => (
+                      <input
+                        key={index}
+                        ref={(el) => {
+                          otpRefs.current[index] = el;
+                        }}
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete={index === 0 ? 'one-time-code' : 'off'}
+                        dir="ltr"
+                        maxLength={1}
+                        aria-label={t('auth.otpDigitLabel', { index: toPersianDigits(index + 1) })}
+                        value={digit}
+                        onChange={(e) => handleOtpChange(index, e)}
+                        onPaste={(e) => handleOtpPaste(index, e)}
+                        onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                        className={cn(
+                          'h-12 w-11 rounded-md border bg-bg text-center text-lg font-bold text-text',
+                          'transition-colors duration-fast ease-standard',
+                          'outline-none focus-visible:outline focus-visible:outline-2',
+                          'focus-visible:outline-offset-2 focus-visible:outline-focus',
+                          otpError ? 'border-danger' : 'border-border',
+                        )}
+                      />
+                    ))}
+                  </div>
+                </fieldset>
+
+                <Button
+                  type="submit"
+                  size="lg"
+                  fullWidth
+                  loading={otpLoading}
+                  disabled={!codeIsComplete}
+                >
+                  {t('business.register.verify.cta')}
+                </Button>
+
+                <div className="flex items-center justify-center">
+                  {secondsLeft > 0 ? (
+                    <span className="text-xs text-muted" aria-live="polite">
+                      {t('auth.resendIn', { time: formatCountdown(secondsLeft) })}
+                    </span>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="md"
+                      onClick={() => void resendOtp()}
+                      disabled={otpLoading}
+                    >
+                      {t('auth.resend')}
+                    </Button>
+                  )}
+                </div>
+
+                {otpError && (
+                  <p className="mt-1 flex items-center gap-1 text-sm text-danger" role="alert">
+                    {otpError}
+                  </p>
+                )}
+              </form>
+            )}
+          </section>
         )}
 
-      {/* Already have an account? */}
-      {step !== 'otp' && step !== 'category' && (
-        <p className="text-center text-sm text-muted">
-          {t('business.register.haveAccount')}{' '}
-          <Link
-            to="/auth"
-            className="font-medium text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-          >
-            {t('business.register.signIn')}
-          </Link>
-        </p>
-      )}
+        {/* Already have an account? */}
+        {step !== 'otp' && step !== 'category' && (
+          <p className="text-center text-sm text-muted">
+            {t('business.register.haveAccount')}{' '}
+            <Link
+              to="/auth"
+              className="font-medium text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            >
+              {t('business.register.signIn')}
+            </Link>
+          </p>
+        )}
       </div>
     </div>
   );
@@ -889,9 +893,7 @@ function AccentSwatch({
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
       )}
     >
-      {selected && !accentStyle && (
-        <Check className="h-4 w-4 text-text" aria-hidden="true" />
-      )}
+      {selected && !accentStyle && <Check className="h-4 w-4 text-text" aria-hidden="true" />}
     </button>
   );
 }

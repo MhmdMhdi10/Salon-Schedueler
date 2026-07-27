@@ -82,8 +82,8 @@ describe('business landing — indexable head in initial HTML (R5.4; seo §3/§4
     const route = businessRoute();
     const head = renderHeadTags(route, DEFAULT_SITE_URL);
     const canonical = absoluteUrl(DEFAULT_SITE_URL, '/business');
-    expect(head).toContain('<meta name="robots" content="index,follow" />');
-    expect(head).toContain(`<link rel="canonical" href="${canonical}" />`);
+    expect(head).toContain('<meta data-prerender name="robots" content="index,follow" />');
+    expect(head).toContain(`<link data-prerender rel="canonical" href="${canonical}" />`);
     expect(head).toContain(`hreflang="fa" href="${canonical}"`);
     expect(head).toContain(`hreflang="fa-IR" href="${canonical}"`);
     expect(head).toContain('hreflang="x-default"');
@@ -113,9 +113,9 @@ describe('business landing — indexable head in initial HTML (R5.4; seo §3/§4
     expect(html).not.toContain('<title>سامانه رزرو سالن</title>');
 
     // Robots + canonical present in the initial HTML (View Source parity).
-    expect(html).toContain('<meta name="robots" content="index,follow" />');
+    expect(html).toContain('<meta data-prerender name="robots" content="index,follow" />');
     expect(html).toContain(
-      `<link rel="canonical" href="${absoluteUrl(DEFAULT_SITE_URL, '/business')}" />`,
+      `<link data-prerender rel="canonical" href="${absoluteUrl(DEFAULT_SITE_URL, '/business')}" />`,
     );
 
     // #root carries real content (one <h1>, not empty) without running app JS.
@@ -145,7 +145,7 @@ describe('business landing — WebSite + Organization JSON-LD (R5.4; seo §5)', 
     const route = businessRoute();
     const head = renderHeadTags(route, DEFAULT_SITE_URL);
     const matches = head.match(
-      /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g,
+      /<script data-prerender type="application\/ld\+json">([\s\S]*?)<\/script>/g,
     );
     expect(matches).not.toBeNull();
     expect((matches || []).length).toBe(2);

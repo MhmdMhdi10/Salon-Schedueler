@@ -1,11 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import {
-  render,
-  screen,
-  waitFor,
-  fireEvent,
-  cleanup,
-} from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { ThemeProvider } from '../../../components/theme';
@@ -48,9 +42,7 @@ vi.mock('../../../api/client', () => {
     // calendar/analytics/config endpoints — stub them so the panel mounts.
     adminApi: {
       getCalendar: vi.fn().mockResolvedValue({ appointments: [] }),
-      getAnalytics: vi
-        .fn()
-        .mockResolvedValue({ utilization: {}, revenue: 0, busiestWindows: [] }),
+      getAnalytics: vi.fn().mockResolvedValue({ utilization: {}, revenue: 0, busiestWindows: [] }),
       getStaff: vi.fn().mockResolvedValue({ staff: [] }),
       getChairs: vi.fn().mockResolvedValue({ chairs: [] }),
     },
@@ -63,10 +55,7 @@ vi.mock('../../../api/client', () => {
 import { OwnerLayout } from '../OwnerLayout';
 import { AuthProvider } from '../../../auth/AuthContext';
 import { HeaderAuthNav } from '../../../components/layout/HeaderAuthNav';
-import {
-  OwnerCalendarPage,
-  OwnerConfigurationPage,
-} from '..';
+import { OwnerCalendarPage, OwnerConfigurationPage } from '..';
 
 function renderOwnerApp(initialPath = '/owner/calendar') {
   return render(
@@ -87,11 +76,7 @@ function renderOwnerApp(initialPath = '/owner/calendar') {
 }
 
 function robotsContent(): string | null {
-  return (
-    document.head
-      .querySelector('meta[name="robots"]')
-      ?.getAttribute('content') ?? null
-  );
+  return document.head.querySelector('meta[name="robots"]')?.getAttribute('content') ?? null;
 }
 
 beforeEach(() => {
@@ -156,9 +141,7 @@ describe('OwnerLayout — RBAC (R2.3)', () => {
     renderOwnerApp();
 
     await screen.findByTestId('owner-calendar-page');
-    expect(
-      screen.getAllByRole('link', { name: 'تنظیمات سالن' }).length,
-    ).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('link', { name: 'تنظیمات سالن' }).length).toBeGreaterThanOrEqual(1);
   });
 
   it('limits a Stylist to the own-appointments view', async () => {
@@ -168,9 +151,7 @@ describe('OwnerLayout — RBAC (R2.3)', () => {
     renderOwnerApp();
 
     await screen.findByTestId('owner-calendar-page');
-    expect(
-      screen.queryByRole('link', { name: 'تنظیمات سالن' }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'تنظیمات سالن' })).not.toBeInTheDocument();
   });
 });
 
@@ -191,10 +172,7 @@ describe('OwnerLayout — sign-out', () => {
             <AuthProvider>
               <Routes>
                 <Route path="/owner" element={<OwnerLayout />}>
-                  <Route
-                    path="calendar"
-                    element={<div data-testid="owner-calendar-stub" />}
-                  />
+                  <Route path="calendar" element={<div data-testid="owner-calendar-stub" />} />
                 </Route>
                 <Route path="/auth" element={<HeaderAuthNav />} />
               </Routes>

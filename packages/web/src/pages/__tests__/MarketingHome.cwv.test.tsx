@@ -31,10 +31,6 @@ function renderHome() {
   );
 }
 
-function head(selector: string): Element | null {
-  return document.head.querySelector(selector);
-}
-
 afterEach(() => {
   cleanup();
 });
@@ -75,7 +71,9 @@ describe('LCP optimization', () => {
   it('route-level code splitting: MarketingHome is lazy-loaded (no admin bundles)', () => {
     const appContent = readFileSync(resolve(__dirname, '../../App.tsx'), 'utf-8');
     // MarketingHome is lazy-loaded
-    expect(appContent).toMatch(/lazy\(\(\)\s*=>\s*\n?\s*import\(['"]\.\/pages\/MarketingHome['"]\)/);
+    expect(appContent).toMatch(
+      /lazy\(\(\)\s*=>\s*\n?\s*import\(['"]\.\/pages\/MarketingHome['"]\)/,
+    );
     // Owner pages are also lazy-loaded (separate code split group)
     expect(appContent).toMatch(/lazy\(\(\)\s*=>\s*\n?\s*import\(['"]\.\/pages\/owner/);
   });
@@ -167,9 +165,7 @@ describe('responsive design (no horizontal overflow)', () => {
   it('featured salons grid is responsive: grid-cols-1 sm:grid-cols-2 lg:grid-cols-4', () => {
     const { getByTestId } = renderHome();
     const root = getByTestId('marketing-home');
-    const gridElements = root.querySelectorAll(
-      '[class*="grid-cols-1"][class*="sm:grid-cols-2"]',
-    );
+    const gridElements = root.querySelectorAll('[class*="grid-cols-1"][class*="sm:grid-cols-2"]');
     expect(gridElements.length).toBeGreaterThan(0);
   });
 
@@ -208,9 +204,7 @@ describe('responsive design (no horizontal overflow)', () => {
   it('salon card grid adapts to multiple breakpoints', () => {
     const { getByTestId } = renderHome();
     const root = getByTestId('marketing-home');
-    const grids = root.querySelectorAll(
-      '[class*="grid-cols-1"][class*="sm:grid-cols-2"]',
-    );
+    const grids = root.querySelectorAll('[class*="grid-cols-1"][class*="sm:grid-cols-2"]');
     expect(grids.length).toBeGreaterThanOrEqual(1);
   });
 });
@@ -225,14 +219,15 @@ describe('performance budget and loading strategy', () => {
     const allImages = root.querySelectorAll('img');
     let lazyCount = 0;
     for (const img of allImages) {
-    if (img.getAttribute('loading') === 'lazy') {
+      if (img.getAttribute('loading') === 'lazy') {
         lazyCount++;
       }
     }
     // There should be at least some lazy images (benefit section images, salon cards)
     expect(lazyCount).toBeGreaterThan(0);
     expect(allImages[0]).toHaveAttribute('loading', 'eager');
-    for (const img of Array.from(allImages).slice(1)) expect(img).toHaveAttribute('loading', 'lazy');
+    for (const img of Array.from(allImages).slice(1))
+      expect(img).toHaveAttribute('loading', 'lazy');
   });
 
   it('animation system uses only compositor-friendly properties (transform, opacity)', () => {

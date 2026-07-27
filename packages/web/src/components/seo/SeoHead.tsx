@@ -102,9 +102,7 @@ export function SeoHead({
     <Helmet prioritizeSeoTags>
       <html lang="fa" dir="rtl" />
       <title>{fullTitle}</title>
-      {description != null && (
-        <meta name="description" content={description} />
-      )}
+      {description != null && <meta name="description" content={description} />}
       <meta name="robots" content={robots} />
       <link rel="canonical" href={canonicalUrl} />
 
@@ -118,9 +116,7 @@ export function SeoHead({
       <meta property="og:site_name" content={SITE_NAME} />
       <meta property="og:locale" content={OG_LOCALE} />
       <meta property="og:title" content={fullTitle} />
-      {description != null && (
-        <meta property="og:description" content={description} />
-      )}
+      {description != null && <meta property="og:description" content={description} />}
       <meta property="og:url" content={canonicalUrl} />
       <meta property="og:image" content={image} />
       <meta property="og:image:width" content={String(OG_IMAGE_WIDTH)} />
@@ -129,9 +125,7 @@ export function SeoHead({
       {/* Twitter card (seo §4). */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={fullTitle} />
-      {description != null && (
-        <meta name="twitter:description" content={description} />
-      )}
+      {description != null && <meta name="twitter:description" content={description} />}
       <meta name="twitter:image" content={image} />
 
       {children}

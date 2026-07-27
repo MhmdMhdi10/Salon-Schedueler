@@ -7,6 +7,7 @@ import '../../i18n';
 import { CalendarPage } from './CalendarPage';
 import { AnalyticsPage } from './AnalyticsPage';
 import { adminApi } from '../../api/client';
+import { ToastProvider } from '../../components/ui/Toast';
 
 /**
  * Property 12: Error states are safe and recoverable
@@ -62,15 +63,35 @@ afterEach(() => {
 
 /** Arbitrary HTTP status codes (client + server errors). */
 const arbHttpStatus = fc.constantFrom(
-  400, 401, 403, 404, 405, 408, 409, 413, 422, 429,
-  500, 501, 502, 503, 504,
+  400,
+  401,
+  403,
+  404,
+  405,
+  408,
+  409,
+  413,
+  422,
+  429,
+  500,
+  501,
+  502,
+  503,
+  504,
 );
 
 /** Arbitrary error codes similar to what the backend might return. */
 const arbErrorCode = fc.constantFrom(
-  'FORBIDDEN', 'INTERNAL', 'TIMEOUT', 'NETWORK', 'NOT_FOUND',
-  'RATE_LIMITED', 'INVALID_REQUEST', 'SERVICE_UNAVAILABLE',
-  'BAD_GATEWAY', 'UNKNOWN',
+  'FORBIDDEN',
+  'INTERNAL',
+  'TIMEOUT',
+  'NETWORK',
+  'NOT_FOUND',
+  'RATE_LIMITED',
+  'INVALID_REQUEST',
+  'SERVICE_UNAVAILABLE',
+  'BAD_GATEWAY',
+  'UNKNOWN',
 );
 
 /** Arbitrary error messages that might include stack traces or raw info. */
@@ -90,15 +111,15 @@ const arbErrorMessage = fc.constantFrom(
 );
 
 /** Generate an error object that simulates various API failures. */
-const arbApiError = fc.tuple(arbHttpStatus, arbErrorCode, arbErrorMessage).map(
-  ([status, code, message]) => {
+const arbApiError = fc
+  .tuple(arbHttpStatus, arbErrorCode, arbErrorMessage)
+  .map(([status, code, message]) => {
     const err = new Error(message) as Error & { status?: number; code?: string };
     err.name = 'ApiError';
     err.status = status;
     err.code = code;
     return err;
-  },
-);
+  });
 
 /** Generate a TypeError or generic JS error (non-API failures). */
 const arbGenericError = fc.constantFrom(
@@ -183,7 +204,9 @@ describe('Feature: signature-ui-system, Property 12: Error states are safe and r
         render(
           <HelmetProvider>
             <MemoryRouter>
-              <CalendarPage salonId="salon-err" />
+              <ToastProvider>
+                <CalendarPage salonId="salon-err" />
+              </ToastProvider>
             </MemoryRouter>
           </HelmetProvider>,
         );
@@ -215,7 +238,9 @@ describe('Feature: signature-ui-system, Property 12: Error states are safe and r
         render(
           <HelmetProvider>
             <MemoryRouter>
-              <CalendarPage salonId="salon-retry" />
+              <ToastProvider>
+                <CalendarPage salonId="salon-retry" />
+              </ToastProvider>
             </MemoryRouter>
           </HelmetProvider>,
         );
@@ -232,7 +257,9 @@ describe('Feature: signature-ui-system, Property 12: Error states are safe and r
 
         // Verify API was called again
         await waitFor(() => {
-          expect(vi.mocked(adminApi.getCalendar).mock.calls.length).toBeGreaterThan(callCountBefore);
+          expect(vi.mocked(adminApi.getCalendar).mock.calls.length).toBeGreaterThan(
+            callCountBefore,
+          );
         });
       }),
       { numRuns: 10 },
@@ -251,7 +278,9 @@ describe('Feature: signature-ui-system, Property 12: Error states are safe and r
         render(
           <HelmetProvider>
             <MemoryRouter>
-              <CalendarPage salonId="salon-after-load" />
+              <ToastProvider>
+                <CalendarPage salonId="salon-after-load" />
+              </ToastProvider>
             </MemoryRouter>
           </HelmetProvider>,
         );
@@ -362,7 +391,9 @@ describe('Feature: signature-ui-system, Property 12: Error states are safe and r
 
         // Verify API was called again
         await waitFor(() => {
-          expect(vi.mocked(adminApi.getAnalytics).mock.calls.length).toBeGreaterThan(callCountBefore);
+          expect(vi.mocked(adminApi.getAnalytics).mock.calls.length).toBeGreaterThan(
+            callCountBefore,
+          );
         });
       }),
       { numRuns: 10 },
@@ -375,7 +406,11 @@ describe('Feature: signature-ui-system, Property 12: Error states are safe and r
         cleanup();
 
         // First call succeeds with data
-        const firstCall = deferred<{ utilization: unknown; revenue: unknown; busiestWindows: unknown }>();
+        const firstCall = deferred<{
+          utilization: unknown;
+          revenue: unknown;
+          busiestWindows: unknown;
+        }>();
         vi.mocked(adminApi.getAnalytics).mockReturnValueOnce(firstCall.promise);
 
         render(

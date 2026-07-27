@@ -25,11 +25,7 @@ export function FeatureMosaic({ children, className }: FeatureMosaicProps) {
   return (
     <div
       data-layout="feature-mosaic"
-      className={cn(
-        'grid grid-cols-1 gap-5',
-        'md:grid-cols-3 md:auto-rows-fr',
-        className,
-      )}
+      className={cn('grid grid-cols-1 gap-5', 'md:grid-cols-3 md:auto-rows-fr', className)}
     >
       {tiles.map((tile, index) => (
         <div

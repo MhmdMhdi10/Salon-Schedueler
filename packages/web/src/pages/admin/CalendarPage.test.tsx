@@ -6,6 +6,7 @@ import '../../i18n';
 import { CalendarPage } from './CalendarPage';
 import { adminApi, ApiError } from '../../api/client';
 import type { OwnerRole } from '../../api/client';
+import { ToastProvider } from '../../components/ui/Toast';
 
 /**
  * Component tests for the admin CalendarPage.
@@ -19,7 +20,7 @@ vi.mock('../../api/client', () => {
     constructor(
       public status: number,
       public code: string,
-      message: string
+      message: string,
     ) {
       super(message);
       this.name = 'ApiError';
@@ -80,9 +81,11 @@ function renderPage() {
   return render(
     <HelmetProvider>
       <MemoryRouter>
-        <CalendarPage salonId="salon-2" />
+        <ToastProvider>
+          <CalendarPage salonId="salon-2" />
+        </ToastProvider>
       </MemoryRouter>
-    </HelmetProvider>
+    </HelmetProvider>,
   );
 }
 
@@ -98,12 +101,18 @@ describe('CalendarPage', () => {
       'salon-2',
       expect.any(String),
       expect.any(String),
-      'day'
+      'day',
     );
 
     calD.resolve({
       appointments: [
-        { id: 'a1', startAt: '2024-03-15T09:00:00Z', endAt: '2024-03-15T09:45:00Z', serviceName: 'Haircut', status: 'confirmed' },
+        {
+          id: 'a1',
+          startAt: '2024-03-15T09:00:00Z',
+          endAt: '2024-03-15T09:45:00Z',
+          serviceName: 'Haircut',
+          status: 'confirmed',
+        },
       ],
     });
 
@@ -129,8 +138,8 @@ describe('CalendarPage', () => {
         'salon-2',
         expect.any(String),
         expect.any(String),
-        'week'
-      )
+        'week',
+      ),
     );
   });
 
@@ -177,9 +186,7 @@ describe('CalendarPage — approve/reject (manage_appointments)', () => {
 
     renderPage();
 
-    await waitFor(() =>
-      expect(screen.getByTestId('calendar-appointments')).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByTestId('calendar-appointments')).toBeTruthy());
 
     const approveBtn = await screen.findByRole('button', { name: 'تأیید' });
     expect(screen.getByRole('button', { name: 'رد' })).toBeTruthy();
@@ -187,14 +194,10 @@ describe('CalendarPage — approve/reject (manage_appointments)', () => {
     const callsBefore = vi.mocked(adminApi.getCalendar).mock.calls.length;
     fireEvent.click(approveBtn);
 
-    await waitFor(() =>
-      expect(adminApi.approveAppointment).toHaveBeenCalledWith('appt-7'),
-    );
+    await waitFor(() => expect(adminApi.approveAppointment).toHaveBeenCalledWith('appt-7'));
     // On success the calendar refetches so the new status is reflected.
     await waitFor(() =>
-      expect(
-        vi.mocked(adminApi.getCalendar).mock.calls.length,
-      ).toBeGreaterThan(callsBefore),
+      expect(vi.mocked(adminApi.getCalendar).mock.calls.length).toBeGreaterThan(callsBefore),
     );
   });
 
@@ -208,9 +211,7 @@ describe('CalendarPage — approve/reject (manage_appointments)', () => {
 
       renderPage();
 
-      await waitFor(() =>
-        expect(screen.getByTestId('calendar-appointments')).toBeTruthy(),
-      );
+      await waitFor(() => expect(screen.getByTestId('calendar-appointments')).toBeTruthy());
       expect(screen.queryByRole('button', { name: 'تأیید' })).toBeNull();
     },
   );

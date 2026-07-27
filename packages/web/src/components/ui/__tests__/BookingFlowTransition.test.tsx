@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars --
+ * The framer-motion mock intercepts arbitrary motion props (variants,
+ * transition, ...) to strip them from the DOM; loose typing is intentional. */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';

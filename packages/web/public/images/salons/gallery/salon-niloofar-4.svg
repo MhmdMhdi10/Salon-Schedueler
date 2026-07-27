@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img">
+  <defs>
+    <linearGradient id="bg-salon-niloofar-4" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#40241a"/><stop offset="1" stop-color="#7a4633"/>
+    </linearGradient>
+    <radialGradient id="glow-salon-niloofar-4" cx="0.5" cy="0.4" r="0.7">
+      <stop offset="0" stop-color="#f2cc8f" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#f2cc8f" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="arc-salon-niloofar-4" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e07a5f" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#e07a5f" stop-opacity="0.35"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#bg-salon-niloofar-4)"/>
+    <circle cx="530" cy="90" r="120" fill="url(#glow-salon-niloofar-4)"/>
+    <path d="M60 360 L60 180 A70 70 0 0 1 200 180 L200 360 Z" fill="url(#arc-salon-niloofar-4)" opacity="0.85"/>
+    <path d="M250 360 L250 230 A55 55 0 0 1 360 230 L360 360 Z" fill="#e07a5f" opacity="0.4"/>
+    <path d="M410 360 L410 270 A40 40 0 0 1 490 270 L490 360 Z" fill="#f2cc8f" opacity="0.25"/>
+    <circle cx="530" cy="90" r="34" fill="none" stroke="#f2cc8f" stroke-width="2" opacity="0.7"/>
+</svg>

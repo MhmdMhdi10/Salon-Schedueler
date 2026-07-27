@@ -1,12 +1,5 @@
 import { forwardRef } from 'react';
-import {
-  CheckCircle2,
-  AlertTriangle,
-  XCircle,
-  Info,
-  Circle,
-  type LucideIcon,
-} from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle, Info, Circle, type LucideIcon } from 'lucide-react';
 import { cn } from './cn';
 
 export type BadgeStatus = 'success' | 'warning' | 'danger' | 'info' | 'neutral';

@@ -122,11 +122,7 @@ describe('ErrorState', () => {
   it('announces via role=alert and renders a working retry action', () => {
     const onRetry = vi.fn();
     render(
-      <ErrorState
-        title="بارگذاری ناموفق بود"
-        description="اتصال برقرار نشد"
-        onRetry={onRetry}
-      />,
+      <ErrorState title="بارگذاری ناموفق بود" description="اتصال برقرار نشد" onRetry={onRetry} />,
     );
     const alert = screen.getByRole('alert');
     expect(alert).toHaveTextContent('بارگذاری ناموفق بود');

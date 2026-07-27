@@ -55,7 +55,6 @@ import {
   Spinner,
   Switch,
   TextField,
-  ToastProvider,
   cn,
   useToast,
 } from '../../components/ui';
@@ -1561,14 +1560,10 @@ function ConfigurationPageContent({ salonId: salonIdProp }: { salonId?: string }
 }
 
 /**
- * Public entry point. Hosts its own {@link ToastProvider} so the undo
- * («بازگردانی») confirmation works whether the route is mounted standalone (as
- * in the component tests) or inside the admin shell.
+ * Public entry point. The undo («بازگردانی») confirmation toasts surface
+ * through the app-root `ToastProvider` in App.tsx — a nested per-page provider
+ * would silo them from the app host (component tests supply their own).
  */
 export function ConfigurationPage({ salonId }: { salonId?: string }) {
-  return (
-    <ToastProvider>
-      <ConfigurationPageContent salonId={salonId} />
-    </ToastProvider>
-  );
+  return <ConfigurationPageContent salonId={salonId} />;
 }

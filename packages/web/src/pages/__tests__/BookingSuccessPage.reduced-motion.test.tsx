@@ -20,7 +20,11 @@ import { BookingSuccessPage } from '../BookingSuccessPage';
  * under reduce) and that the opacity/visible content is never hidden.
  */
 
+// The page renders a real receipt only when the confirm step hands over a
+// server-decided `status` (honest-receipt contract); `pending` keeps the
+// amber clock icon these assertions target.
 const SUMMARY = {
+  status: 'pending' as const,
   serviceName: 'کوتاهی مو',
   startAt: '2999-03-15T09:30:00.000Z',
   salonName: 'سالن رز',
@@ -31,10 +35,7 @@ function HomeProbe() {
 }
 
 function renderPage(state: unknown = undefined) {
-  const entry =
-    state === undefined
-      ? '/booking/success'
-      : { pathname: '/booking/success', state };
+  const entry = state === undefined ? '/booking/success' : { pathname: '/booking/success', state };
   return render(
     <HelmetProvider>
       <MemoryRouter initialEntries={[entry]}>
@@ -52,9 +53,7 @@ function stubReducedMotion(prefersReduce: boolean) {
   vi.stubGlobal(
     'matchMedia',
     vi.fn().mockImplementation((query: string) => ({
-      matches: query.includes('prefers-reduced-motion: reduce')
-        ? prefersReduce
-        : false,
+      matches: query.includes('prefers-reduced-motion: reduce') ? prefersReduce : false,
       media: query,
       onchange: null,
       addEventListener: vi.fn(),
@@ -72,6 +71,9 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  // The page mirrors the routed outcome into sessionStorage (refresh-proof
+  // receipt) — clear it so tests stay isolated from each other.
+  sessionStorage.clear();
   cleanup();
 });
 
@@ -89,12 +91,8 @@ describe('BookingSuccessPage — reduced motion (R6.3)', () => {
   it('keeps the success content present and visible under reduced motion', () => {
     renderPage(SUMMARY);
     // Content (opacity/visibility) is never hidden by the dropped transform.
-    expect(
-      screen.getByRole('heading', { name: 'درخواست رزرو شما ثبت شد' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('img', { name: 'در انتظار تایید سالن' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'درخواست رزرو شما ثبت شد' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'در انتظار تایید سالن' })).toBeInTheDocument();
     // The summary still renders.
     expect(screen.getByText('کوتاهی مو')).toBeInTheDocument();
   });

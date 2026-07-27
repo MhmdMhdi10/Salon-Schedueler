@@ -24,11 +24,7 @@ export interface EditorialSplitProps {
  * (the dominant funnel traffic). Pure CSS-grid with logical flow — no physical
  * `left`/`right`, tokenized `gap` only — so it mirrors correctly in RTL.
  */
-export function EditorialSplit({
-  children,
-  lead = 'start',
-  className,
-}: EditorialSplitProps) {
+export function EditorialSplit({ children, lead = 'start', className }: EditorialSplitProps) {
   return (
     <div
       data-layout="editorial-split"
@@ -38,9 +34,7 @@ export function EditorialSplit({
         // Asymmetric ratio at md+; the fr-based template flows start→end so it
         // honors `dir` automatically (the wide column is at the inline-start
         // for `start`, inline-end for `end`).
-        lead === 'start'
-          ? 'md:grid-cols-[1.4fr_1fr]'
-          : 'md:grid-cols-[1fr_1.4fr]',
+        lead === 'start' ? 'md:grid-cols-[1.4fr_1fr]' : 'md:grid-cols-[1fr_1.4fr]',
         'md:items-center',
         className,
       )}

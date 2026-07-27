@@ -34,10 +34,7 @@ export function SalonPlaceholder({ className, alt }: SalonPlaceholderProps) {
       aria-label={isDecorative ? undefined : alt}
       aria-hidden={isDecorative ? true : undefined}
     >
-      <Motif
-        variant="watermark"
-        className="h-16 w-16 text-border opacity-50"
-      />
+      <Motif variant="watermark" className="h-16 w-16 text-border opacity-50" />
     </div>
   );
 }

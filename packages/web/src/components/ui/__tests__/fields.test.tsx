@@ -29,13 +29,7 @@ describe('TextField', () => {
   });
 
   it('error sets aria-invalid, wires aria-describedby to a role=alert, and hides helper', () => {
-    render(
-      <TextField
-        label="ایمیل"
-        helperText="اختیاری"
-        error="ایمیل نامعتبر است"
-      />,
-    );
+    render(<TextField label="ایمیل" helperText="اختیاری" error="ایمیل نامعتبر است" />);
     const input = screen.getByLabelText('ایمیل');
     expect(input).toHaveAttribute('aria-invalid', 'true');
     const describedBy = input.getAttribute('aria-describedby');
@@ -48,24 +42,14 @@ describe('TextField', () => {
   });
 
   it('passes through dir/inputMode for the phone field pattern', () => {
-    render(
-      <TextField
-        label="تلفن"
-        type="tel"
-        inputMode="tel"
-        dir="ltr"
-        autoComplete="tel"
-      />,
-    );
+    render(<TextField label="تلفن" type="tel" inputMode="tel" dir="ltr" autoComplete="tel" />);
     const input = screen.getByLabelText('تلفن');
     expect(input).toHaveAttribute('dir', 'ltr');
     expect(input).toHaveAttribute('inputmode', 'tel');
   });
 
   it('has no serious/critical a11y violations (with error)', async () => {
-    const { rtlContainer } = renderRtl(
-      <TextField label="نام" error="الزامی است" required />,
-    );
+    const { rtlContainer } = renderRtl(<TextField label="نام" error="الزامی است" required />);
     await expectNoSeriousA11yViolations(rtlContainer);
   });
 });
@@ -76,15 +60,11 @@ describe('Textarea', () => {
     const area = screen.getByLabelText('توضیحات');
     expect(area).toHaveAttribute('aria-invalid', 'true');
     const describedBy = area.getAttribute('aria-describedby');
-    expect(document.getElementById(describedBy!)).toHaveTextContent(
-      'خیلی کوتاه است',
-    );
+    expect(document.getElementById(describedBy!)).toHaveTextContent('خیلی کوتاه است');
   });
 
   it('has no serious/critical a11y violations', async () => {
-    const { rtlContainer } = renderRtl(
-      <Textarea label="یادداشت" helperText="اختیاری" />,
-    );
+    const { rtlContainer } = renderRtl(<Textarea label="یادداشت" helperText="اختیاری" />);
     await expectNoSeriousA11yViolations(rtlContainer);
   });
 });
@@ -111,9 +91,7 @@ describe('Checkbox', () => {
   });
 
   it('has no serious/critical a11y violations', async () => {
-    const { rtlContainer } = renderRtl(
-      <Checkbox label="یادآوری" helperText="پیامک می‌فرستیم" />,
-    );
+    const { rtlContainer } = renderRtl(<Checkbox label="یادآوری" helperText="پیامک می‌فرستیم" />);
     await expectNoSeriousA11yViolations(rtlContainer);
   });
 });
@@ -129,9 +107,7 @@ describe('Switch', () => {
   });
 
   it('has no serious/critical a11y violations', async () => {
-    const { rtlContainer } = renderRtl(
-      <Switch label="اعلان‌ها" helperText="فعال/غیرفعال" />,
-    );
+    const { rtlContainer } = renderRtl(<Switch label="اعلان‌ها" helperText="فعال/غیرفعال" />);
     await expectNoSeriousA11yViolations(rtlContainer);
   });
 });
@@ -152,21 +128,13 @@ describe('RadioGroup', () => {
 
   it('selects an option on click', () => {
     const onValueChange = vi.fn();
-    render(
-      <RadioGroup
-        label="روش"
-        options={options}
-        onValueChange={onValueChange}
-      />,
-    );
+    render(<RadioGroup label="روش" options={options} onValueChange={onValueChange} />);
     fireEvent.click(screen.getByRole('radio', { name: 'تماس' }));
     expect(onValueChange).toHaveBeenCalledWith('call');
   });
 
   it('has no serious/critical a11y violations', async () => {
-    const { rtlContainer } = renderRtl(
-      <RadioGroup label="روش اطلاع‌رسانی" options={options} />,
-    );
+    const { rtlContainer } = renderRtl(<RadioGroup label="روش اطلاع‌رسانی" options={options} />);
     await expectNoSeriousA11yViolations(rtlContainer);
   });
 });

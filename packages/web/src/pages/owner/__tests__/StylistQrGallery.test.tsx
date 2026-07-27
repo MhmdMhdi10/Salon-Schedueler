@@ -67,9 +67,7 @@ describe('StylistQrGallery — empty', () => {
 
     renderGallery();
 
-    expect(
-      await screen.findByText('هنوز آرایشگری ثبت نشده'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('هنوز آرایشگری ثبت نشده')).toBeInTheDocument();
     expect(screen.queryByTestId('qr-stylist-image')).not.toBeInTheDocument();
   });
 });
@@ -122,9 +120,7 @@ describe('StylistQrGallery — error + retry', () => {
 
     renderGallery();
 
-    expect(
-      await screen.findByText('ساخت کدهای آرایشگرها ناموفق بود'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('ساخت کدهای آرایشگرها ناموفق بود')).toBeInTheDocument();
 
     // Recover: getStylists now resolves; «تلاش مجدد» re-runs the fetch.
     getStylists.mockResolvedValue({

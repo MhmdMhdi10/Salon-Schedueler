@@ -47,11 +47,7 @@ const SCHEMA_CONTEXT = 'https://schema.org';
 
 /** True when `value` is a plain object (not null, not an array). */
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    !Array.isArray(value)
-  );
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /**
@@ -82,9 +78,7 @@ export function serializeJsonLd(node: JsonLdNode): string {
 
 export function JsonLd({ data }: JsonLdProps) {
   const nodes = Array.isArray(data) ? data : [data];
-  const valid = nodes
-    .map(normalizeJsonLdNode)
-    .filter((node): node is JsonLdNode => node !== null);
+  const valid = nodes.map(normalizeJsonLdNode).filter((node): node is JsonLdNode => node !== null);
 
   if (import.meta.env?.DEV && valid.length !== nodes.length) {
     // eslint-disable-next-line no-console

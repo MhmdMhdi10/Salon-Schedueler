@@ -49,9 +49,7 @@ describe('AdminShell', () => {
   it('marks the active route with aria-current="page"', () => {
     renderAdmin({}, '/admin/analytics');
     const current = screen.getAllByRole('link', { name: 'آمار' });
-    expect(
-      current.some((el) => el.getAttribute('aria-current') === 'page'),
-    ).toBe(true);
+    expect(current.some((el) => el.getAttribute('aria-current') === 'page')).toBe(true);
   });
 
   it('renders a mobile bottom tab bar', () => {
@@ -64,10 +62,7 @@ describe('AdminShell', () => {
 
   it('renders desktop breadcrumbs with a dashboard root and current page', () => {
     renderAdmin({
-      breadcrumbs: [
-        { label: 'خدمات', to: '/admin/config' },
-        { label: 'ویرایش خدمت' },
-      ],
+      breadcrumbs: [{ label: 'خدمات', to: '/admin/config' }, { label: 'ویرایش خدمت' }],
     });
     const trail = screen.getByRole('navigation', { name: 'مسیر صفحه' });
     expect(within(trail).getByText('داشبورد')).toBeInTheDocument();
@@ -78,25 +73,19 @@ describe('AdminShell', () => {
 
   it('omits breadcrumbs when none are supplied', () => {
     renderAdmin();
-    expect(
-      screen.queryByRole('navigation', { name: 'مسیر صفحه' }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'مسیر صفحه' })).not.toBeInTheDocument();
   });
 
   it('is structurally distinct from the funnel (admin data-shell marker)', () => {
     const { container } = renderAdmin();
-    expect(
-      container.querySelector('[data-shell="admin"]'),
-    ).toBeInTheDocument();
+    expect(container.querySelector('[data-shell="admin"]')).toBeInTheDocument();
   });
 
   it('has no serious/critical a11y violations in RTL', async () => {
     const { rtlContainer } = renderRtl(
       <ThemeProvider defaultTheme="light">
         <MemoryRouter initialEntries={['/admin/config']}>
-          <AdminShell
-            breadcrumbs={[{ label: 'خدمات', to: '/admin/config' }]}
-          >
+          <AdminShell breadcrumbs={[{ label: 'خدمات', to: '/admin/config' }]}>
             <h1>تنظیمات</h1>
           </AdminShell>
         </MemoryRouter>

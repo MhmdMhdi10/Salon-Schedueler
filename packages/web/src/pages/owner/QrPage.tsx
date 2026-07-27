@@ -12,13 +12,7 @@ import {
   Printer,
   Sparkles,
 } from 'lucide-react';
-import {
-  ApiError,
-  cardOrderApi,
-  qrApi,
-  salonApi,
-  type SalonQrResponse,
-} from '../../api/client';
+import { ApiError, cardOrderApi, qrApi, salonApi, type SalonQrResponse } from '../../api/client';
 import { useSalonId } from '../../auth/useSalonId';
 import { SeoHead } from '../../components/seo';
 import { Motif } from '../../components/brand';
@@ -322,8 +316,7 @@ export function OwnerQrPage() {
   const stylistName = targetStylist?.fullName?.trim() ?? '';
   // The QR to render/print/download: the targeted stylist's payload when one is
   // selected and loaded, otherwise the salon-wide payload.
-  const activePayload =
-    targetStaffId && staffPayload ? staffPayload : data?.payload ?? '';
+  const activePayload = targetStaffId && staffPayload ? staffPayload : (data?.payload ?? '');
   const qrAlt = data
     ? stylistName
       ? t('owner.qr.imageAltStylist', { salon: data.salonName, stylist: stylistName })
@@ -355,11 +348,6 @@ export function OwnerQrPage() {
   // Orders apply to a printable card/banner; a standee selection prints but
   // orders the closest physical product (the card).
   const orderTemplate: 'card' | 'banner' = kind === 'banner' ? 'banner' : 'card';
-  const normalizedPhone = toLatinDigits(orderPhone).replace(/\D/g, '');
-  const orderValid =
-    orderName.trim().length > 1 &&
-    /^09\d{9}$/.test(normalizedPhone) &&
-    orderAddress.trim().length > 4;
 
   const handleOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -397,9 +385,7 @@ export function OwnerQrPage() {
       setOrderId(res.orderId);
       setOrderStatus('success');
     } catch (err) {
-      setOrderError(
-        err instanceof ApiError ? err.message : t('owner.qr.order.errorBody'),
-      );
+      setOrderError(err instanceof ApiError ? err.message : t('owner.qr.order.errorBody'));
       setOrderStatus('error');
     }
   };
@@ -410,11 +396,7 @@ export function OwnerQrPage() {
   }));
 
   return (
-    <section
-      data-testid="owner-qr-page"
-      data-print-kind={kind}
-      className="flex flex-col gap-6"
-    >
+    <section data-testid="owner-qr-page" data-print-kind={kind} className="flex flex-col gap-6">
       <SeoHead title={t('owner.qr.title')} />
 
       <header className="flex flex-col gap-2 owner-qr-screen-only">
@@ -454,9 +436,7 @@ export function OwnerQrPage() {
           <CardTitle as="h2" className="relative text-lg font-bold text-text">
             {t('owner.qr.gate.title')}
           </CardTitle>
-          <p className="relative max-w-prose text-sm text-muted">
-            {t('owner.qr.gate.body')}
-          </p>
+          <p className="relative max-w-prose text-sm text-muted">{t('owner.qr.gate.body')}</p>
           <Link
             to="/owner/subscription"
             className="relative inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md bg-primary px-5 py-3 text-md font-medium text-primary-contrast no-underline shadow-1 transition-colors duration-fast ease-standard hover:brightness-110 active:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
@@ -464,9 +444,7 @@ export function OwnerQrPage() {
             <Sparkles className="h-4 w-4" aria-hidden="true" />
             {t('owner.qr.gate.cta')}
           </Link>
-          <p className="relative max-w-prose text-xs text-muted">
-            {t('owner.qr.gate.trialNote')}
-          </p>
+          <p className="relative max-w-prose text-xs text-muted">{t('owner.qr.gate.trialNote')}</p>
         </Card>
       )}
 
@@ -530,10 +508,7 @@ export function OwnerQrPage() {
                         key={k}
                         type="button"
                         aria-pressed={kind === k}
-                        className={cn(
-                          'owner-qr-seg',
-                          kind === k && 'owner-qr-seg--on',
-                        )}
+                        className={cn('owner-qr-seg', kind === k && 'owner-qr-seg--on')}
                         onClick={() => setKind(k)}
                       >
                         {t(`owner.qr.template.${k}`)}
@@ -568,9 +543,7 @@ export function OwnerQrPage() {
                         }}
                         onClick={() => setAccentKey(a.key)}
                       >
-                        {accentKey === a.key && (
-                          <Check className="h-4 w-4" aria-hidden="true" />
-                        )}
+                        {accentKey === a.key && <Check className="h-4 w-4" aria-hidden="true" />}
                       </button>
                     ))}
                   </div>
@@ -622,9 +595,7 @@ export function OwnerQrPage() {
                   <Button
                     variant="secondary"
                     startIcon={<ImageIcon className="h-4 w-4" />}
-                    onClick={() =>
-                      void downloadQrPng(activePayload, qrAlt, data.salonName)
-                    }
+                    onClick={() => void downloadQrPng(activePayload, qrAlt, data.salonName)}
                   >
                     {t('owner.qr.downloadPng')}
                   </Button>
@@ -687,13 +658,7 @@ export function OwnerQrPage() {
                 <Button
                   data-testid="qr-copy"
                   variant="secondary"
-                  startIcon={
-                    copied ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )
-                  }
+                  startIcon={copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   onClick={handleCopy}
                 >
                   {copied ? t('owner.qr.copied') : t('owner.qr.copy')}
@@ -738,17 +703,11 @@ export function OwnerQrPage() {
           </div>
 
           {orderStatus === 'success' ? (
-            <div
-              data-testid="qr-order-success"
-              role="status"
-              className="owner-qr-order__done"
-            >
+            <div data-testid="qr-order-success" role="status" className="owner-qr-order__done">
               <Check className="h-6 w-6" aria-hidden="true" />
               <div className="flex flex-col gap-1">
                 <strong>{t('owner.qr.order.successTitle')}</strong>
-                <span className="text-sm">
-                  {t('owner.qr.order.successBody')}
-                </span>
+                <span className="text-sm">{t('owner.qr.order.successBody')}</span>
                 {orderId && (
                   <span className="text-xs text-muted">
                     {t('owner.qr.order.refLabel')}:{' '}
@@ -836,7 +795,7 @@ export function OwnerQrPage() {
             </form>
           )}
         </Card>
-          )}
+      )}
       {status === 'success' && data && (
         <>
           {/* ── Print surface: simple standee (always in DOM; print-only) ── */}
@@ -854,9 +813,7 @@ export function OwnerQrPage() {
               height={200}
               className="owner-qr-standee__qr"
             />
-            <p className="owner-qr-standee__invite">
-              {t('owner.qr.standeeInvite')}
-            </p>
+            <p className="owner-qr-standee__invite">{t('owner.qr.standeeInvite')}</p>
           </section>
 
           {/* ── Print surface: the branded card/banner (print-only) ── */}

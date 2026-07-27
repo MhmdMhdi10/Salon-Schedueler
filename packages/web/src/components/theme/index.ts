@@ -7,8 +7,10 @@ export {
   ThemeProvider,
   useTheme,
   THEME_STORAGE_KEY,
+  ThemeScope,
+  useThemeScope,
 } from './ThemeProvider';
-export type { Theme, ThemeProviderProps } from './ThemeProvider';
+export type { Theme, ThemeProviderProps, ThemeScopeProps } from './ThemeProvider';
 export { ThemeToggle } from './ThemeToggle';
 export type { ThemeToggleProps } from './ThemeToggle';
 export { OwnerThemeToggle } from './OwnerThemeToggle';

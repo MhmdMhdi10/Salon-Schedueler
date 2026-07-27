@@ -45,10 +45,7 @@ describe('Property 21: Marketing routes are indexable with unique metadata', () 
     it('is marked indexable (robots = index,follow)', async () => {
       renderHome();
       await waitFor(() => {
-        expect(head('meta[name="robots"]')).toHaveAttribute(
-          'content',
-          'index,follow',
-        );
+        expect(head('meta[name="robots"]')).toHaveAttribute('content', 'index,follow');
       });
     });
 
@@ -107,10 +104,7 @@ describe('Property 21: Marketing routes are indexable with unique metadata', () 
     it('is marked indexable (robots = index,follow)', async () => {
       renderBusiness();
       await waitFor(() => {
-        expect(head('meta[name="robots"]')).toHaveAttribute(
-          'content',
-          'index,follow',
-        );
+        expect(head('meta[name="robots"]')).toHaveAttribute('content', 'index,follow');
       });
     });
 

@@ -1,8 +1,5 @@
 import { forwardRef } from 'react';
-import {
-  gregorianToJalali,
-  getJalaliMonthName,
-} from '@salon/shared';
+import { gregorianToJalali, getJalaliMonthName } from '@salon/shared';
 import { cn } from './cn';
 import { toPersianDigits } from './Num';
 
@@ -87,27 +84,23 @@ export function formatJalaliDisplay(
  *   <JalaliDate value={appointment.startAt} withWeekday />
  *   <JalaliDate value="2025-05-07" variant="numeric" />
  */
-export const JalaliDate = forwardRef<HTMLTimeElement, JalaliDateProps>(
-  function JalaliDate(
-    { value, variant = 'long', withWeekday = false, className, ...rest },
-    ref,
-  ) {
-    const date = toDate(value);
-    const display = formatJalaliDisplay(value, variant, withWeekday);
-    // Machine-readable ISO date (YYYY-MM-DD) for the `datetime` attribute.
-    const iso = Number.isNaN(date.getTime())
-      ? undefined
-      : date.toISOString().slice(0, 10);
-    return (
-      <time
-        ref={ref}
-        dateTime={iso}
-        dir="rtl"
-        className={cn('whitespace-nowrap', className)}
-        {...rest}
-      >
-        {display}
-      </time>
-    );
-  },
-);
+export const JalaliDate = forwardRef<HTMLTimeElement, JalaliDateProps>(function JalaliDate(
+  { value, variant = 'long', withWeekday = false, className, ...rest },
+  ref,
+) {
+  const date = toDate(value);
+  const display = formatJalaliDisplay(value, variant, withWeekday);
+  // Machine-readable ISO date (YYYY-MM-DD) for the `datetime` attribute.
+  const iso = Number.isNaN(date.getTime()) ? undefined : date.toISOString().slice(0, 10);
+  return (
+    <time
+      ref={ref}
+      dateTime={iso}
+      dir="rtl"
+      className={cn('whitespace-nowrap', className)}
+      {...rest}
+    >
+      {display}
+    </time>
+  );
+});

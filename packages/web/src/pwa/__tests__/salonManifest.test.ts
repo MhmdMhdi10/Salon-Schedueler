@@ -82,9 +82,7 @@ describe('Feature: signature-ui-system, Property 9: PWA install identity derives
           expect(manifest.theme_color).toBe(themeColor);
           expect(manifest.theme_color).not.toBe('#6366f1');
           // start_url is the salon's storefront booking path, scoped to origin.
-          expect(String(manifest.start_url)).toMatch(
-            new RegExp(`/salon/${salonId}/book$`),
-          );
+          expect(String(manifest.start_url)).toMatch(new RegExp(`/salon/${salonId}/book$`));
           expect(manifest.scope).toBe(`${window.location.origin}/`);
 
           cleanup();

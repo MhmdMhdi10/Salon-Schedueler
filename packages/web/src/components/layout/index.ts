@@ -14,11 +14,7 @@
 export { AppShell, MAIN_CONTENT_ID } from './AppShell';
 export type { AppShellProps } from './AppShell';
 
-export {
-  FunnelShell,
-  FUNNEL_CONTENT_ID,
-  FUNNEL_STEPS,
-} from './FunnelShell';
+export { FunnelShell, FUNNEL_CONTENT_ID, FUNNEL_STEPS } from './FunnelShell';
 export type { FunnelShellProps, FunnelStep } from './FunnelShell';
 
 export { AdminShell, ADMIN_CONTENT_ID } from './AdminShell';

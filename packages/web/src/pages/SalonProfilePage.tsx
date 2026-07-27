@@ -1,137 +1,213 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Check, MapPin, Phone, Star } from 'lucide-react';
+import * as RadixDialog from '@radix-ui/react-dialog';
+import {
+  Check,
+  ExternalLink,
+  Globe,
+  Images,
+  MapPin,
+  Phone,
+  Send,
+  ShieldCheck,
+  X,
+} from 'lucide-react';
 import i18n from '../i18n';
 import { salonApi } from '../api/client';
 import { JsonLd, SeoHead, SITE_URL } from '../components/seo';
 import type { JsonLdNode } from '../components/seo';
-import { DirText, JalaliDate, Num, formatRial, toPersianDigits } from '../components/ui';
+import {
+  DirText,
+  IconButton,
+  ImageCarousel,
+  JalaliDate,
+  Num,
+  Picture,
+  Rating,
+  RatingStars,
+  SalonPlaceholder,
+  Spinner,
+  cn,
+  formatRial,
+  toPersianDigits,
+} from '../components/ui';
+import type { CarouselImage } from '../components/ui/ImageCarousel';
 import { TenantTheme } from '../components/theme';
 import {
   getSalonProfile,
   IRANIAN_WEEK_ORDER,
   PERSIAN_DAY_LABEL,
   type SalonProfile,
+  type SalonService,
   type SchemaDay,
 } from '../data/salons';
-import { getCity } from '../data/discovery';
+// City display name from the lightweight canonical taxonomy (NOT data/discovery
+// — that module carries the full discovery copy and would join this public
+// route's initial JS graph just for one name lookup).
+import { DISCOVERY_CITIES } from '../data/taxonomy';
 import { writeSalonName } from '../utils/salonName';
 
-const PROFILE_IMAGES = [
-  '/images/blog/esthetician.jpg',
-  '/images/features/section-1.webp',
-  '/images/blog/salon-software.jpg',
-  '/images/features/section-2.webp',
-  '/images/blog/short-nails.jpg',
-] as const;
+/**
+ * Public salon profile (`/s/:slug`) — Booksy profile anatomy per the directive
+ * adoption map (§j `/s/:slug`):
+ *
+ *  1. Photo mosaic header from the salon's own gallery (first tile 2×2,
+ *     «نمایش همه تصاویر» opens a Dialog lightbox around `ImageCarousel`).
+ *  2. Identity block: chips → name → address → rating (bold-number ★ count).
+ *  3. Two-column body with a 360px sticky booking card; sticky bottom CTA below
+ *     `lg` (safe-area aware) so the funnel entry never disappears at tablet
+ *     widths.
+ *  4. Services as ONE bordered `divide-y` list, grouped by category, each row
+ *     with an outlined Book button that preserves the chosen service into the
+ *     funnel (`?service=`).
+ *  5. Reviews with a giant rating, star-distribution bars, verified-booking
+ *     checks — every displayed rating is backed by the on-page reviews
+ *     (contract §content-honesty), and JSON-LD `aggregateRating` is emitted
+ *     only when reviews exist.
+ *  6. Uniform `mt-10` rhythm across Services / Reviews / About / Amenities /
+ *     Team / Hours / Contact; hours as a `max-w-sm divide-y` mini-table; the
+ *     Neshan map in a lazy iframe with a real directions link.
+ */
 
-function ProfileGallery({ salonName }: { salonName: string }) {
-  const [active, setActive] = useState(0);
-  const go = (delta: number) =>
-    setActive((current) => (current + delta + PROFILE_IMAGES.length) % PROFILE_IMAGES.length);
+/* ─── Photo mosaic + lightbox ──────────────────────────────────────────── */
+
+const MOSAIC_TILES = 5;
+
+function ProfileGallery({
+  salon,
+  onOpen,
+}: {
+  salon: SalonProfile;
+  onOpen: (index: number) => void;
+}) {
+  const { t } = useTranslation();
+  const images = salon.gallery.slice(0, MOSAIC_TILES);
+  const placeholders = Math.max(0, MOSAIC_TILES - images.length);
 
   return (
-    <section aria-labelledby="salon-gallery-title" className="relative">
-      <h2 id="salon-gallery-title" className="sr-only">
-        تصاویر {salonName}
-      </h2>
-      <div
-        role="region"
-        aria-roledescription="carousel"
-        aria-label={`گالری تصاویر ${salonName}`}
-        tabIndex={0}
-        onKeyDown={(event) => {
-          const rtl = document.documentElement.dir === 'rtl';
-          if (event.key === 'ArrowLeft') go(rtl ? 1 : -1);
-          if (event.key === 'ArrowRight') go(rtl ? -1 : 1);
-        }}
-        className="h-[60vh] md:h-[50vh] relative grid max-h-80 min-h-64 grid-cols-2 grid-rows-2 gap-1 overflow-hidden rounded-2xl lg:grid-cols-4"
-      >
-        {PROFILE_IMAGES.map((src, index) => (
-          <div
-            key={src}
-            aria-roledescription="slide"
-            aria-label={`تصویر ${toPersianDigits(index + 1)} از ${toPersianDigits(PROFILE_IMAGES.length)}`}
-            aria-hidden={index === active ? 'false' : 'true'}
-            className={
-              index === 0
-                ? 'relative col-span-2 row-span-2'
-                : index > 2
-                  ? 'relative hidden lg:block'
-                  : 'relative'
-            }
+    <section aria-label={t('salon.profile.galleryAria', { name: salon.name })}>
+      <div className="relative grid h-64 grid-cols-2 grid-rows-2 gap-2 overflow-hidden rounded-2xl sm:h-80 sm:grid-cols-4">
+        {images.map((image, index) => (
+          <button
+            key={image.src}
+            type="button"
+            onClick={() => onOpen(index)}
+            className={cn(
+              'relative block h-full w-full overflow-hidden bg-surface p-0 text-start',
+              'outline-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus',
+              // Mobile: the 2×2 lead photo fills the mosaic alone; the four
+              // small tiles join at `sm`+ (directive §j.1).
+              index === 0 ? 'col-span-2 row-span-2' : 'hidden sm:block',
+            )}
           >
-            <img
-              src={src}
-              alt={`نمای ${toPersianDigits(index + 1)} از ${salonName}`}
-              width={640}
-              height={360}
+            <Picture
+              sources={[
+                ...(image.avifSrcSet ? [{ type: 'image/avif', srcSet: image.avifSrcSet }] : []),
+                ...(image.webpSrcSet ? [{ type: 'image/webp', srcSet: image.webpSrcSet }] : []),
+              ]}
+              src={image.src}
+              alt={image.alt}
+              width={image.width}
+              height={image.height}
               loading={index === 0 ? 'eager' : 'lazy'}
-              {...(index === 0 ? { fetchpriority: 'high' } : {})}
+              {...(index === 0 ? { fetchpriority: 'high' as const } : {})}
+              pictureClassName="block h-full w-full"
               className="h-full w-full object-cover"
             />
-          </div>
+          </button>
+        ))}
+        {Array.from({ length: placeholders }).map((_, index) => (
+          <SalonPlaceholder key={`placeholder-${index}`} className="hidden h-full w-full sm:flex" />
         ))}
 
         <button
           type="button"
-          aria-label="تصویر قبلی"
-          onClick={() => go(-1)}
-          className="sr-only start-3"
+          onClick={() => onOpen(0)}
+          className={cn(
+            'absolute bottom-4 end-4 inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-elevated px-4 py-2 text-sm font-semibold text-text shadow-2',
+            'transition-opacity duration-fast ease-standard hover:opacity-90',
+            'outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+          )}
         >
-          تصویر قبلی
-        </button>
-        <button
-          type="button"
-          aria-label="تصویر بعدی"
-          onClick={() => go(1)}
-          className="sr-only end-3"
-        >
-          تصویر بعدی
-        </button>
-        <div role="tablist" aria-label="انتخاب تصویر" className="sr-only">
-          {PROFILE_IMAGES.map((src, index) => (
-            <button
-              key={src}
-              type="button"
-              role="tab"
-              aria-label={`نمایش تصویر ${toPersianDigits(index + 1)}`}
-              aria-selected={index === active}
-              onClick={() => setActive(index)}
-            />
-          ))}
-        </div>
-        <button
-          type="button"
-          className="absolute bottom-4 end-4 rounded-lg bg-elevated px-4 py-2 text-sm font-semibold text-text shadow-sm"
-        >
-          نمایش همه تصاویر
+          <Images className="size-4" aria-hidden="true" />
+          {t('salon.profile.showAllPhotos')}
         </button>
       </div>
     </section>
   );
 }
 
-function Stars({ value = 0 }: { value?: number }) {
+/**
+ * Full-screen gallery lightbox built directly on Radix Dialog (focus trap,
+ * `Esc` + overlay close) around the shared `ImageCarousel` (RTL-safe track,
+ * keyboard arrows, swipe). Motion: token-timed fade/scale keyframes gated by
+ * `motion-safe:`; reduced motion falls back to opacity.
+ */
+function GalleryLightbox({
+  salon,
+  openAt,
+  onClose,
+}: {
+  salon: SalonProfile;
+  openAt: number | null;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const images: CarouselImage[] = salon.gallery.map((image) => ({
+    src: image.src,
+    alt: image.alt,
+    width: image.width,
+    height: image.height,
+  }));
+
   return (
-    <span
-      className="inline-flex items-center gap-0.5 text-warning"
-      role="img"
-      aria-label={`امتیاز ${value}`}
-    >
-      {Array.from({ length: 5 }).map((_, index) => (
-        <Star
-          // eslint-disable-next-line react/no-array-index-key
-          key={index}
-          className="size-3.5"
-          fill={index < Math.round(value) ? 'currentColor' : 'none'}
-          aria-hidden="true"
+    <RadixDialog.Root open={openAt !== null} onOpenChange={(open) => !open && onClose()}>
+      <RadixDialog.Portal>
+        <RadixDialog.Overlay
+          className={cn(
+            'fixed inset-0 z-overlay bg-overlay',
+            'motion-safe:data-[state=open]:animate-fade-in',
+            'motion-safe:data-[state=closed]:animate-fade-out',
+          )}
         />
-      ))}
-    </span>
+        <RadixDialog.Content
+          aria-modal="true"
+          className={cn(
+            'fixed inset-0 z-dialog m-auto h-fit w-[calc(100%-var(--space-8))] max-w-4xl',
+            'rounded-lg outline-none',
+            'motion-safe:data-[state=open]:animate-scale-in',
+            'motion-safe:data-[state=closed]:animate-fade-out',
+          )}
+        >
+          <RadixDialog.Title className="sr-only">
+            {t('salon.profile.lightboxTitle', { name: salon.name })}
+          </RadixDialog.Title>
+          <RadixDialog.Description className="sr-only">
+            {t('salon.profile.galleryAria', { name: salon.name })}
+          </RadixDialog.Description>
+          <ImageCarousel
+            images={images}
+            eagerFirst={false}
+            initialIndex={openAt ?? 0}
+            className="aspect-video w-full overflow-hidden rounded-lg bg-ink"
+          />
+          <RadixDialog.Close asChild>
+            <IconButton
+              aria-label={t('common.close', 'بستن')}
+              variant="ghost"
+              className="absolute -top-12 end-0 h-10 min-h-0 w-10 min-w-0 text-ink-contrast hover:text-ink-contrast"
+            >
+              <X className="h-5 w-5" />
+            </IconButton>
+          </RadixDialog.Close>
+        </RadixDialog.Content>
+      </RadixDialog.Portal>
+    </RadixDialog.Root>
   );
 }
+
+/* ─── Open-now helpers ─────────────────────────────────────────────────── */
 
 function tehranToday(): SchemaDay | null {
   try {
@@ -169,12 +245,192 @@ function isOpenNow(salon: SalonProfile): boolean | null {
   }
 }
 
+/* ─── Sections ─────────────────────────────────────────────────────────── */
+
+/** Services grouped by their category label, insertion-ordered. */
+function groupServices(services: SalonService[]): Array<[string | null, SalonService[]]> {
+  const groups = new Map<string | null, SalonService[]>();
+  for (const service of services) {
+    const key = service.category ?? null;
+    const list = groups.get(key) ?? [];
+    list.push(service);
+    groups.set(key, list);
+  }
+  return Array.from(groups.entries());
+}
+
+function ServicesSection({
+  salon,
+  bookHref,
+  onBookClick,
+}: {
+  salon: SalonProfile;
+  bookHref: string;
+  onBookClick: () => void;
+}) {
+  const { t } = useTranslation();
+  const groups = groupServices(salon.services);
+  const showGroupHeaders = groups.length > 1;
+
+  return (
+    <section className="mt-10" aria-labelledby="salon-services-title">
+      <h2 id="salon-services-title" className="text-2xl font-bold text-text">
+        {t('salon.profile.servicesTitle')}
+      </h2>
+      {/* ONE bordered container, rows divided — not per-row cards (§c). */}
+      <div className="mt-4 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-elevated">
+        {groups.map(([category, services]) => (
+          <div key={category ?? 'all'} className="divide-y divide-border">
+            {showGroupHeaders && (
+              <h3 className="bg-surface px-4 py-2 text-sm font-semibold text-muted">
+                {category ?? t('salon.profile.allServices')}
+              </h3>
+            )}
+            {services.map((service) => (
+              <div key={service.id} className="flex items-center gap-4 p-4">
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-text">{service.name}</p>
+                  {service.description && (
+                    <p className="mt-1 line-clamp-2 text-sm text-muted">{service.description}</p>
+                  )}
+                  <p className="mt-1 text-sm text-muted">
+                    {t('salon.profile.durationMinutes', { count: service.durationMinutes })}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-4">
+                  <bdi className="whitespace-nowrap text-sm font-semibold text-text">
+                    {formatRial(service.priceRial)}{' '}
+                    <span className="text-xs font-normal text-muted">ریال</span>
+                  </bdi>
+                  <Link
+                    to={`${bookHref}?service=${encodeURIComponent(service.id)}`}
+                    onClick={onBookClick}
+                    aria-label={t('salon.profile.bookServiceAria', { name: service.name })}
+                    className={cn(
+                      'inline-flex min-h-[44px] items-center rounded-md border border-primary px-5 text-sm font-semibold text-primary no-underline',
+                      'transition-colors duration-fast ease-standard hover:bg-primary hover:text-primary-contrast',
+                      'outline-none focus-visible:outline focus-visible:outline-2',
+                      'focus-visible:outline-offset-2 focus-visible:outline-focus',
+                    )}
+                  >
+                    {t('salon.profile.bookService')}
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ReviewsSection({ salon }: { salon: SalonProfile }) {
+  const { t } = useTranslation();
+  const reviews = salon.reviews ?? [];
+  const distribution = useMemo(() => {
+    const counts = new Map<number, number>([...Array.from({ length: 5 }, (_, i) => [5 - i, 0] as [number, number])]);
+    for (const review of reviews) {
+      const bucket = Math.round(review.rating);
+      counts.set(bucket, (counts.get(bucket) ?? 0) + 1);
+    }
+    return Array.from(counts.entries());
+  }, [reviews]);
+
+  return (
+    <section className="mt-10" aria-labelledby="salon-reviews-title">
+      <h2 id="salon-reviews-title" className="text-2xl font-bold text-text">
+        {t('salon.profile.reviewsTitle')}
+      </h2>
+
+      {reviews.length > 0 ? (
+        <>
+          {/* Summary: giant rating + stars + count, then distribution bars. */}
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <span className="text-3xl font-bold text-text">
+              <Num value={Number((salon.rating ?? 0).toFixed(1))} />
+            </span>
+            <RatingStars value={salon.rating ?? 0} size="md" hideValue />
+            <span className="text-sm text-muted">
+              {t('salon.profile.reviewsSummary', { count: salon.reviewCount ?? reviews.length })}
+            </span>
+          </div>
+
+          <ul
+            role="list"
+            aria-label={t('salon.profile.distributionAria')}
+            className="mt-4 max-w-sm space-y-1.5"
+          >
+            {distribution.map(([stars, count]) => {
+              const percent = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
+              return (
+                <li key={stars} className="flex items-center gap-3 text-xs text-muted">
+                  <span className="w-14 shrink-0">
+                    {t('salon.profile.starLabel', { count: stars })}
+                  </span>
+                  <span className="h-2 flex-1 overflow-hidden rounded-pill bg-surface" aria-hidden="true">
+                    <span
+                      className="block h-full rounded-pill bg-warning"
+                      style={{ inlineSize: `${percent}%` }}
+                    />
+                  </span>
+                  <span className="w-6 shrink-0 text-end">
+                    <Num value={count} />
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+
+          <div className="mt-6 space-y-4">
+            {reviews.map((review) => (
+              <article key={review.id} className="rounded-2xl border border-border bg-elevated p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-semibold text-text">{review.author}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <RatingStars value={review.rating} hideValue />
+                      {review.verified && (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-success">
+                          <ShieldCheck className="size-3.5" aria-hidden="true" />
+                          {t('salon.profile.verifiedBooking')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <time className="shrink-0 text-xs text-muted" dateTime={review.date}>
+                    <JalaliDate value={review.date} />
+                  </time>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-muted">{review.body}</p>
+                {review.service && (
+                  <p className="mt-2 inline-flex rounded-pill bg-surface px-2.5 py-1 text-xs text-muted">
+                    {t('salon.profile.reviewFor', { service: review.service })}
+                  </p>
+                )}
+              </article>
+            ))}
+          </div>
+        </>
+      ) : (
+        <p className="mt-4 rounded-2xl border border-border bg-elevated p-4 text-sm text-muted">
+          {t('salon.profile.reviewsEmpty')}
+        </p>
+      )}
+    </section>
+  );
+}
+
+/* ─── Page ─────────────────────────────────────────────────────────────── */
+
 export function SalonProfilePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { slug } = useParams<{ slug: string }>();
   const salon = getSalonProfile(slug);
   const [qrRedirecting, setQrRedirecting] = useState(false);
+  const [lightboxAt, setLightboxAt] = useState<number | null>(null);
+  const [mapVisible, setMapVisible] = useState(false);
 
   useEffect(() => {
     if (salon || !slug) return;
@@ -194,15 +450,27 @@ export function SalonProfilePage() {
   }, [navigate, salon, slug]);
 
   if (!salon) {
+    // While the QR-resolve request is in flight, show a neutral pending state
+    // — never flash «صفحه یافت نشد» at users following a valid QR link.
+    if (qrRedirecting) {
+      return (
+        <div
+          data-testid="salon-resolving"
+          role="status"
+          className="mx-auto flex min-h-[60vh] max-w-7xl flex-col items-center justify-center gap-4 px-4 py-12 text-center"
+        >
+          <SeoHead title={t('salon.profile.resolvingQrTitle')} />
+          <Spinner size="lg" />
+          <p className="font-semibold text-text">{t('salon.profile.resolvingQrTitle')}</p>
+          <p className="text-sm text-muted">{t('salon.profile.resolvingQrBody')}</p>
+        </div>
+      );
+    }
     return (
       <div data-testid="salon-not-found" className="mx-auto min-h-[60vh] max-w-7xl px-4 py-12">
         <SeoHead title={t('salon.profile.notFoundTitle')} />
-        <h1 className="text-2xl font-bold text-text">
-          {t('salon.profile.notFoundTitle')}
-        </h1>
-        <p className="mt-2 text-muted">
-          {qrRedirecting ? 'در حال بررسی پیوند سالن…' : t('salon.profile.notFoundBody')}
-        </p>
+        <h1 className="text-2xl font-bold text-text">{t('salon.profile.notFoundTitle')}</h1>
+        <p className="mt-2 text-muted">{t('salon.profile.notFoundBody')}</p>
         <Link to="/" className="mt-5 inline-flex text-primary underline">
           {t('salon.profile.backHome')}
         </Link>
@@ -215,14 +483,19 @@ export function SalonProfilePage() {
   const cacheSalonName = () => writeSalonName(salon.bookingSalonId, salon.name);
   const reviews = salon.reviews ?? [];
   const staff = salon.staff ?? [];
+  const city = DISCOVERY_CITIES.find((c) => c.slug === salon.citySlug);
   const today = tehranToday();
   const open = isOpenNow(salon);
+  const minPrice =
+    salon.services.length > 0
+      ? Math.min(...salon.services.map((service) => service.priceRial))
+      : null;
 
   return (
     <TenantTheme accentKey={salon.brandAccent}>
       <div
         data-testid="salon-profile"
-        className="mx-auto w-full max-w-container px-4 pb-28 pt-4 md:pb-12"
+        className="mx-auto w-full max-w-container px-4 pb-28 pt-4 lg:pb-12"
       >
         <SeoHead
           title={salon.name}
@@ -234,150 +507,134 @@ export function SalonProfilePage() {
         />
         <JsonLd data={buildSalonJsonLd(salon)} />
 
-        <nav aria-label={t('salon.profile.breadcrumb')} className="sr-only">
-          <ol role="list">
+        {/* Visible, RTL-correct breadcrumb (steering §8 wayfinding). */}
+        <nav aria-label={t('salon.profile.breadcrumb')} className="mb-4 text-sm text-muted">
+          <ol role="list" className="flex flex-wrap items-center gap-1.5">
             <li>
-              <Link to="/">{t('salon.profile.crumbHome')}</Link>
+              <Link
+                to="/"
+                className="text-muted no-underline transition-colors duration-fast ease-standard hover:text-primary"
+              >
+                {t('salon.profile.crumbHome')}
+              </Link>
             </li>
             <li aria-hidden="true">‹</li>
-            <li>{salon.name}</li>
+            {city && (
+              <>
+                <li>
+                  <Link
+                    to={`/city/${city.slug}`}
+                    className="text-muted no-underline transition-colors duration-fast ease-standard hover:text-primary"
+                  >
+                    {city.name}
+                  </Link>
+                </li>
+                <li aria-hidden="true">‹</li>
+              </>
+            )}
+            <li aria-current="page" className="font-medium text-text">
+              {salon.name}
+            </li>
           </ol>
         </nav>
 
         <header>
-          <ProfileGallery salonName={salon.name} />
+          <ProfileGallery salon={salon} onOpen={setLightboxAt} />
         </header>
+        <GalleryLightbox salon={salon} openAt={lightboxAt} onClose={() => setLightboxAt(null)} />
 
-        <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_20rem]">
-          <div>
+        <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_22.5rem]">
+          <div className="min-w-0">
+            {/* Identity block: chips → name → address → rating (§j.4). */}
             <div className="mb-3 flex flex-wrap gap-2">
-              <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-primary">
-                پیشنهاد آرا
+              <span className="rounded-pill bg-surface px-3 py-1 text-xs text-muted">
+                {salon.category ?? t('salon.profile.eyebrow')}
               </span>
-              <span className="rounded-full bg-surface px-3 py-1 text-xs text-muted">
-                {salon.category ?? 'سالن زیبایی'}
-              </span>
+              {open !== null && (
+                <span
+                  className={cn(
+                    'rounded-pill px-3 py-1 text-xs font-semibold',
+                    open ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger',
+                  )}
+                >
+                  {open ? t('salon.profile.openNow') : t('salon.profile.closedNow')}
+                </span>
+              )}
             </div>
-            <h1 className="text-xl font-bold leading-tight text-text">
+            <h1 className="text-display text-3xl leading-tight text-text">
               {salon.displayName ?? salon.name}
             </h1>
-            <p className="mt-2 text-sm text-muted">{salon.address.streetAddress}</p>
-            <div className="mt-2 flex items-center gap-2 text-sm">
-              <bdi className="font-bold text-text">
-                <Num value={Number((salon.rating ?? 0).toFixed(1))} />
-              </bdi>
-              <Stars value={salon.rating} />
-              <span className="text-muted">
-                <Num value={salon.reviewCount ?? reviews.length} /> نظر
-              </span>
-            </div>
-
-            <section className="mt-10" aria-labelledby="salon-services-title">
-              <h2 id="salon-services-title" className="text-2xl font-bold text-text">
-                خدمات
-              </h2>
-              <p className="mb-4 mt-4 font-semibold text-text">خدمات محبوب</p>
-              <div className="overflow-hidden rounded-2xl border border-border bg-elevated">
-                {salon.services.map((service) => (
-                  <div
-                    key={service.id}
-                    className="flex min-h-16 items-center gap-4 border-b border-border px-4 py-3 last:border-b-0"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-text">{service.name}</h3>
-                      <p className="mt-1 text-xs text-muted">
-                        {toPersianDigits(service.durationMinutes)} دقیقه
-                      </p>
-                    </div>
-                    <bdi className="whitespace-nowrap text-sm font-semibold text-text">
-                      {formatRial(service.priceRial)} ریال
-                    </bdi>
-                    <Link
-                      to={`${bookHref}?service=${service.id}`}
-                      onClick={cacheSalonName}
-                      className="inline-flex min-h-[44px] items-center rounded-lg border border-primary px-4 text-sm font-semibold text-primary no-underline"
-                    >
-                      رزرو
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="mt-10" aria-labelledby="salon-reviews-title">
-              <h2 id="salon-reviews-title" className="text-2xl font-bold text-text">
-                نظر مشتریان
-              </h2>
-              <div className="my-4 flex items-center gap-2">
-                <span className="text-2xl font-bold text-text">
-                  <Num value={Number((salon.rating ?? 0).toFixed(1))} />
-                </span>
-                <Stars value={salon.rating} />
-                <span className="text-xs text-muted">
-                  <Num value={salon.reviewCount ?? reviews.length} /> نظر
+            <p className="mt-2 text-sm text-muted">
+              {salon.address.streetAddress}، {salon.address.addressLocality}
+            </p>
+            {salon.rating != null && (
+              <div className="mt-2 flex items-center gap-2 text-sm">
+                <bdi className="font-bold text-text">
+                  <Num value={Number(salon.rating.toFixed(1))} />
+                </bdi>
+                <RatingStars value={salon.rating} hideValue />
+                <span className="text-muted">
+                  {t('rating.reviews', { count: salon.reviewCount ?? reviews.length })}
                 </span>
               </div>
-              <div className="space-y-4">
-                {reviews.length > 0 ? (
-                  reviews.map((review) => (
-                    <article
-                      key={review.id}
-                      className="rounded-2xl border border-border bg-elevated p-4"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <h3 className="font-semibold text-text">{review.author}</h3>
-                          <Stars value={review.rating} />
-                        </div>
-                        <time className="text-xs text-muted" dateTime={review.date}>
-                          <JalaliDate value={review.date} />
-                        </time>
-                      </div>
-                      <p className="mt-3 text-sm leading-6 text-muted">{review.body}</p>
-                    </article>
-                  ))
-                ) : (
-                  <p className="rounded-2xl border border-border bg-elevated p-4 text-sm text-muted">
-                    هنوز نظری برای این سالن ثبت نشده است.
-                  </p>
-                )}
-              </div>
-            </section>
+            )}
+
+            <ServicesSection salon={salon} bookHref={bookHref} onBookClick={cacheSalonName} />
+
+            <ReviewsSection salon={salon} />
 
             <section className="mt-10" aria-labelledby="salon-about-title">
               <h2 id="salon-about-title" className="text-2xl font-bold text-text">
-                درباره ما
+                {t('salon.profile.aboutTitle')}
               </h2>
-              <p className="mt-4 max-w-3xl text-sm leading-7 text-muted">
-                {salon.description}
-              </p>
+              <p className="mt-4 max-w-3xl text-sm leading-7 text-muted">{salon.description}</p>
             </section>
 
-            <section className="mt-10" aria-labelledby="salon-amenities-title">
-              <h2 id="salon-amenities-title" className="text-2xl font-bold text-text">
-                امکانات
-              </h2>
-              <ul className="mt-4 grid gap-3 text-sm text-muted sm:grid-cols-3" role="list">
-                {['اینترنت بی‌سیم', 'پرداخت با کارت', 'جای پارک', 'دسترسی آسان', 'مناسب کودکان'].map(
-                  (amenity) => (
+            {salon.amenities && salon.amenities.length > 0 && (
+              <section className="mt-10" aria-labelledby="salon-amenities-title">
+                <h2 id="salon-amenities-title" className="text-2xl font-bold text-text">
+                  {t('salon.profile.amenitiesTitle')}
+                </h2>
+                <ul className="mt-4 grid gap-3 text-sm text-muted sm:grid-cols-2 lg:grid-cols-3" role="list">
+                  {salon.amenities.map((amenity) => (
                     <li key={amenity} className="flex items-center gap-2">
-                      <Check className="size-4 text-primary" aria-hidden="true" />
+                      <Check className="size-4 shrink-0 text-primary" aria-hidden="true" />
                       {amenity}
                     </li>
-                  ),
-                )}
-              </ul>
-            </section>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {salon.policies && salon.policies.length > 0 && (
+              <section className="mt-10" aria-labelledby="salon-policies-title">
+                <h2 id="salon-policies-title" className="text-2xl font-bold text-text">
+                  {t('salon.profile.policiesTitle')}
+                </h2>
+                <ul className="mt-4 max-w-3xl space-y-2 text-sm leading-6 text-muted" role="list">
+                  {salon.policies.map((policy) => (
+                    <li key={policy} className="flex items-start gap-2">
+                      <ShieldCheck className="mt-1 size-4 shrink-0 text-primary" aria-hidden="true" />
+                      {policy}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
 
             {staff.length > 0 && (
               <section className="mt-10" aria-labelledby="salon-staff-title">
                 <h2 id="salon-staff-title" className="text-2xl font-bold text-text">
-                  تیم ما
+                  {t('salon.profile.teamTitle')}
                 </h2>
-                <ul className="mt-4 flex flex-wrap gap-5" role="list">
+                <p className="mt-1 text-sm text-muted">{t('salon.profile.teamSubtitle')}</p>
+                <ul className="mt-4 flex flex-wrap gap-6" role="list">
                   {staff.map((member) => (
                     <li key={member.id} className="text-center">
-                      <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-gradient-to-br from-accent to-text text-xl font-bold text-bg">
+                      <span
+                        aria-hidden="true"
+                        className="mx-auto flex size-14 items-center justify-center rounded-full bg-primary/10 text-xl font-bold text-primary"
+                      >
                         {member.name.slice(0, 1)}
                       </span>
                       <span className="mt-2 block text-sm font-semibold text-text">
@@ -392,22 +649,31 @@ export function SalonProfilePage() {
 
             <section className="mt-10" aria-labelledby="salon-hours-title">
               <h2 id="salon-hours-title" className="text-2xl font-bold text-text">
-                ساعت کاری
+                {t('salon.profile.hoursTitle')}
               </h2>
-              <div className="mt-4 max-w-md overflow-hidden rounded-2xl border border-border bg-elevated">
+              <div className="mt-4 max-w-sm divide-y divide-border overflow-hidden rounded-2xl border border-border bg-elevated">
                 {IRANIAN_WEEK_ORDER.map((day) => {
                   const hours = salon.openingHours.find((item) => item.day === day);
+                  const isToday = day === today;
                   return (
                     <div
                       key={day}
-                      className={`flex items-center justify-between border-b border-border px-4 py-3 text-sm last:border-b-0 ${
-                        day === today ? 'bg-accent/10 font-semibold' : ''
-                      }`}
+                      className={cn(
+                        'flex items-center justify-between px-4 py-3 text-sm',
+                        isToday && 'bg-primary/5 font-semibold',
+                      )}
                     >
-                      <span>{PERSIAN_DAY_LABEL[day]}</span>
+                      <span className="flex items-center gap-2">
+                        {PERSIAN_DAY_LABEL[day]}
+                        {isToday && (
+                          <span className="rounded-pill bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                            {t('salon.profile.todayBadge')}
+                          </span>
+                        )}
+                      </span>
                       <bdi className="text-muted">
                         {!hours || hours.closed
-                          ? 'تعطیل'
+                          ? t('salon.profile.hoursClosed')
                           : `${toPersianDigits(hours.opens ?? '')} – ${toPersianDigits(hours.closes ?? '')}`}
                       </bdi>
                     </div>
@@ -418,65 +684,171 @@ export function SalonProfilePage() {
 
             <section className="mt-10" aria-labelledby="salon-contact-title">
               <h2 id="salon-contact-title" className="text-2xl font-bold text-text">
-                تماس و نشانی
+                {t('salon.profile.contactTitle')}
               </h2>
-              <address className="mt-4 space-y-2 not-italic text-sm text-muted">
+              <address className="mt-4 space-y-2 text-sm not-italic text-muted">
                 <p className="flex items-center gap-2">
-                  <MapPin className="size-4" aria-hidden="true" />
+                  <MapPin className="size-4 shrink-0" aria-hidden="true" />
                   {salon.address.streetAddress}، {salon.address.addressLocality}
                 </p>
                 <a
                   href={`tel:${salon.telephone}`}
-                  className="flex items-center gap-2 font-semibold text-primary"
+                  className="flex items-center gap-2 font-semibold text-primary no-underline"
                 >
-                  <Phone className="size-4" aria-hidden="true" />
+                  <Phone className="size-4 shrink-0" aria-hidden="true" />
                   <DirText dir="ltr">{salon.telephone}</DirText>
                 </a>
               </address>
-              <div
-                className="mt-5 flex h-64 items-center justify-center overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-accent/10 to-surface text-sm text-muted"
-                aria-label={`نقشه ${salon.name}`}
-              >
-                نمایش موقعیت روی نقشه
+
+              {salon.channels && (
+                <div className="mt-5">
+                  <h3 className="text-sm font-semibold text-text">
+                    {t('salon.profile.channelsTitle')}
+                  </h3>
+                  <p className="mt-1 text-xs text-muted">{t('salon.profile.channelsHint')}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {salon.channels.website && (
+                      <Link
+                        to={salon.channels.website}
+                        className="inline-flex min-h-[40px] items-center gap-2 rounded-md border border-border bg-elevated px-4 text-sm font-medium text-text no-underline transition-colors duration-fast ease-standard hover:border-primary hover:text-primary"
+                      >
+                        <Globe className="size-4" aria-hidden="true" />
+                        {t('salon.profile.channelWebsite')}
+                      </Link>
+                    )}
+                    {salon.channels.bale && (
+                      <a
+                        href={salon.channels.bale}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex min-h-[40px] items-center gap-2 rounded-md border border-border bg-elevated px-4 text-sm font-medium text-text no-underline transition-colors duration-fast ease-standard hover:border-primary hover:text-primary"
+                      >
+                        <Send className="size-4" aria-hidden="true" />
+                        {t('salon.profile.channelBale')}
+                        <span className="sr-only">({t('salon.profile.channelNewTab')})</span>
+                      </a>
+                    )}
+                    {salon.channels.telegram && (
+                      <a
+                        href={salon.channels.telegram}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex min-h-[40px] items-center gap-2 rounded-md border border-border bg-elevated px-4 text-sm font-medium text-text no-underline transition-colors duration-fast ease-standard hover:border-primary hover:text-primary"
+                      >
+                        <Send className="size-4" aria-hidden="true" />
+                        {t('salon.profile.channelTelegram')}
+                        <span className="sr-only">({t('salon.profile.channelNewTab')})</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Real map embed, loaded lazily behind an explicit tap/click so
+                  the third-party iframe never competes with first paint. */}
+              <div className="mt-5 overflow-hidden rounded-2xl border border-border">
+                {mapVisible ? (
+                  <iframe
+                    src={salon.mapEmbedUrl}
+                    title={t('salon.profile.mapEmbedTitle', { name: salon.name })}
+                    loading="lazy"
+                    className="block h-64 w-full border-0"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setMapVisible(true)}
+                    className={cn(
+                      'flex h-64 w-full flex-col items-center justify-center gap-2 bg-surface text-sm font-semibold text-text',
+                      'transition-colors duration-fast ease-standard hover:text-primary',
+                      'outline-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus',
+                    )}
+                  >
+                    <MapPin className="size-6 text-primary" aria-hidden="true" />
+                    {t('salon.profile.mapTitle')}
+                  </button>
+                )}
               </div>
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${salon.geo.latitude},${salon.geo.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex min-h-[40px] items-center gap-2 text-sm font-semibold text-primary no-underline transition-opacity duration-fast ease-standard hover:opacity-80"
+              >
+                <ExternalLink className="size-4" aria-hidden="true" />
+                {t('salon.profile.directionsCta')}
+                <span className="sr-only">({t('salon.profile.channelNewTab')})</span>
+              </a>
             </section>
           </div>
 
+          {/* Sticky booking card — 360px rail (§j.2). */}
           <aside className="hidden lg:block">
-            <div className="sticky top-32 rounded-2xl border border-border bg-elevated p-6 shadow-sm">
-              <p className="text-sm text-muted">هر زمان آماده‌اید</p>
-              <h2 className="mt-2 text-lg font-semibold text-text">رزرو نوبت</h2>
+            <div className="sticky top-32 rounded-2xl border border-border bg-elevated p-6 shadow-1">
+              <p className="text-sm text-muted">{t('salon.profile.sidebarEyebrow')}</p>
+              <h2 className="mt-2 text-lg font-semibold text-text">
+                {t('salon.profile.bookCta')}
+              </h2>
               <Link
                 to={bookHref}
                 onClick={cacheSalonName}
-                className="mt-5 flex min-h-[44px] items-center justify-center rounded-lg bg-primary px-5 text-sm font-semibold text-primary-contrast no-underline"
+                className={cn(
+                  'mt-5 flex min-h-[48px] w-full items-center justify-center rounded-pill bg-primary px-5 text-sm font-semibold text-primary-contrast no-underline',
+                  'transition-opacity duration-fast ease-standard hover:opacity-90 active:translate-y-px',
+                  'outline-none focus-visible:outline focus-visible:outline-2',
+                  'focus-visible:outline-offset-2 focus-visible:outline-focus',
+                )}
               >
-                رزرو کنید
+                {t('salon.profile.bookCtaLong')}
               </Link>
-              <div className="mt-5 flex items-center gap-2 text-sm">
-                <bdi className="font-bold">{salon.rating?.toFixed(1)}</bdi>
-                <Stars value={salon.rating} />
-                <span className="text-muted">
-                  <Num value={salon.reviewCount ?? reviews.length} />
-                </span>
-              </div>
-              <p className="mt-4 text-sm leading-6 text-muted">{salon.address.streetAddress}</p>
+              <p className="mt-3 text-xs text-muted">{t('salon.profile.bookCtaHint')}</p>
+              {salon.rating != null && (
+                <div className="mt-5 flex items-center gap-2 text-sm">
+                  <bdi className="font-bold text-text">
+                    <Num value={Number(salon.rating.toFixed(1))} />
+                  </bdi>
+                  <RatingStars value={salon.rating} hideValue />
+                  <span className="text-muted">
+                    {t('rating.reviews', { count: salon.reviewCount ?? reviews.length })}
+                  </span>
+                </div>
+              )}
+              {minPrice != null && (
+                <p className="mt-3 text-sm text-muted">
+                  {t('discovery.card.fromPrice', {
+                    price: toPersianDigits(formatRial(minPrice)),
+                  })}
+                </p>
+              )}
+              <p className="mt-3 text-sm leading-6 text-muted">{salon.address.streetAddress}</p>
               {open !== null && (
-                <p className={`mt-3 text-sm font-semibold ${open ? 'text-success' : 'text-danger'}`}>
-                  {open ? 'اکنون باز است' : 'اکنون بسته است'}
+                <p
+                  className={cn(
+                    'mt-3 text-sm font-semibold',
+                    open ? 'text-success' : 'text-danger',
+                  )}
+                >
+                  {open ? t('salon.profile.openNow') : t('salon.profile.closedNow')}
                 </p>
               )}
             </div>
           </aside>
         </div>
 
-        <div className="fixed inset-x-0 bottom-0 z-sticky border-t border-border bg-elevated px-4 py-3 md:hidden">
+        {/* Sticky bottom CTA below lg — hands off to the sidebar exactly where
+            it appears; safe-area aware (steering §5). */}
+        <div className="fixed inset-x-0 bottom-0 z-sticky border-t border-border bg-elevated px-4 pt-3 pb-[max(var(--space-3),env(safe-area-inset-bottom))] lg:hidden">
           <Link
             to={bookHref}
             onClick={cacheSalonName}
-            className="flex min-h-[44px] w-full items-center justify-center rounded-lg bg-primary px-5 font-semibold text-primary-contrast no-underline"
+            className={cn(
+              'flex min-h-[48px] w-full items-center justify-center rounded-pill bg-primary px-5 font-semibold text-primary-contrast no-underline',
+              'transition-opacity duration-fast ease-standard hover:opacity-90 active:translate-y-px',
+              'outline-none focus-visible:outline focus-visible:outline-2',
+              'focus-visible:outline-offset-2 focus-visible:outline-focus',
+            )}
           >
-            رزرو نوبت
+            {t('salon.profile.bookCta')}
           </Link>
         </div>
       </div>
@@ -484,9 +856,12 @@ export function SalonProfilePage() {
   );
 }
 
+/* ─── JSON-LD ──────────────────────────────────────────────────────────── */
+
 export function buildSalonJsonLd(salon: SalonProfile): JsonLdNode[] {
   const url = `${SITE_URL}/s/${salon.slug}`;
   const salonType = salon.category === 'آرایشگاه مردانه' ? 'HairSalon' : 'BeautySalon';
+  const reviews = salon.reviews ?? [];
   const node: JsonLdNode = {
     '@type': salonType,
     name: salon.name,
@@ -508,9 +883,8 @@ export function buildSalonJsonLd(salon: SalonProfile): JsonLdNode[] {
     openingHoursSpecification: IRANIAN_WEEK_ORDER.map((day) =>
       salon.openingHours.find((hours) => hours.day === day),
     )
-      .filter(
-        (hours): hours is NonNullable<typeof hours> =>
-          Boolean(hours && !hours.closed && hours.opens && hours.closes),
+      .filter((hours): hours is NonNullable<typeof hours> =>
+        Boolean(hours && !hours.closed && hours.opens && hours.closes),
       )
       .map((hours) => ({
         '@type': 'OpeningHoursSpecification',
@@ -520,7 +894,10 @@ export function buildSalonJsonLd(salon: SalonProfile): JsonLdNode[] {
       })),
   };
   if (salon.ogImage) node.image = `${SITE_URL}${salon.ogImage}`;
-  if (typeof salon.rating === 'number' && salon.reviewCount) {
+  // aggregateRating ONLY when visible reviews back it (contract
+  // §content-honesty; Google review-snippet policy). `withComputedRating`
+  // guarantees rating/reviewCount agree with the reviews below.
+  if (reviews.length > 0 && typeof salon.rating === 'number' && salon.reviewCount) {
     node.aggregateRating = {
       '@type': 'AggregateRating',
       ratingValue: salon.rating.toFixed(1),
@@ -528,9 +905,7 @@ export function buildSalonJsonLd(salon: SalonProfile): JsonLdNode[] {
       bestRating: '5',
       worstRating: '1',
     };
-  }
-  if (salon.reviews?.length) {
-    node.review = salon.reviews.map((review) => ({
+    node.review = reviews.map((review) => ({
       '@type': 'Review',
       author: { '@type': 'Person', name: review.author },
       datePublished: review.date.slice(0, 10),
@@ -554,7 +929,7 @@ export function buildSalonJsonLd(salon: SalonProfile): JsonLdNode[] {
       priceCurrency: 'IRR',
     },
   }));
-  const city = getCity(salon.citySlug);
+  const city = DISCOVERY_CITIES.find((c) => c.slug === salon.citySlug);
   const breadcrumb: JsonLdNode = {
     '@type': 'BreadcrumbList',
     itemListElement: [

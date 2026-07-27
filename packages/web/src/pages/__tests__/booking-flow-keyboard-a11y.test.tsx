@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within, fireEvent, waitFor, cleanup } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import '../../i18n';
 import { renderRtl, expectNoSeriousA11yViolations } from '../../test/a11y';
@@ -198,7 +197,7 @@ describe('Booking Flow — Keyboard Operability', () => {
     });
 
     it('ArrowLeft advances focus (RTL forward), ArrowRight goes back (RTL backward)', async () => {
-      const { container } = renderAvailability();
+      renderAvailability();
       (await screen.findByText('کوتاهی مو')).click();
       await pickToday();
 

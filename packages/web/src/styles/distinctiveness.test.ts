@@ -187,11 +187,7 @@ function detectLine(line: string, isCss: boolean): RuleId[] {
     if (inlineStyleHasLiteral || arbitraryHex) {
       // Attribute the literal to the library rule when it sits on a known
       // Component_Library element; otherwise it is a generic raw-style literal.
-      rules.add(
-        UI_COMPONENT_TAG.test(line)
-          ? 'library-inline-literal'
-          : 'raw-style-literal',
-      );
+      rules.add(UI_COMPONENT_TAG.test(line) ? 'library-inline-literal' : 'raw-style-literal');
     }
   }
 
@@ -319,10 +315,9 @@ function formatReport(violations: Violation[]): string {
     (v) =>
       `  ${v.file}:${v.line} — [${RULES[v.rule].label}] (${RULES[v.rule].reqs})\n      ${v.snippet}`,
   );
-  return [
-    `Distinctiveness guardrail found ${violations.length} violation(s):`,
-    ...lines,
-  ].join('\n');
+  return [`Distinctiveness guardrail found ${violations.length} violation(s):`, ...lines].join(
+    '\n',
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -386,9 +381,7 @@ describe('distinctiveness guardrail — authored web source (regression tripwire
   });
 
   it('flags no generic-pattern regressions in authored source', () => {
-    const violations = files.flatMap((f) =>
-      scanContent(f.rel, readFileSync(f.abs, 'utf8')),
-    );
+    const violations = files.flatMap((f) => scanContent(f.rel, readFileSync(f.abs, 'utf8')));
     // The message lists every file + rule so a real regression is locatable.
     expect(violations, formatReport(violations)).toEqual([]);
   });
@@ -474,43 +467,31 @@ describe('Property 19 — the guardrail flags a file iff it contains a forbidden
   it('flags every forbidden snippet under its own rule (and only when present)', () => {
     const choices = fc.constantFrom<'none' | RuleId>('none', ...ruleIds);
     fc.assert(
-      fc.property(
-        choices,
-        compliantLine,
-        fc.nat(),
-        (choice, base, pick) => {
-          if (choice === 'none') {
-            expect(scanContent('pages/Sample.tsx', base)).toEqual([]);
-            return;
-          }
-          const options = FORBIDDEN[choice];
-          const forbidden = options[pick % options.length];
-          const content = `${base}\n${forbidden}`;
-          const flaggedRules = new Set(
-            scanContent('pages/Sample.tsx', content).map((v) => v.rule),
-          );
-          // "if and only if": the forbidden snippet's own rule must be flagged.
-          expect(flaggedRules.has(choice)).toBe(true);
-        },
-      ),
+      fc.property(choices, compliantLine, fc.nat(), (choice, base, pick) => {
+        if (choice === 'none') {
+          expect(scanContent('pages/Sample.tsx', base)).toEqual([]);
+          return;
+        }
+        const options = FORBIDDEN[choice];
+        const forbidden = options[pick % options.length];
+        const content = `${base}\n${forbidden}`;
+        const flaggedRules = new Set(scanContent('pages/Sample.tsx', content).map((v) => v.rule));
+        // "if and only if": the forbidden snippet's own rule must be flagged.
+        expect(flaggedRules.has(choice)).toBe(true);
+      }),
     );
   });
 
   it('honours the `// distinctiveness-ok:` opt-out (trailing and leading)', () => {
     fc.assert(
-      fc.property(
-        fc.constantFrom(...ruleIds),
-        fc.nat(),
-        fc.boolean(),
-        (rule, pick, leading) => {
-          const options = FORBIDDEN[rule];
-          const forbidden = options[pick % options.length];
-          const content = leading
-            ? `      // distinctiveness-ok: justified for the test\n${forbidden}`
-            : `${forbidden} // distinctiveness-ok: justified for the test`;
-          expect(scanContent('pages/Sample.tsx', content)).toEqual([]);
-        },
-      ),
+      fc.property(fc.constantFrom(...ruleIds), fc.nat(), fc.boolean(), (rule, pick, leading) => {
+        const options = FORBIDDEN[rule];
+        const forbidden = options[pick % options.length];
+        const content = leading
+          ? `      // distinctiveness-ok: justified for the test\n${forbidden}`
+          : `${forbidden} // distinctiveness-ok: justified for the test`;
+        expect(scanContent('pages/Sample.tsx', content)).toEqual([]);
+      }),
     );
   });
 
@@ -544,8 +525,7 @@ describe('Property 19 — the guardrail flags a file iff it contains a forbidden
   });
 
   it('flags a CSS gradient + indigo/purple hex and a CSS physical property', () => {
-    const css =
-      '.hero { background: linear-gradient(90deg, #6366f1, #a855f7); margin-left: 8px; }';
+    const css = '.hero { background: linear-gradient(90deg, #6366f1, #a855f7); margin-left: 8px; }';
     const rules = scanContent('styles/sample.css', css).map((v) => v.rule);
     expect(rules).toContain('indigo-purple-gradient');
     expect(rules).toContain('physical-left-right');
@@ -578,31 +558,26 @@ const fileWithViolation = fc
 describe('Property 20 — guardrail violations carry their file path and the broken rule', () => {
   it('reports each violation with a non-empty file, a known rule, and a line number', () => {
     fc.assert(
-      fc.property(
-        fc.array(fileWithViolation, { minLength: 1, maxLength: 6 }),
-        (specs) => {
-          const all = specs.flatMap((s) => scanContent(s.path, s.content));
-          const report = formatReport(all);
+      fc.property(fc.array(fileWithViolation, { minLength: 1, maxLength: 6 }), (specs) => {
+        const all = specs.flatMap((s) => scanContent(s.path, s.content));
+        const report = formatReport(all);
 
-          // Each injected (file, rule) pair surfaces in the results.
-          for (const s of specs) {
-            const found = all.find(
-              (v) => v.file === s.path && v.rule === s.rule,
-            );
-            expect(found, `${s.path} should report ${s.rule}`).toBeDefined();
-          }
+        // Each injected (file, rule) pair surfaces in the results.
+        for (const s of specs) {
+          const found = all.find((v) => v.file === s.path && v.rule === s.rule);
+          expect(found, `${s.path} should report ${s.rule}`).toBeDefined();
+        }
 
-          // Every reported violation is fully located: file + rule + line, and
-          // both the path and the rule label appear in the rendered report.
-          for (const v of all) {
-            expect(v.file.length).toBeGreaterThan(0);
-            expect(RULES[v.rule]).toBeDefined();
-            expect(v.line).toBeGreaterThanOrEqual(1);
-            expect(report).toContain(v.file);
-            expect(report).toContain(RULES[v.rule].label);
-          }
-        },
-      ),
+        // Every reported violation is fully located: file + rule + line, and
+        // both the path and the rule label appear in the rendered report.
+        for (const v of all) {
+          expect(v.file.length).toBeGreaterThan(0);
+          expect(RULES[v.rule]).toBeDefined();
+          expect(v.line).toBeGreaterThanOrEqual(1);
+          expect(report).toContain(v.file);
+          expect(report).toContain(RULES[v.rule].label);
+        }
+      }),
     );
   });
 

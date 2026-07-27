@@ -16,18 +16,14 @@ const options = [
 
 describe('Select', () => {
   it('renders a labelled combobox showing the placeholder', () => {
-    render(
-      <Select label="خدمت" placeholder="یک خدمت انتخاب کنید" options={options} />,
-    );
+    render(<Select label="خدمت" placeholder="یک خدمت انتخاب کنید" options={options} />);
     const trigger = screen.getByRole('combobox', { name: /خدمت/ });
     expect(trigger).toHaveTextContent('یک خدمت انتخاب کنید');
   });
 
   it('reflects a controlled value', () => {
     render(<Select label="خدمت" value="color" options={options} />);
-    expect(screen.getByRole('combobox', { name: /خدمت/ })).toHaveTextContent(
-      'رنگ مو',
-    );
+    expect(screen.getByRole('combobox', { name: /خدمت/ })).toHaveTextContent('رنگ مو');
   });
 
   it('error sets aria-invalid and renders a role=alert message', () => {
@@ -39,12 +35,7 @@ describe('Select', () => {
 
   it('shows the empty state when there are no options', () => {
     render(
-      <Select
-        label="خدمت"
-        options={[]}
-        emptyText="موردی موجود نیست"
-        defaultValue={undefined}
-      />,
+      <Select label="خدمت" options={[]} emptyText="موردی موجود نیست" defaultValue={undefined} />,
     );
     // Open the listbox to reveal the empty message.
     fireEvent.click(screen.getByRole('combobox', { name: /خدمت/ }));

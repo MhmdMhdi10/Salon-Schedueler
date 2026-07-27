@@ -1,18 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-} from '../Dialog';
-import {
-  Sheet,
-  SheetTrigger,
-  SheetContent,
-  SheetTitle,
-} from '../Sheet';
+import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } from '../Dialog';
+import { Sheet, SheetTrigger, SheetContent, SheetTitle } from '../Sheet';
 import { Tooltip, TooltipProvider } from '../Tooltip';
 import { Button } from '../Button';
 import { IconButton } from '../IconButton';
@@ -54,9 +43,7 @@ describe('Dialog', () => {
     fireEvent.click(trigger);
     const dialog = await screen.findByRole('dialog');
     fireEvent.keyDown(dialog, { key: 'Escape', code: 'Escape' });
-    await waitFor(() =>
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(trigger).toHaveFocus();
   });
 
@@ -97,9 +84,7 @@ describe('Sheet', () => {
     expect(dialog).toHaveAttribute('aria-modal', 'true');
     expect(dialog).toHaveAccessibleName('زمان‌ها');
     fireEvent.keyDown(dialog, { key: 'Escape', code: 'Escape' });
-    await waitFor(() =>
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
   it('has no serious/critical a11y violations while open', async () => {
@@ -124,9 +109,7 @@ describe('Tooltip', () => {
     const trigger = screen.getByRole('button', { name: 'حذف نوبت' });
     fireEvent.focus(trigger);
     // Radix renders the content (it may appear in multiple nodes); assert at least one.
-    await waitFor(() =>
-      expect(screen.getAllByText('حذف نوبت').length).toBeGreaterThan(0),
-    );
+    await waitFor(() => expect(screen.getAllByText('حذف نوبت').length).toBeGreaterThan(0));
   });
 
   it('has no serious/critical a11y violations', async () => {

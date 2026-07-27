@@ -76,9 +76,7 @@ vi.mock('../../../api/client', () => {
     // populated/empty state for the audit.
     adminApi: {
       getCalendar: vi.fn().mockResolvedValue({ appointments: [] }),
-      getAnalytics: vi
-        .fn()
-        .mockResolvedValue({ utilization: {}, revenue: 0, busiestWindows: [] }),
+      getAnalytics: vi.fn().mockResolvedValue({ utilization: {}, revenue: 0, busiestWindows: [] }),
       getStaff: vi.fn().mockResolvedValue({ staff: [] }),
       getChairs: vi.fn().mockResolvedValue({ chairs: [] }),
     },
@@ -117,6 +115,7 @@ vi.mock('../../../api/client', () => {
 });
 
 import { OwnerLayout } from '../OwnerLayout';
+import { ToastProvider } from '../../../components/ui/Toast';
 import {
   OwnerCalendarPage,
   OwnerAnalyticsPage,
@@ -155,15 +154,17 @@ function renderOwnerPanel(role: OwnerRole, initialPath: string) {
   return renderRtl(
     <HelmetProvider>
       <ThemeProvider defaultTheme="light">
-        <MemoryRouter initialEntries={[initialPath]}>
-          <Routes>
-            <Route path="/owner" element={<OwnerLayout />}>
-              <Route path="calendar" element={<OwnerCalendarPage />} />
-              <Route path="analytics" element={<OwnerAnalyticsPage />} />
-              <Route path="config" element={<OwnerConfigurationPage />} />
-            </Route>
-          </Routes>
-        </MemoryRouter>
+        <ToastProvider>
+          <MemoryRouter initialEntries={[initialPath]}>
+            <Routes>
+              <Route path="/owner" element={<OwnerLayout />}>
+                <Route path="calendar" element={<OwnerCalendarPage />} />
+                <Route path="analytics" element={<OwnerAnalyticsPage />} />
+                <Route path="config" element={<OwnerConfigurationPage />} />
+              </Route>
+            </Routes>
+          </MemoryRouter>
+        </ToastProvider>
       </ThemeProvider>
     </HelmetProvider>,
   );
@@ -175,7 +176,9 @@ function renderSection(ui: React.ReactElement, initialPath: string) {
     <HelmetProvider>
       <ThemeProvider defaultTheme="light">
         <div lang="fa" className="app-root">
-          <MemoryRouter initialEntries={[initialPath]}>{ui}</MemoryRouter>
+          <ToastProvider>
+            <MemoryRouter initialEntries={[initialPath]}>{ui}</MemoryRouter>
+          </ToastProvider>
         </div>
       </ThemeProvider>
     </HelmetProvider>,
@@ -251,19 +254,13 @@ describe('Owner panel a11y — reused admin pages in the owner context (R7.1)', 
 
 describe('Owner panel a11y — SubscriptionPage (R7.1)', () => {
   it('opens the outline at a single <h1> with ordered headings', async () => {
-    const { rtlContainer } = renderSection(
-      <OwnerSubscriptionPage />,
-      '/owner/subscription',
-    );
+    const { rtlContainer } = renderSection(<OwnerSubscriptionPage />, '/owner/subscription');
     await screen.findByTestId('subscription-status');
     expectSingleH1AndOrderedHeadings(rtlContainer);
   });
 
   it('has no serious/critical violations in RTL', async () => {
-    const { rtlContainer } = renderSection(
-      <OwnerSubscriptionPage />,
-      '/owner/subscription',
-    );
+    const { rtlContainer } = renderSection(<OwnerSubscriptionPage />, '/owner/subscription');
     await screen.findByTestId('subscription-status');
     await expectNoSeriousA11yViolations(rtlContainer);
   });
@@ -280,13 +277,9 @@ describe('Owner panel a11y — QrPage (R7.1)', () => {
     renderSection(<OwnerQrPage />, '/owner/qr');
     await screen.findByTestId('qr-card');
     // Both the preview and the standee QR carry a meaningful Persian alt.
-    expect(screen.getByTestId('qr-image')).toHaveAccessibleName(
-      expect.stringContaining('سالن رز'),
-    );
+    expect(screen.getByTestId('qr-image')).toHaveAccessibleName(expect.stringContaining('سالن رز'));
     expect(
-      (screen.getByTestId('qr-standee-image') as HTMLImageElement).getAttribute(
-        'alt',
-      ),
+      (screen.getByTestId('qr-standee-image') as HTMLImageElement).getAttribute('alt'),
     ).toBeTruthy();
   });
 

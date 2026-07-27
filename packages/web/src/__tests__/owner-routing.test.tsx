@@ -43,9 +43,7 @@ vi.mock('../api/client', () => ({
     getStaff: vi.fn().mockResolvedValue({ staff: [] }),
     getChairs: vi.fn().mockResolvedValue({ chairs: [] }),
     getCalendar: vi.fn().mockResolvedValue({ appointments: [] }),
-    getAnalytics: vi
-      .fn()
-      .mockResolvedValue({ utilization: {}, revenue: 0, busiestWindows: [] }),
+    getAnalytics: vi.fn().mockResolvedValue({ utilization: {}, revenue: 0, busiestWindows: [] }),
   },
 }));
 
@@ -75,9 +73,7 @@ describe('owner routes are code-split off the main bundle', () => {
     render(<App />);
     // Once the lazy chunk loads and the bootstrap restores the session, the
     // owner calendar placeholder renders inside the owner shell.
-    expect(
-      await screen.findByTestId('owner-calendar-page'),
-    ).toBeInTheDocument();
+    expect(await screen.findByTestId('owner-calendar-page')).toBeInTheDocument();
     expect(bootstrapAuth).not.toHaveBeenCalled(); // in-memory token reused
     // `/me` is fetched to derive the principal: once by the app-wide
     // AuthProvider (drives the header) and once by the OwnerLayout guard.

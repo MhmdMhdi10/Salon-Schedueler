@@ -80,9 +80,7 @@ describe('SlotGrid', () => {
   });
 
   it('has no serious/critical a11y violations', async () => {
-    const { rtlContainer } = renderRtl(
-      <SlotGrid slots={slots} ariaLabel="زمان‌های موجود" />,
-    );
+    const { rtlContainer } = renderRtl(<SlotGrid slots={slots} ariaLabel="زمان‌های موجود" />);
     await expectNoSeriousA11yViolations(rtlContainer);
   });
 });

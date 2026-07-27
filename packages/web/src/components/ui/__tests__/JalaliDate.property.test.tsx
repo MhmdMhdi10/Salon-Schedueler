@@ -1,11 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import fc from 'fast-check';
-import {
-  gregorianToJalali,
-  jalaliToGregorian,
-  type GregorianDate,
-} from '@salon/shared';
+import { gregorianToJalali, jalaliToGregorian, type GregorianDate } from '@salon/shared';
 import { JalaliDate, formatJalaliDisplay } from '../JalaliDate';
 
 /**
@@ -59,11 +55,13 @@ function jalaliToIso(jalali: { jy: number; jm: number; jd: number }): string {
 const validDate = fc
   .integer({ min: 1900, max: 2100 })
   .chain((year) =>
-    fc.integer({ min: 1, max: 12 }).chain((month) =>
-      fc
-        .integer({ min: 1, max: gregorianDaysInMonth(year, month) })
-        .map((day) => ({ year, month, day }) satisfies GregorianDate),
-    ),
+    fc
+      .integer({ min: 1, max: 12 })
+      .chain((month) =>
+        fc
+          .integer({ min: 1, max: gregorianDaysInMonth(year, month) })
+          .map((day) => ({ year, month, day }) satisfies GregorianDate),
+      ),
   );
 
 describe('Property 16 — Jalali date conversion round-trips', () => {
@@ -101,9 +99,7 @@ describe('Property 16 — Jalali date conversion round-trips', () => {
         // The component's own numeric display string («۱۴۰۴/۰۲/۱۷» form).
         const display = formatJalaliDisplay(date, 'numeric');
         // Map Persian digits back to ASCII so we can parse the Jalali parts.
-        const ascii = display.replace(/[۰-۹]/g, (d) =>
-          String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)),
-        );
+        const ascii = display.replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
         const [jy, jm, jd] = ascii.split('/').map(Number);
 
         // Inverting the displayed Jalali parts at the API boundary returns the
@@ -112,9 +108,7 @@ describe('Property 16 — Jalali date conversion round-trips', () => {
 
         // The rendered <time> element shows exactly that Jalali display string,
         // so the on-screen date is the same one that inverts back to `greg`.
-        const { container, unmount } = render(
-          <JalaliDate value={date} variant="numeric" />,
-        );
+        const { container, unmount } = render(<JalaliDate value={date} variant="numeric" />);
         try {
           const time = container.querySelector('time');
           expect(time).not.toBeNull();

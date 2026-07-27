@@ -11,53 +11,18 @@
  * Nothing here pulls a new dependency: the QR image reuses the dependency-free
  * `./qr-svg` generator, kept inside the lazily-loaded owner chunk.
  */
-import type { CSSProperties } from 'react';
 import { buildQrSvg } from './qr-svg';
 
 /** The three printable layouts offered in the studio. */
 export type AssetKind = 'card' | 'banner' | 'standee';
 export const ASSET_KINDS: readonly AssetKind[] = ['card', 'banner', 'standee'] as const;
 
-/** A brand-accent theme: the gradient pair + soft tint + dark ink. */
-export interface AccentTheme {
-  key: string;
-  from: string;
-  to: string;
-  soft: string;
-  ink: string;
-}
-
-/**
- * Curated accent palette (gradient from→to). Values are chosen so white text
- * sits comfortably on the gradient and the QR panel stays high-contrast.
- */
-export const ACCENTS: readonly AccentTheme[] = [
-  { key: 'violet', from: '#6d5efc', to: '#a855f7', soft: '#efeafe', ink: '#2e1065' },
-  { key: 'jade', from: '#0B7A68', to: '#05CFA6', soft: '#E2F7F2', ink: '#073F36' },
-  { key: 'teal', from: '#0ea5a4', to: '#0284c7', soft: '#e2fbfb', ink: '#083344' },
-  { key: 'rose', from: '#fb7185', to: '#ef4444', soft: '#ffe9ec', ink: '#4c0519' },
-  { key: 'amber', from: '#f59e0b', to: '#ea580c', soft: '#fdf0d5', ink: '#451a03' },
-  { key: 'emerald', from: '#10b981', to: '#047857', soft: '#dcfbee', ink: '#022c22' },
-  { key: 'night', from: '#3b4252', to: '#4f46e5', soft: '#e6e8f0', ink: '#0b1020' },
-] as const;
-
-/** Resolve an accent by key, falling back to the first (violet). */
-export function resolveAccent(key: string): AccentTheme {
-  return ACCENTS.find((a) => a.key === key) ?? ACCENTS[0];
-}
-
-/**
- * Inline CSS custom properties an asset reads for its brand colors. Cast to
- * CSSProperties since CSS variables are not in the typed property map.
- */
-export function accentVars(a: AccentTheme): CSSProperties {
-  return {
-    '--asset-from': a.from,
-    '--asset-to': a.to,
-    '--asset-soft': a.soft,
-    '--asset-ink': a.ink,
-  } as CSSProperties;
-}
+// The accent palette lives in `components/theme/accents` so public storefront
+// surfaces (TenantTheme, QR landing) can use it without pulling this module's
+// QR generator + download helpers into their bundles. Re-exported here so
+// existing owner-studio imports keep working.
+export { ACCENTS, resolveAccent, accentVars } from '../../components/theme/accents';
+export type { AccentTheme } from '../../components/theme/accents';
 
 /** Build a `data:` URI for the QR (an SVG image) suitable for an `<img src>`. */
 export function qrImageDataUri(payload: string, title: string): string {

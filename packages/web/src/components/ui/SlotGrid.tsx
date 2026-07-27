@@ -1,13 +1,6 @@
 import { forwardRef, useId, useRef } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import {
-  Check,
-  Clock,
-  Hourglass,
-  Ban,
-  History,
-  type LucideIcon,
-} from 'lucide-react';
+import { Check, Clock, Hourglass, Ban, History, type LucideIcon } from 'lucide-react';
 import { cn } from './cn';
 import { toPersianDigits } from './Num';
 import { easings } from '../../lib/motion-variants';
@@ -72,8 +65,10 @@ const stateClasses: Record<SlotState, string> = {
   past: 'border border-dashed border-border bg-surface text-muted',
 };
 
-export interface SlotChipProps
-  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
+export interface SlotChipProps extends Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  'children'
+> {
   /** Visual + interaction state of the slot. */
   state: SlotState;
   /** Visible slot label, e.g. a start time «۰۹:۳۰». Latin digits are localized. */
@@ -95,58 +90,54 @@ export interface SlotChipProps
  * Framer Motion. Respects prefers-reduced-motion: disables scale animation,
  * retains color transition. Unavailable slots are visually muted (opacity).
  */
-export const SlotChip = forwardRef<HTMLButtonElement, SlotChipProps>(
-  function SlotChip(
-    { state, label, ariaLabel, className, disabled, ...rest },
-    ref,
-  ) {
-    const Icon = stateIcon[state];
-    const canInteract = interactive[state];
-    const localizedLabel = toPersianDigits(label);
-    const computedLabel = ariaLabel ?? `${localizedLabel}، ${stateLabel[state]}`;
-    const prefersReduced = useReducedMotion();
+export const SlotChip = forwardRef<HTMLButtonElement, SlotChipProps>(function SlotChip(
+  { state, label, ariaLabel, className, disabled, ...rest },
+  ref,
+) {
+  const Icon = stateIcon[state];
+  const canInteract = interactive[state];
+  const localizedLabel = toPersianDigits(label);
+  const computedLabel = ariaLabel ?? `${localizedLabel}، ${stateLabel[state]}`;
+  const prefersReduced = useReducedMotion();
 
-    const isSelected = state === 'selected';
+  const isSelected = state === 'selected';
 
-    // Scale pulse animation on selection — only when motion is allowed
-    const scaleAnimation =
-      isSelected && !prefersReduced ? { scale: [1, 1.05, 1] } : { scale: 1 };
+  // Scale pulse animation on selection — only when motion is allowed
+  const scaleAnimation = isSelected && !prefersReduced ? { scale: [1, 1.05, 1] } : { scale: 1 };
 
-    // whileTap press feedback for interactive chips (not when reduced motion)
-    const tapAnimation =
-      canInteract && !prefersReduced ? { scale: 0.97 } : undefined;
+  // whileTap press feedback for interactive chips (not when reduced motion)
+  const tapAnimation = canInteract && !prefersReduced ? { scale: 0.97 } : undefined;
 
-    return (
-      <motion.button
-        ref={ref}
-        type="button"
-        role="gridcell"
-        aria-selected={isSelected}
-        aria-label={computedLabel}
-        disabled={disabled ?? !canInteract}
-        animate={scaleAnimation}
-        whileTap={tapAnimation}
-        transition={{ duration: 0.2, ease: easings.standard }}
-        className={cn(
-          'inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1',
-          'rounded-md px-3 py-2 text-sm tabular-nums',
-          'transition-colors duration-fast ease-standard',
-          'outline-none focus-visible:outline focus-visible:outline-2',
-          'focus-visible:outline-offset-2 focus-visible:outline-focus',
-          'disabled:cursor-not-allowed',
-          stateClasses[state],
-          // Muted opacity for unavailable slots
-          !canInteract && 'opacity-50',
-          className,
-        )}
-        {...(rest as Record<string, unknown>)}
-      >
-        <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-        <span aria-hidden="true">{localizedLabel}</span>
-      </motion.button>
-    );
-  },
-);
+  return (
+    <motion.button
+      ref={ref}
+      type="button"
+      role="gridcell"
+      aria-selected={isSelected}
+      aria-label={computedLabel}
+      disabled={disabled ?? !canInteract}
+      animate={scaleAnimation}
+      whileTap={tapAnimation}
+      transition={{ duration: 0.2, ease: easings.standard }}
+      className={cn(
+        'inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1',
+        'rounded-md px-3 py-2 text-sm tabular-nums',
+        'transition-colors duration-fast ease-standard',
+        'outline-none focus-visible:outline focus-visible:outline-2',
+        'focus-visible:outline-offset-2 focus-visible:outline-focus',
+        'disabled:cursor-not-allowed',
+        stateClasses[state],
+        // Muted opacity for unavailable slots
+        !canInteract && 'opacity-50',
+        className,
+      )}
+      {...(rest as Record<string, unknown>)}
+    >
+      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+      <span aria-hidden="true">{localizedLabel}</span>
+    </motion.button>
+  );
+});
 
 export interface SlotItem {
   /** Stable key — typically the slot's ISO start time. */
@@ -157,8 +148,7 @@ export interface SlotItem {
   state: SlotState;
 }
 
-export interface SlotGridProps
-  extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onSelect'> {
+export interface SlotGridProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onSelect'> {
   /** The slots to render. */
   slots: SlotItem[];
   /** Called with a slot id when a selectable slot is activated. */
@@ -176,103 +166,92 @@ export interface SlotGridProps
  * Loading/empty/error states are owned by the page (skeleton chips → empty card
  * → grid, per the design); this renders the populated grid.
  */
-export const SlotGrid = forwardRef<HTMLDivElement, SlotGridProps>(
-  function SlotGrid(
-    { slots, onSelect, ariaLabel, className, ...rest },
-    ref,
-  ) {
-    const gridId = useId();
-    const containerRef = useRef<HTMLDivElement | null>(null);
+export const SlotGrid = forwardRef<HTMLDivElement, SlotGridProps>(function SlotGrid(
+  { slots, onSelect, ariaLabel, className, ...rest },
+  ref,
+) {
+  const gridId = useId();
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
-    // First selectable (or selected) chip owns the initial tab stop.
-    const initialIndex = (() => {
-      const sel = slots.findIndex((s) => s.state === 'selected');
-      if (sel !== -1) return sel;
-      const free = slots.findIndex((s) => interactive[s.state]);
-      return free === -1 ? 0 : free;
-    })();
+  // First selectable (or selected) chip owns the initial tab stop.
+  const initialIndex = (() => {
+    const sel = slots.findIndex((s) => s.state === 'selected');
+    if (sel !== -1) return sel;
+    const free = slots.findIndex((s) => interactive[s.state]);
+    return free === -1 ? 0 : free;
+  })();
 
-    const focusChip = (index: number) => {
-      const buttons = containerRef.current?.querySelectorAll<HTMLButtonElement>(
-        '[role="gridcell"]',
-      );
-      buttons?.[index]?.focus();
-    };
+  const focusChip = (index: number) => {
+    const buttons = containerRef.current?.querySelectorAll<HTMLButtonElement>('[role="gridcell"]');
+    buttons?.[index]?.focus();
+  };
 
-    const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-      const count = slots.length;
-      if (count === 0) return;
-      const buttons = Array.from(
-        containerRef.current?.querySelectorAll<HTMLButtonElement>(
-          '[role="gridcell"]',
-        ) ?? [],
-      );
-      const current = buttons.findIndex((b) => b === document.activeElement);
-      if (current === -1) return;
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const count = slots.length;
+    if (count === 0) return;
+    const buttons = Array.from(
+      containerRef.current?.querySelectorAll<HTMLButtonElement>('[role="gridcell"]') ?? [],
+    );
+    const current = buttons.findIndex((b) => b === document.activeElement);
+    if (current === -1) return;
 
-      let next = current;
-      switch (event.key) {
-        case 'ArrowLeft': // RTL: visual-left advances
-          next = Math.min(current + 1, count - 1);
-          break;
-        case 'ArrowRight': // RTL: visual-right goes back
-          next = Math.max(current - 1, 0);
-          break;
-        case 'ArrowDown':
-          next = Math.min(current + COLUMNS, count - 1);
-          break;
-        case 'ArrowUp':
-          next = Math.max(current - COLUMNS, 0);
-          break;
-        case 'Home':
-          next = 0;
-          break;
-        case 'End':
-          next = count - 1;
-          break;
-        default:
-          return;
-      }
-      event.preventDefault();
-      focusChip(next);
-    };
+    let next = current;
+    switch (event.key) {
+      case 'ArrowLeft': // RTL: visual-left advances
+        next = Math.min(current + 1, count - 1);
+        break;
+      case 'ArrowRight': // RTL: visual-right goes back
+        next = Math.max(current - 1, 0);
+        break;
+      case 'ArrowDown':
+        next = Math.min(current + COLUMNS, count - 1);
+        break;
+      case 'ArrowUp':
+        next = Math.max(current - COLUMNS, 0);
+        break;
+      case 'Home':
+        next = 0;
+        break;
+      case 'End':
+        next = count - 1;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    focusChip(next);
+  };
 
-    const setRefs = (node: HTMLDivElement | null) => {
-      containerRef.current = node;
-      if (typeof ref === 'function') ref(node);
-      else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
-    };
+  const setRefs = (node: HTMLDivElement | null) => {
+    containerRef.current = node;
+    if (typeof ref === 'function') ref(node);
+    else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+  };
 
-    return (
-      <div
-        ref={setRefs}
-        role="grid"
-        aria-label={ariaLabel}
-        id={gridId}
-        onKeyDown={handleKeyDown}
-        className={className}
-        {...rest}
-      >
-        {/* A single logical row carries the responsive chip layout. The
+  return (
+    <div
+      ref={setRefs}
+      role="grid"
+      aria-label={ariaLabel}
+      id={gridId}
+      onKeyDown={handleKeyDown}
+      className={className}
+      {...rest}
+    >
+      {/* A single logical row carries the responsive chip layout. The
             `role="grid"` → `role="row"` → `role="gridcell"` nesting satisfies
             the ARIA required-parent/children contract (R2.9, R10.4). */}
-        <div
-          role="row"
-          className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-2"
-        >
-          {slots.map((slot, index) => (
-            <SlotChip
-              key={slot.id}
-              state={slot.state}
-              label={slot.label}
-              tabIndex={index === initialIndex ? 0 : -1}
-              onClick={
-                interactive[slot.state] ? () => onSelect?.(slot.id) : undefined
-              }
-            />
-          ))}
-        </div>
+      <div role="row" className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-2">
+        {slots.map((slot, index) => (
+          <SlotChip
+            key={slot.id}
+            state={slot.state}
+            label={slot.label}
+            tabIndex={index === initialIndex ? 0 : -1}
+            onClick={interactive[slot.state] ? () => onSelect?.(slot.id) : undefined}
+          />
+        ))}
       </div>
-    );
-  },
-);
+    </div>
+  );
+});

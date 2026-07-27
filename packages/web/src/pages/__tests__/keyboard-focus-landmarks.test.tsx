@@ -80,8 +80,7 @@ vi.mock('../../api/client', () => {
       getChairs: (salonId: string) => getChairs(salonId),
       getCalendar: (salonId: string, from: string, to: string, view: string) =>
         getCalendar(salonId, from, to, view),
-      getAnalytics: (salonId: string, from: string, to: string) =>
-        getAnalytics(salonId, from, to),
+      getAnalytics: (salonId: string, from: string, to: string) => getAnalytics(salonId, from, to),
     },
     holidaysApi: {
       list: vi.fn().mockResolvedValue({ holidays: [] }),
@@ -109,10 +108,9 @@ import { BookingSuccessPage } from '../BookingSuccessPage';
 import { ConfigurationPage } from '../admin/ConfigurationPage';
 import { CalendarPage } from '../admin/CalendarPage';
 import { AnalyticsPage } from '../admin/AnalyticsPage';
+import { ToastProvider } from '../../components/ui/Toast';
 
-const SERVICES = [
-  { id: 'svc-1', name: 'کوتاهی مو', durationMinutes: 30, priceRial: 2500000 },
-];
+const SERVICES = [{ id: 'svc-1', name: 'کوتاهی مو', durationMinutes: 30, priceRial: 2500000 }];
 
 function wrap(ui: React.ReactElement, initialPath = '/') {
   return (
@@ -147,7 +145,14 @@ afterEach(() => {
 
 describe('Heading audit — customer funnel pages (single <h1>, ordered levels)', () => {
   it('AuthPage opens the outline at a single <h1>', () => {
-    const { getByTestId } = render(wrap(<AuthPage />, '/auth'));
+    const { getByTestId } = render(
+      wrap(
+        <ToastProvider>
+          <AuthPage />
+        </ToastProvider>,
+        '/auth',
+      ),
+    );
     expectSingleH1AndOrderedHeadings(getByTestId('auth-page'));
   });
 
@@ -191,10 +196,7 @@ describe('Heading audit — customer funnel pages (single <h1>, ordered levels)'
           ]}
         >
           <Routes>
-            <Route
-              path="/salon/:salonId/book/confirm"
-              element={<BookingConfirmPage />}
-            />
+            <Route path="/salon/:salonId/book/confirm" element={<BookingConfirmPage />} />
           </Routes>
         </MemoryRouter>
       </HelmetProvider>,
@@ -219,7 +221,13 @@ describe('Heading audit — customer funnel pages (single <h1>, ordered levels)'
 
 describe('Heading audit — admin pages (single <h1>, ordered levels)', () => {
   it('ConfigurationPage has a single <h1> with ordered section <h2>s', async () => {
-    const { findByTestId } = render(wrap(<ConfigurationPage salonId="salon-1" />));
+    const { findByTestId } = render(
+      wrap(
+        <ToastProvider>
+          <ConfigurationPage salonId="salon-1" />
+        </ToastProvider>,
+      ),
+    );
     const root = await findByTestId('admin-configuration');
     await waitFor(() => expect(getServices).toHaveBeenCalled());
     await screen.findByText('کوتاهی مو');
@@ -227,7 +235,13 @@ describe('Heading audit — admin pages (single <h1>, ordered levels)', () => {
   });
 
   it('CalendarPage has a single <h1> with ordered levels', async () => {
-    const { findByTestId } = render(wrap(<CalendarPage salonId="salon-1" />));
+    const { findByTestId } = render(
+      wrap(
+        <ToastProvider>
+          <CalendarPage salonId="salon-1" />
+        </ToastProvider>,
+      ),
+    );
     const root = await findByTestId('admin-calendar');
     await screen.findByTestId('calendar-appointments');
     expectSingleH1AndOrderedHeadings(root);
@@ -243,7 +257,14 @@ describe('Heading audit — admin pages (single <h1>, ordered levels)', () => {
 
 describe('Keyboard & focus — funnel/admin controls are reachable with a visible ring', () => {
   it('AuthPage primary CTA is a real, focusable <button> carrying the focus-ring class', () => {
-    render(wrap(<AuthPage />, '/auth'));
+    render(
+      wrap(
+        <ToastProvider>
+          <AuthPage />
+        </ToastProvider>,
+        '/auth',
+      ),
+    );
     const cta = screen.getByRole('button', { name: 'دریافت کد' });
     cta.focus();
     expect(cta).toHaveFocus();
@@ -252,7 +273,13 @@ describe('Keyboard & focus — funnel/admin controls are reachable with a visibl
   });
 
   it('Admin side-nav links use real anchors (keyboard operable) — calendar tabs keep tab semantics', async () => {
-    render(wrap(<CalendarPage salonId="salon-1" />));
+    render(
+      wrap(
+        <ToastProvider>
+          <CalendarPage salonId="salon-1" />
+        </ToastProvider>,
+      ),
+    );
     await screen.findByTestId('calendar-appointments');
     // The day/week toggle preserves the tab semantics that keyboard users rely
     // on (Radix roving tabindex, RTL-aware arrow keys).
@@ -277,7 +304,13 @@ describe('Accessibility (axe) in RTL — funnel/admin populated states', () => {
   });
 
   it('ConfigurationPage has no serious/critical violations in RTL', async () => {
-    const { rtlContainer } = renderRtl(wrap(<ConfigurationPage salonId="salon-1" />));
+    const { rtlContainer } = renderRtl(
+      wrap(
+        <ToastProvider>
+          <ConfigurationPage salonId="salon-1" />
+        </ToastProvider>,
+      ),
+    );
     await screen.findByText('کوتاهی مو');
     await expectNoSeriousA11yViolations(rtlContainer);
   });

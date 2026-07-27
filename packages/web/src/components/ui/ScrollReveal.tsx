@@ -22,11 +22,7 @@ export interface ScrollRevealProps {
  * use `ScrollReveal` when richer orchestration (stagger delays, variant
  * composition) is needed.
  */
-export function ScrollReveal({
-  children,
-  delay = 0,
-  className,
-}: ScrollRevealProps) {
+export function ScrollReveal({ children, delay = 0, className }: ScrollRevealProps) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-10% 0px' });
   const prefersReduced = useReducedMotion();

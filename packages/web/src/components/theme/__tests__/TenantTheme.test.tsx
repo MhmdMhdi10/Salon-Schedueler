@@ -137,10 +137,7 @@ describe('Feature: signature-ui-system, Property 10: An active accent preserves 
           expect(wrapper.style.transition).toBe('');
           expect(wrapper.style.animation).toBe('');
           // Toggling the theme leaves the (orthogonal) accent overrides intact.
-          document.documentElement.setAttribute(
-            'data-theme',
-            theme === 'light' ? 'dark' : 'light',
-          );
+          document.documentElement.setAttribute('data-theme', theme === 'light' ? 'dark' : 'light');
           expect(wrapper.style.getPropertyValue('--color-primary').trim()).not.toBe('');
         },
       ),

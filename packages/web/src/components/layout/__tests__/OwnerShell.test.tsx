@@ -55,12 +55,7 @@ function renderOwner(
   props: Partial<React.ComponentProps<typeof OwnerShell>> = {},
   initialPath = '/owner/calendar',
 ) {
-  const {
-    role = 'Owner',
-    onSignOut = vi.fn(),
-    children = <h1>تقویم</h1>,
-    ...rest
-  } = props;
+  const { role = 'Owner', onSignOut = vi.fn(), children = <h1>تقویم</h1>, ...rest } = props;
   return render(
     <ThemeProvider defaultTheme="light">
       <TooltipProvider>
@@ -171,15 +166,15 @@ describe('OwnerShell — desktop (lg+)', () => {
     // Owner should see calendar, analytics, and config in sidebar
     expect(within(sidebar).getByRole('link', { name: 'تقویم' })).toBeInTheDocument();
     expect(within(sidebar).getByRole('link', { name: 'آمار' })).toBeInTheDocument();
-    expect(within(sidebar).getByRole('link', { name: 'تنظیمات' })).toBeInTheDocument();
+    expect(within(sidebar).getByRole('link', { name: 'تنظیمات سالن' })).toBeInTheDocument();
   });
 
   it('hides configuration and analytics from a Stylist (RBAC)', () => {
     renderDesktop({ role: 'Stylist' });
     const sidebar = screen.getByLabelText('ناوبری پنل مدیریت');
-    // Stylist sees only calendar
+    // Stylist never sees configuration or analytics
     expect(within(sidebar).getByRole('link', { name: 'تقویم' })).toBeInTheDocument();
-    expect(within(sidebar).queryByRole('link', { name: 'تنظیمات' })).not.toBeInTheDocument();
+    expect(within(sidebar).queryByRole('link', { name: 'تنظیمات سالن' })).not.toBeInTheDocument();
     expect(within(sidebar).queryByRole('link', { name: 'آمار' })).not.toBeInTheDocument();
   });
 
@@ -239,9 +234,11 @@ describe('ownerNavForRole (RBAC matrix)', () => {
     expect(nav.map((i) => i.to)).toEqual([
       '/owner/calendar',
       '/owner/analytics',
-      '/owner/config',
-      '/owner/subscription',
       '/owner/qr',
+      '/owner/config',
+      '/owner/transactions',
+      '/owner/notifications',
+      '/owner/subscription',
       '/owner/my-qr',
     ]);
   });
@@ -253,9 +250,13 @@ describe('ownerNavForRole (RBAC matrix)', () => {
     expect(paths).not.toContain('/owner/config');
   });
 
-  it('limits Stylist to calendar and their personal QR', () => {
+  it('limits Stylist to calendar, notifications, and their personal QR', () => {
     const nav = ownerNavForRole('Stylist');
-    expect(nav.map((i) => i.to)).toEqual(['/owner/calendar', '/owner/my-qr']);
+    expect(nav.map((i) => i.to)).toEqual([
+      '/owner/calendar',
+      '/owner/notifications',
+      '/owner/my-qr',
+    ]);
   });
 });
 

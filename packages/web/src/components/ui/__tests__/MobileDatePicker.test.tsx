@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MobileDatePicker } from '../MobileDatePicker';
 
@@ -29,10 +29,7 @@ function stubMatchMedia(mobile: boolean) {
     removeListener: () => {},
     dispatchEvent: () => false,
   };
-  vi.stubGlobal(
-    'matchMedia',
-    vi.fn(() => mql) as unknown as typeof window.matchMedia,
-  );
+  vi.stubGlobal('matchMedia', vi.fn(() => mql) as unknown as typeof window.matchMedia);
   return {
     /** Simulate a viewport change to update the matches state. */
     setMobile: (value: boolean) => {
@@ -63,13 +60,7 @@ describe('MobileDatePicker', () => {
 
   it('opens a popover calendar on desktop (>= 768px)', async () => {
     stubMatchMedia(false);
-    render(
-      <MobileDatePicker
-        value="2025-05-07"
-        onChange={() => {}}
-        label="تاریخ"
-      />,
-    );
+    render(<MobileDatePicker value="2025-05-07" onChange={() => {}} label="تاریخ" />);
     fireEvent.click(screen.getByRole('button', { name: /تاریخ/ }));
     // On desktop, the calendar opens in a Radix Popover (role="dialog")
     const dialog = await screen.findByRole('dialog');
@@ -80,13 +71,7 @@ describe('MobileDatePicker', () => {
 
   it('opens a bottom-sheet dialog on mobile (< 768px)', async () => {
     stubMatchMedia(true);
-    render(
-      <MobileDatePicker
-        value="2025-05-07"
-        onChange={() => {}}
-        label="تاریخ"
-      />,
-    );
+    render(<MobileDatePicker value="2025-05-07" onChange={() => {}} label="تاریخ" />);
     fireEvent.click(screen.getByRole('button', { name: /تاریخ/ }));
     // On mobile, the calendar opens in a Sheet (also role="dialog" via Radix Dialog)
     const dialog = await screen.findByRole('dialog');
@@ -100,13 +85,7 @@ describe('MobileDatePicker', () => {
   it('passes onChange through and emits ISO date on selection', async () => {
     stubMatchMedia(false);
     const onChange = vi.fn();
-    render(
-      <MobileDatePicker
-        value="2025-05-07"
-        onChange={onChange}
-        label="تاریخ"
-      />,
-    );
+    render(<MobileDatePicker value="2025-05-07" onChange={onChange} label="تاریخ" />);
     fireEvent.click(screen.getByRole('button', { name: /تاریخ/ }));
     await screen.findByRole('grid');
     // Pick the first day of the visible month
@@ -122,12 +101,7 @@ describe('MobileDatePicker', () => {
     stubMatchMedia(false);
     // Set min to 2025-05-10 — days before it should be disabled
     render(
-      <MobileDatePicker
-        value="2025-05-10"
-        onChange={() => {}}
-        label="تاریخ"
-        min="2025-05-10"
-      />,
+      <MobileDatePicker value="2025-05-10" onChange={() => {}} label="تاریخ" min="2025-05-10" />,
     );
     fireEvent.click(screen.getByRole('button', { name: /تاریخ/ }));
     await screen.findByRole('grid');
@@ -140,16 +114,8 @@ describe('MobileDatePicker', () => {
 
   it('displays selected date in Jalali format', () => {
     stubMatchMedia(false);
-    render(
-      <MobileDatePicker
-        value="2025-05-07"
-        onChange={() => {}}
-        label="تاریخ"
-      />,
-    );
+    render(<MobileDatePicker value="2025-05-07" onChange={() => {}} label="تاریخ" />);
     // 2025-05-07 → ۱۷ اردیبهشت ۱۴۰۴
-    expect(screen.getByRole('button', { name: /تاریخ/ })).toHaveTextContent(
-      /۱۷ اردیبهشت ۱۴۰۴/,
-    );
+    expect(screen.getByRole('button', { name: /تاریخ/ })).toHaveTextContent(/۱۷ اردیبهشت ۱۴۰۴/);
   });
 });

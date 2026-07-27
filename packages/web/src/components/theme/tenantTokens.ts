@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import type { AccentTheme } from '../../pages/owner/marketing-assets';
+import type { AccentTheme } from './accents';
 import { onAccentForeground, ensureAaFill } from '../../styles/contrast';
 
 /**

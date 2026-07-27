@@ -14,8 +14,7 @@ import { renderRtl, expectNoSeriousA11yViolations } from '../../../test/a11y';
  */
 
 function renderFunnel(props: Partial<React.ComponentProps<typeof FunnelShell>> = {}) {
-  const { children = <p>محتوای مرحله</p>, currentStep = 'service', ...rest } =
-    props;
+  const { children = <p>محتوای مرحله</p>, currentStep = 'service', ...rest } = props;
   return render(
     <ThemeProvider defaultTheme="light">
       <MemoryRouter>
@@ -69,9 +68,7 @@ describe('FunnelShell', () => {
   it('shows the back affordance only when onBack is provided and calls it', () => {
     const onBack = vi.fn();
     const { rerender } = renderFunnel();
-    expect(
-      screen.queryByRole('button', { name: 'بازگشت' }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'بازگشت' })).not.toBeInTheDocument();
 
     rerender(
       <ThemeProvider defaultTheme="light">
@@ -97,10 +94,7 @@ describe('FunnelShell', () => {
       <ThemeProvider defaultTheme="light">
         <MemoryRouter>
           <div dir="rtl" lang="fa">
-            <FunnelShell
-              currentStep="confirm"
-              cta={<Button>تایید رزرو</Button>}
-            >
+            <FunnelShell currentStep="confirm" cta={<Button>تایید رزرو</Button>}>
               <p>محتوای مرحله</p>
             </FunnelShell>
           </div>
@@ -108,9 +102,7 @@ describe('FunnelShell', () => {
       </ThemeProvider>,
     );
     const bar = screen.getByTestId('funnel-cta-bar');
-    expect(
-      within(bar).getByRole('button', { name: 'تایید رزرو' }),
-    ).toBeInTheDocument();
+    expect(within(bar).getByRole('button', { name: 'تایید رزرو' })).toBeInTheDocument();
   });
 
   it('has no serious/critical a11y violations in RTL', async () => {

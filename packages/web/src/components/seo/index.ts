@@ -16,11 +16,7 @@
 export { SeoHead } from './SeoHead';
 export type { SeoHeadProps } from './SeoHead';
 
-export {
-  JsonLd,
-  normalizeJsonLdNode,
-  serializeJsonLd,
-} from './JsonLd';
+export { JsonLd, normalizeJsonLdNode, serializeJsonLd } from './JsonLd';
 export type { JsonLdProps, JsonLdNode } from './JsonLd';
 
 export {

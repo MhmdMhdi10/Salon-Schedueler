@@ -36,17 +36,24 @@ export function RouteLoader({ className }: RouteLoaderProps) {
       aria-live="polite"
       aria-label={t('app.routeLoading')}
       // Reserve a realistic content height so swapping the loader for the page
-      // does not shift surrounding layout (sticky footer, etc.).
-      className={cn('flex min-h-[60vh] flex-col gap-5', className)}
+      // does not shift surrounding layout (sticky footer, etc.). Mirrors the
+      // routed pages' centered container + page padding so the skeleton sits
+      // where the content will land.
+      className={cn(
+        'mx-auto flex min-h-[60vh] w-full max-w-container flex-col gap-5 px-4 py-8',
+        className,
+      )}
     >
       {/* Page-title placeholder. */}
       <Skeleton variant="text" className="h-7 w-1/2 max-w-xs" />
 
-      {/* Primary content blocks. */}
+      {/* Primary content blocks — staggered so the loading grid ripples
+          instead of pulsing as one block (delays are decorative; the shimmer
+          keyframe itself is reduced-motion clamped). */}
       <div className="flex flex-col gap-3">
         <Skeleton variant="rect" className="h-12" />
-        <Skeleton variant="rect" className="h-12" />
-        <Skeleton variant="rect" className="h-32" />
+        <Skeleton variant="rect" className="h-12 [animation-delay:var(--dur-stagger)]" />
+        <Skeleton variant="rect" className="h-32 [animation-delay:calc(var(--dur-stagger)*2)]" />
       </div>
 
       {/* Visually-hidden status text for AT (the skeletons are aria-hidden). */}

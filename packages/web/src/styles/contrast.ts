@@ -59,11 +59,7 @@ export function channelToLinear(value8bit: number): number {
 /** Relative luminance (0..1) of an opaque `#rgb`/`#rrggbb` color. */
 export function relativeLuminance(hex: string): number {
   const { r, g, b } = hexToRgb(hex);
-  return (
-    0.2126 * channelToLinear(r) +
-    0.7152 * channelToLinear(g) +
-    0.0722 * channelToLinear(b)
-  );
+  return 0.2126 * channelToLinear(r) + 0.7152 * channelToLinear(g) + 0.0722 * channelToLinear(b);
 }
 
 /** WCAG contrast ratio (1..21) between two opaque hex colors. */

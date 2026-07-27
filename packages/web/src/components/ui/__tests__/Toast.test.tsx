@@ -12,11 +12,7 @@ import { renderRtl, expectNoSeriousA11yViolations } from '../../../test/a11y';
 function Harness() {
   const { success } = useToast();
   return (
-    <Button
-      onClick={() =>
-        success({ title: 'کد ارسال شد', description: 'تا ۴۵ ثانیه دیگر' })
-      }
-    >
+    <Button onClick={() => success({ title: 'کد ارسال شد', description: 'تا ۴۵ ثانیه دیگر' })}>
       ارسال
     </Button>
   );
@@ -30,9 +26,7 @@ describe('Toast', () => {
       </ToastProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'ارسال' }));
-    await waitFor(() =>
-      expect(screen.getByText('کد ارسال شد')).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText('کد ارسال شد')).toBeInTheDocument());
     expect(screen.getByText('تا ۴۵ ثانیه دیگر')).toBeInTheDocument();
   });
 
@@ -40,11 +34,7 @@ describe('Toast', () => {
     const onUndo = vi.fn();
     function UndoHarness() {
       const { toast } = useToast();
-      return (
-        <Button onClick={() => toast({ title: 'حذف شد', onUndo })}>
-          حذف
-        </Button>
-      );
+      return <Button onClick={() => toast({ title: 'حذف شد', onUndo })}>حذف</Button>;
     }
     render(
       <ToastProvider>
@@ -64,9 +54,7 @@ describe('Toast', () => {
       </ToastProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'ارسال' }));
-    await waitFor(() =>
-      expect(screen.getByText('کد ارسال شد')).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText('کد ارسال شد')).toBeInTheDocument());
     await expectNoSeriousA11yViolations(rtlContainer);
   });
 });
@@ -81,9 +69,7 @@ describe('Toast', () => {
 describe('Toast — success via live region (R7.5)', () => {
   /** Collect every live region currently in the document. */
   function liveRegions() {
-    return Array.from(
-      document.querySelectorAll<HTMLElement>('[role="status"][aria-live]'),
-    );
+    return Array.from(document.querySelectorAll<HTMLElement>('[role="status"][aria-live]'));
   }
 
   it('announces a success toast through a polite live region', async () => {
@@ -96,31 +82,19 @@ describe('Toast — success via live region (R7.5)', () => {
 
     // The success confirmation text is mirrored into a polite live region…
     await waitFor(() => {
-      const polite = liveRegions().filter(
-        (el) => el.getAttribute('aria-live') === 'polite',
-      );
-      expect(
-        polite.some((el) => el.textContent?.includes('کد ارسال شد')),
-      ).toBe(true);
+      const polite = liveRegions().filter((el) => el.getAttribute('aria-live') === 'polite');
+      expect(polite.some((el) => el.textContent?.includes('کد ارسال شد'))).toBe(true);
     });
 
     // …and it is NOT announced assertively (success must not interrupt).
-    const assertive = liveRegions().filter(
-      (el) => el.getAttribute('aria-live') === 'assertive',
-    );
-    expect(
-      assertive.some((el) => el.textContent?.includes('کد ارسال شد')),
-    ).toBe(false);
+    const assertive = liveRegions().filter((el) => el.getAttribute('aria-live') === 'assertive');
+    expect(assertive.some((el) => el.textContent?.includes('کد ارسال شد'))).toBe(false);
   });
 
   it('announces an error toast assertively', async () => {
     function ErrorHarness() {
       const { error } = useToast();
-      return (
-        <Button onClick={() => error({ title: 'پرداخت ناموفق' })}>
-          خطا
-        </Button>
-      );
+      return <Button onClick={() => error({ title: 'پرداخت ناموفق' })}>خطا</Button>;
     }
     render(
       <ToastProvider>
@@ -130,12 +104,8 @@ describe('Toast — success via live region (R7.5)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'خطا' }));
 
     await waitFor(() => {
-      const assertive = liveRegions().filter(
-        (el) => el.getAttribute('aria-live') === 'assertive',
-      );
-      expect(
-        assertive.some((el) => el.textContent?.includes('پرداخت ناموفق')),
-      ).toBe(true);
+      const assertive = liveRegions().filter((el) => el.getAttribute('aria-live') === 'assertive');
+      expect(assertive.some((el) => el.textContent?.includes('پرداخت ناموفق'))).toBe(true);
     });
   });
 });

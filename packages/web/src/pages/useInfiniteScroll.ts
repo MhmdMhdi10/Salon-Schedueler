@@ -14,11 +14,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  *
  * @returns visibleCount, sentinelRef, hasMore, isLoadingMore
  */
-export function useInfiniteScroll(
-  totalCount: number,
-  pageSize = 24,
-  resetKey = '',
-) {
+export function useInfiniteScroll(totalCount: number, pageSize = 24, resetKey = '') {
   const [visibleCount, setVisibleCount] = useState(pageSize);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);

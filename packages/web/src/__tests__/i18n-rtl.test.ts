@@ -24,9 +24,7 @@ describe('Persian Localization and RTL', () => {
   });
 
   describe('Persian translation bundle', () => {
-    const bundle = JSON.parse(
-      readFileSync(resolve(__dirname, '../i18n/fa.json'), 'utf-8')
-    );
+    const bundle = JSON.parse(readFileSync(resolve(__dirname, '../i18n/fa.json'), 'utf-8'));
 
     it('contains Persian text (non-ASCII characters)', () => {
       expect(bundle.app.title).toMatch(/[\u0600-\u06FF]/); // Arabic/Persian unicode range

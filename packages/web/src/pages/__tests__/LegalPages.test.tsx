@@ -3,12 +3,7 @@ import { render, waitFor, cleanup, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import '../../i18n';
-import {
-  AboutPage,
-  ContactPage,
-  PrivacyPage,
-  TermsPage,
-} from '../LegalPages';
+import { AboutPage, ContactPage, PrivacyPage, TermsPage } from '../LegalPages';
 import { expectNoSeriousA11yViolations } from '../../test/a11y';
 
 /**

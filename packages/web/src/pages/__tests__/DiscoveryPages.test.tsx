@@ -3,9 +3,11 @@ import { render, waitFor, cleanup, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import '../../i18n';
-import { CityPage, ServicePage } from '../DiscoveryPages';
+import { CityPage, DiscoverySkeleton, ServicePage } from '../DiscoveryPages';
 import { getCity, getServiceType } from '../../data/discovery';
 import { getSalonsByCity, getSalonsByService } from '../../data/salons';
+import { DISCOVERY_CATEGORIES, DISCOVERY_CITIES } from '../../data/taxonomy';
+import { toPersianDigits } from '../../components/ui';
 import { expectNoSeriousA11yViolations } from '../../test/a11y';
 import { SITE_URL } from '../../components/seo';
 
@@ -19,9 +21,11 @@ import { SITE_URL } from '../../components/seo';
  *
  * Requirements: 8.1, 8.4, 8.8
  *
- * Task 4.6 verification — responsive grid, SEO structured data, skeleton states:
- *  - Req 5.4: responsive grid (3/2/1 columns via Tailwind grid-cols classes)
- *  - Req 5.5: DiscoverySkeleton (6 skeleton cards, aspect-video, role="status", aria-busy)
+ * Task 4.6 verification — result-list layout, SEO structured data, skeleton states:
+ *  - Req 5.4: result list is a vertical stack of horizontal business cards
+ *    (Booksy directive §j.3 — list, not grid) with the gap-4 rhythm value
+ *  - Req 5.5: DiscoverySkeleton (6 skeleton cards matching the list geometry,
+ *    role="status", aria-busy)
  *  - Req 5.6: Empty state with Persian text + reset action
  *  - Req 5.7 / seo §5: SeoHead index + BreadcrumbList JSON-LD with خانه crumb
  *  - Additional: breadcrumb nav, OG metadata, pages are indexable (not noindex)
@@ -56,9 +60,7 @@ function head(selector: string): Element | null {
 }
 
 function jsonLdTypes(): string[] {
-  return Array.from(
-    document.head.querySelectorAll('script[type="application/ld+json"]'),
-  )
+  return Array.from(document.head.querySelectorAll('script[type="application/ld+json"]'))
     .map((s) => JSON.parse(s.textContent!))
     .map((s) => s['@type']);
 }
@@ -85,10 +87,7 @@ describe('CityPage (/city/:city)', () => {
     renderCity();
     await waitFor(() => {
       expect(head('meta[name="robots"]')).toHaveAttribute('content', 'index,follow');
-      expect(head('link[rel="canonical"]')).toHaveAttribute(
-        'href',
-        `${SITE_URL}/city/tehran`,
-      );
+      expect(head('link[rel="canonical"]')).toHaveAttribute('href', `${SITE_URL}/city/tehran`);
     });
   });
 
@@ -142,10 +141,7 @@ describe('ServicePage (/services/:type)', () => {
     renderService();
     await waitFor(() => {
       expect(head('meta[name="robots"]')).toHaveAttribute('content', 'index,follow');
-      expect(head('link[rel="canonical"]')).toHaveAttribute(
-        'href',
-        `${SITE_URL}/services/haircut`,
-      );
+      expect(head('link[rel="canonical"]')).toHaveAttribute('href', `${SITE_URL}/services/haircut`);
     });
   });
 
@@ -182,48 +178,45 @@ describe('ServicePage (/services/:type)', () => {
   });
 });
 
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // Task 4.6 Verification — Responsive Grid, SEO Structured Data, Skeleton States
 // ═══════════════════════════════════════════════════════════════════════════════
 
-describe('Task 4.6 Verification: Responsive Grid (Req 5.4)', () => {
-  it('CityPage renders a grid with 1-col mobile, 2-col tablet, 3-col desktop classes', () => {
+describe('Task 4.6 Verification: Result-list layout (Req 5.4, directive §j.3)', () => {
+  it('CityPage renders results as a vertical stack (list, not grid)', () => {
     const { getByTestId } = renderCity();
     const root = getByTestId('city-page');
 
-    // The StaggerContainer wrapping the salon cards should have the responsive grid classes
-    const grids = root.querySelectorAll('.grid');
-    const salonGrid = Array.from(grids).find(
-      (el) =>
-        el.classList.contains('grid-cols-1') &&
-        el.classList.contains('sm:grid-cols-2') &&
-        el.classList.contains('lg:grid-cols-3'),
-    );
-    expect(salonGrid).toBeTruthy();
+    const list = root.querySelector('[data-testid="discovery-result-list"]');
+    expect(list).toBeTruthy();
+    expect(list!.classList.contains('flex')).toBe(true);
+    expect(list!.classList.contains('flex-col')).toBe(true);
+    // The list must NOT be a multi-column card grid (Booksy: list, not grid).
+    expect(list!.classList.contains('grid')).toBe(false);
+    // Every result is a horizontal business card linking to a profile.
+    expect(list!.querySelectorAll('a[href^="/s/"]').length).toBe(getSalonsByCity('tehran').length);
   });
 
-  it('ServicePage renders a grid with 1-col mobile, 2-col tablet, 3-col desktop classes', () => {
+  it('ServicePage renders results as a vertical stack (list, not grid)', () => {
     const { getByTestId } = renderService();
     const root = getByTestId('service-page');
 
-    const grids = root.querySelectorAll('.grid');
-    const salonGrid = Array.from(grids).find(
-      (el) =>
-        el.classList.contains('grid-cols-1') &&
-        el.classList.contains('sm:grid-cols-2') &&
-        el.classList.contains('lg:grid-cols-3'),
+    const list = root.querySelector('[data-testid="discovery-result-list"]');
+    expect(list).toBeTruthy();
+    expect(list!.classList.contains('flex-col')).toBe(true);
+    expect(list!.classList.contains('grid')).toBe(false);
+    expect(list!.querySelectorAll('a[href^="/s/"]').length).toBe(
+      getSalonsByService('haircut').length,
     );
-    expect(salonGrid).toBeTruthy();
   });
 
-  it('grid containers use gap-4 for consistent spacing', () => {
+  it('the result list uses gap-4 for consistent spacing', () => {
     const { getByTestId } = renderCity();
     const root = getByTestId('city-page');
 
-    const grids = root.querySelectorAll('.grid.grid-cols-1');
-    const hasGap = Array.from(grids).some((el) => el.classList.contains('gap-4'));
-    expect(hasGap).toBe(true);
+    const list = root.querySelector('[data-testid="discovery-result-list"]');
+    expect(list).toBeTruthy();
+    expect(list!.classList.contains('gap-4')).toBe(true);
   });
 });
 
@@ -343,24 +336,17 @@ describe('Task 4.6 Verification: Skeleton States (Req 5.5)', () => {
     expect(liveRegion!.classList.contains('sr-only')).toBe(true);
   });
 
-  it('DiscoverySkeleton structure: grid with role="status" + aria-busy="true" is defined in source', () => {
-    // The DiscoverySkeleton in the source is rendered during loading state.
-    // Since we can't easily trigger the loading state without mocking, we
-    // verify the component implementation structurally: the DiscoverySkeleton
-    // function produces a container with:
-    //   - role="status" aria-busy="true" (accessibility)
-    //   - 6 skeleton card children (Req 5.5)
-    //   - Each card: aspect-video Skeleton + 3 text Skeletons
-    //   - Grid classes: grid-cols-1 sm:grid-cols-2 lg:grid-cols-3
-    //
-    // These are verified by the following import-time structural check:
-    // The component is a named function in the module that returns a grid div.
-    // The actual loading grid (tail) within SalonGrid also uses these attributes.
-    const { getByTestId } = renderCity();
-    const root = getByTestId('city-page');
-    // The rendered page must have the data grid present (matching skeleton dimensions)
-    const grid = root.querySelector('.grid.grid-cols-1.lg\\:grid-cols-3');
-    expect(grid).not.toBeNull();
+  it('DiscoverySkeleton: role="status" + aria-busy list matching the result-list geometry', () => {
+    // The skeleton must announce as a busy status region and mirror the real
+    // result list's geometry (vertical stack of 6 horizontal card placeholders)
+    // so the loading→loaded swap causes no layout shift (Req 5.5).
+    const { container } = render(<DiscoverySkeleton />);
+    const status = container.querySelector('[role="status"]');
+    expect(status).not.toBeNull();
+    expect(status!.getAttribute('aria-busy')).toBe('true');
+    expect(status!.classList.contains('flex-col')).toBe(true);
+    expect(status!.classList.contains('gap-4')).toBe(true);
+    expect(status!.children.length).toBe(6);
   });
 
   it('ServicePage also provides an accessible loading region', () => {
@@ -393,9 +379,10 @@ describe('Task 4.6 Verification: Breadcrumb Navigation', () => {
   it('CityPage renders a visible breadcrumb nav with خانه link', () => {
     const { getByTestId } = renderCity();
     const root = getByTestId('city-page');
-    const nav = within(root).getByRole('navigation');
+    const nav = within(root).getByRole('navigation', { name: 'مسیر صفحه' });
     expect(nav).toBeInTheDocument();
-    // The breadcrumb should have a link to home
+    // The breadcrumb is visible (not sr-only) and links home
+    expect(nav.getAttribute('class') ?? '').not.toContain('sr-only');
     const links = within(nav).getAllByRole('link');
     expect(links.length).toBeGreaterThanOrEqual(1);
     expect(links[0]).toHaveAttribute('href', '/');
@@ -404,7 +391,7 @@ describe('Task 4.6 Verification: Breadcrumb Navigation', () => {
   it('ServicePage renders a visible breadcrumb nav', () => {
     const { getByTestId } = renderService();
     const root = getByTestId('service-page');
-    const nav = within(root).getByRole('navigation');
+    const nav = within(root).getByRole('navigation', { name: 'مسیر صفحه' });
     expect(nav).toBeInTheDocument();
     const links = within(nav).getAllByRole('link');
     expect(links.length).toBeGreaterThanOrEqual(1);
@@ -414,7 +401,7 @@ describe('Task 4.6 Verification: Breadcrumb Navigation', () => {
   it('breadcrumb mirrors the JSON-LD structure (both show home → current page)', async () => {
     const { getByTestId } = renderCity();
     const root = getByTestId('city-page');
-    const nav = within(root).getByRole('navigation');
+    const nav = within(root).getByRole('navigation', { name: 'مسیر صفحه' });
     const breadcrumbItems = within(nav).getAllByRole('listitem');
     // Should have at least the home item and the current page item (plus separator)
     expect(breadcrumbItems.length).toBeGreaterThanOrEqual(2);
@@ -431,6 +418,113 @@ describe('Task 4.6 Verification: Breadcrumb Navigation', () => {
       // Both the visible nav and the JSON-LD have خانه as the first breadcrumb
       expect(breadcrumb.itemListElement[0].name).toBeTruthy();
     });
+  });
+});
+
+describe('Canonical taxonomy resolution (implementation contract)', () => {
+  it('every one of the 8 category slugs renders a service page — never a 404', () => {
+    for (const { slug } of DISCOVERY_CATEGORIES) {
+      const { getByTestId, queryByTestId, unmount } = renderService(slug);
+      expect(queryByTestId('discovery-not-found')).toBeNull();
+      expect(getByTestId('service-page')).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it('every one of the 20 city slugs renders a city page — never a 404', () => {
+    for (const { slug } of DISCOVERY_CITIES) {
+      const { getByTestId, queryByTestId, unmount } = renderCity(slug);
+      expect(queryByTestId('discovery-not-found')).toBeNull();
+      expect(getByTestId('city-page')).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it('a category with no demo salons renders the honest empty state with an owner CTA', () => {
+    const { getByTestId } = renderService('massage');
+    const root = getByTestId('service-page');
+    expect(within(root).getByText('هنوز سالنی اضافه نشده')).toBeInTheDocument();
+    expect(within(root).getByRole('link', { name: /ثبت سالن در آرا/ })).toHaveAttribute(
+      'href',
+      '/business/register',
+    );
+  });
+
+  it('a city with no demo salons renders the honest empty state with an owner CTA', () => {
+    const { getByTestId } = renderCity('mashhad');
+    const root = getByTestId('city-page');
+    expect(within(root).getByText('هنوز سالنی اضافه نشده')).toBeInTheDocument();
+    expect(within(root).getByRole('link', { name: /ثبت سالن در آرا/ })).toHaveAttribute(
+      'href',
+      '/business/register',
+    );
+  });
+});
+
+describe('Filter behavior (directive §b control row)', () => {
+  function renderCityWith(query: string) {
+    return render(
+      <HelmetProvider>
+        <MemoryRouter initialEntries={[`/city/tehran${query}`]}>
+          <Routes>
+            <Route path="/city/:city" element={<CityPage />} />
+          </Routes>
+        </MemoryRouter>
+      </HelmetProvider>,
+    );
+  }
+
+  it('filtered-to-empty shows the noResults copy with a clear-filters recovery action', () => {
+    // No demo salon reaches a 5.0 rating, so rating=5 empties the list.
+    const { getByTestId } = renderCityWith('?rating=5');
+    const root = getByTestId('city-page');
+    expect(within(root).getByText('سالنی یافت نشد')).toBeInTheDocument();
+    expect(
+      within(root).getByRole('button', { name: /پاک کردن فیلترها/ }),
+    ).toBeInTheDocument();
+    // The "no salons yet" copy is reserved for genuinely empty markets.
+    expect(within(root).queryByText('هنوز سالنی اضافه نشده')).toBeNull();
+  });
+
+  it('H1 is count-bearing with Persian digits', () => {
+    const { getByTestId } = renderCity();
+    const root = getByTestId('city-page');
+    const h1 = within(root).getByRole('heading', { level: 1 });
+    const count = getSalonsByCity('tehran').length;
+    expect(h1.textContent).toContain(`${toPersianDigits(count)} سالن`);
+  });
+});
+
+describe('Business-card anatomy (directive §c)', () => {
+  it('cards are photography-forward: every card shows the salon cover image', () => {
+    const { getByTestId } = renderCity();
+    const root = getByTestId('city-page');
+    const list = root.querySelector('[data-testid="discovery-result-list"]')!;
+    const cards = list.querySelectorAll('[data-testid="salon-list-card"]');
+    expect(cards.length).toBe(getSalonsByCity('tehran').length);
+    for (const card of cards) {
+      const img = card.querySelector('img');
+      expect(img).not.toBeNull();
+      // The image container is visible at all breakpoints (no hidden sm:flex).
+      expect(img!.closest('.hidden')).toBeNull();
+    }
+  });
+
+  it('cards carry no fabricated «پیشنهاد آرا» endorsement badge', () => {
+    const { getByTestId } = renderCity();
+    const root = getByTestId('city-page');
+    expect(within(root).queryByText('پیشنهاد آرا')).toBeNull();
+  });
+
+  it('cards include inline bookable services deep-linking with ?service=', () => {
+    const { getByTestId } = renderCity();
+    const root = getByTestId('city-page');
+    const list = root.querySelector('[data-testid="discovery-result-list"]')!;
+    const bookLinks = Array.from(list.querySelectorAll('a[href*="?service="]'));
+    expect(bookLinks.length).toBeGreaterThan(0);
+    for (const link of bookLinks) {
+      expect(link.getAttribute('href')).toMatch(/^\/salon\/[0-9a-f-]+\/book\?service=/);
+    }
   });
 });
 

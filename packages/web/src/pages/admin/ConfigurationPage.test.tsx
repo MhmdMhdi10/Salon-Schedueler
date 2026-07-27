@@ -5,6 +5,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import '../../i18n';
 import { ConfigurationPage } from './ConfigurationPage';
 import { adminApi, salonApi, staffApi, ApiError, type SalonStaff } from '../../api/client';
+import { ToastProvider } from '../../components/ui/Toast';
 
 /**
  * Component tests for the admin ConfigurationPage.
@@ -18,7 +19,7 @@ vi.mock('../../api/client', () => {
     constructor(
       public status: number,
       public code: string,
-      message: string
+      message: string,
     ) {
       super(message);
       this.name = 'ApiError';
@@ -79,8 +80,9 @@ describe('ConfigurationPage', () => {
   it('shows a loading state and then renders staff, chairs, and services from the API', async () => {
     const staffD = deferred<{ staff: SalonStaff[] }>();
     const chairsD = deferred<{ chairs: unknown[] }>();
-    const servicesD =
-      deferred<{ services: Array<{ id: string; name: string; durationMinutes: number; priceRial: number }> }>();
+    const servicesD = deferred<{
+      services: Array<{ id: string; name: string; durationMinutes: number; priceRial: number }>;
+    }>();
 
     vi.mocked(adminApi.getStaff).mockReturnValue(staffD.promise);
     vi.mocked(adminApi.getChairs).mockReturnValue(chairsD.promise);
@@ -89,9 +91,11 @@ describe('ConfigurationPage', () => {
     render(
       <HelmetProvider>
         <MemoryRouter>
-          <ConfigurationPage salonId="salon-9" />
+          <ToastProvider>
+            <ConfigurationPage salonId="salon-9" />
+          </ToastProvider>
         </MemoryRouter>
-      </HelmetProvider>
+      </HelmetProvider>,
     );
 
     expect(screen.getByTestId('config-loading')).toBeTruthy();
@@ -143,9 +147,11 @@ describe('ConfigurationPage', () => {
     render(
       <HelmetProvider>
         <MemoryRouter>
-          <ConfigurationPage salonId="salon-9" />
+          <ToastProvider>
+            <ConfigurationPage salonId="salon-9" />
+          </ToastProvider>
         </MemoryRouter>
-      </HelmetProvider>
+      </HelmetProvider>,
     );
 
     expect(screen.getByTestId('config-loading')).toBeTruthy();
@@ -165,9 +171,11 @@ describe('ConfigurationPage', () => {
     render(
       <HelmetProvider>
         <MemoryRouter>
-          <ConfigurationPage salonId="salon-9" />
+          <ToastProvider>
+            <ConfigurationPage salonId="salon-9" />
+          </ToastProvider>
         </MemoryRouter>
-      </HelmetProvider>
+      </HelmetProvider>,
     );
 
     await waitFor(() => expect(screen.getByTestId('staff-list')).toBeTruthy());
@@ -212,9 +220,11 @@ describe('ConfigurationPage', () => {
     render(
       <HelmetProvider>
         <MemoryRouter>
-          <ConfigurationPage salonId="salon-9" />
+          <ToastProvider>
+            <ConfigurationPage salonId="salon-9" />
+          </ToastProvider>
         </MemoryRouter>
-      </HelmetProvider>
+      </HelmetProvider>,
     );
 
     await waitFor(() => expect(screen.getByTestId('services-list')).toBeTruthy());
@@ -230,13 +240,15 @@ describe('ConfigurationPage', () => {
     render(
       <HelmetProvider>
         <MemoryRouter>
-          <ConfigurationPage salonId="salon-9" />
+          <ToastProvider>
+            <ConfigurationPage salonId="salon-9" />
+          </ToastProvider>
         </MemoryRouter>
-      </HelmetProvider>
+      </HelmetProvider>,
     );
 
     await waitFor(() =>
-      expect(within(screen.getByTestId('chairs-list')).getByText('سارا')).toBeTruthy()
+      expect(within(screen.getByTestId('chairs-list')).getByText('سارا')).toBeTruthy(),
     );
 
     // Destructive action requires confirmation (ui-ux §1 forgiveness).
@@ -246,14 +258,14 @@ describe('ConfigurationPage', () => {
 
     // Item removed, and an undo toast («بازگردانی») is offered.
     await waitFor(() =>
-      expect(within(screen.getByTestId('chairs-list')).queryByText('سارا')).toBeNull()
+      expect(within(screen.getByTestId('chairs-list')).queryByText('سارا')).toBeNull(),
     );
     const undo = await screen.findByRole('button', { name: 'بازگردانی' });
 
     // Undo restores the item.
     fireEvent.click(undo);
     await waitFor(() =>
-      expect(within(screen.getByTestId('chairs-list')).getByText('سارا')).toBeTruthy()
+      expect(within(screen.getByTestId('chairs-list')).getByText('سارا')).toBeTruthy(),
     );
   });
 });

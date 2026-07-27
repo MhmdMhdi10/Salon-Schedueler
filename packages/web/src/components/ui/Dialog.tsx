@@ -1,6 +1,8 @@
 import { forwardRef } from 'react';
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useThemeScope } from '../theme/ThemeProvider';
 import { cn } from './cn';
 import { IconButton } from './IconButton';
 
@@ -55,30 +57,50 @@ export const DialogDescription = forwardRef<
   );
 });
 
-export interface DialogContentProps
-  extends React.ComponentPropsWithoutRef<typeof RadixDialog.Content> {
+export interface DialogContentProps extends React.ComponentPropsWithoutRef<
+  typeof RadixDialog.Content
+> {
   /** Show the default inline-end close (✕) button. Defaults to true. */
   showCloseButton?: boolean;
-  /** Accessible label for the default close button. */
+  /** Accessible label for the default close button. Defaults to `common.close`. */
   closeLabel?: string;
 }
 
 /**
  * Centered modal panel with overlay. The overlay sits on `--z-overlay` and the
- * content on `--z-dialog` per the z-index ladder (ui-ux §2). Enter/exit use
- * opacity (reduced-motion safe — no layout-shifting animation).
+ * content on `--z-dialog` per the z-index ladder (ui-ux §2).
+ *
+ * Motion: overlay fades, panel scale-fades in and opacity-led-exits — the
+ * token keyframes (`fade-in`/`scale-in`/`fade-out`/`scale-out`) run only under
+ * `motion-safe:` and are additionally clamped by the global reduced-motion
+ * block in `tokens.css`.
+ *
+ * Tall content: the panel caps at the small-viewport height minus breathing
+ * room and scrolls internally, so action buttons never clip off-screen on
+ * 360×640 phones (matches the Sheet pattern).
+ *
+ * Theme scope: the portal root re-stamps the nearest `ThemeScope` theme (owner
+ * panel tenant theming) so a dialog opened from a dark-scoped subtree renders
+ * dark even though it portals to `document.body`.
  */
 export const DialogContent = forwardRef<
   React.ElementRef<typeof RadixDialog.Content>,
   DialogContentProps
 >(function DialogContent(
-  { className, children, showCloseButton = true, closeLabel = 'بستن', ...rest },
+  { className, children, showCloseButton = true, closeLabel, ...rest },
   ref,
 ) {
+  const { t } = useTranslation();
+  const scopeTheme = useThemeScope();
   return (
     <RadixDialog.Portal>
       <RadixDialog.Overlay
-        className="fixed inset-0 z-overlay bg-black/50"
+        data-theme={scopeTheme}
+        className={cn(
+          'fixed inset-0 z-overlay bg-overlay',
+          'motion-safe:data-[state=open]:animate-fade-in',
+          'motion-safe:data-[state=closed]:animate-fade-out',
+        )}
       />
       <RadixDialog.Content
         ref={ref}
@@ -86,11 +108,18 @@ export const DialogContent = forwardRef<
         // `aria-modal` explicitly so the modal contract is announced directly
         // on the dialog (ui-ux §10, R2.5).
         aria-modal="true"
+        data-theme={scopeTheme}
         className={cn(
-          'fixed inset-x-0 top-1/2 z-dialog mx-auto -translate-y-1/2',
+          // inset-0 + m-auto + h-fit centers without a transform, so the
+          // scale-in/out keyframes (which own `transform`) cannot knock the
+          // panel off-center mid-animation.
+          'fixed inset-0 z-dialog m-auto h-fit',
           'w-[calc(100%-var(--space-8))] max-w-md',
+          'max-h-[calc(100dvh-var(--space-10))] overflow-y-auto',
           'rounded-lg border border-border bg-elevated p-5 text-text shadow-3',
           'outline-none',
+          'motion-safe:data-[state=open]:animate-scale-in',
+          'motion-safe:data-[state=closed]:animate-fade-out',
           className,
         )}
         {...rest}
@@ -99,7 +128,7 @@ export const DialogContent = forwardRef<
         {showCloseButton && (
           <RadixDialog.Close asChild>
             <IconButton
-              aria-label={closeLabel}
+              aria-label={closeLabel ?? t('common.close', 'بستن')}
               variant="ghost"
               className="absolute end-2 top-2 h-9 min-h-0 w-9 min-w-0"
             >

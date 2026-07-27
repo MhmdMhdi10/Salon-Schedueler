@@ -66,10 +66,7 @@ describe('BusinessLanding', () => {
   it('opts in to indexing with index,follow (R5.4, R5.5)', async () => {
     renderLanding();
     await waitFor(() => {
-      expect(head('meta[name="robots"]')).toHaveAttribute(
-        'content',
-        'index,follow',
-      );
+      expect(head('meta[name="robots"]')).toHaveAttribute('content', 'index,follow');
     });
   });
 
@@ -77,12 +74,8 @@ describe('BusinessLanding', () => {
     renderLanding();
     await waitFor(() => {
       expect(document.title).toContain('آرا');
-      expect(
-        head('meta[name="description"]')?.getAttribute('content'),
-      ).toBeTruthy();
-      expect(head('link[rel="canonical"]')?.getAttribute('href')).toContain(
-        '/business',
-      );
+      expect(head('meta[name="description"]')?.getAttribute('content')).toBeTruthy();
+      expect(head('link[rel="canonical"]')?.getAttribute('href')).toContain('/business');
     });
   });
 
@@ -100,9 +93,11 @@ describe('BusinessLanding', () => {
 
   it('matches the reference business hero: centered copy on a mint field', () => {
     const { getByTestId } = renderLanding();
-    const hero = within(getByTestId('business-landing')).getByRole('heading', {
-      level: 1,
-    }).closest('[data-hero]');
+    const hero = within(getByTestId('business-landing'))
+      .getByRole('heading', {
+        level: 1,
+      })
+      .closest('[data-hero]');
     expect(hero).not.toBeNull();
     expect(hero!.className).toContain('bg-accent/10');
     expect(hero!.querySelector('img')).toBeNull();

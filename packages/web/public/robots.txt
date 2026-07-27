@@ -7,4 +7,6 @@ Disallow: /salon/*/book
 Disallow: /booking/
 Disallow: /qr/
 Disallow: /api/
+Disallow: /business/register
+Disallow: /search
 Sitemap: https://example.ir/sitemap.xml

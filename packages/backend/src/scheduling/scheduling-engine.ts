@@ -9,6 +9,12 @@ export interface AvailabilityQuery {
   serviceId: string;
   date: string; // ISO date in salon timezone (e.g., '2024-03-15')
   granularityMinutes?: number; // default 15
+  /**
+   * Optional stylist filter: when present, only slots this staff member can
+   * personally serve are returned (customer picked a specific stylist —
+   * R14.3). Unknown/unqualified ids yield [] rather than salon-wide slots.
+   */
+  staffId?: string;
 }
 
 /**
@@ -84,7 +90,7 @@ export class SchedulingEngine {
    * Requirements: R4.4, R4.5, R6.2, R6.3, R8.1, R8.2, R8.3, R8.4
    */
   async getAvailability(query: AvailabilityQuery): Promise<TimeSlot[]> {
-    const { salonId, serviceId, date, granularityMinutes = 15 } = query;
+    const { salonId, serviceId, date, granularityMinutes = 15, staffId } = query;
 
     // 1. Fetch the service details
     const service = await this.prisma.service.findUnique({
@@ -130,8 +136,13 @@ export class SchedulingEngine {
         end: this.timeToAbsolute(c.endTime as Date, date),
       }));
 
-    // 3. Resolve qualified staff set (R6.2)
-    const qualifiedStaffIds = service.serviceStaff.map((ss) => ss.staffMemberId);
+    // 3. Resolve qualified staff set (R6.2). An explicit `staffId` filter
+    //    narrows availability to that one stylist (R14.3): if they are not
+    //    qualified for the service there is simply no availability.
+    let qualifiedStaffIds = service.serviceStaff.map((ss) => ss.staffMemberId);
+    if (staffId) {
+      qualifiedStaffIds = qualifiedStaffIds.filter((id) => id === staffId);
+    }
     if (qualifiedStaffIds.length === 0) {
       return []; // No staff can perform this service
     }

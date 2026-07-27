@@ -1,6 +1,7 @@
 import { Star } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from './cn';
-import { Num } from './Num';
+import { Num, toPersianDigits } from './Num';
 
 export interface RatingProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Numeric rating 0–5 (supports halves via the `half` prop). */
@@ -30,10 +31,11 @@ const textSize: Record<NonNullable<RatingProps['size']>, string> = {
 /**
  * Star rating + review count — the Booksy signature social-proof primitive.
  *
- * Renders five star glyphs; filled stars use the آرا primary token.
- * so the rating reads as brand-tinted, never color-only — the numeric value is
- * always present as accessible text. Half-stars are represented by a 50%-width
- * overlay so the visual granularity matches the value.
+ * Filled stars use the `--color-warning` amber token (the Booksy gold star —
+ * one star color across the whole product; `RatingStars` matches). Never
+ * color-only: the numeric value is always present as accessible text.
+ * Half-stars are represented by a 50%-width overlay so the visual granularity
+ * matches the value.
  *
  * Token-driven, RTL-safe (the row direction follows the document dir), and
  * accessible: the group carries an `aria-label` so screen readers announce the
@@ -48,12 +50,18 @@ export function Rating({
   className,
   ...rest
 }: RatingProps) {
+  const { t } = useTranslation();
   const clamped = Math.max(0, Math.min(5, value));
   const full = Math.floor(clamped);
   const hasHalf = clamped - full >= 0.25 && clamped - full < 0.75;
   const roundedUp = clamped - full >= 0.75 ? full + 1 : full;
   const filled = hasHalf ? full : roundedUp;
-  const ariaLabel = label ?? `امتیاز ${new Intl.NumberFormat('fa-IR').format(clamped)} از ۵`;
+  const ariaLabel =
+    label ??
+    t('rating.srLabel', {
+      value: toPersianDigits(clamped.toFixed(1)),
+      defaultValue: `امتیاز ${new Intl.NumberFormat('fa-IR').format(clamped)} از ۵`,
+    });
 
   return (
     <div
@@ -79,7 +87,7 @@ export function Rating({
                   style={{ width: isHalf ? '50%' : '100%' }}
                 >
                   <Star
-                    className={cn(starSize[size], 'text-primary')}
+                    className={cn(starSize[size], 'text-warning')}
                     strokeWidth={1.5}
                     fill="currentColor"
                   />

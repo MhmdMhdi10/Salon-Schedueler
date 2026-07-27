@@ -80,14 +80,10 @@ function describeTheme(themeName: string, c: ColorPalette) {
     // selected SlotGrid chip and current FunnelShell step do the same.
     describe('text-bearing fills carry ≥ 4.5:1 label contrast', () => {
       it('primary-contrast on primary (primary Button, selected slot, current step)', () => {
-        expect(ratio(c.primaryContrast, c.primary)).toBeGreaterThanOrEqual(
-          AA_TEXT,
-        );
+        expect(ratio(c.primaryContrast, c.primary)).toBeGreaterThanOrEqual(AA_TEXT);
       });
       it('primary-contrast on danger (danger Button)', () => {
-        expect(ratio(c.primaryContrast, c.danger)).toBeGreaterThanOrEqual(
-          AA_TEXT,
-        );
+        expect(ratio(c.primaryContrast, c.danger)).toBeGreaterThanOrEqual(AA_TEXT);
       });
     });
 
@@ -124,41 +120,29 @@ function describeTheme(themeName: string, c: ColorPalette) {
     // so it is exempt per WCAG 1.4.11 (decorative alongside text).
     describe('secondary as non-text / large text on bg (≥ 3:1)', () => {
       it('secondary on bg', () => {
-        expect(ratio(c.secondary, c.bg)).toBeGreaterThanOrEqual(
-          AA_LARGE_OR_NONTEXT,
-        );
+        expect(ratio(c.secondary, c.bg)).toBeGreaterThanOrEqual(AA_LARGE_OR_NONTEXT);
       });
       it('secondary on surface', () => {
-        expect(ratio(c.secondary, c.surface)).toBeGreaterThanOrEqual(
-          AA_LARGE_OR_NONTEXT,
-        );
+        expect(ratio(c.secondary, c.surface)).toBeGreaterThanOrEqual(AA_LARGE_OR_NONTEXT);
       });
     });
 
     // --- Non-text / large (≥ 3:1) ------------------------------------------
     describe('focus ring & decorative fills (≥ 3:1)', () => {
       it('focus ring on bg', () => {
-        expect(ratio(c.focusRing, c.bg)).toBeGreaterThanOrEqual(
-          AA_LARGE_OR_NONTEXT,
-        );
+        expect(ratio(c.focusRing, c.bg)).toBeGreaterThanOrEqual(AA_LARGE_OR_NONTEXT);
       });
       it('focus ring on surface', () => {
-        expect(ratio(c.focusRing, c.surface)).toBeGreaterThanOrEqual(
-          AA_LARGE_OR_NONTEXT,
-        );
+        expect(ratio(c.focusRing, c.surface)).toBeGreaterThanOrEqual(AA_LARGE_OR_NONTEXT);
       });
       it('focus ring on elevated (dialogs, menus)', () => {
-        expect(ratio(c.focusRing, c.elevated)).toBeGreaterThanOrEqual(
-          AA_LARGE_OR_NONTEXT,
-        );
+        expect(ratio(c.focusRing, c.elevated)).toBeGreaterThanOrEqual(AA_LARGE_OR_NONTEXT);
       });
       // The completed-step badge in FunnelShell is `bg-secondary` with a white
       // glyph; it is `aria-hidden` decoration paired with a text label, so the
       // 3:1 non-text bar applies (the white "✓"/number is large + bold).
       it('primary-contrast on secondary (decorative completed-step badge)', () => {
-        expect(ratio(c.primaryContrast, c.secondary)).toBeGreaterThanOrEqual(
-          AA_LARGE_OR_NONTEXT,
-        );
+        expect(ratio(c.primaryContrast, c.secondary)).toBeGreaterThanOrEqual(AA_LARGE_OR_NONTEXT);
       });
     });
   });

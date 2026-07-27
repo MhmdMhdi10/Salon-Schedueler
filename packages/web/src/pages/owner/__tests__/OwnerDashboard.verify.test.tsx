@@ -129,6 +129,7 @@ vi.mock('../../../auth/useSalonId', () => ({
 import { OwnerCalendarPage } from '../OwnerCalendarPage';
 import { OwnerAnalyticsPageContent } from '../OwnerAnalyticsPage';
 import { OwnerConfigPage } from '../OwnerConfigurationPage';
+import { ToastProvider } from '../../../components/ui/Toast';
 
 // ─── matchMedia mock ─────────────────────────────────────────────────────────
 
@@ -213,7 +214,9 @@ function renderConfigPage() {
       <ThemeProvider defaultTheme="dark">
         <div dir="rtl" lang="fa">
           <MemoryRouter initialEntries={['/owner/config']}>
-            <OwnerConfigPage salonId="salon-1" />
+            <ToastProvider>
+              <OwnerConfigPage salonId="salon-1" />
+            </ToastProvider>
           </MemoryRouter>
         </div>
       </ThemeProvider>
@@ -416,8 +419,18 @@ describe('Jalali dates', () => {
 
       // The date nav should show a Jalali month name (one of the 12 Persian months)
       const jalaliMonths = [
-        'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
-        'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند',
+        'فروردین',
+        'اردیبهشت',
+        'خرداد',
+        'تیر',
+        'مرداد',
+        'شهریور',
+        'مهر',
+        'آبان',
+        'آذر',
+        'دی',
+        'بهمن',
+        'اسفند',
       ];
 
       const dateNav = screen.getByRole('navigation', { name: /ناوبری تاریخ/ });
@@ -529,7 +542,7 @@ describe('Responsive layout', () => {
       mediaQueryMatches = true;
       mockMatchMedia();
 
-      const { container } = render(
+      render(
         <HelmetProvider>
           <ThemeProvider defaultTheme="dark">
             <div dir="rtl" lang="fa">

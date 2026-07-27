@@ -360,173 +360,176 @@ export function AvailabilityPage() {
       currentStep={activeStep === 0 ? 'service' : activeStep === 1 ? 'date' : 'time'}
       salonName={readSalonName(salonId) ?? undefined}
     >
-    <div data-testid="availability-page" className="flex w-full flex-col gap-8">
-      <SeoHead title={t('seo.titles.availability')} />
-      <h1 className="text-xl font-bold text-text">{t('booking.heading')}</h1>
+      <div data-testid="availability-page" className="flex w-full flex-col gap-8">
+        <SeoHead title={t('seo.titles.availability')} />
+        <h1 className="text-xl font-bold text-text">{t('booking.heading')}</h1>
 
-      {/* Service selector — card radio list with loading / error / empty / ready. */}
-      <section aria-labelledby="service-section-title" className="flex flex-col gap-3">
-        <h2
-          id="service-section-title"
-          className="flex items-center gap-2 text-lg font-bold text-text"
-        >
-          <Scissors className="h-5 w-5" aria-hidden="true" />
-          {t('booking.selectService')}
-        </h2>
-
-        {servicesStatus === 'loading' && (
-          <div
-            className="flex flex-col gap-2"
-            role="status"
-            aria-busy="true"
-            aria-label={t('booking.servicesLoadingLabel')}
-          >
-            <Skeleton variant="rect" className="h-16" />
-            <Skeleton variant="rect" className="h-16" />
-            <Skeleton variant="rect" className="h-16" />
-          </div>
-        )}
-
-        {servicesStatus === 'error' && (
-          <ErrorState
-            title={t('booking.servicesErrorTitle')}
-            description={t('booking.servicesErrorBody')}
-            retryLabel={t('common.retry')}
-            onRetry={loadServices}
-          />
-        )}
-
-        {servicesStatus === 'ready' && services.length === 0 && (
-          <EmptyState
-            icon={<Scissors className="h-8 w-8" />}
-            title={t('booking.servicesEmptyTitle')}
-            description={t('booking.servicesEmptyBody')}
-          />
-        )}
-
-        {servicesStatus === 'ready' && services.length > 0 && (
-          <ServiceCardList
-            services={serviceCardItems}
-            value={selectedService}
-            onValueChange={handleServiceChange}
-            ariaLabel={t('booking.selectService')}
-            durationLabel={(minutes) =>
-              t('booking.durationMinutes', { count: minutes })
-            }
-          />
-        )}
-      </section>
-
-      {/* Stylist picker — appears after a salon QR scan so the customer can
-          choose their stylist (or "any"). A stylist-scoped QR pre-selects one.
-          Best-effort: hidden while loading fails or no stylists exist. */}
-      {(stylistsStatus === 'loading' || (stylistsStatus === 'ready' && stylists.length > 0)) && (
-        <section aria-labelledby="stylist-section-title" className="flex flex-col gap-3">
+        {/* Service selector — card radio list with loading / error / empty / ready. */}
+        <section aria-labelledby="service-section-title" className="flex flex-col gap-3">
           <h2
-            id="stylist-section-title"
+            id="service-section-title"
             className="flex items-center gap-2 text-lg font-bold text-text"
           >
-            <Users className="h-5 w-5" aria-hidden="true" />
-            {t('booking.selectStylist')}
+            <Scissors className="h-5 w-5" aria-hidden="true" />
+            {t('booking.selectService')}
           </h2>
 
-          {stylistsStatus === 'loading' && (
+          {servicesStatus === 'loading' && (
             <div
               className="flex flex-col gap-2"
               role="status"
               aria-busy="true"
-              aria-label={t('booking.stylistsLoadingLabel')}
+              aria-label={t('booking.servicesLoadingLabel')}
             >
-              <Skeleton variant="rect" className="h-11" />
-              <Skeleton variant="rect" className="h-11" />
+              <Skeleton variant="rect" className="h-16" />
+              <Skeleton variant="rect" className="h-16" />
+              <Skeleton variant="rect" className="h-16" />
             </div>
           )}
 
-          {stylistsStatus === 'ready' && stylists.length > 0 && (
-            <RadioGroup
-              label={t('booking.selectStylist')}
-              labelHidden
-              value={selectedStaff === '' ? 'any' : selectedStaff}
-              onValueChange={(v) => handleStaffChange(v === 'any' ? '' : v)}
-              options={stylistOptions}
+          {servicesStatus === 'error' && (
+            <ErrorState
+              title={t('booking.servicesErrorTitle')}
+              description={t('booking.servicesErrorBody')}
+              retryLabel={t('common.retry')}
+              onRetry={loadServices}
+            />
+          )}
+
+          {servicesStatus === 'ready' && services.length === 0 && (
+            <EmptyState
+              icon={<Scissors className="h-8 w-8" />}
+              title={t('booking.servicesEmptyTitle')}
+              description={t('booking.servicesEmptyBody')}
+            />
+          )}
+
+          {servicesStatus === 'ready' && services.length > 0 && (
+            <ServiceCardList
+              services={serviceCardItems}
+              value={selectedService}
+              onValueChange={handleServiceChange}
+              ariaLabel={t('booking.selectService')}
+              durationLabel={(minutes) => t('booking.durationMinutes', { count: minutes })}
             />
           )}
         </section>
-      )}
 
-      {/* Date — Booksy-style horizontal day scroller for the next 14 days,
+        {/* Stylist picker — appears after a salon QR scan so the customer can
+          choose their stylist (or "any"). A stylist-scoped QR pre-selects one.
+          Best-effort: hidden while loading fails or no stylists exist. */}
+        {(stylistsStatus === 'loading' || (stylistsStatus === 'ready' && stylists.length > 0)) && (
+          <section aria-labelledby="stylist-section-title" className="flex flex-col gap-3">
+            <h2
+              id="stylist-section-title"
+              className="flex items-center gap-2 text-lg font-bold text-text"
+            >
+              <Users className="h-5 w-5" aria-hidden="true" />
+              {t('booking.selectStylist')}
+            </h2>
+
+            {stylistsStatus === 'loading' && (
+              <div
+                className="flex flex-col gap-2"
+                role="status"
+                aria-busy="true"
+                aria-label={t('booking.stylistsLoadingLabel')}
+              >
+                <Skeleton variant="rect" className="h-11" />
+                <Skeleton variant="rect" className="h-11" />
+              </div>
+            )}
+
+            {stylistsStatus === 'ready' && stylists.length > 0 && (
+              <RadioGroup
+                label={t('booking.selectStylist')}
+                labelHidden
+                value={selectedStaff === '' ? 'any' : selectedStaff}
+                onValueChange={(v) => handleStaffChange(v === 'any' ? '' : v)}
+                options={stylistOptions}
+              />
+            )}
+          </section>
+        )}
+
+        {/* Date — Booksy-style horizontal day scroller for the next 14 days,
            plus the full Jalali calendar for jumping further out. */}
-      <section aria-labelledby="date-section-title" className="flex flex-col gap-3">
-        <h2 id="date-section-title" className="flex items-center gap-2 text-lg font-bold text-text">
-          <CalendarClock className="h-5 w-5" aria-hidden="true" />
-          {t('booking.selectDate')}
-        </h2>
-        <DayScroller
-          days={upcomingDays}
-          value={date || null}
-          onChange={handleDateChange}
-          label={t('booking.selectDate')}
-        />
-        <JalaliDatePicker
-          label={t('booking.selectDate')}
-          value={date || null}
-          onChange={handleDateChange}
-          min={minDate}
-          placeholder={t('booking.datePlaceholder')}
-          variant={isMobile ? 'sheet' : 'popover'}
-        />
-      </section>
-
-      {/* Time slots — skeleton → empty → populated, with an explicit error+retry. */}
-      <section aria-labelledby="time-section-title" className="flex flex-col gap-3">
-        <h2 id="time-section-title" className="flex items-center gap-2 text-lg font-bold text-text">
-          <Clock className="h-5 w-5" aria-hidden="true" />
-          {t('booking.selectTime')}
-        </h2>
-
-        {slotsStatus === 'idle' && (
-          <p className="text-sm text-muted">{t('booking.chooseDateFirst')}</p>
-        )}
-
-        {slotsStatus === 'loading' && (
-          <div
-            className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-2"
-            role="status"
-            aria-busy="true"
-            aria-label={t('booking.slotsLoadingLabel')}
+        <section aria-labelledby="date-section-title" className="flex flex-col gap-3">
+          <h2
+            id="date-section-title"
+            className="flex items-center gap-2 text-lg font-bold text-text"
           >
-            {Array.from({ length: 8 }).map((_, i) => (
-              // eslint-disable-next-line react/no-array-index-key
-              <Skeleton key={i} variant="rect" className="h-11" />
-            ))}
-          </div>
-        )}
-
-        {slotsStatus === 'error' && (
-          <ErrorState
-            title={t('booking.slotsErrorTitle')}
-            description={t('booking.slotsErrorBody')}
-            retryLabel={t('common.retry')}
-            onRetry={loadSlots}
+            <CalendarClock className="h-5 w-5" aria-hidden="true" />
+            {t('booking.selectDate')}
+          </h2>
+          <DayScroller
+            days={upcomingDays}
+            value={date || null}
+            onChange={handleDateChange}
+            label={t('booking.selectDate')}
           />
-        )}
-
-        {slotsStatus === 'ready' && slotItems.length === 0 && (
-          <EmptyState
-            icon={<CalendarClock className="h-8 w-8" />}
-            title={t('booking.slotsEmptyTitle')}
+          <JalaliDatePicker
+            label={t('booking.selectDate')}
+            value={date || null}
+            onChange={handleDateChange}
+            min={minDate}
+            placeholder={t('booking.datePlaceholder')}
+            variant={isMobile ? 'sheet' : 'popover'}
           />
-        )}
+        </section>
 
-        {slotsStatus === 'ready' && slotItems.length > 0 && (
-          <SlotGrid
-            slots={slotItems}
-            onSelect={handleSlotSelect}
-            ariaLabel={t('booking.slotsGridLabel')}
-          />
-        )}
-      </section>
-    </div>
+        {/* Time slots — skeleton → empty → populated, with an explicit error+retry. */}
+        <section aria-labelledby="time-section-title" className="flex flex-col gap-3">
+          <h2
+            id="time-section-title"
+            className="flex items-center gap-2 text-lg font-bold text-text"
+          >
+            <Clock className="h-5 w-5" aria-hidden="true" />
+            {t('booking.selectTime')}
+          </h2>
+
+          {slotsStatus === 'idle' && (
+            <p className="text-sm text-muted">{t('booking.chooseDateFirst')}</p>
+          )}
+
+          {slotsStatus === 'loading' && (
+            <div
+              className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-2"
+              role="status"
+              aria-busy="true"
+              aria-label={t('booking.slotsLoadingLabel')}
+            >
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} variant="rect" className="h-11" />
+              ))}
+            </div>
+          )}
+
+          {slotsStatus === 'error' && (
+            <ErrorState
+              title={t('booking.slotsErrorTitle')}
+              description={t('booking.slotsErrorBody')}
+              retryLabel={t('common.retry')}
+              onRetry={loadSlots}
+            />
+          )}
+
+          {slotsStatus === 'ready' && slotItems.length === 0 && (
+            <EmptyState
+              icon={<CalendarClock className="h-8 w-8" />}
+              title={t('booking.slotsEmptyTitle')}
+            />
+          )}
+
+          {slotsStatus === 'ready' && slotItems.length > 0 && (
+            <SlotGrid
+              slots={slotItems}
+              onSelect={handleSlotSelect}
+              ariaLabel={t('booking.slotsGridLabel')}
+            />
+          )}
+        </section>
+      </div>
     </FunnelShell>
   );
 }

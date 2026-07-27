@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Percent, Wallet, Clock, BarChart3 } from 'lucide-react';
+import { Percent, Wallet, Clock } from 'lucide-react';
 import { adminApi } from '../../api/client';
 import { useSalonId } from '../../auth/useSalonId';
 import { SeoHead } from '../../components/seo';
@@ -199,7 +199,6 @@ function AnalyticsSkeleton() {
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
-          // eslint-disable-next-line react/no-array-index-key
           <Skeleton key={i} variant="rect" className="h-28" />
         ))}
       </div>
@@ -268,9 +267,7 @@ export function AnalyticsPage({ salonId: salonIdProp }: { salonId?: string }) {
 
       <header className="flex flex-col gap-2">
         <h1 className="text-xl font-bold text-text">{t('admin.analytics')}</h1>
-        <p className="max-w-[60ch] text-sm text-muted">
-          {t('admin.analyticsPage.subtitle')}
-        </p>
+        <p className="max-w-[60ch] text-sm text-muted">{t('admin.analyticsPage.subtitle')}</p>
       </header>
 
       {status === 'loading' && <AnalyticsSkeleton />}
@@ -397,7 +394,6 @@ export function AnalyticsPage({ salonId: salonIdProp }: { salonId?: string }) {
                   <tbody>
                     {model.busiestWindows.map((w, index) => (
                       <tr
-                        // eslint-disable-next-line react/no-array-index-key
                         key={`${w.startAt ?? 'w'}-${index}`}
                         className="border-b border-border last:border-0"
                       >
@@ -429,10 +425,7 @@ export function AnalyticsPage({ salonId: salonIdProp }: { salonId?: string }) {
                       />
                     }
                   >
-                    <AnalyticsChart
-                      data={chartData}
-                      tableId="analytics-busiest-table"
-                    />
+                    <AnalyticsChart data={chartData} tableId="analytics-busiest-table" />
                   </Suspense>
                 </div>
               </>

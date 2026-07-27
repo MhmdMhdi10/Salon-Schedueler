@@ -46,8 +46,7 @@ export function useFieldIds(
   const controlId = providedId ?? `field-${generatedId}`;
   const helperId = `${controlId}-helper`;
   const errorId = `${controlId}-error`;
-  const describedBy =
-    cn(hasHelper && helperId, hasError && errorId) || undefined;
+  const describedBy = cn(hasHelper && helperId, hasError && errorId) || undefined;
   return { controlId, helperId, errorId, describedBy, hasError };
 }
 
@@ -65,10 +64,7 @@ export function FieldLabel({
   return (
     <label
       htmlFor={htmlFor}
-      className={cn(
-        'mb-1 block text-xs font-medium text-text',
-        hidden && 'sr-only',
-      )}
+      className={cn('mb-1 block text-xs font-medium text-text', hidden && 'sr-only')}
     >
       {children}
       {required && (
@@ -91,11 +87,7 @@ export function FieldHelper({ id, children }: { id: string; children: React.Reac
 
 export function FieldError({ id, children }: { id: string; children: React.ReactNode }) {
   return (
-    <p
-      id={id}
-      role="alert"
-      className="mt-1 flex items-center gap-1 text-2xs text-danger"
-    >
+    <p id={id} role="alert" className="mt-1 flex items-center gap-1 text-2xs text-danger">
       <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
       <span>{children}</span>
     </p>

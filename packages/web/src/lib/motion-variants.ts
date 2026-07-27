@@ -172,6 +172,27 @@ export const celebrationTransition: Transition = {
   ease: EASE_SPRING,
 };
 
+/**
+ * Micro-interaction timing — 200ms standard ease. The JS mirror of
+ * `--dur-base` + `--ease-standard` for hover-lift / tap feedback on cards,
+ * chips, and list rows. Import this instead of inlining
+ * `{ duration: 0.2, ease: [0.2, 0, 0, 1] }` so a token retune happens in one
+ * place.
+ */
+export const microTransition: Transition = {
+  duration: 0.2,
+  ease: EASE_STANDARD,
+};
+
+/**
+ * Animated-counter timing — a 1.2s decelerating settle (`--ease-decelerate`).
+ * Used by `AnimatedCounter` for stat count-ups.
+ */
+export const counterTransition: Transition = {
+  duration: 1.2,
+  ease: EASE_DECELERATE,
+};
+
 // ─── Exported Easing Constants ───────────────────────────────────────────────
 
 export const easings = {
@@ -179,4 +200,18 @@ export const easings = {
   emphasized: EASE_EMPHASIZED,
   spring: EASE_SPRING,
   decelerate: EASE_DECELERATE,
+} as const;
+
+/**
+ * JS mirror of the CSS duration tokens (seconds, framer-motion units). Keep in
+ * sync with `--dur-*` in `tokens.css`.
+ */
+export const durations = {
+  fast: 0.15,
+  base: 0.2,
+  slow: 0.3,
+  enter: 0.4,
+  exit: 0.25,
+  stagger: 0.05,
+  celebration: 0.6,
 } as const;

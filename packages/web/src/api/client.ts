@@ -228,9 +228,7 @@ export const registrationApi = {
    * instead of bouncing the user back from Submit at Step 3.
    */
   checkPhone: (phone: string) =>
-    request<{ available: boolean }>(
-      `/register/check-phone?phone=${encodeURIComponent(phone)}`,
-    ),
+    request<{ available: boolean }>(`/register/check-phone?phone=${encodeURIComponent(phone)}`),
 };
 
 // Salon endpoints
@@ -250,13 +248,29 @@ export const salonApi = {
       /** Present only for a stylist-scoped QR — the pre-selected staff member. */
       staff?: { id: string; fullName: string | null };
     }>(`/salons/by-qr/${encodeURIComponent(payload)}`),
-  getAvailability: (salonId: string, serviceId: string, date: string) =>
+  /**
+   * Free slots for a service on a date. `staffId` (optional) narrows the slots
+   * to ones that specific stylist can personally serve — used when the customer
+   * picked a stylist so the shown times are genuinely hers (R14.3).
+   */
+  getAvailability: (salonId: string, serviceId: string, date: string, staffId?: string) =>
     request<{ slots: Array<{ startAt: string; endAt: string }> }>(
-      `/salons/${salonId}/availability?serviceId=${serviceId}&date=${date}`,
+      `/salons/${salonId}/availability?serviceId=${serviceId}&date=${date}${
+        staffId ? `&staffId=${encodeURIComponent(staffId)}` : ''
+      }`,
     ),
   getServices: (salonId: string) =>
     request<{
-      services: Array<{ id: string; name: string; durationMinutes: number; priceRial: number }>;
+      services: Array<{
+        id: string;
+        name: string;
+        durationMinutes: number;
+        priceRial: number;
+        /** True when booking requires an upfront deposit via the gateway. */
+        requiresDeposit?: boolean;
+        /** Deposit amount in Rial (present when `requiresDeposit`). */
+        depositRial?: number | null;
+      }>;
     }>(`/salons/${salonId}/services`),
   /**
    * Public list of a salon's bookable stylists (Owner/Stylist roles) for the
@@ -475,11 +489,23 @@ export const adminApi = {
     request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/cancel`, {
       method: 'POST',
     }),
+  /**
+   * Mark a confirmed appointment as a no-show (manage_appointments —
+   * Owner/Admin any salon booking; a Stylist only their own). Mirrors the
+   * backend `POST /appointments/:id/no-show` route.
+   */
+  noShowAppointment: (appointmentId: string) =>
+    request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/no-show`, {
+      method: 'POST',
+    }),
   /** The salon's money transactions (appointment + subscription payments), newest-first. */
   getTransactions: (salonId: string) =>
     request<{ transactions: Transaction[] }>(`/salons/${salonId}/transactions`),
   /** Create a service (Owner only). Duration/price optional (default 30/0). */
-  createService: (salonId: string, body: { name: string; durationMinutes?: number; priceRial?: number }) =>
+  createService: (
+    salonId: string,
+    body: { name: string; durationMinutes?: number; priceRial?: number },
+  ) =>
     request<{ service: { id: string; name: string; durationMinutes: number; priceRial: number } }>(
       `/salons/${salonId}/services`,
       { method: 'POST', body },
@@ -491,10 +517,10 @@ export const adminApi = {
     }),
   /** Create a chair (Owner only). */
   createChair: (salonId: string, body: { name: string }) =>
-    request<{ chair: { id: string; name: string; active: boolean } }>(
-      `/salons/${salonId}/chairs`,
-      { method: 'POST', body },
-    ),
+    request<{ chair: { id: string; name: string; active: boolean } }>(`/salons/${salonId}/chairs`, {
+      method: 'POST',
+      body,
+    }),
 };
 
 /** A single row in the owner-panel transactions ledger. */
@@ -566,6 +592,12 @@ export const approvalPolicyApi = {
 export interface BrandAccentResponse {
   /** The salon's Brand_Accent key (from the curated `ACCENTS`), or null. */
   brandAccent: string | null;
+  /**
+   * The salon's display name (additive): lets a deep-linked funnel show the
+   * salon as the primary brand mark without another request (R4.5). May be
+   * absent/null for older backends or unknown salons.
+   */
+  name?: string | null;
 }
 
 export const brandAccentApi = {
@@ -619,13 +651,10 @@ export const holidaysApi = {
   list: (salonId: string) => request<{ holidays: SalonClosure[] }>(`/salons/${salonId}/holidays`),
   /** Add a closure. Omit both times for a full-day closure. */
   add: (salonId: string, input: SalonClosureInput) =>
-    request<{ holiday: SalonClosure; holidays?: SalonClosure[] }>(
-      `/salons/${salonId}/holidays`,
-      {
-        method: 'POST',
-        body: input,
-      },
-    ),
+    request<{ holiday: SalonClosure; holidays?: SalonClosure[] }>(`/salons/${salonId}/holidays`, {
+      method: 'POST',
+      body: input,
+    }),
   /** Remove a closure by id. */
   remove: (salonId: string, holidayId: string) =>
     request<{ ok: boolean }>(`/salons/${salonId}/holidays/${holidayId}`, {
@@ -743,16 +772,14 @@ export interface SalonNotification {
   type: string;
   title: string;
   body: string;
-  payload:
-    | {
-        appointmentId?: string;
-        orderId?: string;
-        staffMemberId?: string;
-        customerId?: string;
-        date?: string;
-        [key: string]: unknown;
-      }
-    | null;
+  payload: {
+    appointmentId?: string;
+    orderId?: string;
+    staffMemberId?: string;
+    customerId?: string;
+    date?: string;
+    [key: string]: unknown;
+  } | null;
   readAt: string | null;
   createdAt: string;
 }

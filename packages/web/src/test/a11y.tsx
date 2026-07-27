@@ -51,17 +51,12 @@ export function renderRtl(
  * assertions if needed.
  */
 export function expectSingleH1AndOrderedHeadings(container: Element): number[] {
-  const headings = Array.from(
-    container.querySelectorAll('h1, h2, h3, h4, h5, h6'),
-  );
+  const headings = Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6'));
   const levels = headings.map((el) => Number(el.tagName[1]));
 
   // Exactly one <h1>.
   const h1Count = levels.filter((lvl) => lvl === 1).length;
-  expect(
-    h1Count,
-    `expected exactly one <h1>, found ${h1Count}`,
-  ).toBe(1);
+  expect(h1Count, `expected exactly one <h1>, found ${h1Count}`).toBe(1);
 
   // The outline must open at the <h1> (no heading appears before it).
   if (levels.length > 0) {
@@ -96,9 +91,7 @@ export async function expectNoSeriousA11yViolations(
   options?: RunOptions,
 ): Promise<AxeResults> {
   const results = (await axe(container, options)) as AxeResults;
-  const blocking = results.violations.filter((v) =>
-    BLOCKING_IMPACTS.has(v.impact ?? ''),
-  );
+  const blocking = results.violations.filter((v) => BLOCKING_IMPACTS.has(v.impact ?? ''));
   // `toHaveNoViolations` is registered on `expect` via `vitest-axe/matchers`
   // in the global test setup. Access it through a small typed shim so this
   // helper type-checks under `moduleResolution: bundler` without depending on

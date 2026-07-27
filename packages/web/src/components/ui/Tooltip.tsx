@@ -1,5 +1,6 @@
 import { forwardRef } from 'react';
 import * as RadixTooltip from '@radix-ui/react-tooltip';
+import { useThemeScope } from '../theme/ThemeProvider';
 import { cn } from './cn';
 
 /**
@@ -15,11 +16,10 @@ import { cn } from './cn';
  */
 export const TooltipProvider = RadixTooltip.Provider;
 
-export interface TooltipProps
-  extends Pick<
-    React.ComponentPropsWithoutRef<typeof RadixTooltip.Root>,
-    'open' | 'defaultOpen' | 'onOpenChange' | 'delayDuration'
-  > {
+export interface TooltipProps extends Pick<
+  React.ComponentPropsWithoutRef<typeof RadixTooltip.Root>,
+  'open' | 'defaultOpen' | 'onOpenChange' | 'delayDuration'
+> {
   /** The tooltip body text/content. */
   content: React.ReactNode;
   /** The trigger element (must accept a ref / forward props — uses `asChild`). */
@@ -30,45 +30,40 @@ export interface TooltipProps
   className?: string;
 }
 
-export const Tooltip = forwardRef<
-  React.ElementRef<typeof RadixTooltip.Content>,
-  TooltipProps
->(function Tooltip(
-  {
-    content,
-    children,
-    side = 'top',
-    className,
-    open,
-    defaultOpen,
-    onOpenChange,
-    delayDuration,
+export const Tooltip = forwardRef<React.ElementRef<typeof RadixTooltip.Content>, TooltipProps>(
+  function Tooltip(
+    { content, children, side = 'top', className, open, defaultOpen, onOpenChange, delayDuration },
+    ref,
+  ) {
+    const scopeTheme = useThemeScope();
+    return (
+      <RadixTooltip.Root
+        open={open}
+        defaultOpen={defaultOpen}
+        onOpenChange={onOpenChange}
+        delayDuration={delayDuration}
+      >
+        <RadixTooltip.Trigger asChild>{children}</RadixTooltip.Trigger>
+        <RadixTooltip.Portal>
+          <RadixTooltip.Content
+            ref={ref}
+            side={side}
+            sideOffset={6}
+            data-theme={scopeTheme}
+            className={cn(
+              'z-overlay max-w-xs rounded-sm bg-text px-2 py-1 text-2xs text-bg shadow-2',
+              'select-none',
+              'origin-[var(--radix-tooltip-content-transform-origin)]',
+              'motion-safe:data-[state=delayed-open]:animate-scale-in',
+              'motion-safe:data-[state=instant-open]:animate-fade-in',
+              className,
+            )}
+          >
+            {content}
+            <RadixTooltip.Arrow className="fill-text" />
+          </RadixTooltip.Content>
+        </RadixTooltip.Portal>
+      </RadixTooltip.Root>
+    );
   },
-  ref,
-) {
-  return (
-    <RadixTooltip.Root
-      open={open}
-      defaultOpen={defaultOpen}
-      onOpenChange={onOpenChange}
-      delayDuration={delayDuration}
-    >
-      <RadixTooltip.Trigger asChild>{children}</RadixTooltip.Trigger>
-      <RadixTooltip.Portal>
-        <RadixTooltip.Content
-          ref={ref}
-          side={side}
-          sideOffset={6}
-          className={cn(
-            'z-overlay max-w-xs rounded-sm bg-text px-2 py-1 text-2xs text-bg shadow-2',
-            'select-none',
-            className,
-          )}
-        >
-          {content}
-          <RadixTooltip.Arrow className="fill-text" />
-        </RadixTooltip.Content>
-      </RadixTooltip.Portal>
-    </RadixTooltip.Root>
-  );
-});
+);

@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
-import { ACCENTS, resolveAccent } from '../../pages/owner/marketing-assets';
+import { ACCENTS, resolveAccent } from './accents';
 import { deriveTenantTokens } from './tenantTokens';
 
 export interface TenantThemeProps {
@@ -39,14 +39,17 @@ export function TenantTheme({ accentKey, className, children }: TenantThemeProps
   // default, i.e. no overrides). `resolveAccent` would fall back to ACCENTS[0]
   // for any string, so guard on membership first to keep an unknown key on the
   // signature default rather than silently tinting it.
-  const isKnown =
-    typeof accentKey === 'string' && ACCENTS.some((a) => a.key === accentKey);
+  const isKnown = typeof accentKey === 'string' && ACCENTS.some((a) => a.key === accentKey);
   const style: CSSProperties | undefined = isKnown
     ? deriveTenantTokens(resolveAccent(accentKey as string))
     : undefined;
 
   return (
-    <div data-tenant-theme={isKnown ? (accentKey as string) : 'default'} style={style} className={className}>
+    <div
+      data-tenant-theme={isKnown ? (accentKey as string) : 'default'}
+      style={style}
+      className={className}
+    >
       {children}
     </div>
   );

@@ -26,11 +26,7 @@ export interface SectionRhythmProps {
  * only (RTL-neutral); colors are tokens. The inner content container is the
  * child's responsibility.
  */
-export function SectionRhythm({
-  children,
-  startWith = 'bg',
-  className,
-}: SectionRhythmProps) {
+export function SectionRhythm({ children, startWith = 'bg', className }: SectionRhythmProps) {
   const bands = Children.toArray(children);
   const startsOnSurface = startWith === 'surface';
   return (

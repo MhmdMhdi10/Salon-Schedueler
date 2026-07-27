@@ -52,13 +52,16 @@ vi.mock('../../../auth/AuthContext', () => ({
 }));
 
 import { CalendarPage } from '../CalendarPage';
+import { ToastProvider } from '../../../components/ui/Toast';
 
 function renderCalendar() {
   return render(
     <HelmetProvider>
       <ThemeProvider defaultTheme="light">
         <MemoryRouter initialEntries={['/owner/calendar']}>
-          <CalendarPage salonId="s1" />
+          <ToastProvider>
+            <CalendarPage salonId="s1" />
+          </ToastProvider>
         </MemoryRouter>
       </ThemeProvider>
     </HelmetProvider>,

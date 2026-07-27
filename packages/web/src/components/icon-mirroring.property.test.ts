@@ -136,8 +136,7 @@ const CATEGORY_ICONS = new Set([
 const RTL_MIRROR_PATTERN = /rtl:-?scale-x-|rtl:rotate-(?!0\b)|rtl:-rotate/;
 
 /** Matches a JSX icon element usage line: `<IconName .../>` or `<IconName ...>`. */
-const ICON_USAGE_RE =
-  /<([A-Z][A-Za-z0-9]+)\s+[^>]*className\s*=\s*(?:{[^}]*}|"[^"]*"|'[^']*')/;
+const ICON_USAGE_RE = /<([A-Z][A-Za-z0-9]+)\s+[^>]*className\s*=\s*(?:{[^}]*}|"[^"]*"|'[^']*')/;
 
 /**
  * Captures icon usages in a source file. Returns an array of icon usage
@@ -185,7 +184,11 @@ function findIconUsages(filePath: string, relPath: string): IconUsage[] {
     if (!match) continue;
     const iconName = match[1];
     // Only consider known directional or universal icons
-    if (!DIRECTIONAL_ICONS.has(iconName) && !UNIVERSAL_ICONS.has(iconName) && !CATEGORY_ICONS.has(iconName)) {
+    if (
+      !DIRECTIONAL_ICONS.has(iconName) &&
+      !UNIVERSAL_ICONS.has(iconName) &&
+      !CATEGORY_ICONS.has(iconName)
+    ) {
       continue;
     }
     const isMirrored = RTL_MIRROR_PATTERN.test(line);
@@ -210,7 +213,8 @@ function collectSourceFiles(dir: string): Array<{ abs: string; rel: string }> {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
       // Skip test dirs + three (WebGL icons are out of scope)
-      if (entry.name === 'node_modules' || entry.name === '__tests__' || entry.name === 'three') continue;
+      if (entry.name === 'node_modules' || entry.name === '__tests__' || entry.name === 'three')
+        continue;
       out.push(...collectSourceFiles(full));
       continue;
     }
@@ -289,10 +293,7 @@ describe('Property 10 — Icon mirroring matches directionality class', () => {
     const categoryUsages = allUsages.filter((u) => CATEGORY_ICONS.has(u.icon));
 
     // Also check the icons module JSDoc explicitly declares them non-mirrored
-    const iconsSource = readFileSync(
-      join(SRC_DIR, 'components', 'icons.tsx'),
-      'utf8',
-    );
+    const iconsSource = readFileSync(join(SRC_DIR, 'components', 'icons.tsx'), 'utf8');
     expect(iconsSource).toContain('never mirrored');
     expect(iconsSource).toContain('universal');
 

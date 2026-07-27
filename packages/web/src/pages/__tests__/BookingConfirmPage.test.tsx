@@ -66,10 +66,7 @@ function renderPage(state: unknown = SELECTION, salonId = 'salon-1') {
     <HelmetProvider>
       <MemoryRouter initialEntries={[entry]}>
         <Routes>
-          <Route
-            path="/salon/:salonId/book/confirm"
-            element={<BookingConfirmPage />}
-          />
+          <Route path="/salon/:salonId/book/confirm" element={<BookingConfirmPage />} />
           <Route path="/salon/:salonId/book" element={<AvailabilityProbe />} />
           <Route path="/auth" element={<AuthProbe />} />
           <Route path="/booking/success" element={<SuccessProbe />} />
@@ -104,16 +101,12 @@ describe('BookingConfirmPage — summary', () => {
     // Jalali date is rendered as a <time> element (machine ISO + Persian text).
     expect(document.querySelector('time')).toBeInTheDocument();
     // Deposit/payment notice is present.
-    expect(
-      screen.getByText(/پرداخت از درگاه امن انجام می‌شود/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/پرداخت از درگاه امن انجام می‌شود/)).toBeInTheDocument();
   });
 
   it('shows a retry error state when the service detail fails to load', async () => {
     getServices.mockReset();
-    getServices
-      .mockRejectedValueOnce({})
-      .mockResolvedValueOnce({ services: SERVICES });
+    getServices.mockRejectedValueOnce({}).mockResolvedValueOnce({ services: SERVICES });
     renderPage();
     const retry = await screen.findByRole('button', { name: 'تلاش مجدد' });
     retry.click();
@@ -127,9 +120,7 @@ describe('BookingConfirmPage — missing selection guard', () => {
     expect(await screen.findByTestId('booking-confirm')).toBeInTheDocument();
     const back = screen.getByRole('button', { name: 'بازگشت به انتخاب زمان' });
     back.click();
-    expect(
-      await screen.findByText(/availability-page:\/salon\/salon-1\/book/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/availability-page:\/salon\/salon-1\/book/)).toBeInTheDocument();
   });
 });
 
@@ -173,13 +164,9 @@ describe('BookingConfirmPage — confirm states', () => {
       cta.click();
 
       // Explicit redirect surface appears (never a fake success).
-      expect(
-        await screen.findByText('در حال انتقال به درگاه پرداخت...'),
-      ).toBeInTheDocument();
+      expect(await screen.findByText('در حال انتقال به درگاه پرداخت...')).toBeInTheDocument();
       // And the gateway hand-off happened.
-      await waitFor(() =>
-        expect(assigned).toContain('https://zarinpal.example/pay/abc'),
-      );
+      await waitFor(() => expect(assigned).toContain('https://zarinpal.example/pay/abc'));
       // Success route was NOT reached — money is server-confirmed only.
       expect(screen.queryByText('success-page')).not.toBeInTheDocument();
     } finally {
@@ -210,9 +197,7 @@ describe('BookingConfirmPage — confirm states', () => {
     const cta = await screen.findByRole('button', { name: 'تایید رزرو' });
     await waitFor(() => expect(cta).not.toBeDisabled());
     cta.click();
-    expect(
-      await screen.findByText('ثبت رزرو ناموفق بود'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('ثبت رزرو ناموفق بود')).toBeInTheDocument();
     expect(screen.queryByText('success-page')).not.toBeInTheDocument();
   });
 });
@@ -261,9 +246,7 @@ describe('BookingConfirmPage — abandon warning', () => {
     await waitFor(() => expect(cta).not.toBeDisabled());
     cta.click();
 
-    await waitFor(() =>
-      expect(addSpy).toHaveBeenCalledWith('beforeunload', expect.any(Function)),
-    );
+    await waitFor(() => expect(addSpy).toHaveBeenCalledWith('beforeunload', expect.any(Function)));
     resolveCreate({ status: 'pending' });
     addSpy.mockRestore();
   });

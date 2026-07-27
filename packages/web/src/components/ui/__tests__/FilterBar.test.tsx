@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { FilterBar } from '../FilterBar';
@@ -21,10 +21,7 @@ const SERVICE_LABELS: Record<string, string> = {
 function renderFilterBar(initialEntries: string[] = ['/']) {
   return render(
     <MemoryRouter initialEntries={initialEntries}>
-      <FilterBar
-        serviceTypes={SERVICE_TYPES}
-        serviceTypeLabels={SERVICE_LABELS}
-      />
+      <FilterBar serviceTypes={SERVICE_TYPES} serviceTypeLabels={SERVICE_LABELS} />
     </MemoryRouter>,
   );
 }
@@ -34,8 +31,10 @@ describe('FilterBar', () => {
     renderFilterBar();
     // Sort chips should be visible (Persian labels from i18n)
     expect(screen.getByRole('button', { name: /بهترین امتیاز/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /نزدیک‌ترین/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /ارزان‌ترین/ })).toBeInTheDocument();
+    // «نزدیک‌ترین» (distance) is deliberately absent until geolocation ships —
+    // a chip that activates but reorders nothing would erode trust.
+    expect(screen.queryByRole('button', { name: /نزدیک‌ترین/ })).not.toBeInTheDocument();
   });
 
   it('renders rating chips', () => {
@@ -115,9 +114,7 @@ describe('FilterBar', () => {
     buttons.forEach((btn) => {
       const classes = btn.className;
       // Either the chip class pattern or the clear/expand button pattern
-      expect(
-        classes.includes('min-h-[44px]') || classes.includes('min-h-[44px]'),
-      ).toBe(true);
+      expect(classes.includes('min-h-[44px]') || classes.includes('min-h-[44px]')).toBe(true);
     });
   });
 

@@ -94,15 +94,9 @@ describe('expired access token recovery', () => {
     client.setAccessToken('access-expired');
     client.setRefreshToken('refresh-1');
     mockFetch
-      .mockResolvedValueOnce(
-        jsonResponse({ code: 'UNAUTHORIZED', message: 'expired' }, false, 401),
-      )
-      .mockResolvedValueOnce(
-        jsonResponse({ accessToken: 'access-new', refreshToken: 'refresh-2' }),
-      )
-      .mockResolvedValueOnce(
-        jsonResponse({ utilization: {}, revenue: {}, busiestWindows: [] }),
-      );
+      .mockResolvedValueOnce(jsonResponse({ code: 'UNAUTHORIZED', message: 'expired' }, false, 401))
+      .mockResolvedValueOnce(jsonResponse({ accessToken: 'access-new', refreshToken: 'refresh-2' }))
+      .mockResolvedValueOnce(jsonResponse({ utilization: {}, revenue: {}, busiestWindows: [] }));
 
     await client.adminApi.getAnalytics('salon-1', '2026-06-25', '2026-07-25');
 

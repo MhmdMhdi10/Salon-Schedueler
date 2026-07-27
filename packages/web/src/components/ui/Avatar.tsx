@@ -3,8 +3,7 @@ import { cn } from './cn';
 
 export type AvatarSize = 'sm' | 'md' | 'lg';
 
-export interface AvatarProps
-  extends Omit<React.HTMLAttributes<HTMLSpanElement>, 'children'> {
+export interface AvatarProps extends Omit<React.HTMLAttributes<HTMLSpanElement>, 'children'> {
   /** Image source. When absent or it fails to load, the initials fallback shows. */
   src?: string;
   /**

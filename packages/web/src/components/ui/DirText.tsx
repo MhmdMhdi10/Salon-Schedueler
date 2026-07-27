@@ -26,12 +26,7 @@ export const DirText = forwardRef<HTMLElement, DirTextProps>(function DirText(
   ref,
 ) {
   return (
-    <bdi
-      ref={ref}
-      dir={dir}
-      className={cn('inline-block', className)}
-      {...rest}
-    >
+    <bdi ref={ref} dir={dir} className={cn('inline-block', className)} {...rest}>
       {children}
     </bdi>
   );
