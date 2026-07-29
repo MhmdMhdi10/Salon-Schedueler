@@ -179,16 +179,24 @@ describe('Image accessibility — BusinessLanding', () => {
     return render(wrap(<BusinessLanding />, '/business'));
   }
 
-  it('matches the reference image-free business hero', () => {
-    const { getByTestId } = renderBusiness();
-    expect(getByTestId('business-landing').querySelectorAll('img')).toHaveLength(0);
-  });
-
-  it('does not add an off-reference hero image', () => {
+  it('renders an accessible, explicitly sized editorial hero image', () => {
     const { getByTestId } = renderBusiness();
     const root = getByTestId('business-landing');
-    const heroImg = root.querySelector('img[fetchpriority="high"]');
-    expect(heroImg).toBeNull();
+    const heroImg = root.querySelector<HTMLImageElement>(
+      'img[src="/images/business/iranian-salon-owner-at-work.webp"]',
+    );
+    expect(heroImg).not.toBeNull();
+    expect(heroImg).toHaveAttribute('alt');
+    expect(heroImg?.getAttribute('alt')).not.toBe('');
+    expect(heroImg).toHaveAttribute('width', '1536');
+    expect(heroImg).toHaveAttribute('height', '1024');
+    expect(heroImg).toHaveAttribute('loading', 'eager');
+
+    for (const image of root.querySelectorAll('img')) {
+      expect(image.getAttribute('alt')).not.toBeNull();
+      expect(image.getAttribute('width')).toBeTruthy();
+      expect(image.getAttribute('height')).toBeTruthy();
+    }
   });
 });
 

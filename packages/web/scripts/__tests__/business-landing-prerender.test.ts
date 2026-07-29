@@ -155,24 +155,24 @@ describe('business landing — WebSite + Organization JSON-LD (R5.4; seo §5)', 
 });
 
 describe('business landing — crawlable CTA routing (R5.2/R5.3 in prerendered HTML)', () => {
-  it('exposes the owner sign-up (/owner) and customer booking (/) links on the route', () => {
+  it('exposes owner registration and marketplace search links on the route', () => {
     const route = businessRoute();
     const hrefs = route.links.map((l: { href: string }) => l.href);
-    expect(hrefs).toContain('/owner');
-    expect(hrefs).toContain('/');
+    expect(hrefs).toContain('/business/register');
+    expect(hrefs).toContain('/search');
   });
 
-  it('renders the owner + customer CTA anchors in the prerendered body', () => {
+  it('renders owner registration + marketplace anchors in the prerendered body', () => {
     const route = businessRoute();
     const body = renderBody(route);
-    expect(body).toContain('href="/owner"');
-    expect(body).toContain('href="/"');
+    expect(body).toContain('href="/business/register"');
+    expect(body).toContain('href="/search"');
   });
 
-  it('includes the owner + customer CTA anchors in the full prerendered document', () => {
+  it('includes owner registration + marketplace anchors in the full prerendered document', () => {
     const route = businessRoute();
     const html = injectIntoTemplate(TEMPLATE, route, DEFAULT_SITE_URL);
-    expect(html).toContain('href="/owner"');
-    expect(html).toContain('href="/"');
+    expect(html).toContain('href="/business/register"');
+    expect(html).toContain('href="/search"');
   });
 });

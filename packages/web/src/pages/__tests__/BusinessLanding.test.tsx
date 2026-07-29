@@ -13,8 +13,8 @@ import { expectNoSeriousA11yViolations } from '../../test/a11y';
  * The landing is a standalone, indexable, owner-focused surface: it opts **in**
  * to indexing, emits a unique title/description + canonical + WebSite/Organization
  * JSON-LD, carries a single `<h1>`, routes its primary CTA to owner sign-up
- * (`/owner`) and a secondary CTA to the customer booking funnel (`/`), and
- * preloads an LCP-optimized hero.
+ * (`/business/register`) and a marketplace bridge to (`/search`), and
+ * preloads an LCP-optimized editorial hero.
  *
  * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6
  */
@@ -52,14 +52,18 @@ describe('BusinessLanding', () => {
       .getAllByRole('link')
       .filter((a) => a.getAttribute('href') === '/business/register');
     expect(registerLinks.length).toBeGreaterThan(0);
+    expect(root.querySelector('[data-hero-cta="primary"]')).toHaveAttribute(
+      'href',
+      '/business/register',
+    );
   });
 
-  it('routes a secondary CTA to the customer booking funnel (/) (R5.3)', () => {
+  it('routes customers into the marketplace search (/search) (R5.3)', () => {
     const { getByTestId } = renderLanding();
     const root = getByTestId('business-landing');
     const customerLinks = within(root)
       .getAllByRole('link')
-      .filter((a) => a.getAttribute('href') === '/');
+      .filter((a) => a.getAttribute('href') === '/search');
     expect(customerLinks.length).toBeGreaterThan(0);
   });
 
@@ -91,16 +95,39 @@ describe('BusinessLanding', () => {
     });
   });
 
-  it('matches the reference business hero: centered copy on a mint field', () => {
+  it('renders the editorial hero image and authentic product proof accessibly', () => {
     const { getByTestId } = renderLanding();
-    const hero = within(getByTestId('business-landing'))
+    const root = getByTestId('business-landing');
+    const hero = within(root)
       .getByRole('heading', {
         level: 1,
       })
       .closest('[data-hero]');
     expect(hero).not.toBeNull();
-    expect(hero!.className).toContain('bg-accent/10');
-    expect(hero!.querySelector('img')).toBeNull();
+    expect(
+      within(hero as HTMLElement).getByRole('img', {
+        name: /مدیر ایرانی سالن زیبایی در حال رسیدگی/,
+      }),
+    ).toHaveAttribute('src', '/images/business/iranian-salon-owner-at-work.webp');
+    expect(
+      within(root).getAllByRole('img', { name: /داشبورد|تقویم و داشبورد مدیریت/ }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      within(root).getAllByRole('img', { name: /رزرو.*موبایل|موبایلی رزرو/ }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('submits canonical service and city fields to the existing search route', () => {
+    const { getByTestId } = renderLanding();
+    const root = getByTestId('business-landing');
+    const form = within(root).getByRole('search', { name: 'جست‌وجوی بازار سالن‌های آرا' });
+    expect(form).toHaveAttribute('action', '/search');
+    expect(form).toHaveAttribute('method', 'get');
+    expect(within(form).getByRole('combobox', { name: 'خدمت' })).toHaveAttribute('name', 'q');
+    expect(within(form).getByRole('combobox', { name: 'شهر' })).toHaveAttribute('name', 'city');
+    expect(root.querySelectorAll('a[href^="/services/"]').length).toBeGreaterThan(0);
+    expect(root.querySelectorAll('a[href^="/city/"]').length).toBeGreaterThan(0);
+    expect(root.querySelectorAll('details')).toHaveLength(6);
   });
 
   it('has no serious or critical accessibility violations', async () => {

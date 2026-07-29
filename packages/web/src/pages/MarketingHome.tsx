@@ -23,10 +23,10 @@ const FEATURES = [
       'آرا رزرو خدمات زیبایی را ساده می‌کند؛ بدون تماس تلفنی، در چند ثانیه زمان آزاد را پیدا کنید و هر ساعت از شبانه‌روز رزرو کنید.',
       'بهترین کسب‌وکارهای اطرافتان را پیدا کنید و همان لحظه وقت بگیرید.',
     ],
-    image: '/images/features/section-1.webp',
-    width: 750,
-    height: 782,
-    alt: 'مراجعه به یک سالن زیبایی محلی',
+    image: '/images/hero/iranian-hairstylist.webp',
+    width: 1280,
+    height: 720,
+    alt: 'آرایشگر ایرانی در حال حالت‌دادن موهای مشتری در یک سالن مدرن',
     reverse: false,
   },
   {
@@ -35,10 +35,10 @@ const FEATURES = [
       'رزروهای خود را از هرجا مدیریت کنید. بدون تماس تلفنی، زمان قرار را تغییر دهید یا آن را لغو کنید.',
       'آرا پیش از قرار به شما یادآوری می‌کند تا هیچ نوبتی را فراموش نکنید.',
     ],
-    image: '/images/features/section-2.webp',
-    width: 988,
-    height: 690,
-    alt: 'یادآوری قرار زیبایی در اپلیکیشن',
+    image: '/images/hero/iranian-booking.webp',
+    width: 1280,
+    height: 720,
+    alt: 'مشتری ایرانی در حال مدیریت قرار زیبایی با تلفن همراه',
     reverse: true,
   },
   {
@@ -48,10 +48,10 @@ const FEATURES = [
       'نمونه‌کارها، فضای سالن، قیمت‌ها و نظرهای تأییدشده مشتریان را پیش از رزرو ببینید.',
       'زمانتان را ذخیره کنید؛ گرفتن نوبت زیبایی در آرا رایگان، سریع و ساده است.',
     ],
-    image: '/images/features/section-3.webp',
-    width: 854,
-    height: 684,
-    alt: 'پروفایل یک سالن زیبایی همراه امتیاز مشتریان',
+    image: '/images/hero/iranian-skincare.webp',
+    width: 1280,
+    height: 720,
+    alt: 'متخصص پوست ایرانی در حال ارائه خدمات حرفه‌ای به مشتری',
     reverse: false,
   },
 ] as const;
@@ -64,23 +64,26 @@ const FEATURES = [
 const GUIDES = [
   {
     title: 'چطور بهترین متخصص پوست را انتخاب کنیم؟',
-    image: '/images/blog/esthetician.jpg',
-    width: 1238,
-    height: 870,
+    image: '/images/hero/iranian-skincare.webp',
+    alt: 'متخصص ایرانی مراقبت از پوست در فضای حرفه‌ای',
+    width: 1280,
+    height: 720,
     to: '/services/skin',
   },
   {
     title: 'محبوب‌ترین مدل‌های سبیل و ریش',
-    image: '/images/blog/mustache.jpg',
-    width: 600,
-    height: 400,
+    image: '/images/hero/iranian-barber.webp',
+    alt: 'آرایشگر مرد ایرانی در حال مرتب‌کردن ریش مشتری',
+    width: 1280,
+    height: 720,
     to: '/services/barber',
   },
   {
     title: 'راهنمای انتخاب خدمات مراقبت و زیبایی',
-    image: '/images/blog/short-nails.jpg',
-    width: 995,
-    height: 582,
+    image: '/images/hero/iranian-manicure.webp',
+    alt: 'مانیکور حرفه‌ای ناخن‌های طبیعی در سالن ایرانی',
+    width: 1280,
+    height: 720,
     to: '/services/nails',
   },
 ] as const;
@@ -155,17 +158,17 @@ function HeroVideo() {
         muted
         playsInline
         preload="none"
-        poster="/images/hero/poster-us.webp"
+        poster="/images/hero/poster-iran.webp"
         aria-hidden="true"
         tabIndex={-1}
       >
-        <source src="/videos/hero.webm" type="video/webm" />
+        <source src="/videos/hero-iran-steady.webm?v=5" type="video/webm" />
       </video>
       <button
         type="button"
         onClick={toggle}
         aria-label={playing ? t('marketing.hero.videoPause') : t('marketing.hero.videoPlay')}
-        className="absolute bottom-16 end-4 z-10 flex h-9 w-9 items-center justify-center rounded-pill border border-ink-border bg-ink/60 text-ink-contrast transition-opacity duration-fast ease-standard hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        className="absolute bottom-16 end-4 z-10 flex h-11 w-11 items-center justify-center rounded-pill border border-ink-border bg-ink/60 text-ink-contrast transition-opacity duration-fast ease-standard hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
         {playing ? (
           <Pause className="h-4 w-4" aria-hidden="true" />
@@ -211,14 +214,23 @@ function AppPromo() {
               </Link>
               <span className="text-xs text-muted">{t('marketing.apps.customer.storesSoon')}</span>
             </div>
-            <div className="mt-auto flex justify-center pt-6">
+            <div className="relative mt-auto aspect-[4/3] w-full pt-6">
               <img
-                src="/images/app/customer-app-en.webp"
-                alt={t('marketing.apps.customer.imageAlt')}
-                width={1220}
-                height={942}
+                src="/images/app/customer-app-iran.webp"
+                alt=""
+                aria-hidden="true"
+                width={1200}
+                height={900}
                 loading="lazy"
-                className="w-full max-w-md"
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              <img
+                src="/screenshots/booking-mobile.png"
+                alt={t('marketing.apps.customer.imageAlt')}
+                width={1080}
+                height={1920}
+                loading="lazy"
+                className="absolute -bottom-[8%] left-[7%] w-[27%] rounded-xl border border-ink-border/20 bg-elevated shadow-2"
               />
             </div>
           </div>
@@ -246,14 +258,23 @@ function AppPromo() {
                 {t('marketing.apps.business.cta')}
               </Link>
             </div>
-            <div className="mt-auto flex justify-center pt-6">
+            <div className="relative mt-auto aspect-[4/3] w-full pt-6">
               <img
-                src="/images/app/biz-app-en.webp"
-                alt={t('marketing.apps.business.imageAlt')}
-                width={1220}
-                height={942}
+                src="/images/app/business-app-iran.webp"
+                alt=""
+                aria-hidden="true"
+                width={1200}
+                height={900}
                 loading="lazy"
-                className="w-full max-w-md"
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              <img
+                src="/screenshots/admin-desktop.png"
+                alt={t('marketing.apps.business.imageAlt')}
+                width={1920}
+                height={1080}
+                loading="lazy"
+                className="absolute bottom-[9%] right-[5%] w-[58%] rounded-md border border-ink-border/20 bg-elevated shadow-2"
               />
             </div>
           </div>
@@ -302,7 +323,7 @@ function FeatureRow({
         width={width}
         height={height}
         loading="lazy"
-        className="w-full max-w-md"
+        className="aspect-[16/10] w-full max-w-xl rounded-lg object-cover shadow-1"
       />
     </div>
   );
@@ -386,10 +407,10 @@ export function MarketingHome() {
           flow height on `/`), so it carries its own dark scrim for the chrome. */}
       <section className="relative flex min-h-[34rem] flex-col overflow-hidden bg-ink">
         <img
-          src="/images/hero/poster-us.webp"
+          src="/images/hero/poster-iran.webp"
           alt={t('marketing.hero.imageAlt')}
-          width={1920}
-          height={1080}
+          width={1280}
+          height={720}
           loading="eager"
           {...{ fetchpriority: 'high' }}
           className="absolute inset-0 h-full w-full object-cover"
@@ -520,7 +541,7 @@ export function MarketingHome() {
                 <div className="aspect-[16/10] w-full overflow-hidden">
                   <img
                     src={guide.image}
-                    alt=""
+                    alt={guide.alt}
                     width={guide.width}
                     height={guide.height}
                     loading="lazy"
