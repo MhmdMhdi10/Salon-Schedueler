@@ -235,7 +235,7 @@ export function BusinessLanding() {
                 height={1024}
                 loading="eager"
                 decoding="async"
-                className="h-full w-full object-cover"
+                className="h-full w-full object-cover motion-safe:animate-ken-burns-hero"
               />
               <div
                 className="absolute inset-y-0 end-0 w-1/3 bg-gradient-to-s from-overlay/40 to-transparent"

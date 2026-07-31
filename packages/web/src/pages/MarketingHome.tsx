@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
@@ -88,6 +88,30 @@ const GUIDES = [
   },
 ] as const;
 
+/**
+ * Ambient Ken Burns drift (`animate-ken-burns`, tailwind.config.js) applied to
+ * the page's photography so every image breathes instead of sitting dead-still.
+ *
+ * Each surface picks a different variant whose shorthand carries a **negative**
+ * `animation-delay`, starting the loop already part-way through: neighbouring
+ * photos are instantly out of phase (no synchronised page-wide "pulse") and
+ * nobody waits for the first cycle. The offset must live inside the `animation`
+ * shorthand — a separate `[animation-delay:…]` utility gets reset by it.
+ *
+ * Class strings are static literals so Tailwind's JIT emits them, and the whole
+ * set is `motion-safe:`-gated — under `prefers-reduced-motion: reduce` no
+ * animation is applied at all and the photos render at their natural scale.
+ */
+const DRIFT = [
+  'motion-safe:animate-ken-burns',
+  'motion-safe:animate-ken-burns-2',
+  'motion-safe:animate-ken-burns-3',
+  'motion-safe:animate-ken-burns-4',
+] as const;
+
+/** Stable per-surface drift phase — wraps so any index is safe. */
+const drift = (index: number) => DRIFT[index % DRIFT.length];
+
 /** Small square آرا mark used on the dual product panel badges. */
 function AppMark({ dark = false }: { dark?: boolean }) {
   return (
@@ -103,71 +127,74 @@ function AppMark({ dark = false }: { dark?: boolean }) {
 }
 
 /**
- * Ambient hero video with a poster-first loading strategy (WCAG 2.2.2 +
- * bandwidth budget):
+ * Hero photography — three salon scenes that cross-fade while drifting slowly
+ * inwards (`animate-hero-slide`, tailwind.config.js).
  *
- *  - The poster `<img>` (rendered by the hero, not here) is the LCP element;
- *    the video element only mounts after first paint via idle callback, with
- *    `preload="none"` so nothing streams before then.
- *  - Under `prefers-reduced-motion: reduce` the video never mounts — visitors
- *    keep the static photography.
- *  - A visible pause/play control is always available while the video runs.
+ * These are stills, not a video, and that is the point. A browser composites a
+ * `<video>` layer with bilinear filtering and refreshes its texture only at the
+ * clip's frame rate, so animating `scale` on one makes fine detail (hair,
+ * fabric, stone) crawl between frames — it reads as a trembling picture at ANY
+ * amplitude. An `<img>` layer has no such constraint: the same transform is
+ * resampled smoothly, so the drift stays calm. The old background clip was
+ * itself just these photos cut together every ~2.5s, so nothing is lost —
+ * the hard cuts become slow cross-fades and 886KB of video goes away.
+ *
+ *  - Slide 1 is the LCP element: `loading="eager"` + `fetchpriority="high"`,
+ *    and it carries the hero's real Persian alt text. The other two are
+ *    decorative (`alt=""`) and lazy.
+ *  - `animation-delay` offsets each slide by a third of the cycle. Slides 2–3
+ *    start at `opacity-0`, so before their turn — and under
+ *    `prefers-reduced-motion: reduce`, where `motion-safe:` withholds the
+ *    animation entirely — the hero is simply slide 1, static.
+ *  - A visible pause control satisfies WCAG 2.2.2 for motion that runs longer
+ *    than five seconds; it freezes every slide's fade AND drift at once.
  */
-function HeroVideo() {
+const HERO_SLIDES = [
+  {
+    src: '/images/hero/poster-iran.webp',
+    // Each slide's phase offset is baked into its own animation utility (see
+    // tailwind.config.js) rather than added as a separate `[animation-delay:…]`
+    // class — the `animation` shorthand would otherwise reset the delay back to
+    // zero and all three slides would fade in and out together.
+    phase: 'motion-safe:animate-hero-slide-1',
+    lead: true,
+  },
+  {
+    src: '/images/hero/iranian-hairstylist.webp',
+    phase: 'opacity-0 motion-safe:animate-hero-slide-2',
+    lead: false,
+  },
+  {
+    src: '/images/hero/iranian-barber.webp',
+    phase: 'opacity-0 motion-safe:animate-hero-slide-3',
+    lead: false,
+  },
+] as const;
+
+function HeroPhotos() {
   const { t } = useTranslation();
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [mounted, setMounted] = useState(false);
   const [playing, setPlaying] = useState(true);
-
-  useEffect(() => {
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
-    type IdleWindow = Window & {
-      requestIdleCallback?: (cb: () => void) => number;
-      cancelIdleCallback?: (id: number) => void;
-    };
-    const w = window as IdleWindow;
-    if (w.requestIdleCallback) {
-      const id = w.requestIdleCallback(() => setMounted(true));
-      return () => w.cancelIdleCallback?.(id);
-    }
-    const id = window.setTimeout(() => setMounted(true), 1);
-    return () => window.clearTimeout(id);
-  }, []);
-
-  if (!mounted) return null;
-
-  const toggle = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (playing) {
-      video.pause();
-      setPlaying(false);
-    } else {
-      void video.play();
-      setPlaying(true);
-    }
-  };
+  // `animation-play-state` does not inherit, so the freeze goes on each slide.
+  const freeze = playing ? '' : '[animation-play-state:paused]';
 
   return (
     <>
-      <video
-        ref={videoRef}
-        className="absolute inset-0 h-full w-full object-cover"
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload="none"
-        poster="/images/hero/poster-iran.webp"
-        aria-hidden="true"
-        tabIndex={-1}
-      >
-        <source src="/videos/hero-iran-steady.webm?v=5" type="video/webm" />
-      </video>
+      {HERO_SLIDES.map(({ src, phase, lead }) => (
+        <img
+          key={src}
+          src={src}
+          alt={lead ? t('marketing.hero.imageAlt') : ''}
+          width={1280}
+          height={720}
+          loading={lead ? 'eager' : 'lazy'}
+          {...{ fetchpriority: lead ? 'high' : 'auto' }}
+          className={`absolute inset-0 h-full w-full object-cover ${phase} ${freeze}`}
+        />
+      ))}
       <button
         type="button"
-        onClick={toggle}
-        aria-label={playing ? t('marketing.hero.videoPause') : t('marketing.hero.videoPlay')}
+        onClick={() => setPlaying((current) => !current)}
+        aria-label={playing ? t('marketing.hero.motionPause') : t('marketing.hero.motionPlay')}
         className="absolute bottom-16 end-4 z-10 flex h-11 w-11 items-center justify-center rounded-pill border border-ink-border bg-ink/60 text-ink-contrast transition-opacity duration-fast ease-standard hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
         {playing ? (
@@ -222,7 +249,7 @@ function AppPromo() {
                 width={1200}
                 height={900}
                 loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover"
+                className={`absolute inset-0 h-full w-full object-cover ${drift(0)}`}
               />
               <img
                 src="/screenshots/booking-mobile.png"
@@ -230,7 +257,7 @@ function AppPromo() {
                 width={1080}
                 height={1920}
                 loading="lazy"
-                className="absolute -bottom-[8%] left-[7%] w-[27%] rounded-xl border border-ink-border/20 bg-elevated shadow-2"
+                className="absolute -bottom-[8%] end-[7%] w-[27%] rounded-xl border border-ink-border/20 bg-elevated shadow-2"
               />
             </div>
           </div>
@@ -266,7 +293,7 @@ function AppPromo() {
                 width={1200}
                 height={900}
                 loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover"
+                className={`absolute inset-0 h-full w-full object-cover ${drift(2)}`}
               />
               <img
                 src="/screenshots/admin-desktop.png"
@@ -274,7 +301,7 @@ function AppPromo() {
                 width={1920}
                 height={1080}
                 loading="lazy"
-                className="absolute bottom-[9%] right-[5%] w-[58%] rounded-md border border-ink-border/20 bg-elevated shadow-2"
+                className="absolute bottom-[9%] start-[5%] w-[58%] rounded-md border border-ink-border/20 bg-elevated shadow-2"
               />
             </div>
           </div>
@@ -297,7 +324,8 @@ function FeatureRow({
   height,
   alt,
   reverse,
-}: (typeof FEATURES)[number]) {
+  phase,
+}: (typeof FEATURES)[number] & { phase: number }) {
   const text = (
     <div className="flex flex-col justify-center">
       <h2 className="mb-6 text-2xl text-display leading-display text-text lg:mb-10 lg:text-3xl">
@@ -317,14 +345,18 @@ function FeatureRow({
   );
   const visual = (
     <div className="flex items-center justify-center">
-      <img
-        src={image}
-        alt={alt}
-        width={width}
-        height={height}
-        loading="lazy"
-        className="aspect-[16/10] w-full max-w-xl rounded-lg object-cover shadow-1"
-      />
+      {/* The frame clips the ambient Ken Burns zoom so the drift never bleeds
+          past the rounded edge or nudges the layout (transform only, no reflow). */}
+      <div className="aspect-[16/10] w-full max-w-xl overflow-hidden rounded-lg shadow-1">
+        <img
+          src={image}
+          alt={alt}
+          width={width}
+          height={height}
+          loading="lazy"
+          className={`h-full w-full object-cover ${drift(phase)}`}
+        />
+      </div>
     </div>
   );
 
@@ -406,16 +438,7 @@ export function MarketingHome() {
       {/* Hero — sits beneath the transparent absolute header (AppShell adds no
           flow height on `/`), so it carries its own dark scrim for the chrome. */}
       <section className="relative flex min-h-[34rem] flex-col overflow-hidden bg-ink">
-        <img
-          src="/images/hero/poster-iran.webp"
-          alt={t('marketing.hero.imageAlt')}
-          width={1280}
-          height={720}
-          loading="eager"
-          {...{ fetchpriority: 'high' }}
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-        <HeroVideo />
+        <HeroPhotos />
         {/* Flat photo scrim (directive §b) — the theme-stable overlay token. */}
         <div className="absolute inset-0 bg-overlay" aria-hidden="true" />
 
@@ -506,8 +529,8 @@ export function MarketingHome() {
 
       <AppPromo />
 
-      {FEATURES.map((feature) => (
-        <FeatureRow key={feature.title} {...feature} />
+      {FEATURES.map((feature, index) => (
+        <FeatureRow key={feature.title} {...feature} phase={index + 1} />
       ))}
 
       <section className="mx-auto max-w-7xl px-4 py-16">
@@ -545,7 +568,7 @@ export function MarketingHome() {
                     width={guide.width}
                     height={guide.height}
                     loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-slow ease-standard motion-safe:group-hover:scale-105"
+                    className={`h-full w-full object-cover ${drift(index)}`}
                   />
                 </div>
                 <h3 className="p-5 text-xl font-semibold leading-[1.6] text-text transition-colors duration-fast ease-standard group-hover:text-primary">

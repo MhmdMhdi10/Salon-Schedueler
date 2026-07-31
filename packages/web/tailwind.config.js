@@ -154,6 +154,7 @@ export default {
         emphasized: 'var(--ease-emphasized)',
         spring: 'var(--ease-spring)',
         decelerate: 'var(--ease-decelerate)',
+        ambient: 'var(--ease-ambient)',
       },
       // Motion library — the signature micro-interactions that make the PWA
       // feel alive. Every keyframe animates ONLY compositor-friendly properties
@@ -221,6 +222,49 @@ export default {
           '0%': { opacity: '1', transform: 'translateY(0)' },
           '100%': { opacity: '0', transform: 'translateY(8px)' },
         },
+        // Ken Burns — a very gentle ambient zoom for editorial photography so
+        // every hero/feature image drifts instead of sitting dead-still.
+        // Transform only (compositor-friendly, no reflow) and direction-neutral:
+        // a pure uniform `scale`, so it needs no RTL sign flip.
+        //
+        // Amplitude is deliberately SMALL and paired with a long duration below.
+        // A wide zoom range forces the browser to resample the source on every
+        // frame, which reads as shimmer/judder — especially on video, where each
+        // decoded frame is rescaled. Small range + long duration keeps the
+        // per-frame delta far below the eye's motion threshold, so it reads as a
+        // calm drift rather than a shake.
+        'ken-burns': {
+          '0%': { transform: 'scale(1)' },
+          '100%': { transform: 'scale(1.06)' },
+        },
+        // The full-bleed hero video/poster: a slightly wider frame gets a
+        // slightly wider range, still well inside the "calm" band.
+        'ken-burns-hero': {
+          '0%': { transform: 'scale(1.01)' },
+          '100%': { transform: 'scale(1.08)' },
+        },
+        // Hero photo slideshow: one keyframe track drives BOTH the cross-fade
+        // and the Ken Burns drift for a single slide, so they can never drift
+        // out of sync. Percentages assume three slides sharing one 21s cycle,
+        // i.e. each slide owns a third of it (7s):
+        //
+        //   0%    → 7.14%   fade in (1.5s, overlaps the previous slide's fade out)
+        //   7.14% → 33.33%  fully visible for 5.5s, drifting 1.00 → 1.04
+        //   33.33%→ 40.47%  fade out, scale HELD at 1.04
+        //   40.5%           scale reset — happens at opacity 0, so unseen
+        //   40.5% → 100%    parked, waiting for its next turn
+        //
+        // Slides are offset by exactly a third of the cycle via
+        // `animation-delay`, so the fade-out of one lands on the fade-in of the
+        // next and the wrap-around at 100% is seamless.
+        'hero-slide': {
+          '0%': { opacity: '0', transform: 'scale(1)' },
+          '7.14%': { opacity: '1' },
+          '33.33%': { opacity: '1', transform: 'scale(1.04)' },
+          '40.47%': { opacity: '0', transform: 'scale(1.04)' },
+          '40.5%': { transform: 'scale(1)' },
+          '100%': { opacity: '0', transform: 'scale(1)' },
+        },
       },
       animation: {
         'success-pop': 'success-pop var(--dur-slow) var(--ease-emphasized) both',
@@ -234,6 +278,32 @@ export default {
         'fade-out': 'fade-out var(--dur-exit) var(--ease-standard) both',
         'scale-out': 'scale-out var(--dur-exit) var(--ease-standard) both',
         'toast-out': 'toast-out var(--dur-exit) var(--ease-standard) both',
+        // Ambient photo drift. Very long + `alternate infinite` so the loop
+        // never cuts/snaps, and NO `both` fill — under the global
+        // `prefers-reduced-motion: reduce` clamp (tokens.css) the animation ends
+        // immediately and the image settles back at its natural scale.
+        //
+        // The duration is the other half of the "gentle, not shaky" tuning: 6%
+        // spread over 40s is ~0.15% scale per second, which the eye reads as
+        // stillness that slowly opens up. Shorter cycles at the same amplitude
+        // are what make a video judder.
+        // IMPORTANT — the phase offsets live INSIDE these shorthands on purpose.
+        // Pairing `animate-*` with a separate `[animation-delay:…]` utility is a
+        // trap: the `animation` shorthand resets every sub-property it omits, so
+        // whichever rule Tailwind emits LAST wins. `motion-safe:` variants are
+        // emitted after plain utilities, so the shorthand silently clobbered the
+        // delay and every phased element ran in lockstep. One class per phase
+        // removes the ordering dependency entirely.
+        'ken-burns': 'ken-burns 40s var(--ease-ambient) infinite alternate',
+        'ken-burns-2': 'ken-burns 40s var(--ease-ambient) -10s infinite alternate',
+        'ken-burns-3': 'ken-burns 40s var(--ease-ambient) -20s infinite alternate',
+        'ken-burns-4': 'ken-burns 40s var(--ease-ambient) -30s infinite alternate',
+        'ken-burns-hero': 'ken-burns-hero 50s var(--ease-ambient) infinite alternate',
+        // 21s cycle ÷ 3 slides = 7s each: ~5.5s held, 1.5s cross-fade. Slide 1
+        // is pulled back by the fade length so it opens at full opacity.
+        'hero-slide-1': 'hero-slide 21s var(--ease-ambient) -1.5s infinite',
+        'hero-slide-2': 'hero-slide 21s var(--ease-ambient) 5.5s infinite',
+        'hero-slide-3': 'hero-slide 21s var(--ease-ambient) 12.5s infinite',
       },
     },
   },
