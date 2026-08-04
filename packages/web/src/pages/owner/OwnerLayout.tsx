@@ -6,6 +6,7 @@ import { RouteLoader } from '../../components/layout/RouteLoader';
 import { SeoHead } from '../../components/seo';
 import { TooltipProvider } from '../../components/ui/Tooltip';
 import { useAuth } from '../../auth/AuthContext';
+import { DEFAULT_SALON_ID } from '../../auth/useSalonId';
 import {
   bootstrapAuth,
   getAccessToken,
@@ -17,7 +18,7 @@ import {
 /** Auth/bootstrap lifecycle for the owner panel. */
 type OwnerAuthState =
   | { phase: 'loading' }
-  | { phase: 'authenticated'; role: OwnerRole }
+  | { phase: 'authenticated'; role: OwnerRole; salonId: string }
   | { phase: 'unauthenticated' };
 
 /**
@@ -61,7 +62,11 @@ export function OwnerLayout() {
       try {
         const { principal } = await meApi.getMe();
         if (cancelled) return;
-        setState({ phase: 'authenticated', role: principal.role });
+        setState({
+          phase: 'authenticated',
+          role: principal.role,
+          salonId: principal.salonId ?? DEFAULT_SALON_ID,
+        });
       } catch {
         // A present-but-rejected token means the session is no longer valid.
         if (cancelled) return;
@@ -103,7 +108,7 @@ export function OwnerLayout() {
 
   return (
     <TooltipProvider>
-      <OwnerShell role={state.role} onSignOut={handleSignOut}>
+      <OwnerShell role={state.role} salonId={state.salonId} onSignOut={handleSignOut}>
         <SeoHead title={t('owner.title')} />
         <Outlet context={{ role: state.role }} />
       </OwnerShell>

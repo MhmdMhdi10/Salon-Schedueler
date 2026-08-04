@@ -37,15 +37,14 @@
   font-display: swap;
   font-weight: 100 900;
   src: url('/fonts/vazirmatn-arabic-wght-normal.woff2') format('woff2-variations');
-  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1,
-    U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74,
-    U+FE76-FEFC, U+102E0-102FB, U+10E60-10E7E, U+10EC2-10EC4, U+10EFC-10EFF,
-    U+1EE00-1EE03, U+1EE05-1EE1F, U+1EE21-1EE22, U+1EE24, U+1EE27, U+1EE29-1EE32,
-    U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42, U+1EE47, U+1EE49, U+1EE4B,
-    U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B, U+1EE5D,
-    U+1EE5F, U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77,
-    U+1EE79-1EE7C, U+1EE7E, U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3,
-    U+1EEA5-1EEA9, U+1EEAB-1EEBB, U+1EEF0-1EEF1;
+  unicode-range:
+    U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E,
+    U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+102E0-102FB,
+    U+10E60-10E7E, U+10EC2-10EC4, U+10EFC-10EFF, U+1EE00-1EE03, U+1EE05-1EE1F, U+1EE21-1EE22,
+    U+1EE24, U+1EE27, U+1EE29-1EE32, U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42, U+1EE47, U+1EE49,
+    U+1EE4B, U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B, U+1EE5D, U+1EE5F,
+    U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77, U+1EE79-1EE7C, U+1EE7E,
+    U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3, U+1EEA5-1EEA9, U+1EEAB-1EEBB, U+1EEF0-1EEF1;
 }
 
 /* Basic Latin range (numerals, Latin runs, punctuation) */
@@ -55,9 +54,9 @@
   font-display: swap;
   font-weight: 100 900;
   src: url('/fonts/vazirmatn-latin-wght-normal.woff2') format('woff2-variations');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
-    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
-    U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 /*
@@ -86,21 +85,21 @@
      black/white foundation, deep interactive teal action color, bright
      signature teal reserved as a large decorative fill. Byte-identical to
      `@salon/shared` lightColors; AA-verified in contrast.test.ts. */
-  --color-bg: #FFFFFF;
-  --color-surface: #F5F6F7;
-  --color-elevated: #FFFFFF;
+  --color-bg: #ffffff;
+  --color-surface: #f5f6f7;
+  --color-elevated: #ffffff;
   --color-text: #111417;
   --color-text-muted: #586170;
-  --color-border: #E4E7EA;
-  --color-primary: #0B7A68;
-  --color-primary-contrast: #FFFFFF;
-  --color-secondary: #116E60;
-  --color-accent: #05CFA6;
-  --color-success: #1F7A43;
-  --color-warning: #9A5B12;
-  --color-danger: #B3261E;
-  --color-info: #1F5FAE;
-  --color-focus-ring: #0B7A68;
+  --color-border: #e4e7ea;
+  --color-primary: #0b7a68;
+  --color-primary-contrast: #ffffff;
+  --color-secondary: #116e60;
+  --color-accent: #05cfa6;
+  --color-success: #1f7a43;
+  --color-warning: #9a5b12;
+  --color-danger: #b3261e;
+  --color-info: #1f5fae;
+  --color-focus-ring: #0b7a68;
 
   /* Ink surface — the deliberately-dark band (footer, stats band, dark hero
      chrome) that stays dark in BOTH themes, Booksy-style. `ink-contrast` /
@@ -109,8 +108,8 @@
      `text-ink-muted` / `border-ink-border` so components never hard-code
      white/black utilities for dark bands. */
   --color-ink: #111417;
-  --color-ink-contrast: #F4F6F6;
-  --color-ink-muted: #A6ADAD;
+  --color-ink-contrast: #f4f6f6;
+  --color-ink-muted: #a6adad;
   --color-ink-border: rgba(244, 246, 246, 0.14);
 
   /* Overlay scrim behind modal surfaces (Dialog/Sheet) and photo scrims. */
@@ -130,9 +129,9 @@
   --font-2xl: 2.25rem;
 
   /* Heroic display scale (Req 2.2, 4.1) */
-  --font-3xl: 3rem;      /* 48px — hero headlines */
-  --font-4xl: 3.75rem;   /* 60px — landing page hero (desktop) */
-  --font-5xl: 4.5rem;    /* 72px — maximum display (wide screens) */
+  --font-3xl: 3rem; /* 48px — hero headlines */
+  --font-4xl: 3.75rem; /* 60px — landing page hero (desktop) */
+  --font-5xl: 4.5rem; /* 72px — maximum display (wide screens) */
 
   /*
    * Display treatment — the signature type pairing (design §2, R1.2/R8.1).
@@ -157,8 +156,7 @@
   --line-height-hero: 1.05;
 
   /* Font stack (Persian-first); metrics-matched fallback limits CLS */
-  --font-family-sans: 'Vazirmatn', 'Vazirmatn Fallback', system-ui, 'Segoe UI',
-    Tahoma, sans-serif;
+  --font-family-sans: 'Vazirmatn', 'Vazirmatn Fallback', system-ui, 'Segoe UI', Tahoma, sans-serif;
 
   /* Spacing — 8pt grid */
   --space-0: 0;
@@ -216,27 +214,27 @@
      luminous text, luminous teal highlights preserving the high-contrast
      minimal character. Byte-identical to `@salon/shared` darkColors;
      AA-verified in contrast.test.ts. */
-  --color-bg: #0F1111;
-  --color-surface: #181B1B;
+  --color-bg: #0f1111;
+  --color-surface: #181b1b;
   --color-elevated: #222626;
-  --color-text: #F4F6F6;
-  --color-text-muted: #A6ADAD;
-  --color-border: #2A2F2F;
-  --color-primary: #2DE0BE;
-  --color-primary-contrast: #0F1111;
-  --color-secondary: #4FE3C8;
-  --color-accent: #38E0C0;
-  --color-success: #69D08C;
-  --color-warning: #E7B45C;
-  --color-danger: #F2938C;
-  --color-info: #86B6F0;
-  --color-focus-ring: #2DE0BE;
+  --color-text: #f4f6f6;
+  --color-text-muted: #a6adad;
+  --color-border: #2a2f2f;
+  --color-primary: #2de0be;
+  --color-primary-contrast: #0f1111;
+  --color-secondary: #4fe3c8;
+  --color-accent: #38e0c0;
+  --color-success: #69d08c;
+  --color-warning: #e7b45c;
+  --color-danger: #f2938c;
+  --color-info: #86b6f0;
+  --color-focus-ring: #2de0be;
 
   /* Ink band stays dark in dark mode too — slightly lifted off the page bg so
      the footer/stats band still reads as a distinct surface. */
-  --color-ink: #181B1B;
-  --color-ink-contrast: #F4F6F6;
-  --color-ink-muted: #A6ADAD;
+  --color-ink: #181b1b;
+  --color-ink-contrast: #f4f6f6;
+  --color-ink-muted: #a6adad;
   --color-ink-border: rgba(244, 246, 246, 0.12);
 
   --color-overlay: rgba(0, 0, 0, 0.6);
@@ -374,4 +372,101 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+/* Selected smart-calendar wordmark stays legible when the manual dark theme is active. */
+[data-theme='dark'] .ara-brand-logo {
+  filter: grayscale(1) brightness(0) invert(1);
+}
+
+@keyframes ara-route-progress {
+  0% {
+    opacity: 0.75;
+    transform: scaleX(0.06);
+  }
+  68% {
+    opacity: 1;
+    transform: scaleX(0.78);
+  }
+  100% {
+    opacity: 0.9;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes ara-loading-orbit {
+  from {
+    opacity: 0.8;
+    transform: rotate(0deg) scale(0.9);
+  }
+  to {
+    opacity: 0.15;
+    transform: rotate(90deg) scale(1.12);
+  }
+}
+
+@keyframes ara-loading-mark {
+  from {
+    transform: translateY(1px) scale(0.97);
+  }
+  to {
+    transform: translateY(-1px) scale(1.03);
+  }
+}
+
+.ara-route-progress {
+  animation: ara-route-progress var(--dur-celebration) var(--ease-decelerate) both;
+}
+
+.ara-loading-orbit {
+  animation: ara-loading-orbit 1.2s var(--ease-ambient) infinite alternate;
+}
+
+.ara-loading-mark {
+  animation: ara-loading-mark 900ms var(--ease-ambient) infinite alternate;
+}
+
+/* Branded scrollbar: compact, token-colored, and consistent across themes. */
+html {
+  scrollbar-gutter: stable;
+  scrollbar-color: var(--color-primary) var(--color-surface);
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+
+*::-webkit-scrollbar-thumb {
+  min-height: 44px;
+  border: 3px solid var(--color-surface);
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-secondary);
+}
+
+*::-webkit-scrollbar-corner {
+  background: var(--color-surface);
+}
+
+/* No stray scrollbar behind either full boot screen or Suspense route loader. */
+html:has(#app-boot-loader),
+html.app-route-loading {
+  overflow: hidden;
+  scrollbar-color: transparent transparent;
+}
+
+html:has(#app-boot-loader)::-webkit-scrollbar-thumb,
+html:has(#app-boot-loader)::-webkit-scrollbar-track,
+html.app-route-loading::-webkit-scrollbar-thumb,
+html.app-route-loading::-webkit-scrollbar-track {
+  border-color: transparent;
+  background: transparent;
 }

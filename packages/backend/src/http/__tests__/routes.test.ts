@@ -36,6 +36,7 @@ function makeServices() {
     },
     bookingFlow: {
       book: jest.fn(),
+      reject: jest.fn(),
     },
     cancellationFlow: {
       cancel: jest.fn(),
@@ -68,6 +69,12 @@ function makeServices() {
       listBookableStaff: jest.fn().mockResolvedValue([]),
     },
     availabilityConfig: {
+      getWorkingHours: jest.fn().mockResolvedValue([]),
+      setWorkingHours: jest.fn().mockResolvedValue([]),
+      getBookingWindowDays: jest.fn().mockResolvedValue(14),
+      setBookingWindowDays: jest.fn().mockResolvedValue(undefined),
+      getHolidays: jest.fn().mockResolvedValue([]),
+      addHoliday: jest.fn().mockResolvedValue({ id: 'holiday-1', onDate: new Date('2026-07-15') }),
       setSalonBrandAccent: jest.fn().mockResolvedValue(undefined),
       getDaysOff: jest.fn().mockResolvedValue([]),
       addDayOff: jest
@@ -486,6 +493,94 @@ describe('HTTP routes', () => {
   });
 
   // ── Staff availability blocks (stylist self-service, salon-granted) ──────────
+  describe('weekly working hours', () => {
+    it('lets an Owner apply salon hours to active staff and chairs', async () => {
+      fake.resourceRegistration.listStaff.mockResolvedValue([
+        { id: 'staff-1', active: true, role: 'Stylist' },
+        { id: 'staff-off', active: false, role: 'Stylist' },
+      ]);
+      fake.resourceRegistration.listChairs.mockResolvedValue([{ id: 'chair-1' }]);
+      const hours = [{ weekday: 6, startTime: '09:00', endTime: '20:00' }];
+      const res = await request(app)
+        .put('/api/salons/salon-1/working-hours')
+        .set('Authorization', `Bearer ${staffToken('Owner')}`)
+        .send({ hours });
+      expect(res.status).toBe(200);
+      expect(fake.availabilityConfig.setWorkingHours).toHaveBeenCalledWith(
+        'staff',
+        'staff-1',
+        hours,
+      );
+      expect(fake.availabilityConfig.setWorkingHours).toHaveBeenCalledWith(
+        'chair',
+        'chair-1',
+        hours,
+      );
+      expect(fake.availabilityConfig.setWorkingHours).not.toHaveBeenCalledWith(
+        'staff',
+        'staff-off',
+        hours,
+      );
+    });
+
+    it('rejects an invalid time range', async () => {
+      const res = await request(app)
+        .put('/api/salons/salon-1/working-hours')
+        .set('Authorization', `Bearer ${staffToken('Owner')}`)
+        .send({ hours: [{ weekday: 6, startTime: '20:00', endTime: '09:00' }] });
+      expect(res.status).toBe(400);
+    });
+
+    it('accepts two non-overlapping windows for a recurring break', async () => {
+      fake.resourceRegistration.listStaff.mockResolvedValue([
+        { id: 'staff-1', active: true, role: 'Stylist' },
+      ]);
+      const hours = [
+        { weekday: 6, startTime: '09:00', endTime: '13:00' },
+        { weekday: 6, startTime: '14:00', endTime: '20:00' },
+      ];
+      const res = await request(app)
+        .put('/api/salons/salon-1/working-hours')
+        .set('Authorization', `Bearer ${staffToken('Owner')}`)
+        .send({ hours });
+      expect(res.status).toBe(200);
+      expect(fake.availabilityConfig.setWorkingHours).toHaveBeenCalledWith('staff', 'staff-1', hours);
+    });
+
+    it('stores a today-only booking policy', async () => {
+      const res = await request(app)
+        .put('/api/salons/salon-1/booking-policy')
+        .set('Authorization', `Bearer ${staffToken('Owner')}`)
+        .send({ bookingWindowDays: 0 });
+      expect(res.status).toBe(200);
+      expect(fake.availabilityConfig.setBookingWindowDays).toHaveBeenCalledWith('salon-1', 0);
+    });
+
+    it('closes an interrupted day and cancels its active appointments', async () => {
+      fake.calendarService.getSalonCalendar.mockResolvedValue([
+        { id: 'pending-1', status: 'pending' },
+        { id: 'confirmed-1', status: 'confirmed' },
+      ]);
+      fake.bookingFlow.reject.mockResolvedValue({ id: 'pending-1' });
+      fake.cancellationFlow.cancel.mockResolvedValue({ id: 'confirmed-1' });
+      const res = await request(app)
+        .post('/api/salons/salon-1/emergency-close')
+        .set('Authorization', `Bearer ${staffToken('Owner')}`)
+        .send({ onDate: '2026-07-15', cancelAppointments: true });
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ cancelledCount: 2, failedCount: 0 });
+      expect(fake.availabilityConfig.addHoliday).toHaveBeenCalledWith('salon-1', '2026-07-15');
+    });
+
+    it('forbids an Admin from changing recurring hours', async () => {
+      const res = await request(app)
+        .put('/api/salons/salon-1/working-hours')
+        .set('Authorization', `Bearer ${staffToken('Admin')}`)
+        .send({ hours: [] });
+      expect(res.status).toBe(403);
+    });
+  });
+
   describe('POST /api/staff/:staffId/availability-blocks', () => {
     it('lets an Owner add a block for any stylist (201)', async () => {
       const res = await request(app)

@@ -34,6 +34,7 @@ export type { OwnerBottomTabsProps } from './OwnerBottomTabs';
 
 export { RouteLoader, ROUTE_LOADER_TESTID } from './RouteLoader';
 export type { RouteLoaderProps } from './RouteLoader';
+export { RouteProgress } from './RouteProgress';
 
 /**
  * Editorial layout primitives (design §3; R1.4, R2.2, R3.4) — thin CSS-grid

@@ -277,6 +277,23 @@ export class AvailabilityConfig {
     });
   }
 
+  /** Inclusive number of future days customers may select; 0 = today only. */
+  async getBookingWindowDays(salonId: string): Promise<number> {
+    const salon = (await this.prisma.salon.findUnique({
+      where: { id: salonId },
+      select: { bookingWindowDays: true } as never,
+    })) as unknown as { bookingWindowDays: number } | null;
+    if (!salon) throw new Error('Salon not found');
+    return salon.bookingWindowDays;
+  }
+
+  async setBookingWindowDays(salonId: string, bookingWindowDays: number): Promise<void> {
+    await this.prisma.salon.update({
+      where: { id: salonId },
+      data: { bookingWindowDays } as never,
+    });
+  }
+
   /**
    * Set (or clear) a stylist's approval-policy override. `null` inherits the
    * salon default; `true`/`false` overrides it for that stylist.

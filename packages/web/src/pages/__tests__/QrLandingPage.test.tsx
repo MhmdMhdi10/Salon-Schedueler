@@ -40,6 +40,7 @@ function renderQr(payload = 'abc123') {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  localStorage.clear();
 });
 
 afterEach(() => {
@@ -65,6 +66,12 @@ describe('QrLandingPage — resolved', () => {
     renderQr();
     expect(await screen.findByTestId('qr-landing')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'سالن رز' })).toBeInTheDocument();
+  });
+
+  it('saves a successfully scanned salon on this device', async () => {
+    renderQr();
+    await screen.findByTestId('qr-landing');
+    expect(localStorage.getItem('ara-saved-salons-v1')).toContain('سالن رز');
   });
 
   it('offers the «انتخاب خدمت» CTA that begins the funnel', async () => {

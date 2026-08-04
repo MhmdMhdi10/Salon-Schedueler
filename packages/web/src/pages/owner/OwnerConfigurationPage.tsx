@@ -264,11 +264,13 @@ function StaffSection({
   staff,
   salonId,
   onChange,
+  onStaffAdded,
   requestDelete,
 }: {
   staff: SalonStaff[];
   salonId: string;
   onChange: React.Dispatch<React.SetStateAction<SalonStaff[]>>;
+  onStaffAdded: () => void;
   requestDelete: (state: DeleteState) => void;
 }) {
   const { t } = useTranslation();
@@ -309,6 +311,8 @@ function StaffSection({
       setFullName('');
       setRole('Stylist');
       setPhone('');
+      onStaffAdded();
+      window.dispatchEvent(new Event('salon-config-changed'));
       success({ title: t('admin.config.staff.added') });
     } catch (err) {
       if (err instanceof ApiError && err.code === 'PHONE_TAKEN') {
@@ -724,6 +728,16 @@ function HolidaysSection({
   }, [salonId]);
 
   useEffect(() => load(), [load]);
+
+  // Persistent setup warnings deep-link to the exact configuration card. The
+  // cards render after async data loads, so perform the anchor scroll then.
+  useEffect(() => {
+    if (status !== 'success' || !window.location.hash) return;
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    window.requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [status]);
 
   const modeOptions = useMemo(
     () => [
@@ -1311,6 +1325,11 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
             staff={staff}
             salonId={salonId}
             onChange={setStaff}
+            onStaffAdded={() => {
+              void adminApi.getChairs(salonId).then((result) => {
+                setChairs(result.chairs.map((chair, index) => toEntry(chair, `chair-${index + 1}`)));
+              });
+            }}
             requestDelete={setPendingDelete}
           />
 
@@ -1321,6 +1340,7 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
                 .createService(salonId, service)
                 .then((res) => {
                   setServices((prev) => [...prev, res.service]);
+                  window.dispatchEvent(new Event('salon-config-changed'));
                 })
                 .catch(() => {});
             }}
@@ -1349,21 +1369,34 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
                 .createChair(salonId, { name: label })
                 .then((res) => {
                   setChairs((prev) => [...prev, toEntry(res.chair, res.chair.id)]);
+                  window.dispatchEvent(new Event('salon-config-changed'));
                 })
                 .catch(() => {});
             }}
             onRemove={(id) => {
               const removed = chairs.find((c) => c.id === id);
+              let undone = false;
               setChairs((prev) => prev.filter((e) => e.id !== id));
+              const removal = adminApi.deleteChair(salonId, id).then(() => {
+                window.dispatchEvent(new Event('salon-config-changed'));
+              }).catch(() => {
+                if (removed && !undone) setChairs((prev) => [...prev, removed]);
+              });
               if (removed) {
                 const idx = chairs.findIndex((c) => c.id === id);
-                undoToast(removed.label, () =>
+                undoToast(removed.label, () => {
+                  undone = true;
+                  void removal.then(() =>
+                    adminApi.setChairActive(salonId, id, true).then(() => {
+                      window.dispatchEvent(new Event('salon-config-changed'));
+                    }),
+                  );
                   setChairs((prev) => {
                     const next = [...prev];
                     next.splice(Math.min(idx, next.length), 0, removed);
                     return next;
-                  }),
-                );
+                  });
+                });
               }
             }}
             requestDelete={setPendingDelete}

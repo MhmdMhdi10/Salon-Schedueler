@@ -41,13 +41,15 @@ export class PrismaNotificationRepository implements NotificationRepository {
   async findAppointment(appointmentId: string): Promise<AppointmentInfo | null> {
     const appt = await this.prisma.appointment.findUnique({
       where: { id: appointmentId },
-      include: { customer: true, service: true, staffMember: true },
+      include: { customer: true, service: true, staffMember: true, salon: true },
     });
     if (!appt) {
       return null;
     }
     return {
       id: appt.id,
+      salonId: appt.salonId,
+      salonName: appt.salon.name,
       customerId: appt.customerId,
       customerPhone: appt.customer.phone,
       customerName: appt.customer.fullName ?? undefined,
@@ -55,6 +57,19 @@ export class PrismaNotificationRepository implements NotificationRepository {
       startAt: appt.startAt,
       staffName: appt.staffMember.fullName,
     };
+  }
+
+  async findSalonSmsRecipients(salonId: string): Promise<string[]> {
+    const owners = await this.prisma.staffMember.findMany({
+      where: {
+        salonId,
+        role: 'Owner',
+        active: true,
+        phone: { not: null },
+      },
+      select: { phone: true },
+    });
+    return owners.flatMap((owner) => (owner.phone ? [owner.phone] : []));
   }
 
   async findDeviceTokens(customerId: string): Promise<DeviceTokenInfo[]> {
@@ -78,10 +93,12 @@ export class PrismaNotificationRepository implements NotificationRepository {
         status: 'confirmed',
         startAt: { gte: now, lt: windowEnd },
       },
-      include: { customer: true, service: true, staffMember: true },
+      include: { customer: true, service: true, staffMember: true, salon: true },
     });
     return appts.map((appt) => ({
       id: appt.id,
+      salonId: appt.salonId,
+      salonName: appt.salon.name,
       customerId: appt.customerId,
       customerPhone: appt.customer.phone,
       customerName: appt.customer.fullName ?? undefined,

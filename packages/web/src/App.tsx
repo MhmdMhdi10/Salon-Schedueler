@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom
 import { ThemeProvider } from './components/theme/ThemeProvider';
 import { AppShell } from './components/layout/AppShell';
 import { RouteLoader } from './components/layout/RouteLoader';
+import { RouteProgress } from './components/layout/RouteProgress';
 import { PageTransition } from './components/ui/Motion';
 import { ToastProvider } from './components/ui/Toast';
 import { AuthProvider } from './auth/AuthContext';
@@ -44,9 +45,6 @@ import { AuthProvider } from './auth/AuthContext';
  */
 
 // Customer funnel + public pages — each its own chunk.
-const MarketingHome = lazy(() =>
-  import('./pages/MarketingHome').then((m) => ({ default: m.MarketingHome })),
-);
 const BusinessLanding = lazy(() =>
   import('./pages/BusinessLanding').then((m) => ({
     default: m.BusinessLanding,
@@ -62,12 +60,6 @@ const SalonProfilePage = lazy(() =>
     default: m.SalonProfilePage,
   })),
 );
-const CityPage = lazy(() =>
-  import('./pages/DiscoveryPages').then((m) => ({ default: m.CityPage })),
-);
-const ServicePage = lazy(() =>
-  import('./pages/DiscoveryPages').then((m) => ({ default: m.ServicePage })),
-);
 const AboutPage = lazy(() => import('./pages/LegalPages').then((m) => ({ default: m.AboutPage })));
 const ContactPage = lazy(() =>
   import('./pages/LegalPages').then((m) => ({ default: m.ContactPage })),
@@ -79,6 +71,9 @@ const TermsPage = lazy(() => import('./pages/LegalPages').then((m) => ({ default
 const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })));
 const QrLandingPage = lazy(() =>
   import('./pages/QrLandingPage').then((m) => ({ default: m.QrLandingPage })),
+);
+const MySalonsPage = lazy(() =>
+  import('./pages/MySalonsPage').then((m) => ({ default: m.MySalonsPage })),
 );
 const AvailabilityPage = lazy(() =>
   import('./pages/AvailabilityPage').then((m) => ({
@@ -99,9 +94,6 @@ const FunnelTenantTheme = lazy(() =>
   import('./components/theme/FunnelTenantTheme').then((m) => ({
     default: m.FunnelTenantTheme,
   })),
-);
-const SearchPage = lazy(() =>
-  import('./pages/SearchPage').then((m) => ({ default: m.SearchPage })),
 );
 const NotFoundPage = lazy(() =>
   import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })),
@@ -152,6 +144,7 @@ export function App() {
              * a nested one would silo its toasts to that page.) */}
             <ToastProvider>
               <div dir="rtl" lang="fa" className="app-root">
+                <RouteProgress />
                 <Suspense fallback={<RouteLoader />}>
                   <Routes>
                     {/*
@@ -204,11 +197,13 @@ export function App() {
                         </AppShell>
                       }
                     >
-                      {/* Public marketing home (indexable) */}
-                      <Route path="/" element={<MarketingHome />} />
-
-                      {/* Owner-acquisition marketing landing (indexable) */}
-                      <Route path="/business" element={<BusinessLanding />} />
+                      {/* Launch home: owner-acquisition is the primary product.
+                       * Marketplace discovery stays out of navigation and old
+                       * public discovery URLs return here until that product is
+                       * ready to launch. Direct salon profiles and booking links
+                       * remain available below. */}
+                      <Route path="/" element={<BusinessLanding />} />
+                      <Route path="/business" element={<Navigate to="/" replace />} />
 
                       {/* Salon self-registration onboarding wizard (noindex) */}
                       <Route path="/business/register" element={<RegisterSalonPage />} />
@@ -216,12 +211,10 @@ export function App() {
                       {/* Public salon profile (indexable) */}
                       <Route path="/s/:slug" element={<SalonProfilePage />} />
 
-                      {/* Public discovery pages (indexable) */}
-                      <Route path="/city/:city" element={<CityPage />} />
-                      <Route path="/services/:type" element={<ServicePage />} />
-
-                      {/* Search results — the home hero submits here (noindex) */}
-                      <Route path="/search" element={<SearchPage />} />
+                      {/* Marketplace is intentionally unavailable at launch. */}
+                      <Route path="/city/:city" element={<Navigate to="/" replace />} />
+                      <Route path="/services/:type" element={<Navigate to="/" replace />} />
+                      <Route path="/search" element={<Navigate to="/" replace />} />
 
                       {/* Public trust & legal pages (indexable) */}
                       <Route path="/about" element={<AboutPage />} />
@@ -232,6 +225,7 @@ export function App() {
                       {/* Customer flows */}
                       <Route path="/auth" element={<AuthPage />} />
                       <Route path="/qr/:payload" element={<QrLandingPage />} />
+                      <Route path="/my-salons" element={<MySalonsPage />} />
                       {/*
                        * Booking funnel + success live outside AppShell (above)
                        * for the FunnelShell no-chrome pattern (آرا Design Goal 17).

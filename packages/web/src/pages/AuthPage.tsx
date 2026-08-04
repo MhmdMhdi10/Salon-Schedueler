@@ -8,6 +8,7 @@ import { useAuth } from '../auth/AuthContext';
 import { OtpInput, OTP_LENGTH, type OtpInputHandle } from '../auth/OtpInput';
 import { normalizePhone, PHONE_PATTERN } from '../auth/phone';
 import { SeoHead } from '../components/seo';
+import { BrandLogo } from '../components/brand';
 import { Button, TextField, cn, toPersianDigits, useToast } from '../components/ui';
 import { durations, stepTransition, stepVariants } from '../lib/motion-variants';
 
@@ -224,8 +225,8 @@ export function AuthPage() {
     >
       <SeoHead title={t('seo.titles.auth')} />
 
-      <Link to="/" className="text-2xl font-extrabold text-text no-underline">
-        آرا
+      <Link to="/" aria-label="آرا" className="no-underline">
+        <BrandLogo className="h-12" />
       </Link>
 
       <div className="w-full overflow-hidden rounded-2xl border border-border bg-elevated p-6 shadow-1 sm:p-8">

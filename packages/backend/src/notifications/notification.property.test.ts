@@ -82,6 +82,8 @@ const deviceTokensArb: fc.Arbitrary<DeviceTokenInfo[]> = fc.array(deviceTokenInf
 /** Generate an appointment info object */
 const appointmentArb: fc.Arbitrary<AppointmentInfo> = fc.record({
   id: fc.uuid(),
+  salonId: fc.uuid(),
+  salonName: fc.string({ minLength: 1, maxLength: 30 }),
   customerId: fc.uuid(),
   customerPhone: phoneArb,
   customerName: fc.option(fc.string({ minLength: 1, maxLength: 20 }), { nil: undefined }),
@@ -110,6 +112,7 @@ describe('Property 17: Reminder channel selection', () => {
 
           const repo: NotificationRepository = {
             findAppointment: async () => appointment,
+            findSalonSmsRecipients: async () => [],
             findDeviceTokens: async () => deviceTokens,
             findAppointmentsInReminderWindow: async () => [appointment],
             registerDeviceToken: async () => { },

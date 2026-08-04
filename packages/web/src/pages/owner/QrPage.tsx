@@ -11,6 +11,8 @@ import {
   Package,
   Printer,
   Sparkles,
+  Trash2,
+  Upload,
 } from 'lucide-react';
 import { ApiError, cardOrderApi, qrApi, salonApi, type SalonQrResponse } from '../../api/client';
 import { useSalonId } from '../../auth/useSalonId';
@@ -77,6 +79,9 @@ function QrAsset({
   qrDataUri,
   qrAlt,
   accent,
+  logoDataUri,
+  cta,
+  showBrand,
   t,
   imgTestId,
 }: {
@@ -86,6 +91,9 @@ function QrAsset({
   qrDataUri: string;
   qrAlt: string;
   accent: AccentTheme;
+  logoDataUri?: string;
+  cta: string;
+  showBrand: boolean;
   t: T;
   imgTestId?: string;
 }) {
@@ -117,6 +125,9 @@ function QrAsset({
       {t('owner.qr.brand')}
     </span>
   );
+  const logo = logoDataUri ? (
+    <img className="asset__custom-logo" src={logoDataUri} alt="" aria-hidden="true" />
+  ) : null;
 
   if (kind === 'banner') {
     return (
@@ -127,12 +138,13 @@ function QrAsset({
       >
         <span className="asset__blob asset__blob--1" aria-hidden="true" />
         <span className="asset__blob asset__blob--2" aria-hidden="true" />
+        {logo}
         <span className="asset__kicker">
           {t('owner.qr.salonPrefix')} {salonName}
         </span>
         <h3 className="asset__hero">{t('owner.qr.bannerHero')}</h3>
         {qr}
-        <span className="asset__cta">{t('owner.qr.scanCta')}</span>
+        <span className="asset__cta">{cta}</span>
         <ol className="asset__steps">
           <li>
             <b>۱</b>
@@ -147,7 +159,7 @@ function QrAsset({
             {t('owner.qr.step3')}
           </li>
         </ol>
-        {brand}
+        {showBrand && brand}
       </article>
     );
   }
@@ -160,11 +172,12 @@ function QrAsset({
         aria-label={t('owner.qr.assetAlt', { salon: salonName })}
       >
         <span className="asset__blob asset__blob--1" aria-hidden="true" />
+        {logo}
         <span className="asset__salon">{salonName}</span>
         {tagline ? <span className="asset__tag">{tagline}</span> : null}
         {qr}
-        <span className="asset__cta">{t('owner.qr.scanCta')}</span>
-        {brand}
+        <span className="asset__cta">{cta}</span>
+        {showBrand && brand}
       </article>
     );
   }
@@ -178,12 +191,17 @@ function QrAsset({
     >
       <span className="asset__blob asset__blob--1" aria-hidden="true" />
       <span className="asset__blob asset__blob--2" aria-hidden="true" />
-      {brand}
-      <span className="asset__salon">{salonName}</span>
-      {tagline ? <span className="asset__tag">{tagline}</span> : null}
-      {qr}
-      <span className="asset__cta">{t('owner.qr.scanCta')}</span>
-      <span className="asset__foot">{t('owner.qr.cardFoot')}</span>
+      <div className="asset__card-copy">
+        {logo}
+        {showBrand && brand}
+        <span className="asset__salon">{salonName}</span>
+        {tagline ? <span className="asset__tag">{tagline}</span> : null}
+        <span className="asset__foot">{t('owner.qr.cardFoot')}</span>
+      </div>
+      <div className="asset__card-code">
+        {qr}
+        <span className="asset__cta">{cta}</span>
+      </div>
     </article>
   );
 }
@@ -221,6 +239,11 @@ export function OwnerQrPage() {
   const [kind, setKind] = useState<AssetKind>('card');
   const [accentKey, setAccentKey] = useState<string>('jade');
   const [tagline, setTagline] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [cta, setCta] = useState('');
+  const [logoDataUri, setLogoDataUri] = useState('');
+  const [logoError, setLogoError] = useState('');
+  const [showBrand, setShowBrand] = useState(true);
 
   // QR target: '' = the whole salon (default), or a specific stylist's id. A
   // stylist target swaps in that stylist's QR payload (best-effort) so the owner
@@ -331,6 +354,25 @@ export function OwnerQrPage() {
     (stylistName
       ? t('owner.qr.stylistTagline', { name: stylistName })
       : t('owner.qr.defaultTagline'));
+  const effectiveName = displayName.trim() || data?.salonName || '';
+  const effectiveCta = cta.trim() || t('owner.qr.scanCta');
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/') || file.size > 2 * 1024 * 1024) {
+      setLogoError(t('owner.qr.logoInvalid'));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setLogoDataUri(typeof reader.result === 'string' ? reader.result : '');
+      setLogoError('');
+    };
+    reader.onerror = () => setLogoError(t('owner.qr.logoInvalid'));
+    reader.readAsDataURL(file);
+  };
 
   const handleCopy = async () => {
     if (!data) return;
@@ -361,6 +403,7 @@ export function OwnerQrPage() {
     if (!/^09\d{9}$/.test(phone)) fieldErrors.phone = t('owner.qr.order.phoneLabel');
     if (address.length < 5) fieldErrors.address = t('owner.qr.order.addressLabel');
     if (Object.keys(fieldErrors).length > 0) {
+      setOrderStatus('error');
       setOrderError(
         t('owner.qr.order.missingFields', {
           defaultValue: 'این فیلدها را تکمیل کنید: {{fields}}',
@@ -558,6 +601,61 @@ export function OwnerQrPage() {
                   maxLength={48}
                   helperText={t('owner.qr.taglineHint')}
                 />
+
+                <TextField
+                  label={t('owner.qr.displayNameLabel')}
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder={data.salonName}
+                  maxLength={52}
+                />
+
+                <TextField
+                  label={t('owner.qr.ctaLabel')}
+                  value={cta}
+                  onChange={(e) => setCta(e.target.value)}
+                  placeholder={t('owner.qr.scanCta')}
+                  maxLength={52}
+                />
+
+                <div className="owner-qr-upload">
+                  <span className="text-xs font-medium text-muted">{t('owner.qr.logoLabel')}</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label className="owner-qr-upload__button">
+                      <Upload className="h-4 w-4" aria-hidden="true" />
+                      {t('owner.qr.logoUpload')}
+                      <input
+                        data-testid="qr-logo-upload"
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                        onChange={handleLogoUpload}
+                      />
+                    </label>
+                    {logoDataUri && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="md"
+                        startIcon={<Trash2 className="h-4 w-4" />}
+                        onClick={() => setLogoDataUri('')}
+                      >
+                        {t('owner.qr.logoRemove')}
+                      </Button>
+                    )}
+                  </div>
+                  <small className={logoError ? 'text-danger' : 'text-muted'}>
+                    {logoError || t('owner.qr.logoHint')}
+                  </small>
+                </div>
+
+                <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-border bg-surface px-3 text-sm text-text">
+                  <input
+                    type="checkbox"
+                    checked={showBrand}
+                    onChange={(e) => setShowBrand(e.target.checked)}
+                  />
+                  {t('owner.qr.showBrand')}
+                </label>
               </div>
 
               {/* Live preview column — sticky on desktop so it stays in view
@@ -566,11 +664,14 @@ export function OwnerQrPage() {
                 <div className="owner-qr-stage" data-testid="qr-asset-preview">
                   <QrAsset
                     kind={kind}
-                    salonName={data.salonName}
+                    salonName={effectiveName}
                     tagline={effectiveTagline}
                     qrDataUri={qrDataUri}
                     qrAlt={qrAlt}
                     accent={accent}
+                    logoDataUri={logoDataUri}
+                    cta={effectiveCta}
+                    showBrand={showBrand}
                     t={t}
                   />
                 </div>
@@ -821,11 +922,14 @@ export function OwnerQrPage() {
             <div className="owner-qr-print-asset" aria-hidden="true">
               <QrAsset
                 kind={kind}
-                salonName={data.salonName}
+                salonName={effectiveName}
                 tagline={effectiveTagline}
                 qrDataUri={qrDataUri}
                 qrAlt={qrAlt}
                 accent={accent}
+                logoDataUri={logoDataUri}
+                cta={effectiveCta}
+                showBrand={showBrand}
                 t={t}
               />
             </div>

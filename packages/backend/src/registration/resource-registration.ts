@@ -86,6 +86,14 @@ export class ResourceRegistration {
   }
 
   /**
+   * Activate/deactivate a chair without deleting its historical appointments.
+   * An inactive chair is ignored by availability and can later be restored.
+   */
+  async setChairActive(id: string, active: boolean): Promise<Chair> {
+    return this.prisma.chair.update({ where: { id }, data: { active } });
+  }
+
+  /**
    * Register new equipment for a salon.
    *
    * @param salonId - The salon to add the equipment to

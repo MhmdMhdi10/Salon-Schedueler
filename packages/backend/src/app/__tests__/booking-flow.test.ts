@@ -22,7 +22,12 @@ const sampleRequest: BookingRequest = {
 
 /** A minimal Appointment stand-in — only `id` is read by the flow. */
 function fakeAppointment(id: string): Appointment {
-  return { id } as Appointment;
+  return {
+    id,
+    salonId: 'salon-1',
+    staffMemberId: 'staff-1',
+    startAt: new Date('2024-03-15T10:00:00.000Z'),
+  } as Appointment;
 }
 
 function makeEngine(result: BookingResult): BookingEngine & {
@@ -62,12 +67,15 @@ function makeEngine(result: BookingResult): BookingEngine & {
 function makeNotifier(impl?: (id: string) => Promise<void>): ConfirmationNotifier & {
   confirmations: string[];
   rejections: string[];
+  salonNotices: Array<{ id: string; status: 'pending' | 'confirmed' }>;
 } {
   const confirmations: string[] = [];
   const rejections: string[] = [];
+  const salonNotices: Array<{ id: string; status: 'pending' | 'confirmed' }> = [];
   return {
     confirmations,
     rejections,
+    salonNotices,
     async sendConfirmation(appointmentId) {
       confirmations.push(appointmentId);
       if (impl) {
@@ -79,6 +87,10 @@ function makeNotifier(impl?: (id: string) => Promise<void>): ConfirmationNotifie
       if (impl) {
         await impl(appointmentId);
       }
+    },
+    async sendSalonBookingNotice(appointmentId, status) {
+      salonNotices.push({ id: appointmentId, status });
+      if (impl) await impl(appointmentId);
     },
   };
 }
@@ -98,9 +110,13 @@ describe('BookingFlow', () => {
 
       const result = await flow.book(sampleRequest);
 
-      expect(result).toEqual({ status: 'pending', appointment: { id: 'appt-1' } });
+      expect(result).toEqual({
+        status: 'pending',
+        appointment: expect.objectContaining({ id: 'appt-1' }),
+      });
       expect(notifier.confirmations).toEqual([]);
       expect(notifier.rejections).toEqual([]);
+      expect(notifier.salonNotices).toEqual([{ id: 'appt-1', status: 'pending' }]);
     });
 
     it('does NOT notify when the booking is rejected', async () => {
@@ -148,9 +164,34 @@ describe('BookingFlow', () => {
 
       const result = await flow.book(sampleRequest);
 
-      expect(result).toEqual({ status: 'confirmed', appointment: { id: 'appt-auto' } });
+      expect(result).toEqual({
+        status: 'confirmed',
+        appointment: expect.objectContaining({ id: 'appt-auto' }),
+      });
       expect(notifier.confirmations).toEqual(['appt-auto']);
       expect(notifier.rejections).toEqual([]);
+      expect(notifier.salonNotices).toEqual([{ id: 'appt-auto', status: 'confirmed' }]);
+    });
+
+    it('adds an auto-confirmed booking to the salon inbox', async () => {
+      const engine = makeEngine({
+        status: 'confirmed',
+        appointment: fakeAppointment('appt-auto'),
+      });
+      const emit = jest.fn().mockResolvedValue(undefined);
+      const flow = new BookingFlow({
+        schedulingEngine: engine,
+        notificationService: makeNotifier(),
+        inboxService: { emit },
+      });
+
+      await flow.book(sampleRequest);
+
+      expect(emit).toHaveBeenCalledWith(expect.objectContaining({
+        salonId: 'salon-1',
+        type: 'booking.confirmed',
+        payload: expect.objectContaining({ appointmentId: 'appt-auto' }),
+      }));
     });
   });
 
@@ -257,7 +298,7 @@ describe('BookingFlow', () => {
       const appt = await flow.confirm('appt-42');
 
       expect(appt.id).toBe('appt-42');
-      expect(logger.error).toHaveBeenCalledTimes(1);
+      expect(logger.error).toHaveBeenCalledTimes(2);
     });
   });
 });

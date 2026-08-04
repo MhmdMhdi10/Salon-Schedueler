@@ -49,6 +49,26 @@ services:
       retries: 12
     restart: unless-stopped
 
+  # Development SMS inbox. The dev SMS adapter mirrors every outbound message
+  # here so OTPs and appointment notifications can be inspected in a browser.
+  sms-inbox:
+    image: node:20-alpine
+    command: [ "node", "/app/sms-inbox.mjs" ]
+    environment:
+      PORT: "4000"
+      SMS_INBOX_DATA_FILE: "/data/messages.json"
+    ports:
+      - "${SMS_INBOX_HOST_PORT:-8025}:4000"
+    volumes:
+      - ./docker/sms-inbox.mjs:/app/sms-inbox.mjs:ro
+      - sms-inbox-data:/data
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:4000/healthz" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
   backend:
     image: salon-booking-backend-dev
     build:
@@ -60,6 +80,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_started
+      sms-inbox:
+        condition: service_healthy
     environment:
       NODE_ENV: development
       PORT: "3000"
@@ -69,6 +91,7 @@ services:
       PAYMENT_CALLBACK_BASE_URL: "http://localhost:3000"
       # Reliable SMS: publish to RabbitMQ (the sms-worker service delivers it).
       RABBITMQ_URL: "amqp://salon:salon@rabbitmq:5672"
+      DEV_SMS_INBOX_URL: "http://sms-inbox:4000"
       # Dev convenience: widen the OTP validity window to 10 minutes so manual
       # testing (read code from logs → type it) isn't rushed by the 2-minute
       # production default. Do NOT carry this into production.
@@ -123,6 +146,7 @@ services:
       NODE_ENV: development
       DATABASE_URL: "postgresql://salon:salon@postgres:5432/salon_dev?schema=public"
       RABBITMQ_URL: "amqp://salon:salon@rabbitmq:5672"
+      DEV_SMS_INBOX_URL: "http://sms-inbox:4000"
       # SMS provider keys intentionally unset -> dev/log delivery (logs here).
     volumes:
       - ./:/app
@@ -218,6 +242,7 @@ services:
 volumes:
   postgres-data:
   rabbitmq-data:
+  sms-inbox-data:
   backend-root-node-modules:
   backend-backend-node-modules:
   backend-shared-node-modules:

@@ -78,6 +78,56 @@ const toClosureDto = (h: {
 
 /** "HH:mm" 24-hour validator for closure window times. */
 const HHMM_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const IRAN_DEFAULT_WORKING_HOURS = Array.from({ length: 7 }, (_, weekday) => ({
+  weekday,
+  startTime: '09:00',
+  endTime: '20:00',
+}));
+
+const toWorkingHourDto = (row: {
+  weekday: number;
+  startTime: Date | string;
+  endTime: Date | string;
+}): { weekday: number; startTime: string; endTime: string } => {
+  const startTime = formatClosureTime(row.startTime);
+  const endTime = formatClosureTime(row.endTime);
+  if (!startTime || !endTime) throw new Error('Invalid persisted working-hours time');
+  return { weekday: row.weekday, startTime, endTime };
+};
+
+function parseWorkingHours(body: unknown) {
+  const hours = (body as { hours?: unknown })?.hours;
+  if (!Array.isArray(hours) || hours.length > 21) return null;
+  const parsed: Array<{ weekday: number; startTime: string; endTime: string }> = [];
+  for (const value of hours) {
+    if (!value || typeof value !== 'object') return null;
+    const row = value as Record<string, unknown>;
+    if (
+      !Number.isInteger(row.weekday) ||
+      Number(row.weekday) < 0 ||
+      Number(row.weekday) > 6 ||
+      typeof row.startTime !== 'string' ||
+      typeof row.endTime !== 'string' ||
+      !HHMM_RE.test(row.startTime) ||
+      !HHMM_RE.test(row.endTime) ||
+      row.startTime >= row.endTime
+    ) {
+      return null;
+    }
+    parsed.push({
+      weekday: Number(row.weekday),
+      startTime: row.startTime,
+      endTime: row.endTime,
+    });
+  }
+  parsed.sort((a, b) => a.weekday - b.weekday || a.startTime.localeCompare(b.startTime));
+  for (let index = 1; index < parsed.length; index += 1) {
+    const previous = parsed[index - 1];
+    const current = parsed[index];
+    if (previous.weekday === current.weekday && previous.endTime > current.startTime) return null;
+  }
+  return parsed;
+}
 
 /**
  * Validate a closure/availability-block body: an ISO `onDate` (YYYY-MM-DD), an
@@ -302,6 +352,33 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
           role as (typeof STAFF_ROLES)[number],
           rawPhone || null,
         );
+        // A new service-performing staff member inherits the salon's current
+        // recurring schedule instead of starting with zero bookable hours.
+        if (created.role !== 'Admin') {
+          const salonStaff = await services.resourceRegistration.listStaff(req.params.id);
+          const source = salonStaff.find(
+            (item) => item.id !== created.id && item.active && item.role !== 'Admin',
+          );
+          const inherited = source
+            ? (await services.availabilityConfig.getWorkingHours('staff', source.id)).map(
+                toWorkingHourDto,
+              )
+            : IRAN_DEFAULT_WORKING_HOURS;
+          await services.availabilityConfig.setWorkingHours('staff', created.id, inherited);
+
+          // Most salons have one physical station per service-performing
+          // stylist. Provision that capacity by default; owners can deactivate
+          // any extra chair later without touching the stylist or history.
+          const chair = await services.resourceRegistration.registerChair(
+            req.params.id,
+            `صندلی ${created.fullName || 'جدید'}`,
+          );
+          await services.availabilityConfig.setWorkingHours(
+            'chair',
+            chair.id,
+            inherited.length > 0 ? inherited : IRAN_DEFAULT_WORKING_HOURS,
+          );
+        }
         res.status(201).json({ staff: toStaffDto(created) });
       } catch (err) {
         if (isUniqueViolation(err)) {
@@ -376,7 +453,108 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     requireRole('manage_appointments'),
     asyncRoute(async (req, res) => {
       const chairs = await services.resourceRegistration.listChairs(req.params.id);
-      res.status(200).json({ chairs });
+      res.status(200).json({ chairs: chairs.filter((item) => item.active) });
+    }),
+  );
+
+  // Recurring weekly schedule. Salon-level writes apply to every active staff
+  // member and chair so the scheduling engine sees one consistent opening
+  // window. A per-staff route allows a stylist-specific recurring timetable.
+  router.get(
+    '/salons/:id/working-hours',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const staff = await services.resourceRegistration.listStaff(req.params.id);
+      const chairs = await services.resourceRegistration.listChairs(req.params.id);
+      const bookableStaff = staff.find((item) => item.active && item.role !== 'Admin');
+      const source = bookableStaff
+        ? { kind: 'staff' as const, id: bookableStaff.id }
+        : chairs[0]
+          ? { kind: 'chair' as const, id: chairs[0].id }
+          : null;
+      const hours = source
+        ? await services.availabilityConfig.getWorkingHours(source.kind, source.id)
+        : [];
+      res.status(200).json({ hours: hours.map(toWorkingHourDto) });
+    }),
+  );
+
+  router.put(
+    '/salons/:id/working-hours',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const hours = parseWorkingHours(req.body);
+      if (!hours) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'hours' });
+        return;
+      }
+      const staff = await services.resourceRegistration.listStaff(req.params.id);
+      const chairs = await services.resourceRegistration.listChairs(req.params.id);
+      await Promise.all([
+        ...staff
+          .filter((item) => item.active && item.role !== 'Admin')
+          .map((item) => services.availabilityConfig.setWorkingHours('staff', item.id, hours)),
+        ...chairs.map((item) =>
+          services.availabilityConfig.setWorkingHours('chair', item.id, hours),
+        ),
+      ]);
+      res.status(200).json({ ok: true, hours });
+    }),
+  );
+
+  router.get(
+    '/salons/:id/booking-policy',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const bookingWindowDays = await services.availabilityConfig.getBookingWindowDays(req.params.id);
+      res.status(200).json({ bookingWindowDays });
+    }),
+  );
+
+  router.put(
+    '/salons/:id/booking-policy',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const value = req.body?.bookingWindowDays;
+      if (!Number.isInteger(value) || value < 0 || value > 365) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'bookingWindowDays' });
+        return;
+      }
+      await services.availabilityConfig.setBookingWindowDays(req.params.id, value);
+      res.status(200).json({ ok: true, bookingWindowDays: value });
+    }),
+  );
+
+  router.get(
+    '/salons/:id/staff/:staffId/working-hours',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const staff = await services.resourceRegistration.listStaff(req.params.id);
+      if (!staff.some((item) => item.id === req.params.staffId)) {
+        res.status(404).json({ code: 'NOT_FOUND' });
+        return;
+      }
+      const hours = await services.availabilityConfig.getWorkingHours('staff', req.params.staffId);
+      res.status(200).json({ hours: hours.map(toWorkingHourDto) });
+    }),
+  );
+
+  router.put(
+    '/salons/:id/staff/:staffId/working-hours',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const hours = parseWorkingHours(req.body);
+      if (!hours) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'hours' });
+        return;
+      }
+      const staff = await services.resourceRegistration.listStaff(req.params.id);
+      if (!staff.some((item) => item.id === req.params.staffId)) {
+        res.status(404).json({ code: 'NOT_FOUND' });
+        return;
+      }
+      await services.availabilityConfig.setWorkingHours('staff', req.params.staffId, hours);
+      res.status(200).json({ ok: true, hours });
     }),
   );
 
@@ -403,6 +581,43 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         { weekday: 6, startTime: '09:00', endTime: '20:00' },
       ]);
       res.status(201).json({ chair });
+    }),
+  );
+
+  // Activate/deactivate a chair. Deactivation keeps historical appointments
+  // intact while immediately removing the chair from future availability.
+  router.patch(
+    '/salons/:id/chairs/:chairId',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      if (typeof req.body?.active !== 'boolean') {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'active' });
+        return;
+      }
+      const chairs = await services.resourceRegistration.listChairs(req.params.id);
+      if (!chairs.some((item) => item.id === req.params.chairId)) {
+        res.status(404).json({ code: 'NOT_FOUND' });
+        return;
+      }
+      const chair = await services.resourceRegistration.setChairActive(
+        req.params.chairId,
+        req.body.active,
+      );
+      res.status(200).json({ chair });
+    }),
+  );
+
+  router.delete(
+    '/salons/:id/chairs/:chairId',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const chairs = await services.resourceRegistration.listChairs(req.params.id);
+      if (!chairs.some((item) => item.id === req.params.chairId)) {
+        res.status(404).json({ code: 'NOT_FOUND' });
+        return;
+      }
+      await services.resourceRegistration.setChairActive(req.params.chairId, false);
+      res.status(200).json({ ok: true });
     }),
   );
 
@@ -567,6 +782,54 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     asyncRoute(async (req, res) => {
       await services.availabilityConfig.removeHoliday(req.params.holidayId);
       res.status(200).json({ ok: true });
+    }),
+  );
+
+  // Fast incident action: close one date immediately and optionally cancel all
+  // remaining appointments. Each cancellation uses the normal flow, preserving
+  // customer notification, refund rules, and waitlist handling.
+  router.post(
+    '/salons/:id/emergency-close',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const onDate = req.body?.onDate;
+      if (typeof onDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(onDate)) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'onDate' });
+        return;
+      }
+      const existing = await services.availabilityConfig.getHolidays(req.params.id);
+      const alreadyClosed = existing.some(
+        (item) => toClosureDto(item).onDate === onDate && formatClosureTime((item as any).startTime) === null,
+      );
+      if (!alreadyClosed) {
+        await services.availabilityConfig.addHoliday(req.params.id, onDate);
+      }
+
+      if (req.body?.cancelAppointments !== true) {
+        res.status(200).json({ ok: true, cancelledCount: 0, failedCount: 0 });
+        return;
+      }
+
+      const from = new Date(`${onDate}T00:00:00.000Z`);
+      const to = new Date(from);
+      to.setUTCDate(to.getUTCDate() + 1);
+      const appointments = await services.calendarService.getSalonCalendar(req.params.id, from, to);
+      const cancellable = appointments.filter((item) =>
+        ['pending', 'held', 'confirmed'].includes(item.status),
+      );
+      const results = await Promise.allSettled(
+        cancellable.map((item) =>
+          item.status === 'pending'
+            ? services.bookingFlow.reject(item.id)
+            : services.cancellationFlow.cancel(item.id),
+        ),
+      );
+      const cancelledCount = results.filter((item) => item.status === 'fulfilled').length;
+      res.status(200).json({
+        ok: true,
+        cancelledCount,
+        failedCount: results.length - cancelledCount,
+      });
     }),
   );
 

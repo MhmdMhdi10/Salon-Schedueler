@@ -329,7 +329,9 @@ function ReviewsSection({ salon }: { salon: SalonProfile }) {
   const { t } = useTranslation();
   const reviews = salon.reviews ?? [];
   const distribution = useMemo(() => {
-    const counts = new Map<number, number>([...Array.from({ length: 5 }, (_, i) => [5 - i, 0] as [number, number])]);
+    const counts = new Map<number, number>([
+      ...Array.from({ length: 5 }, (_, i) => [5 - i, 0] as [number, number]),
+    ]);
     for (const review of reviews) {
       const bucket = Math.round(review.rating);
       counts.set(bucket, (counts.get(bucket) ?? 0) + 1);
@@ -368,7 +370,10 @@ function ReviewsSection({ salon }: { salon: SalonProfile }) {
                   <span className="w-14 shrink-0">
                     {t('salon.profile.starLabel', { count: stars })}
                   </span>
-                  <span className="h-2 flex-1 overflow-hidden rounded-pill bg-surface" aria-hidden="true">
+                  <span
+                    className="h-2 flex-1 overflow-hidden rounded-pill bg-surface"
+                    aria-hidden="true"
+                  >
                     <span
                       className="block h-full rounded-pill bg-warning"
                       style={{ inlineSize: `${percent}%` }}
@@ -439,7 +444,11 @@ export function SalonProfilePage() {
     salonApi
       .resolveQr(slug)
       .then((result) => {
-        if (active) navigate(`/salon/${result.salon.id}/book`, { replace: true });
+        if (active)
+          navigate(`/qr/${encodeURIComponent(slug)}`, {
+            replace: true,
+            state: { resolvedQr: result },
+          });
       })
       .catch(() => {
         if (active) setQrRedirecting(false);
@@ -595,7 +604,10 @@ export function SalonProfilePage() {
                 <h2 id="salon-amenities-title" className="text-2xl font-bold text-text">
                   {t('salon.profile.amenitiesTitle')}
                 </h2>
-                <ul className="mt-4 grid gap-3 text-sm text-muted sm:grid-cols-2 lg:grid-cols-3" role="list">
+                <ul
+                  className="mt-4 grid gap-3 text-sm text-muted sm:grid-cols-2 lg:grid-cols-3"
+                  role="list"
+                >
                   {salon.amenities.map((amenity) => (
                     <li key={amenity} className="flex items-center gap-2">
                       <Check className="size-4 shrink-0 text-primary" aria-hidden="true" />
@@ -614,7 +626,10 @@ export function SalonProfilePage() {
                 <ul className="mt-4 max-w-3xl space-y-2 text-sm leading-6 text-muted" role="list">
                   {salon.policies.map((policy) => (
                     <li key={policy} className="flex items-start gap-2">
-                      <ShieldCheck className="mt-1 size-4 shrink-0 text-primary" aria-hidden="true" />
+                      <ShieldCheck
+                        className="mt-1 size-4 shrink-0 text-primary"
+                        aria-hidden="true"
+                      />
                       {policy}
                     </li>
                   ))}
@@ -786,9 +801,7 @@ export function SalonProfilePage() {
           <aside className="hidden lg:block">
             <div className="sticky top-32 rounded-2xl border border-border bg-elevated p-6 shadow-1">
               <p className="text-sm text-muted">{t('salon.profile.sidebarEyebrow')}</p>
-              <h2 className="mt-2 text-lg font-semibold text-text">
-                {t('salon.profile.bookCta')}
-              </h2>
+              <h2 className="mt-2 text-lg font-semibold text-text">{t('salon.profile.bookCta')}</h2>
               <Link
                 to={bookHref}
                 onClick={cacheSalonName}

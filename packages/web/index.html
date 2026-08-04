@@ -1,47 +1,163 @@
 <!doctype html>
 <html lang="fa" dir="rtl">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#FFFFFF" />
-  <link rel="manifest" href="/manifest.json" />
-  <link rel="icon" href="/icons/icon-192.png" />
-  <!-- Apply the persisted theme before first paint so there is no flash of
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#FFFFFF" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+    <!-- Apply the persisted theme before first paint so there is no flash of
        the wrong theme (matches src/components/theme/ThemeProvider.tsx:
        localStorage 'salon-theme' → light). The OS `prefers-color-scheme` is
        intentionally NOT consulted: a dark-OS visitor still lands on the warm
        porcelain palette and only flips to dark via the explicit toggle. Kept
        inline and dependency-free so it runs before the module bundle loads. -->
-  <script>
-    (function () {
-      try {
-        var stored = localStorage.getItem('salon-theme');
-        var theme = stored === 'dark' ? 'dark' : 'light';
-        document.documentElement.setAttribute('data-theme', theme);
-        var meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) meta.setAttribute('content', theme === 'dark' ? '#0F1111' : '#FFFFFF');
-      } catch (e) {
-        document.documentElement.setAttribute('data-theme', 'light');
-      }
-    })();
-  </script>
-  <!-- Preload the above-the-fold Vazirmatn weight (Persian/Arabic subset) to
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('salon-theme');
+          var theme = stored === 'dark' ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', theme);
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', theme === 'dark' ? '#0F1111' : '#FFFFFF');
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
+    <!-- Preload the above-the-fold Vazirmatn weight (Persian/Arabic subset) to
        avoid FOIT on the OTP/booking screens; matches the @font-face src in
        src/styles/tokens.css. crossorigin is required for font preloads. -->
-  <link
-    rel="preload"
-    as="font"
-    type="font/woff2"
-    href="/fonts/vazirmatn-arabic-wght-normal.woff2"
-    crossorigin
-  />
-  <title>آرا | رزرو آنلاین خدمات زیبایی</title>
-</head>
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/fonts/vazirmatn-arabic-wght-normal.woff2"
+      crossorigin
+    />
+    <title>آرا | رزرو آنلاین خدمات زیبایی</title>
+    <style>
+      #app-boot-loader {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: grid;
+        place-items: center;
+        background: #ffffff;
+        color: #071b3c;
+        transition:
+          opacity 250ms ease,
+          visibility 250ms ease;
+      }
+      [data-theme='dark'] #app-boot-loader {
+        background: #0f1111;
+        color: #ffffff;
+      }
+      #app-boot-loader.is-leaving {
+        opacity: 0;
+        visibility: hidden;
+      }
+      .app-boot-loader__content {
+        display: grid;
+        justify-items: center;
+        gap: 18px;
+      }
+      .app-boot-loader__mark {
+        position: relative;
+        display: grid;
+        width: 88px;
+        height: 88px;
+        place-items: center;
+      }
+      .app-boot-loader__mark::before,
+      .app-boot-loader__mark::after {
+        position: absolute;
+        inset: 0;
+        border: 2px solid rgba(36, 86, 216, 0.22);
+        border-radius: 24px;
+        content: '';
+        animation: app-boot-ring 1.5s ease-out infinite;
+      }
+      .app-boot-loader__mark::after {
+        animation-delay: 0.55s;
+      }
+      .app-boot-loader__mark img {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        animation: app-boot-float 1.2s ease-in-out infinite alternate;
+      }
+      .app-boot-loader__label {
+        margin: 0;
+        font:
+          700 15px/1.8 Tahoma,
+          Arial,
+          sans-serif;
+      }
+      .app-boot-loader__track {
+        width: 132px;
+        height: 3px;
+        overflow: hidden;
+        border-radius: 99px;
+        background: rgba(36, 86, 216, 0.12);
+      }
+      .app-boot-loader__track::after {
+        display: block;
+        width: 45%;
+        height: 100%;
+        border-radius: inherit;
+        background: #2456d8;
+        content: '';
+        animation: app-boot-track 1s ease-in-out infinite alternate;
+      }
+      @keyframes app-boot-ring {
+        0% {
+          opacity: 0.9;
+          transform: scale(0.72);
+        }
+        100% {
+          opacity: 0;
+          transform: scale(1.18);
+        }
+      }
+      @keyframes app-boot-float {
+        from {
+          transform: translateY(2px) scale(0.98);
+        }
+        to {
+          transform: translateY(-2px) scale(1.02);
+        }
+      }
+      @keyframes app-boot-track {
+        from {
+          transform: translateX(90%);
+        }
+        to {
+          transform: translateX(-120%);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .app-boot-loader__mark::before,
+        .app-boot-loader__mark::after,
+        .app-boot-loader__mark img,
+        .app-boot-loader__track::after {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
 
-<body>
-  <div id="root"></div>
-  <script type="module" src="/src/main.tsx"></script>
-</body>
-
+  <body>
+    <div id="app-boot-loader" role="status" aria-live="polite" aria-label="در حال آماده‌سازی آرا">
+      <div class="app-boot-loader__content">
+        <span class="app-boot-loader__mark" aria-hidden="true">
+          <img src="/icons/icon-192.png" width="64" height="64" alt="" />
+        </span>
+        <p class="app-boot-loader__label">آرا در حال آماده‌شدن است…</p>
+        <span class="app-boot-loader__track" aria-hidden="true"></span>
+      </div>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>

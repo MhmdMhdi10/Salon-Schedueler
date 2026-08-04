@@ -73,7 +73,9 @@ export class SalonRegistration {
     chairCount?: number;
   }): Promise<{ salon: Salon; ownerStaffId: string }> {
     const qrToken = randomUUID();
-    const chairCount = Math.min(Math.max(input.chairCount ?? 0, 0), 50);
+    // Scheduling requires at least one active chair/resource. Never create a
+    // salon that looks complete but cannot expose any booking slots.
+    const chairCount = Math.min(Math.max(input.chairCount ?? 1, 1), 50);
     const services = (input.services ?? []).slice(0, 50);
 
     return this.prisma.$transaction(async (tx) => {

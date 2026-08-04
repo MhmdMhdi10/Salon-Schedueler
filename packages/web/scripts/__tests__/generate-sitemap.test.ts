@@ -137,28 +137,15 @@ describe('buildEntries', () => {
     expect(noor?.lastmod).toBe('2025-01-01'); // build-date fallback
   });
 
-  it('adds /city/:slug and /services/:slug discovery entries', () => {
+  it('keeps marketplace discovery entries out while the marketplace is disabled', () => {
     const entries = buildEntries({
       siteUrl: DEFAULT_SITE_URL,
       cities: [{ slug: 'tehran', lastmod: '2024-11-30' }],
       serviceTypes: [{ slug: 'haircut' }],
       buildDate,
     });
-    const tehran = entries.find((e) => e.loc.endsWith('/city/tehran'));
-    const haircut = entries.find((e) => e.loc.endsWith('/services/haircut'));
-    expect(tehran?.lastmod).toBe('2024-11-30');
-    expect(haircut?.lastmod).toBe('2025-01-01'); // build-date fallback
-  });
-
-  it('skips discovery entries with missing/blank slugs', () => {
-    const entries = buildEntries({
-      siteUrl: DEFAULT_SITE_URL,
-      cities: [{ slug: '' }, { slug: '  ' }, {}, null, { slug: 'ok-city' }],
-      serviceTypes: [{ slug: '' }, { slug: 'ok-service' }],
-      buildDate,
-    });
-    expect(entries.filter((e) => e.loc.includes('/city/'))).toHaveLength(1);
-    expect(entries.filter((e) => e.loc.includes('/services/'))).toHaveLength(1);
+    expect(entries.some((e) => e.loc.includes('/city/'))).toBe(false);
+    expect(entries.some((e) => e.loc.includes('/services/'))).toBe(false);
   });
 
   it('skips salons with missing/blank slugs', () => {
@@ -195,7 +182,7 @@ describe('buildSitemap', () => {
     expect(locCount).toBe(STATIC_INDEXABLE_PATHS.length + 1);
   });
 
-  it('includes discovery URLs and counts them in the total', () => {
+  it('excludes discovery URLs even when discovery data is supplied', () => {
     const xml = buildSitemap({
       siteUrl: DEFAULT_SITE_URL,
       salons: [{ slug: 'salon-rose' }],
@@ -203,12 +190,10 @@ describe('buildSitemap', () => {
       serviceTypes: [{ slug: 'haircut' }, { slug: 'color' }],
       buildDate,
     });
-    expect(xml).toContain('<loc>https://example.ir/city/tehran</loc>');
-    expect(xml).toContain('<loc>https://example.ir/services/haircut</loc>');
-    expect(xml).toContain('<loc>https://example.ir/services/color</loc>');
+    expect(xml).not.toContain('/city/');
+    expect(xml).not.toContain('/services/');
     const locCount = (xml.match(/<loc>/g) || []).length;
-    // static + 1 salon + 1 city + 2 services
-    expect(locCount).toBe(STATIC_INDEXABLE_PATHS.length + 4);
+    expect(locCount).toBe(STATIC_INDEXABLE_PATHS.length + 1);
   });
 
   it('NEVER lists a noindex URL even if a salon slug looks like one', () => {

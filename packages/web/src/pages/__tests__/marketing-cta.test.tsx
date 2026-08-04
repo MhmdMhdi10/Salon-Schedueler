@@ -40,7 +40,7 @@ function renderHome() {
 function renderBusiness() {
   return render(
     <HelmetProvider>
-      <MemoryRouter initialEntries={['/business']}>
+      <MemoryRouter initialEntries={['/']}>
         <BusinessLanding />
       </MemoryRouter>
     </HelmetProvider>,
@@ -101,7 +101,7 @@ describe('Hero CTA prominence and routing (R3.1, R3.6)', () => {
     });
   });
 
-  describe('BusinessLanding (/business)', () => {
+  describe('BusinessLanding (/)', () => {
     it('has exactly ONE primary CTA in the hero section (data-cta="primary")', () => {
       const { getByTestId } = renderBusiness();
       const root = getByTestId('business-landing');

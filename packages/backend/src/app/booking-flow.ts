@@ -21,6 +21,10 @@ export interface BookingEngine {
 export interface ConfirmationNotifier {
   sendConfirmation(appointmentId: string): Promise<void>;
   sendRejection(appointmentId: string): Promise<void>;
+  sendSalonBookingNotice(
+    appointmentId: string,
+    status: 'pending' | 'confirmed',
+  ): Promise<void>;
 }
 
 /** Constructor dependencies for {@link BookingFlow}. */
@@ -91,7 +95,33 @@ export class BookingFlow {
       await this.safelyNotify(() =>
         this.notificationService.sendConfirmation(result.appointment.id),
       );
-    } else if (result.status === 'pending' && this.inboxService) {
+      await this.safelyNotify(() =>
+        this.notificationService.sendSalonBookingNotice(result.appointment.id, 'confirmed'),
+      );
+      if (this.inboxService) {
+        const a = result.appointment;
+        const inbox = this.inboxService;
+        await this.safelyNotify(() =>
+          inbox.emit({
+            salonId: a.salonId,
+            audience: 'all-staff',
+            staffMemberId: a.staffMemberId,
+            type: 'booking.confirmed',
+            title: 'رزرو جدید تأیید شد',
+            body: 'یک نوبت جدید ثبت و به‌صورت خودکار تأیید شد.',
+            payload: {
+              appointmentId: a.id,
+              staffMemberId: a.staffMemberId,
+              date: a.startAt.toISOString().slice(0, 10),
+            },
+          }),
+        );
+      }
+    } else if (result.status === 'pending') {
+      await this.safelyNotify(() =>
+        this.notificationService.sendSalonBookingNotice(result.appointment.id, 'pending'),
+      );
+      if (!this.inboxService) return result;
       const a = result.appointment;
       const inbox = this.inboxService;
       await this.safelyNotify(() =>
@@ -177,6 +207,9 @@ export class BookingFlow {
     const appointment = await this.schedulingEngine.confirmHeld(appointmentId);
     await this.safelyNotify(() =>
       this.notificationService.sendConfirmation(appointment.id),
+    );
+    await this.safelyNotify(() =>
+      this.notificationService.sendSalonBookingNotice(appointment.id, 'confirmed'),
     );
     return appointment;
   }

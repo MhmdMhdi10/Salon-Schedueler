@@ -143,7 +143,7 @@ export function ContactPage() {
         </h2>
         <p className="mt-2 text-sm leading-7 text-muted">{t('legal.contact.businessBody')}</p>
         <Link
-          to="/business"
+          to="/business/register"
           className="mt-3 inline-block rounded-sm font-semibold text-primary underline underline-offset-4 transition-opacity duration-fast ease-standard hover:opacity-80"
         >
           {t('legal.contact.businessCta')}

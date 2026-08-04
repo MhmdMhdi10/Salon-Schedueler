@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { ThemeProvider } from '../../../components/theme';
@@ -32,6 +32,10 @@ const bootstrapAuth = vi.fn();
 const getAccessToken = vi.fn();
 const getMe = vi.fn();
 const signOut = vi.fn();
+const getSalonWorkingHours = vi.fn();
+const setSalonWorkingHours = vi.fn();
+const getBookingPolicy = vi.fn();
+const setBookingPolicy = vi.fn();
 
 vi.mock('../../../api/client', () => {
   class ApiError extends Error {
@@ -76,6 +80,19 @@ vi.mock('../../../api/client', () => {
       list: vi.fn().mockResolvedValue({ holidays: [] }),
       add: vi.fn().mockResolvedValue({ holiday: {} }),
       remove: vi.fn().mockResolvedValue({ ok: true }),
+    },
+    workingHoursApi: {
+      getSalon: (...args: unknown[]) => getSalonWorkingHours(...args),
+      setSalon: (...args: unknown[]) => setSalonWorkingHours(...args),
+      getStaff: vi.fn().mockResolvedValue({ hours: [] }),
+      setStaff: vi.fn().mockResolvedValue({ ok: true, hours: [] }),
+    },
+    bookingPolicyApi: {
+      get: (...args: unknown[]) => getBookingPolicy(...args),
+      set: (...args: unknown[]) => setBookingPolicy(...args),
+    },
+    emergencyScheduleApi: {
+      closeDay: vi.fn().mockResolvedValue({ ok: true, cancelledCount: 0, failedCount: 0 }),
     },
     staffApi: {
       create: vi.fn().mockResolvedValue({ staff: {} }),
@@ -127,6 +144,12 @@ function renderOwnerApp(role: OwnerRole, initialPath: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  getSalonWorkingHours.mockResolvedValue({
+    hours: [{ weekday: 6, startTime: '09:00', endTime: '20:00' }],
+  });
+  setSalonWorkingHours.mockResolvedValue({ ok: true, hours: [] });
+  getBookingPolicy.mockResolvedValue({ bookingWindowDays: 14 });
+  setBookingPolicy.mockResolvedValue({ ok: true, bookingWindowDays: 14 });
 });
 
 afterEach(() => {
@@ -142,6 +165,38 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
 
     // Rendered inside the owner shell's single <main>.
     expect(screen.getByRole('main')).toContainElement(screen.getByTestId('owner-calendar-page'));
+  });
+
+  it('opens recurring weekly hours directly from the calendar', async () => {
+    renderOwnerApp('Owner', '/owner/calendar');
+    fireEvent.click(await screen.findByRole('button', { name: 'ساعات کاری هفتگی' }));
+    expect(await screen.findByRole('dialog')).toHaveTextContent('برنامه کاری هفتگی');
+    await waitFor(() => expect(getSalonWorkingHours).toHaveBeenCalled());
+    expect(screen.getByText('پنجشنبه و جمعه تعطیل')).toBeInTheDocument();
+  });
+
+  it('turns a recurring break into two bookable windows', async () => {
+    renderOwnerApp('Owner', '/owner/calendar');
+    fireEvent.click(await screen.findByRole('button', { name: 'ساعات کاری هفتگی' }));
+    fireEvent.click(await screen.findByRole('switch', { name: /زمان استراحت تکرارشونده/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'ذخیره برنامه هفتگی' }));
+    await waitFor(() =>
+      expect(setSalonWorkingHours).toHaveBeenCalledWith(expect.any(String), [
+        { weekday: 6, startTime: '09:00', endTime: '13:00' },
+        { weekday: 6, startTime: '14:00', endTime: '20:00' },
+      ]),
+    );
+    expect(setBookingPolicy).toHaveBeenCalledWith(expect.any(String), 14);
+  });
+
+  it('selects working time from scrollable hour and minute wheels', async () => {
+    renderOwnerApp('Owner', '/owner/calendar');
+    fireEvent.click(await screen.findByRole('button', { name: 'ساعات کاری هفتگی' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'شروع 09:00' }));
+    const wheels = await screen.findAllByRole('listbox');
+    fireEvent.click(within(wheels[0]).getByRole('option', { name: '10' }));
+    fireEvent.click(screen.getByRole('button', { name: 'تأیید ساعت' }));
+    expect(await screen.findByRole('button', { name: 'شروع 10:00' })).toBeInTheDocument();
   });
 
   it('renders the admin AnalyticsPage inside the owner analytics section', async () => {

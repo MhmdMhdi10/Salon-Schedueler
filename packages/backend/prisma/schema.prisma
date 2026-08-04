@@ -83,6 +83,8 @@ model Salon {
   // bookings are created 'pending' and need manual admin approval; true => they
   // are auto-confirmed on creation. A staff member can override this (below).
   autoApprove Boolean  @default(false) @map("auto_approve")
+  // Inclusive future booking horizon. 0 means customers may book today only.
+  bookingWindowDays Int @default(14) @map("booking_window_days")
   // Per-salon Brand_Accent key for storefront theming (signature-ui-system R4.1).
   // Additive + nullable: null = use the signature default palette. The value is an
   // opaque accent key (e.g. "rose") resolved client-side against the curated ACCENTS.

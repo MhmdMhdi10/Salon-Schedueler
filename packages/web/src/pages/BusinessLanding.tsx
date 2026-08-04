@@ -8,9 +8,8 @@ import {
   Check,
   CreditCard,
   Headphones,
-  MapPin,
+  Link2,
   Megaphone,
-  Search,
   ShieldCheck,
   Sparkles,
   Store,
@@ -19,14 +18,13 @@ import {
 } from 'lucide-react';
 import { JsonLd, SeoHead, SITE_NAME, SITE_URL } from '../components/seo';
 import { cn } from '../components/ui';
-import { DISCOVERY_CATEGORIES, DISCOVERY_CITIES } from '../data/taxonomy';
 
 const WORKFLOW = [
   {
-    icon: Search,
+    icon: Link2,
     number: '۰۱',
-    title: 'در جست‌وجوی مشتری دیده شوید',
-    body: 'پروفایل، خدمات و نمونه‌کارهای شما در بازار آرا جلوی چشم مشتری‌های همان شهر قرار می‌گیرد.',
+    title: 'لینک رزروتان را منتشر کنید',
+    body: 'لینک و QR اختصاصی سالن را در اینستاگرام، پیام‌رسان‌ها و ویترین بگذارید تا مشتری مستقیم رزرو کند.',
   },
   {
     icon: CalendarDays,
@@ -99,9 +97,9 @@ const FAQS = [
       'پس از ثبت شماره، نام سالن و خدمات اصلی، صفحهٔ رزرو و پنل شما آماده است. جزئیات، کارکنان و ساعت کاری را می‌توانید همان موقع یا بعدتر تکمیل کنید.',
   },
   {
-    question: 'چطور در جست‌وجوی مشتری‌ها دیده می‌شوم؟',
+    question: 'مشتری چطور آنلاین رزرو می‌کند؟',
     answer:
-      'با تکمیل پروفایل عمومی، خدمات و شهر، سالن شما در بازار آرا و نتایج مرتبط قابل کشف می‌شود. اطلاعات دقیق‌تر، انتخاب مشتری را ساده‌تر می‌کند.',
+      'لینک یا QR اختصاصی سالن را برای مشتری می‌فرستید؛ مشتری بدون نصب برنامه، خدمت و زمان خالی را انتخاب می‌کند و نوبت مستقیم وارد تقویم شما می‌شود.',
   },
   {
     question: 'نوبت‌های فعلی‌ام را چطور منتقل کنم؟',
@@ -142,9 +140,9 @@ const secondaryCtaClass = cn(
 );
 
 /**
- * Owner-acquisition landing at `/business`.
+ * Owner-acquisition landing and launch home at `/`.
  *
- * Editorial, image-led persuasion meets real product and marketplace proof.
+ * Editorial, image-led persuasion meets real product proof.
  * Essential content renders statically; motion is progressive decoration only.
  */
 export function BusinessLanding() {
@@ -155,7 +153,7 @@ export function BusinessLanding() {
       <SeoHead
         title={t('seo.titles.business')}
         description={t('seo.descriptions.business')}
-        path="/business"
+        path="/"
         index
       />
       <JsonLd
@@ -201,19 +199,13 @@ export function BusinessLanding() {
                 className={primaryCtaClass}
               >
                 {t('business.hero.primaryCta')}
+                {/* RTL-native: ArrowLeft indicates forward in Persian layouts. */}
                 <ArrowLeft className="size-4" aria-hidden="true" />
               </Link>
               <Link to="/auth" data-cta="secondary" className={secondaryCtaClass}>
                 {t('business.hero.secondaryCta')}
               </Link>
             </div>
-            <Link
-              to="/search"
-              className="mt-5 inline-flex items-center gap-2 rounded-sm text-sm font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary"
-            >
-              <Search className="size-4" aria-hidden="true" />
-              {t('business.hero.customerLink')}
-            </Link>
             <ul className="mt-8 grid gap-3 border-t border-border pt-5 text-sm text-muted sm:grid-cols-3">
               {['بدون نیاز به کارت بانکی', 'راه‌اندازی سریع', 'پشتیبانی فارسی'].map(
                 (note) => (
@@ -261,7 +253,7 @@ export function BusinessLanding() {
               />
             </div>
             <figcaption className="sr-only">
-              مشتری شما را پیدا و رزرو می‌کند؛ شما همه‌چیز را در داشبورد آرا مدیریت می‌کنید.
+              مشتری از لینک اختصاصی رزرو می‌کند؛ شما همه‌چیز را در داشبورد آرا مدیریت می‌کنید.
             </figcaption>
           </figure>
         </div>
@@ -273,12 +265,12 @@ export function BusinessLanding() {
             <div>
               <p className="text-xs font-bold tracking-wider text-primary">مسیر رشد در آرا</p>
               <h2 className="mt-3 max-w-xl text-2xl text-display sm:text-3xl">
-                از اولین جست‌وجو تا بازگشت دوبارهٔ مشتری
+                از اولین رزرو تا بازگشت دوبارهٔ مشتری
               </h2>
             </div>
             <p className="max-w-2xl text-md leading-8 text-muted lg:justify-self-end">
-              آرا فقط یک دفتر نوبت دیجیتال نیست؛ مسیر پیدا شدن، رزرو و ساختن رابطه‌ای ماندگار
-              با مشتری را به یک جریان ساده تبدیل می‌کند.
+              آرا فقط یک دفتر نوبت دیجیتال نیست؛ مسیر رزرو، مدیریت و ساختن رابطه‌ای ماندگار با
+              مشتری را به یک جریان ساده تبدیل می‌کند.
             </p>
           </div>
           <ol className="mt-12 grid border-y border-border md:grid-cols-2 lg:grid-cols-4">
@@ -300,121 +292,6 @@ export function BusinessLanding() {
               </li>
             ))}
           </ol>
-        </div>
-      </section>
-
-      <section className="bg-surface py-20" aria-labelledby="marketplace-heading">
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
-            <div className="lg:sticky lg:top-24">
-              <div className="flex size-11 items-center justify-center rounded-lg bg-primary text-primary-contrast">
-                <MapPin className="size-5" aria-hidden="true" />
-              </div>
-              <p className="mt-6 text-xs font-bold tracking-wider text-primary">بازار مشتریان آرا</p>
-              <h2 id="marketplace-heading" className="mt-3 text-2xl text-display sm:text-3xl">
-                اینجا همان‌جایی است که مشتری تازه شما را پیدا می‌کند
-              </h2>
-              <p className="mt-5 max-w-xl text-md leading-8 text-muted">
-                همین حالا مثل یک مشتری جست‌وجو کنید. آرا سالن‌ها را بر اساس خدمت و شهر در
-                دسترس قرار می‌دهد و مسیر رزرو را کوتاه می‌کند.
-              </p>
-
-              <form
-                action="/search"
-                method="get"
-                role="search"
-                aria-label="جست‌وجوی بازار سالن‌های آرا"
-                className="mt-8 grid gap-3 rounded-lg border border-border bg-elevated p-4 shadow-1 sm:grid-cols-2"
-              >
-                <label className="grid gap-2 text-sm font-semibold">
-                  خدمت
-                  <select
-                    name="q"
-                    defaultValue=""
-                    className="min-h-12 w-full rounded-md border border-border bg-bg px-3 text-text outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                  >
-                    <option value="">همهٔ خدمات</option>
-                    {DISCOVERY_CATEGORIES.map((category) => (
-                      <option key={category.slug} value={category.label}>
-                        {category.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="grid gap-2 text-sm font-semibold">
-                  شهر
-                  <select
-                    name="city"
-                    defaultValue=""
-                    className="min-h-12 w-full rounded-md border border-border bg-bg px-3 text-text outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                  >
-                    <option value="">همهٔ شهرها</option>
-                    {DISCOVERY_CITIES.map((city) => (
-                      <option key={city.slug} value={city.slug}>
-                        {city.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button type="submit" className={cn(primaryCtaClass, 'sm:col-span-2')}>
-                  <Search className="size-4" aria-hidden="true" />
-                  جست‌وجوی سالن‌ها
-                </button>
-              </form>
-
-              <Link to="/business/register" className="mt-5 inline-flex items-center gap-2 font-bold text-primary">
-                کسب‌وکار من هم اینجا باشد
-                <ArrowLeft className="size-4" aria-hidden="true" />
-              </Link>
-            </div>
-
-            <div className="rounded-xl border border-border bg-elevated p-5 shadow-1 sm:p-7">
-              <div className="mb-4 flex items-center justify-between border-b border-border pb-4">
-                <span className="font-bold">جست‌وجوهای محبوب بازار آرا</span>
-                <Link to="/search" className="text-sm font-semibold text-primary">
-                  دیدن همه
-                </Link>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {DISCOVERY_CATEGORIES.slice(0, 6).map((category, index) => (
-                  <Link
-                    key={category.slug}
-                    to={`/services/${category.slug}`}
-                    className="group flex min-h-20 items-center justify-between gap-4 border-b border-border px-1 py-4 no-underline transition-colors hover:text-primary"
-                  >
-                    <span>
-                      <span className="block text-xs font-bold text-muted">
-                        خدمت {String(index + 1).padStart(2, '0')}
-                      </span>
-                      <span className="mt-1 block font-bold">{category.label}</span>
-                    </span>
-                    <ArrowLeft
-                      className="size-5 text-primary transition-transform group-hover:-translate-x-1"
-                      aria-hidden="true"
-                    />
-                  </Link>
-                ))}
-              </div>
-              <div className="mt-7">
-                <p className="text-xs font-bold tracking-wider text-muted">شهرهای پرجست‌وجو</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {DISCOVERY_CITIES.slice(0, 6).map((city) => (
-                    <Link
-                      key={city.slug}
-                      to={`/city/${city.slug}`}
-                      className="inline-flex min-h-10 items-center rounded-md border border-border px-4 text-sm font-semibold no-underline transition-colors hover:border-primary hover:text-primary"
-                    >
-                      {city.name}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-              <p className="mt-7 border-t border-border pt-5 text-sm leading-7 text-muted">
-                پس از تکمیل پروفایل، خدمت و شهر شما هم از همین مسیرها برای مشتری قابل کشف
-                می‌شود.
-              </p>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -524,6 +401,7 @@ export function BusinessLanding() {
             </div>
             <Link to="/business/register" className={primaryCtaClass}>
               رایگان شروع کنید
+              {/* RTL-native: ArrowLeft indicates forward in Persian layouts. */}
               <ArrowLeft className="size-4" aria-hidden="true" />
             </Link>
           </div>
@@ -571,10 +449,10 @@ export function BusinessLanding() {
         />
         <div className="relative mx-auto grid max-w-5xl gap-8 px-4 text-center">
           <h2 className="text-2xl font-display sm:text-4xl">
-            مشتری بعدی آمادهٔ رزرو است؛ سالن شما چطور؟
+            رزرو بعدی می‌تواند بدون تماس تلفنی ثبت شود
           </h2>
           <p className="mx-auto max-w-2xl text-md leading-8 opacity-90">
-            ویترین آنلاین، رزرو ۲۴ ساعته و مدیریت روزانه را از همین امروز یک‌جا داشته باشید.
+            لینک رزرو اختصاصی، تقویم و مدیریت روزانه را از همین امروز یک‌جا داشته باشید.
           </p>
           <div className="flex flex-col justify-center gap-3 sm:flex-row">
             <Link
@@ -582,14 +460,8 @@ export function BusinessLanding() {
               className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-primary-contrast px-7 font-bold text-primary no-underline shadow-2 hover:opacity-90"
             >
               ثبت رایگان کسب‌وکار
+              {/* RTL-native: ArrowLeft indicates forward in Persian layouts. */}
               <ArrowLeft className="size-4" aria-hidden="true" />
-            </Link>
-            <Link
-              to="/search"
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md border border-primary-contrast/40 px-7 font-bold text-primary-contrast no-underline hover:bg-primary-contrast/10"
-            >
-              <Search className="size-4" aria-hidden="true" />
-              دیدن بازار آرا
             </Link>
           </div>
           <div className="mt-4 flex flex-wrap justify-center gap-x-8 gap-y-3 text-sm opacity-90">

@@ -9,3 +9,5 @@
  */
 export { Motif } from './Motif';
 export type { MotifProps, MotifVariant } from './Motif';
+export { BrandLogo } from './BrandLogo';
+export type { BrandLogoProps } from './BrandLogo';

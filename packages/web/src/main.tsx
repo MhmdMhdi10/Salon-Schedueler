@@ -29,3 +29,17 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <App />
   </React.StrictMode>,
 );
+
+// Static boot screen exists before React/route chunks download, so cold visits
+// never flash blank. Reveal the rendered app after one short branded beat.
+const bootLoader = document.getElementById('app-boot-loader');
+if (bootLoader) {
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.setTimeout(
+    () => {
+      bootLoader.classList.add('is-leaving');
+      window.setTimeout(() => bootLoader.remove(), reduced ? 0 : 260);
+    },
+    reduced ? 0 : 650,
+  );
+}

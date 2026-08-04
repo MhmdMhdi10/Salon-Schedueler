@@ -28,6 +28,14 @@ ALTER TABLE staff_member ADD COLUMN IF NOT EXISTS auto_approve boolean;
 -- Additive + nullable: null = signature default palette. Existing rows unaffected.
 ALTER TABLE salon ADD COLUMN IF NOT EXISTS brand_accent text;
 
+-- Inclusive customer booking horizon; 0 means today only.
+ALTER TABLE salon ADD COLUMN IF NOT EXISTS booking_window_days integer NOT NULL DEFAULT 14;
+DO $$ BEGIN
+  ALTER TABLE salon ADD CONSTRAINT salon_booking_window_days_check
+    CHECK (booking_window_days BETWEEN 0 AND 365);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
 -- Salon Inbox Notification table (idempotent). The WebSocket pipe is the realtime
 -- transport; this durable table backs the owner dashboard Inbox + unread badges.
 CREATE TABLE IF NOT EXISTS salon_notification (

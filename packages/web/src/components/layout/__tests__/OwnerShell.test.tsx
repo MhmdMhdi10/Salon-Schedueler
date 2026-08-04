@@ -54,10 +54,11 @@ afterEach(() => {
 function renderOwner(
   props: Partial<React.ComponentProps<typeof OwnerShell>> = {},
   initialPath = '/owner/calendar',
+  defaultTheme: 'light' | 'dark' = 'light',
 ) {
   const { role = 'Owner', onSignOut = vi.fn(), children = <h1>تقویم</h1>, ...rest } = props;
   return render(
-    <ThemeProvider defaultTheme="light">
+    <ThemeProvider defaultTheme={defaultTheme}>
       <TooltipProvider>
         <MemoryRouter initialEntries={[initialPath]}>
           <div dir="rtl" lang="fa">
@@ -260,20 +261,19 @@ describe('ownerNavForRole (RBAC matrix)', () => {
   });
 });
 
-// ─── Booksy-style light default (Req 8.1) ────────────────────────────────────
+// ─── Unified app/owner theme ─────────────────────────────────────────────────
 
-describe('OwnerShell — Booksy-style light default', () => {
+describe('OwnerShell — unified theme', () => {
   it('defaults to data-theme="light" on first visit (no stored preference)', () => {
     const { container } = renderOwner();
     const shell = container.querySelector('[data-shell="owner"]');
     expect(shell).toHaveAttribute('data-theme', 'light');
   });
 
-  it('uses a separate localStorage key (owner-theme) independent of main app theme', () => {
-    localStorage.setItem('salon-theme', 'dark');
-    const { container } = renderOwner();
+  it('follows the active global dark theme', () => {
+    const { container } = renderOwner({}, '/owner/calendar', 'dark');
     const shell = container.querySelector('[data-shell="owner"]');
-    expect(shell).toHaveAttribute('data-theme', 'light');
+    expect(shell).toHaveAttribute('data-theme', 'dark');
   });
 
   it('respects stored owner-theme="light" preference', () => {
@@ -283,7 +283,7 @@ describe('OwnerShell — Booksy-style light default', () => {
     expect(shell).toHaveAttribute('data-theme', 'light');
   });
 
-  it('toggles from light to dark and persists to owner-theme key', () => {
+  it('toggles from light to dark and persists to the shared theme key', () => {
     const { container } = renderOwner();
     const shell = container.querySelector('[data-shell="owner"]');
     expect(shell).toHaveAttribute('data-theme', 'light');
@@ -296,8 +296,7 @@ describe('OwnerShell — Booksy-style light default', () => {
   });
 
   it('toggles back from dark to light', () => {
-    localStorage.setItem(OWNER_THEME_STORAGE_KEY, 'dark');
-    const { container } = renderOwner();
+    const { container } = renderOwner({}, '/owner/calendar', 'dark');
     const shell = container.querySelector('[data-shell="owner"]');
     expect(shell).toHaveAttribute('data-theme', 'dark');
 
@@ -308,14 +307,13 @@ describe('OwnerShell — Booksy-style light default', () => {
     expect(localStorage.getItem(OWNER_THEME_STORAGE_KEY)).toBe('light');
   });
 
-  it('does not modify the main app theme key when toggling', () => {
+  it('updates the main app theme key when toggling', () => {
     localStorage.setItem('salon-theme', 'light');
     renderOwner();
 
     const toggle = screen.getByTestId('owner-theme-toggle');
     fireEvent.click(toggle);
 
-    // Main app theme key should remain untouched
-    expect(localStorage.getItem('salon-theme')).toBe('light');
+    expect(localStorage.getItem('salon-theme')).toBe('dark');
   });
 });

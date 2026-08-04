@@ -7,13 +7,13 @@ import { BusinessLanding } from '../BusinessLanding';
 import { expectNoSeriousA11yViolations } from '../../test/a11y';
 
 /**
- * Tests for the owner-acquisition marketing landing at `/business`
+ * Tests for the owner-acquisition launch home at `/`
  * (task 6.1; R5.1, R5.2, R5.3, R5.4, R5.5, R5.6).
  *
  * The landing is a standalone, indexable, owner-focused surface: it opts **in**
  * to indexing, emits a unique title/description + canonical + WebSite/Organization
  * JSON-LD, carries a single `<h1>`, routes its primary CTA to owner sign-up
- * (`/business/register`) and a marketplace bridge to (`/search`), and
+ * (`/business/register`), keeps marketplace links hidden, and
  * preloads an LCP-optimized editorial hero.
  *
  * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6
@@ -22,7 +22,7 @@ import { expectNoSeriousA11yViolations } from '../../test/a11y';
 function renderLanding() {
   return render(
     <HelmetProvider>
-      <MemoryRouter initialEntries={['/business']}>
+      <MemoryRouter initialEntries={['/']}>
         <BusinessLanding />
       </MemoryRouter>
     </HelmetProvider>,
@@ -58,13 +58,15 @@ describe('BusinessLanding', () => {
     );
   });
 
-  it('routes customers into the marketplace search (/search) (R5.3)', () => {
+  it('does not expose marketplace search, city, or service links at launch', () => {
     const { getByTestId } = renderLanding();
     const root = getByTestId('business-landing');
     const customerLinks = within(root)
       .getAllByRole('link')
       .filter((a) => a.getAttribute('href') === '/search');
-    expect(customerLinks.length).toBeGreaterThan(0);
+    expect(customerLinks).toHaveLength(0);
+    expect(root.querySelectorAll('a[href^="/services/"]')).toHaveLength(0);
+    expect(root.querySelectorAll('a[href^="/city/"]')).toHaveLength(0);
   });
 
   it('opts in to indexing with index,follow (R5.4, R5.5)', async () => {
@@ -79,7 +81,7 @@ describe('BusinessLanding', () => {
     await waitFor(() => {
       expect(document.title).toContain('آرا');
       expect(head('meta[name="description"]')?.getAttribute('content')).toBeTruthy();
-      expect(head('link[rel="canonical"]')?.getAttribute('href')).toContain('/business');
+      expect(head('link[rel="canonical"]')?.getAttribute('href')).not.toContain('/business');
     });
   });
 
@@ -117,16 +119,10 @@ describe('BusinessLanding', () => {
     ).toBeGreaterThan(0);
   });
 
-  it('submits canonical service and city fields to the existing search route', () => {
+  it('keeps the FAQ complete without rendering marketplace controls', () => {
     const { getByTestId } = renderLanding();
     const root = getByTestId('business-landing');
-    const form = within(root).getByRole('search', { name: 'جست‌وجوی بازار سالن‌های آرا' });
-    expect(form).toHaveAttribute('action', '/search');
-    expect(form).toHaveAttribute('method', 'get');
-    expect(within(form).getByRole('combobox', { name: 'خدمت' })).toHaveAttribute('name', 'q');
-    expect(within(form).getByRole('combobox', { name: 'شهر' })).toHaveAttribute('name', 'city');
-    expect(root.querySelectorAll('a[href^="/services/"]').length).toBeGreaterThan(0);
-    expect(root.querySelectorAll('a[href^="/city/"]').length).toBeGreaterThan(0);
+    expect(within(root).queryByRole('search')).not.toBeInTheDocument();
     expect(root.querySelectorAll('details')).toHaveLength(6);
   });
 

@@ -70,6 +70,9 @@ export function paymentCallbackRouter(services: Services): Router {
           await safelyNotify(() =>
             services.notificationService.sendConfirmation(appointmentId),
           );
+          await safelyNotify(() =>
+            services.notificationService.sendSalonBookingNotice(appointmentId, 'confirmed'),
+          );
         }
       }
 

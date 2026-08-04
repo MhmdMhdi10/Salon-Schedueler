@@ -13,6 +13,7 @@ import {
 } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { SeoHead } from '../../components/seo';
+import { BrandLogo } from '../../components/brand';
 import { Button, TextField, cn, toPersianDigits, useToast } from '../../components/ui';
 import { ACCENTS, accentVars } from '../../components/theme/accents';
 
@@ -109,7 +110,7 @@ function RegisterSalonContent() {
   const [svcError, setSvcError] = useState('');
 
   // Step 3 — setup questionnaire.
-  const [chairCount, setChairCount] = useState('');
+  const [chairCount, setChairCount] = useState('1');
   const [accentKey, setAccentKey] = useState('');
 
   // Submit + OTP.
@@ -328,8 +329,8 @@ function RegisterSalonContent() {
 
       <header className="border-b border-border bg-elevated">
         <div className="mx-auto flex h-14 w-full max-w-2xl items-center gap-5 px-4">
-          <Link to="/business" className="text-2xl font-extrabold text-text no-underline">
-            آرا
+          <Link to="/" aria-label="آرا" className="no-underline">
+            <BrandLogo className="h-9" />
           </Link>
           <div className="flex flex-1 gap-1" aria-label={t('business.register.progressLabel')}>
             {STEP_ORDER.map((item, index) => (

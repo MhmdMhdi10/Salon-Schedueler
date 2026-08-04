@@ -193,6 +193,41 @@
   color: var(--color-success);
 }
 
+.owner-qr-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.owner-qr-upload__button {
+  display: inline-flex;
+  min-block-size: 44px;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  border: 1px dashed var(--color-border);
+  border-radius: 10px;
+  padding-inline: 14px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.owner-qr-upload__button:hover {
+  border-color: var(--color-primary);
+  background: var(--color-elevated);
+}
+.owner-qr-upload__button:focus-within {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+.owner-qr-upload__button input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
 /* ── The branded asset artwork (card / banner / standee) ─────────────────── */
 
 .asset {
@@ -249,6 +284,13 @@
 .asset__brand-ic {
   inline-size: 1em;
   block-size: 1em;
+}
+.asset__custom-logo {
+  display: block;
+  max-inline-size: 120px;
+  max-block-size: 62px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.18));
 }
 .asset__kicker {
   font-weight: 800;
@@ -405,20 +447,44 @@
 
 /* Card layout */
 .asset--card {
-  inline-size: min(330px, 100%);
-  aspect-ratio: 85 / 128;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 26px 22px 22px;
+  display: grid;
+  inline-size: min(560px, 100%);
+  aspect-ratio: 85 / 55;
+  grid-template-columns: minmax(0, 1fr) minmax(135px, 0.72fr);
+  align-items: stretch;
+  gap: 18px;
+  padding: 24px 26px;
+  text-align: start;
+}
+.asset__card-copy,
+.asset__card-code {
+  display: flex;
+  min-inline-size: 0;
+  flex-direction: column;
+}
+.asset__card-copy {
+  align-items: flex-start;
+  justify-content: center;
+  gap: 10px;
+}
+.asset__card-code {
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
 .asset--card .asset__salon {
-  font-size: 1.55rem;
+  font-size: clamp(1.2rem, 4vw, 1.85rem);
 }
 .asset--card .asset__tag {
   font-size: 0.85rem;
 }
 .asset--card .asset__qr-wrap {
-  inline-size: 52%;
+  inline-size: min(100%, 158px);
+  padding: 11px;
+}
+.asset--card .asset__qr {
+  border-radius: 13px;
+  padding: 9px;
 }
 .asset--card .asset__cta {
   font-size: 0.9rem;
@@ -428,6 +494,30 @@
 }
 .asset--card .asset__foot {
   font-size: 0.72rem;
+}
+
+@media (max-width: 480px) {
+  .asset--card {
+    gap: 10px;
+    padding: 16px;
+    grid-template-columns: minmax(0, 1fr) minmax(105px, 0.68fr);
+  }
+  .asset--card .asset__tag,
+  .asset--card .asset__foot {
+    font-size: 0.62rem;
+  }
+  .asset--card .asset__brand {
+    font-size: 0.68rem;
+  }
+  .asset--card .asset__cta {
+    padding-block: 6px;
+    padding-inline: 10px;
+    font-size: 0.68rem;
+  }
+  .asset--card .asset__custom-logo {
+    max-inline-size: 72px;
+    max-block-size: 36px;
+  }
 }
 
 /* Banner / poster layout */

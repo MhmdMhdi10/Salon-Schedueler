@@ -23,6 +23,7 @@ import '../../../i18n';
 const getSalonQr = vi.fn();
 const getStaffQr = vi.fn();
 const getStylists = vi.fn();
+const createCardOrder = vi.fn();
 
 vi.mock('../../../api/client', () => {
   class ApiError extends Error {
@@ -43,6 +44,9 @@ vi.mock('../../../api/client', () => {
     },
     salonApi: {
       getStylists: (...args: unknown[]) => getStylists(...args),
+    },
+    cardOrderApi: {
+      create: (...args: unknown[]) => createCardOrder(...args),
     },
   };
 });
@@ -77,6 +81,7 @@ beforeEach(() => {
     staffName: 'زهرا',
     salonName: 'سالن رز',
   });
+  createCardOrder.mockResolvedValue({ orderId: 'order-42' });
 });
 
 afterEach(() => {
@@ -192,5 +197,34 @@ describe('OwnerQrPage — print action + standee (R4.3)', () => {
     expect(standee).toHaveTextContent('برای رزرو اسکن کنید');
     // The standee carries its own QR image too.
     expect(screen.getByTestId('qr-standee-image')).toBeInTheDocument();
+  });
+});
+
+describe('OwnerQrPage — printed card order', () => {
+  it('shows validation feedback when required delivery fields are missing', async () => {
+    getSalonQr.mockResolvedValue(QR_RESPONSE);
+    renderPage();
+    const submit = await screen.findByTestId('qr-order-submit');
+    fireEvent.submit(submit.closest('form')!);
+    expect(await screen.findByRole('alert')).toHaveTextContent('این فیلدها را تکمیل کنید');
+    expect(createCardOrder).not.toHaveBeenCalled();
+  });
+
+  it('submits a valid delivery order and shows its tracking reference', async () => {
+    getSalonQr.mockResolvedValue(QR_RESPONSE);
+    renderPage();
+    fireEvent.change(await screen.findByPlaceholderText('نام و نام خانوادگی'), {
+      target: { value: 'مریم احمدی' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('09xxxxxxxxx'), {
+      target: { value: '09123456789' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('استان، شهر، خیابان، پلاک و کد پستی'), {
+      target: { value: 'تهران، خیابان آزادی، پلاک ۱۰' },
+    });
+    fireEvent.submit(screen.getByTestId('qr-order-submit').closest('form')!);
+
+    await waitFor(() => expect(createCardOrder).toHaveBeenCalledTimes(1));
+    expect(await screen.findByTestId('qr-order-success')).toHaveTextContent('order-42');
   });
 });

@@ -65,6 +65,24 @@ const MAX_BOOKING_RETRIES = 3;
 /** Default hold period: 15 minutes (900 seconds) */
 const DEFAULT_HOLD_PERIOD_SECONDS = 900;
 
+function dateInTimeZone(now: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? '';
+  return `${value('year')}-${value('month')}-${value('day')}`;
+}
+
+function addIsoDays(date: string, days: number): string {
+  const value = new Date(`${date}T00:00:00Z`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
+}
+
 /**
  * SchedulingEngine computes availability for a salon's services.
  *
@@ -91,6 +109,18 @@ export class SchedulingEngine {
    */
   async getAvailability(query: AvailabilityQuery): Promise<TimeSlot[]> {
     const { salonId, serviceId, date, granularityMinutes = 15, staffId } = query;
+
+    const salonDelegate = (this.prisma as unknown as { salon?: { findUnique?: Function } }).salon;
+    const salon = salonDelegate?.findUnique
+      ? ((await salonDelegate.findUnique({
+          where: { id: salonId },
+          select: { timezone: true, bookingWindowDays: true },
+        })) as { timezone: string; bookingWindowDays: number } | null)
+      : null;
+    if (salon) {
+      const today = dateInTimeZone(new Date(), salon.timezone);
+      if (date < today || date > addIsoDays(today, salon.bookingWindowDays)) return [];
+    }
 
     // 1. Fetch the service details
     const service = await this.prisma.service.findUnique({
@@ -429,6 +459,24 @@ export class SchedulingEngine {
 
     if (!service || service.salonId !== salonId) {
       return { status: 'rejected', reason: 'no_availability' };
+    }
+
+    const salonDelegate = (this.prisma as unknown as { salon?: { findUnique?: Function } }).salon;
+    const salonPolicy = salonDelegate?.findUnique
+      ? ((await salonDelegate.findUnique({
+          where: { id: salonId },
+          select: { timezone: true, bookingWindowDays: true },
+        })) as { timezone: string; bookingWindowDays: number } | null)
+      : null;
+    if (salonPolicy) {
+      const requestedDate = dateInTimeZone(new Date(startAtISO), salonPolicy.timezone);
+      const today = dateInTimeZone(new Date(), salonPolicy.timezone);
+      if (
+        requestedDate < today ||
+        requestedDate > addIsoDays(today, salonPolicy.bookingWindowDays)
+      ) {
+        return { status: 'rejected', reason: 'no_availability' };
+      }
     }
 
     // 2. Compute the occupancy interval

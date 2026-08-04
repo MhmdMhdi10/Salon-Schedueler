@@ -1,18 +1,18 @@
-import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 import { OwnerThemeToggle } from '../theme/OwnerThemeToggle';
-import { ThemeScope } from '../theme';
+import { THEME_STORAGE_KEY, ThemeScope, useTheme } from '../theme';
 import { Button } from '../ui/Button';
 import { cn } from '../ui/cn';
 import { OwnerSidebar } from '../owner/OwnerSidebar';
 import { OwnerInboxBell } from '../owner/OwnerInboxBell';
+import { OwnerSetupAlert } from '../owner/OwnerSetupAlert';
 import { OWNER_NAV, ownerNavForRole, type OwnerNavItem } from '../owner/ownerNav';
 import { OwnerBottomTabs } from './OwnerBottomTabs';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import type { OwnerRole } from '../../api/client';
-import type { Theme } from '../theme';
 
 /** Stable id the owner `<main>` exposes (skip-link target / focus). */
 export const OWNER_CONTENT_ID = 'owner-content';
@@ -20,49 +20,8 @@ export const OWNER_CONTENT_ID = 'owner-content';
 /** localStorage key for sidebar collapsed state. */
 const SIDEBAR_COLLAPSED_KEY = 'owner-sidebar-collapsed';
 
-/**
- * Separate localStorage key for the owner panel theme preference (Req 8.1).
- * Defaults to Booksy's light workspace when no stored value exists, independent
- * of the main app theme stored under 'salon-theme'.
- */
-export const OWNER_THEME_STORAGE_KEY = 'owner-theme';
-
-/**
- * Reads the persisted owner theme preference from localStorage.
- * Defaults to light to match Booksy's management workspace.
- */
-function getOwnerTheme(): Theme {
-  try {
-    const stored = localStorage.getItem(OWNER_THEME_STORAGE_KEY);
-    return stored === 'dark' ? 'dark' : 'light';
-  } catch {
-    return 'light';
-  }
-}
-
-/**
- * Persists the owner theme preference to localStorage.
- */
-function setOwnerThemeStorage(theme: Theme): void {
-  try {
-    localStorage.setItem(OWNER_THEME_STORAGE_KEY, theme);
-  } catch {
-    // Silent — localStorage unavailable
-  }
-}
-
-/**
- * Keep `<meta name="theme-color">` in sync with the currently applied theme so
- * the PWA chrome matches the owner workspace (ui-ux §2). Mirrors the app-wide
- * ThemeProvider helper: prefer the live `--color-bg` token, no hardcoded hex.
- */
-function syncMetaThemeColor(): void {
-  if (typeof document === 'undefined') return;
-  const meta = document.head.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
-  if (!meta) return;
-  const tokenBg = getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim();
-  if (tokenBg) meta.setAttribute('content', tokenBg);
-}
+/** Kept as a compatibility export; owner and public surfaces now share one theme. */
+export const OWNER_THEME_STORAGE_KEY = THEME_STORAGE_KEY;
 
 // The nav definition lives in `components/owner/ownerNav.ts` (the single
 // source of truth for sidebar + bottom tabs); re-exported here so existing
@@ -77,6 +36,8 @@ export interface OwnerShellProps {
   role: OwnerRole;
   /** Salon display name shown in the header (falls back to the app title). */
   salonName?: string;
+  /** Authenticated salon id; enables persistent booking-readiness checks. */
+  salonId?: string;
   /** Sign-out handler — clears tokens and returns the user to the login surface. */
   onSignOut: () => void;
   /** Optional className applied to the outermost shell element. */
@@ -116,52 +77,11 @@ function getPersistedCollapsed(): boolean {
  * Layout uses tokens-only styling, logical properties for RTL correctness,
  * and env(safe-area-inset-bottom) for bottom tab bar on mobile.
  */
-export function OwnerShell({ children, role, salonName, onSignOut, className }: OwnerShellProps) {
+export function OwnerShell({ children, role, salonName, salonId, onSignOut, className }: OwnerShellProps) {
   const { t } = useTranslation();
+  const { theme, toggleTheme } = useTheme();
   const { pathname } = useLocation();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
-
-  // Owner-specific theme state — light workspace by default.
-  const [ownerTheme, setOwnerTheme] = useState<Theme>(getOwnerTheme);
-
-  const toggleOwnerTheme = useCallback(() => {
-    setOwnerTheme((prev) => {
-      const next: Theme = prev === 'dark' ? 'light' : 'dark';
-      setOwnerThemeStorage(next);
-      return next;
-    });
-  }, []);
-
-  // Sync owner theme from localStorage on multi-tab
-  useEffect(() => {
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === OWNER_THEME_STORAGE_KEY) {
-        setOwnerTheme(e.newValue === 'light' ? 'light' : 'dark');
-      }
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
-
-  // The owner-scoped theme must also win over the *document* theme: tokens.css
-  // defines light on `:root` and dark under `[data-theme='dark']` only, so a
-  // nested light wrapper can never override an app-dark `<html>` (the panel
-  // would render dark while the toggle claims light), and Radix portals mount
-  // on `document.body` — outside any wrapper. While /owner/* is mounted we
-  // therefore stamp the owner theme on the document root (restoring the app
-  // theme on unmount) and keep the PWA `theme-color` chrome in sync. The
-  // ThemeScope below additionally carries the theme to scoped portal content.
-  useLayoutEffect(() => {
-    const root = document.documentElement;
-    const previous = root.getAttribute('data-theme');
-    root.setAttribute('data-theme', ownerTheme);
-    syncMetaThemeColor();
-    return () => {
-      if (previous === null) root.removeAttribute('data-theme');
-      else root.setAttribute('data-theme', previous);
-      syncMetaThemeColor();
-    };
-  }, [ownerTheme]);
 
   // Sidebar collapsed state — persisted to localStorage
   const [collapsed, setCollapsed] = useState(getPersistedCollapsed);
@@ -192,7 +112,7 @@ export function OwnerShell({ children, role, salonName, onSignOut, className }: 
 
   return (
     <ThemeScope
-      theme={ownerTheme}
+      theme={theme}
       data-shell="owner"
       className={cn(
         // Booksy Biz app frame: the shell never page-scrolls — panes scroll
@@ -221,7 +141,7 @@ export function OwnerShell({ children, role, salonName, onSignOut, className }: 
           </Link>
           <div className="flex items-center gap-2">
             <OwnerInboxBell />
-            <OwnerThemeToggle theme={ownerTheme} onToggle={toggleOwnerTheme} />
+            <OwnerThemeToggle theme={theme} onToggle={toggleTheme} />
             <Button
               variant="ghost"
               size="md"
@@ -258,6 +178,7 @@ export function OwnerShell({ children, role, salonName, onSignOut, className }: 
             !isDesktop && 'pb-[calc(var(--space-10)+env(safe-area-inset-bottom)+12px)]',
           )}
         >
+          {role === 'Owner' && salonId && <OwnerSetupAlert salonId={salonId} refreshKey={pathname} />}
           {children}
         </main>
       </div>

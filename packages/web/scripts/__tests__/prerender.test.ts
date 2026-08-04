@@ -150,34 +150,14 @@ describe('buildRoutes', () => {
     expect(salonRoutes[0].path).toBe('/s/ok');
   });
 
-  it('prerenders /city/:slug and /services/:slug discovery routes', () => {
+  it('does not prerender marketplace discovery routes at launch', () => {
     const routes = buildRoutes({
       siteUrl: DEFAULT_SITE_URL,
       cities: [{ slug: 'tehran', name: 'تهران' }],
       serviceTypes: [{ slug: 'haircut', name: 'کوتاهی مو' }],
     });
-    const byPath = Object.fromEntries(routes.map((r) => [r.path, r]));
-    expect(byPath['/city/tehran'].outputPath).toBe('city/tehran/index.html');
-    expect(byPath['/services/haircut'].outputPath).toBe(
-      'services/haircut/index.html',
-    );
-    // Each discovery route carries a BreadcrumbList in its JSON-LD.
-    expect(byPath['/city/tehran'].jsonLd.map((n) => n['@type'])).toContain(
-      'BreadcrumbList',
-    );
-    expect(byPath['/services/haircut'].jsonLd.map((n) => n['@type'])).toContain(
-      'BreadcrumbList',
-    );
-  });
-
-  it('skips discovery entries with missing/blank slugs', () => {
-    const routes = buildRoutes({
-      siteUrl: DEFAULT_SITE_URL,
-      cities: [{ slug: '' }, { slug: '  ' }, {}, null, { slug: 'ok-city' }],
-      serviceTypes: [{ slug: '' }, { slug: 'ok-service' }],
-    });
-    expect(routes.filter((r) => r.path.startsWith('/city/'))).toHaveLength(1);
-    expect(routes.filter((r) => r.path.startsWith('/services/'))).toHaveLength(1);
+    expect(routes.some((r) => r.path.startsWith('/city/'))).toBe(false);
+    expect(routes.some((r) => r.path.startsWith('/services/'))).toBe(false);
   });
 
   it('never produces a route for a noindex surface', () => {

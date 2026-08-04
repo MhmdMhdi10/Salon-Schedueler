@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Download, ScanLine, Scissors, Store } from 'lucide-react';
 import { salonApi } from '../api/client';
@@ -11,6 +11,7 @@ import { usePwaInstall } from '../pwa/usePwaInstall';
 import { useSalonManifest } from '../pwa/salonManifest';
 import { ensureAaFill } from '../styles/contrast';
 import { ACCENTS, resolveAccent } from '../components/theme/accents';
+import { saveSalon } from '../utils/savedSalons';
 
 /** Resolved salon identity returned by the QR resolver. */
 type ResolvedSalon = { id: string; name: string; brandAccent?: string | null };
@@ -53,13 +54,22 @@ export function QrLandingPage() {
   const { t } = useTranslation();
   const { payload } = useParams<{ payload: string }>();
   const navigate = useNavigate();
-  const [salon, setSalon] = useState<ResolvedSalon | null>(null);
-  const [staff, setStaff] = useState<ResolvedStaff | null>(null);
+  const location = useLocation();
+  const routed = (
+    location.state as { resolvedQr?: { salon: ResolvedSalon; staff?: ResolvedStaff } } | null
+  )?.resolvedQr;
+  const [salon, setSalon] = useState<ResolvedSalon | null>(routed?.salon ?? null);
+  const [staff, setStaff] = useState<ResolvedStaff | null>(routed?.staff ?? null);
   const [errorKind, setErrorKind] = useState<QrErrorKind | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!routed);
 
   useEffect(() => {
     let active = true;
+
+    if (routed) {
+      writeSalonName(routed.salon.id, routed.salon.name);
+      return;
+    }
 
     if (!payload) {
       setErrorKind('malformed');
@@ -91,20 +101,23 @@ export function QrLandingPage() {
     return () => {
       active = false;
     };
-  }, [payload]);
+  }, [payload, routed]);
 
-  // Brand the install/manifest for this salon (or stylist): "add to home
-  // screen" saves an icon named for them whose start_url deep-links straight
-  // back into this booking funnel. No-ops until the salon resolves.
+  useEffect(() => {
+    if (!salon) return;
+    saveSalon({
+      id: salon.id,
+      name: salon.name,
+      staffId: staff?.id,
+      staffName: staff?.fullName?.trim() || undefined,
+    });
+  }, [salon, staff]);
+
+  // One installed آرا app opens the device-local list of every scanned salon.
   const stylistName = staff?.fullName?.trim() ?? '';
   const bookPath = salon
     ? `/salon/${salon.id}/book${staff ? `?staff=${encodeURIComponent(staff.id)}` : ''}`
     : '';
-  const installName = salon
-    ? stylistName
-      ? `${salon.name} — ${stylistName}`
-      : salon.name
-    : undefined;
   // R4.6: derive the PWA chrome color from the salon's Brand_Accent (the same
   // AA-safe fill the storefront theme uses); undefined → signature default.
   const accentKey = salon?.brandAccent ?? null;
@@ -112,7 +125,7 @@ export function QrLandingPage() {
     accentKey && ACCENTS.some((a) => a.key === accentKey)
       ? ensureAaFill(resolveAccent(accentKey).from)
       : undefined;
-  useSalonManifest(installName, bookPath, salon?.name ?? undefined, themeColor);
+  useSalonManifest('آرا — سالن‌های من', '/my-salons', 'آرا', themeColor);
 
   const { installed, promptInstall } = usePwaInstall();
   const [showInstallHelp, setShowInstallHelp] = useState(false);

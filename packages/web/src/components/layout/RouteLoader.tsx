@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Skeleton } from '../ui/Skeleton';
 import { cn } from '../ui/cn';
@@ -28,6 +29,11 @@ export interface RouteLoaderProps {
 export function RouteLoader({ className }: RouteLoaderProps) {
   const { t } = useTranslation();
 
+  useEffect(() => {
+    document.documentElement.classList.add('app-route-loading');
+    return () => document.documentElement.classList.remove('app-route-loading');
+  }, []);
+
   return (
     <div
       data-testid={ROUTE_LOADER_TESTID}
@@ -44,6 +50,20 @@ export function RouteLoader({ className }: RouteLoaderProps) {
         className,
       )}
     >
+      <div className="mb-1 flex items-center gap-3" aria-hidden="true">
+        <span className="relative flex h-12 w-12 items-center justify-center">
+          <span className="ara-loading-orbit absolute inset-0 rounded-xl border-2 border-primary/20" />
+          <img
+            src="/icons/icon-192.png"
+            width={48}
+            height={48}
+            alt=""
+            className="ara-loading-mark relative h-10 w-10 rounded-lg"
+          />
+        </span>
+        <span className="text-sm font-semibold text-text">در حال آماده‌سازی صفحه…</span>
+      </div>
+
       {/* Page-title placeholder. */}
       <Skeleton variant="text" className="h-7 w-1/2 max-w-xs" />
 

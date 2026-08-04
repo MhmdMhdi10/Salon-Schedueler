@@ -176,7 +176,7 @@ describe('Image accessibility — SalonProfilePage', () => {
 // ---------------------------------------------------------------------------
 describe('Image accessibility — BusinessLanding', () => {
   function renderBusiness() {
-    return render(wrap(<BusinessLanding />, '/business'));
+    return render(wrap(<BusinessLanding />, '/'));
   }
 
   it('renders an accessible, explicitly sized editorial hero image', () => {

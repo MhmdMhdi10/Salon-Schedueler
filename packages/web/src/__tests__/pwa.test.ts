@@ -14,7 +14,7 @@ describe('PWA Configuration', () => {
     it('has required PWA fields', () => {
       expect(manifest.name).toBeDefined();
       expect(manifest.short_name).toBeDefined();
-      expect(manifest.start_url).toBe('/');
+      expect(manifest.start_url).toBe('/my-salons');
       expect(manifest.display).toBe('standalone');
     });
 

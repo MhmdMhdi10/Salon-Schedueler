@@ -6,6 +6,8 @@ import type { PushProvider, PushPayload, PushDeliveryResult } from './push-provi
  */
 export interface AppointmentInfo {
   id: string;
+  salonId: string;
+  salonName: string;
   customerId: string;
   customerPhone: string;
   customerName?: string;
@@ -47,6 +49,9 @@ export interface NotificationLogEntry {
 export interface NotificationRepository {
   /** Find appointment info by ID */
   findAppointment(appointmentId: string): Promise<AppointmentInfo | null>;
+
+  /** Active salon-owner phone numbers that should receive booking alerts. */
+  findSalonSmsRecipients(salonId: string): Promise<string[]>;
 
   /** Find device tokens for a customer */
   findDeviceTokens(customerId: string): Promise<DeviceTokenInfo[]>;
@@ -122,6 +127,33 @@ export class NotificationService {
       status: result.ok ? 'sent' : 'failed',
       error: result.ok ? null : result.error,
     });
+  }
+
+  /**
+   * Notify salon owners immediately when a customer submits a booking. Pending
+   * requests ask for review; auto-confirmed/payment-confirmed bookings report
+   * their final state. Customer delivery remains a separate message.
+   */
+  async sendSalonBookingNotice(
+    appointmentId: string,
+    status: 'pending' | 'confirmed',
+  ): Promise<void> {
+    const appointment = await this.repository.findAppointment(appointmentId);
+    if (!appointment) return;
+
+    const recipients = [...new Set(
+      await this.repository.findSalonSmsRecipients(appointment.salonId),
+    )];
+    const message = this.buildSalonBookingMessage(appointment, status);
+    for (const phone of recipients) {
+      const result = await this.smsProvider.send(phone, message);
+      await this.repository.logNotification({
+        appointmentId,
+        channel: 'sms',
+        status: result.ok ? 'sent' : 'failed',
+        error: result.ok ? null : result.error,
+      });
+    }
   }
 
   /**
@@ -264,7 +296,7 @@ export class NotificationService {
       hour: '2-digit',
       minute: '2-digit',
     });
-    return `نوبت شما برای ${appointment.serviceName} در تاریخ ${dateStr} ساعت ${timeStr} تأیید شد.`;
+    return `نوبت شما در ${appointment.salonName} برای ${appointment.serviceName} در تاریخ ${dateStr} ساعت ${timeStr} تأیید شد.`;
   }
 
   private buildRejectionMessage(appointment: AppointmentInfo): string {
@@ -273,7 +305,7 @@ export class NotificationService {
       hour: '2-digit',
       minute: '2-digit',
     });
-    return `متأسفانه درخواست نوبت شما برای ${appointment.serviceName} در تاریخ ${dateStr} ساعت ${timeStr} تأیید نشد. لطفاً زمان دیگری را انتخاب کنید.`;
+    return `متأسفانه درخواست نوبت شما در ${appointment.salonName} برای ${appointment.serviceName} در تاریخ ${dateStr} ساعت ${timeStr} تأیید نشد. لطفاً زمان دیگری را انتخاب کنید.`;
   }
 
   private buildCancellationMessage(appointment: AppointmentInfo): string {
@@ -282,7 +314,7 @@ export class NotificationService {
       hour: '2-digit',
       minute: '2-digit',
     });
-    return `نوبت شما برای ${appointment.serviceName} در تاریخ ${dateStr} ساعت ${timeStr} لغو شد. برای رزرو زمانی دیگر می‌توانید دوباره اقدام کنید.`;
+    return `نوبت شما در ${appointment.salonName} برای ${appointment.serviceName} در تاریخ ${dateStr} ساعت ${timeStr} لغو شد. برای رزرو زمانی دیگر می‌توانید دوباره اقدام کنید.`;
   }
 
   private buildReminderMessage(appointment: AppointmentInfo): string {
@@ -290,6 +322,21 @@ export class NotificationService {
       hour: '2-digit',
       minute: '2-digit',
     });
-    return `یادآوری: نوبت شما برای ${appointment.serviceName} ساعت ${timeStr} نزدیک است.`;
+    return `یادآوری ${appointment.salonName}: نوبت ${appointment.serviceName} ساعت ${timeStr} نزدیک است.`;
+  }
+
+  private buildSalonBookingMessage(
+    appointment: AppointmentInfo,
+    status: 'pending' | 'confirmed',
+  ): string {
+    const dateStr = appointment.startAt.toLocaleDateString('fa-IR');
+    const timeStr = appointment.startAt.toLocaleTimeString('fa-IR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    const customer = appointment.customerName?.trim() || appointment.customerPhone;
+    const staff = appointment.staffName ? ` با ${appointment.staffName}` : '';
+    const state = status === 'pending' ? 'منتظر تأیید شما در پنل است.' : 'به‌صورت خودکار تأیید شد.';
+    return `رزرو جدید ${appointment.salonName}: ${customer}، ${appointment.serviceName}${staff}، تاریخ ${dateStr} ساعت ${timeStr}. ${state}`;
   }
 }

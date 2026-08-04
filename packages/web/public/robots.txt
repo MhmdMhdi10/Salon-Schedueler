@@ -9,4 +9,6 @@ Disallow: /qr/
 Disallow: /api/
 Disallow: /business/register
 Disallow: /search
+Disallow: /city/
+Disallow: /services/
 Sitemap: https://example.ir/sitemap.xml

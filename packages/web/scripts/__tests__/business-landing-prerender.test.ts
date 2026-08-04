@@ -13,7 +13,7 @@ import {
 import { absoluteUrl } from '../generate-sitemap.mjs';
 
 /**
- * Focused SEO/prerender tests for the owner-acquisition landing `/business`
+ * Focused SEO/prerender tests for the owner-acquisition launch home `/`
  * (task 6.2; R5.4).
  *
  * Task 6.1 built the landing component (`src/pages/BusinessLanding.tsx`) and
@@ -21,9 +21,9 @@ import { absoluteUrl } from '../generate-sitemap.mjs';
  * component-level CTA routing + indexability are already pinned by
  * `src/pages/__tests__/BusinessLanding.test.tsx`. These tests pin the **other
  * half** of the split-rendering strategy (seo §8): that the *prerendered*
- * `/business` HTML — what `View Source` shows without running app JS — carries
+ * `/` HTML — what `View Source` shows without running app JS — carries
  * the indexable head, the WebSite + Organization JSON-LD, and the crawlable
- * owner/customer CTA links, all in the **initial HTML** (R5.4).
+ * owner CTA links, all in the **initial HTML** (R5.4).
  *
  * The set of noindex path prefixes from the SEO indexability map (seo §1).
  */
@@ -50,38 +50,39 @@ const TEMPLATE = `<!doctype html>
 </body>
 </html>`;
 
-/** Resolves the single `/business` route descriptor from the prerender source. */
+/** Resolves the launch-home route descriptor from the prerender source. */
 function businessRoute() {
   const route = buildRoutes({ siteUrl: DEFAULT_SITE_URL, salons: [] }).find(
-    (r: { path: string }) => r.path === '/business',
+    (r: { path: string }) => r.path === '/',
   );
-  if (!route) throw new Error('/business route missing from buildRoutes');
+  if (!route) throw new Error('/ route missing from buildRoutes');
   return route;
 }
 
 describe('business landing — sitemap inclusion (R5.4; seo §1/§7)', () => {
-  it('lists /business in STATIC_INDEXABLE_PATHS', () => {
-    expect(STATIC_INDEXABLE_PATHS).toContain('/business');
+  it('lists / and not /business in STATIC_INDEXABLE_PATHS', () => {
+    expect(STATIC_INDEXABLE_PATHS).toContain('/');
+    expect(STATIC_INDEXABLE_PATHS).not.toContain('/business');
   });
 
-  it('emits a /business prerender route mapped to a clean directory index', () => {
+  it('emits the business home at the root index', () => {
     const route = businessRoute();
-    expect(route.outputPath).toBe('business/index.html');
-    expect(route.canonical).toBe(absoluteUrl(DEFAULT_SITE_URL, '/business'));
+    expect(route.outputPath).toBe('index.html');
+    expect(route.canonical).toBe(absoluteUrl(DEFAULT_SITE_URL, '/'));
   });
 
-  it('never treats /business as a noindex surface', () => {
+  it('never treats / as a noindex surface', () => {
     for (const prefix of NOINDEX_PREFIXES) {
-      expect('/business'.startsWith(prefix)).toBe(false);
+      expect('/'.startsWith(prefix)).toBe(false);
     }
   });
 });
 
 describe('business landing — indexable head in initial HTML (R5.4; seo §3/§4/§6)', () => {
-  it('renders robots index,follow + self-referencing canonical to …/business', () => {
+  it('renders robots index,follow + a self-referencing root canonical', () => {
     const route = businessRoute();
     const head = renderHeadTags(route, DEFAULT_SITE_URL);
-    const canonical = absoluteUrl(DEFAULT_SITE_URL, '/business');
+    const canonical = absoluteUrl(DEFAULT_SITE_URL, '/');
     expect(head).toContain('<meta data-prerender name="robots" content="index,follow" />');
     expect(head).toContain(`<link data-prerender rel="canonical" href="${canonical}" />`);
     expect(head).toContain(`hreflang="fa" href="${canonical}"`);
@@ -92,7 +93,7 @@ describe('business landing — indexable head in initial HTML (R5.4; seo §3/§4
   it('renders the OG + Twitter card set for the landing', () => {
     const route = businessRoute();
     const head = renderHeadTags(route, DEFAULT_SITE_URL);
-    const canonical = absoluteUrl(DEFAULT_SITE_URL, '/business');
+    const canonical = absoluteUrl(DEFAULT_SITE_URL, '/');
     const fullTitle = pageTitle(route.title);
     expect(head).toContain('property="og:type" content="website"');
     expect(head).toContain('property="og:locale" content="fa_IR"');
@@ -115,7 +116,7 @@ describe('business landing — indexable head in initial HTML (R5.4; seo §3/§4
     // Robots + canonical present in the initial HTML (View Source parity).
     expect(html).toContain('<meta data-prerender name="robots" content="index,follow" />');
     expect(html).toContain(
-      `<link data-prerender rel="canonical" href="${absoluteUrl(DEFAULT_SITE_URL, '/business')}" />`,
+      `<link data-prerender rel="canonical" href="${absoluteUrl(DEFAULT_SITE_URL, '/')}" />`,
     );
 
     // #root carries real content (one <h1>, not empty) without running app JS.
@@ -154,25 +155,25 @@ describe('business landing — WebSite + Organization JSON-LD (R5.4; seo §5)', 
   });
 });
 
-describe('business landing — crawlable CTA routing (R5.2/R5.3 in prerendered HTML)', () => {
-  it('exposes owner registration and marketplace search links on the route', () => {
+describe('business landing — crawlable CTA routing in prerendered HTML', () => {
+  it('exposes owner registration without marketplace search links', () => {
     const route = businessRoute();
     const hrefs = route.links.map((l: { href: string }) => l.href);
     expect(hrefs).toContain('/business/register');
-    expect(hrefs).toContain('/search');
+    expect(hrefs).not.toContain('/search');
   });
 
-  it('renders owner registration + marketplace anchors in the prerendered body', () => {
+  it('renders owner registration without marketplace anchors in the prerendered body', () => {
     const route = businessRoute();
     const body = renderBody(route);
     expect(body).toContain('href="/business/register"');
-    expect(body).toContain('href="/search"');
+    expect(body).not.toContain('href="/search"');
   });
 
-  it('includes owner registration + marketplace anchors in the full prerendered document', () => {
+  it('includes owner registration without marketplace anchors in the full document', () => {
     const route = businessRoute();
     const html = injectIntoTemplate(TEMPLATE, route, DEFAULT_SITE_URL);
     expect(html).toContain('href="/business/register"');
-    expect(html).toContain('href="/search"');
+    expect(html).not.toContain('href="/search"');
   });
 });

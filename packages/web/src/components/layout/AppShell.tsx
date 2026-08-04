@@ -1,9 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
-import { Motif } from '../brand/Motif';
+import { BrandLogo } from '../brand';
 import { ThemeToggle } from '../theme/ThemeToggle';
 import { HeaderAuthNav } from './HeaderAuthNav';
-import { DISCOVERY_CATEGORIES } from '../../data/taxonomy';
 import { toPersianDigits } from '../ui/Num';
 import { cn } from '../ui/cn';
 
@@ -16,22 +15,17 @@ export const MAIN_CONTENT_ID = 'main-content';
  *  - `default`     — sticky two-deck header: brand row (wordmark + Motif mark,
  *                    account nav, «ثبت سالن», theme toggle) over a horizontally
  *                    scrollable category rail fed from `data/taxonomy.ts`.
- *  - `transparent` — absolute, transparent chrome over a dark hero (the `/`
- *                    landing): white wordmark, visible sign-in entry, one white
- *                    pill CTA to `/business`, theme toggle. The page under it
- *                    must extend its hero beneath the header (the header adds
- *                    no height to the flow).
  *  - `business`    — sticky product header for the owner-acquisition surface
- *                    (`/business`): logo + «بیز» badge, section anchors, login
+ *                    (`/`): logo + «بیز» badge, section anchors, login
  *                    + primary CTA.
  *  - `bare`        — no header and no footer (auth / onboarding pages where
  *                    the card is the whole composition).
  *
  * When `headerVariant` is omitted it is derived from the pathname
- * (`/` → transparent, `/business` → business, `/auth` + `/business/register`
+ * (`/` → business, `/auth` + `/business/register`
  * → bare, everything else → default).
  */
-export type AppShellHeaderVariant = 'default' | 'transparent' | 'business' | 'bare';
+export type AppShellHeaderVariant = 'default' | 'business' | 'bare';
 
 export interface AppShellProps {
   /** Routed page content rendered inside the single `<main>` landmark. */
@@ -61,12 +55,10 @@ export function AppShell({ children, className, headerVariant }: AppShellProps) 
 
   const derived: AppShellHeaderVariant =
     pathname === '/'
-      ? 'transparent'
-      : pathname === '/business'
-        ? 'business'
-        : pathname === '/auth' || pathname === '/business/register'
-          ? 'bare'
-          : 'default';
+      ? 'business'
+      : pathname === '/auth' || pathname === '/business/register'
+        ? 'bare'
+        : 'default';
   const variant = headerVariant ?? derived;
   const isBare = variant === 'bare';
 
@@ -91,9 +83,7 @@ export function AppShell({ children, className, headerVariant }: AppShellProps) 
         {t('app.skipToContent')}
       </a>
 
-      {variant === 'transparent' ? (
-        <TransparentHeader />
-      ) : variant === 'business' ? (
+      {variant === 'business' ? (
         <BusinessHeader />
       ) : variant === 'default' ? (
         <DefaultHeader />
@@ -110,65 +100,27 @@ export function AppShell({ children, className, headerVariant }: AppShellProps) 
 
 export default AppShell;
 
-/** Shared brand wordmark: Motif mark + «آرا», linking home. */
+/** Shared selected brand lockup, linking home. */
 function BrandMark({ inverse = false }: { inverse?: boolean }) {
   return (
     <Link
       to="/"
       aria-label="آرا"
       className={cn(
-        'flex items-center gap-2 rounded-md text-2xl font-extrabold tracking-tight no-underline',
+        'flex items-center rounded-md no-underline',
         'outline-none focus-visible:outline focus-visible:outline-2',
         'focus-visible:outline-offset-2 focus-visible:outline-focus',
         inverse ? 'text-ink-contrast' : 'text-text',
       )}
     >
-      <Motif variant="mark" className="h-6 w-6" aria-hidden />
-      <span>آرا</span>
+      <BrandLogo inverse={inverse} className="h-9" />
     </Link>
   );
 }
 
 /**
- * Transparent chrome over the home hero (directive §a "Home"): absolute, no
- * background/border; white wordmark; visible sign-in; ONE white pill CTA that
- * sells the B2B product; theme toggle for parity with the inner pages.
- * Colors use the `ink-contrast` on-dark tokens — the header always sits on the
- * dark-scrimmed hero photography, independent of the page theme.
- */
-function TransparentHeader() {
-  const { t } = useTranslation();
-  return (
-    <header className="absolute inset-x-0 top-0 z-nav w-full bg-transparent text-ink-contrast">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-5">
-        <nav aria-label={t('app.primaryNav')}>
-          <BrandMark inverse />
-        </nav>
-        <div className="flex items-center gap-2 sm:gap-4">
-          <HeaderAuthNav tone="inverse" />
-          <ThemeToggle className="text-ink-contrast hover:bg-ink-contrast/10" />
-          <Link
-            to="/business"
-            className={cn(
-              'rounded-md bg-ink-contrast px-4 py-2.5 text-sm font-semibold text-ink no-underline',
-              'transition-opacity duration-fast ease-standard hover:opacity-90',
-              'outline-none focus-visible:outline focus-visible:outline-2',
-              'focus-visible:outline-offset-2 focus-visible:outline-focus',
-            )}
-          >
-            ثبت سالن
-          </Link>
-        </div>
-      </div>
-    </header>
-  );
-}
-
-/**
- * Sticky two-deck inner-page header (directive §a "Inner pages"): brand row
- * over a flat, horizontally scrollable category link rail. The rail links come
- * from the canonical taxonomy so a dead link is impossible; «بیشتر…» goes to
- * the full search surface.
+ * Compact inner-page header. Marketplace category navigation is intentionally
+ * absent during the owner-first launch.
  */
 function DefaultHeader() {
   const { t } = useTranslation();
@@ -179,9 +131,15 @@ function DefaultHeader() {
           <BrandMark />
         </nav>
         <div className="flex items-center gap-1 sm:gap-2">
+          <Link
+            to="/my-salons"
+            className="rounded-md px-3 py-2 text-sm font-semibold text-text no-underline transition-colors duration-fast ease-standard hover:bg-surface"
+          >
+            سالن‌های من
+          </Link>
           <HeaderAuthNav />
           <Link
-            to="/business"
+            to="/business/register"
             className={cn(
               'hidden rounded-md px-3 py-2 text-sm font-semibold text-text no-underline sm:inline-flex',
               'transition-colors duration-fast ease-standard hover:bg-surface',
@@ -189,47 +147,17 @@ function DefaultHeader() {
               'focus-visible:outline-offset-2 focus-visible:outline-focus',
             )}
           >
-            {t('app.footerNav.business')}
+            ثبت سالن
           </Link>
           <ThemeToggle />
         </div>
       </div>
-      <nav aria-label="دسته‌بندی خدمات" className="border-t border-border">
-        <div
-          className={cn(
-            'mx-auto flex max-w-7xl items-center gap-6 overflow-x-auto px-4 py-3',
-            'text-sm font-medium [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-          )}
-        >
-          {DISCOVERY_CATEGORIES.map(({ slug, label }) => (
-            <Link
-              key={slug}
-              to={`/services/${slug}`}
-              className={cn(
-                'shrink-0 whitespace-nowrap no-underline',
-                'transition-colors duration-fast ease-standard hover:text-primary',
-              )}
-            >
-              {label}
-            </Link>
-          ))}
-          <Link
-            to="/search"
-            className={cn(
-              'shrink-0 whitespace-nowrap text-muted no-underline',
-              'transition-colors duration-fast ease-standard hover:text-primary',
-            )}
-          >
-            بیشتر...
-          </Link>
-        </div>
-      </nav>
     </header>
   );
 }
 
 /**
- * Sticky product header for `/business` (directive §a "Biz landing"): logo +
+ * Sticky product header for `/` (directive §a "Biz landing"): logo +
  * tiny «بیز» badge, center anchors (the landing page owns the matching ids),
  * login + solid primary CTA, theme toggle.
  */
@@ -239,14 +167,14 @@ function BusinessHeader() {
     <header className="sticky top-0 z-nav border-b border-border bg-elevated text-text">
       <div className="mx-auto flex min-h-16 w-full max-w-7xl items-center justify-between gap-4 px-4">
         <Link
-          to="/business"
+          to="/"
           className={cn(
             'flex items-center gap-2 text-2xl font-extrabold text-text no-underline',
             'outline-none focus-visible:outline focus-visible:outline-2',
             'focus-visible:outline-offset-2 focus-visible:outline-focus',
           )}
         >
-          آرا
+          <BrandLogo className="h-9" />
           <span className="rounded bg-ink px-1.5 py-0.5 text-2xs font-bold text-ink-contrast">
             بیز
           </span>
@@ -344,8 +272,7 @@ function PublicFooter() {
             <FooterLink to="/contact">{t('app.footerNav.contact')}</FooterLink>
             <FooterLink to="/privacy">{t('app.footerNav.privacy')}</FooterLink>
             <FooterLink to="/terms">{t('app.footerNav.terms')}</FooterLink>
-            <FooterLink to="/search">جستجوی سالن‌ها</FooterLink>
-            <FooterLink to="/business">{t('app.footerNav.business')}</FooterLink>
+            <FooterLink to="/business/register">ثبت سالن</FooterLink>
           </nav>
           {/* Honest web-app entry — the native apps don't exist yet, so no
               store badges; the PWA login is the real destination. */}
@@ -359,13 +286,12 @@ function PublicFooter() {
               'focus-visible:outline-offset-2 focus-visible:outline-focus',
             )}
           >
-            وب‌اپ آرا — رزرو آنلاین
+            ورود به پنل آرا
           </Link>
         </div>
         <div className="flex flex-col gap-4 py-8 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
-            <Motif variant="mark" className="h-5 w-5" aria-hidden />
-            <span className="text-xl font-extrabold text-ink-contrast">آرا</span>
+            <BrandLogo inverse className="h-9" />
           </div>
           <span className="text-sm text-ink-muted">© {year} آرا — همه حقوق محفوظ است.</span>
         </div>

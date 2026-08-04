@@ -39,6 +39,7 @@ function createMockRepository(overrides?: Partial<NotificationRepository>): Noti
   return {
     logs,
     findAppointment: overrides?.findAppointment ?? (async () => null),
+    findSalonSmsRecipients: overrides?.findSalonSmsRecipients ?? (async () => []),
     findDeviceTokens: overrides?.findDeviceTokens ?? (async () => []),
     findAppointmentsInReminderWindow: overrides?.findAppointmentsInReminderWindow ?? (async () => []),
     registerDeviceToken: overrides?.registerDeviceToken ?? (async () => {}),
@@ -56,6 +57,8 @@ function createMockRepository(overrides?: Partial<NotificationRepository>): Noti
 
 const sampleAppointment: AppointmentInfo = {
   id: 'appt-1',
+  salonId: 'salon-1',
+  salonName: 'سالن آرا',
   customerId: 'cust-1',
   customerPhone: '+989121234567',
   customerName: 'علی محمدی',
@@ -81,6 +84,7 @@ describe('NotificationService', () => {
       expect(sms.calls).toHaveLength(1);
       expect(sms.calls[0].phone).toBe('+989121234567');
       expect(sms.calls[0].message).toContain('کوتاهی مو');
+      expect(sms.calls[0].message).toContain('سالن آرا');
       expect(repo.logs).toHaveLength(1);
       expect(repo.logs[0]).toMatchObject({
         appointmentId: 'appt-1',
@@ -102,6 +106,24 @@ describe('NotificationService', () => {
 
       expect(sms.calls).toHaveLength(0);
       expect(repo.logs).toHaveLength(0);
+    });
+  });
+
+  describe('sendSalonBookingNotice', () => {
+    it('sends pending booking details to each unique salon owner phone', async () => {
+      const sms = createMockSmsProvider();
+      const repo = createMockRepository({
+        findAppointment: async () => sampleAppointment,
+        findSalonSmsRecipients: async () => ['09120000000', '09120000000'],
+      });
+      const service = new NotificationService(sms, createMockPushProvider(), repo);
+
+      await service.sendSalonBookingNotice('appt-1', 'pending');
+
+      expect(sms.calls).toHaveLength(1);
+      expect(sms.calls[0].phone).toBe('09120000000');
+      expect(sms.calls[0].message).toContain('رزرو جدید سالن آرا');
+      expect(sms.calls[0].message).toContain('منتظر تأیید شما');
     });
   });
 

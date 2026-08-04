@@ -11,7 +11,7 @@ import { SITE_URL } from '../../components/seo';
 /**
  * Property 21: Marketing routes are indexable with unique metadata.
  *
- * For `/` and `/business`, assert:
+ * For the legacy consumer landing component and the owner-first launch home, assert:
  *  1. The page is indexable (robots = index,follow; no noindex)
  *  2. Has a unique non-empty `<title>`
  *  3. Has a unique non-empty `<meta name="description">`
@@ -90,11 +90,11 @@ describe('Property 21: Marketing routes are indexable with unique metadata', () 
     });
   });
 
-  describe('BusinessLanding (/business) is indexable with complete metadata', () => {
+  describe('BusinessLanding (/) is indexable with complete metadata', () => {
     function renderBusiness() {
       return render(
         <HelmetProvider>
-          <MemoryRouter initialEntries={['/business']}>
+          <MemoryRouter initialEntries={['/']}>
             <BusinessLanding />
           </MemoryRouter>
         </HelmetProvider>,
@@ -124,12 +124,12 @@ describe('Property 21: Marketing routes are indexable with unique metadata', () 
       });
     });
 
-    it('has a canonical link containing /business', async () => {
+    it('has a root canonical link', async () => {
       renderBusiness();
       await waitFor(() => {
         const canonical = head('link[rel="canonical"]');
         expect(canonical).not.toBeNull();
-        expect(canonical!.getAttribute('href')).toContain('/business');
+        expect(canonical!.getAttribute('href')).toBe(SITE_URL);
       });
     });
 
@@ -233,7 +233,7 @@ describe('Property 21: Marketing routes are indexable with unique metadata', () 
       expect(homeDesc).not.toBe(businessDesc);
     });
 
-    it('canonical URLs are distinct between / and /business', async () => {
+    it('both launch-home components resolve to the root canonical', async () => {
       // Render home first, capture canonical
       render(
         <HelmetProvider>
@@ -253,7 +253,7 @@ describe('Property 21: Marketing routes are indexable with unique metadata', () 
       // Render business, capture canonical
       render(
         <HelmetProvider>
-          <MemoryRouter initialEntries={['/business']}>
+          <MemoryRouter initialEntries={['/']}>
             <BusinessLanding />
           </MemoryRouter>
         </HelmetProvider>,
@@ -265,7 +265,7 @@ describe('Property 21: Marketing routes are indexable with unique metadata', () 
         businessCanonical = el!.getAttribute('href')!;
       });
 
-      expect(homeCanonical).not.toBe(businessCanonical);
+      expect(homeCanonical).toBe(businessCanonical);
     });
   });
 

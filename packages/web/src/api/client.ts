@@ -280,6 +280,8 @@ export const salonApi = {
     request<{ stylists: Array<{ id: string; fullName: string | null; role: string }> }>(
       `/salons/${salonId}/stylists`,
     ),
+  getBookingPolicy: (salonId: string) =>
+    request<{ bookingWindowDays: number }>(`/salons/${salonId}/booking-policy`),
 };
 
 // Booking endpoints
@@ -521,6 +523,15 @@ export const adminApi = {
       method: 'POST',
       body,
     }),
+  /** Remove a chair from future capacity while preserving appointment history. */
+  deleteChair: (salonId: string, chairId: string) =>
+    request<{ ok: boolean }>(`/salons/${salonId}/chairs/${chairId}`, { method: 'DELETE' }),
+  /** Restore or deactivate an existing chair. */
+  setChairActive: (salonId: string, chairId: string, active: boolean) =>
+    request<{ chair: { id: string; name: string; active: boolean } }>(
+      `/salons/${salonId}/chairs/${chairId}`,
+      { method: 'PATCH', body: { active } },
+    ),
 };
 
 /** A single row in the owner-panel transactions ledger. */
@@ -660,6 +671,50 @@ export const holidaysApi = {
     request<{ ok: boolean }>(`/salons/${salonId}/holidays/${holidayId}`, {
       method: 'DELETE',
     }),
+};
+
+export interface WeeklyWorkingHour {
+  /** JavaScript weekday: Sunday 0 … Saturday 6. */
+  weekday: number;
+  startTime: string;
+  endTime: string;
+}
+
+export const workingHoursApi = {
+  getSalon: (salonId: string) =>
+    request<{ hours: WeeklyWorkingHour[] }>(`/salons/${salonId}/working-hours`),
+  setSalon: (salonId: string, hours: WeeklyWorkingHour[]) =>
+    request<{ ok: boolean; hours: WeeklyWorkingHour[] }>(`/salons/${salonId}/working-hours`, {
+      method: 'PUT',
+      body: { hours },
+    }),
+  getStaff: (salonId: string, staffId: string) =>
+    request<{ hours: WeeklyWorkingHour[] }>(
+      `/salons/${salonId}/staff/${staffId}/working-hours`,
+    ),
+  setStaff: (salonId: string, staffId: string, hours: WeeklyWorkingHour[]) =>
+    request<{ ok: boolean; hours: WeeklyWorkingHour[] }>(
+      `/salons/${salonId}/staff/${staffId}/working-hours`,
+      { method: 'PUT', body: { hours } },
+    ),
+};
+
+export const bookingPolicyApi = {
+  get: (salonId: string) =>
+    request<{ bookingWindowDays: number }>(`/salons/${salonId}/booking-policy`),
+  set: (salonId: string, bookingWindowDays: number) =>
+    request<{ ok: boolean; bookingWindowDays: number }>(`/salons/${salonId}/booking-policy`, {
+      method: 'PUT',
+      body: { bookingWindowDays },
+    }),
+};
+
+export const emergencyScheduleApi = {
+  closeDay: (salonId: string, onDate: string, cancelAppointments: boolean) =>
+    request<{ ok: boolean; cancelledCount: number; failedCount: number }>(
+      `/salons/${salonId}/emergency-close`,
+      { method: 'POST', body: { onDate, cancelAppointments } },
+    ),
 };
 
 // ─── Per-stylist availability blocks (a stylist's own day / hour-range off) ──

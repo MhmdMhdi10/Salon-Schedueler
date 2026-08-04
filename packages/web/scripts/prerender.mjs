@@ -85,8 +85,6 @@ import {
   warnIfPlaceholder,
   absoluteUrl,
   salonPath,
-  cityPath,
-  servicePath,
 } from './generate-sitemap.mjs';
 import { loadSiteData } from './site-data.mjs';
 
@@ -142,16 +140,10 @@ export function slugToName(slug) {
 /** Persian display copy for the static, indexable routes (home + legal/trust). */
 const STATIC_ROUTE_CONTENT = {
   '/': {
-    title: 'رزرو آنلاین نوبت سالن‌های زیبایی',
-    heading: 'رزرو آنلاین نوبت سالن‌های زیبایی',
-    description:
-      'به‌سادگی نوبت کوتاهی، رنگ و میکاپ را در بهترین سالن‌های زیبایی شهر آنلاین رزرو کنید؛ انتخاب خدمت، تاریخ و زمان تنها در چند ثانیه.',
-  },
-  '/business': {
     title: 'پلتفرم مدیریت و رزرو آنلاین برای صاحبان سالن زیبایی',
-    heading: 'مشتری‌ها پیدایتان می‌کنند؛ آرا باقی مسیر را مرتب می‌کند',
+    heading: 'سالن شما همیشه آمادهٔ رزرو؛ حتی وقتی پاسخ‌گوی تلفن نیستید',
     description:
-      'ویترین آنلاین، رزرو ۲۴ ساعته، تقویم کارکنان و پروندهٔ مشتری را در یک پنل فارسی داشته باشید؛ از اولین جست‌وجو تا نوبت بعدی.',
+      'لینک رزرو اختصاصی، تقویم کارکنان، یادآوری پیامکی و پروندهٔ مشتری را در یک پنل فارسی داشته باشید.',
   },
   '/about': {
     title: 'درباره ما',
@@ -314,11 +306,10 @@ export function discoveryJsonLd(name, path, siteUrl) {
  * `{ path, outputPath, title, description, heading, canonical, ogType, jsonLd,
  * links }`.
  */
-export function buildRoutes({ siteUrl, salons = [], cities = [], serviceTypes = [] }) {
+export function buildRoutes({ siteUrl, salons = [] }) {
   const routes = STATIC_INDEXABLE_PATHS.map((path) => {
     const content = STATIC_ROUTE_CONTENT[path];
     const isHome = path === '/';
-    const isBusiness = path === '/business';
     return {
       path,
       outputPath: path === '/' ? 'index.html' : `${path.replace(/^\//, '')}/index.html`,
@@ -327,24 +318,17 @@ export function buildRoutes({ siteUrl, salons = [], cities = [], serviceTypes = 
       description: content.description,
       canonical: absoluteUrl(siteUrl, path),
       ogType: 'website',
-      // Both the marketing home and the owner-acquisition landing carry the
-      // site-wide WebSite + Organization structured data (seo §5).
-      jsonLd: isHome || isBusiness ? homeJsonLd(siteUrl) : [],
-      // Home links out to the legal/trust pages for crawlable internal linking;
-      // the landing links to owner sign-up + the booking entry + back home.
+      jsonLd: isHome ? homeJsonLd(siteUrl) : [],
+      // Home links to owner registration and legal/trust pages.
       links: isHome
         ? [
+            { href: '/business/register', text: 'ثبت رایگان کسب‌وکار' },
             { href: '/about', text: 'درباره ما' },
             { href: '/contact', text: 'تماس با ما' },
             { href: '/privacy', text: 'حریم خصوصی' },
             { href: '/terms', text: 'قوانین و مقررات' },
           ]
-        : isBusiness
-          ? [
-              { href: '/business/register', text: 'ثبت رایگان کسب‌وکار' },
-              { href: '/search', text: 'جست‌وجوی سالن‌ها' },
-            ]
-          : [{ href: '/', text: 'بازگشت به خانه' }],
+        : [{ href: '/', text: 'بازگشت به خانه' }],
     };
   });
 
@@ -369,51 +353,7 @@ export function buildRoutes({ siteUrl, salons = [], cities = [], serviceTypes = 
       };
     });
 
-  const cityRoutes = cities
-    .filter((c) => c && typeof c.slug === 'string' && c.slug.trim() !== '')
-    .map((city) => {
-      const slug = city.slug.trim();
-      const name = city.name || slugToName(slug);
-      const path = cityPath(slug);
-      const heading = `سالن‌های زیبایی در ${name}`;
-      return {
-        path,
-        outputPath: `city/${slug}/index.html`,
-        title: heading,
-        heading,
-        description:
-          city.description ||
-          `بهترین سالن‌های زیبایی ${name} را پیدا کنید و نوبت کوتاهی، رنگ و میکاپ را آنلاین رزرو کنید.`,
-        canonical: absoluteUrl(siteUrl, path),
-        ogType: 'website',
-        jsonLd: discoveryJsonLd(heading, path, siteUrl),
-        links: [{ href: '/', text: 'بازگشت به خانه' }],
-      };
-    });
-
-  const serviceRoutes = serviceTypes
-    .filter((s) => s && typeof s.slug === 'string' && s.slug.trim() !== '')
-    .map((service) => {
-      const slug = service.slug.trim();
-      const name = service.name || slugToName(slug);
-      const path = servicePath(slug);
-      const heading = `${name} در سالن‌های زیبایی`;
-      return {
-        path,
-        outputPath: `services/${slug}/index.html`,
-        title: heading,
-        heading,
-        description:
-          service.description ||
-          `سالن‌های ${name} را با قیمت و زمان شفاف مقایسه کنید و نوبت دلخواهتان را آنلاین رزرو کنید.`,
-        canonical: absoluteUrl(siteUrl, path),
-        ogType: 'website',
-        jsonLd: discoveryJsonLd(heading, path, siteUrl),
-        links: [{ href: '/', text: 'بازگشت به خانه' }],
-      };
-    });
-
-  return [...routes, ...salonRoutes, ...cityRoutes, ...serviceRoutes];
+  return [...routes, ...salonRoutes];
 }
 
 /**
@@ -435,21 +375,6 @@ export function buildRoutes({ siteUrl, salons = [], cities = [], serviceTypes = 
 export function buildNoindexRoutes() {
   return [
     {
-      path: '/search',
-      outputPath: 'search/index.html',
-      title: 'جستجوی سالن‌ها',
-      heading: 'جستجوی سالن‌ها',
-      description:
-        'جستجوی خدمت، سالن یا شهر — نتایج با بارگذاری برنامه نمایش داده می‌شوند.',
-      robots: 'noindex,follow',
-      ogType: 'website',
-      jsonLd: [],
-      links: [
-        { href: '/', text: 'بازگشت به خانه' },
-        { href: '/city/tehran', text: 'سالن‌های تهران' },
-      ],
-    },
-    {
       path: '/404',
       outputPath: '404.html',
       title: 'صفحه پیدا نشد',
@@ -461,8 +386,7 @@ export function buildNoindexRoutes() {
       jsonLd: [],
       links: [
         { href: '/', text: 'بازگشت به خانه' },
-        { href: '/search', text: 'جستجوی سالن‌ها' },
-        { href: '/business', text: 'ثبت سالن' },
+        { href: '/business/register', text: 'ثبت سالن' },
       ],
     },
   ];
@@ -662,9 +586,9 @@ export async function main() {
   }
 
   const siteUrl = resolveSiteUrl();
-  const { salons, cities, serviceTypes } = await loadSiteData();
+  const { salons } = await loadSiteData();
   const routes = [
-    ...buildRoutes({ siteUrl, salons, cities, serviceTypes }),
+    ...buildRoutes({ siteUrl, salons }),
     ...buildNoindexRoutes(),
   ];
 
@@ -679,7 +603,7 @@ export async function main() {
   console.log(
     `[prerender] wrote ${routes.length} static pages ` +
       `(${STATIC_INDEXABLE_PATHS.length} static + ${salons.length} salon + ` +
-      `${cities.length} city + ${serviceTypes.length} service + 2 noindex shells, host ${siteUrl})`,
+      `1 noindex shell, host ${siteUrl})`,
   );
 }
 

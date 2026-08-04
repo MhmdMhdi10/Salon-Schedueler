@@ -43,7 +43,6 @@ export const DEFAULT_SITE_URL = 'https://example.ir';
  */
 export const STATIC_INDEXABLE_PATHS = [
   '/',
-  '/business',
   '/about',
   '/contact',
   '/privacy',
@@ -122,7 +121,7 @@ export function servicePath(slug) {
  * the static routes plus the salon list. The build date backfills any salon
  * without its own `lastmod`; static pages use the build date.
  */
-export function buildEntries({ siteUrl, salons = [], cities = [], serviceTypes = [], buildDate = new Date() }) {
+export function buildEntries({ siteUrl, salons = [], buildDate = new Date() }) {
   const fallbackLastmod = toW3CDate(buildDate);
 
   const staticEntries = STATIC_INDEXABLE_PATHS.map((path) => ({
@@ -137,26 +136,12 @@ export function buildEntries({ siteUrl, salons = [], cities = [], serviceTypes =
       lastmod: salon.lastmod ? toW3CDate(salon.lastmod) : fallbackLastmod,
     }));
 
-  const cityEntries = cities
-    .filter((c) => c && typeof c.slug === 'string' && c.slug.trim() !== '')
-    .map((c) => ({
-      loc: absoluteUrl(siteUrl, cityPath(c.slug)),
-      lastmod: c.lastmod ? toW3CDate(c.lastmod) : fallbackLastmod,
-    }));
-
-  const serviceEntries = serviceTypes
-    .filter((s) => s && typeof s.slug === 'string' && s.slug.trim() !== '')
-    .map((s) => ({
-      loc: absoluteUrl(siteUrl, servicePath(s.slug)),
-      lastmod: s.lastmod ? toW3CDate(s.lastmod) : fallbackLastmod,
-    }));
-
-  return [...staticEntries, ...salonEntries, ...cityEntries, ...serviceEntries];
+  return [...staticEntries, ...salonEntries];
 }
 
 /** Serializes sitemap entries into a valid urlset XML document. */
-export function buildSitemap({ siteUrl, salons = [], cities = [], serviceTypes = [], buildDate = new Date() }) {
-  const entries = buildEntries({ siteUrl, salons, cities, serviceTypes, buildDate });
+export function buildSitemap({ siteUrl, salons = [], buildDate = new Date() }) {
+  const entries = buildEntries({ siteUrl, salons, buildDate });
   const urls = entries
     .map(
       (entry) =>
@@ -200,6 +185,8 @@ export function buildRobots(siteUrl) {
     'Disallow: /api/',
     'Disallow: /business/register',
     'Disallow: /search',
+    'Disallow: /city/',
+    'Disallow: /services/',
     `Sitemap: ${origin}/sitemap.xml`,
     '',
   ].join('\n');
@@ -227,12 +214,10 @@ export async function main() {
   const robotsPath = resolve(here, '../public/robots.txt');
 
   const siteUrl = resolveSiteUrl();
-  const { salons, cities, serviceTypes } = await loadSiteData();
+  const { salons } = await loadSiteData();
   const xml = buildSitemap({
     siteUrl,
     salons,
-    cities,
-    serviceTypes,
     buildDate: new Date(),
   });
 
@@ -242,7 +227,7 @@ export async function main() {
   // eslint-disable-next-line no-console
   console.log(
     `[sitemap] wrote ${sitemapPath} (${STATIC_INDEXABLE_PATHS.length} static + ` +
-      `${salons.length} salon + ${cities.length} city + ${serviceTypes.length} service URLs, host ${siteUrl})\n` +
+      `${salons.length} salon URLs, host ${siteUrl})\n` +
       `[sitemap] wrote ${robotsPath} from the same origin helper`,
   );
 }

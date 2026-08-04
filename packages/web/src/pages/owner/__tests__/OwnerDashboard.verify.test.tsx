@@ -268,8 +268,8 @@ describe('Keyboard navigation (RTL arrows)', () => {
       const dayTab = screen.getByRole('tab', { name: /روز/ });
       const weekTab = screen.getByRole('tab', { name: /هفته/ });
 
-      expect(dayTab).toHaveAttribute('aria-selected', 'true');
-      expect(weekTab).toHaveAttribute('aria-selected', 'false');
+      expect(dayTab).toHaveAttribute('aria-selected', 'false');
+      expect(weekTab).toHaveAttribute('aria-selected', 'true');
 
       // Click week tab
       fireEvent.click(weekTab);
@@ -471,6 +471,7 @@ describe('Persian numerals', () => {
       await waitFor(() => {
         expect(screen.getByTestId('owner-calendar-page')).toBeInTheDocument();
       });
+      fireEvent.click(screen.getByRole('tab', { name: /روز/ }));
 
       // Wait for data to load and render
       await waitFor(() => {
@@ -594,6 +595,7 @@ describe('Responsive layout', () => {
 
     it('day view is scrollable', async () => {
       renderCalendarPage();
+      fireEvent.click(screen.getByRole('tab', { name: /روز/ }));
       await waitFor(() => {
         expect(screen.getByTestId('owner-calendar-day')).toBeInTheDocument();
       });
@@ -663,6 +665,7 @@ describe('Accessibility', () => {
 
   it('calendar grid sections have aria-labels', async () => {
     renderCalendarPage();
+    fireEvent.click(screen.getByRole('tab', { name: /روز/ }));
     await waitFor(() => {
       expect(screen.getByTestId('owner-calendar-day')).toBeInTheDocument();
     });

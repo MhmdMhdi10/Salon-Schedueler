@@ -144,6 +144,14 @@ function todayISO(): string {
   return `${y}-${m}-${d}`;
 }
 
+function addDaysISO(date: string, days: number): string {
+  const value = new Date(`${date}T00:00:00`);
+  value.setDate(value.getDate() + days);
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(
+    value.getDate(),
+  ).padStart(2, '0')}`;
+}
+
 /** Formats an ISO instant to an `HH:mm` label; SlotChip localizes the digits. */
 function slotLabel(iso: string): string {
   const d = new Date(iso);
@@ -206,7 +214,12 @@ export function AvailabilityPage() {
   const [searchParams] = useSearchParams();
   const isMobile = useIsMobile();
   const minDate = useMemo(() => todayISO(), []);
-  const upcomingDays = useMemo(() => buildUpcomingDays(14), []);
+  const [bookingWindowDays, setBookingWindowDays] = useState(14);
+  const maxDate = useMemo(() => addDaysISO(minDate, bookingWindowDays), [minDate, bookingWindowDays]);
+  const upcomingDays = useMemo(
+    () => buildUpcomingDays(Math.min(bookingWindowDays + 1, 31)),
+    [bookingWindowDays],
+  );
 
   // Restore any persisted selection so back-navigation keeps the user's place.
   const restored = useMemo(() => readSelection(salonId), [salonId]);
@@ -261,6 +274,18 @@ export function AvailabilityPage() {
     loadStylists();
   }, [loadStylists]);
 
+  useEffect(() => {
+    if (!salonId || typeof salonApi.getBookingPolicy !== 'function') return;
+    salonApi
+      .getBookingPolicy(salonId)
+      .then(({ bookingWindowDays: value }) => {
+        setBookingWindowDays(value);
+        const upperBound = addDaysISO(minDate, value);
+        setDate((current) => (current && current <= upperBound ? current : ''));
+      })
+      .catch(() => undefined);
+  }, [salonId, minDate]);
+
   // Load availability whenever a service + date are both chosen.
   const loadSlots = useCallback(() => {
     if (!salonId || !selectedService || !date) {
@@ -270,13 +295,13 @@ export function AvailabilityPage() {
     }
     setSlotsStatus('loading');
     salonApi
-      .getAvailability(salonId, selectedService, date)
+      .getAvailability(salonId, selectedService, date, selectedStaff || undefined)
       .then((res) => {
         setSlots(res.slots);
         setSlotsStatus('ready');
       })
       .catch(() => setSlotsStatus('error'));
-  }, [salonId, selectedService, date]);
+  }, [salonId, selectedService, date, selectedStaff]);
 
   useEffect(() => {
     loadSlots();
@@ -452,8 +477,7 @@ export function AvailabilityPage() {
           </section>
         )}
 
-        {/* Date — Booksy-style horizontal day scroller for the next 14 days,
-           plus the full Jalali calendar for jumping further out. */}
+        {/* Date — the salon's configured booking horizon, enforced here and server-side. */}
         <section aria-labelledby="date-section-title" className="flex flex-col gap-3">
           <h2
             id="date-section-title"
@@ -473,6 +497,7 @@ export function AvailabilityPage() {
             value={date || null}
             onChange={handleDateChange}
             min={minDate}
+            max={maxDate}
             placeholder={t('booking.datePlaceholder')}
             variant={isMobile ? 'sheet' : 'popover'}
           />

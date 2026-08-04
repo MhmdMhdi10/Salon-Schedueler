@@ -22,7 +22,7 @@
  * build-time asset (it never enters scanned `src/**` styles); the authoritative
  * tokens live in `styles/tokens.css` / `@salon/shared`.
  */
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
@@ -66,9 +66,7 @@ function flower({ cx, cy, s, a, b, hub, rot = 0, opacity = 1 }) {
   const petals = [0, 72, 144, 216, 288]
     .map(
       (ang, i) =>
-        `<path d="${PETAL}" transform="rotate(${ang} 24 24)" fill="${
-          i % 2 === 0 ? a : b
-        }"/>`,
+        `<path d="${PETAL}" transform="rotate(${ang} 24 24)" fill="${i % 2 === 0 ? a : b}"/>`,
     )
     .join('');
   return `<g transform="translate(${cx} ${cy}) scale(${s}) rotate(${rot})" opacity="${opacity}"><g transform="translate(-24 -24)">${petals}<circle cx="24" cy="24" r="4" fill="${hub}"/></g></g>`;
@@ -158,28 +156,23 @@ function buildHeroSvg() {
 // Emit assets.
 // ---------------------------------------------------------------------------
 
-function buildIconSvg(maskable) {
-  const inset = maskable ? 112 : 72;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-    <defs>
-      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#0B7A68"/>
-        <stop offset="1" stop-color="#05CFA6"/>
-      </linearGradient>
-    </defs>
-    <rect width="512" height="512" rx="${maskable ? 0 : 112}" fill="url(#bg)"/>
-    <g transform="translate(${inset} ${inset}) scale(${(512 - inset * 2) / 256})" fill="#FFFFFF">
-      <path d="M18 130C44 54 92 22 128 22c2 52-22 100-72 130-20 12-38 3-38-22Z"/>
-      <path d="M238 130c-26-76-74-108-110-108-2 52 22 100 72 130 20 12 38 3 38-22Z" opacity=".92"/>
-      <path d="M57 178c18-58 45-88 71-108 26 20 53 50 71 108 8 27-7 50-31 50H88c-24 0-39-23-31-50Z" opacity=".82"/>
-      <circle cx="128" cy="151" r="19"/>
-    </g>
-  </svg>`;
-}
+const appIconSource = readFileSync(resolve(PUBLIC, 'brand/ara-app-icon-source.png'));
+const horizontalLogo = resolve(PUBLIC, 'brand/ara-logo.png');
+
+// Browser tabs need a tight transparent mark. Reusing the padded install icon
+// makes the logo look like a tiny white square at 16–32 px.
+const favicon = await sharp(horizontalLogo)
+  .extract({ left: 496, top: 0, width: 459, height: 480 })
+  .trim({ background: { r: 255, g: 255, b: 255, alpha: 0 } })
+  .resize(30, 30, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+  .extend({ top: 1, bottom: 1, left: 1, right: 1, background: { r: 0, g: 0, b: 0, alpha: 0 } })
+  .png()
+  .toBuffer();
+write('icons/favicon-32.png', favicon);
 
 for (const size of [192, 512]) {
-  const icon = await sharp(Buffer.from(buildIconSvg(false))).resize(size, size).png().toBuffer();
-  const maskable = await sharp(Buffer.from(buildIconSvg(true))).resize(size, size).png().toBuffer();
+  const icon = await sharp(appIconSource).resize(size, size).png().toBuffer();
+  const maskable = await sharp(appIconSource).resize(size, size).png().toBuffer();
   write(`icons/icon-${size}.png`, icon);
   write(`icons/icon-${size}-maskable.png`, maskable);
 }
@@ -189,10 +182,7 @@ for (const size of [192, 512]) {
 // AVIF + WebP sibling at identical dimensions (CLS-safe `<picture>` sources).
 const heroSvg = Buffer.from(buildHeroSvg());
 const hero1280 = await sharp(heroSvg).png({ compressionLevel: 9 }).toBuffer();
-const hero640 = await sharp(hero1280)
-  .resize(640, 360)
-  .png({ compressionLevel: 9 })
-  .toBuffer();
+const hero640 = await sharp(hero1280).resize(640, 360).png({ compressionLevel: 9 }).toBuffer();
 
 const HERO_VARIANTS = [
   ['hero/hero-1280', hero1280],
@@ -217,7 +207,7 @@ write('og/default.jpg', og);
 
 // eslint-disable-next-line no-console
 console.log(
-  `[pwa-assets] wrote 4 آرا bloom icons, ` +
+  `[pwa-assets] wrote 4 آرا smart-calendar icons, ` +
     `${HERO_VARIANTS.length} hero PNGs + ${modernCount} AVIF/WebP variants, ` +
     `and the OG share image to public/`,
 );

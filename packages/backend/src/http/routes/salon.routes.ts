@@ -79,6 +79,16 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
     }),
   );
 
+  // Public booking horizon used by the date picker. Enforcement also lives in
+  // SchedulingEngine, so a crafted request cannot bypass this rule.
+  router.get(
+    '/salons/:id/booking-policy',
+    asyncRoute(async (req, res) => {
+      const bookingWindowDays = await services.availabilityConfig.getBookingWindowDays(req.params.id);
+      res.status(200).json({ bookingWindowDays });
+    }),
+  );
+
   // List a salon's services. priceRial is BigInt in the domain; map to the
   // client-facing shape (number) so the JSON response serializes cleanly.
   router.get(

@@ -45,9 +45,23 @@ vi.mock('../../../api/client', () => {
       getAnalytics: vi.fn().mockResolvedValue({ utilization: {}, revenue: 0, busiestWindows: [] }),
       getStaff: vi.fn().mockResolvedValue({ staff: [] }),
       getChairs: vi.fn().mockResolvedValue({ chairs: [] }),
+      createChair: vi.fn().mockResolvedValue({ chair: { id: 'c1', name: 'صندلی ۱', active: true } }),
     },
     salonApi: {
       getServices: vi.fn().mockResolvedValue({ services: [] }),
+    },
+    holidaysApi: {
+      list: vi.fn().mockResolvedValue({ holidays: [] }),
+    },
+    workingHoursApi: {
+      getSalon: vi.fn().mockResolvedValue({ hours: [] }),
+      getStaff: vi.fn().mockResolvedValue({ hours: [] }),
+    },
+    bookingPolicyApi: {
+      get: vi.fn().mockResolvedValue({ bookingWindowDays: 14 }),
+    },
+    staffAvailabilityApi: {
+      list: vi.fn().mockResolvedValue({ blocks: [] }),
     },
   };
 });

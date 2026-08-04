@@ -105,6 +105,24 @@ function chairWorkingHoursForDay() {
 }
 
 describe('SchedulingEngine.getAvailability', () => {
+  it('returns no slots beyond a today-only booking horizon', async () => {
+    const prisma = createMockPrisma({
+      salon: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ timezone: 'Asia/Tehran', bookingWindowDays: 0 }),
+      },
+    });
+    const engine = new SchedulingEngine(prisma);
+    const slots = await engine.getAvailability({
+      salonId: SALON_ID,
+      serviceId: SERVICE_ID,
+      date: '2099-01-01',
+    });
+    expect(slots).toEqual([]);
+    expect(prisma.service.findUnique).not.toHaveBeenCalled();
+  });
+
   describe('basic slot generation (R8.1)', () => {
     it('returns slots when staff and chair are both free', async () => {
       const prisma = createMockPrisma();
