@@ -70,6 +70,8 @@ export interface AppConfig {
    * by the 2-minute expiry; production should leave it at the secure default.
    */
   otpWindowSeconds: number;
+  /** Explicit temporary opt-in to return generated OTPs to the web client. */
+  devOtpAutoFill: boolean;
   /**
    * Public origin (scheme + host) for salon profile links / QR destinations.
    * Optional; QR_Service falls back to its own documented default when absent.
@@ -165,6 +167,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     otpWindowSeconds: env.OTP_WINDOW_SECONDS
       ? Number(env.OTP_WINDOW_SECONDS)
       : 120,
+    devOtpAutoFill: env.DEV_OTP_AUTO_FILL === 'true',
     publicBaseUrl: env.PUBLIC_BASE_URL,
     rabbitmqUrl: env.RABBITMQ_URL,
     smsQueueMaxAttempts: env.SMS_QUEUE_MAX_ATTEMPTS

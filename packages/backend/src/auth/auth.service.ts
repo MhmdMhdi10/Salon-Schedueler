@@ -37,6 +37,8 @@ export interface AuthServiceConfig {
   refreshExpirySeconds: number;
   /** OTP validity window in seconds (default 120) */
   otpWindowSeconds: number;
+  /** Explicit temporary opt-in to return generated OTPs to the web client. */
+  devOtpAutoFill: boolean;
 }
 
 const DEFAULT_CONFIG: AuthServiceConfig = {
@@ -45,6 +47,7 @@ const DEFAULT_CONFIG: AuthServiceConfig = {
   accessExpirySeconds: 900,       // 15 minutes
   refreshExpirySeconds: 604800,   // 7 days
   otpWindowSeconds: 120,
+  devOtpAutoFill: false,
 };
 
 /**
@@ -100,7 +103,12 @@ export class AuthService {
    * 3. Store the new OTP with a 120-second expiry window
    * 4. Send the code via SmsProvider (R1.1)
    */
-  async requestOtp(phone: string): Promise<void> {
+  async requestOtp(phone: string): Promise<void>;
+  async requestOtp(phone: string, options: { exposeCode: true }): Promise<string | undefined>;
+  async requestOtp(
+    phone: string,
+    options?: { exposeCode?: boolean },
+  ): Promise<void | string | undefined> {
     const code = this.generateOtpCode();
     const codeHash = this.hashCode(code);
     const now = new Date();
@@ -134,6 +142,8 @@ export class AuthService {
       phone,
       `Your verification code is: ${code}`,
     );
+
+    return options?.exposeCode && this.config.devOtpAutoFill ? code : undefined;
   }
 
   /**

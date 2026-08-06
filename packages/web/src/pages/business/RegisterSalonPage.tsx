@@ -234,7 +234,9 @@ function RegisterSalonContent() {
         chairCount: toIntOrZero(chairCount),
       });
       // Salon created — send the OTP so the owner can sign straight in.
-      await authApi.requestOtp(normalizedPhone);
+      const response = await authApi.requestOtp(normalizedPhone);
+      const devOtp = response?.devOtp;
+      setCode(devOtp ? devOtp.split('') : Array(OTP_LENGTH).fill(''));
       setStep('otp');
       setSecondsLeft(RESEND_SECONDS);
       success({ title: t('auth.otpSent') });
@@ -257,9 +259,9 @@ function RegisterSalonContent() {
     setOtpLoading(true);
     setOtpError('');
     try {
-      await authApi.requestOtp(normalizedPhone);
+      const response = await authApi.requestOtp(normalizedPhone);
       setSecondsLeft(RESEND_SECONDS);
-      setCode(Array(OTP_LENGTH).fill(''));
+      setCode(response?.devOtp ? response.devOtp.split('') : Array(OTP_LENGTH).fill(''));
       success({ title: t('auth.otpSent') });
       window.setTimeout(() => otpRefs.current[0]?.focus(), 0);
     } catch {

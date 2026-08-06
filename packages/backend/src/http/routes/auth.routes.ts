@@ -6,7 +6,7 @@ import { asyncRoute, validateRequired } from './route-helpers.js';
  * Auth routes (public — no token required). Maps to `AuthService` and reuses the
  * stable error codes via `mapDomainError` (Requirement 2.2, 2.5 / original R1).
  *
- * - POST /auth/otp/request  { phone }            -> 200 { ok: true }
+ * - POST /auth/otp/request  { phone }            -> 200 { ok: true, devOtp? }
  * - POST /auth/otp/verify   { phone, code }      -> 200 { accessToken, refreshToken }
  * - POST /auth/refresh      { refreshToken }     -> 200 { accessToken, refreshToken }
  *
@@ -22,8 +22,8 @@ export function authRouter(services: Services): Router {
       if (!validateRequired(res, req.body, ['phone'])) {
         return;
       }
-      await services.authService.requestOtp(req.body.phone);
-      res.status(200).json({ ok: true });
+      const devOtp = await services.authService.requestOtp(req.body.phone, { exposeCode: true });
+      res.status(200).json(devOtp ? { ok: true, devOtp } : { ok: true });
     }),
   );
 

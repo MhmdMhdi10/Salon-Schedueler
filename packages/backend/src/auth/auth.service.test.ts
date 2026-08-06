@@ -180,6 +180,18 @@ describe('AuthService', () => {
       expect(smsProvider.calls[0].phone).toBe(phone);
       expect(smsProvider.calls[0].message).toMatch(/\d{6}/);
     });
+
+    it('returns the generated code only when explicit autofill is enabled', async () => {
+      const devService = new AuthService(prisma, smsProvider, {
+        ...config,
+        devOtpAutoFill: true,
+      });
+
+      const code = await devService.requestOtp('09123456789', { exposeCode: true });
+
+      expect(code).toMatch(/^\d{6}$/);
+      expect(smsProvider.calls[0].message).toContain(code);
+    });
   });
 
   describe('verifyOtp', () => {

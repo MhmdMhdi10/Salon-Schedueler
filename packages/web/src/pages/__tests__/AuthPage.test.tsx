@@ -131,6 +131,14 @@ describe('AuthPage — OTP step', () => {
     }
   });
 
+  it('fills a temporary development OTP returned by the API', async () => {
+    requestOtp.mockResolvedValueOnce({ devOtp: '123456' });
+    await advanceToOtp();
+
+    expect(screen.getByLabelText('رقم ۱ کد تایید')).toHaveValue('1');
+    expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('6');
+  });
+
   it('auto-advances focus to the next box on entry', async () => {
     await advanceToOtp();
     const first = screen.getByLabelText('رقم ۱ کد تایید');

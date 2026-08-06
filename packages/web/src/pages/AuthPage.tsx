@@ -146,7 +146,9 @@ export function AuthPage() {
     setLoading(true);
     setError('');
     try {
-      await authApi.requestOtp(normalizedPhone);
+      const response = await authApi.requestOtp(normalizedPhone);
+      const devOtp = response?.devOtp;
+      setCode(devOtp ? devOtp.split('') : Array(OTP_LENGTH).fill(''));
       setDirection(1);
       setStep('otp');
       setSecondsLeft(RESEND_SECONDS);

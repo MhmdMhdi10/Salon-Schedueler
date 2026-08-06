@@ -230,6 +230,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     jwtAccessSecret: config.jwtAccessSecret,
     jwtRefreshSecret: config.jwtRefreshSecret,
     otpWindowSeconds: config.otpWindowSeconds,
+    devOtpAutoFill: config.devOtpAutoFill,
   });
 
   // Port-based services with Prisma-backed adapters.

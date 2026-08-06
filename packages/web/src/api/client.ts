@@ -140,7 +140,10 @@ export class ApiError extends Error {
 // Auth endpoints
 export const authApi = {
   requestOtp: (phone: string) =>
-    request<void>('/auth/otp/request', { method: 'POST', body: { phone } }),
+    request<{ ok: boolean; devOtp?: string }>('/auth/otp/request', {
+      method: 'POST',
+      body: { phone },
+    }),
   verifyOtp: (phone: string, code: string) =>
     request<{ accessToken: string; refreshToken: string }>('/auth/otp/verify', {
       method: 'POST',
