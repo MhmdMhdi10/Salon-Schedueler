@@ -60,6 +60,7 @@ export function OwnerInboxBell() {
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const anchorRef = useRef<HTMLDivElement>(null);
+  const readOnOpenRef = useRef(false);
 
   const refreshAll = useCallback(async () => {
     if (!salonId) return;
@@ -108,7 +109,7 @@ export function OwnerInboxBell() {
   }, [open]);
 
   const markAll = useCallback(async () => {
-    if (!salonId) return;
+    if (!salonId || unread <= 0) return;
     setBusy(true);
     const prev = unread;
     const prevList = recent;
@@ -123,6 +124,14 @@ export function OwnerInboxBell() {
       setBusy(false);
     }
   }, [salonId, unread, recent]);
+
+  // If owner opens before the initial count request resolves, wait for that
+  // count and still mark the inbox as seen exactly once for this opening.
+  useEffect(() => {
+    if (!open || !readOnOpenRef.current || unread <= 0 || busy) return;
+    readOnOpenRef.current = false;
+    void markAll();
+  }, [open, unread, busy, markAll]);
 
   const markOne = useCallback(async (id: string) => {
     setBusy(true);
@@ -139,6 +148,14 @@ export function OwnerInboxBell() {
       setBusy(false);
     }
   }, []);
+
+  const toggleOpen = () => {
+    const nextOpen = !open;
+    setOpen(nextOpen);
+    // Opening inbox means owner has seen current notifications. The effect
+    // waits for the initial unread-count request when needed.
+    readOnOpenRef.current = nextOpen;
+  };
 
   const renderedRecent = useMemo(() => {
     if (loading && recent.length === 0) {
@@ -175,7 +192,7 @@ export function OwnerInboxBell() {
                       aria-label={t('owner.inbox.markRead', {
                         defaultValue: 'علامت‌گذاری به خوانده‌شده',
                       })}
-                      className="shrink-0 rounded p-1 text-muted hover:bg-elevated hover:text-text"
+                      className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded p-1 text-muted hover:bg-elevated hover:text-text"
                     >
                       <Check className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>
@@ -202,12 +219,12 @@ export function OwnerInboxBell() {
     <div ref={anchorRef} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggleOpen}
         aria-label={t('owner.inbox.bell', { defaultValue: 'اعلان‌ها' })}
         aria-expanded={open}
-        aria-haspopup="menu"
+        aria-haspopup="dialog"
         className={cn(
-          'relative inline-flex h-9 w-9 items-center justify-center rounded-md',
+          'relative inline-flex h-11 w-11 items-center justify-center rounded-md',
           'text-text hover:bg-elevated',
           'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
         )}
@@ -227,51 +244,59 @@ export function OwnerInboxBell() {
         )}
       </button>
       {open && (
-        <div
-          role="menu"
-          aria-label={t('owner.inbox.bell', { defaultValue: 'اعلان‌ها' })}
-          className={cn(
-            'absolute end-0 top-full mt-2 z-nav',
-            'w-[20rem] max-w-[calc(100vw-1rem)]',
-            'rounded-lg border border-border bg-surface shadow-2',
-          )}
-        >
-          <header className="flex items-center justify-between border-b border-border px-3 py-2">
-            <span className="text-sm font-semibold text-text">
-              {t('owner.inbox.title', { defaultValue: 'اعلان‌ها' })}
-              {unread > 0 && (
-                <span className="ms-1 text-xs text-muted">
-                  (<Num value={unread} />)
-                </span>
-              )}
-            </span>
-            {unread > 0 && (
-              <button
-                type="button"
-                onClick={markAll}
-                disabled={busy}
-                className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs font-medium text-primary hover:bg-primary/10"
-              >
-                <CheckCheck className="h-3.5 w-3.5" aria-hidden="true" />
-                {t('owner.inbox.markAllRead', { defaultValue: 'خواندن همه' })}
-              </button>
+        <>
+          <button
+            type="button"
+            aria-label="بستن اعلان‌ها"
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-sticky bg-bg/40 backdrop-blur-[1px] sm:hidden"
+          />
+          <div
+            role="dialog"
+            aria-label={t('owner.inbox.bell', { defaultValue: 'اعلان‌ها' })}
+            className={cn(
+              'fixed inset-x-3 top-[4.5rem] z-nav flex max-h-[calc(100dvh-7.5rem)] flex-col overflow-hidden',
+              'rounded-xl border border-border bg-surface shadow-3',
+              'sm:absolute sm:inset-x-auto sm:end-0 sm:top-full sm:mt-2 sm:w-[22rem] sm:max-w-[calc(100vw-1rem)] sm:max-h-[min(36rem,calc(100dvh-7rem))]',
             )}
-          </header>
-          {renderedRecent}
-          <footer className="border-t border-border p-2">
-            <Button
-              variant="ghost"
-              size="md"
-              onClick={() => {
-                setOpen(false);
-                navigate('/owner/notifications');
-              }}
-              className="w-full"
-            >
-              {t('owner.inbox.viewAll', { defaultValue: 'نمایش همه' })}
-            </Button>
-          </footer>
-        </div>
+          >
+            <header className="flex items-center justify-between border-b border-border px-3 py-2">
+              <span className="text-sm font-semibold text-text">
+                {t('owner.inbox.title', { defaultValue: 'اعلان‌ها' })}
+                {unread > 0 && (
+                  <span className="ms-1 text-xs text-muted">
+                    (<Num value={unread} />)
+                  </span>
+                )}
+              </span>
+              {unread > 0 && (
+                <button
+                  type="button"
+                  onClick={markAll}
+                  disabled={busy}
+                  className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs font-medium text-primary hover:bg-primary/10"
+                >
+                  <CheckCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                  {t('owner.inbox.markAllRead', { defaultValue: 'خواندن همه' })}
+                </button>
+              )}
+            </header>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{renderedRecent}</div>
+            <footer className="border-t border-border p-2">
+              <Button
+                variant="ghost"
+                size="md"
+                onClick={() => {
+                  setOpen(false);
+                  navigate('/owner/notifications');
+                }}
+                className="w-full"
+              >
+                {t('owner.inbox.viewAll', { defaultValue: 'نمایش همه' })}
+              </Button>
+            </footer>
+          </div>
+        </>
       )}
     </div>
   );

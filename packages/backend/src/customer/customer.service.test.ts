@@ -27,6 +27,14 @@ const AUTHOR_ID = 'author-1';
 function createMockRepository(overrides: Partial<CustomerRepository> = {}): CustomerRepository {
   return {
     findById: jest.fn().mockResolvedValue({ id: CUSTOMER_ID, preferredStaffId: null }),
+    getProfile: jest.fn().mockResolvedValue({
+      id: CUSTOMER_ID,
+      phone: '09120000000',
+      fullName: null,
+    }),
+    updateProfile: jest.fn().mockImplementation((customerId: string, fullName: string) =>
+      Promise.resolve({ id: customerId, phone: '09120000000', fullName }),
+    ),
     getAppointments: jest.fn().mockResolvedValue([]),
     createNote: jest.fn().mockImplementation(
       (customerId: string, authorId: string | null, body: string) =>
@@ -46,6 +54,35 @@ function createMockRepository(overrides: Partial<CustomerRepository> = {}): Cust
 }
 
 describe('CustomerService', () => {
+  describe('profile', () => {
+    it('returns phone and saved name for the authenticated customer', async () => {
+      const profile = { id: CUSTOMER_ID, phone: '09120000000', fullName: 'سارا محمدی' };
+      const repo = createMockRepository({ getProfile: jest.fn().mockResolvedValue(profile) });
+      const service = new CustomerService(repo);
+
+      await expect(service.getProfile(CUSTOMER_ID)).resolves.toEqual(profile);
+      expect(repo.getProfile).toHaveBeenCalledWith(CUSTOMER_ID);
+    });
+
+    it('trims and persists a valid name', async () => {
+      const repo = createMockRepository();
+      const service = new CustomerService(repo);
+
+      await service.updateProfile(CUSTOMER_ID, '  سارا محمدی  ');
+
+      expect(repo.updateProfile).toHaveBeenCalledWith(CUSTOMER_ID, 'سارا محمدی');
+    });
+
+    it('rejects empty or oversized names', async () => {
+      const repo = createMockRepository();
+      const service = new CustomerService(repo);
+
+      await expect(service.updateProfile(CUSTOMER_ID, ' ')).rejects.toThrow();
+      await expect(service.updateProfile(CUSTOMER_ID, 'x'.repeat(121))).rejects.toThrow();
+      expect(repo.updateProfile).not.toHaveBeenCalled();
+    });
+  });
+
   describe('getHistory (R14.1)', () => {
     it('returns past appointments for a customer', async () => {
       const appointments: AppointmentRecord[] = [

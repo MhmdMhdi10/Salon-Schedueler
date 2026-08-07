@@ -36,6 +36,14 @@ export interface NotificationLogEntry {
    * are the bot channels added by `Bot_Channel` (Requirements 1.9, 1.10).
    */
   channel: 'sms' | 'push' | 'telegram' | 'bale';
+  /** Semantic event used for durable idempotency (older fakes may omit it). */
+  type?:
+    | 'confirmation'
+    | 'reminder'
+    | 'rejection'
+    | 'cancellation'
+    | 'booking_notice'
+    | 'generic';
   status: 'sent' | 'failed';
   error: string | null;
   createdAt: Date;
@@ -65,6 +73,13 @@ export interface NotificationRepository {
   /** Log a notification delivery attempt */
   logNotification(entry: Omit<NotificationLogEntry, 'id' | 'createdAt'>): Promise<NotificationLogEntry>;
 
+  /** Return true after a successful delivery of the same event/channel. */
+  hasSentNotification?: (
+    appointmentId: string,
+    type: NonNullable<NotificationLogEntry['type']>,
+    channel: NotificationLogEntry['channel'],
+  ) => Promise<boolean>;
+
   /** Register a device token for a customer */
   registerDeviceToken(customerId: string, token: string, platform: string): Promise<void>;
 }
@@ -92,6 +107,7 @@ export class NotificationService {
   private readonly pushProvider: PushProvider;
   private readonly repository: NotificationRepository;
   private readonly defaultReminderLeadTimeMinutes: number;
+  private readonly remindersInFlight = new Set<string>();
 
   constructor(
     smsProvider: SmsProvider,
@@ -124,6 +140,7 @@ export class NotificationService {
     await this.repository.logNotification({
       appointmentId,
       channel: 'sms',
+      type: 'confirmation',
       status: result.ok ? 'sent' : 'failed',
       error: result.ok ? null : result.error,
     });
@@ -150,6 +167,7 @@ export class NotificationService {
       await this.repository.logNotification({
         appointmentId,
         channel: 'sms',
+        type: 'booking_notice',
         status: result.ok ? 'sent' : 'failed',
         error: result.ok ? null : result.error,
       });
@@ -173,6 +191,7 @@ export class NotificationService {
     await this.repository.logNotification({
       appointmentId,
       channel: 'sms',
+      type: 'rejection',
       status: result.ok ? 'sent' : 'failed',
       error: result.ok ? null : result.error,
     });
@@ -197,6 +216,7 @@ export class NotificationService {
     await this.repository.logNotification({
       appointmentId,
       channel: 'sms',
+      type: 'cancellation',
       status: result.ok ? 'sent' : 'failed',
       error: result.ok ? null : result.error,
     });
@@ -211,45 +231,59 @@ export class NotificationService {
    * Requirements: R12.2, R12.3, R12.4
    */
   async sendReminder(appointmentId: string): Promise<void> {
-    const appointment = await this.repository.findAppointment(appointmentId);
-    if (!appointment) {
-      return;
-    }
+    if (this.remindersInFlight.has(appointmentId)) return;
+    this.remindersInFlight.add(appointmentId);
 
-    // R12.2: Always send SMS reminder
-    const smsMessage = this.buildReminderMessage(appointment);
-    const smsResult = await this.smsProvider.send(appointment.customerPhone, smsMessage);
+    try {
+      const appointment = await this.repository.findAppointment(appointmentId);
+      if (!appointment) return;
 
-    await this.repository.logNotification({
-      appointmentId,
-      channel: 'sms',
-      status: smsResult.ok ? 'sent' : 'failed',
-      error: smsResult.ok ? null : smsResult.error,
-    });
+      if (
+        this.repository.hasSentNotification &&
+        (await this.repository.hasSentNotification(appointmentId, 'reminder', 'sms'))
+      ) {
+        return;
+      }
+
+      // R12.2: Always send SMS reminder
+      const smsMessage = this.buildReminderMessage(appointment);
+      const smsResult = await this.smsProvider.send(appointment.customerPhone, smsMessage);
+
+      await this.repository.logNotification({
+        appointmentId,
+        channel: 'sms',
+        type: 'reminder',
+        status: smsResult.ok ? 'sent' : 'failed',
+        error: smsResult.ok ? null : smsResult.error,
+      });
 
     // R12.4: If SMS fails, log failure and do NOT attempt further delivery
     // (no fallback — the failure is already logged above)
 
     // R12.3: Additionally send push if customer has push enabled with a registered device
-    const deviceTokens = await this.repository.findDeviceTokens(appointment.customerId);
-    const enabledTokens = deviceTokens.filter((dt) => dt.pushEnabled);
+      const deviceTokens = await this.repository.findDeviceTokens(appointment.customerId);
+      const enabledTokens = deviceTokens.filter((dt) => dt.pushEnabled);
 
-    if (enabledTokens.length > 0) {
-      const pushPayload: PushPayload = {
-        title: 'یادآوری نوبت',
-        body: this.buildReminderMessage(appointment),
-      };
+      if (enabledTokens.length > 0) {
+        const pushPayload: PushPayload = {
+          title: 'یادآوری نوبت',
+          body: this.buildReminderMessage(appointment),
+        };
 
-      for (const dt of enabledTokens) {
-        const pushResult = await this.pushProvider.send(dt.token, pushPayload);
+        for (const dt of enabledTokens) {
+          const pushResult = await this.pushProvider.send(dt.token, pushPayload);
 
-        await this.repository.logNotification({
-          appointmentId,
-          channel: 'push',
-          status: pushResult.ok ? 'sent' : 'failed',
-          error: pushResult.ok ? null : pushResult.error,
-        });
+          await this.repository.logNotification({
+            appointmentId,
+            channel: 'push',
+            type: 'reminder',
+            status: pushResult.ok ? 'sent' : 'failed',
+            error: pushResult.ok ? null : pushResult.error,
+          });
+        }
       }
+    } finally {
+      this.remindersInFlight.delete(appointmentId);
     }
   }
 

@@ -124,6 +124,12 @@ describe('Authorizer', () => {
   });
 
   describe('Edge cases', () => {
+    it('denies a scoped staff principal from crossing salon boundaries', () => {
+      const scopedOwner: Principal = { ...owner(), salonId: 'salon-1' };
+      expect(authorizer.can(scopedOwner, 'manage_appointments', { salonId: 'salon-2' })).toBe(false);
+      expect(authorizer.can(scopedOwner, 'manage_appointments', { salonId: 'salon-1' })).toBe(true);
+    });
+
     it('should default resource to empty object when not provided', () => {
       // Owner still gets access
       expect(authorizer.can(owner(), 'view_own_appointments')).toBe(true);

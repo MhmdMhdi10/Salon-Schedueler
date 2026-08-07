@@ -19,7 +19,9 @@ import {
 type OwnerAuthState =
   | { phase: 'loading' }
   | { phase: 'authenticated'; role: OwnerRole; salonId: string }
-  | { phase: 'unauthenticated' };
+  | { phase: 'unauthenticated' }
+  | { phase: 'customer' }
+  | { phase: 'platform-admin' };
 
 /**
  * Owner panel layout + auth guard (task 5.1; R2.1, R2.2, R2.3).
@@ -62,6 +64,17 @@ export function OwnerLayout() {
       try {
         const { principal } = await meApi.getMe();
         if (cancelled) return;
+        // A valid customer token is authenticated, but it is not an owner
+        // session. Keep the customer signed in and return them to their own
+        // surface instead of mounting an empty owner shell on a deep link.
+        if (principal.role === 'PlatformAdmin') {
+          setState({ phase: 'platform-admin' });
+          return;
+        }
+        if (!principal.role) {
+          setState({ phase: 'customer' });
+          return;
+        }
         setState({
           phase: 'authenticated',
           role: principal.role,
@@ -104,6 +117,14 @@ export function OwnerLayout() {
 
   if (state.phase === 'unauthenticated') {
     return <Navigate to="/auth" replace />;
+  }
+
+  if (state.phase === 'customer') {
+    return <Navigate to="/account" replace />;
+  }
+
+  if (state.phase === 'platform-admin') {
+    return <Navigate to="/platform-admin" replace />;
   }
 
   return (

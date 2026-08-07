@@ -2,6 +2,9 @@ import type { Response } from 'express';
 import { AuthError } from '../auth/index.js';
 import { RegistrationError } from '../registration/index.js';
 import { ValidationError } from '../catalog/validation-error.js';
+import { BookingAbuseError } from '../security/booking-abuse-guard.js';
+import { BookingConflictError } from '../app/appointment-management.js';
+import { PlatformAdminError } from '../platform-admin/platform-admin.service.js';
 
 /**
  * A domain error mapped to an HTTP status and a stable, client-facing error code.
@@ -28,6 +31,23 @@ export interface MappedError {
  * | Anything else            | 500    | INTERNAL              |
  */
 export function mapDomainError(err: unknown): MappedError {
+  if (err instanceof BookingAbuseError) {
+    switch (err.code) {
+      case 'BOT_DETECTED':
+        return { status: 403, code: 'AUTOMATION_BLOCKED' };
+      case 'BOOKING_LIMIT':
+        return { status: 429, code: 'BOOKING_LIMIT_REACHED' };
+      case 'INVALID_IDEMPOTENCY_KEY':
+        return { status: 400, code: 'INVALID_IDEMPOTENCY_KEY' };
+      case 'DUPLICATE_BOOKING':
+        return { status: 409, code: 'DUPLICATE_BOOKING' };
+    }
+  }
+
+  if (err instanceof BookingConflictError) {
+    return { status: 409, code: 'BOOKING_SLOT_UNAVAILABLE' };
+  }
+
   if (err instanceof AuthError) {
     switch (err.code) {
       case 'OTP_EXPIRED':
@@ -51,6 +71,13 @@ export function mapDomainError(err: unknown): MappedError {
 
   if (err instanceof ValidationError) {
     return { status: 400, code: 'VALIDATION_ERROR' };
+  }
+
+  if (err instanceof PlatformAdminError) {
+    return {
+      status: err.code === 'NOT_FOUND' ? 404 : 409,
+      code: err.code,
+    };
   }
 
   return { status: 500, code: 'INTERNAL' };

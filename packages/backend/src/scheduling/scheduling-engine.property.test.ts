@@ -338,6 +338,9 @@ function buildMockPrisma(scenario: SalonScenario) {
       findFirst: jest.fn().mockResolvedValue(
         isHoliday ? { id: 'h-1', salonId, onDate: new Date(`${date}T00:00:00Z`) } : null,
       ),
+      findMany: jest.fn().mockResolvedValue(
+        isHoliday ? [{ id: 'h-1', salonId, onDate: new Date(`${date}T00:00:00Z`) }] : [],
+      ),
     },
     staffMember: {
       findMany: jest.fn().mockResolvedValue(staffMembers),

@@ -144,7 +144,7 @@ export const OtpInput = forwardRef<OtpInputHandle, OtpInputProps>(function OtpIn
        guaranteeing reading order == index order (index 0 = leftmost box) so
        `value.join('')` submits digits in the order the user sees them. */
     <motion.div
-      className="flex flex-row justify-center gap-1.5 sm:gap-2"
+      className="flex flex-row justify-center gap-1 sm:gap-2"
       dir="ltr"
       style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
       animate={shakeControls}
@@ -174,7 +174,7 @@ export const OtpInput = forwardRef<OtpInputHandle, OtpInputProps>(function OtpIn
           onFocus={(e) => e.target.select()}
           onKeyDown={(e) => handleKeyDown(index, e)}
           className={cn(
-            'h-11 w-10 rounded-md border bg-bg text-center text-lg font-bold text-text',
+            'h-11 w-9 rounded-md border bg-bg text-center text-lg font-bold text-text',
             'sm:h-12 sm:w-11',
             'transition-colors duration-fast ease-standard',
             'outline-none focus-visible:outline focus-visible:outline-2',

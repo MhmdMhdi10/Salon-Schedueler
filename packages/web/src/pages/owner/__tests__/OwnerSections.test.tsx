@@ -36,6 +36,8 @@ const getSalonWorkingHours = vi.fn();
 const setSalonWorkingHours = vi.fn();
 const getBookingPolicy = vi.fn();
 const setBookingPolicy = vi.fn();
+const getAdminStaff = vi.fn();
+const updateStaff = vi.fn();
 
 vi.mock('../../../api/client', () => {
   class ApiError extends Error {
@@ -61,7 +63,7 @@ vi.mock('../../../api/client', () => {
     adminApi: {
       getCalendar: vi.fn().mockResolvedValue({ appointments: [] }),
       getAnalytics: vi.fn().mockResolvedValue({ utilization: {}, revenue: 0, busiestWindows: [] }),
-      getStaff: vi.fn().mockResolvedValue({ staff: [] }),
+      getStaff: (...args: unknown[]) => getAdminStaff(...args),
       getChairs: vi.fn().mockResolvedValue({ chairs: [] }),
     },
     salonApi: {
@@ -96,7 +98,7 @@ vi.mock('../../../api/client', () => {
     },
     staffApi: {
       create: vi.fn().mockResolvedValue({ staff: {} }),
-      update: vi.fn().mockResolvedValue({ staff: {} }),
+      update: (...args: unknown[]) => updateStaff(...args),
     },
     staffAvailabilityApi: {
       list: vi.fn().mockResolvedValue({ blocks: [] }),
@@ -108,7 +110,12 @@ vi.mock('../../../api/client', () => {
 });
 
 import { OwnerLayout } from '../OwnerLayout';
-import { OwnerCalendarPage, OwnerAnalyticsPage, OwnerConfigurationPage } from '..';
+import {
+  OwnerCalendarPage,
+  OwnerWorkingHoursPage,
+  OwnerAnalyticsPage,
+  OwnerConfigurationPage,
+} from '..';
 import type { OwnerRole } from '../../../api/client';
 import { ToastProvider } from '../../../components/ui/Toast';
 
@@ -130,6 +137,7 @@ function renderOwnerApp(role: OwnerRole, initialPath: string) {
               <Routes>
                 <Route path="/owner" element={<OwnerLayout />}>
                   <Route path="calendar" element={<OwnerCalendarPage />} />
+                  <Route path="calendar/working-hours" element={<OwnerWorkingHoursPage />} />
                   <Route path="analytics" element={<OwnerAnalyticsPage />} />
                   <Route path="config" element={<OwnerConfigurationPage />} />
                 </Route>
@@ -150,6 +158,8 @@ beforeEach(() => {
   setSalonWorkingHours.mockResolvedValue({ ok: true, hours: [] });
   getBookingPolicy.mockResolvedValue({ bookingWindowDays: 14 });
   setBookingPolicy.mockResolvedValue({ ok: true, bookingWindowDays: 14 });
+  getAdminStaff.mockResolvedValue({ staff: [] });
+  updateStaff.mockResolvedValue({ staff: {} });
 });
 
 afterEach(() => {
@@ -167,12 +177,30 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
     expect(screen.getByRole('main')).toContainElement(screen.getByTestId('owner-calendar-page'));
   });
 
-  it('opens recurring weekly hours directly from the calendar', async () => {
+  it('shows the date navigation before calendar action buttons', async () => {
+    renderOwnerApp('Owner', '/owner/calendar');
+
+    const dateNav = await screen.findByRole('navigation', { name: 'ناوبری تاریخ' });
+    const weeklyHours = await screen.findByRole('button', { name: 'ساعات کاری هفتگی' });
+
+    expect(
+      dateNav.compareDocumentPosition(weeklyHours) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('opens recurring weekly hours on a separate page with back navigation', async () => {
     renderOwnerApp('Owner', '/owner/calendar');
     fireEvent.click(await screen.findByRole('button', { name: 'ساعات کاری هفتگی' }));
-    expect(await screen.findByRole('dialog')).toHaveTextContent('برنامه کاری هفتگی');
+    expect(await screen.findByTestId('owner-working-hours-page')).toBeInTheDocument();
+    expect(await screen.findByTestId('owner-weekly-schedule')).toHaveTextContent(
+      'برنامه کاری هفتگی',
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'بازگشت به تقویم' })).toBeInTheDocument();
     await waitFor(() => expect(getSalonWorkingHours).toHaveBeenCalled());
     expect(screen.getByText('پنجشنبه و جمعه تعطیل')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', { name: 'بازگشت به تقویم' }));
+    expect(await screen.findByTestId('owner-calendar-page')).toBeInTheDocument();
   });
 
   it('turns a recurring break into two bookable windows', async () => {
@@ -211,6 +239,32 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
 
     expect(await screen.findByTestId('owner-config-page')).toBeInTheDocument();
     expect(await screen.findByTestId('admin-configuration')).toBeInTheDocument();
+    expect(screen.queryByTestId('holidays-list')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('approval-policy')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('approval-loading')).not.toBeInTheDocument();
+  });
+
+  it('deactivates a staff member through the owner API and keeps the row recoverable', async () => {
+    const member = {
+      id: 'staff-1',
+      fullName: 'سارا محمدی',
+      role: 'Stylist' as const,
+      phone: null,
+      active: true,
+      autoApprove: null,
+      manageOwnAvailability: false,
+    };
+    getAdminStaff.mockResolvedValue({ staff: [member] });
+    updateStaff.mockResolvedValue({ staff: { ...member, active: false } });
+
+    renderOwnerApp('Owner', '/owner/config');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'غیرفعال کردن سارا محمدی' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('غیرفعال کردن سارا محمدی؟');
+    fireEvent.click(screen.getByRole('button', { name: 'غیرفعال کردن' }));
+
+    await waitFor(() => expect(updateStaff).toHaveBeenCalledWith('staff-1', { active: false }));
+    expect(await screen.findByText('غیرفعال')).toBeInTheDocument();
   });
 });
 

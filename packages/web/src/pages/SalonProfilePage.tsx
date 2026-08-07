@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import * as RadixDialog from '@radix-ui/react-dialog';
 import {
   Check,
@@ -93,6 +93,7 @@ function ProfileGallery({
             key={image.src}
             type="button"
             onClick={() => onOpen(index)}
+            aria-label={image.alt || `نمایش تصویر ${index + 1}`}
             className={cn(
               'relative block h-full w-full overflow-hidden bg-surface p-0 text-start',
               'outline-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus',
@@ -287,7 +288,10 @@ function ServicesSection({
               </h3>
             )}
             {services.map((service) => (
-              <div key={service.id} className="flex items-center gap-4 p-4">
+              <div
+                key={service.id}
+                className="flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:gap-4"
+              >
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-text">{service.name}</p>
                   {service.description && (
@@ -297,7 +301,7 @@ function ServicesSection({
                     {t('salon.profile.durationMinutes', { count: service.durationMinutes })}
                   </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-4">
+                <div className="flex w-full items-center justify-between gap-4 sm:w-auto sm:shrink-0 sm:justify-start">
                   <bdi className="whitespace-nowrap text-sm font-semibold text-text">
                     {formatRial(service.priceRial)}{' '}
                     <span className="text-xs font-normal text-muted">ریال</span>
@@ -431,6 +435,7 @@ function ReviewsSection({ salon }: { salon: SalonProfile }) {
 export function SalonProfilePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { slug } = useParams<{ slug: string }>();
   const salon = getSalonProfile(slug);
   const [qrRedirecting, setQrRedirecting] = useState(false);
@@ -447,7 +452,13 @@ export function SalonProfilePage() {
         if (active)
           navigate(`/qr/${encodeURIComponent(slug)}`, {
             replace: true,
-            state: { resolvedQr: result },
+            state: {
+              resolvedQr: result,
+              scanSource:
+                new URLSearchParams(location.search).get('utm_source') ??
+                new URLSearchParams(location.search).get('source') ??
+                undefined,
+            },
           });
       })
       .catch(() => {
@@ -456,7 +467,7 @@ export function SalonProfilePage() {
     return () => {
       active = false;
     };
-  }, [navigate, salon, slug]);
+  }, [location.search, navigate, salon, slug]);
 
   if (!salon) {
     // While the QR-resolve request is in flight, show a neutral pending state
@@ -522,7 +533,7 @@ export function SalonProfilePage() {
             <li>
               <Link
                 to="/"
-                className="text-muted no-underline transition-colors duration-fast ease-standard hover:text-primary"
+                className="inline-flex min-h-10 min-w-10 items-center justify-center px-1 text-muted no-underline transition-colors duration-fast ease-standard hover:text-primary"
               >
                 {t('salon.profile.crumbHome')}
               </Link>
@@ -533,7 +544,7 @@ export function SalonProfilePage() {
                 <li>
                   <Link
                     to={`/city/${city.slug}`}
-                    className="text-muted no-underline transition-colors duration-fast ease-standard hover:text-primary"
+                    className="inline-flex min-h-10 min-w-10 items-center justify-center px-1 text-muted no-underline transition-colors duration-fast ease-standard hover:text-primary"
                   >
                     {city.name}
                   </Link>
@@ -681,7 +692,7 @@ export function SalonProfilePage() {
                       <span className="flex items-center gap-2">
                         {PERSIAN_DAY_LABEL[day]}
                         {isToday && (
-                          <span className="rounded-pill bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                          <span className="rounded-pill bg-primary/10 px-2 py-0.5 text-xs font-bold text-text">
                             {t('salon.profile.todayBadge')}
                           </span>
                         )}
@@ -708,7 +719,7 @@ export function SalonProfilePage() {
                 </p>
                 <a
                   href={`tel:${salon.telephone}`}
-                  className="flex items-center gap-2 font-semibold text-primary no-underline"
+                  className="flex min-h-10 items-center gap-2 font-semibold text-primary no-underline"
                 >
                   <Phone className="size-4 shrink-0" aria-hidden="true" />
                   <DirText dir="ltr">{salon.telephone}</DirText>

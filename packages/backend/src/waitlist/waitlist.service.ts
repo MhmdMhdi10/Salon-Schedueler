@@ -46,6 +46,12 @@ export interface WaitlistRepository {
   /** Find a single entry by ID. */
   findById(id: string): Promise<WaitlistEntry | null>;
 
+  /** Return an existing active entry for the same customer/window, when supported. */
+  findActiveForCustomer?(input: JoinWaitlistInput): Promise<WaitlistEntry | null>;
+
+  /** Return a customer's entries for the account surface, when supported. */
+  findByCustomer?(customerId: string): Promise<WaitlistEntry[]>;
+
   /** Update the status of a waitlist entry. */
   updateStatus(id: string, status: WaitlistEntry['status']): Promise<WaitlistEntry>;
 
@@ -88,12 +94,29 @@ export class WaitlistService {
    * @returns The created waitlist entry
    */
   async joinWaitlist(input: JoinWaitlistInput): Promise<WaitlistEntry> {
-    if (input.windowEnd <= input.windowStart) {
+    if (
+      Number.isNaN(input.windowStart.getTime()) ||
+      Number.isNaN(input.windowEnd.getTime()) ||
+      input.windowEnd <= input.windowStart
+    ) {
       throw new Error('windowEnd must be after windowStart');
     }
 
+    const existing = await this.repository.findActiveForCustomer?.(input);
+    if (existing) return existing;
+
     const entry = await this.repository.create(input);
     return entry;
+  }
+
+  /** Fetch one entry so HTTP callers can enforce customer ownership. */
+  async getEntry(entryId: string): Promise<WaitlistEntry | null> {
+    return this.repository.findById(entryId);
+  }
+
+  /** List the authenticated customer's waitlist entries. */
+  async getCustomerEntries(customerId: string): Promise<WaitlistEntry[]> {
+    return this.repository.findByCustomer ? this.repository.findByCustomer(customerId) : [];
   }
 
   /**

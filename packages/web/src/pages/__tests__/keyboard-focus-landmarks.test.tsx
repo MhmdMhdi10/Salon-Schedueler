@@ -53,6 +53,7 @@ vi.mock('../../api/client', () => {
   }
   return {
     ApiError,
+    getAccessToken: vi.fn(() => null),
     setAccessToken: vi.fn(),
     authApi: {
       requestOtp: vi.fn().mockResolvedValue(undefined),
@@ -66,6 +67,10 @@ vi.mock('../../api/client', () => {
       getStylists: (salonId: string) => getStylists(salonId),
     },
     bookingApi: { create: vi.fn() },
+    customerApi: {
+      getProfile: vi.fn(),
+      updateProfile: vi.fn(),
+    },
     approvalPolicyApi: {
       get: vi.fn().mockResolvedValue({ autoApprove: false, staff: [] }),
       setSalon: vi.fn().mockResolvedValue({ ok: true, autoApprove: false }),

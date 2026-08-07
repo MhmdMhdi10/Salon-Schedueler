@@ -1,6 +1,7 @@
 import { Router, type RequestHandler } from 'express';
 import type { Services } from '../app.js';
 import { asyncRoute, validateRequired } from './route-helpers.js';
+import { createRateLimit } from '../middleware/rate-limit.js';
 
 /**
  * Public salon routes (Requirement 2.6, 2.7 / original R7, R8). These are
@@ -18,6 +19,22 @@ import { asyncRoute, validateRequired } from './route-helpers.js';
 export function salonRouter(services: Services, optionalAuth: RequestHandler): Router {
   const router = Router();
 
+  const publicReadLimit = createRateLimit({
+    name: 'public-salon-read',
+    max: 180,
+    windowMs: 60_000,
+  });
+  const availabilityLimit = createRateLimit({
+    name: 'public-availability',
+    max: 90,
+    windowMs: 60_000,
+  });
+  const scanLimit = createRateLimit({
+    name: 'campaign-scan',
+    max: 60,
+    windowMs: 60_000,
+  });
+
   router.use(optionalAuth);
 
   // Resolve a scanned QR payload to a salon (and, for a stylist QR, the named
@@ -25,6 +42,7 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
   // distinguishes malformed from unregistered.
   router.get(
     '/salons/by-qr/:payload',
+    publicReadLimit,
     asyncRoute(async (req, res) => {
       const { salon, staff } = await services.salonRegistration.resolveQr(
         req.params.payload,
@@ -51,6 +69,7 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
   // signature default.
   router.get(
     '/salons/:id/brand',
+    publicReadLimit,
     asyncRoute(async (req, res) => {
       // Additive: `name` lets a deep-linked funnel show the salon as the
       // primary brand mark (R4.5) without a second request. Existing
@@ -65,6 +84,7 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
   // picker (id + display name + role). Public — no authentication required.
   router.get(
     '/salons/:id/stylists',
+    publicReadLimit,
     asyncRoute(async (req, res) => {
       const stylists = await services.resourceRegistration.listBookableStaff(
         req.params.id,
@@ -83,6 +103,7 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
   // SchedulingEngine, so a crafted request cannot bypass this rule.
   router.get(
     '/salons/:id/booking-policy',
+    publicReadLimit,
     asyncRoute(async (req, res) => {
       const bookingWindowDays = await services.availabilityConfig.getBookingWindowDays(req.params.id);
       res.status(200).json({ bookingWindowDays });
@@ -93,6 +114,7 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
   // client-facing shape (number) so the JSON response serializes cleanly.
   router.get(
     '/salons/:id/services',
+    publicReadLimit,
     asyncRoute(async (req, res) => {
       const services_ = await services.serviceCatalog.listServices(req.params.id);
       res.status(200).json({
@@ -100,6 +122,7 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
           id: s.id,
           name: s.name,
           durationMinutes: s.durationMin,
+          bufferMinutes: s.bufferMin,
           priceRial: Number(s.priceRial),
           // Additive deposit fields so the confirm step can show the deposit
           // notice (with its amount) ONLY for services that actually require
@@ -114,6 +137,7 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
   // Public availability for a service on a date.
   router.get(
     '/salons/:id/availability',
+    availabilityLimit,
     asyncRoute(async (req, res) => {
       if (!validateRequired(res, req.query as Record<string, unknown>, ['serviceId', 'date'])) {
         return;
@@ -138,6 +162,7 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
   // `source`) from the query string or JSON body.
   router.post(
     '/salons/:id/scan',
+    scanLimit,
     asyncRoute(async (req, res) => {
       const body = (req.body ?? {}) as Record<string, unknown>;
       const raw =

@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   Check,
+  ChevronDown,
   Copy,
   Download,
   ExternalLink,
   Image as ImageIcon,
-  Lock,
   Package,
   Printer,
   Sparkles,
@@ -17,7 +17,6 @@ import {
 import { ApiError, cardOrderApi, qrApi, salonApi, type SalonQrResponse } from '../../api/client';
 import { useSalonId } from '../../auth/useSalonId';
 import { SeoHead } from '../../components/seo';
-import { Motif } from '../../components/brand';
 import {
   Button,
   Card,
@@ -47,7 +46,7 @@ import { StylistQrGallery } from './StylistQrGallery';
 
 import './owner-qr.css';
 
-type LoadStatus = 'loading' | 'success' | 'error' | 'locked';
+type LoadStatus = 'loading' | 'success' | 'error';
 type OrderStatus = 'idle' | 'submitting' | 'success' | 'error';
 
 /** A bookable stylist for the QR target selector. */
@@ -244,6 +243,7 @@ export function OwnerQrPage() {
   const [logoDataUri, setLogoDataUri] = useState('');
   const [logoError, setLogoError] = useState('');
   const [showBrand, setShowBrand] = useState(true);
+  const [customizationOpen, setCustomizationOpen] = useState(false);
 
   // QR target: '' = the whole salon (default), or a specific stylist's id. A
   // stylist target swaps in that stylist's QR payload (best-effort) so the owner
@@ -276,13 +276,6 @@ export function OwnerQrPage() {
       })
       .catch((err: unknown) => {
         if (!active) return;
-        // Barcode generation is gated behind a paid subscription: the backend
-        // answers 402 SUBSCRIPTION_REQUIRED for a salon on trial/expired. Show
-        // the "subscribe to unlock" gate instead of a generic error.
-        if (err instanceof ApiError && err.status === 402) {
-          setStatus('locked');
-          return;
-        }
         setError(err instanceof ApiError ? err.message : t('owner.qr.errorTitle'));
         setStatus('error');
       });
@@ -393,8 +386,7 @@ export function OwnerQrPage() {
 
   const handleOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    // No longer require `data` (the QR payload) — the order form is independent
-    // of the subscription-gated QR generation. It only needs the salonId.
+    // No longer require `data` (the QR payload); order form only needs salonId.
     const name = orderName.trim();
     const phone = toLatinDigits(orderPhone).replace(/\D/g, '');
     const address = orderAddress.trim();
@@ -459,38 +451,6 @@ export function OwnerQrPage() {
         />
       )}
 
-      {status === 'locked' && (
-        <Card
-          as="section"
-          data-testid="qr-subscription-gate"
-          elevated
-          className="relative flex flex-col items-center gap-4 overflow-hidden text-center"
-        >
-          <Motif
-            variant="watermark"
-            className="pointer-events-none absolute -top-6 -end-6 h-40 w-40"
-          />
-          <span
-            className="relative flex h-14 w-14 items-center justify-center rounded-pill bg-primary/10 text-primary"
-            aria-hidden="true"
-          >
-            <Lock className="h-7 w-7" />
-          </span>
-          <CardTitle as="h2" className="relative text-lg font-bold text-text">
-            {t('owner.qr.gate.title')}
-          </CardTitle>
-          <p className="relative max-w-prose text-sm text-muted">{t('owner.qr.gate.body')}</p>
-          <Link
-            to="/owner/subscription"
-            className="relative inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md bg-primary px-5 py-3 text-md font-medium text-primary-contrast no-underline shadow-1 transition-colors duration-fast ease-standard hover:brightness-110 active:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-          >
-            <Sparkles className="h-4 w-4" aria-hidden="true" />
-            {t('owner.qr.gate.cta')}
-          </Link>
-          <p className="relative max-w-prose text-xs text-muted">{t('owner.qr.gate.trialNote')}</p>
-        </Card>
-      )}
-
       {status === 'success' && data && (
         <>
           {/* ── Studio: pick a template, brand it, preview, print/download ── */}
@@ -517,7 +477,30 @@ export function OwnerQrPage() {
 
             <div className="owner-qr-studio-grid">
               {/* Controls column */}
-              <div className="flex flex-col gap-4">
+              <div
+                className={cn(
+                  'owner-qr-controls flex flex-col gap-4',
+                  customizationOpen && 'owner-qr-controls--open',
+                )}
+              >
+                <button
+                  type="button"
+                  className="owner-qr-controls__toggle"
+                  aria-expanded={customizationOpen}
+                  onClick={() => setCustomizationOpen((open) => !open)}
+                >
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <strong className="text-sm text-text">
+                      {t('owner.qr.customizeTitle', { defaultValue: 'شخصی‌سازی QR' })}
+                    </strong>
+                    <span className="text-xs font-normal text-muted">
+                      {t('owner.qr.customizeHint', {
+                        defaultValue: 'قالب، رنگ، متن و لوگو را تغییر بده',
+                      })}
+                    </span>
+                  </span>
+                  <ChevronDown className="owner-qr-controls__chevron h-5 w-5" aria-hidden="true" />
+                </button>
                 {/* QR target: the whole salon (default) or a specific stylist. Only
                     shown when the salon has bookable stylists. */}
                 {stylists.length > 0 && (
@@ -677,7 +660,7 @@ export function OwnerQrPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-wrap gap-3">
+                <div className="owner-qr-actions flex flex-wrap gap-3">
                   <Button
                     data-testid="qr-print"
                     variant="primary"
@@ -748,7 +731,7 @@ export function OwnerQrPage() {
             </CardTitle>
             <CardContent className="flex flex-col gap-3">
               <p className="text-sm text-muted">{t('owner.qr.urlHint')}</p>
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="owner-qr-url-actions flex flex-wrap items-center gap-3">
                 <DirText
                   dir="ltr"
                   data-testid="qr-url"
@@ -882,7 +865,7 @@ export function OwnerQrPage() {
                   {orderError}
                 </p>
               )}
-              <div>
+              <div className="owner-qr-order-submit">
                 <Button
                   type="submit"
                   data-testid="qr-order-submit"

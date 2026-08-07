@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CalendarPlus, QrCode, Scissors, Store, Trash2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 import { SeoHead } from '../components/seo';
 import { cn } from '../components/ui';
 import {
@@ -13,6 +14,7 @@ import {
 import { writeSalonName } from '../utils/salonName';
 
 export function MySalonsPage() {
+  const { isCustomer } = useAuth();
   const [salons, setSalons] = useState<SavedSalon[]>(readSavedSalons);
   const refresh = useCallback(() => setSalons(readSavedSalons()), []);
 
@@ -24,6 +26,10 @@ export function MySalonsPage() {
       window.removeEventListener(SAVED_SALONS_CHANGED, refresh);
     };
   }, [refresh]);
+
+  // Keep old anonymous QR storage route available, but send signed-in
+  // customers to the full account surface (also covers the PWA start URL).
+  if (isCustomer) return <Navigate to="/account" replace />;
 
   const remove = (salon: SavedSalon) => {
     setSalons(removeSavedSalon(salon.id, salon.staffId));

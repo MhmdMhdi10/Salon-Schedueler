@@ -40,7 +40,11 @@ function timeDate(hours: number, minutes: number): Date {
 
 // A date whose UTC weekday is used to seed working hours. The engine derives the
 // weekday from the booking date via getUTCDay(), so we compute it the same way.
-const DATE = '2025-06-02';
+const DATE = (() => {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() + 2);
+  return date.toISOString().slice(0, 10);
+})();
 const WEEKDAY = new Date(`${DATE}T00:00:00Z`).getUTCDay();
 const START_AT = `${DATE}T10:00:00.000Z`;
 

@@ -9,7 +9,7 @@ import '../../../i18n';
  *
  * Covers: tab rendering with Persian labels, active tab detection from the
  * route, nav landmark with aria-label, aria-current="page" on the active tab,
- * touch target sizing (≥ 44px), indicator presence on active tab, navigation
+ * touch target sizing (≥ 64px), indicator presence on active tab, navigation
  * on click, and safe-area-inset-bottom respect.
  */
 
@@ -82,11 +82,13 @@ describe('OwnerBottomTabs', () => {
     expect(buttons[1]).toHaveAttribute('aria-current', 'page');
   });
 
-  it('touch targets are at least 44px (min-h-[44px] class)', () => {
+  it('touch targets are at least 64px (min-h-[64px] class)', () => {
     const { container } = renderTabs();
     const buttons = container.querySelectorAll('a');
     buttons.forEach((btn) => {
-      expect(btn.className).toContain('min-h-[44px]');
+      expect(btn.className).toContain('min-h-[64px]');
+      expect(btn.className).toContain('gap-2.5');
+      expect(btn.querySelector('svg')).toHaveClass('h-6', 'w-6');
     });
   });
 

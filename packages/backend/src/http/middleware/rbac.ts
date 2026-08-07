@@ -36,16 +36,30 @@ export function makeRbac(authorizer: Authorizer): {
         res.status(401).json({ code: 'UNAUTHORIZED' });
         return;
       }
-      if (!principal.role) {
-        // A customer (no staff role) cannot perform staff-guarded actions.
+      if (!principal.role || principal.role === 'PlatformAdmin') {
+        // Customers and global operators cannot enter tenant-scoped staff RBAC.
         res.status(403).json({ code: 'FORBIDDEN' });
         return;
       }
-      const resource: ResourceRef = resolveResource ? resolveResource(req) : {};
+      const explicitResource = resolveResource ? resolveResource(req) : {};
+      const routePath = typeof req.route?.path === 'string' ? req.route.path : '';
+      const routeSalonId =
+        routePath.includes('/salons/:id') && typeof req.params.id === 'string'
+          ? req.params.id
+          : routePath.includes('/salons/:salonId') && typeof req.params.salonId === 'string'
+            ? req.params.salonId
+            : undefined;
+      const bodySalonId =
+        typeof req.body?.salonId === 'string' ? req.body.salonId : undefined;
+      const resource: ResourceRef = {
+        ...explicitResource,
+        salonId: explicitResource.salonId ?? routeSalonId ?? bodySalonId,
+      };
       const authzPrincipal: Principal = {
         id: principal.id,
         role: principal.role,
         staffMemberId: principal.staffMemberId,
+        salonId: principal.salonId,
       };
       if (!authorizer.can(authzPrincipal, action, resource)) {
         res.status(403).json({ code: 'FORBIDDEN' });

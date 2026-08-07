@@ -90,6 +90,8 @@ export { AnimatedCounter } from './AnimatedCounter';
 export type { AnimatedCounterProps } from './AnimatedCounter';
 export { FilterBar } from './FilterBar';
 export type { FilterBarProps, SortOption } from './FilterBar';
+export { Pagination } from './Pagination';
+export type { PaginationProps } from './Pagination';
 export { CategoryBrowser } from './CategoryBrowser';
 export type { CategoryBrowserProps, CategoryBrowserVariant } from './CategoryBrowser';
 export { ImageCarousel } from './ImageCarousel';

@@ -374,4 +374,58 @@ describe('AnalyticsService', () => {
       expect(result.busiestWindows[0].concurrentCount).toBe(1);
     });
   });
+
+  describe('dashboard', () => {
+    it('returns operational, financial, customer, and performance breakdowns', async () => {
+      const appointment = {
+        customerId: 'customer-1',
+        staffMemberId: 'staff-1',
+        serviceId: 'service-1',
+        startAt: new Date('2024-03-15T10:00:00Z'),
+        endAt: new Date('2024-03-15T11:00:00Z'),
+        status: 'completed',
+        source: 'web',
+        customer: { id: 'customer-1', phone: '09120000000', fullName: 'سارا محمدی' },
+        service: {
+          id: 'service-1',
+          name: 'کوتاهی مو',
+          priceRial: 1_500_000n,
+          durationMin: 60,
+        },
+        staffMember: { id: 'staff-1', fullName: 'فاطمه' },
+      };
+      const mockPrisma = {
+        appointment: { findMany: jest.fn().mockResolvedValue([appointment]) },
+        payment: {
+          findMany: jest.fn().mockResolvedValue([{ amountRial: 1_500_000n, status: 'paid' }]),
+        },
+        salon: { findUnique: jest.fn().mockResolvedValue({ timezone: 'Asia/Tehran' }) },
+        chair: { findMany: jest.fn().mockResolvedValue([]) },
+        staffMember: { findMany: jest.fn().mockResolvedValue([]) },
+      } as any;
+
+      const service = new AnalyticsService(mockPrisma);
+      const result = await service.dashboard(
+        'salon-1',
+        new Date('2024-03-01T00:00:00Z'),
+        new Date('2024-04-01T00:00:00Z'),
+      );
+
+      expect(result.summary.completedAppointments).toBe(1);
+      expect(result.summary.uniqueCustomers).toBe(1);
+      expect(result.summary.collectedRial).toBe(1_500_000);
+      expect(result.services[0]).toMatchObject({ name: 'کوتاهی مو', bookings: 1 });
+      expect(result.staff[0]).toMatchObject({ name: 'فاطمه', completed: 1 });
+      expect(result.sources[0]).toMatchObject({ source: 'web', bookings: 1 });
+      expect(result.customers[0]).toMatchObject({
+        name: 'سارا محمدی',
+        phone: '09120000000',
+        reservations: 1,
+        visits: 1,
+      });
+      expect(result.daily.some((row) => row.bookings === 1)).toBe(true);
+      // 10:00Z is 13:30 in the salon's Asia/Tehran timezone.
+      expect(result.hourly.find((row) => row.hour === 13)?.bookings).toBe(1);
+    });
+  });
 });

@@ -83,7 +83,7 @@ function toastType(status: ToastStatus): RadixToast.ToastProps['type'] {
 
 export interface ToastProviderProps {
   children: React.ReactNode;
-  /** Default auto-dismiss duration (ms). Defaults to 5000. */
+  /** Default auto-dismiss duration (ms). Defaults to 3000. */
   duration?: number;
   /** Swipe direction to dismiss. Defaults to `right` (toward inline-end in RTL). */
   swipeDirection?: RadixToast.ToastProviderProps['swipeDirection'];
@@ -101,7 +101,7 @@ export interface ToastProviderProps {
  */
 export function ToastProvider({
   children,
-  duration = 5000,
+  duration = 3000,
   swipeDirection = 'right',
 }: ToastProviderProps) {
   // `t` is taken by the toast record in the render map, so alias the i18n fn.
@@ -163,7 +163,8 @@ export function ToastProvider({
                 'flex items-start gap-3 rounded-md border border-border bg-elevated p-3 shadow-3',
                 'transition-opacity duration-base ease-standard',
                 'data-[state=closed]:opacity-0',
-                // Slide-up entrance from the bottom edge (token keyframe);
+            // Brief slide entrance; viewport is top-anchored so it never
+            // collides with the mobile bottom navigation.
                 // exit stays the opacity crossfade above. Motion-safe gated
                 // and clamped globally under prefers-reduced-motion.
                 'motion-safe:animate-toast-in',
@@ -222,11 +223,9 @@ export function ToastProvider({
         <RadixToast.Viewport
           data-theme={scopeTheme}
           className={cn(
-            'fixed bottom-0 z-toast m-0 flex w-full max-w-sm list-none flex-col gap-2 p-4',
-            // Clear the home indicator / notch on standalone-PWA phones.
-            'pb-[max(var(--space-4),env(safe-area-inset-bottom))]',
-            // Anchor to the inline-start so it sits correctly in RTL.
-            'start-0 outline-none',
+            'fixed inset-x-2 top-0 z-toast m-0 mx-auto flex w-auto max-w-sm list-none flex-col gap-2 p-2',
+            // Keep success/error feedback below the status-bar cutout on phones.
+            'pt-[max(var(--space-2),env(safe-area-inset-top))] outline-none',
           )}
         />
       </RadixToast.Provider>

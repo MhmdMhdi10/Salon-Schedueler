@@ -92,6 +92,9 @@ services:
       # Reliable SMS: publish to RabbitMQ (the sms-worker service delivers it).
       RABBITMQ_URL: "amqp://salon:salon@rabbitmq:5672"
       DEV_SMS_INBOX_URL: "http://sms-inbox:4000"
+      # Development only: return the generated OTP so the web form can fill it
+      # automatically. Production keeps this disabled and uses real SMS.
+      DEV_OTP_AUTO_FILL: "true"
       # Dev convenience: widen the OTP validity window to 10 minutes so manual
       # testing (read code from logs → type it) isn't rushed by the 2-minute
       # production default. Do NOT carry this into production.

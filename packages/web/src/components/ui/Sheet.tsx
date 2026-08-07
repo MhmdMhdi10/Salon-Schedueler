@@ -106,7 +106,7 @@ export const SheetContent = forwardRef<
         data-theme={scopeTheme}
         className={cn(
           'fixed z-dialog bg-elevated p-5 text-text shadow-3 outline-none',
-          'max-h-[90vh] overflow-y-auto',
+          'max-h-[90dvh] overscroll-contain overflow-y-auto',
           // Enter: bottom sheets slide up (`toast-in`), side drawers slide in
           // from the inline-end; exits are an opacity fade. All motion-safe
           // gated and clamped globally under prefers-reduced-motion.
@@ -125,7 +125,7 @@ export const SheetContent = forwardRef<
             <IconButton
               aria-label={closeLabel ?? t('common.close', 'بستن')}
               variant="ghost"
-              className="absolute end-2 top-2 h-9 min-h-0 w-9 min-w-0"
+              className="!absolute end-2 top-2 h-9 min-h-0 w-9 min-w-0"
             >
               <X className="h-5 w-5" />
             </IconButton>

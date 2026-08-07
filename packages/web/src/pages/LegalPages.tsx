@@ -126,7 +126,7 @@ export function ContactPage() {
           <span className="text-sm text-muted">{t('legal.contact.emailLabel')}</span>
           <a
             href={`mailto:${SUPPORT_EMAIL}`}
-            className="inline-block w-fit rounded-sm font-semibold text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            className="inline-flex min-h-10 w-fit items-center rounded-sm font-semibold text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           >
             <DirText dir="ltr">{SUPPORT_EMAIL}</DirText>
           </a>
@@ -144,7 +144,7 @@ export function ContactPage() {
         <p className="mt-2 text-sm leading-7 text-muted">{t('legal.contact.businessBody')}</p>
         <Link
           to="/business/register"
-          className="mt-3 inline-block rounded-sm font-semibold text-primary underline underline-offset-4 transition-opacity duration-fast ease-standard hover:opacity-80"
+          className="mt-3 inline-flex min-h-10 items-center rounded-sm font-semibold text-primary underline underline-offset-4 transition-opacity duration-fast ease-standard hover:opacity-80"
         >
           {t('legal.contact.businessCta')}
         </Link>
@@ -207,7 +207,7 @@ function PolicyPage({
 /** Inline accent link to the contact page used by policy bodies. */
 function ContactInlineLink() {
   return (
-    <Link to="/contact" className="font-semibold text-primary">
+    <Link to="/contact" className="inline-flex min-h-10 items-center font-semibold text-primary">
       تماس با ما
     </Link>
   );

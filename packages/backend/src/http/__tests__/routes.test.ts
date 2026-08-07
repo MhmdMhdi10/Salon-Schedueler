@@ -27,6 +27,7 @@ function makeServices() {
     salonRegistration: {
       resolveQr: jest.fn(),
       getSalonBrandAccent: jest.fn().mockResolvedValue(null),
+      getSalonPublicBrand: jest.fn().mockResolvedValue({ name: null, brandAccent: null }),
     },
     serviceCatalog: {
       listServices: jest.fn().mockResolvedValue([]),
@@ -67,6 +68,10 @@ function makeServices() {
       listStaff: jest.fn().mockResolvedValue([]),
       listChairs: jest.fn().mockResolvedValue([]),
       listBookableStaff: jest.fn().mockResolvedValue([]),
+      getStaffMember: jest.fn().mockImplementation(async (id: string) => ({
+        id,
+        salonId: 'salon-1',
+      })),
     },
     availabilityConfig: {
       getWorkingHours: jest.fn().mockResolvedValue([]),
@@ -93,6 +98,20 @@ function makeServices() {
       buildStaffQrResponse: jest
         .fn()
         .mockResolvedValue({ payload: 'p', staffName: 'زهرا', salonName: 's' }),
+    },
+    subscriptionService: {
+      getStatus: jest.fn().mockResolvedValue('active'),
+    },
+    customerService: {
+      getProfile: jest.fn().mockResolvedValue({
+        id: 'cust-1',
+        phone: '09120000000',
+        fullName: null,
+      }),
+      updateProfile: jest.fn().mockImplementation((id: string, fullName: string) =>
+        Promise.resolve({ id, phone: '09120000000', fullName }),
+      ),
+      getHistory: jest.fn().mockResolvedValue([]),
     },
     authorizer: new Authorizer(),
   };
@@ -269,18 +288,21 @@ describe('HTTP routes', () => {
   // ── Salon Brand_Accent read (public) ─────────────────────────────────────────
   describe('GET /api/salons/:id/brand', () => {
     it('returns 200 { brandAccent } from the salon registration read', async () => {
-      fake.salonRegistration.getSalonBrandAccent.mockResolvedValue('rose');
+      fake.salonRegistration.getSalonPublicBrand.mockResolvedValue({
+        name: 'Test Salon',
+        brandAccent: 'rose',
+      });
       const res = await request(app).get('/api/salons/salon-1/brand');
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ brandAccent: 'rose' });
-      expect(fake.salonRegistration.getSalonBrandAccent).toHaveBeenCalledWith('salon-1');
+      expect(res.body).toEqual({ brandAccent: 'rose', name: 'Test Salon' });
+      expect(fake.salonRegistration.getSalonPublicBrand).toHaveBeenCalledWith('salon-1');
     });
 
     it('returns 200 { brandAccent: null } when the salon has no configured accent', async () => {
-      fake.salonRegistration.getSalonBrandAccent.mockResolvedValue(null);
+      fake.salonRegistration.getSalonPublicBrand.mockResolvedValue({ name: null, brandAccent: null });
       const res = await request(app).get('/api/salons/salon-2/brand');
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ brandAccent: null });
+      expect(res.body).toEqual({ brandAccent: null, name: null });
     });
   });
 
@@ -382,10 +404,14 @@ describe('HTTP routes', () => {
     });
 
     it('returns held with paymentRedirectUrl', async () => {
+      fake.paymentService.initiateDeposit.mockResolvedValue({
+        paymentId: 'pay-1',
+        redirectUrl: '/gateway/redirect',
+      });
       fake.bookingFlow.book.mockResolvedValue({
         status: 'held',
         appointment: { id: 'appt-held' },
-        payment: { paymentId: 'pay-1', redirectUrl: '/pay/redirect' },
+        payment: { paymentId: 'placeholder', redirectUrl: '/pay/placeholder' },
       });
       const res = await request(app)
         .post('/api/appointments')
@@ -395,8 +421,9 @@ describe('HTTP routes', () => {
       expect(res.body).toEqual({
         status: 'held',
         appointment: { id: 'appt-held' },
-        paymentRedirectUrl: '/pay/redirect',
+        paymentRedirectUrl: '/gateway/redirect',
       });
+      expect(fake.paymentService.initiateDeposit).toHaveBeenCalledWith('appt-held');
     });
 
     it('maps rejected no_availability to 409 BOOKING_NO_AVAILABILITY', async () => {
@@ -423,6 +450,71 @@ describe('HTTP routes', () => {
         .send(body);
       expect(res.status).toBe(409);
       expect(res.body).toEqual({ code: 'BOOKING_SLOT_UNAVAILABLE' });
+    });
+  });
+
+  // ── Deposit payment ownership (protected) ───────────────────────────────────
+  describe('POST /api/payments/initiate', () => {
+    const appointment = {
+      id: 'appt-held',
+      salonId: 'salon-1',
+      customerId: 'cust-1',
+      staffMemberId: 'staff-1',
+    };
+
+    it('lets the booking owner create a payment session', async () => {
+      fake.calendarService.getAppointmentById.mockResolvedValue(appointment);
+      fake.paymentService.initiateDeposit.mockResolvedValue({
+        paymentId: 'pay-1',
+        redirectUrl: '/gateway/pay-1',
+      });
+
+      const res = await request(app)
+        .post('/api/payments/initiate')
+        .set('Authorization', `Bearer ${customerToken('cust-1')}`)
+        .send({ appointmentId: appointment.id });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ redirectUrl: '/gateway/pay-1' });
+      expect(fake.paymentService.initiateDeposit).toHaveBeenCalledWith(appointment.id);
+    });
+
+    it('forbids another customer and never calls the payment service', async () => {
+      fake.calendarService.getAppointmentById.mockResolvedValue(appointment);
+
+      const res = await request(app)
+        .post('/api/payments/initiate')
+        .set('Authorization', `Bearer ${customerToken('cust-2')}`)
+        .send({ appointmentId: appointment.id });
+
+      expect(res.status).toBe(403);
+      expect(res.body).toEqual({ code: 'FORBIDDEN' });
+      expect(fake.paymentService.initiateDeposit).not.toHaveBeenCalled();
+    });
+
+    it('forbids staff tokens from creating customer payment sessions', async () => {
+      fake.calendarService.getAppointmentById.mockResolvedValue(appointment);
+
+      const res = await request(app)
+        .post('/api/payments/initiate')
+        .set('Authorization', `Bearer ${staffToken('Owner')}`)
+        .send({ appointmentId: appointment.id });
+
+      expect(res.status).toBe(403);
+      expect(fake.paymentService.initiateDeposit).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 without touching payment state when appointment is missing', async () => {
+      fake.calendarService.getAppointmentById.mockResolvedValue(null);
+
+      const res = await request(app)
+        .post('/api/payments/initiate')
+        .set('Authorization', `Bearer ${customerToken('cust-1')}`)
+        .send({ appointmentId: 'missing' });
+
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ code: 'NOT_FOUND' });
+      expect(fake.paymentService.initiateDeposit).not.toHaveBeenCalled();
     });
   });
 
@@ -827,6 +919,38 @@ describe('HTTP routes', () => {
         'salon-1',
         'whoever',
       );
+    });
+  });
+
+  // ── Customer profile (protected, customer-owned) ───────────────────────────
+  describe('GET/PATCH /api/customers/me/profile', () => {
+    it('returns the authenticated customer profile', async () => {
+      const res = await request(app)
+        .get('/api/customers/me/profile')
+        .set('Authorization', `Bearer ${customerToken()}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.customer).toEqual({
+        id: 'cust-1',
+        phone: '09120000000',
+        fullName: null,
+      });
+    });
+
+    it('validates and persists the customer name', async () => {
+      const invalid = await request(app)
+        .patch('/api/customers/me/profile')
+        .set('Authorization', `Bearer ${customerToken()}`)
+        .send({ fullName: ' ' });
+      expect(invalid.status).toBe(400);
+      expect(invalid.body).toEqual({ code: 'VALIDATION_ERROR', field: 'fullName' });
+
+      const valid = await request(app)
+        .patch('/api/customers/me/profile')
+        .set('Authorization', `Bearer ${customerToken()}`)
+        .send({ fullName: '  سارا محمدی  ' });
+      expect(valid.status).toBe(200);
+      expect(fake.customerService.updateProfile).toHaveBeenCalledWith('cust-1', 'سارا محمدی');
     });
   });
 

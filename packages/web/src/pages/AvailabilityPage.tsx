@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { CalendarClock, Clock, Scissors, Users } from 'lucide-react';
-import { salonApi } from '../api/client';
+import { getAccessToken, salonApi } from '../api/client';
 import { SeoHead } from '../components/seo';
 import { FunnelShell } from '../components/layout';
 import {
@@ -17,6 +17,7 @@ import {
   type SlotItem,
   type SlotState,
   ServiceCardList,
+  Button,
   type ServiceCardItem,
 } from '../components/ui';
 import { gregorianToJalali, getJalaliMonthName } from '@salon/shared';
@@ -347,6 +348,17 @@ export function AvailabilityPage() {
     });
   };
 
+  const handleJoinWaitlist = () => {
+    if (!salonId || !selectedService || !date) return;
+    const returnTo = `/salon/${salonId}/waitlist`;
+    const returnState = { serviceId: selectedService, date };
+    if (getAccessToken()) {
+      navigate(returnTo, { state: returnState });
+      return;
+    }
+    navigate('/auth', { state: { returnTo, returnState } });
+  };
+
   // Map each free slot to a chip state. The API returns only free slots, so a
   // slot is `selected` when it is the chosen start, `past` when its start is
   // already behind us, and `available` otherwise. The grid supports held/full
@@ -543,6 +555,14 @@ export function AvailabilityPage() {
             <EmptyState
               icon={<CalendarClock className="h-8 w-8" />}
               title={t('booking.slotsEmptyTitle')}
+              description={t('booking.slotsEmptyBody')}
+              action={
+                selectedService && date ? (
+                  <Button variant="secondary" onClick={handleJoinWaitlist}>
+                    {t('booking.joinWaitlist')}
+                  </Button>
+                ) : undefined
+              }
             />
           )}
 

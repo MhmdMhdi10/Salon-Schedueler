@@ -23,6 +23,14 @@ interface StaffClaims {
   salonId: string;
 }
 
+/** Global operator claims. Platform admins are not tenant-scoped staff. */
+interface PlatformAdminClaims {
+  role: 'PlatformAdmin';
+  platformAdminId: string;
+}
+
+type TokenClaims = StaffClaims | PlatformAdminClaims;
+
 /**
  * Configuration for the AuthService.
  */
@@ -59,7 +67,8 @@ const DEFAULT_CONFIG: AuthServiceConfig = {
  *
  * - verifyOtp: finds the latest non-invalidated OTP for the phone,
  *   checks expiry (120s window), verifies the code hash, marks it consumed,
- *   creates/finds the customer, and issues JWT access + refresh tokens.
+   *   resolves a platform admin or creates/finds the customer, and issues JWT
+   *   access + refresh tokens.
  *
  * - refresh: verifies a refresh token and issues a new token pair.
  */
@@ -153,7 +162,7 @@ export class AuthService {
    * 2. Check if it has expired (120s window) (R1.3)
    * 3. Check if the code hash matches (R1.4)
    * 4. Mark the OTP as consumed (R1.2)
-   * 5. Find or create the customer
+   * 5. Resolve a global platform admin, or find/create the customer
    * 6. Issue JWT access and refresh tokens
    */
   async verifyOtp(phone: string, code: string): Promise<AuthTokens> {
@@ -191,6 +200,18 @@ export class AuthService {
       data: { consumedAt: now },
     });
 
+    // Platform admin identities live outside the customer/staff tenant model.
+    // Check them before creating a customer row so an operator phone never
+    // pollutes customer analytics or receives customer-scoped behavior.
+    const platformAdmin = await this.findPlatformAdminByPhone(phone);
+    if (platformAdmin) {
+      await this.updatePlatformAdminLogin(platformAdmin.id);
+      return this.issueTokens(platformAdmin.id, {
+        role: 'PlatformAdmin',
+        platformAdminId: platformAdmin.id,
+      });
+    }
+
     // Find or create customer
     const customer = await this.findOrCreateCustomer(phone);
 
@@ -220,6 +241,11 @@ export class AuthService {
         typeof payload.staffMemberId === 'string' ? payload.staffMemberId : undefined;
       const salonId =
         typeof payload.salonId === 'string' ? payload.salonId : undefined;
+      const platformAdminId =
+        typeof payload.platformAdminId === 'string' ? payload.platformAdminId : undefined;
+      if (role === 'PlatformAdmin' && platformAdminId) {
+        return this.issueTokens(payload.sub, { role: 'PlatformAdmin', platformAdminId });
+      }
       const staff =
         role && staffMemberId && salonId
           ? { role, staffMemberId, salonId }
@@ -268,6 +294,40 @@ export class AuthService {
     return { role: staff.role, staffMemberId: staff.id, salonId: staff.salonId };
   }
 
+  /** Resolve an active global operator. Optional delegate keeps older unit-test
+   * Prisma fakes compatible while the generated client always provides it. */
+  private async findPlatformAdminByPhone(
+    phone: string,
+  ): Promise<{ id: string } | undefined> {
+    const delegate = (
+      this.prisma as unknown as {
+        platformAdmin?: {
+          findFirst?: (args: unknown) => Promise<{ id: string } | null>;
+        };
+      }
+    ).platformAdmin;
+    if (!delegate?.findFirst) return undefined;
+    const admin = await delegate.findFirst({
+      where: { phone, active: true },
+      select: { id: true },
+    });
+    return admin ?? undefined;
+  }
+
+  /** Update last-login telemetry without making authentication depend on an
+   * optional field in old test doubles. */
+  private async updatePlatformAdminLogin(id: string): Promise<void> {
+    const delegate = (
+      this.prisma as unknown as {
+        platformAdmin?: {
+          update?: (args: unknown) => Promise<unknown>;
+        };
+      }
+    ).platformAdmin;
+    if (!delegate?.update) return;
+    await delegate.update({ where: { id }, data: { lastLoginAt: new Date() } });
+  }
+
   /**
    * Issue a JWT access token (15min) and refresh token (7d).
    *
@@ -276,23 +336,17 @@ export class AuthService {
    * by the auth middleware is subject to the RBAC matrix. Plain customers get a
    * roleless token.
    */
-  private issueTokens(customerId: string, staff?: StaffClaims): AuthTokens {
-    const staffClaims = staff
-      ? {
-          role: staff.role,
-          staffMemberId: staff.staffMemberId,
-          salonId: staff.salonId,
-        }
-      : {};
+  private issueTokens(subjectId: string, claims?: TokenClaims): AuthTokens {
+    const tokenClaims = claims ? { ...claims } : {};
 
     const accessToken = jwt.sign(
-      { sub: customerId, type: 'access', ...staffClaims },
+      { sub: subjectId, type: 'access', ...tokenClaims },
       this.config.jwtAccessSecret,
       { expiresIn: this.config.accessExpirySeconds },
     );
 
     const refreshToken = jwt.sign(
-      { sub: customerId, type: 'refresh', ...staffClaims },
+      { sub: subjectId, type: 'refresh', ...tokenClaims },
       this.config.jwtRefreshSecret,
       { expiresIn: this.config.refreshExpirySeconds },
     );

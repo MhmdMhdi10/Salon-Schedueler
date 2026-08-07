@@ -1,0 +1,827 @@
+.platform-admin-root {
+  min-height: 100dvh;
+  color: var(--platform-text);
+  background: var(--platform-canvas);
+}
+
+.platform-admin-root .ant-layout {
+  min-height: 100dvh;
+  background: var(--platform-canvas);
+}
+
+.platform-admin-root .ant-layout-sider {
+  border-inline-start: var(--platform-size-1) solid var(--platform-border);
+  border-inline-end: 0;
+  background: var(--platform-surface) !important;
+}
+
+.platform-admin-mobile-drawer .ant-drawer-body {
+  padding: 0;
+  background: var(--platform-surface);
+}
+
+.platform-admin-mobile-drawer .ant-drawer-content {
+  background: var(--platform-surface);
+}
+
+.platform-admin-root .ant-layout-header {
+  z-index: 10;
+  height: var(--platform-size-72);
+  line-height: normal;
+  padding-inline: var(--platform-size-28);
+  border-bottom: var(--platform-size-1) solid var(--platform-border);
+  background: color-mix(in srgb, var(--platform-surface) 92%, transparent) !important;
+  backdrop-filter: blur(var(--space-4)) saturate(1.05);
+}
+
+.platform-admin-root .ant-layout-content {
+  padding: var(--space-5) var(--platform-size-28) var(--space-6);
+}
+
+.platform-admin-root .ant-menu {
+  border-inline-end: 0;
+  background: transparent;
+}
+
+.platform-admin-root .ant-menu-item,
+.platform-admin-root .ant-menu-submenu-title {
+  min-height: var(--platform-size-42);
+  margin-block: var(--platform-size-3);
+  font-weight: 500;
+}
+
+.platform-admin-root .ant-menu-submenu-title {
+  color: var(--platform-text-secondary);
+  font-weight: 700;
+}
+
+.platform-admin-root .ant-menu-item-selected {
+  font-weight: 700;
+}
+
+.platform-admin-brand {
+  display: flex;
+  min-height: var(--platform-size-72);
+  align-items: center;
+  gap: var(--platform-size-10);
+  padding: var(--platform-size-10) var(--platform-size-6);
+  border-bottom: var(--platform-size-1) solid var(--platform-border);
+}
+
+.platform-admin-brand__mark.ara-brand-logo {
+  display: block;
+  width: var(--platform-size-46);
+  height: var(--platform-size-46);
+  flex: 0 0 var(--platform-size-46);
+  max-width: var(--platform-size-46);
+  max-height: var(--platform-size-46);
+  object-fit: cover;
+  object-position: right center;
+}
+
+.platform-admin-root .ant-layout-sider-collapsed .platform-admin-brand {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.platform-admin-brand__copy {
+  display: grid;
+  min-width: 0;
+  gap: var(--platform-size-1);
+}
+
+.platform-admin-brand__copy strong {
+  color: var(--platform-text);
+  font-size: var(--font-xs);
+  font-weight: 800;
+}
+
+.platform-admin-brand__copy small {
+  color: var(--platform-text-muted);
+  font-size: var(--platform-font-micro);
+}
+
+.platform-admin-sider-search {
+  padding: var(--platform-size-14) var(--space-4) var(--space-1);
+}
+
+.platform-admin-sider-search__hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--platform-size-7) var(--platform-size-2) 0;
+  color: var(--platform-text-muted);
+  font-size: var(--platform-font-micro);
+}
+
+.platform-admin-sider-search__hint kbd,
+.platform-admin-header kbd {
+  padding: var(--platform-size-1) var(--platform-size-6);
+  border: var(--platform-size-1) solid var(--platform-border);
+  border-radius: var(--platform-size-5);
+  background: var(--platform-surface-alt);
+  color: var(--platform-text-secondary);
+  font-family: ui-monospace, monospace;
+  font-size: var(--platform-font-micro);
+}
+
+.platform-admin-sider-footer {
+  padding: var(--space-3) var(--space-4);
+  border-top: var(--platform-size-1) solid var(--platform-border);
+  color: var(--platform-text-muted);
+  font-size: var(--platform-font-micro);
+  text-align: center;
+}
+
+.platform-admin-header {
+  display: flex;
+  height: var(--platform-size-72);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.platform-admin-header__context,
+.platform-admin-header__profile {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--platform-size-10);
+}
+
+.platform-admin-header__context-icon {
+  display: grid;
+  width: var(--platform-size-36);
+  height: var(--platform-size-36);
+  flex: 0 0 var(--platform-size-36);
+  place-items: center;
+  border-radius: var(--platform-size-11);
+  background: var(--platform-primary-soft);
+  color: var(--platform-primary);
+}
+
+.platform-admin-header__context-copy,
+.platform-admin-header__profile-copy {
+  display: grid;
+  min-width: 0;
+  gap: var(--platform-size-1);
+}
+
+.platform-admin-header__context-copy strong,
+.platform-admin-header__profile-copy strong {
+  overflow: hidden;
+  color: var(--platform-text);
+  font-size: var(--platform-font-small);
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.platform-admin-header__context-copy small,
+.platform-admin-header__profile-copy small {
+  overflow: hidden;
+  color: var(--platform-text-muted);
+  font-size: var(--platform-font-micro);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.platform-admin-header__profile {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: start;
+}
+
+.platform-admin-header__avatar {
+  background: var(--platform-primary-soft);
+  color: var(--platform-primary);
+}
+
+.platform-admin-header__tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.platform-admin-header__search {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.platform-admin-breadcrumb {
+  max-width: var(--platform-size-1440);
+  margin: 0 auto var(--platform-size-18);
+}
+
+.platform-admin-page {
+  width: 100%;
+  max-width: var(--platform-size-1440);
+  margin-inline: auto;
+}
+
+.platform-admin-page-header {
+  display: flex;
+  min-height: var(--platform-size-78);
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--platform-size-20);
+  margin-block-end: var(--platform-size-20);
+  padding: var(--space-1) 0 var(--space-2);
+}
+
+.platform-admin-page-header__copy {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.platform-admin-page-header__eyebrow {
+  color: var(--platform-primary);
+  font-size: var(--platform-font-label);
+  font-weight: 700;
+}
+
+.platform-admin-page-header h1 {
+  margin: 0;
+  color: var(--platform-text);
+  font-size: var(--platform-font-page-title);
+  font-weight: 800;
+  letter-spacing: -0.018em;
+}
+
+.platform-admin-page-header__copy p {
+  margin: 0;
+  color: var(--platform-text-muted);
+  font-size: var(--font-2xs);
+  line-height: 1.8;
+}
+
+.platform-admin-root .ant-card {
+  overflow: hidden;
+  border-color: var(--platform-border);
+  border-radius: var(--space-4);
+  box-shadow: var(--platform-shadow);
+}
+
+.platform-admin-root .ant-card-head {
+  border-bottom-color: var(--platform-border);
+}
+
+.platform-admin-root .ant-table-wrapper {
+  overflow: hidden;
+  border: var(--platform-size-1) solid var(--platform-border);
+  border-radius: var(--space-4);
+  background: var(--platform-surface);
+  box-shadow: var(--platform-shadow);
+}
+
+.platform-admin-root .ant-table {
+  background: var(--platform-surface);
+}
+
+.platform-admin-root .ant-table-thead > tr > th {
+  color: var(--platform-text-secondary);
+  font-size: var(--font-2xs);
+  font-weight: 700;
+}
+
+.platform-admin-root .ant-table-tbody > tr.platform-admin-detail-row > td {
+  cursor: pointer;
+}
+
+.platform-admin-root .ant-table-tbody > tr.platform-admin-detail-row:hover > td {
+  background: var(--platform-primary-soft) !important;
+}
+
+.platform-admin-root .ant-table-pagination {
+  margin-inline: var(--space-4) !important;
+}
+
+.platform-admin-root .ant-tag {
+  border-radius: var(--space-2);
+  font-weight: 600;
+}
+
+.platform-admin-root .ant-input,
+.platform-admin-root .ant-input-affix-wrapper,
+.platform-admin-root .ant-select-selector,
+.platform-admin-root .ant-picker {
+  background: var(--platform-surface-alt) !important;
+}
+
+.platform-admin-root .ant-drawer-content,
+.platform-admin-root .ant-modal-content {
+  border: var(--platform-size-1) solid var(--platform-border);
+}
+
+.platform-admin-root .platform-admin-filter-card {
+  margin-block-end: var(--space-4);
+  padding: var(--platform-size-14) var(--space-4);
+}
+
+.platform-admin-root .platform-admin-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--platform-size-10);
+}
+
+.platform-admin-root .platform-admin-filter-row > .ant-input-affix-wrapper {
+  width: min(100%, var(--platform-size-360));
+}
+
+.platform-admin-root .platform-admin-table-name {
+  display: grid;
+  min-width: 0;
+  gap: var(--platform-size-2);
+}
+
+.platform-admin-root .platform-admin-table-name strong {
+  overflow: hidden;
+  color: var(--platform-text);
+  font-size: var(--platform-font-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.platform-admin-root .platform-admin-table-name span {
+  overflow: hidden;
+  color: var(--platform-text-muted);
+  font-size: var(--platform-font-micro);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.platform-admin-root .platform-admin-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.platform-admin-root .platform-admin-stat-card {
+  min-height: var(--platform-size-132);
+}
+
+.platform-admin-root .platform-admin-stat-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.platform-admin-root .platform-admin-stat-card__icon {
+  display: grid;
+  width: var(--platform-size-40);
+  height: var(--platform-size-40);
+  place-items: center;
+  border-radius: var(--space-3);
+  background: var(--platform-primary-soft);
+  color: var(--platform-primary);
+}
+
+.platform-admin-root .platform-admin-stat-card__label {
+  color: var(--platform-text-muted);
+  font-size: var(--platform-font-label);
+  font-weight: 600;
+}
+
+.platform-admin-root .platform-admin-stat-card__value {
+  display: block;
+  margin-block-start: var(--space-4);
+  color: var(--platform-text);
+  font-size: var(--platform-font-stat);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.platform-admin-root .platform-admin-stat-card__detail {
+  display: block;
+  margin-block-start: var(--space-1);
+  color: var(--platform-text-muted);
+  font-size: var(--platform-font-label);
+}
+
+.platform-admin-root .platform-admin-dashboard-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(var(--platform-size-300), 0.8fr);
+  gap: var(--space-4);
+  margin-block-start: var(--space-4);
+}
+
+.platform-admin-root .platform-admin-chart {
+  display: flex;
+  height: var(--platform-size-236);
+  align-items: flex-end;
+  gap: var(--platform-size-6);
+  padding: var(--platform-size-20) var(--platform-size-10) var(--space-3);
+  border-bottom: var(--platform-size-1) solid var(--platform-border);
+}
+
+.platform-admin-root .platform-admin-chart__day {
+  display: flex;
+  height: 100%;
+  min-width: 0;
+  flex: 1;
+  align-items: flex-end;
+  justify-content: center;
+  gap: var(--platform-size-2);
+}
+
+.platform-admin-root .platform-admin-chart__bar {
+  width: 45%;
+  min-height: 0;
+  border-radius: var(--platform-size-5) var(--platform-size-5) 0 0;
+  background: var(--platform-primary);
+  opacity: 0.82;
+}
+
+.platform-admin-root .platform-admin-chart__bar--secondary {
+  background: var(--platform-chart-secondary);
+  opacity: 0.65;
+}
+
+.platform-admin-root .platform-admin-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--platform-size-18);
+  margin-block-start: var(--space-3);
+  color: var(--platform-text-muted);
+  font-size: var(--platform-font-label);
+}
+
+.platform-admin-root .platform-admin-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--platform-size-6);
+}
+
+.platform-admin-root .platform-admin-legend i {
+  width: var(--platform-size-9);
+  height: var(--platform-size-9);
+  border-radius: 50%;
+  background: var(--platform-primary);
+}
+
+.platform-admin-root .platform-admin-legend i.secondary {
+  background: var(--platform-chart-secondary);
+}
+
+.platform-admin-root .platform-admin-inbox {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.platform-admin-root .platform-admin-inbox a {
+  display: flex;
+  min-height: var(--platform-size-54);
+  align-items: center;
+  gap: var(--platform-size-10);
+  padding: var(--platform-size-9) var(--platform-size-11);
+  border: var(--platform-size-1) solid var(--platform-border);
+  border-radius: var(--platform-size-10);
+  color: var(--platform-text);
+  text-decoration: none;
+  transition: background var(--platform-transition) ease, border-color var(--platform-transition) ease;
+}
+
+.platform-admin-root .platform-admin-inbox a:hover {
+  border-color: var(--platform-primary);
+  background: var(--platform-primary-soft);
+}
+
+.platform-admin-root .platform-admin-inbox a > span:nth-child(2) {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  font-size: var(--font-2xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.platform-admin-root .platform-admin-dashboard-table {
+  margin-block-start: var(--space-4);
+}
+
+.platform-admin-root .platform-admin-skeleton {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.platform-admin-root .platform-admin-detail-page {
+  width: 100%;
+  max-width: var(--platform-size-1440);
+  margin-inline: auto;
+  padding-block-end: var(--space-6);
+}
+
+.platform-admin-root .platform-admin-detail-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--platform-size-20) var(--space-5);
+  margin-block-end: var(--platform-size-20);
+  padding: var(--platform-size-20) var(--space-5);
+  overflow: hidden;
+  border: var(--platform-size-1) solid var(--platform-border);
+  border-radius: var(--space-4);
+  background: var(--platform-surface);
+  box-shadow: var(--platform-shadow);
+}
+
+.platform-admin-root .platform-admin-detail-hero__main {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.platform-admin-root .platform-admin-detail-hero__mark,
+.platform-admin-root .platform-admin-detail-section__icon {
+  display: grid;
+  place-items: center;
+  border-radius: var(--space-3);
+  background: var(--platform-primary-soft);
+  color: var(--platform-primary);
+}
+
+.platform-admin-root .platform-admin-detail-hero__mark {
+  width: var(--platform-size-44);
+  height: var(--platform-size-44);
+  flex: 0 0 var(--platform-size-44);
+}
+
+.platform-admin-root .platform-admin-detail-hero__copy {
+  min-width: 0;
+}
+
+.platform-admin-root .platform-admin-detail-hero__eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--platform-primary);
+  font-size: var(--platform-font-label);
+  font-weight: 700;
+}
+
+.platform-admin-root .platform-admin-detail-hero__resource {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--platform-size-5);
+  padding: var(--platform-size-3) var(--space-2);
+  border: var(--platform-size-1) solid var(--platform-border);
+  border-radius: var(--radius-pill);
+  background: var(--platform-surface-alt);
+  color: var(--platform-text-secondary);
+}
+
+.platform-admin-root .platform-admin-detail-hero h1 {
+  margin: var(--platform-size-5) 0 var(--space-2);
+  color: var(--platform-text);
+  font-size: var(--platform-font-page-title);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.platform-admin-root .platform-admin-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--platform-size-280);
+  gap: var(--platform-size-20);
+  align-items: start;
+}
+
+.platform-admin-root .platform-admin-detail-main {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-4);
+}
+
+.platform-admin-root .platform-admin-detail-section {
+  overflow: hidden;
+  border: var(--platform-size-1) solid var(--platform-border);
+  border-radius: var(--space-4);
+  background: var(--platform-surface);
+  box-shadow: var(--platform-shadow);
+}
+
+.platform-admin-root .platform-admin-detail-section__header {
+  display: flex;
+  min-height: var(--platform-size-58);
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--platform-size-10) var(--space-4);
+  border-bottom: var(--platform-size-1) solid var(--platform-border);
+  background: var(--platform-surface-alt);
+}
+
+.platform-admin-root .platform-admin-detail-section__icon {
+  width: var(--platform-size-34);
+  height: var(--platform-size-34);
+  flex: 0 0 var(--platform-size-34);
+}
+
+.platform-admin-root .platform-admin-detail-section__heading {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: var(--platform-size-2);
+}
+
+.platform-admin-root .platform-admin-detail-section__heading strong {
+  color: var(--platform-text);
+  font-size: var(--font-xs);
+}
+
+.platform-admin-root .platform-admin-detail-section__heading small {
+  color: var(--platform-text-muted);
+  font-size: var(--platform-font-micro);
+}
+
+.platform-admin-root .platform-admin-detail-section__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.platform-admin-root .platform-admin-detail-field {
+  min-width: 0;
+  min-height: var(--platform-size-78);
+  padding: var(--platform-size-14) var(--platform-size-18);
+  border-inline-start: var(--platform-size-1) solid var(--platform-border);
+  border-block-end: var(--platform-size-1) solid var(--platform-border);
+}
+
+.platform-admin-root .platform-admin-detail-field:nth-child(odd) {
+  border-inline-start: 0;
+}
+
+.platform-admin-root .platform-admin-detail-field--wide {
+  grid-column: 1 / -1;
+}
+
+.platform-admin-root .platform-admin-detail-field dt {
+  margin-block-end: var(--platform-size-5);
+  color: var(--platform-text-muted);
+  font-size: var(--platform-font-micro);
+  font-weight: 700;
+}
+
+.platform-admin-root .platform-admin-detail-field dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--platform-text);
+  font-size: var(--platform-font-small);
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.platform-admin-root .platform-admin-detail-aside {
+  position: sticky;
+  top: var(--platform-size-92);
+  overflow: hidden;
+  border: var(--platform-size-1) solid var(--platform-border);
+  border-radius: var(--space-4);
+  background: var(--platform-surface);
+  box-shadow: var(--platform-shadow);
+}
+
+.platform-admin-root .platform-admin-detail-aside > header {
+  display: grid;
+  gap: var(--platform-size-2);
+  padding: var(--space-4) var(--platform-size-18);
+  border-bottom: var(--platform-size-1) solid var(--platform-border);
+}
+
+.platform-admin-root .platform-admin-detail-aside > header strong {
+  color: var(--platform-text);
+  font-size: var(--font-xs);
+}
+
+.platform-admin-root .platform-admin-detail-aside > header small {
+  color: var(--platform-text-muted);
+  font-size: var(--platform-font-micro);
+}
+
+.platform-admin-root .platform-admin-detail-aside__model {
+  display: flex;
+  align-items: center;
+  gap: var(--platform-size-10);
+  margin: var(--space-3) var(--platform-size-14) var(--platform-size-2);
+  padding: var(--platform-size-10);
+  border: var(--platform-size-1) solid color-mix(in srgb, var(--platform-primary) 22%, var(--platform-border));
+  border-radius: var(--platform-size-10);
+  background: var(--platform-primary-soft);
+}
+
+.platform-admin-root .platform-admin-detail-aside__model strong,
+.platform-admin-root .platform-admin-detail-aside__model small {
+  display: block;
+}
+
+.platform-admin-root .platform-admin-detail-aside__model small {
+  color: var(--platform-text-muted);
+  font-size: var(--platform-font-micro);
+}
+
+.platform-admin-root .platform-admin-detail-aside__model strong {
+  color: var(--platform-primary);
+  font-size: var(--platform-font-small);
+}
+
+.platform-admin-root .platform-admin-detail-aside .ant-descriptions {
+  padding: var(--space-2) var(--platform-size-18) var(--platform-size-14);
+}
+
+.platform-admin-root .platform-admin-detail-related {
+  display: grid;
+  gap: var(--platform-size-10);
+}
+
+.platform-admin-root .platform-admin-detail-related .ant-collapse {
+  overflow: hidden;
+  border: var(--platform-size-1) solid var(--platform-border);
+  border-radius: var(--platform-size-10);
+  background: var(--platform-surface-alt);
+}
+
+.platform-admin-root .platform-admin-detail-related .ant-collapse-header {
+  align-items: center !important;
+}
+
+@media (max-width: 68.75rem) {
+  .platform-admin-root .platform-admin-dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .platform-admin-root .platform-admin-dashboard-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .platform-admin-root .platform-admin-detail-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .platform-admin-root .platform-admin-detail-aside {
+    position: static;
+    order: -1;
+  }
+}
+
+@media (max-width: 47.5rem) {
+  .platform-admin-root .ant-layout-header {
+    padding-inline: var(--space-4);
+  }
+
+  .platform-admin-root .ant-layout-content {
+    padding: var(--platform-size-18) var(--space-4) var(--platform-size-28);
+  }
+
+  .platform-admin-root .platform-admin-header__context-copy,
+  .platform-admin-root .platform-admin-header__profile-copy,
+  .platform-admin-root .platform-admin-header__search span {
+    display: none;
+  }
+
+  .platform-admin-root .platform-admin-page-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .platform-admin-root .platform-admin-page-header .ant-btn {
+    align-self: flex-start;
+  }
+
+  .platform-admin-root .platform-admin-detail-hero {
+    grid-template-columns: 1fr;
+    padding: var(--space-4);
+  }
+
+  .platform-admin-root .platform-admin-detail-hero__actions {
+    justify-content: stretch;
+  }
+
+  .platform-admin-root .platform-admin-detail-hero__actions .ant-btn {
+    flex: 1;
+  }
+}
+
+@media (max-width: 35rem) {
+  .platform-admin-root .platform-admin-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .platform-admin-root .platform-admin-detail-section__fields {
+    grid-template-columns: 1fr;
+  }
+
+  .platform-admin-root .platform-admin-detail-field,
+  .platform-admin-root .platform-admin-detail-field:nth-child(odd) {
+    border-inline-start: 0;
+  }
+
+  .platform-admin-root .platform-admin-detail-field--wide {
+    grid-column: auto;
+  }
+}

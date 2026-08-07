@@ -1,6 +1,7 @@
 /**
  * CustomerService — manages customer profile, history, notes, and preferred staff.
  *
+ * - `getProfile` / `updateProfile` — reads and stores the customer's display name
  * - `getHistory` — retrieves a customer's past appointments (R14.1)
  * - `addNote` — adds a free-text note to a customer profile (R14.2)
  * - `getNotes` — retrieves all notes for a customer (R14.2, R14.4)
@@ -24,6 +25,10 @@ export interface AppointmentRecord {
   status: string;
   source: string;
   createdAt: Date;
+  /** Optional display fields used by the customer's own dashboard. */
+  salonName?: string;
+  serviceName?: string;
+  staffName?: string;
 }
 
 /**
@@ -46,6 +51,13 @@ export interface StaffRef {
   role: string;
 }
 
+/** The small self-service profile exposed to the signed-in customer. */
+export interface CustomerProfile {
+  id: string;
+  phone: string;
+  fullName: string | null;
+}
+
 /**
  * Repository port for customer data access.
  * Abstracted from Prisma so tests can supply in-memory fakes.
@@ -53,6 +65,12 @@ export interface StaffRef {
 export interface CustomerRepository {
   /** Find a customer by ID. */
   findById(customerId: string): Promise<{ id: string; preferredStaffId: string | null } | null>;
+
+  /** Read the customer's phone and optional display name. */
+  getProfile(customerId: string): Promise<CustomerProfile | null>;
+
+  /** Persist the customer's display name. */
+  updateProfile(customerId: string, fullName: string): Promise<CustomerProfile>;
 
   /** Get past appointments for a customer, ordered by startAt descending. */
   getAppointments(customerId: string): Promise<AppointmentRecord[]>;
@@ -75,6 +93,24 @@ export class CustomerService {
 
   constructor(repository: CustomerRepository) {
     this.repository = repository;
+  }
+
+  /** Get the signed-in customer's profile. */
+  async getProfile(customerId: string): Promise<CustomerProfile | null> {
+    return this.repository.getProfile(customerId);
+  }
+
+  /**
+   * Save a customer's name once it has been collected after OTP verification.
+   * The route performs the HTTP-shaped validation too; keeping this guard here
+   * protects other callers of the service as well.
+   */
+  async updateProfile(customerId: string, fullName: string): Promise<CustomerProfile> {
+    const normalizedName = fullName.trim();
+    if (normalizedName.length < 2 || normalizedName.length > 120) {
+      throw new Error('Customer name must be between 2 and 120 characters');
+    }
+    return this.repository.updateProfile(customerId, normalizedName);
   }
 
   /**

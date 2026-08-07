@@ -68,11 +68,11 @@ describe('LCP optimization', () => {
     expect(html).toContain('crossorigin');
   });
 
-  it('route-level code splitting: MarketingHome is lazy-loaded (no admin bundles)', () => {
+  it('route-level code splitting: BusinessLanding is lazy-loaded (no admin bundles)', () => {
     const appContent = readFileSync(resolve(__dirname, '../../App.tsx'), 'utf-8');
-    // MarketingHome is lazy-loaded
+    // The launch landing page is lazy-loaded.
     expect(appContent).toMatch(
-      /lazy\(\(\)\s*=>\s*\n?\s*import\(['"]\.\/pages\/MarketingHome['"]\)/,
+      /lazy\(\(\)\s*=>\s*\n?\s*import\(['"]\.\/pages\/BusinessLanding['"]\)/,
     );
     // Owner pages are also lazy-loaded (separate code split group)
     expect(appContent).toMatch(/lazy\(\(\)\s*=>\s*\n?\s*import\(['"]\.\/pages\/owner/);

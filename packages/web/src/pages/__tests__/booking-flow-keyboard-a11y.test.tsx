@@ -25,8 +25,14 @@ const getServices = vi.fn();
 const getAvailability = vi.fn();
 const getStylists = vi.fn();
 const bookingCreate = vi.fn();
+const getAccessToken = vi.fn(() => null);
 
 vi.mock('../../api/client', () => ({
+  getAccessToken: () => getAccessToken(),
+  customerApi: {
+    getProfile: vi.fn(),
+    updateProfile: vi.fn(),
+  },
   salonApi: {
     getServices: (salonId: string) => getServices(salonId),
     getAvailability: (salonId: string, serviceId: string, date: string) =>

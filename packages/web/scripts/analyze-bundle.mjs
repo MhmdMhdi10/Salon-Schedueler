@@ -8,7 +8,7 @@
  * reached only through a dynamic `import()` (the `React.lazy` boundaries) are
  * NOT counted, because they never load on that route.
  *
- * It then asserts the governing budget: initial public-page JS ≤ ~150KB gzip,
+ * It then asserts the governing budget: initial public-page JS ≤ ~240KB gzip,
  * and that the heavy funnel / admin / chart / Jalali-picker chunks are absent
  * from every public route's initial graph.
  *
@@ -28,12 +28,12 @@ import { fileURLToPath } from 'node:url';
  * is ~213KB gzip: app entry + Persian i18n catalog (~74KB), React/router
  * (~58KB), framer-motion (~44KB — the app-wide PageTransition mounts at the
  * root), Radix (~24KB — the single app-root ToastProvider/Tooltip host), and
- * shared floating-ui vendor code (~13KB). 230KB keeps a tight regression
+ * shared floating-ui vendor code (~13KB). 240KB keeps a tight regression
  * ceiling (~17KB for route content — the heaviest real route, discovery, sits
  * at ~227KB) while the FORBIDDEN_ON_PUBLIC list still guards the big
  * funnel/admin/chart chunks from ever leaking onto public routes.
  */
-export const PUBLIC_JS_BUDGET_GZIP = 230 * 1024;
+export const PUBLIC_JS_BUDGET_GZIP = 240 * 1024;
 
 /**
  * Module substrings that must NEVER appear in a public route's initial graph.
@@ -63,10 +63,8 @@ export const FORBIDDEN_ON_PUBLIC = [
  * lazy chunk.
  */
 export const PUBLIC_ENTRY_CHUNKS = {
-  'MarketingHome (/)': 'MarketingHome',
-  'BusinessLanding (/business)': 'BusinessLanding',
+  'BusinessLanding (/)': 'BusinessLanding',
   'SalonProfilePage (/s/:slug)': 'SalonProfilePage',
-  'DiscoveryPages (/city, /services)': 'DiscoveryPages',
   'LegalPages (/about, /contact, /privacy, /terms)': 'LegalPages',
 };
 

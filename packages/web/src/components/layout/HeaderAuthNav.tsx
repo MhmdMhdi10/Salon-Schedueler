@@ -16,10 +16,12 @@ interface HeaderNavItem {
 
 /**
  * Destinations a signed-in **customer** sees in the header. Customers have no
- * staff panel; their surface is the public/booking app, so we point them at the
- * home page where they start a booking.
+ * staff panel; their surface is the account dashboard, so we point them at
+ * appointments and saved salons.
  */
-const CUSTOMER_NAV: readonly HeaderNavItem[] = [{ labelKey: 'app.nav.home', to: '/', end: true }];
+const CUSTOMER_NAV: readonly HeaderNavItem[] = [
+  { labelKey: 'app.nav.account', to: '/account', end: true },
+];
 
 const STAFF_NAV = [
   { labelKey: 'owner.nav.calendar', to: '/owner/calendar', roles: ['Owner', 'Admin', 'Stylist'] },
@@ -45,7 +47,7 @@ const linkClass =
   (tone: HeaderAuthNavTone) =>
   ({ isActive }: { isActive: boolean }) =>
     cn(
-      'rounded-md px-3 py-2 text-sm no-underline',
+      'min-h-10 rounded-md px-3 py-2 text-sm no-underline',
       'outline-none focus-visible:outline focus-visible:outline-2',
       'focus-visible:outline-offset-2 focus-visible:outline-focus',
       isActive
@@ -71,7 +73,7 @@ const linkClass =
 export function HeaderAuthNav({ tone = 'default' }: HeaderAuthNavProps = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { status, role, isStaff, signOut } = useAuth();
+  const { status, role, isStaff, isPlatformAdmin, signOut } = useAuth();
   const inverse = tone === 'inverse';
 
   // Avoid a signed-out → signed-in flash while the session is being restored.
@@ -84,21 +86,23 @@ export function HeaderAuthNav({ tone = 'default' }: HeaderAuthNavProps = {}) {
       <Link
         to="/auth"
         data-testid="header-sign-in"
+        aria-label={t('app.signIn')}
         className={cn(
-          'inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold no-underline',
+          'inline-flex min-h-10 min-w-10 shrink-0 items-center gap-2 rounded-md !px-2 py-2 text-sm font-semibold no-underline sm:!px-3',
           inverse ? 'text-ink-contrast hover:bg-ink-contrast/10' : 'text-text hover:bg-elevated',
           'outline-none focus-visible:outline focus-visible:outline-2',
           'focus-visible:outline-offset-2 focus-visible:outline-focus',
         )}
       >
         <LogIn className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />
-        {t('app.signIn')}
+        <span className="hidden sm:inline">{t('app.signIn')}</span>
       </Link>
     );
   }
 
-  const items: HeaderNavItem[] =
-    isStaff && role
+  const items: HeaderNavItem[] = isPlatformAdmin
+    ? [{ labelKey: 'platform.nav.dashboard', to: '/platform-admin', end: true }]
+    : isStaff && role
       ? STAFF_NAV.filter((item) => item.roles.some((allowedRole) => allowedRole === role)).map(
           ({ labelKey, to }) => ({
             labelKey,
@@ -133,7 +137,7 @@ export function HeaderAuthNav({ tone = 'default' }: HeaderAuthNavProps = {}) {
       <span
         data-testid="header-role-badge"
         className={cn(
-          'rounded-pill border px-2 py-1 text-2xs',
+          'hidden rounded-pill border px-2 py-1 text-2xs sm:inline-flex',
           inverse ? 'border-ink-border text-ink-muted' : 'border-border text-muted',
         )}
       >
@@ -146,9 +150,13 @@ export function HeaderAuthNav({ tone = 'default' }: HeaderAuthNavProps = {}) {
         startIcon={<LogOut className="h-4 w-4 rtl:-scale-x-100" />}
         onClick={handleSignOut}
         data-testid="header-sign-out"
-        className={cn(inverse && 'text-ink-contrast hover:bg-ink-contrast/10')}
+        aria-label={t('app.signOut')}
+        className={cn(
+          'shrink-0 !px-2 sm:!px-5',
+          inverse && 'text-ink-contrast hover:bg-ink-contrast/10',
+        )}
       >
-        {t('app.signOut')}
+        <span className="hidden sm:inline">{t('app.signOut')}</span>
       </Button>
     </nav>
   );

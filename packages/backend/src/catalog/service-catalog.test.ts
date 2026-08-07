@@ -41,6 +41,7 @@ function createMockPrisma() {
           depositRial: data.depositRial,
         });
       }),
+      delete: jest.fn().mockResolvedValue({ id: 'service-1' }),
     },
     serviceStaff,
     serviceEquipment,
@@ -414,5 +415,38 @@ describe('ServiceCatalog - setServiceEquipment (R6.3)', () => {
     await catalog.setServiceEquipment(serviceId, equipmentIds);
 
     expect(callOrder).toEqual(['deleteMany', 'createMany']);
+  });
+});
+
+describe('ServiceCatalog - deleteService', () => {
+  it('removes join-table mappings before deleting the service in one transaction', async () => {
+    const prisma = createMockPrisma();
+    const catalog = new ServiceCatalog(prisma);
+    const callOrder: string[] = [];
+
+    prisma.serviceStaff.deleteMany.mockImplementation(async () => {
+      callOrder.push('staff');
+      return { count: 1 };
+    });
+    prisma.serviceEquipment.deleteMany.mockImplementation(async () => {
+      callOrder.push('equipment');
+      return { count: 1 };
+    });
+    prisma.service.delete.mockImplementation(async () => {
+      callOrder.push('service');
+      return { id: 'service-1' };
+    });
+
+    await catalog.deleteService('service-1');
+
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(prisma.serviceStaff.deleteMany).toHaveBeenCalledWith({
+      where: { serviceId: 'service-1' },
+    });
+    expect(prisma.serviceEquipment.deleteMany).toHaveBeenCalledWith({
+      where: { serviceId: 'service-1' },
+    });
+    expect(prisma.service.delete).toHaveBeenCalledWith({ where: { id: 'service-1' } });
+    expect(callOrder).toEqual(['staff', 'equipment', 'service']);
   });
 });

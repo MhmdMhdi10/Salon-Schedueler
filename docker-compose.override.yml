@@ -24,22 +24,21 @@ services:
     # (e.g. http://192.168.x.x:5273) to scan from a phone on the network, or
     # remove to fall back to the codec default (https://book.salon.app).
     environment:
-      PUBLIC_BASE_URL: "http://localhost:5273"
+      PUBLIC_BASE_URL: "http://192.168.1.190:5273"
 
   web:
     ports: !override
       - "5273:5173"
-    # NOTE on HMR client port: if you access the app via the HOST-mapped port
-    # (http://localhost:5273), uncomment VITE_HMR_CLIENT_PORT below so the HMR
-    # websocket reconnects on 5273 instead of the container-internal 5173.
-    #
+    environment:
+      # The browser on a phone reaches Vite through the host-mapped port.
+      VITE_HMR_CLIENT_PORT: "5273"
+    # HMR uses host port 5273 so a browser on this machine or phone can reconnect.
     # If you access the app via the container's internal Docker network IP
     # directly (e.g. http://172.18.0.x:5173 — common in sandboxed/remote dev
     # environments that route straight to the bridge network), leave this
     # UNSET: port 5273 does not exist on that internal IP, only on `localhost`
     # from the host, so setting it here breaks HMR in that access mode.
-    # environment:
-    #   VITE_HMR_CLIENT_PORT: "5273"
+    # (use a separate override if that access mode is needed).
 
   mobile:
     # Bring the Expo/Metro container into the running stack. Metro must advertise
@@ -48,6 +47,5 @@ services:
     # 3000). Update REACT_NATIVE_PACKAGER_HOSTNAME if this machine's LAN IP
     # changes. Start with: docker compose --profile mobile up -d
     environment:
-      REACT_NATIVE_PACKAGER_HOSTNAME: "192.168.10.216"
-      EXPO_PUBLIC_API_BASE_URL: "http://192.168.10.216:3110"
-
+      REACT_NATIVE_PACKAGER_HOSTNAME: "192.168.1.190"
+      EXPO_PUBLIC_API_BASE_URL: "http://192.168.1.190:3110"

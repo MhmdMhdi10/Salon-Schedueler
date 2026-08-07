@@ -139,6 +139,7 @@ function buildRaceMockPrisma(scenario: RaceScenario) {
     },
     holiday: {
       findFirst: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn().mockResolvedValue([]),
     },
     staffMember: {
       findMany: jest.fn().mockResolvedValue(staffMembers),

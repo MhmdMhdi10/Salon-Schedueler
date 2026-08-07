@@ -1,7 +1,12 @@
 import { Router, type Request, type RequestHandler } from 'express';
 import type { Services } from '../app.js';
 import type { Action, ResourceRef } from '../../auth/authorizer.js';
+import type { StaffRole } from '@salon/shared';
 import { asyncRoute, validateRequired } from './route-helpers.js';
+import {
+  createRateLimit,
+  principalOrIpRateLimitKey,
+} from '../middleware/rate-limit.js';
 
 /**
  * Factory type for the RBAC guard, supplied by `buildApp` (bound to the
@@ -30,6 +35,24 @@ export type RequireRole = (
 export function appointmentRouter(services: Services, requireRole: RequireRole): Router {
   const router = Router();
 
+  const bookingIpLimit = createRateLimit({
+    name: 'booking-ip',
+    max: 30,
+    windowMs: 10 * 60_000,
+  });
+  const bookingCustomerLimit = createRateLimit({
+    name: 'booking-customer',
+    max: 12,
+    windowMs: 10 * 60_000,
+    keyGenerator: principalOrIpRateLimitKey,
+  });
+  const appointmentMutationLimit = createRateLimit({
+    name: 'appointment-mutation',
+    max: 60,
+    windowMs: 60_000,
+    keyGenerator: principalOrIpRateLimitKey,
+  });
+
   // Authorize approve/reject by the appointment's OWNER: Owner/Admin may act on
   // any booking in the salon; a Stylist may act only on a booking assigned to
   // them. The appointment's staffMemberId is not in the request, so this guard
@@ -41,8 +64,8 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
       res.status(401).json({ code: 'UNAUTHORIZED' });
       return;
     }
-    if (!principal.role) {
-      // A customer (no staff role) cannot approve/reject.
+    if (!principal.role || principal.role === 'PlatformAdmin') {
+      // Customers and global operators cannot approve/reject in a tenant panel.
       res.status(403).json({ code: 'FORBIDDEN' });
       return;
     }
@@ -56,8 +79,9 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
         const allowed = services.authorizer.can(
           {
             id: principal.id,
-            role: principal.role!,
+            role: principal.role as StaffRole,
             staffMemberId: principal.staffMemberId,
+            salonId: principal.salonId,
           },
           'manage_own_appointments',
           { salonId: appt.salonId, staffMemberId: appt.staffMemberId },
@@ -96,7 +120,7 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
           return;
         }
         // Otherwise the caller must be staff who can manage this appointment.
-        if (!principal.role) {
+        if (!principal.role || principal.role === 'PlatformAdmin') {
           res.status(403).json({ code: 'FORBIDDEN' });
           return;
         }
@@ -105,6 +129,7 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
             id: principal.id,
             role: principal.role,
             staffMemberId: principal.staffMemberId,
+            salonId: principal.salonId,
           },
           'manage_own_appointments',
           { salonId: appt.salonId, staffMemberId: appt.staffMemberId },
@@ -120,19 +145,35 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
 
   router.post(
     '/appointments',
+    bookingIpLimit,
+    bookingCustomerLimit,
     asyncRoute(async (req, res) => {
       if (!validateRequired(res, req.body, ['salonId', 'serviceId', 'startAt'])) {
         return;
       }
       const principal = req.principal!;
-      const result = await services.bookingFlow.book({
+      const idempotencyKey = req.get('Idempotency-Key')?.trim();
+      if (services.bookingAbuseGuard) {
+        await services.bookingAbuseGuard.check({
+          customerId: principal.id,
+          salonId: String(req.body.salonId),
+          serviceId: String(req.body.serviceId),
+          startAt: String(req.body.startAt),
+          ip: req.ip ?? 'unknown',
+          idempotencyKey: idempotencyKey || undefined,
+          honeypot: req.body.website,
+        });
+      }
+      const bookingRequest = {
         salonId: req.body.salonId,
         serviceId: req.body.serviceId,
         startAt: req.body.startAt,
         preferredStaffId: req.body.preferredStaffId,
         customerId: principal.id,
-        source: 'web',
-      });
+        source: 'web' as const,
+        ...(idempotencyKey ? { idempotencyKey } : {}),
+      };
+      const result = await services.bookingFlow.book(bookingRequest);
 
       if (result.status === 'rejected') {
         const code =
@@ -144,10 +185,16 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
       }
 
       if (result.status === 'held') {
+        // A held appointment must immediately create its deposit payment. The
+        // scheduling engine only reserves the slot; its placeholder URL is not
+        // a gateway session and would leave the customer on a dead route.
+        const payment = await services.paymentService.initiateDeposit(
+          result.appointment.id,
+        );
         res.status(200).json({
           status: 'held',
           appointment: result.appointment,
-          paymentRedirectUrl: result.payment.redirectUrl,
+          paymentRedirectUrl: payment.redirectUrl,
         });
         return;
       }
@@ -162,15 +209,112 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
   router.post(
     '/appointments/:id/cancel',
     requireCanCancelAppointment,
+    appointmentMutationLimit,
     asyncRoute(async (req, res) => {
       const appointment = await services.cancellationFlow.cancel(req.params.id);
       res.status(200).json({ status: 'cancelled', appointment });
     }),
   );
 
+  // Staff-entered walk-in. It uses the same scheduler and resource constraints
+  // as online booking; only the approval is automatic because a staff member is
+  // recording it at the salon counter.
+  router.post(
+    '/salons/:id/appointments/manual',
+    requireRole('manage_appointments', (req) => ({ salonId: req.params.id })),
+    appointmentMutationLimit,
+    asyncRoute(async (req, res) => {
+      if (!services.appointmentManagementService) {
+        res.status(503).json({ code: 'FEATURE_UNAVAILABLE' });
+        return;
+      }
+      if (!validateRequired(res, req.body, ['serviceId', 'startAt', 'phone'])) return;
+      const phone = typeof req.body.phone === 'string' ? req.body.phone.trim() : '';
+      if (!/^09\d{9}$/.test(phone)) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'phone' });
+        return;
+      }
+      const result = await services.appointmentManagementService.createWalkIn({
+        salonId: req.params.id,
+        serviceId: String(req.body.serviceId),
+        startAt: String(req.body.startAt),
+        customerPhone: phone,
+        customerName:
+          typeof req.body.fullName === 'string' ? req.body.fullName.trim() : undefined,
+        preferredStaffId:
+          typeof req.body.preferredStaffId === 'string'
+            ? req.body.preferredStaffId
+            : undefined,
+      });
+      if (result.status === 'rejected') {
+        res.status(409).json({
+          code:
+            result.reason === 'no_availability'
+              ? 'BOOKING_NO_AVAILABILITY'
+              : 'BOOKING_SLOT_UNAVAILABLE',
+        });
+        return;
+      }
+      if (result.status === 'held') {
+        const payment = await services.paymentService.initiateDeposit(result.appointment.id);
+        res.status(200).json({
+          status: result.status,
+          appointment: result.appointment,
+          paymentRedirectUrl: payment.redirectUrl,
+        });
+        return;
+      }
+      res.status(200).json({ status: result.status, appointment: result.appointment });
+    }),
+  );
+
+  router.post(
+    '/appointments/:id/reschedule',
+    requireCanCancelAppointment,
+    appointmentMutationLimit,
+    asyncRoute(async (req, res) => {
+      if (!services.appointmentManagementService) {
+        res.status(503).json({ code: 'FEATURE_UNAVAILABLE' });
+        return;
+      }
+      if (!validateRequired(res, req.body, ['startAt'])) return;
+      const result = await services.appointmentManagementService.reschedule({
+        appointmentId: req.params.id,
+        customerId: req.principal!.id,
+        startAt: String(req.body.startAt),
+        preferredStaffId:
+          typeof req.body.preferredStaffId === 'string'
+            ? req.body.preferredStaffId
+            : undefined,
+      });
+      if (result.booking.status === 'held') {
+        const payment = await services.paymentService.initiateDeposit(
+          result.booking.appointment.id,
+        );
+        res.status(200).json({
+          status: result.booking.status,
+          appointment: result.booking.appointment,
+          previousAppointmentId: result.previousAppointment.id,
+          paymentRedirectUrl: payment.redirectUrl,
+        });
+        return;
+      }
+      if (result.booking.status === 'rejected') {
+        res.status(409).json({ code: 'BOOKING_SLOT_UNAVAILABLE' });
+        return;
+      }
+      res.status(200).json({
+        status: result.booking.status,
+        appointment: result.booking.appointment,
+        previousAppointmentId: result.previousAppointment.id,
+      });
+    }),
+  );
+
   router.post(
     '/appointments/:id/no-show',
     requireRole('manage_appointments'),
+    appointmentMutationLimit,
     asyncRoute(async (req, res) => {
       const appointment = await services.cancellationService.markNoShow(req.params.id);
       res.status(200).json({ status: 'no_show', appointment });

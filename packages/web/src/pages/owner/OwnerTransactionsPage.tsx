@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Receipt, RefreshCw } from 'lucide-react';
 import { ApiError, adminApi, type Transaction } from '../../api/client';
 import { useSalonId } from '../../auth/useSalonId';
+import { usePagination } from '../../hooks/usePagination';
 import { SeoHead } from '../../components/seo';
 import {
   Badge,
@@ -13,6 +14,7 @@ import {
   ErrorState,
   JalaliDate,
   Money,
+  Pagination,
   Skeleton,
 } from '../../components/ui';
 
@@ -61,6 +63,14 @@ export function OwnerTransactionsPage() {
   const [status, setStatus] = useState<Status>('loading');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [error, setError] = useState('');
+  const {
+    page,
+    pageItems,
+    total: transactionTotal,
+    pageSize: transactionPageSize,
+    goToPage,
+    resetPage,
+  } = usePagination(transactions, 10);
 
   const load = () => {
     setStatus('loading');
@@ -68,6 +78,7 @@ export function OwnerTransactionsPage() {
       .getTransactions(salonId)
       .then((res) => {
         setTransactions(res.transactions);
+        resetPage();
         setStatus('ready');
       })
       .catch((err: unknown) => {
@@ -82,8 +93,8 @@ export function OwnerTransactionsPage() {
     <section data-testid="owner-transactions-page" className="flex flex-col gap-5">
       <SeoHead title={t('owner.transactions.title', { defaultValue: 'تراکنش‌ها' })} />
 
-      <header className="flex items-center justify-between gap-3">
-        <div className="flex flex-col gap-1">
+      <header className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+        <div className="min-w-0 flex flex-col gap-1">
           <h1 className="text-xl text-display text-text">
             {t('owner.transactions.title', { defaultValue: 'تراکنش‌ها' })}
           </h1>
@@ -93,7 +104,7 @@ export function OwnerTransactionsPage() {
             })}
           </p>
         </div>
-        <Button variant="ghost" startIcon={<RefreshCw className="h-4 w-4" />} onClick={load}>
+        <Button variant="ghost" startIcon={<RefreshCw className="h-4 w-4" />} onClick={load} className="shrink-0">
           {t('common.refresh', { defaultValue: 'بازخوانی' })}
         </Button>
       </header>
@@ -126,21 +137,22 @@ export function OwnerTransactionsPage() {
       )}
 
       {status === 'ready' && transactions.length > 0 && (
-        <Card className="flex flex-col">
-          <ul className="flex flex-col">
-            {transactions.map((tx) => (
+        <>
+          <Card className="flex flex-col">
+            <ul className="flex flex-col">
+              {pageItems.map((tx) => (
               <li
                 key={`${tx.kind}-${tx.id}`}
-                className="flex items-center justify-between gap-3 border-b border-border/50 px-4 py-3 last:border-b-0"
+                className="flex items-start justify-between gap-3 border-b border-border/50 px-3 py-3 last:border-b-0 sm:items-center sm:px-4"
               >
                 <div className="flex min-w-0 flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-text">{txLabel(tx)}</span>
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <span className="break-words text-sm font-medium text-text">{txLabel(tx)}</span>
                     <Badge status={statusBadge(tx.status)}>
                       {statusLabel[tx.status] ?? tx.status}
                     </Badge>
                   </div>
-                  <span className="flex items-center gap-2 text-xs text-muted">
+                  <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
                     <span>{kindLabel[tx.kind]}</span>
                     <span aria-hidden="true">•</span>
                     <JalaliDate value={tx.createdAt} />
@@ -157,9 +169,17 @@ export function OwnerTransactionsPage() {
                   className="shrink-0 text-sm font-bold text-text"
                 />
               </li>
-            ))}
-          </ul>
-        </Card>
+              ))}
+            </ul>
+          </Card>
+          <Pagination
+            page={page}
+            pageSize={transactionPageSize}
+            total={transactionTotal}
+            onPageChange={goToPage}
+            testId="owner-transactions-pagination"
+          />
+        </>
       )}
     </section>
   );

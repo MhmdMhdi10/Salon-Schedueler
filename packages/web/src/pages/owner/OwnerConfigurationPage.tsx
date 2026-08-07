@@ -1,36 +1,31 @@
 import { useCallback, useEffect, useMemo, useState, FormEvent } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   Armchair,
-  CalendarOff,
   ChevronDown,
   Clock,
   Plus,
   Scissors,
-  ShieldCheck,
   Trash2,
   Users,
   type LucideIcon,
 } from 'lucide-react';
 import {
   adminApi,
-  approvalPolicyApi,
-  holidaysApi,
   salonApi,
   staffApi,
+  staffAvailabilityApi,
   ApiError,
-  type ApprovalPolicyStaff,
-  type SalonClosure,
   type SalonStaff,
   type StaffRole,
   type StaffUpdateInput,
 } from '../../api/client';
 import { useSalonId } from '../../auth/useSalonId';
+import { usePagination } from '../../hooks/usePagination';
 import { SeoHead } from '../../components/seo';
 import {
-  Badge,
   Button,
   Card,
   Dialog,
@@ -41,12 +36,10 @@ import {
   EmptyState,
   ErrorState,
   IconButton,
-  JalaliDate,
-  JalaliDatePicker,
   Money,
+  Pagination,
   Select,
   Skeleton,
-  Spinner,
   Switch,
   TextField,
   cn,
@@ -56,13 +49,13 @@ import {
 /**
  * Redesigned Owner Configuration Page (Task 7.6; Req 8.4, 8.6, 8.7, 3.5, 11.4, 11.5).
  *
- * Card-based sections for Staff, Services, Chairs/Resources, Holidays with:
+ * Card-based sections for Staff, Services, Chairs/Resources with:
  * - Expand/collapse via AnimatePresence + motion.div height animation
  * - Rotate-chevron expand indicator
  * - Inline edit affordances
  * - Add/remove item animations (slide in/out)
  * - Skeleton loading + error+retry states
- * - Persian text, Jalali dates for holidays, Persian numerals
+ * - Persian text and Persian numerals
  * - Responsive: single column mobile, wider on desktop
  * - Tokens-only styling, logical properties for RTL
  * - prefers-reduced-motion respected throughout
@@ -77,6 +70,8 @@ interface ServiceItem {
   name: string;
   durationMinutes: number;
   priceRial: number;
+  requiresDeposit?: boolean;
+  depositRial?: number | null;
 }
 
 interface Entry {
@@ -87,6 +82,7 @@ interface Entry {
 interface DeleteState {
   id: string;
   label: string;
+  kind?: 'delete' | 'deactivate';
   onConfirm: () => void;
 }
 
@@ -127,15 +123,6 @@ function toEntry(item: unknown, fallbackId: string): Entry {
   return { id: fallbackId, label };
 }
 
-function sortClosures(list: SalonClosure[]): SalonClosure[] {
-  return [...list].sort((a, b) => {
-    if (a.onDate !== b.onDate) return a.onDate < b.onDate ? -1 : 1;
-    const sa = a.startTime ?? '';
-    const sb = b.startTime ?? '';
-    return sa < sb ? -1 : sa > sb ? 1 : 0;
-  });
-}
-
 // ─── CollapsibleSection ──────────────────────────────────────────────────────
 
 interface CollapsibleSectionProps {
@@ -174,16 +161,16 @@ function CollapsibleSection({
         aria-controls={`${id}-content`}
         onClick={() => setExpanded((v) => !v)}
         className={cn(
-          'flex w-full items-center justify-between gap-3 p-5',
+          'flex w-full items-center justify-between gap-3 p-4 sm:p-5',
           'outline-none focus-visible:outline focus-visible:outline-2',
           'focus-visible:outline-offset-[-2px] focus-visible:outline-focus',
           'min-h-[44px] cursor-pointer rounded-lg',
           'transition-colors duration-fast ease-standard hover:bg-elevated',
         )}
       >
-        <span className="flex items-center gap-3" id={`${id}-title`}>
+        <span className="flex min-w-0 items-center gap-3" id={`${id}-title`}>
           <Icon className="h-5 w-5 shrink-0 text-muted" aria-hidden="true" />
-          <span className="text-lg font-medium text-text">{title}</span>
+          <span className="min-w-0 break-words text-lg font-medium text-text">{title}</span>
         </span>
         <motion.span
           animate={{ rotate: expanded ? 180 : 0 }}
@@ -207,7 +194,7 @@ function CollapsibleSection({
             transition={prefersReduced ? { duration: 0 } : { duration: 0.3, ease: [0.2, 0, 0, 1] }}
             style={{ overflow: 'hidden' }}
           >
-            <div className="flex flex-col gap-4 px-5 pb-5">{children}</div>
+            <div className="flex flex-col gap-4 px-4 pb-4 sm:px-5 sm:pb-5">{children}</div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -281,6 +268,13 @@ function StaffSection({
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const {
+    page,
+    pageItems,
+    total: staffTotal,
+    pageSize: staffPageSize,
+    goToPage,
+  } = usePagination(staff, 6);
 
   const roleOptions = useMemo(
     () => STAFF_ROLE_VALUES.map((r) => ({ value: r, label: t(`app.role.${r}`) })),
@@ -341,6 +335,36 @@ function StaffSection({
     }
   };
 
+  const patchOwnAvailability = async (id: string, allowed: boolean) => {
+    const previous = staff;
+    onChange((list) =>
+      list.map((member) =>
+        member.id === id ? { ...member, manageOwnAvailability: allowed } : member,
+      ),
+    );
+    try {
+      await staffAvailabilityApi.setManageOwn(id, allowed);
+      success({ title: t('admin.config.staff.availabilitySaved') });
+    } catch {
+      onChange(previous);
+      toastError({ title: t('admin.config.staff.availabilitySaveFailed') });
+    }
+  };
+
+  const deactivateStaff = async (id: string, name: string) => {
+    const previous = staff;
+    onChange((list) => list.map((member) => (member.id === id ? { ...member, active: false } : member)));
+    try {
+      const { staff: updated } = await staffApi.update(id, { active: false });
+      onChange((list) => list.map((member) => (member.id === id ? updated : member)));
+      window.dispatchEvent(new Event('salon-config-changed'));
+      success({ title: t('admin.config.staff.deactivated', { name }) });
+    } catch {
+      onChange(previous);
+      toastError({ title: t('admin.config.staff.deactivateFailed') });
+    }
+  };
+
   return (
     <CollapsibleSection id="staff" icon={Users} title={t('admin.staff')}>
       {staff.length === 0 ? (
@@ -353,8 +377,9 @@ function StaffSection({
           />
         </>
       ) : (
-        <AnimatedList testId="staff-list">
-          {staff.map((member) => {
+        <>
+          <AnimatedList testId="staff-list">
+            {pageItems.map((member) => {
             const name = member.fullName ?? member.id;
             const isEditing = editingId === member.id;
             return (
@@ -365,7 +390,7 @@ function StaffSection({
                       type="button"
                       onClick={() => setEditingId(isEditing ? null : member.id)}
                       className={cn(
-                        'inline-flex items-start text-start text-sm font-medium text-text',
+                        'inline-flex min-h-10 items-center text-start text-sm font-medium text-text',
                         'rounded px-1 -mx-1 transition-colors duration-fast',
                         'hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus',
                       )}
@@ -410,18 +435,27 @@ function StaffSection({
                           onCheckedChange={(v) => patchStaff(member.id, { active: v })}
                           label={t('admin.config.staff.activeLabel')}
                         />
+                        {member.role === 'Stylist' && (
+                          <Switch
+                            checked={member.manageOwnAvailability}
+                            onCheckedChange={(v) => void patchOwnAvailability(member.id, v)}
+                            label={t('admin.config.staff.availabilityLabel')}
+                            helperText={t('admin.config.staff.availabilityHelper')}
+                          />
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>
                 </div>
                 <IconButton
                   variant="danger"
-                  aria-label={t('admin.config.removeItem', { name })}
+                  aria-label={t('admin.config.staff.deactivateLabel', { name })}
                   onClick={() =>
                     requestDelete({
                       id: member.id,
                       label: name,
-                      onConfirm: () => onChange((prev) => prev.filter((s) => s.id !== member.id)),
+                      kind: 'deactivate',
+                      onConfirm: () => void deactivateStaff(member.id, name),
                     })
                   }
                   className="h-9 min-h-0 w-9 min-w-0 shrink-0"
@@ -430,8 +464,16 @@ function StaffSection({
                 </IconButton>
               </AnimatedListItem>
             );
-          })}
-        </AnimatedList>
+            })}
+          </AnimatedList>
+          <Pagination
+            page={page}
+            pageSize={staffPageSize}
+            total={staffTotal}
+            onPageChange={goToPage}
+            testId="staff-pagination"
+          />
+        </>
       )}
 
       {/* Add form */}
@@ -491,7 +533,13 @@ function ServicesSection({
   requestDelete,
 }: {
   services: ServiceItem[];
-  onAdd: (service: { name: string; durationMinutes: number; priceRial: number }) => void;
+  onAdd: (service: {
+    name: string;
+    durationMinutes: number;
+    priceRial: number;
+    requiresDeposit: boolean;
+    depositRial?: number;
+  }) => void;
   onRemove: (id: string) => void;
   requestDelete: (state: DeleteState) => void;
 }) {
@@ -499,7 +547,16 @@ function ServicesSection({
   const [name, setName] = useState('');
   const [duration, setDuration] = useState('');
   const [price, setPrice] = useState('');
+  const [requiresDeposit, setRequiresDeposit] = useState(false);
+  const [deposit, setDeposit] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const {
+    page,
+    pageItems,
+    total: servicesTotal,
+    pageSize: servicesPageSize,
+    goToPage,
+  } = usePagination(services, 6);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -509,10 +566,14 @@ function ServicesSection({
       name: trimmed,
       durationMinutes: Number.parseInt(duration, 10) || 0,
       priceRial: Number.parseInt(price, 10) || 0,
+      requiresDeposit,
+      ...(requiresDeposit ? { depositRial: Number.parseInt(deposit, 10) || 0 } : {}),
     });
     setName('');
     setDuration('');
     setPrice('');
+    setRequiresDeposit(false);
+    setDeposit('');
   };
 
   return (
@@ -527,15 +588,16 @@ function ServicesSection({
           />
         </>
       ) : (
-        <AnimatedList testId="services-list">
-          {services.map((service) => (
+        <>
+          <AnimatedList testId="services-list">
+            {pageItems.map((service) => (
             <AnimatedListItem key={service.id} id={service.id}>
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <button
                   type="button"
                   onClick={() => setEditingId(editingId === service.id ? null : service.id)}
                   className={cn(
-                    'inline-flex items-start text-start text-sm font-medium text-text',
+                    'inline-flex min-h-10 items-center text-start text-sm font-medium text-text',
                     'rounded px-1 -mx-1 transition-colors duration-fast',
                     'hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus',
                   )}
@@ -549,6 +611,14 @@ function ServicesSection({
                     {t('booking.durationMinutes', { count: service.durationMinutes })}
                   </span>
                   <Money amountRial={service.priceRial} className="font-medium text-text" />
+                  {service.requiresDeposit && service.depositRial != null && (
+                    <span className="font-medium text-primary">
+                      {t('admin.config.services.depositSummary', {
+                        amount: service.depositRial.toLocaleString('fa-IR'),
+                        defaultValue: 'بیعانه {{amount}} ریال',
+                      })}
+                    </span>
+                  )}
                 </span>
               </div>
               <IconButton
@@ -566,8 +636,16 @@ function ServicesSection({
                 <Trash2 className="h-4 w-4" />
               </IconButton>
             </AnimatedListItem>
-          ))}
-        </AnimatedList>
+            ))}
+          </AnimatedList>
+          <Pagination
+            page={page}
+            pageSize={servicesPageSize}
+            total={servicesTotal}
+            onPageChange={goToPage}
+            testId="services-pagination"
+          />
+        </>
       )}
 
       {/* Add form */}
@@ -598,6 +676,30 @@ function ServicesSection({
             containerClassName="sm:flex-1"
           />
         </div>
+        <Switch
+          checked={requiresDeposit}
+          onCheckedChange={setRequiresDeposit}
+          label={t('admin.config.services.depositToggleLabel', {
+            defaultValue: 'دریافت بیعانه برای رزرو',
+          })}
+          helperText={t('admin.config.services.depositToggleHelper', {
+            defaultValue: 'مشتری قبل از نهایی‌شدن نوبت به پرداخت بیعانه هدایت می‌شود.',
+          })}
+        />
+        {requiresDeposit && (
+          <TextField
+            label={t('admin.config.services.depositLabel', {
+              defaultValue: 'مبلغ بیعانه (ریال)',
+            })}
+            placeholder={t('admin.config.services.depositPlaceholder', {
+              defaultValue: '۱۰۰۰۰۰',
+            })}
+            inputMode="numeric"
+            dir="ltr"
+            value={deposit}
+            onChange={(e) => setDeposit(e.target.value)}
+          />
+        )}
         <Button type="submit" startIcon={<Plus className="h-4 w-4" />} className="self-start">
           {t('admin.config.services.addCta')}
         </Button>
@@ -621,6 +723,13 @@ function ChairsSection({
 }) {
   const { t } = useTranslation();
   const [value, setValue] = useState('');
+  const {
+    page,
+    pageItems,
+    total: chairsTotal,
+    pageSize: chairsPageSize,
+    goToPage,
+  } = usePagination(chairs, 6);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -643,8 +752,9 @@ function ChairsSection({
           />
         </>
       ) : (
-        <AnimatedList testId="chairs-list">
-          {chairs.map((entry) => (
+        <>
+          <AnimatedList testId="chairs-list">
+            {pageItems.map((entry) => (
             <AnimatedListItem key={entry.id} id={entry.id}>
               <span className="min-w-0 break-words text-sm text-text">{entry.label}</span>
               <IconButton
@@ -662,8 +772,16 @@ function ChairsSection({
                 <Trash2 className="h-4 w-4" />
               </IconButton>
             </AnimatedListItem>
-          ))}
-        </AnimatedList>
+            ))}
+          </AnimatedList>
+          <Pagination
+            page={page}
+            pageSize={chairsPageSize}
+            total={chairsTotal}
+            onPageChange={goToPage}
+            testId="chairs-pagination"
+          />
+        </>
       )}
 
       {/* Add form */}
@@ -686,513 +804,6 @@ function ChairsSection({
   );
 }
 
-// ─── Holidays/Closures Section ───────────────────────────────────────────────
-
-function HolidaysSection({
-  salonId,
-  requestDelete,
-}: {
-  salonId: string;
-  requestDelete: (state: DeleteState) => void;
-}) {
-  const { t } = useTranslation();
-  const { success, error: toastError } = useToast();
-
-  const [status, setStatus] = useState<LoadStatus>('loading');
-  const [closures, setClosures] = useState<SalonClosure[]>([]);
-  const [saving, setSaving] = useState(false);
-
-  const [date, setDate] = useState('');
-  const [toDate, setToDate] = useState('');
-  const [mode, setMode] = useState<'full' | 'range'>('full');
-  const [start, setStart] = useState('');
-  const [end, setEnd] = useState('');
-  const [formError, setFormError] = useState('');
-
-  const load = useCallback(() => {
-    setStatus('loading');
-    let active = true;
-    holidaysApi
-      .list(salonId)
-      .then((res) => {
-        if (!active) return;
-        setClosures(sortClosures(res.holidays));
-        setStatus('success');
-      })
-      .catch(() => {
-        if (active) setStatus('error');
-      });
-    return () => {
-      active = false;
-    };
-  }, [salonId]);
-
-  useEffect(() => load(), [load]);
-
-  // Persistent setup warnings deep-link to the exact configuration card. The
-  // cards render after async data loads, so perform the anchor scroll then.
-  useEffect(() => {
-    if (status !== 'success' || !window.location.hash) return;
-    const id = decodeURIComponent(window.location.hash.slice(1));
-    window.requestAnimationFrame(() => {
-      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }, [status]);
-
-  const modeOptions = useMemo(
-    () => [
-      { value: 'full', label: t('admin.config.closures.modeFull') },
-      { value: 'range', label: t('admin.config.closures.modeRange') },
-    ],
-    [t],
-  );
-
-  const closureLabel = useCallback(
-    (c: SalonClosure): string =>
-      c.startTime && c.endTime
-        ? t('admin.config.closures.rangeSummary', { start: c.startTime, end: c.endTime })
-        : t('admin.config.closures.fullDay'),
-    [t],
-  );
-
-  const resetForm = () => {
-    setDate('');
-    setToDate('');
-    setMode('full');
-    setStart('');
-    setEnd('');
-    setFormError('');
-  };
-
-  const handleAdd = async (e: FormEvent) => {
-    e.preventDefault();
-    setFormError('');
-    if (!date) {
-      setFormError(t('admin.config.closures.dateRequired'));
-      return;
-    }
-    if (toDate && toDate < date) {
-      setFormError(t('admin.config.closures.invalidDateRange'));
-      return;
-    }
-    const isRange = mode === 'range';
-    if (isRange) {
-      if (!start || !end) {
-        setFormError(t('admin.config.closures.timeRequired'));
-        return;
-      }
-      if (start >= end) {
-        setFormError(t('admin.config.closures.invalidRange'));
-        return;
-      }
-    }
-    setSaving(true);
-    try {
-      const res = await holidaysApi.add(salonId, {
-        onDate: date,
-        toDate: toDate || null,
-        startTime: isRange ? start : null,
-        endTime: isRange ? end : null,
-      });
-      const added = res.holidays ?? [res.holiday];
-      setClosures((prev) => sortClosures([...prev, ...added]));
-      resetForm();
-      success({ title: t('admin.config.closures.added') });
-    } catch {
-      toastError({ title: t('admin.config.closures.addFailed') });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleRemove = (c: SalonClosure) => {
-    requestDelete({
-      id: c.id,
-      label: closureLabel(c),
-      onConfirm: () => {
-        const prev = closures;
-        setClosures((list) => list.filter((x) => x.id !== c.id));
-        holidaysApi
-          .remove(salonId, c.id)
-          .then(() => {
-            success({
-              title: t('admin.config.closures.removed'),
-              undoLabel: t('common.undo'),
-              onUndo: () => {
-                holidaysApi
-                  .add(salonId, {
-                    onDate: c.onDate,
-                    startTime: c.startTime,
-                    endTime: c.endTime,
-                  })
-                  .then((res) => setClosures((l) => sortClosures([...l, res.holiday])))
-                  .catch(() => toastError({ title: t('admin.config.closures.addFailed') }));
-              },
-            });
-          })
-          .catch(() => {
-            setClosures(prev);
-            toastError({ title: t('admin.config.closures.removeFailed') });
-          });
-      },
-    });
-  };
-
-  return (
-    <CollapsibleSection
-      id="holidays"
-      icon={CalendarOff}
-      title={t('admin.holidays')}
-      defaultExpanded={false}
-    >
-      <p className="max-w-[60ch] text-sm text-muted">{t('admin.config.closures.body')}</p>
-
-      {status === 'loading' && (
-        <div
-          role="status"
-          aria-busy="true"
-          aria-label={t('admin.config.closures.loadingLabel')}
-          className="flex flex-col gap-2"
-        >
-          <Skeleton variant="rect" className="h-10" />
-          <Skeleton variant="rect" className="h-10" />
-        </div>
-      )}
-
-      {status === 'error' && (
-        <ErrorState
-          title={t('admin.config.closures.errorTitle')}
-          retryLabel={t('admin.config.retry')}
-          onRetry={load}
-        />
-      )}
-
-      {status === 'success' && (
-        <>
-          {closures.length === 0 ? (
-            <>
-              <ul data-testid="holidays-list" className="sr-only" aria-hidden="true" />
-              <EmptyState
-                icon={<CalendarOff className="h-8 w-8" />}
-                title={t('admin.config.closures.emptyTitle')}
-                description={t('admin.config.closures.emptyBody')}
-              />
-            </>
-          ) : (
-            <AnimatedList testId="holidays-list">
-              {closures.map((c) => (
-                <AnimatedListItem key={c.id} id={c.id}>
-                  <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-                    <span className="inline-flex items-center gap-1 text-sm font-medium text-text">
-                      <CalendarOff className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
-                      <JalaliDate value={c.onDate} withWeekday variant="numeric" />
-                    </span>
-                    {c.startTime && c.endTime ? (
-                      <Badge status="warning">
-                        <span dir="ltr" className="tabular-nums">
-                          {c.startTime}–{c.endTime}
-                        </span>
-                      </Badge>
-                    ) : (
-                      <Badge status="danger">{t('admin.config.closures.fullDay')}</Badge>
-                    )}
-                  </span>
-                  <IconButton
-                    variant="danger"
-                    aria-label={t('admin.config.removeItem', { name: closureLabel(c) })}
-                    onClick={() => handleRemove(c)}
-                    className="h-9 min-h-0 w-9 min-w-0 shrink-0"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </IconButton>
-                </AnimatedListItem>
-              ))}
-            </AnimatedList>
-          )}
-
-          {/* Add closure form */}
-          <form onSubmit={handleAdd} className="flex flex-col gap-4 border-t border-border pt-5">
-            <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <div className="min-w-0">
-                <JalaliDatePicker
-                  label={t('admin.config.closures.fromDateLabel')}
-                  value={date || null}
-                  onChange={(iso) => setDate(iso)}
-                  variant="sheet"
-                />
-              </div>
-              <div className="min-w-0">
-                <JalaliDatePicker
-                  label={t('admin.config.closures.toDateLabel')}
-                  value={toDate || null}
-                  min={date || null}
-                  onChange={(iso) => setToDate(iso)}
-                  variant="sheet"
-                  helperText={t('admin.config.closures.toDateHelper')}
-                />
-              </div>
-              <Select
-                label={t('admin.config.closures.modeLabel')}
-                value={mode}
-                onValueChange={(v) => setMode(v as 'full' | 'range')}
-                options={modeOptions}
-                containerClassName="w-full"
-              />
-            </div>
-
-            {mode === 'range' && (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <TextField
-                  type="time"
-                  dir="ltr"
-                  label={t('admin.config.closures.startLabel')}
-                  value={start}
-                  onChange={(e) => setStart(e.target.value)}
-                  containerClassName="w-full"
-                />
-                <TextField
-                  type="time"
-                  dir="ltr"
-                  label={t('admin.config.closures.endLabel')}
-                  value={end}
-                  onChange={(e) => setEnd(e.target.value)}
-                  containerClassName="w-full"
-                />
-              </div>
-            )}
-
-            {formError && (
-              <p role="alert" className="text-sm text-danger">
-                {formError}
-              </p>
-            )}
-
-            <Button
-              type="submit"
-              startIcon={<Plus className="h-4 w-4" />}
-              loading={saving}
-              disabled={saving}
-              className="self-start"
-            >
-              {t('admin.config.closures.addCta')}
-            </Button>
-          </form>
-        </>
-      )}
-    </CollapsibleSection>
-  );
-}
-
-// ─── Approval-Policy Section ─────────────────────────────────────────────────
-
-/** Tri-state approval choice for a single stylist (maps to `boolean | null`). */
-type StaffPolicyValue = 'inherit' | 'auto' | 'manual';
-
-function toStaffValue(autoApprove: boolean | null | undefined): StaffPolicyValue {
-  if (autoApprove === null || autoApprove === undefined) return 'inherit';
-  return autoApprove ? 'auto' : 'manual';
-}
-
-function fromStaffValue(value: StaffPolicyValue): boolean | null {
-  if (value === 'inherit') return null;
-  return value === 'auto';
-}
-
-type PolicyStatus = 'loading' | 'success' | 'error';
-
-/**
- * Approval-policy section for the owner config page. Mirrors the admin
- * `ApprovalPolicySection` but styled with the owner page's `CollapsibleSection`
- * wrapper. Lets the owner toggle the salon-wide auto-confirm setting plus an
- * optional per-stylist override (inherit / auto / manual).
- */
-function ApprovalPolicySection({ salonId }: { salonId: string }) {
-  const { t } = useTranslation();
-  const { success, error: toastError } = useToast();
-
-  const [status, setStatus] = useState<PolicyStatus>('loading');
-  const [salonAuto, setSalonAuto] = useState(false);
-  const [staff, setStaff] = useState<ApprovalPolicyStaff[]>([]);
-  const [saving, setSaving] = useState(false);
-
-  const load = useCallback(() => {
-    setStatus('loading');
-    let active = true;
-    approvalPolicyApi
-      .get(salonId)
-      .then((policy) => {
-        if (!active) return;
-        setSalonAuto(policy.autoApprove);
-        setStaff(policy.staff);
-        setStatus('success');
-      })
-      .catch(() => {
-        if (active) setStatus('error');
-      });
-    return () => {
-      active = false;
-    };
-  }, [salonId]);
-
-  useEffect(() => load(), [load]);
-
-  const policyOptions = useMemo(
-    () => [
-      { value: 'inherit', label: t('admin.config.approval.inherit') },
-      { value: 'auto', label: t('admin.config.approval.auto') },
-      { value: 'manual', label: t('admin.config.approval.manual') },
-    ],
-    [t],
-  );
-
-  const handleSalonToggle = async (next: boolean) => {
-    const prev = salonAuto;
-    setSalonAuto(next);
-    setSaving(true);
-    try {
-      await approvalPolicyApi.setSalon(salonId, next);
-      success({ title: t('admin.config.approval.saved') });
-    } catch {
-      setSalonAuto(prev);
-      toastError({ title: t('admin.config.approval.saveFailed') });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleStaffChange = async (staffId: string, value: StaffPolicyValue) => {
-    const next = fromStaffValue(value);
-    const prev = staff;
-    setStaff((list) => list.map((s) => (s.id === staffId ? { ...s, autoApprove: next } : s)));
-    setSaving(true);
-    try {
-      await approvalPolicyApi.setStaff(staffId, next);
-      success({ title: t('admin.config.approval.saved') });
-    } catch {
-      setStaff(prev);
-      toastError({ title: t('admin.config.approval.saveFailed') });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <CollapsibleSection
-      id="approval"
-      icon={ShieldCheck}
-      title={t('admin.config.approval.title')}
-      defaultExpanded={false}
-    >
-      {status === 'loading' && (
-        <div
-          data-testid="approval-loading"
-          role="status"
-          aria-busy="true"
-          aria-label={t('admin.config.approval.loadingLabel')}
-          className="flex flex-col gap-3"
-        >
-          <Skeleton variant="rect" className="h-12" />
-          <Skeleton variant="rect" className="h-10" />
-        </div>
-      )}
-
-      {status === 'error' && (
-        <ErrorState
-          data-testid="approval-error"
-          title={t('admin.config.approval.errorTitle')}
-          retryLabel={t('admin.config.retry')}
-          onRetry={load}
-        />
-      )}
-
-      {status === 'success' && (
-        <div data-testid="approval-policy" className="flex flex-col gap-5">
-          <p className="max-w-[60ch] text-sm text-muted">{t('admin.config.approval.body')}</p>
-
-          <div className="rounded-md border border-border bg-bg p-4">
-            <Switch
-              checked={salonAuto}
-              onCheckedChange={handleSalonToggle}
-              disabled={saving}
-              label={t('admin.config.approval.salonToggleLabel')}
-              helperText={t('admin.config.approval.salonToggleHelper')}
-            />
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <div>
-              <h3 className="text-sm font-semibold text-text">
-                {t('admin.config.approval.staffTitle')}
-              </h3>
-              <p className="mt-0.5 max-w-[60ch] text-xs text-muted">
-                {t('admin.config.approval.staffBody')}
-              </p>
-            </div>
-
-            {staff.length === 0 ? (
-              <EmptyState
-                icon={<Users className="h-8 w-8" />}
-                title={t('admin.config.approval.staffEmptyTitle')}
-                description={t('admin.config.approval.staffEmptyBody')}
-              />
-            ) : (
-              <ul
-                data-testid="approval-staff-list"
-                className="flex flex-col divide-y divide-border"
-              >
-                {staff.map((member) => {
-                  const value = toStaffValue(member.autoApprove);
-                  const name = member.fullName ?? member.id;
-                  return (
-                    <li
-                      key={member.id}
-                      className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                      <div className="flex min-w-0 flex-col gap-0.5">
-                        <span className="break-words text-sm font-medium text-text">{name}</span>
-                        <span className="text-xs text-muted">{t(`app.role.${member.role}`)}</span>
-                      </div>
-                      <div className="flex w-full flex-col gap-2 sm:w-56 sm:shrink-0">
-                        <Select
-                          label={t('admin.config.approval.staffSelectLabel', { name })}
-                          labelHidden
-                          value={value}
-                          onValueChange={(v) => handleStaffChange(member.id, v as StaffPolicyValue)}
-                          options={policyOptions}
-                          disabled={saving}
-                          helperText={
-                            value === 'inherit'
-                              ? salonAuto
-                                ? t('admin.config.approval.effectiveAuto')
-                                : t('admin.config.approval.effectiveManual')
-                              : undefined
-                          }
-                          containerClassName="w-full"
-                        />
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-
-            {saving && (
-              <p
-                role="status"
-                aria-live="polite"
-                className="flex items-center gap-2 text-xs text-muted"
-              >
-                <Spinner size="sm" />
-                {t('common.saving')}
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-    </CollapsibleSection>
-  );
-}
-
 // ─── Skeleton Loading State ──────────────────────────────────────────────────
 
 function ConfigSkeleton() {
@@ -1204,7 +815,7 @@ function ConfigSkeleton() {
       aria-label="در حال بارگذاری تنظیمات"
       className="flex flex-col gap-4"
     >
-      {[0, 1, 2, 3].map((i) => (
+      {[0, 1, 2].map((i) => (
         <Card key={i} className="overflow-hidden">
           <div className="flex items-center gap-3 p-5">
             <Skeleton variant="rect" className="h-5 w-5 rounded" />
@@ -1283,23 +894,7 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
       <SeoHead title={t('seo.titles.adminConfiguration')} />
 
       {/* Page header */}
-      <header className="flex flex-col gap-2">
-        <nav aria-label={t('admin.breadcrumb')}>
-          <ol className="flex flex-wrap items-center gap-2 text-xs text-muted">
-            <li>
-              <Link to="/owner/calendar" className="text-muted no-underline hover:text-text">
-                {t('admin.home')}
-              </Link>
-            </li>
-            <li className="flex items-center gap-2">
-              <span aria-hidden="true">›</span>
-              <span className="font-medium text-text" aria-current="page">
-                {t('admin.configuration')}
-              </span>
-            </li>
-          </ol>
-        </nav>
-
+      <header className="flex flex-col gap-1">
         <h1 className="text-xl text-display text-text">{t('admin.configuration')}</h1>
         <p className="max-w-[60ch] text-sm text-muted">{t('admin.config.subtitle')}</p>
       </header>
@@ -1402,9 +997,6 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
             requestDelete={setPendingDelete}
           />
 
-          <HolidaysSection salonId={salonId} requestDelete={setPendingDelete} />
-
-          <ApprovalPolicySection salonId={salonId} />
         </div>
       )}
 
@@ -1418,9 +1010,15 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
         {pendingDelete && (
           <DialogContent closeLabel={t('common.cancel')}>
             <DialogTitle>
-              {t('admin.config.confirmDeleteTitle', { name: pendingDelete.label })}
+              {pendingDelete.kind === 'deactivate'
+                ? t('admin.config.staff.confirmDeactivateTitle', { name: pendingDelete.label })
+                : t('admin.config.confirmDeleteTitle', { name: pendingDelete.label })}
             </DialogTitle>
-            <DialogDescription>{t('admin.config.confirmDeleteBody')}</DialogDescription>
+            <DialogDescription>
+              {pendingDelete.kind === 'deactivate'
+                ? t('admin.config.staff.confirmDeactivateBody')
+                : t('admin.config.confirmDeleteBody')}
+            </DialogDescription>
             <div className="mt-5 flex items-center justify-end gap-2">
               <DialogClose asChild>
                 <Button variant="secondary">{t('common.cancel')}</Button>
@@ -1432,7 +1030,9 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
                   setPendingDelete(null);
                 }}
               >
-                {t('common.delete')}
+                {pendingDelete.kind === 'deactivate'
+                  ? t('admin.config.staff.deactivateCta')
+                  : t('common.delete')}
               </Button>
             </div>
           </DialogContent>
@@ -1447,15 +1047,15 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
 /**
  * Redesigned Owner Configuration Page (Task 7.6).
  *
- * Card-based sections for Staff, Services, Chairs/Resources, Holidays with
+ * Card-based sections for Staff, Services, Chairs/Resources with
  * expand/collapse animations (AnimatePresence + motion.div), inline edit
  * affordances (click field name to expand edit panel), add/remove item
  * animations (slide in/out), skeleton loading, error+retry, Persian text,
- * Jalali dates for holidays, responsive layout, tokens-only styling, logical
+ * responsive layout, tokens-only styling, logical
  * properties for RTL, and prefers-reduced-motion handling.
  *
  * Preserved test hooks: `admin-configuration`, `config-loading`, `config-error`,
- * `staff-list`, `chairs-list`, `services-list`, `holidays-list`.
+ * `staff-list`, `chairs-list`, `services-list`.
  */
 export function OwnerConfigPage({ salonId }: { salonId?: string }) {
   // Toasts surface through the app-root <ToastProvider> in App.tsx — a nested

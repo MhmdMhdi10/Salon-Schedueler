@@ -89,6 +89,12 @@ export interface AppConfig {
   smsQueueMaxAttempts: number;
   /** Backoff before a failed SMS is retried, in ms. Defaults to 30000. */
   smsQueueRetryDelayMs: number;
+  /** Reminder scan cadence. Defaults to one minute. */
+  reminderIntervalMs: number;
+  /** Lead time used by the reminder scan. Defaults to one hour. */
+  reminderLeadTimeMinutes: number;
+  /** Whether Express trusts one configured reverse-proxy hop for client IPs. */
+  trustProxy: boolean;
   /** HTTP port the server listens on. Defaults to 3000. */
   port: number;
   /** Node environment. */
@@ -176,6 +182,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     smsQueueRetryDelayMs: env.SMS_QUEUE_RETRY_DELAY_MS
       ? Number(env.SMS_QUEUE_RETRY_DELAY_MS)
       : 30000,
+    reminderIntervalMs: env.REMINDER_INTERVAL_MS
+      ? Number(env.REMINDER_INTERVAL_MS)
+      : 60_000,
+    reminderLeadTimeMinutes: env.REMINDER_LEAD_TIME_MINUTES
+      ? Number(env.REMINDER_LEAD_TIME_MINUTES)
+      : 60,
+    trustProxy: env.TRUST_PROXY === 'true',
     port: env.PORT ? Number(env.PORT) : 3000,
     nodeEnv,
   };

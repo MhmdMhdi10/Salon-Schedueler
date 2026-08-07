@@ -51,6 +51,28 @@ function bootstrap(): void {
   const sweep = setInterval(() => services.wsInboxHub.sweep(), 30_000);
   sweep.unref?.();
 
+  // Background booking maintenance. Reminder delivery is idempotent at the
+  // notification-log level and its SMS leg uses RabbitMQ when configured;
+  // expired deposit holds are released on the same cadence so slots do not stay
+  // blocked after a customer abandons checkout.
+  const backgroundTick = setInterval(() => {
+    void Promise.allSettled([
+      services.notificationService.dispatchReminders(
+        new Date(),
+        config.reminderLeadTimeMinutes,
+      ),
+      services.cancellationFlow.releaseExpiredHoldsAndNotify(new Date()),
+    ]).then((results) => {
+      for (const result of results) {
+        if (result.status === 'rejected') {
+          // eslint-disable-next-line no-console
+          console.error('[background] maintenance task failed:', result.reason);
+        }
+      }
+    });
+  }, config.reminderIntervalMs);
+  backgroundTick.unref?.();
+
   server.listen(config.port, () => {
     // eslint-disable-next-line no-console
     console.log(`Salon Booking System API listening on port ${config.port}`);
@@ -60,6 +82,7 @@ function bootstrap(): void {
     // eslint-disable-next-line no-console
     console.log(`Received ${signal}, shutting down...`);
     clearInterval(sweep);
+    clearInterval(backgroundTick);
     wss.close();
     server.close(() => {
       void prisma.$disconnect().finally(() => process.exit(0));

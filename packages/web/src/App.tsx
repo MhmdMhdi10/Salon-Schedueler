@@ -7,7 +7,7 @@ import { RouteLoader } from './components/layout/RouteLoader';
 import { RouteProgress } from './components/layout/RouteProgress';
 import { PageTransition } from './components/ui/Motion';
 import { ToastProvider } from './components/ui/Toast';
-import { AuthProvider } from './auth/AuthContext';
+import { AuthProvider, useAuth } from './auth/AuthContext';
 
 /**
  * Root component for the Salon Booking PWA.
@@ -75,6 +75,9 @@ const QrLandingPage = lazy(() =>
 const MySalonsPage = lazy(() =>
   import('./pages/MySalonsPage').then((m) => ({ default: m.MySalonsPage })),
 );
+const CustomerDashboardPage = lazy(() =>
+  import('./pages/CustomerDashboardPage').then((m) => ({ default: m.CustomerDashboardPage })),
+);
 const AvailabilityPage = lazy(() =>
   import('./pages/AvailabilityPage').then((m) => ({
     default: m.AvailabilityPage,
@@ -89,6 +92,9 @@ const BookingSuccessPage = lazy(() =>
   import('./pages/BookingSuccessPage').then((m) => ({
     default: m.BookingSuccessPage,
   })),
+);
+const WaitlistPage = lazy(() =>
+  import('./pages/WaitlistPage').then((m) => ({ default: m.WaitlistPage })),
 );
 const FunnelTenantTheme = lazy(() =>
   import('./components/theme/FunnelTenantTheme').then((m) => ({
@@ -112,6 +118,9 @@ const OwnerLayout = lazy(() =>
 const OwnerCalendarPage = lazy(() =>
   import('./pages/owner').then((m) => ({ default: m.OwnerCalendarPage })),
 );
+const OwnerWorkingHoursPage = lazy(() =>
+  import('./pages/owner').then((m) => ({ default: m.OwnerWorkingHoursPage })),
+);
 const OwnerAnalyticsPage = lazy(() =>
   import('./pages/owner').then((m) => ({ default: m.OwnerAnalyticsPage })),
 );
@@ -132,6 +141,64 @@ const OwnerNotificationsPage = lazy(() =>
   import('./pages/owner').then((m) => ({ default: m.OwnerNotificationsPage })),
 );
 
+// Global platform operations center — deliberately separate from the
+// tenant-scoped owner shell. It is reachable only with a PlatformAdmin JWT.
+const PlatformAdminLayout = lazy(() =>
+  import('./pages/platform-admin/PlatformAdminLayout').then((m) => ({ default: m.PlatformAdminLayout })),
+);
+const PlatformDashboardPage = lazy(() =>
+  import('./pages/platform-admin/PlatformAdminPages').then((m) => ({ default: m.PlatformDashboardPage })),
+);
+const PlatformSalonsPage = lazy(() =>
+  import('./pages/platform-admin/PlatformAdminPages').then((m) => ({ default: m.PlatformSalonsPage })),
+);
+const PlatformCustomersPage = lazy(() =>
+  import('./pages/platform-admin/PlatformAdminPages').then((m) => ({ default: m.PlatformCustomersPage })),
+);
+const PlatformStaffPage = lazy(() =>
+  import('./pages/platform-admin/PlatformAdminPages').then((m) => ({ default: m.PlatformStaffPage })),
+);
+const PlatformAppointmentsPage = lazy(() =>
+  import('./pages/platform-admin/PlatformAdminPages').then((m) => ({ default: m.PlatformAppointmentsPage })),
+);
+const PlatformSubscriptionsPage = lazy(() =>
+  import('./pages/platform-admin/PlatformAdminPages').then((m) => ({ default: m.PlatformSubscriptionsPage })),
+);
+const PlatformPaymentsPage = lazy(() =>
+  import('./pages/platform-admin/PlatformAdminPages').then((m) => ({ default: m.PlatformPaymentsPage })),
+);
+const PlatformWaitlistPage = lazy(() =>
+  import('./pages/platform-admin/PlatformAdminPages').then((m) => ({ default: m.PlatformWaitlistPage })),
+);
+const PlatformQrScansPage = lazy(() =>
+  import('./pages/platform-admin/PlatformAdminPages').then((m) => ({ default: m.PlatformQrScansPage })),
+);
+const PlatformAuditPage = lazy(() =>
+  import('./pages/platform-admin/PlatformAdminPages').then((m) => ({ default: m.PlatformAuditPage })),
+);
+const PlatformAdminRecordDetailPage = lazy(() =>
+  import('./pages/platform-admin/PlatformAdminRecordDetailPage').then((m) => ({ default: m.PlatformAdminRecordDetailPage })),
+);
+
+function HomeEntryPage() {
+  const { status, isStaff, isPlatformAdmin } = useAuth();
+
+  if (status === 'loading') return <RouteLoader />;
+  if (status === 'authenticated') {
+    return <Navigate to={isPlatformAdmin ? '/platform-admin' : isStaff ? '/owner' : '/account'} replace />;
+  }
+
+  return <BusinessLanding />;
+}
+
+function AdminEntryPage() {
+  const { status, role, isStaff } = useAuth();
+  if (status === 'loading') return <RouteLoader />;
+  if (status === 'anonymous') return <Navigate to="/auth" replace />;
+  if (role === 'PlatformAdmin') return <Navigate to="/platform-admin" replace />;
+  return <Navigate to={isStaff ? '/owner' : '/account'} replace />;
+}
+
 export function App() {
   return (
     <HelmetProvider>
@@ -147,6 +214,20 @@ export function App() {
                 <RouteProgress />
                 <Suspense fallback={<RouteLoader />}>
                   <Routes>
+                    <Route path="/platform-admin" element={<PlatformAdminLayout />}>
+                      <Route index element={<PlatformDashboardPage />} />
+                      <Route path="details" element={<PlatformAdminRecordDetailPage />} />
+                      <Route path="salons" element={<PlatformSalonsPage />} />
+                      <Route path="customers" element={<PlatformCustomersPage />} />
+                      <Route path="staff" element={<PlatformStaffPage />} />
+                      <Route path="appointments" element={<PlatformAppointmentsPage />} />
+                      <Route path="subscriptions" element={<PlatformSubscriptionsPage />} />
+                      <Route path="payments" element={<PlatformPaymentsPage />} />
+                      <Route path="waitlist" element={<PlatformWaitlistPage />} />
+                      <Route path="qr-scans" element={<PlatformQrScansPage />} />
+                      <Route path="audit-logs" element={<PlatformAuditPage />} />
+                    </Route>
+
                     {/*
                      * Owner panel (R2.1): `/owner/*` brings its own `OwnerShell`
                      * (header / single `<main>` / role-filtered nav) so it renders
@@ -157,6 +238,7 @@ export function App() {
                     <Route path="/owner" element={<OwnerLayout />}>
                       <Route index element={<Navigate to="/owner/calendar" replace />} />
                       <Route path="calendar" element={<OwnerCalendarPage />} />
+                      <Route path="calendar/working-hours" element={<OwnerWorkingHoursPage />} />
                       <Route path="analytics" element={<OwnerAnalyticsPage />} />
                       <Route path="config" element={<OwnerConfigurationPage />} />
                       <Route path="subscription" element={<OwnerSubscriptionPage />} />
@@ -202,7 +284,7 @@ export function App() {
                        * public discovery URLs return here until that product is
                        * ready to launch. Direct salon profiles and booking links
                        * remain available below. */}
-                      <Route path="/" element={<BusinessLanding />} />
+                      <Route path="/" element={<HomeEntryPage />} />
                       <Route path="/business" element={<Navigate to="/" replace />} />
 
                       {/* Salon self-registration onboarding wizard (noindex) */}
@@ -224,6 +306,8 @@ export function App() {
 
                       {/* Customer flows */}
                       <Route path="/auth" element={<AuthPage />} />
+                      <Route path="/account" element={<CustomerDashboardPage />} />
+                      <Route path="/salon/:salonId/waitlist" element={<WaitlistPage />} />
                       <Route path="/qr/:payload" element={<QrLandingPage />} />
                       <Route path="/my-salons" element={<MySalonsPage />} />
                       {/*
@@ -233,7 +317,7 @@ export function App() {
 
                       {/* Legacy admin paths → consolidated into the owner panel,
                       which bootstraps auth and guards by role. */}
-                      <Route path="/admin" element={<Navigate to="/owner" replace />} />
+                      <Route path="/admin" element={<AdminEntryPage />} />
                       <Route
                         path="/admin/config"
                         element={<Navigate to="/owner/config" replace />}

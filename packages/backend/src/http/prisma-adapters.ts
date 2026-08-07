@@ -21,6 +21,7 @@ import type {
   CustomerRepository,
   AppointmentRecord,
   CustomerNote,
+  CustomerProfile,
   StaffRef,
 } from '../customer/customer.service.js';
 
@@ -111,9 +112,33 @@ export class PrismaNotificationRepository implements NotificationRepository {
   async logNotification(
     entry: Omit<NotificationLogEntry, 'id' | 'createdAt'>,
   ): Promise<NotificationLogEntry> {
-    const row = await this.prisma.notificationLog.create({
+    // The checked-in generated client may predate the additive `type` column.
+    // Keep this adapter runnable during rolling deploys; the migration supplies
+    // the database default for older callers.
+    const row = await (
+      this.prisma.notificationLog as unknown as {
+        create(args: {
+          data: {
+            appointmentId: string | null;
+            type: string;
+            channel: string;
+            status: string;
+            error: string | null;
+          };
+        }): Promise<{
+          id: string;
+          appointmentId: string | null;
+          type?: string;
+          channel: string;
+          status: string;
+          error: string | null;
+          createdAt: Date;
+        }>;
+      }
+    ).create({
       data: {
         appointmentId: entry.appointmentId,
+        type: entry.type ?? 'generic',
         channel: entry.channel,
         status: entry.status,
         error: entry.error,
@@ -122,11 +147,31 @@ export class PrismaNotificationRepository implements NotificationRepository {
     return {
       id: row.id,
       appointmentId: row.appointmentId,
+      type: row.type as NotificationLogEntry['type'],
       channel: row.channel as NotificationLogEntry['channel'],
       status: row.status as NotificationLogEntry['status'],
       error: row.error,
       createdAt: row.createdAt,
     };
+  }
+
+  async hasSentNotification(
+    appointmentId: string,
+    type: NonNullable<NotificationLogEntry['type']>,
+    channel: NotificationLogEntry['channel'],
+  ): Promise<boolean> {
+    const row = await (
+      this.prisma.notificationLog as unknown as {
+        findFirst(args: {
+          where: { appointmentId: string; type: string; channel: string; status: string };
+          select: { id: true };
+        }): Promise<{ id: string } | null>;
+      }
+    ).findFirst({
+      where: { appointmentId, type, channel, status: 'sent' },
+      select: { id: true },
+    });
+    return Boolean(row);
   }
 
   async registerDeviceToken(
@@ -264,6 +309,29 @@ export class PrismaWaitlistRepository implements WaitlistRepository {
     return row ? toWaitlistEntry(row) : null;
   }
 
+  async findActiveForCustomer(input: JoinWaitlistInput): Promise<WaitlistEntry | null> {
+    const row = await this.prisma.waitlistEntry.findFirst({
+      where: {
+        salonId: input.salonId,
+        customerId: input.customerId,
+        serviceId: input.serviceId,
+        windowStart: input.windowStart,
+        windowEnd: input.windowEnd,
+        status: { in: ['waiting', 'notified'] },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+    return row ? toWaitlistEntry(row) : null;
+  }
+
+  async findByCustomer(customerId: string): Promise<WaitlistEntry[]> {
+    const rows = await this.prisma.waitlistEntry.findMany({
+      where: { customerId },
+      orderBy: { createdAt: 'desc' },
+    });
+    return rows.map(toWaitlistEntry);
+  }
+
   async updateStatus(
     id: string,
     status: WaitlistEntry['status'],
@@ -324,9 +392,31 @@ export class PrismaCustomerRepository implements CustomerRepository {
     return customer ?? null;
   }
 
+  async getProfile(customerId: string): Promise<CustomerProfile | null> {
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: customerId },
+      select: { id: true, phone: true, fullName: true },
+    });
+    return customer ?? null;
+  }
+
+  async updateProfile(customerId: string, fullName: string): Promise<CustomerProfile> {
+    const customer = await this.prisma.customer.update({
+      where: { id: customerId },
+      data: { fullName },
+      select: { id: true, phone: true, fullName: true },
+    });
+    return customer;
+  }
+
   async getAppointments(customerId: string): Promise<AppointmentRecord[]> {
     const appts = await this.prisma.appointment.findMany({
       where: { customerId },
+      include: {
+        salon: { select: { name: true } },
+        service: { select: { name: true } },
+        staffMember: { select: { fullName: true } },
+      },
       orderBy: { startAt: 'desc' },
     });
     return appts.map((appt) => ({
@@ -340,6 +430,9 @@ export class PrismaCustomerRepository implements CustomerRepository {
       status: appt.status,
       source: appt.source,
       createdAt: appt.createdAt,
+      salonName: appt.salon.name,
+      serviceName: appt.service.name,
+      staffName: appt.staffMember.fullName,
     }));
   }
 

@@ -5,6 +5,8 @@ import { OwnerCalendarPage as OwnerCalendarPageImpl } from './OwnerCalendarPage'
 import { MyQrPage } from './MyQrPage';
 import type { OwnerRole } from '../../api/client';
 
+export { OwnerWorkingHoursPage } from './OwnerWorkingHoursPage';
+
 /** Context the {@link OwnerLayout} `<Outlet>` provides to nested owner pages. */
 export interface OwnerOutletContext {
   /** The authenticated principal's role (RBAC). */
@@ -80,11 +82,11 @@ export function OwnerAnalyticsPage() {
  * Configuration section of the owner panel (task 7.6; R8.4, R8.6, R8.7, R3.5,
  * R11.4, R11.5).
  *
- * Redesigned with card-based sections for Staff, Services, Chairs/Resources,
- * Holidays — each with expand/collapse animations (AnimatePresence + chevron
- * rotation), inline edit affordances, add/remove slide animations, skeleton
- * loading, error+retry, Persian text, Jalali dates for holidays, and
- * prefers-reduced-motion handling.
+ * Redesigned with card-based sections for Staff, Services, Chairs/Resources —
+ * each with expand/collapse animations (AnimatePresence + chevron rotation),
+ * inline edit affordances, add/remove slide animations, skeleton loading,
+ * error+retry, Persian text, and prefers-reduced-motion handling. Working
+ * hours, holidays, booking limits, and approval policy live in Calendar.
  *
  * Owner-only to mirror the shell nav (Admin and Stylist are redirected to the
  * calendar). Preserves `admin-configuration` / `config-*` / `*-list` testIDs.

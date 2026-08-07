@@ -1,16 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, CheckCheck, Bell } from 'lucide-react';
 import { inboxApi, type SalonNotification } from '../../api/client';
 import { useSalonId } from '../../auth/useSalonId';
 import { useInboxWs } from '../../hooks/useInboxWs';
 import { SeoHead } from '../../components/seo';
-import { Button, ErrorState, Skeleton, Spinner, cn } from '../../components/ui';
+import { Button, ErrorState, Pagination, Skeleton, Spinner, cn } from '../../components/ui';
 import { JalaliDate } from '../../components/ui/JalaliDate';
 import { Num } from '../../components/ui/Num';
 
 type Filter = 'all' | 'unread';
 type Status = 'loading' | 'success' | 'error';
+const NOTIFICATION_PAGE_SIZE = 10;
 
 function typeIcon(type: string): string {
   if (type.startsWith('booking.')) return '🗓';
@@ -46,24 +47,50 @@ export function OwnerNotificationsPage() {
   const [status, setStatus] = useState<Status>('loading');
   const [items, setItems] = useState<SalonNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [allCount, setAllCount] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
+  const processedEventId = useRef<string | null>(null);
 
-  // Initial load.
+  // Load only one page. The API returns total so large inboxes never become a
+  // 200-row client-side list.
   useEffect(() => {
     if (!salonId) return;
     let active = true;
     setStatus('loading');
     setError(null);
+    const offset = (page - 1) * NOTIFICATION_PAGE_SIZE;
     Promise.all([
-      inboxApi.list(salonId, { onlyUnread: filter === 'unread', limit: 100 }),
+      inboxApi.list(salonId, {
+        onlyUnread: filter === 'unread',
+        limit: NOTIFICATION_PAGE_SIZE,
+        offset,
+      }),
       inboxApi.unreadCount(salonId),
+      filter === 'unread' ? inboxApi.list(salonId, { limit: 1 }) : Promise.resolve(null),
     ])
-      .then(([listRes, countRes]) => {
+      .then(([listRes, countRes, allRes]) => {
         if (!active) return;
-        setItems(listRes.notifications);
+        const nextTotal = Number.isFinite(listRes.total)
+          ? listRes.total
+          : offset + listRes.notifications.length;
+        const lastPage = Math.max(1, Math.ceil(nextTotal / NOTIFICATION_PAGE_SIZE));
+        setTotal(nextTotal);
         setUnreadCount(countRes.count);
+        if (filter === 'all') setAllCount(nextTotal);
+        else if (allRes) {
+          setAllCount(
+            Number.isFinite(allRes.total) ? allRes.total : allRes.notifications.length,
+          );
+        }
+        if (page > lastPage) {
+          setPage(lastPage);
+          return;
+        }
+        setItems(listRes.notifications);
         setStatus('success');
       })
       .catch((e) => {
@@ -77,51 +104,83 @@ export function OwnerNotificationsPage() {
     return () => {
       active = false;
     };
-  }, [salonId, filter, reloadToken, t]);
+  }, [salonId, filter, page, reloadToken, t]);
 
   // Live events get prepended; matches the bell behavior so the page reflects WS.
   useEffect(() => {
-    if (!lastEvent) return;
-    setItems((list) => [lastEvent, ...list.filter((n) => n.id !== lastEvent.id)]);
+    if (!lastEvent || processedEventId.current === lastEvent.id) return;
+    processedEventId.current = lastEvent.id;
+    setAllCount((count) => count + 1);
     setUnreadCount((u) => u + 1);
-  }, [lastEvent]);
+    setTotal((count) => count + 1);
+    if (page === 1) {
+      setItems((list) =>
+        [lastEvent, ...list.filter((n) => n.id !== lastEvent.id)].slice(
+          0,
+          NOTIFICATION_PAGE_SIZE,
+        ),
+      );
+    }
+  }, [lastEvent, page]);
 
   const markOne = useCallback(async (id: string) => {
+    const previousItems = items;
+    const previousTotal = total;
+    const previousUnreadCount = unreadCount;
     setBusy(true);
     setUnreadCount((u) => Math.max(0, u - 1));
-    setItems((list) =>
-      list.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n)),
-    );
+    if (filter === 'unread') {
+      setItems((list) => list.filter((n) => n.id !== id));
+      setTotal((count) => Math.max(0, count - 1));
+    } else {
+      setItems((list) =>
+        list.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n)),
+      );
+    }
     try {
       await inboxApi.markRead(id);
+      if (filter === 'unread') setReloadToken((n) => n + 1);
     } catch {
-      setUnreadCount((u) => u + 1);
-      setItems((list) => list.map((n) => (n.id === id ? { ...n, readAt: null } : n)));
+      setUnreadCount(previousUnreadCount);
+      setItems(previousItems);
+      setTotal(previousTotal);
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [filter, items, total, unreadCount]);
 
   const markAll = useCallback(async () => {
     if (!salonId) return;
     setBusy(true);
     const prevCount = unreadCount;
     const prevItems = items;
+    const prevTotal = total;
+    const prevPage = page;
     setUnreadCount(0);
-    setItems((list) => list.map((n) => ({ ...n, readAt: n.readAt ?? new Date().toISOString() })));
+    if (filter === 'unread') {
+      setItems([]);
+      setTotal(0);
+      setPage(1);
+    } else {
+      setItems((list) =>
+        list.map((n) => ({ ...n, readAt: n.readAt ?? new Date().toISOString() })),
+      );
+    }
     try {
       await inboxApi.markAllRead(salonId);
     } catch {
       setUnreadCount(prevCount);
       setItems(prevItems);
+      setTotal(prevTotal);
+      setPage(prevPage);
     } finally {
       setBusy(false);
     }
-  }, [salonId, unreadCount, items]);
+  }, [filter, page, salonId, unreadCount, items, total]);
 
   const counts = useMemo(
-    () => ({ all: items.length, unread: items.filter((i) => !i.readAt).length }),
-    [items],
+    () => ({ all: allCount, unread: unreadCount }),
+    [allCount, unreadCount],
   );
 
   return (
@@ -158,7 +217,10 @@ export function OwnerNotificationsPage() {
             type="button"
             role="tab"
             aria-selected={filter === 'all'}
-            onClick={() => setFilter('all')}
+            onClick={() => {
+              setPage(1);
+              setFilter('all');
+            }}
             className={cn(
               'rounded-md px-3 py-1.5 text-sm font-medium',
               filter === 'all'
@@ -175,7 +237,10 @@ export function OwnerNotificationsPage() {
             type="button"
             role="tab"
             aria-selected={filter === 'unread'}
-            onClick={() => setFilter('unread')}
+            onClick={() => {
+              setPage(1);
+              setFilter('unread');
+            }}
             className={cn(
               'rounded-md px-3 py-1.5 text-sm font-medium',
               filter === 'unread'
@@ -267,7 +332,7 @@ export function OwnerNotificationsPage() {
                     </span>
                   </div>
                   <p className="text-xs text-muted">{n.body}</p>
-                  <div className="flex items-center gap-3 text-[0.65rem] text-muted/70">
+                  <div className="flex items-center gap-3 text-[0.65rem] text-muted">
                     <span className="tabular-nums">
                       <JalaliDate value={new Date(n.createdAt).toISOString().slice(0, 10)} />
                     </span>
@@ -295,7 +360,7 @@ export function OwnerNotificationsPage() {
                       defaultValue: 'علامت‌گذاری به خوانده‌شده',
                     })}
                     className={cn(
-                      'shrink-0 rounded-md p-2 text-muted hover:bg-elevated hover:text-text',
+                      'inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-md p-2 text-muted hover:bg-elevated hover:text-text',
                       'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
                     )}
                   >
@@ -306,6 +371,18 @@ export function OwnerNotificationsPage() {
             );
           })}
         </ol>
+      )}
+
+      {status === 'success' && total > NOTIFICATION_PAGE_SIZE && (
+        <Pagination
+          page={page}
+          pageSize={NOTIFICATION_PAGE_SIZE}
+          total={total}
+          onPageChange={setPage}
+          compact
+          ariaLabel={t('owner.inbox.paginationLabel', { defaultValue: 'صفحه‌بندی اعلان‌ها' })}
+          testId="owner-notifications-pagination"
+        />
       )}
     </section>
   );

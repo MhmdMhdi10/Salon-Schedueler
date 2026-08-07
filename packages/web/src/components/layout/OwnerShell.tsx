@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
+import { BrandLogo } from '../brand';
 import { OwnerThemeToggle } from '../theme/OwnerThemeToggle';
 import { THEME_STORAGE_KEY, ThemeScope, useTheme } from '../theme';
 import { Button } from '../ui/Button';
@@ -117,7 +118,7 @@ export function OwnerShell({ children, role, salonName, salonId, onSignOut, clas
       className={cn(
         // Booksy Biz app frame: the shell never page-scrolls — panes scroll
         // internally (design directive §h.1).
-        'flex h-screen flex-col overflow-hidden bg-bg text-text',
+        'flex h-screen h-[100dvh] min-h-0 flex-col overflow-hidden bg-bg text-text',
         className,
       )}
     >
@@ -135,11 +136,15 @@ export function OwnerShell({ children, role, salonName, salonId, onSignOut, clas
 
       {/* Header */}
       <header className="shrink-0 border-b border-border bg-surface">
-        <div className="flex w-full items-center justify-between gap-4 px-4 py-3">
-          <Link to="/owner" className="rounded-md text-md font-bold text-text no-underline">
-            {salonName || t('owner.title')}
+        <div className="flex w-full items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-4 sm:py-3">
+          <Link
+            to="/owner"
+            aria-label={salonName || t('owner.title')}
+            className="flex min-h-10 shrink-0 items-center rounded-md text-sm font-bold text-text no-underline sm:text-md"
+          >
+            <BrandLogo className="h-7 w-auto sm:h-8" />
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <OwnerInboxBell />
             <OwnerThemeToggle theme={theme} onToggle={toggleTheme} />
             <Button
@@ -148,8 +153,10 @@ export function OwnerShell({ children, role, salonName, salonId, onSignOut, clas
               startIcon={<LogOut className="h-4 w-4 rtl:-scale-x-100" />}
               onClick={onSignOut}
               data-testid="owner-sign-out"
+              aria-label={t('owner.signOut')}
+              className="!px-2 sm:!px-5"
             >
-              {t('owner.signOut')}
+              <span className="hidden sm:inline">{t('owner.signOut')}</span>
             </Button>
           </div>
         </div>
@@ -170,12 +177,13 @@ export function OwnerShell({ children, role, salonName, salonId, onSignOut, clas
         {/* Main content area — the single scrolling pane of the app frame */}
         <main
           id={OWNER_CONTENT_ID}
-          tabIndex={-1}
+          tabIndex={0}
           className={cn(
-            'min-w-0 flex-1 overflow-y-auto px-4 py-5',
+            'min-w-0 flex-1 overscroll-contain overflow-y-auto px-3 py-4 sm:px-4 sm:py-5',
             isDesktop && 'w-full',
-            // On mobile, add bottom padding to clear the fixed bottom tabs
-            !isDesktop && 'pb-[calc(var(--space-10)+env(safe-area-inset-bottom)+12px)]',
+            // On mobile, reserve the rendered tab bar (~83px) plus breathing
+            // room so the last card can scroll completely above fixed nav.
+            !isDesktop && 'pb-[calc(100px+env(safe-area-inset-bottom))]',
           )}
         >
           {role === 'Owner' && salonId && <OwnerSetupAlert salonId={salonId} refreshKey={pathname} />}

@@ -435,7 +435,7 @@ export function SeoTailLinks({
               to={link.to}
               className="inline-flex min-h-[32px] items-center gap-1 text-sm text-muted no-underline transition-colors duration-fast ease-standard hover:text-primary"
             >
-              <ChevronLeft className="h-3.5 w-3.5 shrink-0 rtl:rotate-0 ltr:rotate-180" aria-hidden="true" />
+              <ChevronLeft className="h-3.5 w-3.5 shrink-0 rtl:-scale-x-100 ltr:rotate-180" aria-hidden="true" />
               {link.label}
             </Link>
           </li>

@@ -82,6 +82,7 @@ function renderOwnerApp(initialPath = '/owner/calendar') {
               <Route path="config" element={<OwnerConfigurationPage />} />
             </Route>
             <Route path="/auth" element={<div data-testid="auth-surface">ورود</div>} />
+            <Route path="/account" element={<div data-testid="account-surface">حساب</div>} />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>
@@ -148,6 +149,16 @@ describe('OwnerLayout — auth bootstrap (R2.2)', () => {
 });
 
 describe('OwnerLayout — RBAC (R2.3)', () => {
+  it('returns a signed-in customer to the customer dashboard', async () => {
+    getAccessToken.mockReturnValue('customer-token');
+    getMe.mockResolvedValue({ principal: { id: 'c1' } });
+
+    renderOwnerApp();
+
+    expect(await screen.findByTestId('account-surface')).toBeInTheDocument();
+    expect(screen.queryByTestId('owner-calendar-page')).not.toBeInTheDocument();
+  });
+
   it('gives an Owner the full panel navigation', async () => {
     getAccessToken.mockReturnValue('t');
     getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Owner' } });

@@ -360,14 +360,17 @@ export function SalonListCard({
       {services.length > 0 && (
         <ul role="list" className="relative z-10 divide-y divide-border border-t border-border">
           {services.map((service) => (
-            <li key={service.id} className="flex items-center justify-between gap-3 py-2.5">
+            <li
+              key={service.id}
+              className="flex flex-col items-stretch gap-2 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+            >
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-text">{service.name}</p>
                 <p className="text-xs text-muted">
                   {t('salon.profile.durationMinutes', { count: service.durationMinutes })}
                 </p>
               </div>
-              <div className="flex shrink-0 items-center gap-3">
+              <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:shrink-0 sm:justify-start">
                 <bdi className="whitespace-nowrap text-sm font-semibold text-text">
                   {formatRial(service.priceRial)}{' '}
                   <span className="text-xs font-normal text-muted">ریال</span>

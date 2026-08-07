@@ -45,6 +45,21 @@ vi.mock('../api/client', () => ({
     getCalendar: vi.fn().mockResolvedValue({ appointments: [] }),
     getAnalytics: vi.fn().mockResolvedValue({ utilization: {}, revenue: 0, busiestWindows: [] }),
   },
+  approvalPolicyApi: {
+    get: vi.fn().mockResolvedValue({ autoApprove: false, staff: [] }),
+    setSalon: vi.fn().mockResolvedValue({ ok: true, autoApprove: false }),
+    setStaff: vi.fn().mockResolvedValue({ ok: true, autoApprove: null }),
+  },
+  staffAvailabilityApi: {
+    list: vi.fn().mockResolvedValue({ blocks: [] }),
+    add: vi.fn().mockResolvedValue({ block: {} }),
+    remove: vi.fn().mockResolvedValue({ ok: true }),
+  },
+  holidaysApi: {
+    list: vi.fn().mockResolvedValue({ holidays: [] }),
+    add: vi.fn().mockResolvedValue({ holiday: {} }),
+    remove: vi.fn().mockResolvedValue({ ok: true }),
+  },
 }));
 
 import { App } from '../App';

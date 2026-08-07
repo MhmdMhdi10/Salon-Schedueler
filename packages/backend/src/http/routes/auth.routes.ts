@@ -1,6 +1,10 @@
 import { Router } from 'express';
 import type { Services } from '../app.js';
 import { asyncRoute, validateRequired } from './route-helpers.js';
+import {
+  createRateLimit,
+  phoneRateLimitKey,
+} from '../middleware/rate-limit.js';
 
 /**
  * Auth routes (public — no token required). Maps to `AuthService` and reuses the
@@ -16,8 +20,43 @@ import { asyncRoute, validateRequired } from './route-helpers.js';
 export function authRouter(services: Services): Router {
   const router = Router();
 
+  const otpRequestIpLimit = createRateLimit({
+    name: 'otp-request-ip',
+    // SMS cost is additionally bounded per phone below. A wider IP window
+    // keeps shared offices and the automated onboarding matrix from colliding
+    // while still stopping request floods.
+    max: 60,
+    windowMs: 60_000,
+  });
+  const otpRequestPhoneLimit = createRateLimit({
+    name: 'otp-request-phone',
+    max: 5,
+    windowMs: 10 * 60_000,
+    keyGenerator: phoneRateLimitKey,
+  });
+  const otpVerifyIpLimit = createRateLimit({
+    name: 'otp-verify-ip',
+    // Keep brute-force protection per phone below; this IP cap accounts for
+    // shared offices and multi-user onboarding from one network.
+    max: 40,
+    windowMs: 10 * 60_000,
+  });
+  const otpVerifyPhoneLimit = createRateLimit({
+    name: 'otp-verify-phone',
+    max: 10,
+    windowMs: 10 * 60_000,
+    keyGenerator: phoneRateLimitKey,
+  });
+  const refreshLimit = createRateLimit({
+    name: 'auth-refresh-ip',
+    max: 30,
+    windowMs: 60_000,
+  });
+
   router.post(
     '/auth/otp/request',
+    otpRequestIpLimit,
+    otpRequestPhoneLimit,
     asyncRoute(async (req, res) => {
       if (!validateRequired(res, req.body, ['phone'])) {
         return;
@@ -29,6 +68,8 @@ export function authRouter(services: Services): Router {
 
   router.post(
     '/auth/otp/verify',
+    otpVerifyIpLimit,
+    otpVerifyPhoneLimit,
     asyncRoute(async (req, res) => {
       if (!validateRequired(res, req.body, ['phone', 'code'])) {
         return;
@@ -40,6 +81,7 @@ export function authRouter(services: Services): Router {
 
   router.post(
     '/auth/refresh',
+    refreshLimit,
     asyncRoute(async (req, res) => {
       if (!validateRequired(res, req.body, ['refreshToken'])) {
         return;

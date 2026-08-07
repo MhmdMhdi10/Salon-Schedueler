@@ -21,6 +21,8 @@ export interface ErrorStateProps extends Omit<React.HTMLAttributes<HTMLDivElemen
   retryLabel?: string;
   /** Custom icon override; defaults to a warning triangle (not mirrored in RTL). */
   icon?: React.ReactNode;
+  /** Heading level when the error is the page's primary heading. */
+  headingLevel?: 'h1' | 'h2';
 }
 
 /**
@@ -30,7 +32,7 @@ export interface ErrorStateProps extends Omit<React.HTMLAttributes<HTMLDivElemen
  * stack/HTTP code.
  */
 export const ErrorState = forwardRef<HTMLDivElement, ErrorStateProps>(function ErrorState(
-  { title, description, onRetry, retryLabel, icon, className, ...rest },
+  { title, description, onRetry, retryLabel, icon, headingLevel = 'h2', className, ...rest },
   ref,
 ) {
   const { t } = useTranslation();
@@ -47,7 +49,11 @@ export const ErrorState = forwardRef<HTMLDivElement, ErrorStateProps>(function E
       <span className="inline-flex text-danger" aria-hidden="true">
         {icon ?? <AlertTriangle className="h-8 w-8" />}
       </span>
-      <p className="text-md font-medium text-text">{title}</p>
+      {headingLevel === 'h1' ? (
+        <h1 className="text-md font-medium text-text">{title}</h1>
+      ) : (
+        <h2 className="text-md font-medium text-text">{title}</h2>
+      )}
       {description && <p className="max-w-[40ch] text-sm text-muted">{description}</p>}
       {onRetry && (
         <Button variant="secondary" onClick={onRetry} className="mt-1">

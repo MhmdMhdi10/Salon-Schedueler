@@ -19,6 +19,9 @@ export interface CancellationOps {
  */
 export interface HoldReleaser {
   releaseExpiredHolds(now?: Date): Promise<number>;
+  findExpiredHoldWindows?(now?: Date): Promise<
+    Array<{ salonId: string; startAt: Date; endAt: Date }>
+  >;
 }
 
 /**
@@ -115,16 +118,22 @@ export class CancellationFlow {
   /**
    * Release all expired holds and return the count of released appointments.
    *
-   * `SchedulingEngine.releaseExpiredHolds` returns only a count, not the freed
-   * windows, so per-window waitlist notification cannot be derived here without
-   * fabricating data. The worker that enumerates freed windows calls
-   * {@link notifyWaitlistForWindow} for each one; this method keeps the release
-   * itself simple and correct (Requirement 4.3, original R13.4).
+   * The scheduling engine snapshots the expired windows when it supports the
+   * optional capability, then this flow releases them and notifies each
+   * matching waitlist head. Older test doubles only expose the count method and
+   * still retain the original behavior (Requirement 4.3, original R13.4).
    *
    * @returns The number of holds released.
    */
   async releaseExpiredHoldsAndNotify(now?: Date): Promise<number> {
-    return this.schedulingEngine.releaseExpiredHolds(now);
+    const expiredWindows = this.schedulingEngine.findExpiredHoldWindows
+      ? await this.schedulingEngine.findExpiredHoldWindows(now)
+      : [];
+    const count = await this.schedulingEngine.releaseExpiredHolds(now);
+    for (const window of expiredWindows) {
+      await this.notifyWaitlistForWindow(window.salonId, window.startAt, window.endAt);
+    }
+    return count;
   }
 
   /**

@@ -112,6 +112,17 @@ describe('OwnerQrPage — load + data states (R4.1)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'تلاش مجدد' }));
     expect(await screen.findByTestId('qr-card')).toBeInTheDocument();
   });
+
+  it('keeps customization collapsed until requested', async () => {
+    getSalonQr.mockResolvedValue(QR_RESPONSE);
+    renderPage();
+
+    const toggle = await screen.findByRole('button', { name: /شخصی‌سازی QR/ });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  });
 });
 
 describe('OwnerQrPage — per-stylist QR gallery', () => {

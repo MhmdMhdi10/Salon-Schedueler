@@ -415,14 +415,20 @@ export function encodeQrToSvgPath(text: string): { size: number; path: string } 
     blocks.push(dat.concat(ecc));
   }
 
-  // Interleave the blocks into the final codeword sequence.
+  // Interleave all data codewords first, then all ECC codewords. Keeping the
+  // two phases explicit is important when every block has the same length:
+  // there is no "extra" data index to skip in that case.
   const allCodewords: number[] = [];
-  for (let k = 0; k < blocks[0].length; k++) {
-    for (let b = 0; b < blocks.length; b++) {
-      // Short blocks have no extra data codeword at index shortBlockLen-blockEccLen.
-      if (k !== shortBlockLen - blockEccLen || b >= numShortBlocks) {
-        allCodewords.push(blocks[b][k]);
-      }
+  const maxDataCodewords = shortBlockLen - blockEccLen + (numShortBlocks < numBlocks ? 1 : 0);
+  for (let k = 0; k < maxDataCodewords; k++) {
+    for (const block of blocks) {
+      const dataLength = block.length - blockEccLen;
+      if (k < dataLength) allCodewords.push(block[k]);
+    }
+  }
+  for (let k = 0; k < blockEccLen; k++) {
+    for (const block of blocks) {
+      allCodewords.push(block[block.length - blockEccLen + k]);
     }
   }
 

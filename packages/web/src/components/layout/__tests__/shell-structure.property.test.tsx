@@ -180,7 +180,7 @@ describe('Property 12: shell structure — landmarks + h1 + skip link', () => {
       expect(skip).toHaveAttribute('href', `#${OWNER_CONTENT_ID}`);
       const main = screen.getByRole('main');
       expect(main).toHaveAttribute('id', OWNER_CONTENT_ID);
-      expect(main).toHaveAttribute('tabindex', '-1');
+      expect(main).toHaveAttribute('tabindex', '0');
     });
 
     it('has no serious/critical axe violations', async () => {
