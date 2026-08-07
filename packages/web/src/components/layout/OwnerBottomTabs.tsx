@@ -9,6 +9,8 @@ import { cn } from '../ui/cn';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '../ui/Sheet';
 import { ownerNavForRole } from '../owner/ownerNav';
 
+import './owner-bottom-tabs.css';
+
 // ─── Tab Definitions ─────────────────────────────────────────────────────────
 
 interface TabDef {
@@ -39,7 +41,14 @@ const TABS: readonly TabDef[] = [
     icon: BarChart3,
     roles: ['Owner', 'Admin'],
   },
-  { key: 'qr', labelKey: 'owner.nav.qr', to: '/owner/qr', icon: QrCode, roles: ['Owner', 'Admin'] },
+  {
+    key: 'qr',
+    labelKey: 'owner.nav.qr',
+    mobileLabelKey: 'owner.nav.qrShort',
+    to: '/owner/qr',
+    icon: QrCode,
+    roles: ['Owner', 'Admin'],
+  },
   {
     key: 'config',
     labelKey: 'owner.nav.configuration',
@@ -94,12 +103,12 @@ export function OwnerBottomTabs({ className, role = 'Owner' }: OwnerBottomTabsPr
       aria-label={t('owner.tabBar')}
       data-testid="owner-bottom-tabs"
       className={cn(
-        'fixed inset-x-0 bottom-0 z-nav border-t border-border bg-surface',
+        'owner-bottom-tabs fixed z-nav',
         'pb-[env(safe-area-inset-bottom)]',
         className,
       )}
     >
-      <ul className="relative mx-auto flex w-full max-w-container items-stretch justify-around">
+      <ul className="relative z-[1] mx-auto flex w-full max-w-container items-stretch justify-around px-1 py-0">
         {visibleTabs.map((tab, index) => {
           const Icon = tab.icon;
           const isActive = index === activeIndex;
@@ -111,8 +120,8 @@ export function OwnerBottomTabs({ className, role = 'Owner' }: OwnerBottomTabsPr
                 aria-current={isActive ? 'page' : undefined}
                 aria-label={tab.mobileLabelKey ? t(tab.labelKey) : undefined}
                 className={cn(
-                  'relative flex min-h-[64px] w-full flex-col items-center justify-center gap-2.5',
-                  'px-1 py-2.5 outline-none',
+                  'relative flex min-h-[64px] w-full flex-col items-center justify-center gap-0 rounded-[22px]',
+                  'px-1 py-0 outline-none',
                   'focus-visible:outline focus-visible:outline-2',
                   'focus-visible:-outline-offset-2 focus-visible:outline-focus',
                   'transition-colors',
@@ -123,7 +132,7 @@ export function OwnerBottomTabs({ className, role = 'Owner' }: OwnerBottomTabsPr
                 {isActive && (
                   <motion.span
                     layoutId="owner-tab-indicator"
-                    className="absolute inset-x-3 top-0 h-[3px] rounded-b-full bg-primary"
+                    className="owner-bottom-tabs__indicator absolute inset-1 rounded-[20px] bg-primary/10"
                     transition={
                       prefersReduced
                         ? { duration: 0 }
@@ -132,8 +141,8 @@ export function OwnerBottomTabs({ className, role = 'Owner' }: OwnerBottomTabsPr
                     aria-hidden="true"
                   />
                 )}
-                <Icon className="h-6 w-6 shrink-0" aria-hidden="true" />
-                <span className="whitespace-nowrap text-xs font-medium leading-5">
+                <Icon className="relative z-[1] h-6 w-6 shrink-0" aria-hidden="true" />
+                <span className="sr-only">
                   {tab.mobileLabelKey ? (
                     <>
                       <span className="hidden lg:inline">{t(tab.labelKey)}</span>
@@ -157,8 +166,8 @@ export function OwnerBottomTabs({ className, role = 'Owner' }: OwnerBottomTabsPr
               aria-expanded={moreOpen}
               aria-current={moreActive ? 'page' : undefined}
               className={cn(
-                'relative flex min-h-[64px] w-full flex-col items-center justify-center gap-2.5',
-                'px-1 py-2.5 outline-none focus-visible:outline focus-visible:outline-2',
+                'relative flex min-h-[64px] w-full flex-col items-center justify-center gap-0 rounded-[22px]',
+                'px-1 py-0 outline-none focus-visible:outline focus-visible:outline-2',
                 'focus-visible:-outline-offset-2 focus-visible:outline-focus transition-colors',
                 moreActive || moreOpen ? 'font-bold text-primary' : 'text-muted',
               )}
@@ -166,12 +175,12 @@ export function OwnerBottomTabs({ className, role = 'Owner' }: OwnerBottomTabsPr
             >
               {(moreActive || moreOpen) && (
                 <span
-                  className="absolute inset-x-3 top-0 h-[3px] rounded-b-full bg-primary"
+                  className="owner-bottom-tabs__indicator absolute inset-1 rounded-[20px] bg-primary/10"
                   aria-hidden="true"
                 />
               )}
-              <MoreHorizontal className="h-6 w-6 shrink-0" aria-hidden="true" />
-              <span className="whitespace-nowrap text-xs font-medium leading-5">
+              <MoreHorizontal className="relative z-[1] h-6 w-6 shrink-0" aria-hidden="true" />
+              <span className="sr-only">
                 {t('owner.nav.more')}
               </span>
             </button>
@@ -179,7 +188,11 @@ export function OwnerBottomTabs({ className, role = 'Owner' }: OwnerBottomTabsPr
         )}
       </ul>
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-        <SheetContent side="bottom" aria-describedby={undefined}>
+        <SheetContent
+          side="bottom"
+          aria-describedby={undefined}
+          className="owner-more-sheet"
+        >
           <SheetTitle>{t('owner.nav.more')}</SheetTitle>
           <SheetDescription className="sr-only">{t('owner.nav.label')}</SheetDescription>
           <nav aria-label={t('owner.nav.label')} className="mt-4">
@@ -194,11 +207,11 @@ export function OwnerBottomTabs({ className, role = 'Owner' }: OwnerBottomTabsPr
                       aria-current={isActive ? 'page' : undefined}
                       onClick={() => setMoreOpen(false)}
                       className={cn(
-                        'flex min-h-[52px] items-center gap-3 rounded-lg border px-3 py-2',
+                        'owner-more-item flex min-h-[52px] items-center gap-3 rounded-lg border px-3 py-2',
                         'no-underline transition-colors focus-visible:outline focus-visible:outline-2',
                         'focus-visible:outline-offset-2 focus-visible:outline-focus',
                         isActive
-                          ? 'border-primary bg-primary/10 font-bold text-primary'
+                          ? 'owner-more-item--active border-primary bg-primary/10 font-bold text-primary'
                           : 'border-border bg-surface text-text hover:bg-elevated',
                       )}
                     >

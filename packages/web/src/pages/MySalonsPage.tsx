@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CalendarPlus, QrCode, Scissors, Store, Trash2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 import { SeoHead } from '../components/seo';
 import { cn } from '../components/ui';
 import {
@@ -13,6 +14,7 @@ import {
 import { writeSalonName } from '../utils/salonName';
 
 export function MySalonsPage() {
+  const { isCustomer } = useAuth();
   const [salons, setSalons] = useState<SavedSalon[]>(readSavedSalons);
   const refresh = useCallback(() => setSalons(readSavedSalons()), []);
 
@@ -28,6 +30,10 @@ export function MySalonsPage() {
   const remove = (salon: SavedSalon) => {
     setSalons(removeSavedSalon(salon.id, salon.staffId));
   };
+
+  // `/my-salons` remains a valid deep link for old installs and bookmarks, but
+  // an authenticated customer should start from the data-rich dashboard.
+  if (isCustomer) return <Navigate to="/account" replace />;
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-10" data-testid="my-salons-page">

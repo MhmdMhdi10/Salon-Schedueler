@@ -410,31 +410,6 @@
   inline-size: 100%;
   block-size: auto;
 }
-.asset__qr-chip {
-  position: absolute;
-  inset-block-end: -1px;
-  inset-inline-start: 50%;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-inline-size: max-content;
-  padding: 5px 9px;
-  border: 2px solid rgba(255, 255, 255, 0.65);
-  border-radius: 999px;
-  color: var(--asset-ink, #073f36);
-  background: #ffffff;
-  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.18);
-  font-size: 0.55rem;
-  font-weight: 900;
-  transform: translateX(-50%);
-}
-[dir='rtl'] .asset__qr-chip {
-  transform: translateX(50%);
-}
-.asset__qr-chip svg {
-  inline-size: 10px;
-  block-size: 10px;
-}
 .asset__cta {
   display: inline-block;
   font-weight: 800;
@@ -794,41 +769,91 @@
 }
 
 @media print {
-  /* Hide the interactive screen surface in print. */
-  .owner-qr-screen-only {
+  /* Mobile print previews do not handle a fixed child inside the scrolling
+     owner shell consistently. Flatten shell layout and print one surface in
+     normal flow so Chrome, Safari and Android print dialogs agree. */
+  @page {
+    margin: 0;
+    size: auto;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
+  body > *:not(#root) {
     display: none !important;
   }
 
-  /* Reset the page layout for print — remove the shell's sidebar/header. */
-  body * {
-    visibility: hidden;
+  [data-shell='owner'] {
+    display: block !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
   }
-  .owner-qr-standee,
-  .owner-qr-standee *,
-  .owner-qr-print-asset,
-  .owner-qr-print-asset * {
-    visibility: visible;
+
+  [data-shell='owner'] > header,
+  [data-shell='owner'] > nav,
+  [data-shell='owner'] > div > aside,
+  [data-shell='owner'] > div > main > :not(.owner-qr-page) {
+    display: none !important;
   }
+
+  [data-shell='owner'] > div,
+  [data-shell='owner'] > div > main,
+  .owner-qr-page {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Only the selected print surface survives. This also prevents hidden
+     screen cards from contributing blank pages on mobile. */
+  .owner-qr-page > :not(.owner-qr-standee):not(.owner-qr-print-asset) {
+    display: none !important;
+  }
+
   .owner-qr-standee,
   .owner-qr-print-asset {
-    position: fixed;
-    inset: 0;
-    display: flex;
+    position: relative;
+    inset: auto;
+    display: flex !important;
+    width: 100%;
+    max-width: 100%;
+    min-height: 0;
+    height: auto;
+    margin: 0;
+    padding: 8mm;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    box-sizing: border-box;
+    break-inside: avoid;
+    break-after: avoid;
   }
 
   /* Default standee print layout (used when the standee template is selected). */
   .owner-qr-standee {
     gap: var(--space-6);
-    min-block-size: 100vh;
-    padding-block: var(--space-10);
-    padding-inline: var(--space-6);
     text-align: center;
     color: #000000;
     background-color: #ffffff;
-    break-inside: avoid;
   }
 
   /* When a branded card/banner is selected, print THAT and hide the standee. */
@@ -838,28 +863,22 @@
   }
 
   .owner-qr-print-asset {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-block-size: 100vh;
+    min-height: 0;
   }
 
   /* Make the gradient/colors actually print. */
   .asset {
+    box-sizing: border-box;
+    max-inline-size: 100%;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
     box-shadow: none;
-    break-inside: avoid;
   }
   .owner-qr-print-asset .asset--card {
-    inline-size: 86mm;
+    inline-size: min(86mm, 100%);
   }
   .owner-qr-print-asset .asset--banner {
-    inline-size: 180mm;
-  }
-
-  @page {
-    margin: 8mm;
+    inline-size: min(180mm, 100%);
   }
 }
 
@@ -871,8 +890,11 @@
 }
 
 .owner-qr-standee__qr {
-  inline-size: 60mm;
-  block-size: 60mm;
+  inline-size: min(60mm, 100%);
+  max-inline-size: 100%;
+  block-size: auto;
+  aspect-ratio: 1;
+  box-sizing: border-box;
   padding: var(--space-3);
   background-color: #ffffff;
 }

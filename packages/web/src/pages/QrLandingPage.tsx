@@ -137,7 +137,9 @@ export function QrLandingPage() {
     accentKey && ACCENTS.some((a) => a.key === accentKey)
       ? ensureAaFill(resolveAccent(accentKey).from)
       : undefined;
-  useSalonManifest('آرا — سالن‌های من', '/my-salons', 'آرا', themeColor);
+  // The installed app opens the role-aware dashboard. Customers see their
+  // appointments immediately; staff are routed to the owner panel.
+  useSalonManifest('آرا — سالن‌های من', '/account', 'آرا', themeColor);
 
   const { installed, promptInstall } = usePwaInstall();
   const [showInstallHelp, setShowInstallHelp] = useState(false);

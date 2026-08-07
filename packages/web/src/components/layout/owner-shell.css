@@ -1,0 +1,10 @@
+/* Keep the transformed page surface from creating a horizontal scrollbar. */
+[data-shell='owner'] #owner-content > div {
+  max-inline-size: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-shell='owner'] #owner-content > div {
+    transition: none;
+  }
+}

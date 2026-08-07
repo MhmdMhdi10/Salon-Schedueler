@@ -112,10 +112,6 @@ function QrAsset({
           {...(imgTestId ? { 'data-testid': imgTestId } : {})}
         />
       </span>
-      <span className="asset__qr-chip">
-        <Sparkles aria-hidden="true" />
-        {t('owner.qr.customBadge')}
-      </span>
     </span>
   );
   const brand = (
@@ -437,7 +433,11 @@ export function OwnerQrPage() {
   }));
 
   return (
-    <section data-testid="owner-qr-page" data-print-kind={kind} className="flex flex-col gap-6">
+    <section
+      data-testid="owner-qr-page"
+      data-print-kind={kind}
+      className="owner-qr-page flex flex-col gap-6"
+    >
       <SeoHead title={t('owner.qr.title')} />
 
       <header className="flex flex-col gap-2 owner-qr-screen-only">

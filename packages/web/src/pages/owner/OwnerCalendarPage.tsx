@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Clock,
   Hourglass,
+  Settings2,
   User,
   Scissors,
   X,
@@ -47,11 +48,17 @@ import {
   Pagination,
   Skeleton,
   Select,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
   TextField,
   toPersianDigits,
   cn,
 } from '../../components/ui';
 import { easings } from '../../lib/motion-variants';
+
+import './owner-calendar.css';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -2338,7 +2345,15 @@ function ManualBookingDialog({
  * actionable UI surface — the inbox bell link + this card together close the
  * "auto-approve off → I need to confirm" loop.
  */
-function ApprovalQueue({ salonId, onResolved }: { salonId: string; onResolved: () => void }) {
+function ApprovalQueue({
+  salonId,
+  onResolved,
+  className,
+}: {
+  salonId: string;
+  onResolved: () => void;
+  className?: string;
+}) {
   const { t } = useTranslation();
   const [pending, setPending] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -2478,11 +2493,16 @@ function ApprovalQueue({ salonId, onResolved }: { salonId: string; onResolved: (
   };
 
   return (
-    <section
-      data-testid="owner-approval-queue"
-      aria-label={t('owner.calendar.approvalQueue', { defaultValue: 'نوبت‌های در انتظار تأیید' })}
-      className="rounded-xl border border-warning/40 bg-warning/5 p-3 sm:p-4"
-    >
+    <div className={cn('flex flex-col gap-3', className)}>
+      {pending.length > 0 && (
+        <section
+          data-testid="owner-approval-queue"
+          id="owner-approval-queue"
+          aria-label={t('owner.calendar.approvalQueue', {
+            defaultValue: 'نوبت‌های در انتظار تأیید',
+          })}
+          className="rounded-xl border border-warning/40 bg-warning/5 p-3 sm:p-4"
+        >
       <header className="flex items-center gap-2">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning">
           <Hourglass className="h-4 w-4" aria-hidden="true" />
@@ -2569,7 +2589,9 @@ function ApprovalQueue({ salonId, onResolved }: { salonId: string; onResolved: (
           </div>
         </DialogContent>
       </Dialog>
-    </section>
+        </section>
+      )}
+    </div>
   );
 }
 
@@ -2588,7 +2610,7 @@ function ApprovalQueue({ salonId, onResolved }: { salonId: string; onResolved: (
  * - Hover highlights on time cells
  * - Keyboard operable date navigation (RTL arrows)
  */
-function QuickApprovalPolicy({ salonId }: { salonId: string }) {
+function QuickApprovalPolicy({ salonId, className }: { salonId: string; className?: string }) {
   const [autoApprove, setAutoApprove] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -2630,7 +2652,12 @@ function QuickApprovalPolicy({ salonId }: { salonId: string }) {
   return (
     <section
       aria-label="روش تأیید رزرو"
-      className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 shadow-1 sm:flex-row sm:items-center sm:justify-between"
+      data-testid="owner-approval-policy"
+      id="owner-approval-policy"
+      className={cn(
+        'flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 shadow-1 sm:flex-row sm:items-center sm:justify-between',
+        className,
+      )}
     >
       <div className="min-w-0">
         <div className="flex items-center gap-2">
@@ -2681,6 +2708,116 @@ function QuickApprovalPolicy({ salonId }: { salonId: string }) {
   );
 }
 
+function CalendarActionsSheet({
+  salonId,
+  open,
+  onOpenChange,
+  onWorkingHours,
+  onAvailability,
+  onEmergencyClose,
+  showApprovalPolicy,
+}: {
+  salonId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onWorkingHours: () => void;
+  onAvailability: () => void;
+  onEmergencyClose: () => void;
+  showApprovalPolicy: boolean;
+}) {
+  const [approvalOpen, setApprovalOpen] = useState(false);
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    onOpenChange(nextOpen);
+    if (!nextOpen) setApprovalOpen(false);
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent
+        side="bottom"
+        data-testid="owner-calendar-action-sheet"
+        className="owner-calendar-action-sheet !p-4 sm:!p-5"
+      >
+        {approvalOpen ? (
+          <>
+            <div className="flex items-center gap-2 pe-10">
+              <Button
+                variant="ghost"
+                size="md"
+                startIcon={<ChevronRight className="h-4 w-4 rtl:-scale-x-100" />}
+                onClick={() => setApprovalOpen(false)}
+                className="!px-2"
+              >
+                بازگشت
+              </Button>
+              <SheetTitle className="text-xl font-bold">تأیید رزروهای جدید</SheetTitle>
+            </div>
+            <SheetDescription>
+              انتخاب کن رزروهای جدید خودکار قطعی شوند یا قبل از ثبت نهایی تأییدشان کنی.
+            </SheetDescription>
+            <QuickApprovalPolicy
+              salonId={salonId}
+              className="mt-4 !rounded-xl !border-border/70 !bg-surface !p-3 !shadow-none sm:!p-3.5"
+            />
+          </>
+        ) : (
+          <>
+            <div className="pe-10">
+              <SheetTitle className="text-xl font-bold">مدیریت روز</SheetTitle>
+              <SheetDescription>
+                اقدام‌های روزانه را از اینجا انتخاب کن؛ تقویم همیشه خلوت و قابل‌خواندن می‌ماند.
+              </SheetDescription>
+            </div>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <Button
+                variant="primary"
+                size="md"
+                startIcon={<Clock className="h-4 w-4" />}
+                onClick={onWorkingHours}
+                className="min-h-12 w-full justify-start"
+              >
+                ساعات کاری
+              </Button>
+              <Button
+                variant="secondary"
+                size="md"
+                startIcon={<CalendarOff className="h-4 w-4" />}
+                onClick={onAvailability}
+                className="min-h-12 w-full justify-start"
+              >
+                تعطیلی‌ها و محدودیت‌ها
+              </Button>
+              {showApprovalPolicy && (
+                <Button
+                  variant="secondary"
+                  size="md"
+                  startIcon={<CheckCircle2 className="h-4 w-4" />}
+                  onClick={() => setApprovalOpen(true)}
+                  data-testid="owner-calendar-approval-policy-trigger"
+                  className="min-h-12 w-full justify-start sm:col-span-2"
+                >
+                  تأیید رزروهای جدید
+                </Button>
+              )}
+              <Button
+                variant="danger"
+                size="md"
+                startIcon={<TriangleAlert className="h-4 w-4" />}
+                onClick={onEmergencyClose}
+                className="min-h-12 w-full justify-start sm:col-span-2"
+              >
+                بستن فوری امروز
+              </Button>
+            </div>
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 export function OwnerCalendarPage() {
   const { t } = useTranslation();
   const { role } = useAuth();
@@ -2696,6 +2833,7 @@ export function OwnerCalendarPage() {
   const [staff, setStaff] = useState<SalonStaff[]>([]);
   const [staffCalendarBlocks, setStaffCalendarBlocks] = useState<StaffCalendarBlock[]>([]);
   const [closureReloadToken, setClosureReloadToken] = useState(0);
+  const [manageActionsOpen, setManageActionsOpen] = useState(false);
   const [availabilityOpen, setAvailabilityOpen] = useState(false);
   const [availabilityDate, setAvailabilityDate] = useState<Date>(() => new Date());
   const [availabilityStart, setAvailabilityStart] = useState<string | undefined>();
@@ -2962,12 +3100,20 @@ export function OwnerCalendarPage() {
     }
   };
 
+  const openEmergencyClose = () => {
+    setEmergencyError('');
+    setEmergencyOpen(true);
+  };
+
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <section data-testid="owner-calendar-page" className="flex flex-col gap-4 sm:gap-5">
+    <section
+      data-testid="owner-calendar-page"
+      className="owner-calendar-page flex flex-col gap-4 sm:gap-5"
+    >
       {/* Header */}
-      <header className="flex flex-col gap-1">
+      <header className="owner-calendar-header flex flex-col gap-1">
         <h1 className="text-xl text-display text-text">
           {t('owner.calendar.title', { defaultValue: 'تقویم' })}
         </h1>
@@ -2977,71 +3123,102 @@ export function OwnerCalendarPage() {
       </header>
 
       {/* Toolbar: view toggle + date nav */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <ViewToggle view={view} onViewChange={handleViewChange} />
-        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
-          <DateNav view={view} anchor={anchor} onNavigate={handleNavigate} />
-          <Button
-            variant="primary"
-            size="md"
-            startIcon={<CalendarClock className="h-4 w-4" />}
-            onClick={() => openManualBooking(anchor)}
-            aria-label="ثبت نوبت حضوری"
-            className="w-full sm:w-auto"
-          >
-            ثبت نوبت حضوری
-          </Button>
-          <Button
-            variant="primary"
-            size="md"
-            startIcon={<Clock className="h-4 w-4" />}
-            onClick={() => navigate('/owner/calendar/working-hours')}
-            aria-label="ساعات کاری هفتگی"
-            className="w-full sm:w-auto"
-          >
-            <span className="sm:hidden">ساعات کاری</span>
-            <span className="hidden sm:inline">ساعات کاری هفتگی</span>
-          </Button>
-          <Button
-            variant="secondary"
-            size="md"
-            startIcon={<CalendarOff className="h-4 w-4" />}
-            onClick={() => openAvailability(anchor)}
-            aria-label="تعطیلی و عدم حضور"
-            className="col-span-2 w-full sm:w-auto"
-          >
-            <span className="sm:hidden">تعطیلی‌ها</span>
-            <span className="hidden sm:inline">تعطیلی و عدم حضور</span>
-          </Button>
-          <Button
-            variant="danger"
-            size="md"
-            startIcon={<TriangleAlert className="h-4 w-4" />}
-            aria-label="اختلال و بستن این روز"
-            className="col-span-2 w-full sm:w-auto"
-            onClick={() => {
-              setEmergencyError('');
-              setEmergencyOpen(true);
-            }}
-          >
-            <span className="sm:hidden">بستن فوری امروز</span>
-            <span className="hidden sm:inline">اختلال و بستن این روز</span>
-          </Button>
+      <div className="owner-calendar-toolbar flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="owner-calendar-view-toggle">
+          <ViewToggle view={view} onViewChange={handleViewChange} />
+        </div>
+        <div className="owner-calendar-nav-actions flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+          <div className="owner-calendar-date-nav">
+            <DateNav view={view} anchor={anchor} onNavigate={handleNavigate} />
+          </div>
+          <div className="owner-calendar-actions">
+            <Button
+              variant="primary"
+              size="md"
+              startIcon={<CalendarClock className="h-4 w-4" />}
+              onClick={() => openManualBooking(anchor)}
+              aria-label="ثبت نوبت حضوری"
+              className="owner-calendar-booking-action"
+            >
+              ثبت نوبت حضوری
+            </Button>
+            <div className="owner-calendar-desktop-actions">
+              <Button
+                variant="primary"
+                size="md"
+                startIcon={<Clock className="h-4 w-4" />}
+                onClick={() => navigate('/owner/calendar/working-hours')}
+                aria-label="ساعات کاری هفتگی"
+              >
+                ساعات کاری هفتگی
+              </Button>
+              <Button
+                variant="secondary"
+                size="md"
+                startIcon={<CalendarOff className="h-4 w-4" />}
+                onClick={() => openAvailability(anchor)}
+                aria-label="تعطیلی و عدم حضور"
+              >
+                تعطیلی و عدم حضور
+              </Button>
+              <Button
+                variant="danger"
+                size="md"
+                startIcon={<TriangleAlert className="h-4 w-4" />}
+                aria-label="اختلال و بستن این روز"
+                onClick={openEmergencyClose}
+              >
+                اختلال و بستن این روز
+              </Button>
+            </div>
+            <Button
+              variant="secondary"
+              size="md"
+              startIcon={<Settings2 className="h-4 w-4" />}
+              aria-label="مدیریت روز"
+              data-testid="owner-calendar-manage-trigger"
+              className="owner-calendar-manage-trigger"
+              onClick={() => setManageActionsOpen(true)}
+            >
+              مدیریت روز
+            </Button>
+          </div>
         </div>
       </div>
 
-      <p className="-mt-3 text-xs text-muted">
+      <p className="owner-calendar-hint -mt-3 text-xs text-muted">
         روی هر روز یا ساعت بزن تا همان‌جا تعطیلی کامل یا محدودیت ساعتی ثبت کنی.
       </p>
 
-      {role === 'Owner' && <QuickApprovalPolicy salonId={salonId} />}
-
       {/* Pending approval queue — surfaced at top of calendar so owners can
           one-tap Approve/Reject without leaving the calendar view. */}
-      <ApprovalQueue salonId={salonId} onResolved={() => setReloadToken((n) => n + 1)} />
+      <ApprovalQueue
+        salonId={salonId}
+        onResolved={() => setReloadToken((n) => n + 1)}
+        className="owner-calendar-approval"
+      />
+
+      <CalendarActionsSheet
+        salonId={salonId}
+        open={manageActionsOpen}
+        onOpenChange={setManageActionsOpen}
+        onWorkingHours={() => {
+          setManageActionsOpen(false);
+          navigate('/owner/calendar/working-hours');
+        }}
+        onAvailability={() => {
+          setManageActionsOpen(false);
+          openAvailability(anchor);
+        }}
+        onEmergencyClose={() => {
+          setManageActionsOpen(false);
+          openEmergencyClose();
+        }}
+        showApprovalPolicy={role === 'Owner'}
+      />
 
       {/* Calendar content with animated transitions */}
-      <div className="relative min-h-[20rem]">
+      <div className="owner-calendar-content relative min-h-[20rem]">
         {status === 'loading' && <CalendarSkeleton view={view} />}
 
         {status === 'error' && (

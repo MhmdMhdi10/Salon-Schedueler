@@ -144,7 +144,9 @@ describe('OwnerShell — mobile (<lg)', () => {
   it('adds bottom padding to main for bottom tabs clearance', () => {
     renderOwner({ role: 'Owner' });
     const main = screen.getByRole('main');
-    expect(main.className).toContain('pb-[calc(100px+env(safe-area-inset-bottom))]');
+    expect(main.className).toContain(
+      'pb-[calc(var(--space-10)+var(--space-3)+env(safe-area-inset-bottom))]',
+    );
   });
 });
 

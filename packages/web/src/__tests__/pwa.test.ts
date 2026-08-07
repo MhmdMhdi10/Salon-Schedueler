@@ -14,7 +14,9 @@ describe('PWA Configuration', () => {
     it('has required PWA fields', () => {
       expect(manifest.name).toBeDefined();
       expect(manifest.short_name).toBeDefined();
-      expect(manifest.start_url).toBe('/my-salons');
+      // `/account` is role-aware: customers open their dashboard, staff open
+      // the owner panel, and signed-out users are sent to authentication.
+      expect(manifest.start_url).toBe('/account');
       expect(manifest.display).toBe('standalone');
     });
 

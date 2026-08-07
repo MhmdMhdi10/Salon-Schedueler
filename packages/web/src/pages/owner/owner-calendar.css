@@ -1,0 +1,122 @@
+/* On phones, date/calendar are the primary reading path; management actions
+   follow the schedule instead of pushing it below the first screen. */
+.owner-calendar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.owner-calendar-desktop-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.owner-calendar-manage-trigger {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .owner-calendar-page {
+    gap: 0.75rem;
+  }
+
+  /* Let the meaningful controls participate in page-level flex ordering. */
+  .owner-calendar-toolbar,
+  .owner-calendar-nav-actions {
+    display: contents;
+  }
+
+  .owner-calendar-header,
+  .owner-calendar-view-toggle,
+  .owner-calendar-date-nav,
+  .owner-calendar-hint,
+  .owner-calendar-content,
+  .owner-calendar-actions,
+  .owner-calendar-policy,
+  .owner-calendar-approval {
+    inline-size: 100%;
+  }
+
+  .owner-calendar-header {
+    order: 1;
+  }
+
+  .owner-calendar-view-toggle {
+    order: 2;
+  }
+
+  .owner-calendar-date-nav {
+    order: 3;
+  }
+
+  .owner-calendar-hint {
+    order: 4;
+    margin-block-start: -0.25rem;
+  }
+
+  .owner-calendar-content {
+    order: 5;
+    min-block-size: 0;
+  }
+
+  .owner-calendar-actions {
+    order: 6;
+  }
+
+  .owner-calendar-policy {
+    order: 7;
+  }
+
+  .owner-calendar-approval {
+    order: 8;
+  }
+}
+
+/* Mobile keeps one primary booking CTA and one compact management entry point
+   above the floating tab bar. The secondary actions stay in a sheet. */
+@media (max-width: 1023px) {
+  .owner-calendar-page {
+    padding-block-end: 4.5rem;
+  }
+
+  .owner-calendar-actions {
+    position: fixed;
+    inset-inline: 1rem;
+    bottom: calc(6.25rem + env(safe-area-inset-bottom));
+    z-index: var(--z-nav);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    inline-size: auto;
+    max-inline-size: 30rem;
+    margin-inline: auto;
+    padding: 0.25rem;
+    border: 1px solid color-mix(in srgb, var(--color-border) 78%, #ffffff 22%);
+    border-radius: 1.25rem;
+    background: color-mix(in srgb, var(--color-elevated) 86%, transparent);
+    box-shadow:
+      0 0.75rem 2rem rgba(0, 0, 0, 0.26),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    -webkit-backdrop-filter: blur(1rem) saturate(1.3);
+    backdrop-filter: blur(1rem) saturate(1.3);
+  }
+
+  .owner-calendar-desktop-actions {
+    display: none;
+  }
+
+  .owner-calendar-booking-action,
+  .owner-calendar-manage-trigger {
+    display: inline-flex;
+    min-block-size: 3rem;
+    min-inline-size: 0;
+    width: 100%;
+  }
+
+  .owner-calendar-manage-trigger {
+    justify-content: center;
+  }
+}

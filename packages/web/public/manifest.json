@@ -2,7 +2,7 @@
   "name": "آرا | رزرو آنلاین خدمات زیبایی",
   "short_name": "آرا",
   "description": "دسترسی سریع به سالن‌های ذخیره‌شده و رزرو آنلاین نوبت",
-  "start_url": "/my-salons",
+  "start_url": "/account",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",

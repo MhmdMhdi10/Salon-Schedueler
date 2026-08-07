@@ -188,6 +188,22 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
     ).toBeTruthy();
   });
 
+  it('keeps booking visible and opens secondary calendar actions in a sheet', async () => {
+    renderOwnerApp('Owner', '/owner/calendar');
+
+    await screen.findByTestId('owner-calendar-page');
+    expect(screen.getByRole('button', { name: 'ثبت نوبت حضوری' })).toBeInTheDocument();
+    fireEvent.click(await screen.findByTestId('owner-calendar-manage-trigger'));
+
+    const sheet = await screen.findByTestId('owner-calendar-action-sheet');
+    expect(sheet).toHaveTextContent('مدیریت روز');
+    expect(within(sheet).getByRole('button', { name: 'ساعات کاری' })).toBeInTheDocument();
+    expect(
+      within(sheet).getByRole('button', { name: 'تعطیلی‌ها و محدودیت‌ها' }),
+    ).toBeInTheDocument();
+    expect(within(sheet).getByRole('button', { name: 'بستن فوری امروز' })).toBeInTheDocument();
+  });
+
   it('opens recurring weekly hours on a separate page with back navigation', async () => {
     renderOwnerApp('Owner', '/owner/calendar');
     fireEvent.click(await screen.findByRole('button', { name: 'ساعات کاری هفتگی' }));
