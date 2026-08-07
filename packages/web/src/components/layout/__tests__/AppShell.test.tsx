@@ -35,6 +35,22 @@ describe('AppShell', () => {
     expect(mains).toHaveLength(1);
   });
 
+  it('hides the public footer on the customer account dashboard', () => {
+    render(
+      <ThemeProvider defaultTheme="light">
+        <MemoryRouter initialEntries={['/account']}>
+          <div dir="rtl" lang="fa">
+            <AppShell>
+              <p>حساب من</p>
+            </AppShell>
+          </div>
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
+
+    expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument();
+  });
+
   it('exposes a single <main> with the skip-link target id', () => {
     renderShell();
     const main = screen.getByRole('main');

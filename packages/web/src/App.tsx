@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { HelmetProvider } from 'react-helmet-async';
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './components/theme/ThemeProvider';
 import { AppShell } from './components/layout/AppShell';
 import { RouteLoader } from './components/layout/RouteLoader';
@@ -199,6 +199,25 @@ function AdminEntryPage() {
   return <Navigate to={isStaff ? '/owner' : '/account'} replace />;
 }
 
+/** Customer-only app surface. Staff and platform operators stay in their own panel. */
+function CustomerOnlyRoute() {
+  const { status, isCustomer, isStaff, isPlatformAdmin } = useAuth();
+  const location = useLocation();
+
+  if (status === 'loading') return <RouteLoader />;
+
+  if (status === 'anonymous') {
+    const returnTo = `${location.pathname}${location.search}${location.hash}`;
+    return <Navigate to="/auth" state={{ returnTo }} replace />;
+  }
+
+  if (!isCustomer) {
+    return <Navigate to={isPlatformAdmin ? '/platform-admin' : isStaff ? '/owner' : '/account'} replace />;
+  }
+
+  return <Outlet />;
+}
+
 export function App() {
   return (
     <HelmetProvider>
@@ -304,12 +323,14 @@ export function App() {
                       <Route path="/privacy" element={<PrivacyPage />} />
                       <Route path="/terms" element={<TermsPage />} />
 
-                      {/* Customer flows */}
+                      {/* Customer flows — dashboard and saved-salon surfaces require a customer session. */}
                       <Route path="/auth" element={<AuthPage />} />
-                      <Route path="/account" element={<CustomerDashboardPage />} />
-                      <Route path="/salon/:salonId/waitlist" element={<WaitlistPage />} />
+                      <Route element={<CustomerOnlyRoute />}>
+                        <Route path="/account" element={<CustomerDashboardPage />} />
+                        <Route path="/salon/:salonId/waitlist" element={<WaitlistPage />} />
+                        <Route path="/my-salons" element={<MySalonsPage />} />
+                      </Route>
                       <Route path="/qr/:payload" element={<QrLandingPage />} />
-                      <Route path="/my-salons" element={<MySalonsPage />} />
                       {/*
                        * Booking funnel + success live outside AppShell (above)
                        * for the FunnelShell no-chrome pattern (آرا Design Goal 17).

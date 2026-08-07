@@ -63,6 +63,7 @@ export function AppShell({ children, className, headerVariant }: AppShellProps) 
         : 'default';
   const variant = headerVariant ?? derived;
   const isBare = variant === 'bare';
+  const hideFooter = pathname === '/account';
 
   return (
     <div
@@ -102,7 +103,7 @@ export function AppShell({ children, className, headerVariant }: AppShellProps) 
       </main>
 
       {isBare ? null : <PwaInstallPrompt />}
-      {isBare ? null : <PublicFooter />}
+      {isBare || hideFooter ? null : <PublicFooter />}
     </div>
   );
 }

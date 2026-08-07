@@ -215,34 +215,37 @@ function AppointmentRow({
     (start?.getTime() ?? 0) > Date.now();
 
   return (
-    <article className="flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-bg p-3 sm:flex-row sm:items-center sm:gap-4">
-      <div className="flex min-w-0 flex-1 items-start gap-3">
-        <span
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
-          aria-hidden="true"
-        >
-          <CalendarDays className="h-5 w-5" />
-        </span>
-        <div className="min-w-0">
-          <h3 className="truncate text-sm font-bold text-text">
-            {appointment.salonName ?? 'سالن شما'}
-          </h3>
-          <p className="mt-1 truncate text-xs text-muted">
-            {appointment.serviceName ?? 'نوبت خدمات زیبایی'}
-            {appointment.staffName ? ` · ${appointment.staffName}` : ''}
-          </p>
+    <article className="flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-bg p-3">
+      <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+            aria-hidden="true"
+          >
+            <CalendarDays className="h-5 w-5" />
+          </span>
+          <div className="min-w-0">
+            <h3 className="truncate text-sm font-bold text-text">
+              {appointment.salonName ?? 'سالن شما'}
+            </h3>
+            <p className="mt-1 truncate text-xs text-muted">
+              {appointment.serviceName ?? 'نوبت خدمات زیبایی'}
+              {appointment.staffName ? ` · ${appointment.staffName}` : ''}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 text-xs text-muted md:flex-col md:items-end md:gap-1">
+          <span className="flex items-center gap-1 whitespace-nowrap">
+            <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
+            {start ? <JalaliDate value={start} variant="numeric" /> : 'تاریخ نامشخص'}
+            {clockTime(appointment.startAt) ? ` · ${clockTime(appointment.startAt)}` : ''}
+          </span>
+          <Badge status={status.variant}>{status.label}</Badge>
         </div>
       </div>
-      <div className="flex items-center justify-between gap-3 text-xs text-muted sm:flex-col sm:items-end sm:gap-1">
-        <span className="flex items-center gap-1 whitespace-nowrap">
-          <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
-          {start ? <JalaliDate value={start} variant="numeric" /> : 'تاریخ نامشخص'}
-          {clockTime(appointment.startAt) ? ` · ${clockTime(appointment.startAt)}` : ''}
-        </span>
-        <Badge status={status.variant}>{status.label}</Badge>
-      </div>
       {canManage && onCancel && onStartReschedule && (
-        <div className="flex flex-wrap items-center justify-end gap-2 sm:w-56">
+        <div className="flex w-full flex-wrap items-center justify-end gap-2 border-t border-border/50 pt-3">
           {rescheduleValue !== undefined ? (
             <>
               <label className="sr-only" htmlFor={`reschedule-${appointment.id}`}>
@@ -655,9 +658,9 @@ export function CustomerDashboardPage() {
   };
 
   return (
-    <div className="bg-bg text-text" data-testid="customer-dashboard-page">
+    <div className="min-w-0 overflow-x-hidden bg-bg text-text" data-testid="customer-dashboard-page">
       <SeoHead title="حساب من" description="تقویم نوبت‌ها و سالن‌های ذخیره‌شده شما در آرا" />
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-3 py-6 sm:gap-6 sm:px-6 sm:py-10">
+      <div className="mx-auto flex min-w-0 w-full max-w-6xl flex-col gap-5 px-3 py-6 sm:gap-6 sm:px-6 sm:py-10">
         <header className="flex flex-col gap-2">
           <p className="text-sm font-semibold text-primary">حساب من</p>
           <h1 className="text-display text-2xl font-bold text-text sm:text-3xl">
