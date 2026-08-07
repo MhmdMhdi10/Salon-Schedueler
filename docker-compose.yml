@@ -92,6 +92,7 @@ services:
       # Reliable SMS: publish to RabbitMQ (the sms-worker service delivers it).
       RABBITMQ_URL: "amqp://salon:salon@rabbitmq:5672"
       DEV_SMS_INBOX_URL: "http://sms-inbox:4000"
+      NOTIFICATION_CRON_EXTERNAL: "true"
       # Development only: return the generated OTP so the web form can fill it
       # automatically. Production keeps this disabled and uses real SMS.
       DEV_OTP_AUTO_FILL: "true"
@@ -151,6 +152,34 @@ services:
       RABBITMQ_URL: "amqp://salon:salon@rabbitmq:5672"
       DEV_SMS_INBOX_URL: "http://sms-inbox:4000"
       # SMS provider keys intentionally unset -> dev/log delivery (logs here).
+    volumes:
+      - ./:/app
+      - backend-root-node-modules:/app/node_modules
+      - backend-backend-node-modules:/app/packages/backend/node_modules
+      - backend-shared-node-modules:/app/packages/shared/node_modules
+    restart: unless-stopped
+
+  # Dedicated scheduler for appointment reminders, expired holds, and
+  # cancellation notifications. API keeps no duplicate scheduler in compose.
+  notification-cron:
+    image: salon-booking-backend-dev
+    build:
+      context: .
+      dockerfile: docker/dev.Dockerfile
+    command: [ "bash", "docker/notification-cron-entrypoint.sh" ]
+    depends_on:
+      backend:
+        condition: service_started
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: "postgresql://salon:salon@postgres:5432/salon_dev?schema=public"
+      JWT_ACCESS_SECRET: dev-access-secret
+      JWT_REFRESH_SECRET: dev-refresh-secret
+      PAYMENT_CALLBACK_BASE_URL: "http://localhost:3000"
+      RABBITMQ_URL: "amqp://salon:salon@rabbitmq:5672"
+      DEV_SMS_INBOX_URL: "http://sms-inbox:4000"
+      REMINDER_INTERVAL_MS: "60000"
+      REMINDER_LEAD_TIME_MINUTES: "60"
     volumes:
       - ./:/app
       - backend-root-node-modules:/app/node_modules

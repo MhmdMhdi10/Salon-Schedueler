@@ -342,6 +342,8 @@ export const salonApi = {
         requiresDeposit?: boolean;
         /** Deposit amount in Rial (present when `requiresDeposit`). */
         depositRial?: number | null;
+        /** Owner/Stylist ids qualified to perform this service. */
+        staffIds?: string[];
       }>;
     }>(`/salons/${salonId}/services`),
   /**
@@ -554,6 +556,15 @@ export const cardOrderApi = {
 };
 
 // Admin endpoints
+export interface SmsSettings {
+  ownerBooking: boolean;
+  stylistBooking: boolean;
+  ownerReminder: boolean;
+  stylistReminder: boolean;
+  ownerCancellation: boolean;
+  stylistCancellation: boolean;
+}
+
 export const adminApi = {
   getCalendar: (
     salonId: string,
@@ -582,6 +593,10 @@ export const adminApi = {
       `/salons/${salonId}/analytics?from=${from}&to=${to}`,
     ),
   getStaff: (salonId: string) => request<{ staff: SalonStaff[] }>(`/salons/${salonId}/staff`),
+  getSmsSettings: (salonId: string) =>
+    request<SmsSettings>(`/salons/${salonId}/sms-settings`),
+  updateSmsSettings: (salonId: string, patch: Partial<SmsSettings>) =>
+    request<SmsSettings>(`/salons/${salonId}/sms-settings`, { method: 'PATCH', body: patch }),
   getChairs: (salonId: string) => request<{ chairs: unknown[] }>(`/salons/${salonId}/chairs`),
   createManualAppointment: (
     salonId: string,
@@ -654,6 +669,7 @@ export const adminApi = {
         priceRial: number;
         requiresDeposit: boolean;
         depositRial: number | null;
+        staffIds?: string[];
       };
     }>(`/salons/${salonId}/services`, { method: 'POST', body }),
   /** Delete a service (Owner only). */
@@ -677,6 +693,11 @@ export const adminApi = {
       `/salons/${salonId}/services/${serviceId}`,
       { method: 'PATCH', body },
     ),
+  setServiceStaff: (salonId: string, serviceId: string, staffIds: string[]) =>
+    request<{ staffIds: string[] }>(`/salons/${salonId}/services/${serviceId}/staff`, {
+      method: 'PUT',
+      body: { staffIds },
+    }),
   /** Create a chair (Owner only). */
   createChair: (salonId: string, body: { name: string }) =>
     request<{ chair: { id: string; name: string; active: boolean } }>(`/salons/${salonId}/chairs`, {

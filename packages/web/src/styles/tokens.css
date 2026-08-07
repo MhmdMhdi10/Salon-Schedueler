@@ -365,11 +365,15 @@
     /* Persian-first font stack + taller line height for Farsi runs */
     font-family: var(--font-family-sans);
     font-size: var(--font-sm);
+    font-weight: var(--font-weight-body);
     line-height: 1.75;
     color: var(--color-text);
     background-color: var(--color-bg);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-kerning: normal;
+    font-optical-sizing: auto;
+    font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
     text-rendering: optimizeLegibility;
   }
 

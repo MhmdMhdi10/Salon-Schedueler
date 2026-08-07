@@ -45,6 +45,7 @@ fi
 echo "[backend] applying additive schema migrations (idempotent)..."
 psql -v ON_ERROR_STOP=1 -f packages/backend/prisma/migrations/00000000000011_notification_event_type/migration.sql
 psql -v ON_ERROR_STOP=1 -f packages/backend/prisma/migrations/00000000000012_platform_admin/migration.sql
+psql -v ON_ERROR_STOP=1 -f packages/backend/prisma/migrations/00000000000013_salon_sms_settings/migration.sql
 
 # 5. Apply the occupancy range + exclusion/CHECK constraints (idempotent).
 echo "[backend] applying exclusion constraints (idempotent)..."

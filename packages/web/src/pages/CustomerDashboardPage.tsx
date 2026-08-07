@@ -13,7 +13,6 @@ import {
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import {
-  brandAccentApi,
   customerApi,
   type CustomerAppointment,
   type CustomerWaitlistEntry,
@@ -45,7 +44,15 @@ import { writeSalonName } from '../utils/salonName';
 
 const PERSIAN_WEEKDAYS = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
 const PERSIAN_WEEKDAY_SHORT = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
-const DISPLAY_STATUSES = new Set(['pending', 'held', 'confirmed', 'completed']);
+const DISPLAY_STATUSES = new Set([
+  'pending',
+  'held',
+  'confirmed',
+  'completed',
+  'cancelled',
+  'no_show',
+  'expired',
+]);
 const UPCOMING_STATUSES = new Set(['pending', 'held', 'confirmed']);
 const MS_PER_DAY = 86_400_000;
 
@@ -155,6 +162,10 @@ function statusMeta(status: string): {
       return { label: 'انجام شده', variant: 'neutral' };
     case 'cancelled':
       return { label: 'لغو شده', variant: 'danger' };
+    case 'no_show':
+      return { label: 'حاضر نشده', variant: 'danger' };
+    case 'expired':
+      return { label: 'منقضی شده', variant: 'neutral' };
     default:
       return { label: status || 'ثبت شده', variant: 'neutral' };
   }
@@ -423,7 +434,6 @@ export function CustomerDashboardPage() {
   const [waitlistEntries, setWaitlistEntries] = useState<CustomerWaitlistEntry[]>([]);
   const [loadStatus, setLoadStatus] = useState<LoadStatus>('loading');
   const [savedSalons, setSavedSalons] = useState<SavedSalon[]>(readSavedSalons);
-  const [remoteSalonNames, setRemoteSalonNames] = useState<Record<string, string>>({});
   const [monthAnchor, setMonthAnchor] = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState(() => dateKey(new Date()));
   const [actionBusyId, setActionBusyId] = useState<string | null>(null);
@@ -568,42 +578,6 @@ export function CustomerDashboardPage() {
     };
   }, []);
 
-  const missingSalonIds = useMemo(() => {
-    const savedIds = new Set(savedSalons.map((salon) => salon.id));
-    return [
-      ...new Set(
-        appointments
-          .filter((item) => !item.salonName && !savedIds.has(item.salonId))
-          .map((item) => item.salonId),
-      ),
-    ].filter((id) => !remoteSalonNames[id]);
-  }, [appointments, remoteSalonNames, savedSalons]);
-
-  useEffect(() => {
-    if (missingSalonIds.length === 0) return;
-    let cancelled = false;
-    void Promise.all(
-      missingSalonIds.map(async (salonId) => {
-        try {
-          const response = await brandAccentApi.get(salonId);
-          return response.name ? ([salonId, response.name] as const) : null;
-        } catch {
-          return null;
-        }
-      }),
-    ).then((results) => {
-      if (cancelled) return;
-      const next: Record<string, string> = {};
-      for (const result of results) {
-        if (result) next[result[0]] = result[1];
-      }
-      if (Object.keys(next).length > 0) setRemoteSalonNames((current) => ({ ...current, ...next }));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [missingSalonIds]);
-
   const displayAppointments = useMemo(
     () => appointments.filter((appointment) => DISPLAY_STATUSES.has(appointment.status)),
     [appointments],
@@ -633,44 +607,28 @@ export function CustomerDashboardPage() {
   );
 
   const salonSummaries = useMemo(() => {
-    const byId = new Map<string, SalonSummary>();
-    for (const saved of savedSalons) {
-      byId.set(saved.id, {
+    return savedSalons
+      .map((saved) => ({
         id: saved.id,
         name: saved.name,
         staffId: saved.staffId,
         staffName: saved.staffName,
-      });
-    }
-    for (const appointment of appointments) {
-      const current = byId.get(appointment.salonId);
-      const appointmentDate = parseDate(appointment.startAt);
-      const name =
-        appointment.salonName ??
-        remoteSalonNames[appointment.salonId] ??
-        current?.name ??
-        'سالن شما';
-      if (!current) {
-        byId.set(appointment.salonId, {
-          id: appointment.salonId,
-          name,
-          lastVisitAt: appointment.startAt,
-        });
-      } else if (
-        appointmentDate &&
-        (!current.lastVisitAt || appointmentDate > (parseDate(current.lastVisitAt) ?? new Date(0)))
-      ) {
-        byId.set(appointment.salonId, { ...current, lastVisitAt: appointment.startAt });
-      }
-    }
-    return [...byId.values()].sort(
-      (a, b) =>
-        (parseDate(b.lastVisitAt)?.getTime() ?? 0) - (parseDate(a.lastVisitAt)?.getTime() ?? 0),
-    );
-  }, [appointments, remoteSalonNames, savedSalons]);
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'fa'));
+  }, [savedSalons]);
 
   const selectedPagination = usePagination(selectedAppointments, 6);
   const upcomingPagination = usePagination(upcomingAppointments, 4);
+  const historyAppointments = useMemo(
+    () =>
+      displayAppointments
+        .filter((appointment) => !UPCOMING_STATUSES.has(appointment.status))
+        .sort(
+          (a, b) => (parseDate(b.startAt)?.getTime() ?? 0) - (parseDate(a.startAt)?.getTime() ?? 0),
+        ),
+    [displayAppointments],
+  );
+  const historyPagination = usePagination(historyAppointments, 6);
   const salonPagination = usePagination(salonSummaries, 6);
 
   useEffect(() => {
@@ -928,6 +886,32 @@ export function CustomerDashboardPage() {
                 />
               )}
             </Card>
+
+            <Card as="section" className="min-w-0 lg:col-span-2" data-testid="customer-history">
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-bold text-text">سوابق نوبت‌ها</h2>
+                  <p className="mt-1 text-xs text-muted">نوبت‌های انجام‌شده و لغوشده حذف نمی‌شوند.</p>
+                </div>
+                <Clock3 className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+              </div>
+              {historyAppointments.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {historyPagination.pageItems.map((appointment) => (
+                    <AppointmentRow key={appointment.id} appointment={appointment} />
+                  ))}
+                  <Pagination
+                    page={historyPagination.page}
+                    pageSize={historyPagination.pageSize}
+                    total={historyPagination.total}
+                    onPageChange={historyPagination.goToPage}
+                    testId="customer-history-pagination"
+                  />
+                </div>
+              ) : (
+                <p className="m-0 text-sm text-muted">هنوز سابقه‌ای ثبت نشده است.</p>
+              )}
+            </Card>
           </div>
         )}
 
@@ -936,7 +920,7 @@ export function CustomerDashboardPage() {
             <div>
               <h2 className="text-lg font-bold text-text">سالن‌های من</h2>
               <p className="mt-1 text-xs leading-6 text-muted">
-                سالن‌هایی که ذخیره کرده‌ای یا قبلاً از آن‌ها نوبت گرفته‌ای.
+                فقط سالن‌هایی که با اسکن QR ذخیره کرده‌ای.
               </p>
             </div>
             <Store className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />

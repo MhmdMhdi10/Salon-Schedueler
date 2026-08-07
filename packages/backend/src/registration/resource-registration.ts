@@ -135,7 +135,7 @@ export class ResourceRegistration {
    */
   async listBookableStaff(salonId: string): Promise<StaffMember[]> {
     return this.prisma.staffMember.findMany({
-      where: { salonId, role: { in: ['Owner', 'Stylist'] } },
+      where: { salonId, active: true, role: { in: ['Owner', 'Stylist'] } },
       orderBy: { fullName: 'asc' },
     });
   }

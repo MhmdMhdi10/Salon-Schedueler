@@ -237,6 +237,29 @@ const isUniqueViolation = (err: unknown): boolean =>
 export function adminRouter(services: Services, requireRole: RequireRole): Router {
   const router = Router();
 
+  /** Cancel active future bookings covered by a full-day salon closure. */
+  const cancelAppointmentsForFullDayClosure = async (salonId: string, onDate: string) => {
+    const from = new Date(`${onDate}T00:00:00.000Z`);
+    const to = new Date(from);
+    to.setUTCDate(to.getUTCDate() + 1);
+    const now = Date.now();
+    const appointments = await services.calendarService.getSalonCalendar(salonId, from, to);
+    const cancellable = appointments.filter((item) => {
+      if (!['pending', 'held', 'confirmed'].includes(String(item.status))) return false;
+      // Legacy test doubles omit startAt; production rows always have it.
+      return !item.startAt || new Date(item.startAt).getTime() >= now;
+    });
+    const results = await Promise.allSettled(
+      cancellable.map((item) =>
+        String(item.status) === 'pending'
+          ? services.bookingFlow.reject(item.id)
+          : services.cancellationFlow.cancel(item.id),
+      ),
+    );
+    const cancelledCount = results.filter((item) => item.status === 'fulfilled').length;
+    return { cancelledCount, failedCount: results.length - cancelledCount };
+  };
+
   /**
    * Direct `/staff/:id` routes do not carry a salon id in their URL. Resolve
    * the target first so a scoped staff token cannot mutate another salon's
@@ -367,6 +390,52 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     asyncRoute(async (req, res) => {
       const staff = await services.resourceRegistration.listStaff(req.params.id);
       res.status(200).json({ staff: staff.map((s) => toStaffDto(s)) });
+    }),
+  );
+
+  // Role-based SMS audience preferences. The default is applied lazily when
+  // the salon has never opened this page: stylist notices on, owner notices off.
+  router.get(
+    '/salons/:id/sms-settings',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      if (!services.notificationSettings) {
+        res.status(503).json({ code: 'NOTIFICATION_SETTINGS_UNAVAILABLE' });
+        return;
+      }
+      res.status(200).json(await services.notificationSettings.getSmsSettings(req.params.id));
+    }),
+  );
+
+  router.patch(
+    '/salons/:id/sms-settings',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      if (!services.notificationSettings) {
+        res.status(503).json({ code: 'NOTIFICATION_SETTINGS_UNAVAILABLE' });
+        return;
+      }
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const fields = [
+        'ownerBooking',
+        'stylistBooking',
+        'ownerReminder',
+        'stylistReminder',
+        'ownerCancellation',
+        'stylistCancellation',
+      ] as const;
+      const patch: Partial<Record<(typeof fields)[number], boolean>> = {};
+      for (const field of fields) {
+        if (body[field] === undefined) continue;
+        if (typeof body[field] !== 'boolean') {
+          res.status(400).json({ code: 'VALIDATION_ERROR', field });
+          return;
+        }
+        patch[field] = body[field];
+      }
+      res.status(200).json(
+        await services.notificationSettings.updateSmsSettings(req.params.id, patch),
+      );
     }),
   );
 
@@ -738,7 +807,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
       const staff = await services.resourceRegistration.listStaff(req.params.id);
       await services.serviceCatalog.setServiceStaff(
         service.id,
-        staff.filter((s) => s.active).map((s) => s.id),
+        staff.filter((s) => s.active && s.role !== 'Admin').map((s) => s.id),
       );
       res.status(201).json({
         service: {
@@ -749,6 +818,9 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
           priceRial: Number(service.priceRial),
           requiresDeposit: service.requiresDeposit,
           depositRial: service.depositRial == null ? null : Number(service.depositRial),
+          staffIds: (await services.serviceCatalog.listServices(req.params.id))
+            .find((item) => item.id === service.id)
+            ?.serviceStaff.map((mapping) => mapping.staffMemberId) ?? [],
         },
       });
     }),
@@ -822,8 +894,39 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
           priceRial: Number(updated.priceRial),
           requiresDeposit: updated.requiresDeposit,
           depositRial: updated.depositRial == null ? null : Number(updated.depositRial),
+          staffIds: updated.serviceStaff.map((mapping) => mapping.staffMemberId),
         },
       });
+    }),
+  );
+
+  // Replace the staff qualified to perform one service. A service may be
+  // assigned to one or many Owner/Stylist members; Admins are never bookable.
+  router.put(
+    '/salons/:id/services/:serviceId/staff',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      if (!Array.isArray(body.staffIds) || body.staffIds.some((id) => typeof id !== 'string')) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'staffIds' });
+        return;
+      }
+      const staffIds = [...new Set(body.staffIds as string[])];
+      const salonServices = await services.serviceCatalog.listServices(req.params.id);
+      if (!salonServices.some((service) => service.id === req.params.serviceId)) {
+        res.status(404).json({ code: 'NOT_FOUND' });
+        return;
+      }
+      const staff = await services.resourceRegistration.listStaff(req.params.id);
+      const allowed = new Set(
+        staff.filter((member) => member.active && member.role !== 'Admin').map((member) => member.id),
+      );
+      if (staffIds.some((id) => !allowed.has(id))) {
+        res.status(400).json({ code: 'INVALID_STAFF_ASSIGNMENT', field: 'staffIds' });
+        return;
+      }
+      await services.serviceCatalog.setServiceStaff(req.params.serviceId, staffIds);
+      res.status(200).json({ staffIds });
     }),
   );
 
@@ -923,6 +1026,8 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
       }
       const dates = parsed.toDate ? datesInRange(parsed.onDate, parsed.toDate) : [parsed.onDate];
       const created = [];
+      let cancelledCount = 0;
+      let failedCount = 0;
       for (const d of dates) {
         created.push(
           await services.availabilityConfig.addHoliday(
@@ -932,11 +1037,16 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
             parsed.endTime,
           ),
         );
+        if (!parsed.startTime) {
+          const result = await cancelAppointmentsForFullDayClosure(req.params.id, d);
+          cancelledCount += result.cancelledCount;
+          failedCount += result.failedCount;
+        }
       }
       const holidays = created.map((h) => toClosureDto(h));
       // Singular `holiday` (first row) kept for backward compatibility; `holidays`
       // carries every row created for a multi-day range.
-      res.status(201).json({ holiday: holidays[0], holidays });
+      res.status(201).json({ holiday: holidays[0], holidays, cancelledCount, failedCount });
     }),
   );
 
@@ -975,25 +1085,12 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         return;
       }
 
-      const from = new Date(`${onDate}T00:00:00.000Z`);
-      const to = new Date(from);
-      to.setUTCDate(to.getUTCDate() + 1);
-      const appointments = await services.calendarService.getSalonCalendar(req.params.id, from, to);
-      const cancellable = appointments.filter((item) =>
-        ['pending', 'held', 'confirmed'].includes(item.status),
-      );
-      const results = await Promise.allSettled(
-        cancellable.map((item) =>
-          String(item.status) === 'pending'
-            ? services.bookingFlow.reject(item.id)
-            : services.cancellationFlow.cancel(item.id),
-        ),
-      );
-      const cancelledCount = results.filter((item) => item.status === 'fulfilled').length;
+      const { cancelledCount, failedCount } =
+        await cancelAppointmentsForFullDayClosure(req.params.id, onDate);
       res.status(200).json({
         ok: true,
         cancelledCount,
-        failedCount: results.length - cancelledCount,
+        failedCount,
       });
     }),
   );

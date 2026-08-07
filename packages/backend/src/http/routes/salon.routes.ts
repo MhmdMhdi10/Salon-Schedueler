@@ -129,6 +129,7 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
           // one, instead of a blanket payment claim (ui-ux §12 honesty).
           requiresDeposit: s.requiresDeposit,
           depositRial: s.depositRial != null ? Number(s.depositRial) : null,
+          staffIds: s.serviceStaff.map((mapping) => mapping.staffMemberId),
         })),
       });
     }),

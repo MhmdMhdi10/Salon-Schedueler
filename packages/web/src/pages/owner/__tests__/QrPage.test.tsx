@@ -152,6 +152,14 @@ describe('OwnerQrPage — QR image (R4.1)', () => {
     // The QR is generated client-side into an SVG data URI.
     expect(img.getAttribute('src')).toMatch(/^data:image\/svg\+xml/);
   });
+
+  it('uses the Ara app icon beside the brand name on printable assets', async () => {
+    renderPage();
+    const brandIcons = await screen.findAllByTestId('ara-brand-icon');
+
+    expect(brandIcons.length).toBeGreaterThanOrEqual(2);
+    expect(brandIcons[0]).toHaveAttribute('src', '/icons/icon-192.png');
+  });
 });
 
 describe('OwnerQrPage — campaign URL (R4.3)', () => {

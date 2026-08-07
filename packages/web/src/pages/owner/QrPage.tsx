@@ -120,7 +120,13 @@ function QrAsset({
   );
   const brand = (
     <span className="asset__brand">
-      <Sparkles className="asset__brand-ic" aria-hidden="true" />
+      <img
+        className="asset__brand-ic"
+        src="/icons/icon-192.png"
+        alt=""
+        aria-hidden="true"
+        data-testid="ara-brand-icon"
+      />
       {t('owner.qr.brand')}
     </span>
   );
@@ -143,6 +149,7 @@ function QrAsset({
         </span>
         <h3 className="asset__hero">{t('owner.qr.bannerHero')}</h3>
         {qr}
+        {showBrand && brand}
         <span className="asset__cta">{cta}</span>
         <ol className="asset__steps">
           <li>
@@ -158,7 +165,6 @@ function QrAsset({
             {t('owner.qr.step3')}
           </li>
         </ol>
-        {showBrand && brand}
       </article>
     );
   }

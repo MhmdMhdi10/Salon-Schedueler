@@ -95,10 +95,10 @@ export function OwnerTransactionsPage() {
 
       <header className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <div className="min-w-0 flex flex-col gap-1">
-          <h1 className="text-xl text-display text-text">
+          <h1 className="text-display text-2xl text-text sm:text-3xl">
             {t('owner.transactions.title', { defaultValue: 'تراکنش‌ها' })}
           </h1>
-          <p className="text-sm text-muted">
+          <p className="text-sm leading-7 text-muted">
             {t('owner.transactions.subtitle', {
               defaultValue: 'تاریخچهٔ پرداخت‌های نوبت و اشتراک',
             })}
@@ -143,16 +143,16 @@ export function OwnerTransactionsPage() {
               {pageItems.map((tx) => (
               <li
                 key={`${tx.kind}-${tx.id}`}
-                className="flex items-start justify-between gap-3 border-b border-border/50 px-3 py-3 last:border-b-0 sm:items-center sm:px-4"
+                className="flex items-start justify-between gap-3 border-b border-border/50 px-4 py-4 last:border-b-0 sm:items-center sm:px-5"
               >
                 <div className="flex min-w-0 flex-col gap-1">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <span className="break-words text-sm font-medium text-text">{txLabel(tx)}</span>
+                    <span className="break-words text-base font-semibold leading-7 text-text">{txLabel(tx)}</span>
                     <Badge status={statusBadge(tx.status)}>
                       {statusLabel[tx.status] ?? tx.status}
                     </Badge>
                   </div>
-                  <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
+                  <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm leading-6 text-muted">
                     <span>{kindLabel[tx.kind]}</span>
                     <span aria-hidden="true">•</span>
                     <JalaliDate value={tx.createdAt} />
@@ -166,7 +166,7 @@ export function OwnerTransactionsPage() {
                 </div>
                 <Money
                   amountRial={tx.amountRial}
-                  className="shrink-0 text-sm font-bold text-text"
+                  className="shrink-0 text-base font-bold tabular-nums text-text"
                 />
               </li>
               ))}

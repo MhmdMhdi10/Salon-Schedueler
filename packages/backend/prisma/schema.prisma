@@ -105,6 +105,7 @@ model Salon {
   subscription    Subscription?
   qrScanEvents    QrScanEvent[]
   salonNotifications SalonNotification[]
+  smsSettings     SalonSmsSettings?
 
   @@map("salon")
 }
@@ -437,6 +438,26 @@ model NotificationLog {
   appointment Appointment? @relation(fields: [appointmentId], references: [id])
 
   @@map("notification_log")
+}
+
+// Per-salon SMS audience preferences. Stylist notifications are enabled by
+// default; owner notifications are opt-in so busy salon owners do not receive
+// duplicate traffic for every appointment.
+model SalonSmsSettings {
+  id                 String   @id @default(uuid()) @db.Uuid
+  salonId            String   @unique @map("salon_id") @db.Uuid
+  ownerBooking       Boolean  @default(false) @map("owner_booking")
+  stylistBooking     Boolean  @default(true) @map("stylist_booking")
+  ownerReminder      Boolean  @default(false) @map("owner_reminder")
+  stylistReminder    Boolean  @default(true) @map("stylist_reminder")
+  ownerCancellation  Boolean  @default(false) @map("owner_cancellation")
+  stylistCancellation Boolean @default(true) @map("stylist_cancellation")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  salon Salon @relation(fields: [salonId], references: [id])
+
+  @@map("salon_sms_settings")
 }
 
 // ─── Bot Chat ──────────────────────────────────────────────────────────────────

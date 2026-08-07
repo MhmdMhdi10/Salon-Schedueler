@@ -15,6 +15,7 @@ import {
   type PaymentGateway,
 } from './payment/index.js';
 import { NotificationService } from './notifications/index.js';
+import { NotificationSettingsService } from './notifications/notification-settings.service.js';
 import {
   KavenegarSmsAdapter,
   SmsIrAdapter,
@@ -236,6 +237,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     new PrismaNotificationRepository(prisma),
     { defaultReminderLeadTimeMinutes: config.reminderLeadTimeMinutes },
   );
+  const notificationSettings = new NotificationSettingsService(prisma);
   // Bot-based notification channel: routes OTP/reminders/owner notices through a
   // messaging bot when a `BotChat` exists, falling back to SMS otherwise
   // (Requirements 1.8, 8.1). Disabled adapters (no token) are treated as absent.
@@ -340,6 +342,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     authService,
     paymentService,
     notificationService,
+    notificationSettings,
     botChannel,
     botService,
     waitlistService,

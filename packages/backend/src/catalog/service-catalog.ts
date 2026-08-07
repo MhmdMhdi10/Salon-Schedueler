@@ -3,6 +3,10 @@ import { ServiceInputSchema, type ServiceInput } from '@salon/shared';
 import { ValidationError } from './validation-error';
 import type { FieldError } from './validation-error';
 
+export type ServiceWithStaff = Service & {
+  serviceStaff: Array<{ serviceId: string; staffMemberId: string }>;
+};
+
 /**
  * ServiceCatalog manages the creation and querying of services for a salon.
  *
@@ -61,9 +65,10 @@ export class ServiceCatalog {
    * `GET /salons/:id/services` route (Requirement 2.2). Returns the persisted
    * Service rows; the HTTP layer maps them to the client-facing shape.
    */
-  async listServices(salonId: string): Promise<Service[]> {
+  async listServices(salonId: string): Promise<ServiceWithStaff[]> {
     return this.prisma.service.findMany({
       where: { salonId },
+      include: { serviceStaff: { select: { serviceId: true, staffMemberId: true } } },
       orderBy: { name: 'asc' },
     });
   }
@@ -78,9 +83,10 @@ export class ServiceCatalog {
       requiresDeposit?: boolean;
       depositRial?: number | null;
     },
-  ): Promise<Service> {
+  ): Promise<ServiceWithStaff> {
     return this.prisma.service.update({
       where: { id: serviceId },
+      include: { serviceStaff: { select: { serviceId: true, staffMemberId: true } } },
       data: {
         ...(patch.name !== undefined ? { name: patch.name } : {}),
         ...(patch.durationMinutes !== undefined

@@ -91,6 +91,12 @@ export function AppShell({ children, className, headerVariant }: AppShellProps) 
         <DefaultHeader />
       ) : null}
 
+      {isBare && (
+        <div className="fixed end-3 top-3 z-nav">
+          <ThemeToggle />
+        </div>
+      )}
+
       <main id={MAIN_CONTENT_ID} tabIndex={-1} className="min-w-0 w-full max-w-none flex-1 p-0">
         {children}
       </main>

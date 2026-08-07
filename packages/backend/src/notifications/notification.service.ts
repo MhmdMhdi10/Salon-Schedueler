@@ -1,5 +1,6 @@
 import type { SmsProvider, SmsDeliveryResult } from '../auth/sms-provider.interface';
 import type { PushProvider, PushPayload, PushDeliveryResult } from './push-provider.interface';
+import type { SmsNotificationEvent } from './notification-settings.service.js';
 
 /**
  * Represents a stored appointment with the fields needed for notifications.
@@ -14,6 +15,7 @@ export interface AppointmentInfo {
   serviceName: string;
   startAt: Date;
   staffName?: string;
+  staffMemberId?: string;
 }
 
 /**
@@ -60,6 +62,12 @@ export interface NotificationRepository {
 
   /** Active salon-owner phone numbers that should receive booking alerts. */
   findSalonSmsRecipients(salonId: string): Promise<string[]>;
+
+  /** Configured owner/stylist recipients for one appointment and event. */
+  findSmsRecipientsForAppointment?: (
+    appointmentId: string,
+    event: SmsNotificationEvent,
+  ) => Promise<string[]>;
 
   /** Find device tokens for a customer */
   findDeviceTokens(customerId: string): Promise<DeviceTokenInfo[]>;
@@ -158,9 +166,7 @@ export class NotificationService {
     const appointment = await this.repository.findAppointment(appointmentId);
     if (!appointment) return;
 
-    const recipients = [...new Set(
-      await this.repository.findSalonSmsRecipients(appointment.salonId),
-    )];
+    const recipients = [...new Set(await this.findStaffRecipients(appointment, 'booking'))];
     const message = this.buildSalonBookingMessage(appointment, status);
     for (const phone of recipients) {
       const result = await this.smsProvider.send(phone, message);
@@ -195,6 +201,8 @@ export class NotificationService {
       status: result.ok ? 'sent' : 'failed',
       error: result.ok ? null : result.error,
     });
+
+    await this.sendStaffNotice(appointment, 'cancellation', this.buildStaffCancellationMessage(appointment));
   }
 
   /**
@@ -220,6 +228,8 @@ export class NotificationService {
       status: result.ok ? 'sent' : 'failed',
       error: result.ok ? null : result.error,
     });
+
+    await this.sendStaffNotice(appointment, 'cancellation', this.buildStaffCancellationMessage(appointment));
   }
 
   /**
@@ -282,6 +292,8 @@ export class NotificationService {
           });
         }
       }
+
+      await this.sendStaffNotice(appointment, 'reminder', this.buildStaffReminderMessage(appointment));
     } finally {
       this.remindersInFlight.delete(appointmentId);
     }
@@ -372,5 +384,52 @@ export class NotificationService {
     const staff = appointment.staffName ? ` با ${appointment.staffName}` : '';
     const state = status === 'pending' ? 'منتظر تأیید شما در پنل است.' : 'به‌صورت خودکار تأیید شد.';
     return `رزرو جدید ${appointment.salonName}: ${customer}، ${appointment.serviceName}${staff}، تاریخ ${dateStr} ساعت ${timeStr}. ${state}`;
+  }
+
+  private async findStaffRecipients(
+    appointment: AppointmentInfo,
+    event: SmsNotificationEvent,
+  ): Promise<string[]> {
+    if (this.repository.findSmsRecipientsForAppointment) {
+      return this.repository.findSmsRecipientsForAppointment(appointment.id, event);
+    }
+    // Compatibility fallback for older adapters and unit-test fakes. Only the
+    // legacy booking path had an owner-recipient contract; do not accidentally
+    // turn reminders/cancellations on for an adapter that has no settings API.
+    return event === 'booking'
+      ? this.repository.findSalonSmsRecipients(appointment.salonId)
+      : [];
+  }
+
+  private async sendStaffNotice(
+    appointment: AppointmentInfo,
+    event: SmsNotificationEvent,
+    message: string,
+  ): Promise<void> {
+    const recipients = [...new Set(await this.findStaffRecipients(appointment, event))];
+    for (const phone of recipients) {
+      const result = await this.smsProvider.send(phone, message);
+      await this.repository.logNotification({
+        appointmentId: appointment.id,
+        channel: 'sms',
+        type: event === 'booking' ? 'booking_notice' : event,
+        status: result.ok ? 'sent' : 'failed',
+        error: result.ok ? null : result.error,
+      });
+    }
+  }
+
+  private buildStaffCancellationMessage(appointment: AppointmentInfo): string {
+    const customer = appointment.customerName?.trim() || appointment.customerPhone;
+    return `لغو نوبت ${appointment.salonName}: ${customer}، ${appointment.serviceName}. زمان رزرو آزاد شد.`;
+  }
+
+  private buildStaffReminderMessage(appointment: AppointmentInfo): string {
+    const customer = appointment.customerName?.trim() || appointment.customerPhone;
+    const timeStr = appointment.startAt.toLocaleTimeString('fa-IR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    return `یادآوری ${appointment.salonName}: نوبت ${customer} برای ${appointment.serviceName} ساعت ${timeStr} نزدیک است.`;
   }
 }

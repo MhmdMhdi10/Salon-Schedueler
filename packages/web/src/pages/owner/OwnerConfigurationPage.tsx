@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   Armchair,
+  BellRing,
   ChevronDown,
   Clock,
   Plus,
@@ -19,6 +20,7 @@ import {
   staffAvailabilityApi,
   ApiError,
   type SalonStaff,
+  type SmsSettings,
   type StaffRole,
   type StaffUpdateInput,
 } from '../../api/client';
@@ -72,7 +74,17 @@ interface ServiceItem {
   priceRial: number;
   requiresDeposit?: boolean;
   depositRial?: number | null;
+  staffIds?: string[];
 }
+
+const DEFAULT_SMS_SETTINGS: SmsSettings = {
+  ownerBooking: false,
+  stylistBooking: true,
+  ownerReminder: false,
+  stylistReminder: true,
+  ownerCancellation: false,
+  stylistCancellation: true,
+};
 
 interface Entry {
   id: string;
@@ -435,7 +447,7 @@ function StaffSection({
                           onCheckedChange={(v) => patchStaff(member.id, { active: v })}
                           label={t('admin.config.staff.activeLabel')}
                         />
-                        {member.role === 'Stylist' && (
+                        {member.role !== 'Admin' && (
                           <Switch
                             checked={member.manageOwnAvailability}
                             onCheckedChange={(v) => void patchOwnAvailability(member.id, v)}
@@ -528,11 +540,15 @@ function StaffSection({
 
 function ServicesSection({
   services,
+  staff,
+  onStaffChange,
   onAdd,
   onRemove,
   requestDelete,
 }: {
   services: ServiceItem[];
+  staff: SalonStaff[];
+  onStaffChange: (serviceId: string, staffIds: string[]) => Promise<void>;
   onAdd: (service: {
     name: string;
     durationMinutes: number;
@@ -557,6 +573,7 @@ function ServicesSection({
     pageSize: servicesPageSize,
     goToPage,
   } = usePagination(services, 6);
+  const eligibleStaff = staff.filter((member) => member.active && member.role !== 'Admin');
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -578,6 +595,17 @@ function ServicesSection({
 
   return (
     <CollapsibleSection id="services" icon={Scissors} title={t('admin.services')}>
+      <div className="flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/10 p-3">
+        <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-contrast">
+          <Users className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <p className="m-0 text-sm font-bold text-text">هر خدمت را به آرایشگرهایش وصل کن</p>
+          <p className="mt-1 text-xs leading-6 text-muted">
+            برای هر خدمت یک یا چند آرایشگر انتخاب کن تا هنگام رزرو فقط افراد مرتبط نمایش داده شوند.
+          </p>
+        </div>
+      </div>
       {services.length === 0 ? (
         <>
           <ul data-testid="services-list" className="sr-only" aria-hidden="true" />
@@ -620,6 +648,80 @@ function ServicesSection({
                     </span>
                   )}
                 </span>
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                  <span className="inline-flex items-center gap-1.5 text-xs text-muted">
+                    <Users className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+                    <span>
+                      {(
+                        service.staffIds?.filter((staffId) =>
+                          eligibleStaff.some((member) => member.id === staffId),
+                        ).length ?? 0
+                      ).toLocaleString('fa-IR')}{' '}
+                      آرایشگر متصل
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    aria-expanded={editingId === service.id}
+                    aria-controls={`service-staff-${service.id}`}
+                    onClick={() => setEditingId(editingId === service.id ? null : service.id)}
+                    className={cn(
+                      'inline-flex min-h-10 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold text-primary',
+                      'border-primary/40 bg-primary/10 transition-colors duration-fast hover:bg-primary/20',
+                      'focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus',
+                    )}
+                  >
+                    <Users className="h-4 w-4" aria-hidden="true" />
+                    {editingId === service.id ? 'بستن' : 'انتخاب آرایشگر'}
+                    <ChevronDown
+                      className={cn(
+                        'h-4 w-4 transition-transform duration-fast',
+                        editingId === service.id && 'rotate-180',
+                      )}
+                      aria-hidden="true"
+                    />
+                  </button>
+                </div>
+                {editingId === service.id && (
+                  <div
+                    id={`service-staff-${service.id}`}
+                    className="mt-2 flex flex-col gap-2 rounded-lg border border-border bg-bg p-2"
+                  >
+                    <p className="m-0 text-xs font-semibold text-text">
+                      چه کسی این خدمت را انجام می‌دهد؟
+                    </p>
+                    {eligibleStaff.length === 0 ? (
+                      <p className="m-0 text-xs text-muted">ابتدا حداقل یک آرایشگر یا صاحب سالن اضافه کن.</p>
+                    ) : (
+                      <div className="grid max-h-44 gap-1 overflow-y-auto sm:grid-cols-2">
+                        {eligibleStaff.map((member) => {
+                          const checked = service.staffIds?.includes(member.id) ?? false;
+                          return (
+                            <label
+                              key={member.id}
+                              className="flex min-h-10 cursor-pointer items-center gap-2 rounded-md px-2 text-xs text-text hover:bg-elevated"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => {
+                                  const current = service.staffIds ?? [];
+                                  const next = checked
+                                    ? current.filter((id) => id !== member.id)
+                                    : [...current, member.id];
+                                  void onStaffChange(service.id, next);
+                                }}
+                                className="h-4 w-4 accent-primary"
+                              />
+                              <span className="min-w-0 truncate">{member.fullName ?? member.id}</span>
+                              {member.role === 'Owner' && <span className="text-muted">(مالک)</span>}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <IconButton
                 variant="danger"
@@ -704,6 +806,75 @@ function ServicesSection({
           {t('admin.config.services.addCta')}
         </Button>
       </form>
+    </CollapsibleSection>
+  );
+}
+
+function SmsSettingsSection({
+  salonId,
+  settings,
+  onChange,
+}: {
+  salonId: string;
+  settings: SmsSettings;
+  onChange: React.Dispatch<React.SetStateAction<SmsSettings>>;
+}) {
+  const { success, error: toastError } = useToast();
+
+  const toggle = async (field: keyof SmsSettings, value: boolean) => {
+    const previous = settings;
+    onChange((current) => ({ ...current, [field]: value }));
+    try {
+      const saved = await adminApi.updateSmsSettings(salonId, { [field]: value });
+      onChange(saved);
+      success({ title: 'تنظیمات پیامک ذخیره شد' });
+    } catch {
+      onChange(previous);
+      toastError({ title: 'ذخیره تنظیمات پیامک انجام نشد' });
+    }
+  };
+
+  const groups = [
+    {
+      title: 'رزرو جدید',
+      owner: 'ownerBooking' as const,
+      stylist: 'stylistBooking' as const,
+    },
+    {
+      title: 'یادآوری نوبت',
+      owner: 'ownerReminder' as const,
+      stylist: 'stylistReminder' as const,
+    },
+    {
+      title: 'لغو نوبت',
+      owner: 'ownerCancellation' as const,
+      stylist: 'stylistCancellation' as const,
+    },
+  ];
+
+  return (
+    <CollapsibleSection id="sms-settings" icon={BellRing} title="تنظیمات پیامک">
+      <p className="m-0 text-sm leading-7 text-muted">
+        برای کم‌شدن پیام‌های اضافی، به‌صورت پیش‌فرض پیامک‌های کاری فقط برای آرایشگر نوبت می‌رود.
+        ارسال برای صاحب سالن را از هر بخش جداگانه فعال کن.
+      </p>
+      <div className="grid gap-3 md:grid-cols-3">
+        {groups.map((group) => (
+          <div key={group.title} className="flex flex-col gap-2 rounded-xl border border-border bg-bg p-3">
+            <h3 className="m-0 text-sm font-bold text-text">{group.title}</h3>
+            <Switch
+              checked={settings[group.stylist]}
+              onCheckedChange={(value) => void toggle(group.stylist, value)}
+              label="برای آرایشگر نوبت"
+            />
+            <Switch
+              checked={settings[group.owner]}
+              onCheckedChange={(value) => void toggle(group.owner, value)}
+              label="برای صاحب سالن"
+            />
+          </div>
+        ))}
+      </div>
     </CollapsibleSection>
   );
 }
@@ -837,7 +1008,7 @@ function ConfigSkeleton() {
 function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) {
   const { t } = useTranslation();
   const params = useParams<{ salonId?: string }>();
-  const { success } = useToast();
+  const { success, error: toastError } = useToast();
   const sessionSalonId = useSalonId();
   const salonId = salonIdProp ?? params.salonId ?? sessionSalonId;
 
@@ -846,6 +1017,7 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
   const [staff, setStaff] = useState<SalonStaff[]>([]);
   const [chairs, setChairs] = useState<Entry[]>([]);
   const [services, setServices] = useState<ServiceItem[]>([]);
+  const [smsSettings, setSmsSettings] = useState<SmsSettings>(DEFAULT_SMS_SETTINGS);
   const [pendingDelete, setPendingDelete] = useState<DeleteState | null>(null);
 
   const load = useCallback(() => {
@@ -853,16 +1025,22 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
     setError('');
 
     let active = true;
+    const smsSettingsRequest =
+      typeof adminApi.getSmsSettings === 'function'
+        ? adminApi.getSmsSettings(salonId).catch(() => DEFAULT_SMS_SETTINGS)
+        : Promise.resolve(DEFAULT_SMS_SETTINGS);
     Promise.all([
       adminApi.getStaff(salonId),
       adminApi.getChairs(salonId),
       salonApi.getServices(salonId),
+      smsSettingsRequest,
     ])
-      .then(([staffRes, chairsRes, servicesRes]) => {
+      .then(([staffRes, chairsRes, servicesRes, smsSettingsRes]) => {
         if (!active) return;
         setStaff(staffRes.staff);
         setChairs(chairsRes.chairs.map((c, i) => toEntry(c, `chair-${i + 1}`)));
         setServices(servicesRes.services);
+        setSmsSettings(smsSettingsRes);
         setStatus('success');
       })
       .catch((err: unknown) => {
@@ -928,13 +1106,38 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
             requestDelete={setPendingDelete}
           />
 
+          <SmsSettingsSection
+            salonId={salonId}
+            settings={smsSettings}
+            onChange={setSmsSettings}
+          />
+
           <ServicesSection
             services={services}
+            staff={staff}
+            onStaffChange={async (serviceId, staffIds) => {
+              const previous = services;
+              setServices((current) =>
+                current.map((service) =>
+                  service.id === serviceId ? { ...service, staffIds } : service,
+                ),
+              );
+              try {
+                await adminApi.setServiceStaff(salonId, serviceId, staffIds);
+                success({ title: 'آرایشگرهای خدمت ذخیره شد' });
+              } catch {
+                setServices(previous);
+                toastError({ title: 'ذخیره آرایشگرهای خدمت انجام نشد' });
+              }
+            }}
             onAdd={(service) => {
               adminApi
                 .createService(salonId, service)
                 .then((res) => {
-                  setServices((prev) => [...prev, res.service]);
+                  setServices((prev) => [
+                    ...prev,
+                    { ...res.service, staffIds: res.service.staffIds ?? staff.filter((member) => member.active && member.role !== 'Admin').map((member) => member.id) },
+                  ]);
                   window.dispatchEvent(new Event('salon-config-changed'));
                 })
                 .catch(() => {});

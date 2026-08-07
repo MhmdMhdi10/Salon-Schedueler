@@ -248,6 +248,8 @@ export function AuthPage() {
         <Button
           variant="ghost"
           size="md"
+          // In RTL the back affordance points RIGHT (steering §8) —
+          // ArrowRight is already correct, so no rtl flip.
           startIcon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
           onClick={handleBack}
           className="absolute start-0 top-1"

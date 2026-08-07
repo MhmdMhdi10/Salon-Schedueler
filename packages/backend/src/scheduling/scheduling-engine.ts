@@ -193,6 +193,7 @@ export class SchedulingEngine {
         id: { in: qualifiedStaffIds },
         salonId,
         active: true,
+        role: { in: ['Owner', 'Stylist'] },
       },
     });
 
@@ -538,6 +539,7 @@ export class SchedulingEngine {
         id: { in: qualifiedStaffIds },
         salonId,
         active: true,
+        role: { in: ['Owner', 'Stylist'] },
       },
     });
 

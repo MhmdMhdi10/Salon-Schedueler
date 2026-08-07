@@ -307,12 +307,21 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  border-radius: 999px;
+  color: #111827;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
   font-weight: 800;
   opacity: 0.96;
 }
 .asset__brand-ic {
-  inline-size: 1em;
-  block-size: 1em;
+  inline-size: 1.25em;
+  block-size: 1.25em;
+  border-radius: 0.32em;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.45);
 }
 .asset__custom-logo {
   display: block;
@@ -554,23 +563,46 @@
   inline-size: min(380px, 100%);
   aspect-ratio: 1 / 1.414;
   justify-content: center;
-  gap: 18px;
-  padding: 40px 34px;
+  gap: 10px;
+  padding: 26px 28px;
 }
 .asset--banner .asset__kicker {
-  font-size: 0.95rem;
+  font-size: 0.88rem;
 }
 .asset--banner .asset__hero {
-  font-size: 1.95rem;
+  font-size: 1.75rem;
 }
 .asset--banner .asset__qr-wrap {
-  inline-size: 56%;
+  inline-size: 45%;
+  padding: 8px;
 }
-.asset--banner .asset__cta {
-  font-size: 1rem;
+.asset--banner .asset__qr {
+  border-radius: 12px;
+  padding: 7px;
 }
 .asset--banner .asset__brand {
+  padding-block: 4px;
+  padding-inline: 9px;
+  font-size: 0.78rem;
+}
+.asset--banner .asset__cta {
+  padding-block: 7px;
+  padding-inline: 16px;
   font-size: 0.9rem;
+}
+.asset--banner .asset__steps {
+  gap: 4px;
+  max-inline-size: 28ch;
+}
+.asset--banner .asset__steps li {
+  gap: 8px;
+  padding-block: 5px;
+  padding-inline: 9px;
+  font-size: 0.78rem;
+}
+.asset--banner .asset__steps b {
+  inline-size: 22px;
+  block-size: 22px;
 }
 
 /* Standee layout */

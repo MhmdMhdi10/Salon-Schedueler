@@ -5,6 +5,10 @@ import type {
   AppointmentInfo,
   DeviceTokenInfo,
 } from '../notifications/notification.service.js';
+import {
+  DEFAULT_SMS_SETTINGS,
+  type SmsNotificationEvent,
+} from '../notifications/notification-settings.service.js';
 import type {
   BotChannelRepository,
   BotChatRef,
@@ -24,6 +28,10 @@ import type {
   CustomerProfile,
   StaffRef,
 } from '../customer/customer.service.js';
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
 
 /**
  * Prisma-backed implementations of the domain service ports.
@@ -57,6 +65,7 @@ export class PrismaNotificationRepository implements NotificationRepository {
       serviceName: appt.service.name,
       startAt: appt.startAt,
       staffName: appt.staffMember.fullName,
+      staffMemberId: appt.staffMemberId,
     };
   }
 
@@ -71,6 +80,54 @@ export class PrismaNotificationRepository implements NotificationRepository {
       select: { phone: true },
     });
     return owners.flatMap((owner) => (owner.phone ? [owner.phone] : []));
+  }
+
+  async findSmsRecipientsForAppointment(
+    appointmentId: string,
+    event: SmsNotificationEvent,
+  ): Promise<string[]> {
+    const appointment = await this.prisma.appointment.findUnique({
+      where: { id: appointmentId },
+      select: { salonId: true, staffMemberId: true },
+    });
+    if (!appointment) return [];
+
+    const settingsRow = await this.prisma.salonSmsSettings.findUnique({
+      where: { salonId: appointment.salonId },
+    });
+    const settings = settingsRow ?? { ...DEFAULT_SMS_SETTINGS };
+    const ownerEnabled = settings[`owner${capitalize(event)}` as keyof typeof settings] === true;
+    const stylistEnabled = settings[`stylist${capitalize(event)}` as keyof typeof settings] === true;
+    const recipients: string[] = [];
+
+    if (ownerEnabled) {
+      const owners = await this.prisma.staffMember.findMany({
+        where: {
+          salonId: appointment.salonId,
+          role: 'Owner',
+          active: true,
+          phone: { not: null },
+        },
+        select: { phone: true },
+      });
+      recipients.push(...owners.flatMap((owner) => (owner.phone ? [owner.phone] : [])));
+    }
+
+    if (stylistEnabled) {
+      const assigned = await this.prisma.staffMember.findFirst({
+        where: {
+          id: appointment.staffMemberId,
+          salonId: appointment.salonId,
+          role: { in: ['Owner', 'Stylist'] },
+          active: true,
+          phone: { not: null },
+        },
+        select: { phone: true },
+      });
+      if (assigned?.phone) recipients.push(assigned.phone);
+    }
+
+    return [...new Set(recipients)];
   }
 
   async findDeviceTokens(customerId: string): Promise<DeviceTokenInfo[]> {
@@ -106,6 +163,7 @@ export class PrismaNotificationRepository implements NotificationRepository {
       serviceName: appt.service.name,
       startAt: appt.startAt,
       staffName: appt.staffMember.fullName,
+      staffMemberId: appt.staffMemberId,
     }));
   }
 

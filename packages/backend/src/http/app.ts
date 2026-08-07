@@ -4,6 +4,7 @@ import type { CancellationService } from '../scheduling/cancellation.js';
 import type { AuthService, Authorizer } from '../auth/index.js';
 import type { PaymentService } from '../payment/payment.service.js';
 import type { NotificationService } from '../notifications/notification.service.js';
+import type { NotificationSettingsService } from '../notifications/notification-settings.service.js';
 import type { BotChannel } from '../notifications/bot-channel.js';
 import type { BotService } from '../bots/index.js';
 import type { WaitlistService } from '../waitlist/waitlist.service.js';
@@ -57,6 +58,8 @@ export interface Services {
   authService: AuthService;
   paymentService: PaymentService;
   notificationService: NotificationService;
+  /** Role-aware SMS audience preferences. Optional for legacy route fakes. */
+  notificationSettings?: NotificationSettingsService;
   /** Bot-based notification channel sitting behind notifications (Requirement 1.8). */
   botChannel: BotChannel;
   /** Inbound bot webhook dispatch / conversational entry point (Requirements 1.1, 1.6). */
