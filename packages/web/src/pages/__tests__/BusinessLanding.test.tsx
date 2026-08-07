@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { render, waitFor, cleanup, within } from '@testing-library/react';
+import { fireEvent, render, waitFor, cleanup, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import '../../i18n';
@@ -123,7 +123,16 @@ describe('BusinessLanding', () => {
     const { getByTestId } = renderLanding();
     const root = getByTestId('business-landing');
     expect(within(root).queryByRole('search')).not.toBeInTheDocument();
-    expect(root.querySelectorAll('details')).toHaveLength(6);
+    const faqButtons = root.querySelectorAll('button[aria-controls^="faq-answer-"]');
+    expect(faqButtons).toHaveLength(6);
+    expect(faqButtons[0]).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(faqButtons[0]);
+    expect(faqButtons[0]).toHaveAttribute('aria-expanded', 'true');
+    expect(root.querySelector('[id^="faq-answer-"]')).toHaveTextContent('پس از ثبت شماره');
+
+    fireEvent.click(faqButtons[0]);
+    expect(faqButtons[0]).toHaveAttribute('aria-expanded', 'false');
   });
 
   it('has no serious or critical accessibility violations', async () => {

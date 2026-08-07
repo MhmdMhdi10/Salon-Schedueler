@@ -117,6 +117,14 @@ export function AuthPage() {
   const panelPath = (panelRole: string | undefined) =>
     panelRole === 'PlatformAdmin' ? '/platform-admin' : panelRole ? '/owner' : '/account';
 
+  const handleBack = () => {
+    if (location.key !== 'default') {
+      navigate(-1);
+      return;
+    }
+    navigate('/', { replace: true });
+  };
+
   // Resend countdown: ticks once per second while the cooldown is active.
   useEffect(() => {
     if (secondsLeft <= 0) return;
@@ -236,9 +244,21 @@ export function AuthPage() {
     >
       <SeoHead title={t('seo.titles.auth')} />
 
-      <Link to="/" aria-label="آرا" className="inline-flex min-h-10 items-center no-underline">
-        <BrandLogo className="h-12" />
-      </Link>
+      <div className="relative flex w-full items-center justify-center">
+        <Button
+          variant="ghost"
+          size="md"
+          startIcon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
+          onClick={handleBack}
+          className="absolute start-0 top-1"
+          aria-label={t('common.back')}
+        >
+          {t('common.back')}
+        </Button>
+        <Link to="/" aria-label="آرا" className="inline-flex min-h-10 items-center no-underline">
+          <BrandLogo className="h-12" />
+        </Link>
+      </div>
 
       <div className="w-full overflow-hidden rounded-2xl border border-border bg-elevated p-4 shadow-1 sm:p-8">
         <AnimatePresence mode="wait" initial={false} custom={direction}>

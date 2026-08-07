@@ -6,6 +6,7 @@ import { ThemeToggle } from '../theme/ThemeToggle';
 import { HeaderAuthNav } from './HeaderAuthNav';
 import { toPersianDigits } from '../ui/Num';
 import { cn } from '../ui/cn';
+import { PwaInstallPrompt } from '../../pwa/PwaInstallPrompt';
 
 /** Stable id the skip link targets and the `<main>` exposes. */
 export const MAIN_CONTENT_ID = 'main-content';
@@ -94,6 +95,7 @@ export function AppShell({ children, className, headerVariant }: AppShellProps) 
         {children}
       </main>
 
+      {isBare ? null : <PwaInstallPrompt />}
       {isBare ? null : <PublicFooter />}
     </div>
   );

@@ -1,5 +1,7 @@
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowLeft,
   BadgeCheck,
@@ -121,6 +123,50 @@ const FAQS = [
       'پشتیبانی فارسی آرا برای راه‌اندازی پروفایل، خدمات و تقویم همراه شماست.',
   },
 ] as const;
+
+function FAQItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
+  const answerId = `faq-answer-${useId().replace(/:/g, '')}`;
+
+  return (
+    <div className="border-b border-border">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={answerId}
+        onClick={() => setOpen((current) => !current)}
+        className="flex min-h-16 w-full cursor-pointer items-center justify-between gap-4 py-4 text-start font-bold outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+      >
+        <span className="min-w-0">{question}</span>
+        <span
+          className={cn(
+            'shrink-0 text-xl font-normal leading-none text-primary transition-transform duration-fast motion-reduce:transition-none',
+            open && 'rotate-45',
+          )}
+          aria-hidden="true"
+        >
+          +
+        </span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open ? (
+          <motion.div
+            key="answer"
+            id={answerId}
+            initial={prefersReducedMotion ? false : { height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={prefersReducedMotion ? undefined : { height: 0, opacity: 0 }}
+            transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.28, ease: 'easeOut' }}
+            className="overflow-hidden"
+          >
+            <p className="max-w-3xl pb-6 text-sm leading-8 text-muted">{answer}</p>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 const primaryCtaClass = cn(
   'inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-primary px-6',
@@ -427,19 +473,8 @@ export function BusinessLanding() {
             </p>
           </div>
           <div className="border-t border-border">
-            {FAQS.map(({ question, answer }) => (
-              <details key={question} className="group border-b border-border">
-                <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 py-4 font-bold marker:content-none">
-                  {question}
-                  <span
-                    className="text-xl font-normal text-primary transition-transform duration-fast group-open:rotate-45"
-                    aria-hidden="true"
-                  >
-                    +
-                  </span>
-                </summary>
-                <p className="max-w-3xl pb-6 text-sm leading-8 text-muted">{answer}</p>
-              </details>
+            {FAQS.map((faq) => (
+              <FAQItem key={faq.question} {...faq} />
             ))}
           </div>
         </div>
