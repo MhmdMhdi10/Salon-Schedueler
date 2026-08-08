@@ -56,6 +56,7 @@ export interface CustomerProfile {
   id: string;
   phone: string;
   fullName: string | null;
+  noShowCount?: number;
 }
 
 /**

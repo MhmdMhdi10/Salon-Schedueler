@@ -565,6 +565,40 @@ export interface SmsSettings {
   stylistCancellation: boolean;
 }
 
+export interface CustomerAppointmentRecord {
+  id: string;
+  salonId: string;
+  serviceId: string;
+  staffMemberId: string;
+  chairId: string;
+  startAt: string;
+  endAt: string;
+  status: string;
+  source: string;
+  createdAt: string;
+  salonName?: string;
+  serviceName?: string;
+  staffName?: string;
+}
+
+export interface AppointmentCustomerOverview {
+  customer: {
+    id: string;
+    phone: string;
+    fullName: string | null;
+    noShowCount?: number;
+  };
+  appointments: CustomerAppointmentRecord[];
+  notes: Array<{
+    id: string;
+    customerId: string;
+    authorId: string | null;
+    body: string;
+    createdAt: string;
+  }>;
+  preferredStaff: { id: string; fullName: string; role: string } | null;
+}
+
 export const adminApi = {
   getCalendar: (
     salonId: string,
@@ -645,6 +679,24 @@ export const adminApi = {
     request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/no-show`, {
       method: 'POST',
     }),
+  rescheduleAppointment: (appointmentId: string, startAt: string, preferredStaffId?: string) =>
+    request<{
+      status: string;
+      appointment: unknown;
+      previousAppointmentId: string;
+      paymentRedirectUrl?: string;
+    }>('/appointments/' + appointmentId + '/reschedule-managed', {
+      method: 'POST',
+      body: { startAt, ...(preferredStaffId ? { preferredStaffId } : {}) },
+    }),
+  getAppointmentCustomer: (appointmentId: string) =>
+    request<AppointmentCustomerOverview>('/appointments/' + appointmentId + '/customer'),
+  sendCustomerMessage: (appointmentId: string, message: string) =>
+    request<{ status: 'sent' }>('/appointments/' + appointmentId + '/message', {
+      method: 'POST',
+      body: { message },
+    }),
+
   /** The salon's money transactions (appointment + subscription payments), newest-first. */
   getTransactions: (salonId: string) =>
     request<{ transactions: Transaction[] }>(`/salons/${salonId}/transactions`),

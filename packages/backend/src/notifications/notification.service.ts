@@ -181,6 +181,29 @@ export class NotificationService {
   }
 
   /**
+   * Send a staff-authored SMS to the customer attached to an appointment.
+   * Delivery is logged as a generic notification so the action remains
+   * auditable without exposing the customer's phone number to the client.
+   */
+  async sendCustomerMessage(
+    appointmentId: string,
+    message: string,
+  ): Promise<SmsDeliveryResult | null> {
+    const appointment = await this.repository.findAppointment(appointmentId);
+    if (!appointment) return null;
+
+    const result = await this.smsProvider.send(appointment.customerPhone, message);
+    await this.repository.logNotification({
+      appointmentId,
+      channel: 'sms',
+      type: 'generic',
+      status: result.ok ? 'sent' : 'failed',
+      error: result.ok ? null : result.error,
+    });
+    return result;
+  }
+
+  /**
    * Send a rejection notice after a salon admin declines a pending booking.
    * Sends via SMS only and logs success or failure. Best-effort, mirroring
    * {@link sendConfirmation}.

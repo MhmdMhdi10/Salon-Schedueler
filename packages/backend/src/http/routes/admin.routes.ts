@@ -31,6 +31,9 @@ const toCalendarDto = (a: any) => ({
   endAt: a.endAt,
   status: a.status,
   staffMemberId: a.staffMemberId,
+  serviceId: a.serviceId,
+  customerId: a.customer?.id ?? a.customerId ?? null,
+  customerPhone: a.customer?.phone ?? null,
   serviceName: a.service?.name ?? null,
   customerName: a.customer?.fullName ?? null,
   staffName: a.staffMember?.fullName ?? null,
@@ -288,6 +291,46 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
       .catch(next);
   };
 
+  /**
+   * Resolve the appointment before staff mutations so Owner/Admin and a
+   * Stylist can only act inside their authorized salon/staff scope.
+   */
+  const requireCanManageAppointment: RequestHandler = (req, res, next) => {
+    const principal = req.principal;
+    if (!principal) {
+      res.status(401).json({ code: 'UNAUTHORIZED' });
+      return;
+    }
+    if (!principal.role || principal.role === 'PlatformAdmin') {
+      res.status(403).json({ code: 'FORBIDDEN' });
+      return;
+    }
+    services.calendarService
+      .getAppointmentById(req.params.id)
+      .then((appt) => {
+        if (!appt) {
+          res.status(404).json({ code: 'NOT_FOUND' });
+          return;
+        }
+        const allowed = services.authorizer.can(
+          {
+            id: principal.id,
+            role: principal.role as StaffRole,
+            staffMemberId: principal.staffMemberId,
+            salonId: principal.salonId,
+          },
+          'manage_own_appointments',
+          { salonId: appt.salonId, staffMemberId: appt.staffMemberId },
+        );
+        if (!allowed) {
+          res.status(403).json({ code: 'FORBIDDEN' });
+          return;
+        }
+        next();
+      })
+      .catch(next);
+  };
+
   router.get(
     '/salons/:id/calendar',
     // A Stylist may view the calendar but only their own appointments (R2.5), so the
@@ -317,6 +360,101 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
       // Flatten the enriched rows (service/customer/staff relations) to the DTO the
       // calendar clients read, for both the Stylist and Owner/Admin branches.
       res.status(200).json({ appointments: appointments.map(toCalendarDto) });
+    }),
+  );
+
+  router.post(
+    '/appointments/:id/reschedule-managed',
+    requireCanManageAppointment,
+    asyncRoute(async (req, res) => {
+      if (!services.appointmentManagementService) {
+        res.status(503).json({ code: 'FEATURE_UNAVAILABLE' });
+        return;
+      }
+      if (!validateRequired(res, req.body, ['startAt'])) return;
+      const result = await services.appointmentManagementService.rescheduleForStaff({
+        appointmentId: req.params.id,
+        startAt: String(req.body.startAt),
+        preferredStaffId:
+          typeof req.body.preferredStaffId === 'string'
+            ? req.body.preferredStaffId
+            : undefined,
+      });
+      if (result.booking.status === 'held') {
+        const payment = await services.paymentService.initiateDeposit(
+          result.booking.appointment.id,
+        );
+        res.status(200).json({
+          status: result.booking.status,
+          appointment: result.booking.appointment,
+          previousAppointmentId: result.previousAppointment.id,
+          paymentRedirectUrl: payment.redirectUrl,
+        });
+        return;
+      }
+      if (result.booking.status === 'rejected') {
+        res.status(409).json({ code: 'BOOKING_SLOT_UNAVAILABLE' });
+        return;
+      }
+      res.status(200).json({
+        status: result.booking.status,
+        appointment: result.booking.appointment,
+        previousAppointmentId: result.previousAppointment.id,
+      });
+    }),
+  );
+
+  router.get(
+    '/appointments/:id/customer',
+    requireCanManageAppointment,
+    asyncRoute(async (req, res) => {
+      const appointment = await services.calendarService.getAppointmentById(req.params.id);
+      if (!appointment) {
+        res.status(404).json({ code: 'NOT_FOUND' });
+        return;
+      }
+      const [customer, appointments, notes, preferredStaff] = await Promise.all([
+        services.customerService.getProfile(appointment.customerId),
+        services.customerService.getHistory(appointment.customerId),
+        services.customerService.getNotes(appointment.customerId),
+        services.customerService.getPreferredStaff(appointment.customerId),
+      ]);
+      if (!customer) {
+        res.status(404).json({ code: 'NOT_FOUND' });
+        return;
+      }
+      res.status(200).json({ customer, appointments, notes, preferredStaff });
+    }),
+  );
+
+  router.post(
+    '/appointments/:id/message',
+    requireCanManageAppointment,
+    asyncRoute(async (req, res) => {
+      const message = typeof req.body?.message === 'string' ? req.body.message.trim() : '';
+      if (!message || message.length > 500) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'message' });
+        return;
+      }
+      const sender = (services.notificationService as any).sendCustomerMessage;
+      if (typeof sender !== 'function') {
+        res.status(503).json({ code: 'FEATURE_UNAVAILABLE' });
+        return;
+      }
+      const result = await sender.call(
+        services.notificationService,
+        req.params.id,
+        message,
+      );
+      if (!result) {
+        res.status(404).json({ code: 'NOT_FOUND' });
+        return;
+      }
+      if (!result.ok) {
+        res.status(502).json({ code: 'SMS_FAILED' });
+        return;
+      }
+      res.status(200).json({ status: 'sent' });
     }),
   );
 

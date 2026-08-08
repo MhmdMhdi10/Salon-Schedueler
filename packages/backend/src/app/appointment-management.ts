@@ -24,6 +24,12 @@ export interface RescheduleInput {
   startAt: string;
   preferredStaffId?: string;
 }
+export interface ManagedRescheduleInput {
+  appointmentId: string;
+  startAt: string;
+  preferredStaffId?: string;
+}
+
 
 export interface RescheduleResult {
   previousAppointment: Appointment;
@@ -98,6 +104,32 @@ export class AppointmentManagementService {
 
     // Book the replacement first; only then release the old slot. If allocation
     // fails, the original appointment is untouched and the customer can retry.
+    const previousAppointment = await this.cancellationService.cancel(existing.id);
+    return { previousAppointment, booking: result };
+  }
+  async rescheduleForStaff(input: ManagedRescheduleInput): Promise<RescheduleResult> {
+    const existing = await this.prisma.appointment.findUnique({
+      where: { id: input.appointmentId },
+    });
+    if (!existing) {
+      throw new Error('Appointment not found');
+    }
+    if (!['pending', 'held', 'confirmed'].includes(existing.status)) {
+      throw new BookingConflictError('Only active appointments can be rescheduled');
+    }
+
+    const result = await this.bookingFlow.book({
+      salonId: existing.salonId,
+      serviceId: existing.serviceId,
+      startAt: input.startAt,
+      customerId: existing.customerId,
+      preferredStaffId: input.preferredStaffId,
+      source: existing.source as BookingRequest['source'],
+    });
+    if (result.status === 'rejected') {
+      throw new BookingConflictError();
+    }
+
     const previousAppointment = await this.cancellationService.cancel(existing.id);
     return { previousAppointment, booking: result };
   }

@@ -453,7 +453,7 @@ export class PrismaCustomerRepository implements CustomerRepository {
   async getProfile(customerId: string): Promise<CustomerProfile | null> {
     const customer = await this.prisma.customer.findUnique({
       where: { id: customerId },
-      select: { id: true, phone: true, fullName: true },
+      select: { id: true, phone: true, fullName: true, noShowCount: true },
     });
     return customer ?? null;
   }
@@ -462,7 +462,7 @@ export class PrismaCustomerRepository implements CustomerRepository {
     const customer = await this.prisma.customer.update({
       where: { id: customerId },
       data: { fullName },
-      select: { id: true, phone: true, fullName: true },
+      select: { id: true, phone: true, fullName: true, noShowCount: true },
     });
     return customer;
   }

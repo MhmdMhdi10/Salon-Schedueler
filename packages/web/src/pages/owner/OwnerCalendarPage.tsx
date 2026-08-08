@@ -16,6 +16,7 @@ import {
   User,
   Scissors,
   X,
+  GripVertical,
   XCircle,
   TriangleAlert,
 } from 'lucide-react';
@@ -32,6 +33,7 @@ import {
   type SalonStaff,
   type WeeklyWorkingHour,
 } from '../../api/client';
+import { AppointmentDetailsSheet, MoveAppointmentDialog, type CalendarAppointmentLike } from './OwnerAppointmentPanels';
 import { useAuth } from '../../auth/AuthContext';
 import { useSalonId } from '../../auth/useSalonId';
 import { usePagination } from '../../hooks/usePagination';
@@ -73,6 +75,9 @@ interface Appointment {
   customerName?: string;
   staffName?: string;
   status?: string;
+  customerPhone?: string;
+  customerId?: string;
+  staffMemberId?: string;
 }
 
 interface StaffCalendarBlock extends SalonClosure {
@@ -253,9 +258,23 @@ function toAppointment(appt: unknown, fallbackId: string): Appointment {
       customerName: str(rec.customerName),
       staffName: str(rec.staffName),
       status: str(rec.status),
+      customerPhone: str(rec.customerPhone),
+      customerId: str(rec.customerId),
+      staffMemberId: str(rec.staffMemberId),
     };
   }
   return { id: fallbackId };
+}
+
+function uniqueCustomerCount(appointments: Appointment[]): number {
+  const keys = appointments.map(
+    (item) => item.customerId || item.customerPhone || item.customerName || item.id,
+  );
+  return new Set(keys).size;
+}
+
+function asCalendarAppointment(appt: Appointment): CalendarAppointmentLike {
+  return appt;
 }
 
 /** Compute fetch range based on view. */
@@ -332,6 +351,9 @@ const dateSlideTransition = {
 // ─── Appointment Block Component ─────────────────────────────────────────────
 
 interface AppointmentBlockProps {
+  onOpen?: (appointment: Appointment) => void;
+  onDragStart?: (event: React.DragEvent<HTMLDivElement>) => void;
+  onDragEnd?: () => void;
   appt: Appointment;
   onCancel?: (appointment: Appointment) => void;
   onNoShow?: (appointment: Appointment) => void;
@@ -385,6 +407,9 @@ function statusIndicator(status: string | undefined): {
 
 function AppointmentBlock({
   appt,
+  onOpen,
+  onDragStart,
+  onDragEnd,
   onCancel,
   onNoShow,
   compactView = false,
@@ -434,14 +459,23 @@ function AppointmentBlock({
         'hover:-translate-y-px hover:border-primary/40 hover:shadow-2',
         colorClass,
         positioned ? 'absolute z-20' : '',
+        onOpen && 'cursor-pointer',
+        onDragStart && 'cursor-grab active:cursor-grabbing',
       )}
       style={positionStyle}
+      onClick={() => onOpen?.(appt)}
+      draggable={Boolean(onDragStart)}
+      onDragStart={(event) => onDragStart?.(event)}
+      onDragEnd={() => onDragEnd?.()}
       role="article"
       aria-label={`${service} — ${customer ?? ''} — ${statusLabel}`}
       data-status={ariaState}
     >
       <span className="flex min-w-0 items-center gap-1.5">
         <Scissors className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+        {onDragStart && (
+          <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted/60" aria-hidden="true" />
+        )}
         <strong className="min-w-0 flex-1 truncate text-xs leading-tight">{service}</strong>
         {start && (
           <span className="shrink-0 rounded-full bg-bg px-1.5 py-0.5 text-[0.62rem] tabular-nums text-muted">
@@ -535,6 +569,8 @@ function DayView({
   onViewAppointments,
   onCancel,
   onNoShow,
+  onOpenAppointment,
+  onMove,
 }: {
   appointments: Appointment[];
   anchor: Date;
@@ -544,11 +580,15 @@ function DayView({
   onViewAppointments: (date: Date) => void;
   onCancel: (appointment: Appointment) => void;
   onNoShow?: (appointment: Appointment) => void;
+  onOpenAppointment: (appointment: Appointment) => void;
+  onMove: (appointment: Appointment, date: Date, time: string) => void;
 }) {
   const { t } = useTranslation();
   const gridRef = useRef<HTMLDivElement>(null);
   const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [focusedRow, setFocusedRow] = useState<number | null>(null);
+  const [draggedAppointmentId, setDraggedAppointmentId] = useState<string | null>(null);
+  const [dropTargetTime, setDropTargetTime] = useState<string | null>(null);
   const anchorKey = dateKey(anchor);
 
   const dayAppts = useMemo(
@@ -595,8 +635,48 @@ function DayView({
     [focusedRow],
   );
 
+  const handleDragStart = useCallback(
+    (appointment: Appointment, event: React.DragEvent<HTMLDivElement>) => {
+      event.stopPropagation();
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', appointment.id);
+      setDraggedAppointmentId(appointment.id);
+    },
+    [],
+  );
+
+  const finishDrag = useCallback(() => {
+    setDraggedAppointmentId(null);
+    setDropTargetTime(null);
+  }, []);
+
+  const handleDrop = useCallback(
+    (time: string, event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const id = event.dataTransfer.getData('text/plain') || draggedAppointmentId;
+      const appointment = dayAppts.find((item) => item.id === id);
+      if (appointment) onMove(appointment, anchor, time);
+      finishDrag();
+    },
+    [anchor, dayAppts, draggedAppointmentId, finishDrag, onMove],
+  );
+
   return (
     <>
+      <div className="mb-3 flex flex-col gap-2 rounded-xl border border-primary/25 bg-primary/5 p-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <span className="block text-xs font-bold text-primary">خلاصه امروز</span>
+          <div className="mt-1 flex items-baseline gap-2">
+            <strong className="text-2xl font-black tabular-nums text-text">
+              <Num value={uniqueCustomerCount(dayAppts)} />
+            </strong>
+            <span className="text-sm font-bold text-text">مشتری</span>
+            <span className="text-xs text-muted">· <Num value={dayAppts.length} /> نوبت</span>
+          </div>
+        </div>
+        <span className="text-xs text-muted">برای جابه‌جایی، نوبت را بکش و روی ساعت جدید رها کن.</span>
+      </div>
       {dayAppts.length > 12 && (
         <div className="mb-2 flex flex-col gap-2 rounded-lg border border-primary/25 bg-primary/5 p-2.5 sm:flex-row sm:items-center sm:justify-between">
           <p className="m-0 text-xs text-muted">
@@ -649,6 +729,16 @@ function DayView({
               tabIndex={isFocused || (focusedRow === null && idx === 0) ? 0 : -1}
               aria-label={timeStr}
               onFocus={() => setFocusedRow(idx)}
+              onDragOver={(event) => {
+                if (!draggedAppointmentId) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'move';
+                setDropTargetTime(timeStr);
+              }}
+              onDragLeave={() => {
+                if (dropTargetTime === timeStr) setDropTargetTime(null);
+              }}
+              onDrop={(event) => handleDrop(timeStr, event)}
               onClick={() => onSelectSlot(anchor, timeStr)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
@@ -660,6 +750,7 @@ function DayView({
                 'relative flex items-start border-b border-border/50',
                 'transition-colors duration-fast ease-standard hover:bg-elevated/40',
                 'cursor-pointer',
+                dropTargetTime === timeStr && 'bg-primary/15 ring-2 ring-inset ring-primary/40',
                 blocked && 'bg-danger/10 hover:bg-danger/15',
                 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-focus',
               )}
@@ -716,6 +807,9 @@ function DayView({
                   laneCount={laneCount}
                   onCancel={onCancel}
                   onNoShow={onNoShow}
+                  onOpen={onOpenAppointment}
+                  onDragStart={(event) => handleDragStart(appt, event)}
+                  onDragEnd={finishDrag}
                 />
               </div>
             );
@@ -732,6 +826,7 @@ function DayView({
 function WeekView({
   appointments,
   anchor,
+  onOpenAppointment,
   closures,
   staffBlocks,
   onSelectDate,
@@ -744,6 +839,7 @@ function WeekView({
   closures: SalonClosure[];
   staffBlocks: StaffCalendarBlock[];
   onSelectDate: (date: Date) => void;
+  onOpenAppointment: (appointment: Appointment) => void;
   onViewAppointments: (date: Date) => void;
   onCancel: (appointment: Appointment) => void;
   onNoShow?: (appointment: Appointment) => void;
@@ -854,6 +950,9 @@ function WeekView({
               >
                 <Num value={day.jalali.jd} />
               </span>
+              <span className="ms-auto rounded-full bg-primary/10 px-2 py-1 text-[0.68rem] font-bold text-primary sm:ms-0">
+                <Num value={uniqueCustomerCount(day.items)} /> مشتری
+              </span>
               <span className="ms-auto text-[0.68rem] text-muted sm:hidden">
                 {day.items.length > 0
                   ? `${toPersianDigits(String(day.items.length))} نوبت`
@@ -887,6 +986,7 @@ function WeekView({
                     compactView
                     onCancel={onCancel}
                     onNoShow={onNoShow}
+                    onOpen={onOpenAppointment}
                   />
                 </div>
               ))}
@@ -926,6 +1026,7 @@ function MonthView({
   closures,
   staffBlocks,
   onSelectDate,
+  onOpenAppointment,
   onViewAppointments,
   onCancel,
   onNoShow,
@@ -936,6 +1037,7 @@ function MonthView({
   staffBlocks: StaffCalendarBlock[];
   onSelectDate: (date: Date) => void;
   onViewAppointments: (date: Date) => void;
+  onOpenAppointment: (appointment: Appointment) => void;
   onCancel: (appointment: Appointment) => void;
   onNoShow?: (appointment: Appointment) => void;
 }) {
@@ -1014,7 +1116,7 @@ function MonthView({
                   key={iso}
                   role="gridcell"
                   aria-label={`${PERSIAN_WEEKDAYS[iranianDayIndex(cell)]} ${jalali.jd}${dayAppts.length > 3 ? `، ${dayAppts.length} نوبت` : ''}`}
-                  onClick={() => (dayAppts.length > 3 ? onViewAppointments(cell) : onSelectDate(cell))}
+                  onClick={() => onSelectDate(cell)}
                   className={cn(
                     'flex min-h-[5rem] flex-col gap-1 border-b border-e border-border/40 p-1.5',
                     'transition-colors duration-fast ease-standard hover:bg-elevated/30',
@@ -1022,7 +1124,10 @@ function MonthView({
                     dayClosures.some((item) => item.startTime === null) && 'bg-danger/10',
                   )}
                 >
-                  <div className="flex justify-end">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[0.58rem] font-bold text-primary">
+                      <Num value={uniqueCustomerCount(dayAppts)} /> نفر
+                    </span>
                     <span
                       className={cn(
                         'flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-xs font-semibold tabular-nums',
@@ -1050,6 +1155,7 @@ function MonthView({
                           appt={appt}
                           compactView
                           onCancel={onCancel}
+                          onOpen={onOpenAppointment}
                           onNoShow={onNoShow}
                         />
                       </div>
@@ -2851,11 +2957,78 @@ export function OwnerCalendarPage() {
   const [emergencyBusy, setEmergencyBusy] = useState(false);
   const [emergencyError, setEmergencyError] = useState('');
   const [appointmentListDate, setAppointmentListDate] = useState<Date | null>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [moveAppointment, setMoveAppointment] = useState<CalendarAppointmentLike | null>(null);
+  const [moveError, setMoveError] = useState('');
+
 
   // Track direction for animations
   const [viewDirection, setViewDirection] = useState(0);
   const [dateDirection, setDateDirection] = useState(0);
   const dateKey_ = `${view}-${dateKey(anchor)}`;
+  const openDay = useCallback(
+    (date: Date) => {
+      if (view !== 'day') {
+        const order: CalendarView[] = ['day', 'week', 'month', 'list'];
+        const oldIdx = order.indexOf(view);
+        setViewDirection(order.indexOf('day') > oldIdx ? 1 : -1);
+      }
+      setDateDirection(0);
+      setAppointmentListDate(null);
+      setAnchor(new Date(date));
+      setView('day');
+    },
+    [view],
+  );
+
+  const openAppointment = useCallback((appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+  }, []);
+
+  const openMoveDialog = useCallback((appointment: CalendarAppointmentLike) => {
+    setSelectedAppointment(null);
+    setMoveError('');
+    setMoveAppointment(appointment);
+  }, []);
+
+  const applyMove = useCallback(
+    async (appointment: CalendarAppointmentLike, startAt: string) => {
+      const nextStart = new Date(startAt);
+      if (Number.isNaN(nextStart.getTime())) throw new Error('Invalid appointment time');
+      if (
+        appointment.startAt &&
+        new Date(appointment.startAt).getTime() === nextStart.getTime()
+      ) {
+        return;
+      }
+      setMoveError('');
+      await adminApi.rescheduleAppointment(
+        appointment.id,
+        nextStart.toISOString(),
+        appointment.staffMemberId,
+      );
+      setSelectedAppointment(null);
+      setMoveAppointment(null);
+      setAnchor(nextStart);
+      setViewDirection(0);
+      setView('day');
+      setReloadToken((value) => value + 1);
+    },
+    [],
+  );
+
+  const handleGridMove = useCallback(
+    (appointment: Appointment, date: Date, time: string) => {
+      const nextStart = new Date(date);
+      const [hour, minute] = time.split(':').map(Number);
+      nextStart.setHours(hour, minute, 0, 0);
+      void applyMove(appointment, nextStart.toISOString()).catch(() => {
+        setMoveError('این زمان قابل رزرو نیست؛ نوبت قبلی بدون تغییر باقی ماند.');
+      });
+    },
+    [applyMove],
+  );
+
 
   const openAppointmentList = useCallback((date: Date) => {
     setAppointmentListDate(new Date(date));
@@ -3264,6 +3437,8 @@ export function OwnerCalendarPage() {
                       onViewAppointments={openAppointmentList}
                       onCancel={setCancelAppointment}
                       onNoShow={setNoShowAppointment}
+                      onOpenAppointment={openAppointment}
+                      onMove={handleGridMove}
                     />
                   )}
                   {view === 'week' && (
@@ -3272,10 +3447,11 @@ export function OwnerCalendarPage() {
                       anchor={anchor}
                       closures={closures}
                       staffBlocks={staffCalendarBlocks}
-                      onSelectDate={(date) => openAvailability(date)}
-                      onViewAppointments={openAppointmentList}
+                      onSelectDate={openDay}
+                      onViewAppointments={openDay}
                       onCancel={setCancelAppointment}
                       onNoShow={setNoShowAppointment}
+                      onOpenAppointment={openAppointment}
                     />
                   )}
                   {view === 'month' && (
@@ -3284,10 +3460,11 @@ export function OwnerCalendarPage() {
                       anchor={anchor}
                       closures={closures}
                       staffBlocks={staffCalendarBlocks}
-                      onSelectDate={(date) => openAvailability(date)}
-                      onViewAppointments={openAppointmentList}
+                      onSelectDate={openDay}
+                      onViewAppointments={openDay}
                       onCancel={setCancelAppointment}
                       onNoShow={setNoShowAppointment}
+                      onOpenAppointment={openAppointment}
                     />
                   )}
                   {view === 'list' && <ListView appointments={appointments} anchor={anchor} onCancel={setCancelAppointment} onNoShow={setNoShowAppointment} />}
@@ -3298,6 +3475,11 @@ export function OwnerCalendarPage() {
         )}
       </div>
 
+      {moveError && (
+        <p role="alert" className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
+          {moveError}
+        </p>
+      )}
       <AvailabilityDialog
         salonId={salonId}
         date={availabilityDate}
@@ -3325,6 +3507,22 @@ export function OwnerCalendarPage() {
         }}
         onCancel={setCancelAppointment}
         onNoShow={setNoShowAppointment}
+      />
+      <AppointmentDetailsSheet
+        open={Boolean(selectedAppointment)}
+        appointment={selectedAppointment ? asCalendarAppointment(selectedAppointment) : null}
+        onOpenChange={(next) => {
+          if (!next) setSelectedAppointment(null);
+        }}
+        onMove={openMoveDialog}
+      />
+      <MoveAppointmentDialog
+        open={Boolean(moveAppointment)}
+        appointment={moveAppointment}
+        onOpenChange={(next) => {
+          if (!next) setMoveAppointment(null);
+        }}
+        onMoved={applyMove}
       />
       <Dialog
         open={Boolean(cancelAppointment)}
