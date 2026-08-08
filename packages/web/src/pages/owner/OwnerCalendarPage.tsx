@@ -168,6 +168,25 @@ function minutesOf(iso: string | undefined): number | null {
   return d.getHours() * 60 + d.getMinutes();
 }
 
+/** Preserve appointment duration while moving its start time locally. */
+function movedEndAt(
+  appointment: CalendarAppointmentLike,
+  nextStart: Date,
+): string | undefined {
+  if (!appointment.startAt || !appointment.endAt) return undefined;
+  const previousStart = new Date(appointment.startAt);
+  const previousEnd = new Date(appointment.endAt);
+  const duration = previousEnd.getTime() - previousStart.getTime();
+  if (
+    Number.isNaN(previousStart.getTime()) ||
+    Number.isNaN(previousEnd.getTime()) ||
+    duration <= 0
+  ) {
+    return undefined;
+  }
+  return new Date(nextStart.getTime() + duration).toISOString();
+}
+
 interface PositionedAppointment {
   appt: Appointment;
   lane: number;
@@ -3001,20 +3020,51 @@ export function OwnerCalendarPage() {
       ) {
         return;
       }
+
+      const nextStartAt = nextStart.toISOString();
+      const nextEndAt = movedEndAt(appointment, nextStart);
+      const previousStartAt = appointment.startAt;
+      const previousEndAt = appointment.endAt;
+      const updateLocalAppointment = (
+        updatedStartAt?: string,
+        updatedEndAt?: string,
+      ) => {
+        setAppointments((current) =>
+          current.map((item) =>
+            item.id === appointment.id
+              ? { ...item, startAt: updatedStartAt, endAt: updatedEndAt }
+              : item,
+          ),
+        );
+      };
+
       setMoveError('');
-      await adminApi.rescheduleAppointment(
-        appointment.id,
-        nextStart.toISOString(),
-        appointment.staffMemberId,
-      );
+      updateLocalAppointment(nextStartAt, nextEndAt);
+      try {
+        await adminApi.rescheduleAppointment(
+          appointment.id,
+          nextStartAt,
+          appointment.staffMemberId,
+        );
+      } catch (error) {
+        updateLocalAppointment(previousStartAt, previousEndAt);
+        throw error;
+      }
+
       setSelectedAppointment(null);
       setMoveAppointment(null);
+      if (
+        view === 'day' &&
+        appointment.startAt &&
+        localDateKey(appointment.startAt) === dateKey(nextStart)
+      ) {
+        return;
+      }
       setAnchor(nextStart);
       setViewDirection(0);
       setView('day');
-      setReloadToken((value) => value + 1);
     },
-    [],
+    [view],
   );
 
   const handleGridMove = useCallback(
