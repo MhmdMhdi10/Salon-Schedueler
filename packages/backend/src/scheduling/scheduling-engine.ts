@@ -68,6 +68,17 @@ export interface SchedulingEngineOptions {
   holdPeriodSeconds?: number;
 }
 
+/**
+ * Raised when an appointment mutation targets an appointment in an invalid
+ * lifecycle state. The HTTP layer maps this expected conflict to a 409.
+ */
+export class AppointmentStateError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AppointmentStateError';
+  }
+}
+
 /** Maximum number of insert retries when exclusion constraint violations occur */
 const MAX_BOOKING_RETRIES = 3;
 
@@ -904,7 +915,7 @@ export class SchedulingEngine {
     }
 
     if (appointment.status !== 'pending') {
-      throw new Error(
+      throw new AppointmentStateError(
         `Appointment ${appointmentId} cannot be approved: current status is '${appointment.status}', expected 'pending'`,
       );
     }
@@ -940,7 +951,7 @@ export class SchedulingEngine {
     }
 
     if (appointment.status !== 'pending') {
-      throw new Error(
+      throw new AppointmentStateError(
         `Appointment ${appointmentId} cannot be rejected: current status is '${appointment.status}', expected 'pending'`,
       );
     }

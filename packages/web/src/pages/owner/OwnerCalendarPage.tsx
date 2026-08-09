@@ -21,6 +21,7 @@ import {
   TriangleAlert,
 } from 'lucide-react';
 import {
+  ApiError,
   adminApi,
   approvalPolicyApi,
   bookingPolicyApi,
@@ -2473,9 +2474,11 @@ function ManualBookingDialog({
 function ApprovalQueue({
   salonId,
   onResolved,
+  refreshKey,
   className,
 }: {
   salonId: string;
+  refreshKey?: number;
   onResolved: () => void;
   className?: string;
 }) {
@@ -2483,6 +2486,7 @@ function ApprovalQueue({
   const [pending, setPending] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [actionError, setActionError] = useState('');
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const pendingPagination = usePagination(pending, 3);
   const previewPending = pending.slice(0, 1);
@@ -2516,11 +2520,12 @@ function ApprovalQueue({
     };
   }, [salonId]);
 
-  useEffect(() => load(), [load]);
+  useEffect(() => load(), [load, refreshKey]);
 
   const handleAction = useCallback(
     async (id: string, kind: 'approve' | 'reject') => {
       setBusy(`${id}:${kind}`);
+      setActionError('');
       try {
         if (kind === 'approve') {
           await adminApi.approveAppointment(id);
@@ -2529,17 +2534,23 @@ function ApprovalQueue({
         }
         setPending((list) => list.filter((a) => a.id !== id));
         onResolved();
-      } catch {
-        // keep row + alert non-blocking
+      } catch (error) {
+        if (error instanceof ApiError && error.code === 'APPOINTMENT_NOT_PENDING') {
+          setPending((list) => list.filter((a) => a.id !== id));
+          setActionError('این رزرو قبلاً جابه‌جا یا تعیین‌تکلیف شده است؛ صف به‌روزرسانی شد.');
+          void load();
+        } else {
+          setActionError('تغییر وضعیت رزرو انجام نشد. دوباره تلاش کنید.');
+        }
       } finally {
         setBusy(null);
       }
     },
-    [onResolved],
+    [load, onResolved],
   );
 
-  if (loading && pending.length === 0) return null;
-  if (pending.length === 0) return null;
+  if (loading && pending.length === 0 && !actionError) return null;
+  if (pending.length === 0 && !actionError) return null;
 
   const renderPendingRow = (appt: Appointment) => {
     const start = clockTime(appt.startAt);
@@ -2619,6 +2630,11 @@ function ApprovalQueue({
 
   return (
     <div className={cn('flex flex-col gap-3', className)}>
+      {actionError && (
+        <p role="alert" className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
+          {actionError}
+        </p>
+      )}
       {pending.length > 0 && (
         <section
           data-testid="owner-approval-queue"
@@ -2952,6 +2968,7 @@ export function OwnerCalendarPage() {
   const [view, setView] = useState<CalendarView>('week');
   const [anchor, setAnchor] = useState<Date>(() => new Date());
   const [status, setStatus] = useState<LoadStatus>('loading');
+  const [approvalReloadToken, setApprovalReloadToken] = useState(0);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [reloadToken, setReloadToken] = useState(0);
   const [closures, setClosures] = useState<SalonClosure[]>([]);
@@ -3026,28 +3043,36 @@ export function OwnerCalendarPage() {
       const previousStartAt = appointment.startAt;
       const previousEndAt = appointment.endAt;
       const updateLocalAppointment = (
+        appointmentId: string,
         updatedStartAt?: string,
         updatedEndAt?: string,
       ) => {
         setAppointments((current) =>
           current.map((item) =>
             item.id === appointment.id
-              ? { ...item, startAt: updatedStartAt, endAt: updatedEndAt }
+              ? { ...item, id: appointmentId, startAt: updatedStartAt, endAt: updatedEndAt }
               : item,
           ),
         );
       };
 
       setMoveError('');
-      updateLocalAppointment(nextStartAt, nextEndAt);
+      updateLocalAppointment(appointment.id, nextStartAt, nextEndAt);
       try {
-        await adminApi.rescheduleAppointment(
+        const result = await adminApi.rescheduleAppointment(
           appointment.id,
           nextStartAt,
           appointment.staffMemberId,
         );
+        const replacement = result.appointment;
+        updateLocalAppointment(
+          replacement?.id ?? appointment.id,
+          replacement?.startAt ?? nextStartAt,
+          replacement?.endAt ?? nextEndAt,
+        );
+        setApprovalReloadToken((value) => value + 1);
       } catch (error) {
-        updateLocalAppointment(previousStartAt, previousEndAt);
+        updateLocalAppointment(appointment.id, previousStartAt, previousEndAt);
         throw error;
       }
 
@@ -3416,6 +3441,7 @@ export function OwnerCalendarPage() {
       {/* Pending approval queue — surfaced at top of calendar so owners can
           one-tap Approve/Reject without leaving the calendar view. */}
       <ApprovalQueue
+        refreshKey={approvalReloadToken}
         salonId={salonId}
         onResolved={() => setReloadToken((n) => n + 1)}
         className="owner-calendar-approval"

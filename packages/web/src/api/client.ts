@@ -682,7 +682,13 @@ export const adminApi = {
   rescheduleAppointment: (appointmentId: string, startAt: string, preferredStaffId?: string) =>
     request<{
       status: string;
-      appointment: unknown;
+      appointment: {
+        id?: string;
+        startAt?: string;
+        endAt?: string;
+        status?: string;
+        staffMemberId?: string;
+      } | null;
       previousAppointmentId: string;
       paymentRedirectUrl?: string;
     }>('/appointments/' + appointmentId + '/reschedule-managed', {
