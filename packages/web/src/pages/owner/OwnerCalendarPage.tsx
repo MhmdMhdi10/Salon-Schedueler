@@ -2535,9 +2535,15 @@ function ApprovalQueue({
         setPending((list) => list.filter((a) => a.id !== id));
         onResolved();
       } catch (error) {
-        if (error instanceof ApiError && error.code === 'APPOINTMENT_NOT_PENDING') {
+        const errorCode =
+          error instanceof ApiError
+            ? error.code
+            : typeof error === 'object' && error !== null && 'code' in error
+              ? (error as { code?: unknown }).code
+              : undefined;
+        if (errorCode === 'APPOINTMENT_NOT_PENDING') {
           setPending((list) => list.filter((a) => a.id !== id));
-          setActionError('این رزرو قبلاً جابه‌جا یا تعیین‌تکلیف شده است؛ صف به‌روزرسانی شد.');
+          setActionError('این رزرو قبلاً تعیین تکلیف شده است؛ صف به‌روزرسانی شد.');
           void load();
         } else {
           setActionError('تغییر وضعیت رزرو انجام نشد. دوباره تلاش کنید.');

@@ -64,6 +64,7 @@ const mockGetPending = vi.fn();
 const mockApproveAppointment = vi.fn();
 const mockRejectAppointment = vi.fn();
 const mockRescheduleAppointment = vi.fn();
+const mockGetAppointmentCustomer = vi.fn();
 
 vi.mock('../../../api/client', () => {
   class ApiError extends Error {
@@ -91,6 +92,7 @@ vi.mock('../../../api/client', () => {
       approveAppointment: (...args: unknown[]) => mockApproveAppointment(...args),
       rejectAppointment: (...args: unknown[]) => mockRejectAppointment(...args),
       rescheduleAppointment: (...args: unknown[]) => mockRescheduleAppointment(...args),
+      getAppointmentCustomer: (...args: unknown[]) => mockGetAppointmentCustomer(...args),
     },
     salonApi: {
       getServices: (...args: unknown[]) => mockGetServices(...args),
@@ -178,6 +180,11 @@ beforeEach(() => {
   mockApproveAppointment.mockResolvedValue({ status: 'confirmed' });
   mockRejectAppointment.mockResolvedValue({ status: 'cancelled' });
   mockRescheduleAppointment.mockResolvedValue({ status: 'confirmed' });
+  mockGetAppointmentCustomer.mockResolvedValue({
+    customer: { id: 'customer-1', phone: '', fullName: 'زهرا محمدی' },
+    appointments: [],
+    notes: [],
+  });
 });
 
 afterEach(() => {
@@ -570,14 +577,17 @@ describe('Jalali dates', () => {
       });
 
       const calendarFetchesBeforeMove = mockGetCalendar.mock.calls.length;
-      fireEvent.click(screen.getByRole('button', { name: /تغییر زمان/ }));
-      fireEvent.change(screen.getByLabelText('ساعت شروع'), { target: { value: '11:00' } });
-      fireEvent.click(screen.getByRole('button', { name: 'ذخیره زمان' }));
+      fireEvent.click(screen.getByRole('article', { name: /کوتاهی مو/ }));
+      fireEvent.click(screen.getByRole('button', { name: /انتقال به زمان دیگر/ }));
+      const nextStart = new Date(start.getTime() + 60 * 60_000);
+      fireEvent.change(screen.getByLabelText('زمان شروع جدید'), {
+        target: { value: nextStart.toISOString().slice(0, 16) },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'ذخیره زمان جدید' }));
 
       await waitFor(() => {
-        expect(screen.getByRole('status')).toHaveTextContent('بدون بارگذاری مجدد');
+        expect(mockRescheduleAppointment).toHaveBeenCalledWith('appt-1', expect.any(String), undefined);
       });
-      expect(mockRescheduleAppointment).toHaveBeenCalledWith('appt-1', expect.any(String));
       expect(mockGetCalendar).toHaveBeenCalledTimes(calendarFetchesBeforeMove);
     });
 
@@ -605,7 +615,7 @@ describe('Jalali dates', () => {
       });
       fireEvent.click(screen.getByRole('tab', { name: /روز/ }));
       await waitFor(() => {
-        expect(screen.getByRole('group', { name: /کوتاهی مو/ })).toBeInTheDocument();
+        expect(screen.getByRole('article', { name: /کوتاهی مو/ })).toBeInTheDocument();
       });
 
       const dataTransfer = {
@@ -621,13 +631,12 @@ describe('Jalali dates', () => {
         },
       };
       const calendarFetchesBeforeMove = mockGetCalendar.mock.calls.length;
-      fireEvent.dragStart(screen.getByRole('group', { name: /کوتاهی مو/ }), { dataTransfer });
+      fireEvent.dragStart(screen.getByRole('article', { name: /کوتاهی مو/ }), { dataTransfer });
       fireEvent.drop(screen.getByRole('row', { name: '11:00' }), { dataTransfer });
 
       await waitFor(() => {
-        expect(screen.getByRole('status')).toHaveTextContent('بدون بارگذاری مجدد');
+        expect(mockRescheduleAppointment).toHaveBeenCalledWith('appt-1', expect.any(String), undefined);
       });
-      expect(mockRescheduleAppointment).toHaveBeenCalledWith('appt-1', expect.any(String));
       expect(mockGetCalendar).toHaveBeenCalledTimes(calendarFetchesBeforeMove);
     });
   });
