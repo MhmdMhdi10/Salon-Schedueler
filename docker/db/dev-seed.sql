@@ -12,6 +12,21 @@
 
 BEGIN;
 
+-- Global admin used by local development. Production admin identities are
+-- provisioned through deployment/bootstrap tooling, never this seed file.
+INSERT INTO platform_admin (id, phone, full_name, role, active)
+VALUES (
+  'f0000000-0000-4000-8000-000000000001'::uuid,
+  '09120000999',
+  'مدیر پلتفرم آرا',
+  'super_admin',
+  true
+)
+ON CONFLICT (phone) DO UPDATE SET
+  full_name = EXCLUDED.full_name,
+  role = EXCLUDED.role,
+  active = EXCLUDED.active;
+
 -- Fixed UUIDs so the funnel + QR can target this salon deterministically.
 -- salon   : 11111111-1111-1111-1111-111111111111  (qr_token "salon-rose" =
 --           the public profile slug in web data/salons.ts, so the QR campaign

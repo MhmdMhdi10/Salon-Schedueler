@@ -3,6 +3,10 @@ import { ServiceInputSchema, type ServiceInput } from '@salon/shared';
 import { ValidationError } from './validation-error';
 import type { FieldError } from './validation-error';
 
+export type ServiceWithStaff = Service & {
+  serviceStaff: Array<{ serviceId: string; staffMemberId: string }>;
+};
+
 /**
  * ServiceCatalog manages the creation and querying of services for a salon.
  *
@@ -61,10 +65,42 @@ export class ServiceCatalog {
    * `GET /salons/:id/services` route (Requirement 2.2). Returns the persisted
    * Service rows; the HTTP layer maps them to the client-facing shape.
    */
-  async listServices(salonId: string): Promise<Service[]> {
+  async listServices(salonId: string): Promise<ServiceWithStaff[]> {
     return this.prisma.service.findMany({
       where: { salonId },
+      include: { serviceStaff: { select: { serviceId: true, staffMemberId: true } } },
       orderBy: { name: 'asc' },
+    });
+  }
+
+  async updateService(
+    serviceId: string,
+    patch: {
+      name?: string;
+      durationMinutes?: number;
+      bufferMinutes?: number;
+      priceRial?: number;
+      requiresDeposit?: boolean;
+      depositRial?: number | null;
+    },
+  ): Promise<ServiceWithStaff> {
+    return this.prisma.service.update({
+      where: { id: serviceId },
+      include: { serviceStaff: { select: { serviceId: true, staffMemberId: true } } },
+      data: {
+        ...(patch.name !== undefined ? { name: patch.name } : {}),
+        ...(patch.durationMinutes !== undefined
+          ? { durationMin: patch.durationMinutes }
+          : {}),
+        ...(patch.bufferMinutes !== undefined ? { bufferMin: patch.bufferMinutes } : {}),
+        ...(patch.priceRial !== undefined ? { priceRial: BigInt(patch.priceRial) } : {}),
+        ...(patch.requiresDeposit !== undefined
+          ? { requiresDeposit: patch.requiresDeposit }
+          : {}),
+        ...(patch.depositRial !== undefined
+          ? { depositRial: patch.depositRial == null ? null : BigInt(patch.depositRial) }
+          : {}),
+      },
     });
   }
 
@@ -91,6 +127,15 @@ export class ServiceCatalog {
           })),
         });
       }
+    });
+  }
+
+  /** Add qualified staff without removing existing mappings (onboarding/MVP default). */
+  async addServiceStaff(serviceId: string, staffIds: string[]): Promise<void> {
+    if (staffIds.length === 0) return;
+    await this.prisma.serviceStaff.createMany({
+      data: staffIds.map((staffMemberId) => ({ serviceId, staffMemberId })),
+      skipDuplicates: true,
     });
   }
 
@@ -122,9 +167,14 @@ export class ServiceCatalog {
 
   /**
    * Delete a service and all its staff/equipment mappings. Cascading deletes
-   * in the schema handle the join tables; this also removes the service row.
+   * are not enabled on the join-table foreign keys, so remove mappings first
+   * in one transaction before deleting the service row.
    */
   async deleteService(serviceId: string): Promise<void> {
-    await this.prisma.service.delete({ where: { id: serviceId } });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.serviceStaff.deleteMany({ where: { serviceId } });
+      await tx.serviceEquipment.deleteMany({ where: { serviceId } });
+      await tx.service.delete({ where: { id: serviceId } });
+    });
   }
 }

@@ -67,7 +67,11 @@ export class CancellationService {
       throw new Error(`Appointment ${appointmentId} not found`);
     }
 
-    if (appointment.status !== 'confirmed' && appointment.status !== 'held') {
+    if (
+      appointment.status !== 'pending' &&
+      appointment.status !== 'confirmed' &&
+      appointment.status !== 'held'
+    ) {
       throw new Error(
         `Appointment ${appointmentId} cannot be cancelled: current status is '${appointment.status}'`,
       );

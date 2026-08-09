@@ -68,8 +68,8 @@ describeIfDb('database exclusion constraints (opt-in: requires DATABASE_URL)', (
         ${serviceId}::uuid,
         ${params.startAt}::timestamptz,
         ${params.endAt}::timestamptz,
-        ${params.status}::appt_status,
-        'web'::appt_source,
+        ${params.status}::"ApptStatus",
+        'web'::"ApptSource",
         NOW()
       )
     `;
@@ -371,7 +371,7 @@ describeIfDb('database exclusion constraints (opt-in: requires DATABASE_URL)', (
 
         // Now change the first appointment's status to free the resource
         await prisma.$executeRaw`
-          UPDATE appointment SET status = ${freeingStatus}::appt_status WHERE id = ${apptId}::uuid
+          UPDATE appointment SET status = ${freeingStatus}::"ApptStatus" WHERE id = ${apptId}::uuid
         `;
 
         // Now the same overlapping insert should succeed (staff freed)
@@ -412,7 +412,7 @@ describeIfDb('database exclusion constraints (opt-in: requires DATABASE_URL)', (
 
         // Change status to free the chair
         await prisma.$executeRaw`
-          UPDATE appointment SET status = ${freeingStatus}::appt_status WHERE id = ${apptId}::uuid
+          UPDATE appointment SET status = ${freeingStatus}::"ApptStatus" WHERE id = ${apptId}::uuid
         `;
 
         // Now the same overlapping insert should succeed (chair freed)

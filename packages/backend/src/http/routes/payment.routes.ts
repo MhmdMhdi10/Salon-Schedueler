@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { Services } from '../app.js';
 import { safelyNotify } from '../../app/safely-notify.js';
 import { asyncRoute, validateRequired } from './route-helpers.js';
+import { createRateLimit } from '../middleware/rate-limit.js';
 
 /**
  * Protected payment-initiation route (Requirement 2.2 / original R10.2). Mounted
@@ -16,6 +17,21 @@ export function paymentInitiateRouter(services: Services): Router {
     '/payments/initiate',
     asyncRoute(async (req, res) => {
       if (!validateRequired(res, req.body, ['appointmentId'])) {
+        return;
+      }
+      const principal = req.principal;
+      const appointment = await services.calendarService.getAppointmentById(
+        req.body.appointmentId,
+      );
+      if (!appointment) {
+        res.status(404).json({ code: 'NOT_FOUND' });
+        return;
+      }
+      // A payment session is customer-owned. Do not let a logged-in staff
+      // member, or another customer with a guessed appointment id, create a
+      // gateway session for somebody else's booking.
+      if (principal?.role || appointment.customerId !== principal?.id) {
+        res.status(403).json({ code: 'FORBIDDEN' });
         return;
       }
       const { redirectUrl } = await services.paymentService.initiateDeposit(
@@ -44,9 +60,15 @@ export function paymentInitiateRouter(services: Services): Router {
  */
 export function paymentCallbackRouter(services: Services): Router {
   const router = Router();
+  const callbackLimit = createRateLimit({
+    name: 'payment-callback-ip',
+    max: 30,
+    windowMs: 60_000,
+  });
 
   router.post(
     '/payments/callback',
+    callbackLimit,
     asyncRoute(async (req, res) => {
       const params = { ...(req.query as Record<string, unknown>), ...(req.body ?? {}) };
       const authority = (params.authority ?? params.Authority) as string | undefined;

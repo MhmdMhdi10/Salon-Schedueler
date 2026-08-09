@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { LogOut } from 'lucide-react';
+import { BrandLogo } from '../brand';
 import { OwnerThemeToggle } from '../theme/OwnerThemeToggle';
 import { THEME_STORAGE_KEY, ThemeScope, useTheme } from '../theme';
 import { Button } from '../ui/Button';
@@ -13,6 +15,8 @@ import { OWNER_NAV, ownerNavForRole, type OwnerNavItem } from '../owner/ownerNav
 import { OwnerBottomTabs } from './OwnerBottomTabs';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import type { OwnerRole } from '../../api/client';
+
+import './owner-shell.css';
 
 /** Stable id the owner `<main>` exposes (skip-link target / focus). */
 export const OWNER_CONTENT_ID = 'owner-content';
@@ -80,8 +84,12 @@ function getPersistedCollapsed(): boolean {
 export function OwnerShell({ children, role, salonName, salonId, onSignOut, className }: OwnerShellProps) {
   const { t } = useTranslation();
   const { theme, toggleTheme } = useTheme();
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname } = location;
+  const routeKey = `${location.pathname}${location.search}`;
   const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const prefersReducedMotion = useReducedMotion();
+  const contentRef = useRef<HTMLElement | null>(null);
 
   // Sidebar collapsed state — persisted to localStorage
   const [collapsed, setCollapsed] = useState(getPersistedCollapsed);
@@ -110,6 +118,15 @@ export function OwnerShell({ children, role, salonName, salonId, onSignOut, clas
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
+  useEffect(() => {
+    // Each panel page owns its scroll position; a new tab should always open
+    // at its top, like an iOS tab transition.
+    if (contentRef.current) {
+      contentRef.current.scrollTop = 0;
+      contentRef.current.scrollLeft = 0;
+    }
+  }, [routeKey]);
+
   return (
     <ThemeScope
       theme={theme}
@@ -117,7 +134,7 @@ export function OwnerShell({ children, role, salonName, salonId, onSignOut, clas
       className={cn(
         // Booksy Biz app frame: the shell never page-scrolls — panes scroll
         // internally (design directive §h.1).
-        'flex h-screen flex-col overflow-hidden bg-bg text-text',
+        'flex h-screen h-[100dvh] min-h-0 flex-col overflow-hidden bg-bg text-text',
         className,
       )}
     >
@@ -135,11 +152,15 @@ export function OwnerShell({ children, role, salonName, salonId, onSignOut, clas
 
       {/* Header */}
       <header className="shrink-0 border-b border-border bg-surface">
-        <div className="flex w-full items-center justify-between gap-4 px-4 py-3">
-          <Link to="/owner" className="rounded-md text-md font-bold text-text no-underline">
-            {salonName || t('owner.title')}
+        <div className="flex w-full items-center justify-between gap-0 px-3 py-0 sm:gap-3 sm:px-4 sm:py-1.5">
+          <Link
+            to="/owner"
+            aria-label={salonName || t('owner.title')}
+            className="flex min-h-11 shrink-0 items-center rounded-md text-sm font-bold text-text no-underline sm:text-md"
+          >
+            <BrandLogo className="h-5 w-auto sm:h-6" />
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-0 sm:gap-2">
             <OwnerInboxBell />
             <OwnerThemeToggle theme={theme} onToggle={toggleTheme} />
             <Button
@@ -148,8 +169,10 @@ export function OwnerShell({ children, role, salonName, salonId, onSignOut, clas
               startIcon={<LogOut className="h-4 w-4 rtl:-scale-x-100" />}
               onClick={onSignOut}
               data-testid="owner-sign-out"
+              aria-label={t('owner.signOut')}
+              className="!px-1 sm:!px-5"
             >
-              {t('owner.signOut')}
+              <span className="hidden sm:inline">{t('owner.signOut')}</span>
             </Button>
           </div>
         </div>
@@ -169,17 +192,37 @@ export function OwnerShell({ children, role, salonName, salonId, onSignOut, clas
 
         {/* Main content area — the single scrolling pane of the app frame */}
         <main
+          ref={contentRef}
           id={OWNER_CONTENT_ID}
-          tabIndex={-1}
+          tabIndex={0}
           className={cn(
-            'min-w-0 flex-1 overflow-y-auto px-4 py-5',
+            'min-w-0 flex-1 overscroll-contain overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-4 sm:py-5',
             isDesktop && 'w-full',
-            // On mobile, add bottom padding to clear the fixed bottom tabs
-            !isDesktop && 'pb-[calc(var(--space-10)+env(safe-area-inset-bottom)+12px)]',
+            // On mobile, reserve the compact rendered tab bar (~65px) plus breathing
+            // room so the last card can scroll completely above fixed nav.
+            !isDesktop &&
+              'pb-[calc(var(--space-10)+var(--space-3)+env(safe-area-inset-bottom))]',
           )}
         >
-          {role === 'Owner' && salonId && <OwnerSetupAlert salonId={salonId} refreshKey={pathname} />}
-          {children}
+          <AnimatePresence initial={false} mode="wait">
+            <motion.div
+              key={routeKey}
+              initial={prefersReducedMotion ? false : { opacity: 0, x: 18 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={prefersReducedMotion ? undefined : { opacity: 0, x: -12 }}
+              transition={
+                prefersReducedMotion
+                  ? { duration: 0 }
+                  : { duration: 0.24, ease: [0.22, 0.8, 0.2, 1] }
+              }
+              className="min-w-0 w-full"
+            >
+              {role === 'Owner' && salonId && (
+                <OwnerSetupAlert salonId={salonId} refreshKey={pathname} />
+              )}
+              {children}
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
 

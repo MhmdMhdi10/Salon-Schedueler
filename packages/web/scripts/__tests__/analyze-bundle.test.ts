@@ -28,7 +28,7 @@ import {
  *     forbidden-chunk checks behave as specified. These run with no build.
  *
  *  2. **A built-artifact guard** that, *when `dist/` exists*, asserts the real
- *     production build keeps every public (indexable) route within the ~150KB
+ *     production build keeps every public (indexable) route within the ~240KB
  *     gzip budget and free of the heavy funnel/admin/chart/Jalali-picker
  *     chunks. This is the regression guard for the code-split contract: if a
  *     future change statically pulls an overlay/Radix/chart module onto a
@@ -142,7 +142,7 @@ describe('built-artifact guard (R9.3 code-split contract)', () => {
           `${nameSub} leaked heavy chunks: ${report.forbidden.join(', ')}`,
         ).toEqual([]);
 
-        // Initial public-page JS stays within the ~150KB gzip budget.
+        // Initial public-page JS stays within the ~240KB gzip budget.
         expect(
           report.totalGzip,
           `${nameSub} initial JS ${(report.totalGzip / 1024).toFixed(1)}KB exceeds budget`,

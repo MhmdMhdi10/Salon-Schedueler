@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Download, ScanLine, Scissors, Store } from 'lucide-react';
@@ -62,6 +62,18 @@ export function QrLandingPage() {
   const [staff, setStaff] = useState<ResolvedStaff | null>(routed?.staff ?? null);
   const [errorKind, setErrorKind] = useState<QrErrorKind | null>(null);
   const [loading, setLoading] = useState(!routed);
+  const scanRecorded = useRef(false);
+
+  useEffect(() => {
+    if (!salon || scanRecorded.current || typeof salonApi.recordScan !== 'function') return;
+    const state = location.state as { scanSource?: unknown } | null;
+    const query = new URLSearchParams(location.search);
+    const rawSource = state?.scanSource ?? query.get('utm_source') ?? query.get('source');
+    const source = typeof rawSource === 'string' ? rawSource.trim() : '';
+    if (!source) return;
+    scanRecorded.current = true;
+    void salonApi.recordScan(salon.id, source).catch(() => undefined);
+  }, [location.search, location.state, salon]);
 
   useEffect(() => {
     let active = true;
@@ -125,7 +137,9 @@ export function QrLandingPage() {
     accentKey && ACCENTS.some((a) => a.key === accentKey)
       ? ensureAaFill(resolveAccent(accentKey).from)
       : undefined;
-  useSalonManifest('آرا — سالن‌های من', '/my-salons', 'آرا', themeColor);
+  // The installed app opens the role-aware dashboard. Customers see their
+  // appointments immediately; staff are routed to the owner panel.
+  useSalonManifest('آرا — سالن‌های من', '/account', 'آرا', themeColor);
 
   const { installed, promptInstall } = usePwaInstall();
   const [showInstallHelp, setShowInstallHelp] = useState(false);
@@ -170,6 +184,7 @@ export function QrLandingPage() {
             icon={isMalformed ? <ScanLine className="h-8 w-8" /> : <Store className="h-8 w-8" />}
             title={isMalformed ? t('salon.qr.malformedTitle') : t('salon.qr.notFoundTitle')}
             description={isMalformed ? t('salon.qr.malformedBody') : t('salon.qr.notFoundBody')}
+            headingLevel="h1"
           />
           <div className="mt-2 flex justify-center">
             <Link

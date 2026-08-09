@@ -1,0 +1,43 @@
+services:
+  postgres:
+    ports: !override []
+  rabbitmq:
+    ports: !override []
+  sms-inbox:
+    ports: !override []
+  backend:
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: "postgresql://salon:salon@postgres:5432/salon_dev?schema=public"
+      JWT_ACCESS_SECRET: "${JWT_ACCESS_SECRET}"
+      JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET}"
+      PAYMENT_CALLBACK_BASE_URL: "${PAYMENT_CALLBACK_BASE_URL}"
+      PUBLIC_BASE_URL: "${PUBLIC_BASE_URL}"
+      OTP_WINDOW_SECONDS: "120"
+      DEV_OTP_AUTO_FILL: "${DEV_OTP_AUTO_FILL}"
+      RABBITMQ_URL: "amqp://salon:salon@rabbitmq:5672"
+      DEV_SMS_INBOX_URL: "http://sms-inbox:4000"
+    ports: !override
+      - "3000:3000"
+  sms-worker:
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: "postgresql://salon:salon@postgres:5432/salon_dev?schema=public"
+      JWT_ACCESS_SECRET: "${JWT_ACCESS_SECRET}"
+      JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET}"
+      PAYMENT_CALLBACK_BASE_URL: "${PAYMENT_CALLBACK_BASE_URL}"
+      RABBITMQ_URL: "amqp://salon:salon@rabbitmq:5672"
+      DEV_SMS_INBOX_URL: "http://sms-inbox:4000"
+  web:
+    image: salon-booking-web-prod
+    build:
+      context: .
+      dockerfile: docker/web-production.Dockerfile
+      args:
+        VITE_SITE_ORIGIN: "${PUBLIC_BASE_URL}"
+        VITE_PUBLIC_SITE_URL: "${PUBLIC_BASE_URL}"
+    command: ["nginx", "-g", "daemon off;"]
+    tty: false
+    ports: !override
+      - "5173:5173"
+    volumes: !override []

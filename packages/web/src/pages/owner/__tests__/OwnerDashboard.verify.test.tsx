@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, cleanup, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { ThemeProvider } from '../../../components/theme';
@@ -412,6 +412,36 @@ describe('Skeleton and error states', () => {
         expect(mockGetAnalytics).toHaveBeenCalledTimes(2);
       });
     });
+
+    it('paginates customer rows inside analytics cards', async () => {
+      mockGetAnalytics.mockResolvedValue({
+        ...MOCK_ANALYTICS,
+        summary: { uniqueCustomers: 6, repeatCustomers: 1 },
+        customers: Array.from({ length: 6 }, (_, index) => ({
+          id: `customer-${index + 1}`,
+          name: `مشتری ${index + 1}`,
+          phone: `0912000000${index}`,
+          reservations: index + 1,
+          visits: index,
+          noShow: 0,
+          cancelled: 0,
+          revenueRial: 0,
+          lastVisitAt: null,
+        })),
+      });
+      renderAnalyticsPage();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('analytics-customers-pagination')).toBeInTheDocument();
+      });
+      expect(screen.getByText('مشتری 1')).toBeInTheDocument();
+      expect(screen.queryByText('مشتری 6')).not.toBeInTheDocument();
+
+      fireEvent.click(
+        within(screen.getByTestId('analytics-customers-pagination')).getByRole('button', { name: 'بعدی' }),
+      );
+      expect(await screen.findByText('مشتری 6')).toBeInTheDocument();
+    });
   });
 
   describe('Configuration page', () => {
@@ -750,7 +780,7 @@ describe('Responsive layout', () => {
   });
 
   describe('Analytics responsive behavior', () => {
-    it('metrics cards use 2-col grid on mobile and 4-col on desktop', async () => {
+    it('metrics cards stack on phones, then use 2-col and 4-col grids', async () => {
       renderAnalyticsPage();
 
       await waitFor(() => {
@@ -761,7 +791,8 @@ describe('Responsive layout', () => {
       const utilizationCard = screen.getByTestId('analytics-utilization');
       // Traverse up to the section that acts as the grid container
       const metricsGrid = utilizationCard.closest('[aria-label]');
-      expect(metricsGrid?.className).toContain('grid-cols-2');
+      expect(metricsGrid?.className).toContain('grid-cols-1');
+      expect(metricsGrid?.className).toContain('sm:grid-cols-2');
       expect(metricsGrid?.className).toContain('lg:grid-cols-4');
     });
   });

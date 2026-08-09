@@ -6,4 +6,13 @@ export type {
   RevenueReport,
   BusiestWindow,
   WindowReport,
+  AnalyticsDashboardReport,
+  AnalyticsSummary,
+  AnalyticsComparison,
+  AnalyticsDailyPoint,
+  AnalyticsHourlyPoint,
+  AnalyticsServiceRow,
+  AnalyticsStaffRow,
+  AnalyticsSourceRow,
+  AnalyticsCustomerRow,
 } from './analytics.service';

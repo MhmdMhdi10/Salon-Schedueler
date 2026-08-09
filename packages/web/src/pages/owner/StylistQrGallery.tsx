@@ -2,7 +2,16 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, Image as ImageIcon, Users } from 'lucide-react';
 import { qrApi, salonApi } from '../../api/client';
-import { Button, Card, CardTitle, EmptyState, ErrorState, Skeleton } from '../../components/ui';
+import { usePagination } from '../../hooks/usePagination';
+import {
+  Button,
+  Card,
+  CardTitle,
+  EmptyState,
+  ErrorState,
+  Pagination,
+  Skeleton,
+} from '../../components/ui';
 import { downloadQrPng, downloadQrSvg, qrImageDataUri } from './marketing-assets';
 
 /** Data-surface state for the per-stylist QR gallery (ui-ux §6). */
@@ -33,6 +42,14 @@ export function StylistQrGallery({ salonId, salonName }: { salonId: string; salo
   const [status, setStatus] = useState<GalleryStatus>('loading');
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [reloadToken, setReloadToken] = useState(0);
+  const {
+    page,
+    pageItems,
+    total: galleryTotal,
+    pageSize: galleryPageSize,
+    goToPage,
+    resetPage,
+  } = usePagination(items, 8);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,6 +81,7 @@ export function StylistQrGallery({ salonId, salonName }: { salonId: string; salo
           };
         });
         setItems(next);
+        resetPage();
         setStatus('success');
       })
       .catch(() => {
@@ -94,7 +112,7 @@ export function StylistQrGallery({ salonId, salonName }: { salonId: string; salo
           role="status"
           aria-busy="true"
           aria-label={t('owner.qr.gallery.loadingLabel')}
-          className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
+          className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
         >
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} variant="rect" className="h-48" />
@@ -122,9 +140,9 @@ export function StylistQrGallery({ salonId, salonName }: { salonId: string; salo
       {status === 'success' && (
         <ul
           aria-label={t('owner.qr.gallery.listLabel')}
-          className="grid list-none grid-cols-2 gap-4 p-0 sm:grid-cols-3 lg:grid-cols-4"
+          className="grid list-none grid-cols-1 gap-4 p-0 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
         >
-          {items.map((item) => {
+          {pageItems.map((item) => {
             const alt = t('owner.qr.imageAltStylist', {
               salon: salonName,
               stylist: item.name,
@@ -142,11 +160,11 @@ export function StylistQrGallery({ salonId, salonName }: { salonId: string; salo
                       alt={alt}
                       width={160}
                       height={160}
-                      className="h-40 w-40 bg-white p-2"
+                      className="h-40 w-40 max-w-full bg-white p-2"
                     />
                   </div>
                 ) : (
-                  <div className="flex h-40 w-40 items-center justify-center rounded-md border border-border bg-surface p-2 text-center text-xs text-muted">
+                  <div className="flex h-40 w-40 max-w-full items-center justify-center rounded-md border border-border bg-surface p-2 text-center text-xs text-muted">
                     {t('owner.qr.gallery.qrUnavailable')}
                   </div>
                 )}
@@ -183,6 +201,16 @@ export function StylistQrGallery({ salonId, salonName }: { salonId: string; salo
             );
           })}
         </ul>
+      )}
+
+      {status === 'success' && galleryTotal > galleryPageSize && (
+        <Pagination
+          page={page}
+          pageSize={galleryPageSize}
+          total={galleryTotal}
+          onPageChange={goToPage}
+          testId="qr-stylist-gallery-pagination"
+        />
       )}
     </Card>
   );

@@ -15,6 +15,35 @@
 
 /* ── Studio controls ───────────────────────────────────────────────────────── */
 
+.owner-qr-controls {
+  min-inline-size: 0;
+}
+.owner-qr-controls__toggle {
+  display: none;
+  min-block-size: 52px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+.owner-qr-controls__toggle:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+.owner-qr-controls__chevron {
+  flex: none;
+  color: var(--color-text-muted);
+  transition: transform 150ms ease;
+}
+.owner-qr-controls--open .owner-qr-controls__chevron {
+  transform: rotate(180deg);
+}
+
 .owner-qr-segmented {
   display: inline-flex;
   gap: 4px;
@@ -278,12 +307,21 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  border-radius: 999px;
+  color: #111827;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
   font-weight: 800;
   opacity: 0.96;
 }
 .asset__brand-ic {
-  inline-size: 1em;
-  block-size: 1em;
+  inline-size: 1.25em;
+  block-size: 1.25em;
+  border-radius: 0.32em;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.45);
 }
 .asset__custom-logo {
   display: block;
@@ -371,31 +409,6 @@
   display: block;
   inline-size: 100%;
   block-size: auto;
-}
-.asset__qr-chip {
-  position: absolute;
-  inset-block-end: -1px;
-  inset-inline-start: 50%;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-inline-size: max-content;
-  padding: 5px 9px;
-  border: 2px solid rgba(255, 255, 255, 0.65);
-  border-radius: 999px;
-  color: var(--asset-ink, #073f36);
-  background: #ffffff;
-  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.18);
-  font-size: 0.55rem;
-  font-weight: 900;
-  transform: translateX(-50%);
-}
-[dir='rtl'] .asset__qr-chip {
-  transform: translateX(50%);
-}
-.asset__qr-chip svg {
-  inline-size: 10px;
-  block-size: 10px;
 }
 .asset__cta {
   display: inline-block;
@@ -525,23 +538,46 @@
   inline-size: min(380px, 100%);
   aspect-ratio: 1 / 1.414;
   justify-content: center;
-  gap: 18px;
-  padding: 40px 34px;
+  gap: 10px;
+  padding: 26px 28px;
 }
 .asset--banner .asset__kicker {
-  font-size: 0.95rem;
+  font-size: 0.88rem;
 }
 .asset--banner .asset__hero {
-  font-size: 1.95rem;
+  font-size: 1.75rem;
 }
 .asset--banner .asset__qr-wrap {
-  inline-size: 56%;
+  inline-size: 45%;
+  padding: 8px;
 }
-.asset--banner .asset__cta {
-  font-size: 1rem;
+.asset--banner .asset__qr {
+  border-radius: 12px;
+  padding: 7px;
 }
 .asset--banner .asset__brand {
+  padding-block: 4px;
+  padding-inline: 9px;
+  font-size: 0.78rem;
+}
+.asset--banner .asset__cta {
+  padding-block: 7px;
+  padding-inline: 16px;
   font-size: 0.9rem;
+}
+.asset--banner .asset__steps {
+  gap: 4px;
+  max-inline-size: 28ch;
+}
+.asset--banner .asset__steps li {
+  gap: 8px;
+  padding-block: 5px;
+  padding-inline: 9px;
+  font-size: 0.78rem;
+}
+.asset--banner .asset__steps b {
+  inline-size: 22px;
+  block-size: 22px;
 }
 
 /* Standee layout */
@@ -612,6 +648,7 @@
 }
 .owner-qr-person__code {
   position: relative;
+  max-inline-size: 100%;
   padding: 9px;
   border-radius: 18px;
   background:
@@ -620,6 +657,9 @@
 }
 .owner-qr-person__code img {
   display: block;
+  inline-size: 160px;
+  max-inline-size: 100%;
+  block-size: auto;
   border-radius: 11px;
 }
 .owner-qr-person__monogram {
@@ -641,14 +681,76 @@
 
 @media (max-width: 640px) {
   .owner-qr-stage {
-    padding: 22px 14px;
+    padding: 18px 10px;
   }
   .owner-qr-studio-head {
-    align-items: flex-start;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    align-items: start;
+    column-gap: 12px;
+    row-gap: 8px;
+  }
+  .owner-qr-studio-head > .owner-qr-studio-icon {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+  .owner-qr-studio-head > div {
+    grid-column: 2;
+    grid-row: 1;
+    min-inline-size: 0;
   }
   .owner-qr-live-badge {
-    margin-inline-start: 56px;
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: start;
+    margin-inline-start: 0;
+  }
+  .owner-qr-segmented {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    inline-size: 100%;
+  }
+  .owner-qr-seg {
+    min-inline-size: 0;
+    padding-inline: 8px;
+    font-size: 0.82rem;
+  }
+  .owner-qr-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .owner-qr-actions > button:first-child {
+    grid-column: 1 / -1;
+  }
+  .owner-qr-actions > button,
+  .owner-qr-url-actions > button,
+  .owner-qr-url-actions > a,
+  .owner-qr-order-submit > button {
+    inline-size: 100%;
+    justify-content: center;
+  }
+  .owner-qr-url-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .owner-qr-url-actions > [data-testid='qr-url'] {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 767px) {
+  /* Put the useful output before the long customization form on phones. */
+  .owner-qr-studio-grid > :nth-child(2) {
+    order: -1;
+  }
+
+  /* Keep customization available without making first screen feel like a
+     settings form. Preview + print/download actions stay visible first. */
+  .owner-qr-controls__toggle {
+    display: flex;
+  }
+  .owner-qr-controls:not(.owner-qr-controls--open) > :not(.owner-qr-controls__toggle) {
+    display: none;
   }
 }
 .asset--standee .asset__cta {
@@ -667,41 +769,91 @@
 }
 
 @media print {
-  /* Hide the interactive screen surface in print. */
-  .owner-qr-screen-only {
+  /* Mobile print previews do not handle a fixed child inside the scrolling
+     owner shell consistently. Flatten shell layout and print one surface in
+     normal flow so Chrome, Safari and Android print dialogs agree. */
+  @page {
+    margin: 0;
+    size: auto;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
+  body > *:not(#root) {
     display: none !important;
   }
 
-  /* Reset the page layout for print — remove the shell's sidebar/header. */
-  body * {
-    visibility: hidden;
+  [data-shell='owner'] {
+    display: block !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
   }
-  .owner-qr-standee,
-  .owner-qr-standee *,
-  .owner-qr-print-asset,
-  .owner-qr-print-asset * {
-    visibility: visible;
+
+  [data-shell='owner'] > header,
+  [data-shell='owner'] > nav,
+  [data-shell='owner'] > div > aside,
+  [data-shell='owner'] > div > main > :not(.owner-qr-page) {
+    display: none !important;
   }
+
+  [data-shell='owner'] > div,
+  [data-shell='owner'] > div > main,
+  .owner-qr-page {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Only the selected print surface survives. This also prevents hidden
+     screen cards from contributing blank pages on mobile. */
+  .owner-qr-page > :not(.owner-qr-standee):not(.owner-qr-print-asset) {
+    display: none !important;
+  }
+
   .owner-qr-standee,
   .owner-qr-print-asset {
-    position: fixed;
-    inset: 0;
-    display: flex;
+    position: relative;
+    inset: auto;
+    display: flex !important;
+    width: 100%;
+    max-width: 100%;
+    min-height: 0;
+    height: auto;
+    margin: 0;
+    padding: 8mm;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    box-sizing: border-box;
+    break-inside: avoid;
+    break-after: avoid;
   }
 
   /* Default standee print layout (used when the standee template is selected). */
   .owner-qr-standee {
     gap: var(--space-6);
-    min-block-size: 100vh;
-    padding-block: var(--space-10);
-    padding-inline: var(--space-6);
     text-align: center;
     color: #000000;
     background-color: #ffffff;
-    break-inside: avoid;
   }
 
   /* When a branded card/banner is selected, print THAT and hide the standee. */
@@ -711,28 +863,22 @@
   }
 
   .owner-qr-print-asset {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-block-size: 100vh;
+    min-height: 0;
   }
 
   /* Make the gradient/colors actually print. */
   .asset {
+    box-sizing: border-box;
+    max-inline-size: 100%;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
     box-shadow: none;
-    break-inside: avoid;
   }
   .owner-qr-print-asset .asset--card {
-    inline-size: 86mm;
+    inline-size: min(86mm, 100%);
   }
   .owner-qr-print-asset .asset--banner {
-    inline-size: 180mm;
-  }
-
-  @page {
-    margin: 8mm;
+    inline-size: min(180mm, 100%);
   }
 }
 
@@ -744,8 +890,11 @@
 }
 
 .owner-qr-standee__qr {
-  inline-size: 60mm;
-  block-size: 60mm;
+  inline-size: min(60mm, 100%);
+  max-inline-size: 100%;
+  block-size: auto;
+  aspect-ratio: 1;
+  box-sizing: border-box;
   padding: var(--space-3);
   background-color: #ffffff;
 }

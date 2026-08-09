@@ -36,6 +36,15 @@ export interface BookingRequest {
   customerId: string;
   preferredStaffId?: string; // R14.3
   source: 'web' | 'mobile' | 'walkin' | 'bot'; // R13.1 (+ 'bot' for in-chat booking, Requirement 1.6)
+  /** Client retry key; validated and deduplicated at the HTTP/application edge. */
+  idempotencyKey?: string;
+}
+
+/** Minimal resource window needed to wake one waitlist entry after hold expiry. */
+export interface ExpiredHoldWindow {
+  salonId: string;
+  startAt: Date;
+  endAt: Date;
 }
 
 /** Input for moving an existing appointment without creating a replacement row. */
@@ -86,6 +95,17 @@ export type BookingResult =
 export interface SchedulingEngineOptions {
   /** Hold period in seconds for deposit-required services. Default: 900 (15 minutes) */
   holdPeriodSeconds?: number;
+}
+
+/**
+ * Raised when an appointment mutation targets an appointment in an invalid
+ * lifecycle state. The HTTP layer maps this expected conflict to a 409.
+ */
+export class AppointmentStateError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AppointmentStateError';
+  }
 }
 
 /** Maximum number of insert retries when exclusion constraint violations occur */
@@ -143,9 +163,10 @@ export class SchedulingEngine {
     const salon = salonDelegate?.findUnique
       ? ((await salonDelegate.findUnique({
           where: { id: salonId },
-          select: { timezone: true, bookingWindowDays: true },
+          select: { timezone: true, bookingWindowDays: true, active: true },
         })) as { timezone: string; bookingWindowDays: number } | null)
       : null;
+    if (salon && (salon as { active?: boolean }).active === false) return [];
     if (salon) {
       const today = dateInTimeZone(new Date(), salon.timezone);
       if (date < today || date > addIsoDays(today, salon.bookingWindowDays)) return [];
@@ -212,6 +233,7 @@ export class SchedulingEngine {
         id: { in: qualifiedStaffIds },
         salonId,
         active: true,
+        role: { in: ['Owner', 'Stylist'] },
       },
     });
 
@@ -482,11 +504,11 @@ export class SchedulingEngine {
         serviceStaff: true,
         serviceEquipment: true,
         // The salon's default approval policy (auto-confirm vs manual).
-        salon: { select: { autoApprove: true } },
+        salon: { select: { autoApprove: true, active: true } },
       },
     });
 
-    if (!service || service.salonId !== salonId) {
+    if (!service || service.salonId !== salonId || service.salon?.active === false) {
       return { status: 'rejected', reason: 'no_availability' };
     }
 
@@ -494,9 +516,12 @@ export class SchedulingEngine {
     const salonPolicy = salonDelegate?.findUnique
       ? ((await salonDelegate.findUnique({
           where: { id: salonId },
-          select: { timezone: true, bookingWindowDays: true },
+          select: { timezone: true, bookingWindowDays: true, active: true },
         })) as { timezone: string; bookingWindowDays: number } | null)
       : null;
+    if (salonPolicy && (salonPolicy as { active?: boolean }).active === false) {
+      return { status: 'rejected', reason: 'no_availability' };
+    }
     if (salonPolicy) {
       const requestedDate = dateInTimeZone(new Date(startAtISO), salonPolicy.timezone);
       const today = dateInTimeZone(new Date(), salonPolicy.timezone);
@@ -554,6 +579,7 @@ export class SchedulingEngine {
         id: { in: qualifiedStaffIds },
         salonId,
         active: true,
+        role: { in: ['Owner', 'Stylist'] },
       },
     });
 
@@ -1039,6 +1065,19 @@ export class SchedulingEngine {
   }
 
   /**
+   * Snapshot expired hold windows before the maintenance update. The
+   * application flow uses these exact intervals to notify the waitlist; this
+   * keeps expiry behavior useful instead of only freeing the database row.
+   */
+  async findExpiredHoldWindows(now: Date = new Date()): Promise<ExpiredHoldWindow[]> {
+    const rows = await this.prisma.appointment.findMany({
+      where: { status: 'held', holdExpiresAt: { lte: now } },
+      select: { salonId: true, startAt: true, endAt: true },
+    });
+    return rows;
+  }
+
+  /**
    * Confirm a held appointment after successful payment verification.
    * Transitions the appointment from 'held' to 'confirmed'.
    *
@@ -1095,7 +1134,7 @@ export class SchedulingEngine {
     }
 
     if (appointment.status !== 'pending') {
-      throw new Error(
+      throw new AppointmentStateError(
         `Appointment ${appointmentId} cannot be approved: current status is '${appointment.status}', expected 'pending'`,
       );
     }
@@ -1131,7 +1170,7 @@ export class SchedulingEngine {
     }
 
     if (appointment.status !== 'pending') {
-      throw new Error(
+      throw new AppointmentStateError(
         `Appointment ${appointmentId} cannot be rejected: current status is '${appointment.status}', expected 'pending'`,
       );
     }

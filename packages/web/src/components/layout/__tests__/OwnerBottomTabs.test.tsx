@@ -9,7 +9,8 @@ import '../../../i18n';
  *
  * Covers: tab rendering with Persian labels, active tab detection from the
  * route, nav landmark with aria-label, aria-current="page" on the active tab,
- * touch target sizing (≥ 44px), indicator presence on active tab, navigation
+ * compact icon-only layout, touch target sizing (≥ 64px), indicator presence
+ * on active tab, navigation
  * on click, and safe-area-inset-bottom respect.
  */
 
@@ -51,6 +52,11 @@ describe('OwnerBottomTabs', () => {
     expect(screen.getByText('تنظیمات سالن')).toBeInTheDocument();
   });
 
+  it('uses the compact QR label in the tab bar', () => {
+    renderTabs();
+    expect(screen.getByText('QR')).toBeInTheDocument();
+  });
+
   it('sets aria-current="page" on the active tab based on route', () => {
     renderTabs('/owner/analytics');
     const buttons = screen.getAllByRole('link');
@@ -82,11 +88,13 @@ describe('OwnerBottomTabs', () => {
     expect(buttons[1]).toHaveAttribute('aria-current', 'page');
   });
 
-  it('touch targets are at least 44px (min-h-[44px] class)', () => {
+  it('keeps compact icon-only tabs with at least 64px touch targets', () => {
     const { container } = renderTabs();
     const buttons = container.querySelectorAll('a');
     buttons.forEach((btn) => {
-      expect(btn.className).toContain('min-h-[44px]');
+      expect(btn.className).toContain('min-h-[64px]');
+      expect(btn.className).toContain('gap-0');
+      expect(btn.querySelector('svg')).toHaveClass('h-6', 'w-6');
     });
   });
 
@@ -95,6 +103,13 @@ describe('OwnerBottomTabs', () => {
     // The indicator is a motion.span with the bg-primary class
     const indicator = container.querySelector('[class*="bg-primary"]');
     expect(indicator).toBeInTheDocument();
+  });
+
+  it('opens the glass overflow sheet', () => {
+    renderTabs();
+    fireEvent.click(screen.getByRole('button', { name: 'بیشتر' }));
+    expect(document.querySelector('.owner-more-sheet')).toBeInTheDocument();
+    expect(document.querySelector('.owner-more-item')).toBeInTheDocument();
   });
 
   it('respects safe-area-inset-bottom via padding class', () => {

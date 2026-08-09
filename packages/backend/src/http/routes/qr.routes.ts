@@ -2,7 +2,6 @@ import { Router } from 'express';
 import type { Services } from '../app.js';
 import type { RequireRole } from './appointment.routes.js';
 import { asyncRoute } from './route-helpers.js';
-import { requirePaidSubscription } from '../middleware/require-subscription.js';
 
 /**
  * Owner-panel QR route (Requirements 4.1–4.4). Maps the panel client surface
@@ -23,17 +22,9 @@ import { requirePaidSubscription } from '../middleware/require-subscription.js';
 export function qrRouter(services: Services, requireRole: RequireRole): Router {
   const router = Router();
 
-  // Barcode/QR generation is a premium feature: it is unlocked only for a salon
-  // with a PAID subscription (active/grace). A salon on the free `trial` (or an
-  // `expired` one) is blocked with 402 SUBSCRIPTION_REQUIRED so the panel can
-  // surface a "subscribe to unlock" prompt — the trial lets an owner set the
-  // salon up, but generating the customer-facing QR requires a subscription.
-  const requirePaid = requirePaidSubscription(services.subscriptionService);
-
   router.get(
     '/salons/:id/qr',
     requireRole('manage_appointments'),
-    requirePaid,
     asyncRoute(async (req, res) => {
       const qr = await services.qrService.buildSalonQrResponse(req.params.id);
       res.status(200).json(qr);
@@ -50,7 +41,6 @@ export function qrRouter(services: Services, requireRole: RequireRole): Router {
       salonId: req.params.id,
       staffMemberId: req.params.staffId,
     })),
-    requirePaid,
     asyncRoute(async (req, res) => {
       const qr = await services.qrService.buildStaffQrResponse(
         req.params.id,

@@ -131,11 +131,13 @@ function toModel(raw: {
   };
 }
 
-/** Default analytics window: the last 30 days up to today (ISO dates). */
+/** Default analytics window: the last 30 days through today (exclusive end). */
 function defaultRange(today: Date): { from: string; to: string } {
   const from = new Date(today);
   from.setDate(from.getDate() - 30);
-  return { from: from.toISOString().slice(0, 10), to: today.toISOString().slice(0, 10) };
+  const to = new Date(today);
+  to.setDate(to.getDate() + 1);
+  return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
 }
 
 /** `HH:mm` for an ISO instant, or null when not a valid date. */

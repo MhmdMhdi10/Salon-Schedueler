@@ -123,6 +123,7 @@ async function request<T>(
     throw new ApiError(response.status, error.code || 'UNKNOWN', error.message);
   }
 
+  if (response.status === 204) return undefined as T;
   return response.json();
 }
 
@@ -140,7 +141,10 @@ export class ApiError extends Error {
 // Auth endpoints
 export const authApi = {
   requestOtp: (phone: string) =>
-    request<void>('/auth/otp/request', { method: 'POST', body: { phone } }),
+    request<{ ok: boolean; devOtp?: string }>('/auth/otp/request', {
+      method: 'POST',
+      body: { phone },
+    }),
   verifyOtp: (phone: string, code: string) =>
     request<{ accessToken: string; refreshToken: string }>('/auth/otp/verify', {
       method: 'POST',
@@ -155,10 +159,11 @@ export const authApi = {
 
 /** The authenticated principal as returned by `GET /me` (mirrors the backend `Principal`). */
 export type OwnerRole = 'Owner' | 'Admin' | 'Stylist';
+export type PrincipalRole = OwnerRole | PlatformRole;
 
 export interface Principal {
   id: string;
-  role: OwnerRole;
+  role?: PrincipalRole;
   staffMemberId?: string;
   /**
    * The salon this staff member belongs to. Lets the owner panel scope every
@@ -167,12 +172,78 @@ export interface Principal {
    * older tokens (callers fall back to the dev default).
    */
   salonId?: string;
+  platformAdminId?: string;
 }
 
 // Authenticated identity endpoint — derives the current principal (and its
 // role) from the access token so the owner panel can gate by RBAC (task 5.1).
 export const meApi = {
   getMe: () => request<{ principal: Principal }>('/me'),
+};
+
+/** A customer's own booking, enriched for the account calendar. */
+export interface CustomerAppointment {
+  id: string;
+  salonId: string;
+  salonName?: string;
+  serviceId: string;
+  serviceName?: string;
+  staffMemberId: string;
+  staffName?: string;
+  chairId: string;
+  startAt: string;
+  endAt: string;
+  status: string;
+  source: string;
+  createdAt: string;
+}
+
+export interface CustomerWaitlistEntry {
+  id: string;
+  salonId: string;
+  customerId: string;
+  serviceId: string;
+  windowStart: string;
+  windowEnd: string;
+  status: 'waiting' | 'notified' | 'fulfilled' | 'cancelled' | string;
+  createdAt: string;
+}
+
+export interface CustomerProfile {
+  id: string;
+  phone: string;
+  fullName: string | null;
+}
+
+/** Customer-only self-service reads. The backend scopes these to the token. */
+export const customerApi = {
+  getProfile: () => request<{ customer: CustomerProfile }>('/customers/me/profile'),
+  updateProfile: (fullName: string) =>
+    request<{ customer: CustomerProfile }>('/customers/me/profile', {
+      method: 'PATCH',
+      body: { fullName },
+    }),
+  getAppointments: () =>
+    request<{ appointments: CustomerAppointment[] }>('/customers/me/appointments'),
+  getWaitlist: () =>
+    request<{ waitlist: CustomerWaitlistEntry[] }>('/customers/me/waitlist'),
+  cancelAppointment: (appointmentId: string) =>
+    request<{ status: string; appointment: unknown }>(
+      `/appointments/${appointmentId}/cancel`,
+      { method: 'POST' },
+    ),
+  rescheduleAppointment: (appointmentId: string, startAt: string, preferredStaffId?: string) =>
+    request<{ status: string; appointment: unknown; previousAppointmentId: string }>(
+      `/appointments/${appointmentId}/reschedule`,
+      {
+        method: 'POST',
+        body: { startAt, ...(preferredStaffId ? { preferredStaffId } : {}) },
+      },
+    ),
+  cancelWaitlist: (entryId: string) =>
+    request<{ waitlist: CustomerWaitlistEntry }>(`/waitlist/${entryId}`, {
+      method: 'DELETE',
+    }),
 };
 
 // ─── Salon registration (public onboarding) ─────────────────────────────────
@@ -265,11 +336,14 @@ export const salonApi = {
         id: string;
         name: string;
         durationMinutes: number;
+        bufferMinutes?: number;
         priceRial: number;
         /** True when booking requires an upfront deposit via the gateway. */
         requiresDeposit?: boolean;
         /** Deposit amount in Rial (present when `requiresDeposit`). */
         depositRial?: number | null;
+        /** Owner/Stylist ids qualified to perform this service. */
+        staffIds?: string[];
       }>;
     }>(`/salons/${salonId}/services`),
   /**
@@ -282,6 +356,10 @@ export const salonApi = {
     ),
   getBookingPolicy: (salonId: string) =>
     request<{ bookingWindowDays: number }>(`/salons/${salonId}/booking-policy`),
+  recordScan: (salonId: string, source: string) =>
+    request<void>(`/salons/${salonId}/scan?utm_source=${encodeURIComponent(source)}`, {
+      method: 'POST',
+    }),
 };
 
 // Booking endpoints
@@ -294,10 +372,37 @@ export const bookingApi = {
   }) =>
     request<{ status: string; appointment?: unknown; paymentRedirectUrl?: string }>(
       '/appointments',
-      { method: 'POST', body },
+      {
+        method: 'POST',
+        body,
+        headers: {
+          'Idempotency-Key':
+            typeof crypto !== 'undefined' && 'randomUUID' in crypto
+              ? crypto.randomUUID()
+              : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        },
+      },
     ),
   cancel: (appointmentId: string) =>
-    request<void>(`/appointments/${appointmentId}/cancel`, { method: 'POST' }),
+    request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/cancel`, {
+      method: 'POST',
+    }),
+  reschedule: (appointmentId: string, startAt: string, preferredStaffId?: string) =>
+    request<{ status: string; appointment: unknown; previousAppointmentId: string }>(
+      `/appointments/${appointmentId}/reschedule`,
+      {
+        method: 'POST',
+        body: { startAt, ...(preferredStaffId ? { preferredStaffId } : {}) },
+      },
+    ),
+};
+
+export const waitlistApi = {
+  join: (salonId: string, serviceId: string, windowStart: string, windowEnd: string) =>
+    request<{ waitlist: CustomerWaitlistEntry }>(`/salons/${salonId}/waitlist`, {
+      method: 'POST',
+      body: { serviceId, windowStart, windowEnd },
+    }),
 };
 
 // Payment endpoints
@@ -450,20 +555,50 @@ export const cardOrderApi = {
     }),
 };
 
-export interface CalendarAppointment {
+// Admin endpoints
+export interface SmsSettings {
+  ownerBooking: boolean;
+  stylistBooking: boolean;
+  ownerReminder: boolean;
+  stylistReminder: boolean;
+  ownerCancellation: boolean;
+  stylistCancellation: boolean;
+}
+
+export interface CustomerAppointmentRecord {
   id: string;
+  salonId: string;
+  serviceId: string;
+  staffMemberId: string;
+  chairId: string;
   startAt: string;
   endAt: string;
   status: string;
-  staffMemberId?: string | null;
-  customerId?: string | null;
-  serviceName?: string | null;
-  customerName?: string | null;
-  customerPhone?: string | null;
-  staffName?: string | null;
+  source: string;
+  createdAt: string;
+  salonName?: string;
+  serviceName?: string;
+  staffName?: string;
 }
 
-// Admin endpoints
+export interface AppointmentCustomerOverview {
+  customer: {
+    id: string;
+    phone: string;
+    fullName: string | null;
+    noShowCount?: number;
+  };
+  appointments: CustomerAppointmentRecord[];
+  notes: Array<{
+    id: string;
+    customerId: string;
+    authorId: string | null;
+    body: string;
+    createdAt: string;
+  }>;
+  preferredStaff: { id: string; fullName: string; role: string } | null;
+}
+
 export const adminApi = {
   getCalendar: (
     salonId: string,
@@ -475,17 +610,45 @@ export const adminApi = {
       `/salons/${salonId}/calendar?from=${from}&to=${to}&view=${view}`,
     ),
   getAnalytics: (salonId: string, from: string, to: string) =>
-    request<{ utilization: unknown; revenue: unknown; busiestWindows: unknown }>(
+    request<{
+      utilization: unknown;
+      revenue: unknown;
+      busiestWindows: unknown;
+      staffUtilization?: unknown;
+      summary?: unknown;
+      comparison?: unknown;
+      daily?: unknown;
+      hourly?: unknown;
+      services?: unknown;
+      staff?: unknown;
+      sources?: unknown;
+      customers?: unknown;
+    }>(
       `/salons/${salonId}/analytics?from=${from}&to=${to}`,
     ),
   getStaff: (salonId: string) => request<{ staff: SalonStaff[] }>(`/salons/${salonId}/staff`),
+  getSmsSettings: (salonId: string) =>
+    request<SmsSettings>(`/salons/${salonId}/sms-settings`),
+  updateSmsSettings: (salonId: string, patch: Partial<SmsSettings>) =>
+    request<SmsSettings>(`/salons/${salonId}/sms-settings`, { method: 'PATCH', body: patch }),
   getChairs: (salonId: string) => request<{ chairs: unknown[] }>(`/salons/${salonId}/chairs`),
+  createManualAppointment: (
+    salonId: string,
+    body: {
+      serviceId: string;
+      startAt: string;
+      phone: string;
+      fullName?: string;
+      preferredStaffId?: string;
+    },
+  ) =>
+    request<{ status: string; appointment: unknown; paymentRedirectUrl?: string }>(
+      `/salons/${salonId}/appointments/manual`,
+      { method: 'POST', body },
+    ),
   /** The salon's bookings awaiting approval, oldest first (manage_appointments). */
   getPending: (salonId: string) =>
     request<{ appointments: unknown[] }>(`/salons/${salonId}/pending`),
-  /** Customer context opened from a calendar appointment. */
-  getCustomerProfile: (salonId: string, customerId: string) =>
-    request<CustomerProfileResponse>(`/salons/${salonId}/customers/${customerId}`),
   /** Approve a pending appointment (manage_appointments — Owner/Admin). */
   approveAppointment: (appointmentId: string) =>
     request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/approve`, {
@@ -496,12 +659,6 @@ export const adminApi = {
     request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/reject`, {
       method: 'POST',
     }),
-  /** Move an existing appointment in place; backend validates hours and conflicts. */
-  rescheduleAppointment: (appointmentId: string, startAt: string) =>
-    request<{ status: string; appointment: CalendarAppointment }>(
-      `/appointments/${appointmentId}/reschedule`,
-      { method: 'PATCH', body: { startAt } },
-    ),
   /**
    * Cancel a confirmed/held appointment from the calendar. The backend releases
    * the staff + chair, applies the deposit refund/retain policy, and notifies
@@ -522,22 +679,82 @@ export const adminApi = {
     request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/no-show`, {
       method: 'POST',
     }),
+  rescheduleAppointment: (appointmentId: string, startAt: string, preferredStaffId?: string) =>
+    request<{
+      status: string;
+      appointment: {
+        id?: string;
+        startAt?: string;
+        endAt?: string;
+        status?: string;
+        staffMemberId?: string;
+      } | null;
+      previousAppointmentId: string;
+      paymentRedirectUrl?: string;
+    }>('/appointments/' + appointmentId + '/reschedule-managed', {
+      method: 'POST',
+      body: { startAt, ...(preferredStaffId ? { preferredStaffId } : {}) },
+    }),
+  getAppointmentCustomer: (appointmentId: string) =>
+    request<AppointmentCustomerOverview>('/appointments/' + appointmentId + '/customer'),
+  sendCustomerMessage: (appointmentId: string, message: string) =>
+    request<{ status: 'sent' }>('/appointments/' + appointmentId + '/message', {
+      method: 'POST',
+      body: { message },
+    }),
+
   /** The salon's money transactions (appointment + subscription payments), newest-first. */
   getTransactions: (salonId: string) =>
     request<{ transactions: Transaction[] }>(`/salons/${salonId}/transactions`),
-  /** Create a service (Owner only). Duration/price optional (default 30/0). */
+  /** Create a service (Owner only). Deposit fields are optional. */
   createService: (
     salonId: string,
-    body: { name: string; durationMinutes?: number; priceRial?: number },
+    body: {
+      name: string;
+      durationMinutes?: number;
+      bufferMinutes?: number;
+      priceRial?: number;
+      requiresDeposit?: boolean;
+      depositRial?: number;
+    },
   ) =>
-    request<{ service: { id: string; name: string; durationMinutes: number; priceRial: number } }>(
-      `/salons/${salonId}/services`,
-      { method: 'POST', body },
-    ),
+    request<{
+      service: {
+        id: string;
+        name: string;
+        durationMinutes: number;
+        bufferMinutes?: number;
+        priceRial: number;
+        requiresDeposit: boolean;
+        depositRial: number | null;
+        staffIds?: string[];
+      };
+    }>(`/salons/${salonId}/services`, { method: 'POST', body }),
   /** Delete a service (Owner only). */
   deleteService: (salonId: string, serviceId: string) =>
     request<{ ok: boolean }>(`/salons/${salonId}/services/${serviceId}`, {
       method: 'DELETE',
+    }),
+  updateService: (
+    salonId: string,
+    serviceId: string,
+    body: {
+      name?: string;
+      durationMinutes?: number;
+      bufferMinutes?: number;
+      priceRial?: number;
+      requiresDeposit?: boolean;
+      depositRial?: number | null;
+    },
+  ) =>
+    request<{ service: Record<string, unknown> }>(
+      `/salons/${salonId}/services/${serviceId}`,
+      { method: 'PATCH', body },
+    ),
+  setServiceStaff: (salonId: string, serviceId: string, staffIds: string[]) =>
+    request<{ staffIds: string[] }>(`/salons/${salonId}/services/${serviceId}/staff`, {
+      method: 'PUT',
+      body: { staffIds },
     }),
   /** Create a chair (Owner only). */
   createChair: (salonId: string, body: { name: string }) =>
@@ -556,25 +773,209 @@ export const adminApi = {
     ),
 };
 
-export interface CustomerProfileAppointment {
+// ─── Platform admin ─────────────────────────────────────────────────────────
+// Global operations center. This surface is intentionally separate from
+// `adminApi`: the latter is tenant-scoped to one salon; these endpoints require
+// a PlatformAdmin JWT and never accept a salon identity from the browser.
+
+export type PlatformRole = 'PlatformAdmin';
+
+export interface PlatformPageMeta {
+  page: number;
+  limit: number;
+  total: number;
+  pageCount: number;
+}
+
+export interface PlatformPage<T> {
+  data: T[];
+  meta: PlatformPageMeta;
+}
+
+export interface PlatformDashboard {
+  metrics: {
+    totalSalons: number;
+    activeSalons: number;
+    suspendedSalons: number;
+    totalCustomers: number;
+    totalStaff: number;
+    totalAppointments: number;
+    todayAppointments: number;
+    pendingAppointments: number;
+    waitingList: number;
+    qrScans30d: number;
+    revenue30dRial: number;
+    pendingPayments: number;
+  };
+  subscriptions: Record<string, number>;
+  trend: Array<{ date: string; appointments: number; qrScans: number }>;
+  recentSalons: Array<{
+    id: string;
+    name: string;
+    active: boolean;
+    createdAt: string;
+    subscription: { status: string; planKind: string; expiresAt: string } | null;
+  }>;
+}
+
+export interface PlatformSalonRow {
+  id: string;
+  name: string;
+  qrToken: string;
+  timezone: string;
+  active: boolean;
+  createdAt: string;
+  owner: { fullName: string; phone: string | null } | null;
+  subscription: { status: string; planKind: string; expiresAt: string } | null;
+  counts: { staffMembers: number; services: number; appointments: number; waitlistEntries: number; qrScanEvents: number };
+}
+
+export interface PlatformCustomerRow {
+  id: string;
+  phone: string;
+  fullName: string | null;
+  noShowCount: number;
+  _count: { appointments: number; waitlistEntries: number };
+}
+
+export interface PlatformStaffRow {
+  id: string;
+  fullName: string;
+  phone: string | null;
+  role: string;
+  active: boolean;
+  salon: { id: string; name: string };
+}
+
+export interface PlatformAppointmentRow {
   id: string;
   startAt: string;
   endAt: string;
   status: string;
-  service?: { name?: string | null } | null;
-  staffMember?: { fullName?: string | null } | null;
+  source: string;
+  createdAt: string;
+  salon: { id: string; name: string };
+  customer: { id: string; fullName: string | null; phone: string };
+  staffMember: { id: string; fullName: string };
+  service: { id: string; name: string; priceRial: number };
+  _count: { payments: number };
 }
 
-export interface CustomerProfileResponse {
-  customer: {
-    id: string;
-    phone: string;
-    fullName: string | null;
-    noShowCount: number;
-    preferredStaff?: { id: string; fullName: string | null; role: string } | null;
-  };
-  appointments: CustomerProfileAppointment[];
+export interface PlatformSubscriptionRow {
+  id: string;
+  status: string;
+  planKind: string;
+  startedAt: string;
+  expiresAt: string;
+  graceUntil: string | null;
+  salon: { id: string; name: string; active: boolean };
 }
+
+export interface PlatformPaymentRow {
+  id: string;
+  kind: 'appointment' | 'subscription';
+  amountRial: number;
+  status: string;
+  gateway: string;
+  refId: string | null;
+  createdAt: string;
+  salon: { id: string; name: string };
+  subject: string;
+  customer: { fullName: string | null; phone: string } | null;
+}
+
+export interface PlatformWaitlistRow {
+  id: string;
+  status: string;
+  windowStart: string;
+  windowEnd: string;
+  createdAt: string;
+  salon: { id: string; name: string };
+  customer: { fullName: string | null; phone: string };
+  service: { name: string };
+}
+
+export interface PlatformQrScanRow {
+  id: string;
+  source: string;
+  createdAt: string;
+  salon: { id: string; name: string };
+}
+
+export interface PlatformAuditRow {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+  admin: { id: string; fullName: string; phone: string };
+}
+
+export interface PlatformListOptions {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  salonId?: string;
+  source?: string;
+  from?: string;
+  to?: string;
+}
+
+export interface PlatformDetailResponse {
+  resource: string;
+  record: Record<string, unknown> & { id?: string };
+}
+
+function platformQuery(options: PlatformListOptions = {}): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(options)) {
+    if (value !== undefined && value !== '') params.set(key, String(value));
+  }
+  const query = params.toString();
+  return query ? `?${query}` : '';
+}
+
+export const platformAdminApi = {
+  getDashboard: () => request<PlatformDashboard>('/platform-admin/dashboard'),
+  listSalons: (options?: PlatformListOptions) =>
+    request<PlatformPage<PlatformSalonRow>>(`/platform-admin/salons${platformQuery(options)}`),
+  getSalon: (id: string) => request<{ salon: Record<string, unknown> }>(`/platform-admin/salons/${id}`),
+  getDetail: (resource: string, id: string) =>
+    request<PlatformDetailResponse>(`/platform-admin/details/${encodeURIComponent(resource)}/${encodeURIComponent(id)}`),
+  setSalonActive: (id: string, active: boolean) =>
+    request<{ salon: { id: string; active: boolean } }>(`/platform-admin/salons/${id}/status`, {
+      method: 'PATCH',
+      body: { active },
+    }),
+  listCustomers: (options?: PlatformListOptions) =>
+    request<PlatformPage<PlatformCustomerRow>>(`/platform-admin/customers${platformQuery(options)}`),
+  listStaff: (options?: PlatformListOptions) =>
+    request<PlatformPage<PlatformStaffRow>>(`/platform-admin/staff${platformQuery(options)}`),
+  setStaffActive: (id: string, active: boolean) =>
+    request<{ staff: { id: string; active: boolean } }>(`/platform-admin/staff/${id}/status`, {
+      method: 'PATCH',
+      body: { active },
+    }),
+  listAppointments: (options?: PlatformListOptions) =>
+    request<PlatformPage<PlatformAppointmentRow>>(`/platform-admin/appointments${platformQuery(options)}`),
+  appointmentAction: (id: string, action: 'approve' | 'reject' | 'cancel' | 'no_show' | 'complete') =>
+    request<{ appointment: PlatformAppointmentRow }>(`/platform-admin/appointments/${id}/action`, {
+      method: 'POST',
+      body: { action },
+    }),
+  listSubscriptions: (options?: PlatformListOptions) =>
+    request<PlatformPage<PlatformSubscriptionRow>>(`/platform-admin/subscriptions${platformQuery(options)}`),
+  listPayments: (options?: PlatformListOptions) =>
+    request<PlatformPage<PlatformPaymentRow>>(`/platform-admin/payments${platformQuery(options)}`),
+  listWaitlist: (options?: PlatformListOptions) =>
+    request<PlatformPage<PlatformWaitlistRow>>(`/platform-admin/waitlist${platformQuery(options)}`),
+  listQrScans: (options?: PlatformListOptions) =>
+    request<PlatformPage<PlatformQrScanRow>>(`/platform-admin/qr-scans${platformQuery(options)}`),
+  listAuditLogs: (options?: PlatformListOptions) =>
+    request<PlatformPage<PlatformAuditRow>>(`/platform-admin/audit-logs${platformQuery(options)}`),
+};
 
 /** A single row in the owner-panel transactions ledger. */
 export interface Transaction {
@@ -731,7 +1132,9 @@ export const workingHoursApi = {
       body: { hours },
     }),
   getStaff: (salonId: string, staffId: string) =>
-    request<{ hours: WeeklyWorkingHour[] }>(`/salons/${salonId}/staff/${staffId}/working-hours`),
+    request<{ hours: WeeklyWorkingHour[] }>(
+      `/salons/${salonId}/staff/${staffId}/working-hours`,
+    ),
   setStaff: (salonId: string, staffId: string, hours: WeeklyWorkingHour[]) =>
     request<{ ok: boolean; hours: WeeklyWorkingHour[] }>(
       `/salons/${salonId}/staff/${staffId}/working-hours`,
@@ -880,12 +1283,18 @@ export interface SalonNotification {
 }
 
 export const inboxApi = {
-  list: (salonId: string, opts?: { onlyUnread?: boolean; limit?: number }) => {
+  list: (salonId: string, opts?: { onlyUnread?: boolean; limit?: number; offset?: number }) => {
     const params = new URLSearchParams();
     if (opts?.onlyUnread) params.set('onlyUnread', 'true');
     if (opts?.limit) params.set('limit', String(opts.limit));
+    if (opts?.offset) params.set('offset', String(opts.offset));
     const qs = params.toString();
-    return request<{ notifications: SalonNotification[] }>(
+    return request<{
+      notifications: SalonNotification[];
+      total: number;
+      limit: number;
+      offset: number;
+    }>(
       `/salons/${salonId}/notifications${qs ? `?${qs}` : ''}`,
     );
   },

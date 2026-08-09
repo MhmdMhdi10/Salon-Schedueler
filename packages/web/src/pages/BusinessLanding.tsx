@@ -1,5 +1,7 @@
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowLeft,
   BadgeCheck,
@@ -11,7 +13,6 @@ import {
   Link2,
   Megaphone,
   ShieldCheck,
-  Sparkles,
   Store,
   UserRound,
   Users,
@@ -123,6 +124,50 @@ const FAQS = [
   },
 ] as const;
 
+function FAQItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
+  const answerId = `faq-answer-${useId().replace(/:/g, '')}`;
+
+  return (
+    <div className="border-b border-border">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={answerId}
+        onClick={() => setOpen((current) => !current)}
+        className="flex min-h-16 w-full cursor-pointer items-center justify-between gap-4 py-4 text-start font-bold outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+      >
+        <span className="min-w-0">{question}</span>
+        <span
+          className={cn(
+            'shrink-0 text-xl font-normal leading-none text-primary transition-transform duration-fast motion-reduce:transition-none',
+            open && 'rotate-45',
+          )}
+          aria-hidden="true"
+        >
+          +
+        </span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open ? (
+          <motion.div
+            key="answer"
+            id={answerId}
+            initial={prefersReducedMotion ? false : { height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={prefersReducedMotion ? undefined : { height: 0, opacity: 0 }}
+            transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.28, ease: 'easeOut' }}
+            className="overflow-hidden"
+          >
+            <p className="max-w-3xl pb-6 text-sm leading-8 text-muted">{answer}</p>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 const primaryCtaClass = cn(
   'inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-primary px-6',
   'font-semibold text-primary-contrast no-underline shadow-1',
@@ -147,6 +192,7 @@ const secondaryCtaClass = cn(
  */
 export function BusinessLanding() {
   const { t } = useTranslation();
+  const heroTitleLines = t('business.hero.title').split('\n');
 
   return (
     <div data-testid="business-landing" className="bg-bg text-text">
@@ -181,12 +227,16 @@ export function BusinessLanding() {
         />
         <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 py-12 lg:grid-cols-12 lg:gap-8 lg:py-16">
           <div className="motion-safe:animate-fade-up lg:col-span-5">
-            <div className="mb-5 flex items-center gap-3 text-xs font-bold uppercase tracking-wider text-primary">
+            <div className="mb-6 flex items-center gap-3 text-xs font-bold uppercase tracking-wider text-primary">
               <span className="h-px w-10 bg-primary" aria-hidden="true" />
               {t('business.hero.eyebrow')}
             </div>
-            <h1 className="max-w-xl text-3xl font-display leading-hero tracking-tight sm:text-4xl lg:text-5xl">
-              {t('business.hero.title')}
+            <h1 className="flex max-w-lg flex-col gap-6 text-2xl font-display leading-tight tracking-tight sm:text-3xl lg:text-4xl">
+              {heroTitleLines.map((line) => (
+                <span key={line} className="block sm:whitespace-nowrap">
+                  {line}
+                </span>
+              ))}
             </h1>
             <p className="mt-6 max-w-xl text-md leading-8 text-muted">
               {t('business.hero.subtitle')}
@@ -417,38 +467,22 @@ export function BusinessLanding() {
             </h2>
             <p className="mt-4 text-muted">
               سؤال دیگری دارید؟{' '}
-              <Link to="/contact" className="font-semibold text-primary">
+              <Link to="/contact" className="inline-flex min-h-10 items-center font-semibold text-primary">
                 با پشتیبانی فارسی آرا صحبت کنید.
               </Link>
             </p>
           </div>
           <div className="border-t border-border">
-            {FAQS.map(({ question, answer }) => (
-              <details key={question} className="group border-b border-border">
-                <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 py-4 font-bold marker:content-none">
-                  {question}
-                  <span
-                    className="text-xl font-normal text-primary transition-transform duration-fast group-open:rotate-45"
-                    aria-hidden="true"
-                  >
-                    +
-                  </span>
-                </summary>
-                <p className="max-w-3xl pb-6 text-sm leading-8 text-muted">{answer}</p>
-              </details>
+            {FAQS.map((faq) => (
+              <FAQItem key={faq.question} {...faq} />
             ))}
           </div>
         </div>
       </section>
 
-      <section className="relative overflow-hidden bg-primary py-20 text-primary-contrast">
-        <Sparkles
-          className="absolute -top-8 start-[8%] size-40 opacity-10"
-          aria-hidden="true"
-          strokeWidth={0.7}
-        />
-        <div className="relative mx-auto grid max-w-5xl gap-8 px-4 text-center">
-          <h2 className="text-2xl font-display sm:text-4xl">
+      <section className="relative overflow-hidden bg-primary py-16 text-primary-contrast sm:py-20">
+        <div className="relative mx-auto grid max-w-5xl gap-6 px-4 text-center sm:gap-8">
+          <h2 className="text-2xl font-display leading-display sm:text-4xl">
             رزرو بعدی می‌تواند بدون تماس تلفنی ثبت شود
           </h2>
           <p className="mx-auto max-w-2xl text-md leading-8 opacity-90">
@@ -459,7 +493,7 @@ export function BusinessLanding() {
               to="/business/register"
               className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-primary-contrast px-7 font-bold text-primary no-underline shadow-2 hover:opacity-90"
             >
-              ثبت رایگان کسب‌وکار
+              {t('business.hero.primaryCta')}
               {/* RTL-native: ArrowLeft indicates forward in Persian layouts. */}
               <ArrowLeft className="size-4" aria-hidden="true" />
             </Link>

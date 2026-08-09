@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>گزارش ممیزی UI/UX و E2E آرا</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f7fa;
+        --surface: #fff;
+        --text: #142033;
+        --muted: #617089;
+        --border: #dce3ec;
+        --primary: #087f75;
+        --success: #087443;
+        --success-bg: #e8f7ef;
+        --warn: #9a5b00;
+        --warn-bg: #fff4df;
+        --danger: #a52d2d;
+        --danger-bg: #ffebeb;
+        --radius: 16px;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 16px/1.9 Tahoma, Arial, sans-serif;
+      }
+      .wrap { width: min(1100px, calc(100% - 32px)); margin: 0 auto; }
+      header { padding: 48px 0 28px; }
+      h1, h2, h3 { line-height: 1.35; margin: 0 0 12px; }
+      h1 { font-size: clamp(1.7rem, 4vw, 2.6rem); }
+      h2 { margin-top: 34px; font-size: 1.4rem; }
+      h3 { font-size: 1.05rem; }
+      p { margin: 8px 0; }
+      .muted { color: var(--muted); }
+      .hero { border-bottom: 1px solid var(--border); }
+      .meta { color: var(--muted); font-size: .9rem; }
+      .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+      .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: 0 3px 12px #13233d0b; }
+      .metric { font-size: 1.8rem; font-weight: 800; color: var(--primary); }
+      .ok { color: var(--success); background: var(--success-bg); }
+      .warn { color: var(--warn); background: var(--warn-bg); }
+      .danger { color: var(--danger); background: var(--danger-bg); }
+      .badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 2px 10px; font-size: .8rem; font-weight: 700; }
+      table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+      th, td { padding: 11px 13px; border-bottom: 1px solid var(--border); text-align: start; vertical-align: top; }
+      th { background: #edf3f6; font-weight: 700; }
+      tr:last-child td { border-bottom: 0; }
+      code { direction: ltr; unicode-bidi: plaintext; background: #edf1f5; border-radius: 5px; padding: 1px 5px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85em; }
+      ul { margin: 8px 0; padding-inline-start: 24px; }
+      li { margin: 4px 0; }
+      .callout { border-inline-start: 4px solid var(--primary); background: var(--surface); border-radius: 12px; padding: 14px 16px; }
+      .callout.warn { border-inline-start-color: var(--warn); }
+      .two { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+      footer { color: var(--muted); padding: 36px 0 52px; font-size: .85rem; }
+      @media (max-width: 760px) {
+        .wrap { width: min(100% - 20px, 640px); }
+        header { padding-top: 28px; }
+        .cards, .two { grid-template-columns: 1fr 1fr; }
+        table { display: block; overflow-x: auto; white-space: normal; }
+        th, td { min-width: 150px; }
+      }
+      @media (max-width: 480px) {
+        .cards, .two { grid-template-columns: 1fr; }
+        .card { padding: 15px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="hero">
+      <div class="wrap">
+        <h1>گزارش ممیزی UI/UX و تست سناریومحور</h1>
+        <p class="muted">پروژه: Salon-Schedueler / آرا — تاریخ اجرا: ۱۴۰۵/۰۵/۱۶ (۲۰۲۶-۰۸-۰۷)</p>
+        <p>تمرکز ممیزی: تجربه‌ی موبایل سالن‌دار، ریسپانسیو دسکتاپ، دسترسی نقش‌ها، رزرو واقعی، QR و خطاهای قابل‌مشاهده.</p>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <section aria-labelledby="summary">
+        <h2 id="summary">خلاصه نتیجه</h2>
+        <div class="cards">
+          <div class="card ok"><div class="metric">۶۷/۶۷</div><strong>E2E مرورگر</strong><p>functional، responsive و UX سبز؛ ۱ skip مورد انتظار</p></div>
+          <div class="card ok"><div class="metric">۱۱۱۷</div><strong>تست وب</strong><p>۱۰۷ فایل؛ ۱ skip مستند</p></div>
+          <div class="card ok"><div class="metric">۲۲/۲۲</div><strong>ریسپانسیو</strong><p>۱۱ route در دو viewport</p></div>
+          <div class="card ok"><div class="metric">۵۹۰/۵۹۰</div><strong>Jest بک‌اند</strong><p>۵۶ suite؛ بدون failure</p></div>
+        </div>
+        <div class="callout" style="margin-top:14px">
+          <strong>وضعیت تحویل:</strong> مسیرهای ممیزی‌شده در محیط dev و API واقعی سبز هستند: functional برابر ۱۰/۱۰، responsive برابر ۲۲/۲۲، UX برابر ۳۵ پاس و ۱ skip مورد انتظار. پوشش فیزیکی دوربین/OS و سرویس‌های خارجی در محیط dev شبیه‌سازی شده‌اند.
+        </div>
+      </section>
+
+      <section aria-labelledby="changes">
+        <h2 id="changes">اصلاحات مهم انجام‌شده</h2>
+        <div class="two">
+          <div class="card">
+            <h3>موبایل و navigation</h3>
+            <ul>
+              <li>نوبار مالک از ارتفاع ۵۶ به ۶۴ پیکسل رسید.</li>
+              <li>آیکن‌ها ۲۴ پیکسل و فاصله‌ی متن/آیکن <code>gap-2.5</code> شد؛ ناحیه‌ی لمس مناسب‌تر شد.</li>
+              <li>درصد و overflow افقی روی routeهای عمومی، funnel و پنل مالک اندازه‌گیری شد.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>ورود و نقش‌ها</h3>
+            <ul>
+              <li>کاربر عادی بعد از ورود به <code>/account</code> می‌رود و landing برای session لاگین‌شده قفل است.</li>
+              <li>کاربر بدون role اگر مستقیم وارد <code>/owner/*</code> شود به حساب مشتری برمی‌گردد.</li>
+              <li>Owner/Admin/Stylist هم در UI guard و هم در API authorization پوشش داده شدند.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>تقویم و دسترسی</h3>
+            <ul>
+              <li>برنامه‌ی کاری هفتگی صفحه‌ی مستقل با back navigation دارد.</li>
+              <li>ساختار ARIA نمای هفته/ماه اصلاح شد؛ gridcellها داخل row معتبر هستند.</li>
+              <li>غیرفعال‌سازی آرایشگر دیگر فقط حذف local نیست؛ با PATCH واقعی ذخیره و در خطا rollback می‌شود.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>خطا و build quality</h3>
+            <ul>
+              <li><code>ErrorState</code> عنوان semantic از نوع <code>h2</code> و همچنان <code>role=alert</code> دارد.</li>
+              <li>QR malformed/unregistered از هم تفکیک شدند؛ gate اشتراک QR نیز تست شد.</li>
+              <li>قرارداد bundle با routeهای واقعی هماهنگ شد؛ public initial JS در سقف ۲۴۰KB gzip باقی ماند.</li>
+              <li>بیعانه از تنظیمات سرویس قابل تعریف شد؛ پرداخت فقط برای مشتری صاحب همان رزرو ساخته می‌شود.</li>
+              <li>مسیرهای مستقیم staff و حذف سرویس، tenant scope و بررسی مالکیت resource دارند.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="e2e">
+        <h2 id="e2e">ماتریس E2E سناریومحور</h2>
+        <table>
+          <thead><tr><th>دسته</th><th>سناریوهای پوشش‌داده‌شده</th><th>نتیجه</th></tr></thead>
+          <tbody>
+            <tr><td>Public — desktop</td><td>خانه، ثبت سالن، پروفایل سالن، funnel رزرو، ورود، صفحات قانونی، 404، پنل مالک</td><td><span class="badge ok">۱۱/۱۱ پاس</span></td></tr>
+            <tr><td>Public — mobile 390px</td><td>همان routeها با Pixel 5؛ بدون horizontal overflow؛ نوبار پایین با ارتفاع حداقل ۶۴px</td><td><span class="badge ok">۱۱/۱۱ پاس</span></td></tr>
+            <tr><td>Customer auth</td><td>شماره نامعتبر، OTP dev، ورود مشتری، قفل landing و redirect مستقیم owner</td><td><span class="badge ok">پاس</span></td></tr>
+            <tr><td>Owner onboarding</td><td>ثبت سالن از UI، ساخت service/chair، ورود owner، افزودن stylist و اعطای اجازه‌ی بستن وقت شخصی</td><td><span class="badge ok">پاس</span></td></tr>
+            <tr><td>RBAC</td><td>Owner/Admin/Stylist؛ دسترسی calendar/analytics/config/staff در UI و API</td><td><span class="badge ok">پاس</span></td></tr>
+            <tr><td>Booking</td><td>pending/approve/reject/cancel/no-show/auto-approve، رزرو دارای بیعانه، redirect پرداخت و مالکیت payment</td><td><span class="badge ok">پاس</span></td></tr>
+            <tr><td>QR</td><td>gate اشتراک trial، تولید QR سالن فعال، resolve، ثبت scan، malformed و صفحه‌ی خطای قابل‌فهم</td><td><span class="badge ok">پاس</span></td></tr>
+            <tr><td>UX audit</td><td>یک main/h1، title، overflow، نام‌گذاری کنترل‌ها، axe WCAG 2A و touch target مؤثر در routeهای public/owner</td><td><span class="badge ok">۳۵ پاس؛ ۱ skip مورد انتظار</span></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section aria-labelledby="commands">
+        <h2 id="commands">فرمان‌های قابل تکرار</h2>
+        <div class="card">
+          <ul>
+            <li><code>npx playwright test --project=functional</code> → ۱۰/۱۰ پاس</li>
+            <li><code>npx playwright test --project=desktop-responsive --project=mobile-responsive</code> → ۲۲/۲۲ پاس</li>
+            <li><code>npx playwright test --project=ux-desktop --project=ux-mobile</code> → ۳۵ پاس، ۱ skip مورد انتظار</li>
+            <li><code>npm test --workspace @salon/web</code> → ۱۱۱۷ پاس، ۱ skip</li>
+            <li><code>npm run build --workspace @salon/web</code> → build، prerender و bundle budget سبز</li>
+            <li><code>npm run analyze-bundle --workspace @salon/web</code> → public routes سبز، بدون heavy-chunk leak</li>
+            <li><code>docker compose exec -T backend npm test --workspace @salon/backend -- --runInBand --forceExit</code> → ۵۶ suite، ۵۹۰ تست پاس</li>
+            <li><code>docker compose exec -T backend npm run build --workspace @salon/backend</code> → سبز</li>
+            <li><code>rtk git diff --check</code> → بدون whitespace error</li>
+          </ul>
+          <p class="muted">Artifactهای Playwright در <code>artifacts/playwright-report</code> و نتیجه‌ی JSON در <code>artifacts/playwright-results.json</code> تولید می‌شوند.</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="open">
+        <h2 id="open">موارد باز و محدودیت اعتبارسنجی</h2>
+        <div class="card ok">
+          <h3>Backend Jest</h3>
+          <p>اجرای کامل بک‌اند: ۵۶ suite و ۵۹۰ تست سبز. تست‌های real-DB، property، route، payment، RBAC و constraint همگی در stack محلی گذشتند.</p>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <h3>تست‌های خارج از محیط dev</h3>
+          <ul>
+            <li>ارسال SMS واقعی و callback درگاه پرداخت خارجی در این اجرا شبیه‌سازی/ dev OTP بوده است.</li>
+            <li>اسکن دوربین فیزیکی موبایل و permissionهای OS نیاز به device test جدا دارد؛ مسیر QR image، payload و resolve در API/browser پوشش دارد.</li>
+            <li>ارزیابی بصری با viewport و semantic checks انجام شد؛ Lighthouse field data و تست کاربر واقعی جزو این اجرا نبود.</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <footer class="wrap">گزارش تولیدشده داخل repository — مبنا: کد فعلی، dev stack محلی و artifactهای تست همان اجرا.</footer>
+  </body>
+</html>

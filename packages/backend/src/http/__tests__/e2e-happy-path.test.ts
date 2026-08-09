@@ -42,7 +42,11 @@ function timeDate(hours: number, minutes: number): Date {
 
 // A date whose UTC weekday is used to seed working hours so availability is
 // non-empty for it. The engine derives the weekday from the date via getUTCDay().
-const DATE = '2025-06-03';
+const DATE = (() => {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() + 2);
+  return date.toISOString().slice(0, 10);
+})();
 const WEEKDAY = new Date(`${DATE}T00:00:00Z`).getUTCDay();
 
 // Per-run unique suffix so re-runs never collide on unique constraints.
@@ -137,6 +141,7 @@ describeIfDb('E2E happy path (real app + PostgreSQL) [opt-in: requires DATABASE_
       await prisma.notificationLog.deleteMany({ where: { appointmentId: { in: apptIds } } });
       await prisma.payment.deleteMany({ where: { appointmentId: { in: apptIds } } });
     }
+    await prisma.salonNotification.deleteMany({ where: { salonId } });
     await prisma.appointment.deleteMany({ where: { salonId } });
     await prisma.serviceStaff.deleteMany({ where: { serviceId } });
     await prisma.workingHours.deleteMany({ where: { ownerId: { in: [staffId, chairId] } } });
@@ -153,7 +158,11 @@ describeIfDb('E2E happy path (real app + PostgreSQL) [opt-in: requires DATABASE_
 
     // 1. Resolve the salon by its encoded QR payload. The payload is a full deep
     //    link (with slashes); URL-encode it so it fits the single path segment.
-    const qrPayload = encodeSalonQr(salonQrToken);
+    const publicBaseUrl = process.env.PUBLIC_BASE_URL;
+    const qrBase = publicBaseUrl
+      ? `${publicBaseUrl.replace(/\/+$/, '')}/s/`
+      : undefined;
+    const qrPayload = qrBase ? encodeSalonQr(salonQrToken, qrBase) : encodeSalonQr(salonQrToken);
     const qrRes = await request(app).get(`/api/salons/by-qr/${encodeURIComponent(qrPayload)}`);
     expect(qrRes.status).toBe(200);
     expect(qrRes.body.salon.id).toBe(salonId);

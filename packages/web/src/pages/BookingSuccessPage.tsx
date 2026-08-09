@@ -111,7 +111,7 @@ export function BookingSuccessPage() {
       <div
         data-testid="booking-success"
         data-shell="funnel-success"
-        className="flex min-h-screen flex-col overflow-x-hidden bg-bg text-text"
+        className="flex min-h-screen min-h-[100dvh] flex-col overflow-x-hidden bg-bg text-text"
       >
         <SeoHead title={t('seo.titles.success')} />
         <main
@@ -136,7 +136,7 @@ export function BookingSuccessPage() {
     <div
       data-testid="booking-success"
       data-shell="funnel-success"
-      className="flex min-h-screen flex-col overflow-x-hidden bg-bg text-text"
+      className="flex min-h-screen min-h-[100dvh] flex-col overflow-x-hidden bg-bg text-text"
     >
       <SeoHead title={t('seo.titles.success')} />
 
@@ -208,18 +208,18 @@ export function BookingSuccessPage() {
             <Card as="section" className="text-start">
               <dl className="flex flex-col divide-y divide-border">
                 {serviceName && (
-                  <div className="flex items-center justify-between gap-4 py-2 first:pt-0">
+                  <div className="flex flex-col items-start gap-1 py-2 first:pt-0 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                     <dt className="flex items-center gap-2 text-sm text-muted">
                       <Scissors className="h-4 w-4" aria-hidden="true" />
                       {t('booking.serviceLabel')}
                     </dt>
-                    <dd className="text-sm font-medium text-text">{serviceName}</dd>
+                    <dd className="max-w-full break-words text-sm font-medium text-text sm:text-end">{serviceName}</dd>
                   </div>
                 )}
 
                 {startAt && (
                   <>
-                    <div className="flex items-center justify-between gap-4 py-2">
+                    <div className="flex flex-col items-start gap-1 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                       <dt className="flex items-center gap-2 text-sm text-muted">
                         <CalendarClock className="h-4 w-4" aria-hidden="true" />
                         {t('booking.dateLabel')}
@@ -229,7 +229,7 @@ export function BookingSuccessPage() {
                       </dd>
                     </div>
 
-                    <div className="flex items-center justify-between gap-4 py-2">
+                    <div className="flex flex-col items-start gap-1 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                       <dt className="flex items-center gap-2 text-sm text-muted">
                         <Clock className="h-4 w-4" aria-hidden="true" />
                         {t('booking.timeLabel')}
@@ -242,12 +242,12 @@ export function BookingSuccessPage() {
                 )}
 
                 {salonName && (
-                  <div className="flex items-center justify-between gap-4 py-2 last:pb-0">
+                  <div className="flex flex-col items-start gap-1 py-2 last:pb-0 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                     <dt className="flex items-center gap-2 text-sm text-muted">
                       <Store className="h-4 w-4" aria-hidden="true" />
                       {t('booking.whereLabel')}
                     </dt>
-                    <dd className="text-sm font-medium text-text">{salonName}</dd>
+                    <dd className="max-w-full break-words text-sm font-medium text-text sm:text-end">{salonName}</dd>
                   </div>
                 )}
               </dl>

@@ -120,6 +120,7 @@ describe('Feature: salon-booking-system, Property 6: Atomic hold and release', (
           },
           holiday: {
             findFirst: jest.fn().mockResolvedValue(null),
+            findMany: jest.fn().mockResolvedValue([]),
           },
           staffMember: {
             findMany: jest.fn(),
@@ -314,6 +315,7 @@ describe('Feature: salon-booking-system, Property 6: Atomic hold and release', (
           },
           holiday: {
             findFirst: jest.fn().mockResolvedValue(null),
+            findMany: jest.fn().mockResolvedValue([]),
           },
           staffMember: {
             findMany: jest.fn().mockResolvedValue([

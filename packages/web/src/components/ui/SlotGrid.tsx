@@ -195,6 +195,15 @@ export const SlotGrid = forwardRef<HTMLDivElement, SlotGridProps>(function SlotG
     const current = buttons.findIndex((b) => b === document.activeElement);
     if (current === -1) return;
 
+    // The grid uses auto-fill, so the number of columns changes with the
+    // phone width. Read the first row instead of assuming a desktop 4-column
+    // layout; Up/Down must follow the visual grid on every viewport.
+    const firstRowTop = buttons[0]?.getBoundingClientRect().top;
+    const firstRowEndIndex =
+      firstRowTop == null
+        ? -1
+        : buttons.findIndex((button) => button.getBoundingClientRect().top > firstRowTop);
+    const columns = firstRowEndIndex > 0 ? firstRowEndIndex : Math.min(COLUMNS, count);
     let next = current;
     switch (event.key) {
       case 'ArrowLeft': // RTL: visual-left advances
@@ -204,10 +213,10 @@ export const SlotGrid = forwardRef<HTMLDivElement, SlotGridProps>(function SlotG
         next = Math.max(current - 1, 0);
         break;
       case 'ArrowDown':
-        next = Math.min(current + COLUMNS, count - 1);
+        next = Math.min(current + columns, count - 1);
         break;
       case 'ArrowUp':
-        next = Math.max(current - COLUMNS, 0);
+        next = Math.max(current - columns, 0);
         break;
       case 'Home':
         next = 0;

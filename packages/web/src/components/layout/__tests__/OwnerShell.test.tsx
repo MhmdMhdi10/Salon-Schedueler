@@ -89,7 +89,7 @@ describe('OwnerShell', () => {
     const mains = screen.getAllByRole('main');
     expect(mains).toHaveLength(1);
     expect(mains[0]).toHaveAttribute('id', OWNER_CONTENT_ID);
-    expect(mains[0]).toHaveAttribute('tabindex', '-1');
+    expect(mains[0]).toHaveAttribute('tabindex', '0');
   });
 
   it('renders the salon name in the header when provided', () => {
@@ -144,7 +144,9 @@ describe('OwnerShell — mobile (<lg)', () => {
   it('adds bottom padding to main for bottom tabs clearance', () => {
     renderOwner({ role: 'Owner' });
     const main = screen.getByRole('main');
-    expect(main.className).toContain('pb-[calc(');
+    expect(main.className).toContain(
+      'pb-[calc(var(--space-10)+var(--space-3)+env(safe-area-inset-bottom))]',
+    );
   });
 });
 

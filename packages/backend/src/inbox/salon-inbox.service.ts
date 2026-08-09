@@ -1,4 +1,4 @@
-import type { SalonNotification, PrismaClient } from '@prisma/client';
+import type { Prisma, SalonNotification, PrismaClient } from '@prisma/client';
 
 /**
  * Audience scope for a salon inbox notification. Determines which
@@ -79,6 +79,25 @@ export class SalonInboxService {
     private readonly hub: InboxHub = new NullInboxHub(),
   ) {}
 
+  private visibilityWhere(
+    salonId: string,
+    opts: { staffMemberId?: string; role: string; onlyUnread?: boolean },
+  ): Prisma.SalonNotificationWhereInput {
+    const base: Prisma.SalonNotificationWhereInput = {
+      salonId,
+      ...(opts.onlyUnread ? { readAt: null } : {}),
+    };
+    if (opts.role === 'Owner' || opts.role === 'Admin') return base;
+
+    return {
+      ...base,
+      OR: [
+        { audience: 'all-staff' },
+        ...(opts.staffMemberId ? [{ staffMemberId: opts.staffMemberId }] : []),
+      ],
+    };
+  }
+
   /**
    * Create + persist a notification, then fan-out the live event. Best-effort
    * delivery; a hub exception is swallowed and logged — the row is already
@@ -128,34 +147,50 @@ export class SalonInboxService {
       role: string;
       onlyUnread?: boolean;
       limit?: number;
+      offset?: number;
     },
   ): Promise<SalonNotification[]> {
     const limit = opts.limit ?? 50;
-    if (opts.role === 'Owner' || opts.role === 'Admin') {
-      return this.prisma.salonNotification.findMany({
-        where: {
-          salonId,
-          ...(opts.onlyUnread ? { readAt: null } : {}),
-        },
-        orderBy: { createdAt: 'desc' },
-        take: limit,
-      });
-    }
-    // Stylist: see all-staff + rows targeted to them
     return this.prisma.salonNotification.findMany({
-      where: {
-        salonId,
-        ...(opts.onlyUnread ? { readAt: null } : {}),
-        OR: [{ audience: 'all-staff' }, { staffMemberId: opts.staffMemberId ?? undefined }],
-      },
-      orderBy: { createdAt: 'desc' },
+      where: this.visibilityWhere(salonId, opts),
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      skip: Math.max(0, opts.offset ?? 0),
       take: limit,
     });
   }
 
-  /** Mark a single notification read; returns the updated row or null. */
-  async markRead(notificationId: string): Promise<SalonNotification | null> {
+  /** Count all visible rows for the active filter, for server-side pagination. */
+  async countForSalon(
+    salonId: string,
+    opts: { staffMemberId?: string; role: string; onlyUnread?: boolean },
+  ): Promise<number> {
+    return this.prisma.salonNotification.count({
+      where: this.visibilityWhere(salonId, opts),
+    });
+  }
+
+  /**
+   * Mark a single notification read only when it is visible to caller. The
+   * notification id is not a sufficient authorization boundary: it must also
+   * match the caller's salon and audience scope.
+   */
+  async markRead(
+    notificationId: string,
+    opts: { salonId?: string; staffMemberId?: string; role: string },
+  ): Promise<SalonNotification | null> {
     try {
+      const row = await this.prisma.salonNotification.findUnique({
+        where: { id: notificationId },
+      });
+      if (!row || !opts.salonId || row.salonId !== opts.salonId) return null;
+
+      const visible =
+        opts.role === 'Owner' || opts.role === 'Admin'
+          ? true
+          : opts.role === 'Stylist' &&
+            (row.audience === 'all-staff' || row.staffMemberId === opts.staffMemberId);
+      if (!visible) return null;
+
       return await this.prisma.salonNotification.update({
         where: { id: notificationId },
         data: { readAt: new Date() },
@@ -196,17 +231,6 @@ export class SalonInboxService {
     salonId: string,
     opts: { staffMemberId?: string; role: string },
   ): Promise<number> {
-    const where =
-      opts.role === 'Owner' || opts.role === 'Admin'
-        ? { salonId, readAt: null }
-        : {
-            salonId,
-            readAt: null,
-            OR: [
-              { audience: 'all-staff' as const },
-              { staffMemberId: opts.staffMemberId ?? undefined },
-            ],
-          };
-    return this.prisma.salonNotification.count({ where });
+    return this.countForSalon(salonId, { ...opts, onlyUnread: true });
   }
 }

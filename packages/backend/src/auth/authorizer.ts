@@ -28,6 +28,8 @@ export interface Principal {
   role: StaffRole;
   /** The staff member's ID (used for "own only" checks) */
   staffMemberId?: string;
+  /** The staff member's tenant/salon scope. */
+  salonId?: string;
 }
 
 /**
@@ -67,6 +69,11 @@ export class Authorizer {
    * @returns true if the action is permitted, false otherwise
    */
   can(principal: Principal, action: Action, resource: ResourceRef = {}): boolean {
+    // Staff tokens are tenant-scoped. Keep legacy/unit-test principals without
+    // salonId permissive, but never allow a real scoped token to cross salons.
+    if (principal.salonId && resource.salonId && principal.salonId !== resource.salonId) {
+      return false;
+    }
     switch (principal.role) {
       case 'Owner':
         return this.canOwner(action);

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { RegisterSalonSchema } from '@salon/shared';
 import type { Services } from '../app.js';
 import { asyncRoute } from './route-helpers.js';
+import { createRateLimit, phoneRateLimitKey } from '../middleware/rate-limit.js';
 
 /**
  * True when an error is a Prisma unique-constraint violation (P2002). The owner
@@ -31,9 +32,29 @@ const isUniqueViolation = (err: unknown): boolean =>
 export function registrationRouter(services: Services): Router {
   const router = Router();
 
+  const registrationIpLimit = createRateLimit({
+    name: 'salon-registration-ip',
+    // Registration is expensive and protected by phone uniqueness/OTP, but
+    // legitimate teams may create several test or branch salons from one
+    // office IP. Keep the hourly cap meaningful without blocking that flow.
+    max: 15,
+    windowMs: 60 * 60_000,
+  });
+  const checkPhoneLimit = createRateLimit({
+    name: 'registration-phone-check',
+    max: 20,
+    windowMs: 10 * 60_000,
+    keyGenerator: phoneRateLimitKey,
+  });
+
   router.post(
     '/register/salon',
+    registrationIpLimit,
     asyncRoute(async (req, res) => {
+      if (typeof req.body?.website === 'string' && req.body.website.trim() !== '') {
+        res.status(403).json({ code: 'AUTOMATION_BLOCKED' });
+        return;
+      }
       const parsed = RegisterSalonSchema.safeParse(req.body);
       if (!parsed.success) {
         const first = parsed.error.issues[0];
@@ -78,6 +99,7 @@ export function registrationRouter(services: Services): Router {
   // than after Submit bounces them back from Step 3. Public — no auth.
   router.get(
     '/register/check-phone',
+    checkPhoneLimit,
     asyncRoute(async (req, res) => {
       const phone = String(req.query.phone ?? '').trim();
       if (!phone) {

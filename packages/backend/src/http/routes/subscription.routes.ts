@@ -3,6 +3,7 @@ import type { Services } from '../app.js';
 import type { RequireRole } from './appointment.routes.js';
 import { asyncRoute, validateRequired } from './route-helpers.js';
 import type { SubscriptionPlanKind } from '../../subscription/index.js';
+import { createRateLimit } from '../middleware/rate-limit.js';
 
 /** Purchasable (non-trial) plan kinds accepted by POST /subscription/purchase. */
 const PAID_PLANS: ReadonlySet<string> = new Set(['monthly', 'quarterly', 'annual']);
@@ -99,9 +100,15 @@ export function subscriptionRouter(services: Services, requireRole: RequireRole)
  */
 export function subscriptionCallbackRouter(services: Services): Router {
   const router = Router();
+  const callbackLimit = createRateLimit({
+    name: 'subscription-callback-ip',
+    max: 30,
+    windowMs: 60_000,
+  });
 
   router.get(
     '/subscriptions/callback',
+    callbackLimit,
     asyncRoute(async (req, res) => {
       const authority = (req.query.Authority ?? req.query.authority) as string | undefined;
       const status = (req.query.Status ?? req.query.status) as string | undefined;

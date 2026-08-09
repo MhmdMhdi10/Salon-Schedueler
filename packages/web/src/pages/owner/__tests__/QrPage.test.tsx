@@ -112,6 +112,17 @@ describe('OwnerQrPage — load + data states (R4.1)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'تلاش مجدد' }));
     expect(await screen.findByTestId('qr-card')).toBeInTheDocument();
   });
+
+  it('keeps customization collapsed until requested', async () => {
+    getSalonQr.mockResolvedValue(QR_RESPONSE);
+    renderPage();
+
+    const toggle = await screen.findByRole('button', { name: /شخصی‌سازی QR/ });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  });
 });
 
 describe('OwnerQrPage — per-stylist QR gallery', () => {
@@ -140,6 +151,14 @@ describe('OwnerQrPage — QR image (R4.1)', () => {
     expect(img.getAttribute('alt')).toContain('کد QR');
     // The QR is generated client-side into an SVG data URI.
     expect(img.getAttribute('src')).toMatch(/^data:image\/svg\+xml/);
+  });
+
+  it('uses the Ara app icon beside the brand name on printable assets', async () => {
+    renderPage();
+    const brandIcons = await screen.findAllByTestId('ara-brand-icon');
+
+    expect(brandIcons.length).toBeGreaterThanOrEqual(2);
+    expect(brandIcons[0]).toHaveAttribute('src', '/icons/icon-192.png');
   });
 });
 

@@ -2,6 +2,9 @@ import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import * as jwt from 'jsonwebtoken';
 import type { StaffRole } from '@salon/shared';
 
+export type PlatformRole = 'PlatformAdmin';
+export type PrincipalRole = StaffRole | PlatformRole;
+
 /**
  * The authenticated principal attached to a request by the auth middleware.
  *
@@ -11,7 +14,7 @@ import type { StaffRole } from '@salon/shared';
  */
 export interface HttpPrincipal {
   id: string;
-  role?: StaffRole;
+  role?: PrincipalRole;
   staffMemberId?: string;
   /**
    * The salon the staff member belongs to (staff tokens only). Lets the owner
@@ -19,6 +22,8 @@ export interface HttpPrincipal {
    * on a hard-coded id. Absent on customer tokens.
    */
   salonId?: string;
+  /** Global admin identity; absent for customers and salon staff. */
+  platformAdminId?: string;
 }
 
 // Augment Express's Request so handlers can read `req.principal`.
@@ -31,7 +36,12 @@ declare global {
   }
 }
 
-const VALID_ROLES: ReadonlySet<string> = new Set(['Owner', 'Admin', 'Stylist']);
+const VALID_ROLES: ReadonlySet<string> = new Set([
+  'Owner',
+  'Admin',
+  'Stylist',
+  'PlatformAdmin',
+]);
 
 /**
  * Extract a Bearer token from the Authorization header, or null if absent.
@@ -59,13 +69,16 @@ function payloadToPrincipal(payload: jwt.JwtPayload): HttpPrincipal | null {
   const rawRole = (payload as Record<string, unknown>).role;
   const role =
     typeof rawRole === 'string' && VALID_ROLES.has(rawRole)
-      ? (rawRole as StaffRole)
+      ? (rawRole as PrincipalRole)
       : undefined;
   const rawStaffId = (payload as Record<string, unknown>).staffMemberId;
   const staffMemberId = typeof rawStaffId === 'string' ? rawStaffId : undefined;
   const rawSalonId = (payload as Record<string, unknown>).salonId;
   const salonId = typeof rawSalonId === 'string' ? rawSalonId : undefined;
-  return { id: payload.sub, role, staffMemberId, salonId };
+  const rawPlatformAdminId = (payload as Record<string, unknown>).platformAdminId;
+  const platformAdminId =
+    typeof rawPlatformAdminId === 'string' ? rawPlatformAdminId : undefined;
+  return { id: payload.sub, role, staffMemberId, salonId, platformAdminId };
 }
 
 /**

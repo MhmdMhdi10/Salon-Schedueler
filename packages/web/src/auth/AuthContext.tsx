@@ -12,7 +12,7 @@ import {
   getAccessToken,
   meApi,
   signOut as clearSession,
-  type OwnerRole,
+  type PrincipalRole,
 } from '../api/client';
 
 /**
@@ -23,10 +23,11 @@ import {
  */
 export interface AuthPrincipal {
   id: string;
-  role?: OwnerRole;
+  role?: PrincipalRole;
   staffMemberId?: string;
   /** The salon a staff principal belongs to (used to scope the owner panel). */
   salonId?: string;
+  platformAdminId?: string;
 }
 
 /** Lifecycle of the app-wide session. */
@@ -36,11 +37,13 @@ export interface AuthContextValue {
   status: AuthStatus;
   principal: AuthPrincipal | null;
   /** Staff role when the principal is a staff member, else undefined. */
-  role: OwnerRole | undefined;
+  role: PrincipalRole | undefined;
   /** True when the session is an authenticated customer (no staff role). */
   isCustomer: boolean;
   /** True when the session is an authenticated staff member (has a role). */
   isStaff: boolean;
+  /** True only for the global platform operator surface. */
+  isPlatformAdmin: boolean;
   /**
    * Re-derive the session from the current/stored tokens (call after a fresh
    * OTP login). Resolves to the principal, or null when anonymous.
@@ -62,6 +65,7 @@ const DEFAULT_VALUE: AuthContextValue = {
   role: undefined,
   isCustomer: false,
   isStaff: false,
+  isPlatformAdmin: false,
   refresh: async () => null,
   signOut: () => {},
 };
@@ -95,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: p.role,
         staffMemberId: p.staffMemberId,
         salonId: p.salonId,
+        platformAdminId: p.platformAdminId,
       };
       setPrincipal(next);
       setStatus('authenticated');
@@ -120,12 +125,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AuthContextValue>(() => {
     const role = principal?.role;
+    const isPlatformAdmin = status === 'authenticated' && role === 'PlatformAdmin';
     return {
       status,
       principal,
       role,
-      isStaff: status === 'authenticated' && role != null,
+      isStaff:
+        status === 'authenticated' &&
+        (role === 'Owner' || role === 'Admin' || role === 'Stylist'),
       isCustomer: status === 'authenticated' && role == null,
+      isPlatformAdmin,
       refresh,
       signOut,
     };

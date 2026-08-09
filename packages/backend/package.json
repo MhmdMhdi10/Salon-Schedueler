@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
     "start:dev": "ts-node -r tsconfig-paths/register src/main.ts",
+    "start:cron": "node dist/notification-cron.js",
     "start:worker": "node dist/sms-worker.js",
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",

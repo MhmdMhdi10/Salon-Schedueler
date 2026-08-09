@@ -11,6 +11,7 @@ import type { Socket } from 'node:net';
 import { WebSocketServer, type WebSocket as WsSocket } from 'ws';
 import { createApp } from './composition-root.js';
 import { makeWsInboxHandle } from './http/routes/inbox.routes.js';
+import { startNotificationCron } from './notification-cron.js';
 
 function bootstrap(): void {
   const { app, config, prisma, services } = createApp();
@@ -51,6 +52,17 @@ function bootstrap(): void {
   const sweep = setInterval(() => services.wsInboxHub.sweep(), 30_000);
   sweep.unref?.();
 
+  // Background booking maintenance. Reminder delivery is idempotent at the
+  // notification-log level and its SMS leg uses RabbitMQ when configured;
+  // expired deposit holds are released on the same cadence so slots do not stay
+  // blocked after a customer abandons checkout.
+  const stopNotificationCron = process.env.NOTIFICATION_CRON_EXTERNAL === 'true'
+    ? () => undefined
+    : startNotificationCron(services.notificationService, services.cancellationFlow, {
+        intervalMs: config.reminderIntervalMs,
+        reminderLeadTimeMinutes: config.reminderLeadTimeMinutes,
+      });
+
   server.listen(config.port, () => {
     // eslint-disable-next-line no-console
     console.log(`Salon Booking System API listening on port ${config.port}`);
@@ -60,6 +72,7 @@ function bootstrap(): void {
     // eslint-disable-next-line no-console
     console.log(`Received ${signal}, shutting down...`);
     clearInterval(sweep);
+    stopNotificationCron();
     wss.close();
     server.close(() => {
       void prisma.$disconnect().finally(() => process.exit(0));

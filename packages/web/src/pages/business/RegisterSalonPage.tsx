@@ -234,7 +234,9 @@ function RegisterSalonContent() {
         chairCount: toIntOrZero(chairCount),
       });
       // Salon created — send the OTP so the owner can sign straight in.
-      await authApi.requestOtp(normalizedPhone);
+      const response = await authApi.requestOtp(normalizedPhone);
+      const devOtp = response?.devOtp;
+      setCode(devOtp ? devOtp.split('') : Array(OTP_LENGTH).fill(''));
       setStep('otp');
       setSecondsLeft(RESEND_SECONDS);
       success({ title: t('auth.otpSent') });
@@ -257,9 +259,9 @@ function RegisterSalonContent() {
     setOtpLoading(true);
     setOtpError('');
     try {
-      await authApi.requestOtp(normalizedPhone);
+      const response = await authApi.requestOtp(normalizedPhone);
       setSecondsLeft(RESEND_SECONDS);
-      setCode(Array(OTP_LENGTH).fill(''));
+      setCode(response?.devOtp ? response.devOtp.split('') : Array(OTP_LENGTH).fill(''));
       success({ title: t('auth.otpSent') });
       window.setTimeout(() => otpRefs.current[0]?.focus(), 0);
     } catch {
@@ -276,7 +278,7 @@ function RegisterSalonContent() {
       const result = await authApi.verifyOtp(normalizedPhone, codeValue);
       setAccessToken(result.accessToken);
       setRefreshToken(result.refreshToken);
-      void refreshAuth();
+      await refreshAuth();
       navigate('/owner');
     } catch {
       setOtpError(t('business.register.errors.invalidOtp'));
@@ -324,15 +326,19 @@ function RegisterSalonContent() {
   };
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-bg" data-testid="register-salon-page">
+    <div className="flex min-h-screen min-h-[100dvh] w-full flex-col bg-bg" data-testid="register-salon-page">
       <SeoHead title={t('business.register.title')} />
 
       <header className="border-b border-border bg-elevated">
-        <div className="mx-auto flex h-14 w-full max-w-2xl items-center gap-5 px-4">
-          <Link to="/" aria-label="آرا" className="no-underline">
+        <div className="mx-auto flex h-14 w-full max-w-2xl items-center gap-2 px-3 sm:gap-5 sm:px-4">
+          <Link to="/" aria-label="آرا" className="inline-flex min-h-10 shrink-0 items-center no-underline">
             <BrandLogo className="h-9" />
           </Link>
-          <div className="flex flex-1 gap-1" aria-label={t('business.register.progressLabel')}>
+          <div
+            className="flex min-w-0 flex-1 basis-16 gap-1"
+            role="group"
+            aria-label={t('business.register.progressLabel')}
+          >
             {STEP_ORDER.map((item, index) => (
               <span
                 key={item}
@@ -348,7 +354,7 @@ function RegisterSalonContent() {
             <button
               type="button"
               onClick={() => setStep(STEP_ORDER[Math.max(0, stepIndex - 1)])}
-              className="inline-flex size-10 items-center justify-center rounded-md text-text"
+              className="inline-flex size-10 shrink-0 items-center justify-center rounded-md text-text"
               aria-label={t('business.register.back')}
             >
               <ArrowRight className="size-5 rtl:-scale-x-100" aria-hidden="true" />
@@ -359,7 +365,7 @@ function RegisterSalonContent() {
         </div>
       </header>
 
-      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-10">
+      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-3 py-6 sm:px-4 sm:py-10">
         <p className="text-sm font-medium text-primary">
           مرحله {toPersianDigits(stepIndex + 1)} از {toPersianDigits(STEP_ORDER.length)}
         </p>

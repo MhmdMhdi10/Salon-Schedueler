@@ -7,6 +7,7 @@ dist
 coverage
 **/coverage
 *.tsbuildinfo
+**/*.tsbuildinfo
 .git
 .gitignore
 .kiro

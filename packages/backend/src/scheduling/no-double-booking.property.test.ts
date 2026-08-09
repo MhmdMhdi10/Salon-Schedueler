@@ -150,6 +150,7 @@ function buildMockPrisma(scenario: NoDoubleBookingScenario) {
     },
     holiday: {
       findFirst: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn().mockResolvedValue([]),
     },
     staffMember: {
       findMany: jest.fn().mockResolvedValue(staffMembers),

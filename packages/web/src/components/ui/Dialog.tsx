@@ -115,7 +115,7 @@ export const DialogContent = forwardRef<
           // panel off-center mid-animation.
           'fixed inset-0 z-dialog m-auto h-fit',
           'w-[calc(100%-var(--space-8))] max-w-md',
-          'max-h-[calc(100dvh-var(--space-10))] overflow-y-auto',
+          'max-h-[calc(100dvh-var(--space-10))] overscroll-contain overflow-y-auto',
           'rounded-lg border border-border bg-elevated p-5 text-text shadow-3',
           'outline-none',
           'motion-safe:data-[state=open]:animate-scale-in',
@@ -130,7 +130,7 @@ export const DialogContent = forwardRef<
             <IconButton
               aria-label={closeLabel ?? t('common.close', 'بستن')}
               variant="ghost"
-              className="absolute end-2 top-2 h-9 min-h-0 w-9 min-w-0"
+              className="!absolute end-2 top-2 h-9 min-h-0 w-9 min-w-0"
             >
               <X className="h-5 w-5" />
             </IconButton>

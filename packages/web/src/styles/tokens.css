@@ -205,6 +205,57 @@
      zoom). Symmetric ease-in-out so a multi-second alternate loop never reads
      as "snap then freeze" the way the short-interaction curves do. */
   --ease-ambient: cubic-bezier(0.4, 0, 0.6, 1);
+
+  /* Platform-admin chrome tokens — JamJoys-inspired orange control plane. */
+  --platform-canvas: #f7f7f5;
+  --platform-surface: #ffffff;
+  --platform-surface-alt: #f1f2f0;
+  --platform-border: #e2e4e1;
+  --platform-text: #202721;
+  --platform-text-secondary: #4b554d;
+  --platform-text-muted: #727c74;
+  --platform-primary: #b9470f;
+  --platform-primary-soft: #fff2e9;
+  --platform-chart-secondary: #4168c5;
+  --platform-shadow: 0 0 0 1px rgba(32, 39, 33, 0.025), 0 6px 18px rgba(32, 39, 33, 0.035);
+  --platform-transition: 160ms;
+  --platform-size-1: 1px;
+  --platform-size-2: 2px;
+  --platform-size-3: 3px;
+  --platform-size-5: 5px;
+  --platform-size-6: 6px;
+  --platform-size-7: 7px;
+  --platform-size-9: 9px;
+  --platform-size-10: 10px;
+  --platform-size-11: 11px;
+  --platform-size-13: 13px;
+  --platform-size-14: 14px;
+  --platform-size-18: 18px;
+  --platform-size-20: 20px;
+  --platform-size-26: 26px;
+  --platform-size-28: 28px;
+  --platform-size-34: 34px;
+  --platform-size-36: 36px;
+  --platform-size-40: 40px;
+  --platform-size-42: 42px;
+  --platform-size-44: 44px;
+  --platform-size-46: 46px;
+  --platform-size-54: 54px;
+  --platform-size-58: 58px;
+  --platform-size-72: 72px;
+  --platform-size-78: 78px;
+  --platform-size-92: 92px;
+  --platform-size-132: 132px;
+  --platform-size-236: 236px;
+  --platform-size-280: 280px;
+  --platform-size-300: 300px;
+  --platform-size-360: 360px;
+  --platform-size-1440: 1440px;
+  --platform-font-micro: 10px;
+  --platform-font-label: 11px;
+  --platform-font-small: 13px;
+  --platform-font-page-title: 26px;
+  --platform-font-stat: 24px;
 }
 
 [data-theme='dark'] {
@@ -248,6 +299,18 @@
   --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
   --shadow-3: 0 12px 32px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
   --shadow-glow: 0 0 24px rgba(45, 224, 190, 0.1); /* faint teal glow (dark mode) */
+
+  --platform-canvas: #12151a;
+  --platform-surface: #191d23;
+  --platform-surface-alt: #252b34;
+  --platform-border: #303741;
+  --platform-text: #f4f6f8;
+  --platform-text-secondary: #d3d8de;
+  --platform-text-muted: #9aa4af;
+  --platform-primary: #ff955c;
+  --platform-primary-soft: #38251c;
+  --platform-chart-secondary: #4168c5;
+  --platform-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 /* ------------------------------------------------------------------ *
@@ -297,15 +360,20 @@
 
   body {
     min-height: 100vh;
+    min-height: 100dvh;
     margin: 0;
     /* Persian-first font stack + taller line height for Farsi runs */
     font-family: var(--font-family-sans);
     font-size: var(--font-sm);
+    font-weight: var(--font-weight-body);
     line-height: 1.75;
     color: var(--color-text);
     background-color: var(--color-bg);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-kerning: normal;
+    font-optical-sizing: auto;
+    font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
     text-rendering: optimizeLegibility;
   }
 

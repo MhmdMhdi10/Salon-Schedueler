@@ -69,7 +69,7 @@ export function AdminShell({ children, breadcrumbs, className }: AdminShellProps
   return (
     <div
       data-shell="admin"
-      className={cn('flex min-h-screen flex-col overflow-x-hidden bg-bg text-text', className)}
+      className={cn('flex min-h-screen min-h-[100dvh] flex-col overflow-x-hidden bg-bg text-text', className)}
     >
       <a
         href={`#${ADMIN_CONTENT_ID}`}
@@ -83,10 +83,10 @@ export function AdminShell({ children, breadcrumbs, className }: AdminShellProps
       </a>
 
       <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex w-full max-w-container items-center justify-between gap-4 px-4 py-3">
+        <div className="mx-auto flex w-full max-w-container items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-4 sm:py-3">
           <Link
             to="/admin/calendar"
-            className="rounded-md text-md font-bold text-text no-underline"
+            className="min-w-0 flex-1 truncate rounded-md text-sm font-bold text-text no-underline sm:text-md"
           >
             {t('app.title')}
           </Link>
@@ -94,7 +94,7 @@ export function AdminShell({ children, breadcrumbs, className }: AdminShellProps
         </div>
       </header>
 
-      <div className="mx-auto flex w-full max-w-container flex-1">
+      <div className="mx-auto flex min-h-0 w-full max-w-container flex-1">
         {/* Desktop side navigation (lg+). Hidden on mobile, where the bottom
             tab bar takes over. */}
         <nav
@@ -132,7 +132,7 @@ export function AdminShell({ children, breadcrumbs, className }: AdminShellProps
           id={ADMIN_CONTENT_ID}
           tabIndex={-1}
           className={cn(
-            'min-w-0 flex-1 px-4 py-5',
+            'min-w-0 flex-1 px-3 py-4 sm:px-4 sm:py-5',
             // Reserve room for the mobile bottom tab bar so it never covers
             // page content; the bar is hidden on lg+ where padding is dropped.
             'pb-[calc(var(--space-10)+env(safe-area-inset-bottom))] lg:pb-5',
@@ -181,7 +181,7 @@ export function AdminShell({ children, breadcrumbs, className }: AdminShellProps
         aria-label={t('admin.tabBar')}
         data-testid="admin-tab-bar"
         className={cn(
-          'sticky bottom-0 z-nav border-t border-border bg-surface lg:hidden',
+          'sticky bottom-0 z-nav shrink-0 border-t border-border bg-surface lg:hidden',
           'pb-[env(safe-area-inset-bottom)]',
         )}
       >

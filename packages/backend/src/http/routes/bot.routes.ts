@@ -1,6 +1,7 @@
 import { Router, type RequestHandler } from 'express';
 import type { Services } from '../app.js';
 import type { BotPlatform } from '../../bots/index.js';
+import { createRateLimit } from '../middleware/rate-limit.js';
 
 /**
  * Public bot webhook routes (Requirements 1.1, 1.6, 8.1).
@@ -24,6 +25,13 @@ import type { BotPlatform } from '../../bots/index.js';
  */
 export function botRouter(services: Services, webhookSecret?: string): Router {
   const router = Router();
+  // The secret is intentionally in the URL, so rate-limit guesses before they
+  // reach the bot dispatcher. Valid webhook traffic remains well below this cap.
+  const webhookLimit = createRateLimit({
+    name: 'bot-webhook-ip',
+    max: 60,
+    windowMs: 60_000,
+  });
 
   const handle = (platform: BotPlatform): RequestHandler => {
     return (req, res) => {
@@ -44,8 +52,8 @@ export function botRouter(services: Services, webhookSecret?: string): Router {
     };
   };
 
-  router.post('/bots/telegram/:secret', handle('telegram'));
-  router.post('/bots/bale/:secret', handle('bale'));
+  router.post('/bots/telegram/:secret', webhookLimit, handle('telegram'));
+  router.post('/bots/bale/:secret', webhookLimit, handle('bale'));
 
   return router;
 }

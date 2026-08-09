@@ -67,6 +67,11 @@ export class ResourceRegistration {
     });
   }
 
+  /** Read one staff member with its salon scope for route-level tenant checks. */
+  async getStaffMember(id: string): Promise<StaffMember | null> {
+    return this.prisma.staffMember.findUnique({ where: { id } });
+  }
+
   /**
    * Register a new chair for a salon (R3.2).
    *
@@ -130,7 +135,7 @@ export class ResourceRegistration {
    */
   async listBookableStaff(salonId: string): Promise<StaffMember[]> {
     return this.prisma.staffMember.findMany({
-      where: { salonId, role: { in: ['Owner', 'Stylist'] } },
+      where: { salonId, active: true, role: { in: ['Owner', 'Stylist'] } },
       orderBy: { fullName: 'asc' },
     });
   }

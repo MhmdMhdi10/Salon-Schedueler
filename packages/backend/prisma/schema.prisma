@@ -78,6 +78,10 @@ model Salon {
   id        String   @id @default(uuid()) @db.Uuid
   name      String
   qrToken   String   @unique @map("qr_token")
+  // Platform-level lifecycle switch. A suspended salon remains queryable by
+  // the global admin and keeps historical data, but cannot receive new public
+  // bookings.
+  active    Boolean  @default(true)
   timezone  String   @default("Asia/Tehran")
   // Default booking-approval policy for the salon. false (default) => new
   // bookings are created 'pending' and need manual admin approval; true => they
@@ -101,6 +105,7 @@ model Salon {
   subscription    Subscription?
   qrScanEvents    QrScanEvent[]
   salonNotifications SalonNotification[]
+  smsSettings     SalonSmsSettings?
 
   @@map("salon")
 }
@@ -424,6 +429,7 @@ model DeviceToken {
 model NotificationLog {
   id            String   @id @default(uuid()) @db.Uuid
   appointmentId String?  @map("appointment_id") @db.Uuid
+  type          String   @default("generic") // confirmation | reminder | cancellation | booking_notice | generic
   channel       String // 'sms' | 'push'
   status        String // 'sent' | 'failed'
   error         String?
@@ -432,6 +438,26 @@ model NotificationLog {
   appointment Appointment? @relation(fields: [appointmentId], references: [id])
 
   @@map("notification_log")
+}
+
+// Per-salon SMS audience preferences. Stylist notifications are enabled by
+// default; owner notifications are opt-in so busy salon owners do not receive
+// duplicate traffic for every appointment.
+model SalonSmsSettings {
+  id                 String   @id @default(uuid()) @db.Uuid
+  salonId            String   @unique @map("salon_id") @db.Uuid
+  ownerBooking       Boolean  @default(false) @map("owner_booking")
+  stylistBooking     Boolean  @default(true) @map("stylist_booking")
+  ownerReminder      Boolean  @default(false) @map("owner_reminder")
+  stylistReminder    Boolean  @default(true) @map("stylist_reminder")
+  ownerCancellation  Boolean  @default(false) @map("owner_cancellation")
+  stylistCancellation Boolean @default(true) @map("stylist_cancellation")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  salon Salon @relation(fields: [salonId], references: [id])
+
+  @@map("salon_sms_settings")
 }
 
 // ─── Bot Chat ──────────────────────────────────────────────────────────────────
@@ -552,4 +578,41 @@ model QrScanEvent {
   salon Salon @relation(fields: [salonId], references: [id])
 
   @@map("qr_scan_event")
+}
+
+// ─── Platform Admin ─────────────────────────────────────────────────────────
+// Global operators are intentionally separate from salon StaffMember rows.
+// A platform admin has no salon tenant and receives a distinct JWT role.
+
+model PlatformAdmin {
+  id          String   @id @default(uuid()) @db.Uuid
+  phone       String   @unique
+  fullName    String   @map("full_name")
+  role        String   @default("super_admin")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  lastLoginAt DateTime? @map("last_login_at") @db.Timestamptz
+
+  auditLogs PlatformAuditLog[]
+
+  @@map("platform_admin")
+}
+
+// Immutable operator trail for global state changes. Metadata is structured so
+// the panel can show the before/after context without leaking request bodies.
+model PlatformAuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  adminId    String   @map("admin_id") @db.Uuid
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id") @db.Uuid
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  admin PlatformAdmin @relation(fields: [adminId], references: [id])
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
+  @@index([adminId, createdAt])
+  @@map("platform_audit_log")
 }

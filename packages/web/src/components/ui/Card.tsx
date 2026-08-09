@@ -56,7 +56,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
   const prefersReduced = useReducedMotion();
 
   const cardClassName = cn(
-    'rounded-lg border border-border p-5',
+    'rounded-lg border border-border p-4 sm:p-5',
     elevated ? 'bg-elevated shadow-2' : 'bg-surface shadow-1',
     // Add will-change hint and cursor for hover-lift cards
     hoverLift && 'cursor-pointer',

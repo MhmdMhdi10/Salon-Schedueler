@@ -15,6 +15,7 @@ import {
   type PaymentGateway,
 } from './payment/index.js';
 import { NotificationService } from './notifications/index.js';
+import { NotificationSettingsService } from './notifications/notification-settings.service.js';
 import {
   KavenegarSmsAdapter,
   SmsIrAdapter,
@@ -44,6 +45,9 @@ import { WsInboxHub } from './inbox/ws-inbox-hub.js';
 // Application-layer flows (cross-service wiring — Requirement 4.5).
 import { BookingFlow } from './app/booking-flow.js';
 import { CancellationFlow } from './app/cancellation-flow.js';
+import { AppointmentManagementService } from './app/appointment-management.js';
+import { BookingAbuseGuard } from './security/booking-abuse-guard.js';
+import { PlatformAdminService } from './platform-admin/platform-admin.service.js';
 
 // Provider ports + adapters.
 import type { SmsProvider } from './auth/sms-provider.interface.js';
@@ -128,23 +132,16 @@ function selectSmsProvider(config: AppConfig): SmsProvider {
  * ({@link selectSmsProvider}) is passed as a fallback so an SMS is still
  * delivered directly if the broker is momentarily unreachable.
  *
- * In dev/log mode (no SMS credentials), there is no real provider to deliver to,
- * so the broker hop adds nothing but indirection — and it means the code (e.g. a
- * login OTP) is only ever logged by the separate sms-worker process, not the API
- * the developer is watching. So we send DIRECTLY via the dev/log provider, which
- * prints `[dev-sms] -> <phone>: <message>` in THIS process's logs. The queue is
- * also skipped entirely when `RABBITMQ_URL` is unset (the prior behavior).
+ * When RabbitMQ is configured, all outbound SMS (including OTP, confirmations,
+ * reminders and waitlist notices) goes through the durable queue. The direct
+ * provider remains a safe fallback while the broker reconnects. When the broker
+ * is absent, the dev/log or real provider is used synchronously.
  *
  * Exported so the SMS worker can build the same real provider for delivery.
  */
 export function selectApiSmsProvider(config: AppConfig): SmsProvider {
   const direct = selectSmsProvider(config);
-  // Only route through the durable queue when there is a real provider to
-  // deliver to. In dev/log mode, send directly so the OTP is visible in the API
-  // logs (and the broker/worker indirection — plus its dev restart noise — is
-  // bypassed). Configure KAVENEGAR_API_KEY or SMSIR_API_KEY to exercise the queue.
-  const hasRealSmsProvider = Boolean(config.kavenegarApiKey || config.smsirApiKey);
-  if (!config.rabbitmqUrl || !hasRealSmsProvider) return direct;
+  if (!config.rabbitmqUrl) return direct;
   const publisher = new RabbitMqSmsPublisher(config.rabbitmqUrl, {
     maxAttempts: config.smsQueueMaxAttempts,
     retryDelayMs: config.smsQueueRetryDelayMs,
@@ -230,6 +227,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     jwtAccessSecret: config.jwtAccessSecret,
     jwtRefreshSecret: config.jwtRefreshSecret,
     otpWindowSeconds: config.otpWindowSeconds,
+    devOtpAutoFill: config.devOtpAutoFill,
   });
 
   // Port-based services with Prisma-backed adapters.
@@ -237,7 +235,9 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     smsProvider,
     pushProvider,
     new PrismaNotificationRepository(prisma),
+    { defaultReminderLeadTimeMinutes: config.reminderLeadTimeMinutes },
   );
+  const notificationSettings = new NotificationSettingsService(prisma);
   // Bot-based notification channel: routes OTP/reminders/owner notices through a
   // messaging bot when a `BotChat` exists, falling back to SMS otherwise
   // (Requirements 1.8, 8.1). Disabled adapters (no token) are treated as absent.
@@ -311,6 +311,14 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     notificationService,
   });
 
+  const appointmentManagementService = new AppointmentManagementService(
+    prisma,
+    bookingFlow,
+    cancellationService,
+  );
+  const bookingAbuseGuard = new BookingAbuseGuard(prisma);
+  const platformAdminService = new PlatformAdminService(prisma);
+
   // Conversational in-chat booking (task 7.2): a BotSession-backed state machine
   // (service → date → slot → confirm, with an in-chat OTP sub-flow when the chat
   // is not yet linked to a customer). It REUSES the scheduling engine for
@@ -334,6 +342,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     authService,
     paymentService,
     notificationService,
+    notificationSettings,
     botChannel,
     botService,
     waitlistService,
@@ -351,6 +360,9 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     cancellationFlow,
     salonInboxService,
     wsInboxHub,
+    appointmentManagementService,
+    bookingAbuseGuard,
+    platformAdminService,
   };
 
   return { prisma, services, config };
@@ -370,6 +382,7 @@ export function createApp(overrides: Partial<AppConfig> = {}): CreatedApp {
     services: container.services,
     jwtAccessSecret: container.config.jwtAccessSecret,
     botWebhookSecret: container.config.botWebhookSecret,
+    trustProxy: container.config.trustProxy,
   });
   return { ...container, app };
 }

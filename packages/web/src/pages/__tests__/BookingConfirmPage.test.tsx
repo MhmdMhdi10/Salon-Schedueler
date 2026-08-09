@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, cleanup } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, cleanup } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import '../../i18n';
@@ -16,8 +16,16 @@ import { expectNoSeriousA11yViolations } from '../../test/a11y';
 
 const getServices = vi.fn();
 const createBooking = vi.fn();
+const getAccessToken = vi.fn<[], string | null>(() => null);
+const getProfile = vi.fn();
+const updateProfile = vi.fn();
 
 vi.mock('../../api/client', () => ({
+  getAccessToken: () => getAccessToken(),
+  customerApi: {
+    getProfile: () => getProfile(),
+    updateProfile: (name: string) => updateProfile(name),
+  },
   salonApi: {
     getServices: (salonId: string) => getServices(salonId),
   },
@@ -78,6 +86,9 @@ function renderPage(state: unknown = SELECTION, salonId = 'salon-1') {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  getAccessToken.mockReturnValue(null);
+  getProfile.mockReset();
+  updateProfile.mockReset();
   getServices.mockResolvedValue({ services: SERVICES });
 });
 
@@ -227,6 +238,33 @@ describe('BookingConfirmPage — sign-in then resume', () => {
     expect(await screen.findByText('success-page')).toBeInTheDocument();
     expect(createBooking).toHaveBeenCalledTimes(1);
     expect(createBooking).toHaveBeenCalledWith({ salonId: 'salon-1', ...SELECTION });
+  });
+
+  it('asks for name after OTP only for a customer without a saved profile', async () => {
+    getAccessToken.mockReturnValue('access-token');
+    getProfile.mockResolvedValue({
+      customer: { id: 'customer-1', phone: '09120000000', fullName: null },
+    });
+    updateProfile.mockImplementation((fullName: string) =>
+      Promise.resolve({
+        customer: { id: 'customer-1', phone: '09120000000', fullName },
+      }),
+    );
+    createBooking.mockResolvedValue({ status: 'pending' });
+
+    renderPage();
+    const cta = await screen.findByRole('button', { name: 'تایید رزرو' });
+    await waitFor(() => expect(cta).not.toBeDisabled());
+    cta.click();
+
+    const nameField = await screen.findByRole('textbox', { name: 'نام و نام خانوادگی' });
+    expect(createBooking).not.toHaveBeenCalled();
+    fireEvent.change(nameField, { target: { value: 'سارا محمدی' } });
+    cta.click();
+
+    await waitFor(() => expect(updateProfile).toHaveBeenCalledWith('سارا محمدی'));
+    expect(await screen.findByText('success-page')).toBeInTheDocument();
+    expect(getProfile).toHaveBeenCalledTimes(1);
   });
 });
 

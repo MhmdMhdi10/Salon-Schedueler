@@ -226,7 +226,7 @@ export class SalonRegistration {
       where: { qrToken: parseResult.salonToken },
     });
 
-    if (!salon) {
+    if (!salon || salon.active === false) {
       throw new RegistrationError('QR_UNREGISTERED');
     }
 

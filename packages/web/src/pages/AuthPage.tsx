@@ -24,8 +24,8 @@ function formatCountdown(totalSeconds: number): string {
   return toPersianDigits(`${minutes}:${String(seconds).padStart(2, '0')}`);
 }
 
-/** Staff roles that route into the management panel after login. */
-const STAFF_ROLES = new Set(['Owner', 'Admin', 'Stylist']);
+/** Authenticated operator roles that route into a management panel. */
+const PANEL_ROLES = new Set(['Owner', 'Admin', 'Stylist', 'PlatformAdmin']);
 
 /**
  * Best-effort decode of the `role` claim from a JWT access token, for routing
@@ -37,10 +37,12 @@ function roleFromAccessToken(token: string): string | undefined {
   try {
     const payload = token.split('.')[1];
     if (!payload) return undefined;
-    const json = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as {
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+    const json = JSON.parse(atob(padded)) as {
       role?: unknown;
     };
-    return typeof json.role === 'string' && STAFF_ROLES.has(json.role) ? json.role : undefined;
+    return typeof json.role === 'string' && PANEL_ROLES.has(json.role) ? json.role : undefined;
   } catch {
     return undefined;
   }
@@ -68,7 +70,7 @@ const fadeStepVariants: Variants = {
  *    typing, OS one-time-code autofill, and paste), resend cooldown with a
  *    draining progress bar, and expiry-aware error copy.
  *
- * Already-authenticated visitors are redirected away (`/owner` for staff, `/`
+ * Already-authenticated visitors are redirected away (`/owner` for staff, `/account`
  * for customers, honoring any mid-booking `returnTo`). Verify failures branch
  * on the server error code: `OTP_EXPIRED` → «کد منقضی شده…» + resend unlocked;
  * network failure → connection copy; anything else → «کد نامعتبر است». Errors
@@ -112,6 +114,17 @@ export function AuthPage() {
     (location.state as { returnState?: Record<string, unknown> } | null)?.returnState ?? {};
   const hasBookingReturnIntent = typeof returnTo === 'string' && returnTo.length > 0;
 
+  const panelPath = (panelRole: string | undefined) =>
+    panelRole === 'PlatformAdmin' ? '/platform-admin' : panelRole ? '/owner' : '/account';
+
+  const handleBack = () => {
+    if (location.key !== 'default') {
+      navigate(-1);
+      return;
+    }
+    navigate('/', { replace: true });
+  };
+
   // Resend countdown: ticks once per second while the cooldown is active.
   useEffect(() => {
     if (secondsLeft <= 0) return;
@@ -130,7 +143,7 @@ export function AuthPage() {
     return hasBookingReturnIntent ? (
       <Navigate to={returnTo!} state={{ ...returnState, autoConfirm: true }} replace />
     ) : (
-      <Navigate to={role ? '/owner' : '/'} replace />
+      <Navigate to={panelPath(role)} replace />
     );
   }
 
@@ -138,7 +151,9 @@ export function AuthPage() {
     if (hasBookingReturnIntent) {
       navigate(returnTo!, { state: { ...returnState, autoConfirm: true }, replace: true });
     } else {
-      navigate(roleFromAccessToken(lastAccessToken.current) ? '/owner' : '/', { replace: true });
+      navigate(panelPath(roleFromAccessToken(lastAccessToken.current)), {
+        replace: true,
+      });
     }
   };
 
@@ -146,7 +161,9 @@ export function AuthPage() {
     setLoading(true);
     setError('');
     try {
-      await authApi.requestOtp(normalizedPhone);
+      const response = await authApi.requestOtp(normalizedPhone);
+      const devOtp = response?.devOtp;
+      setCode(devOtp ? devOtp.split('') : Array(OTP_LENGTH).fill(''));
       setDirection(1);
       setStep('otp');
       setSecondsLeft(RESEND_SECONDS);
@@ -182,11 +199,13 @@ export function AuthPage() {
       setAccessToken(result.accessToken);
       setRefreshToken(result.refreshToken);
       lastAccessToken.current = result.accessToken;
-      // Update the app-wide session in the background (drives the header).
-      void refreshAuth();
+      // Resolve the app-wide session before navigating. This prevents the
+      // owner guard from racing the /me request and bouncing a valid login
+      // back to /auth on slower mobile connections.
+      await refreshAuth();
       // Show a brief in-button success beat (motion-safe), then route: back to
       // the funnel with `autoConfirm` when we arrived mid-booking, otherwise by
-      // the token's role (staff → panel, customers → public app).
+      // the token's role (staff → panel, customers → account dashboard).
       setVerified(true);
       if (prefersReduced) {
         goToDestination();
@@ -220,16 +239,30 @@ export function AuthPage() {
 
   return (
     <div
-      className="auth-page mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center gap-5 px-4 py-12"
+      className="auth-page mx-auto flex min-h-screen min-h-[100dvh] w-full max-w-md flex-col items-center justify-center gap-4 px-3 py-8 sm:gap-5 sm:px-4 sm:py-12"
       data-testid="auth-page"
     >
       <SeoHead title={t('seo.titles.auth')} />
 
-      <Link to="/" aria-label="آرا" className="no-underline">
-        <BrandLogo className="h-12" />
-      </Link>
+      <div className="relative flex w-full items-center justify-center">
+        <Button
+          variant="ghost"
+          size="md"
+          // In RTL the back affordance points RIGHT (steering §8) —
+          // ArrowRight is already correct, so no rtl flip.
+          startIcon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
+          onClick={handleBack}
+          className="absolute start-0 top-1"
+          aria-label={t('common.back')}
+        >
+          {t('common.back')}
+        </Button>
+        <Link to="/" aria-label="آرا" className="inline-flex min-h-10 items-center no-underline">
+          <BrandLogo className="h-12" />
+        </Link>
+      </div>
 
-      <div className="w-full overflow-hidden rounded-2xl border border-border bg-elevated p-6 shadow-1 sm:p-8">
+      <div className="w-full overflow-hidden rounded-2xl border border-border bg-elevated p-4 shadow-1 sm:p-8">
         <AnimatePresence mode="wait" initial={false} custom={direction}>
           {step === 'phone' ? (
             <motion.div
@@ -286,12 +319,12 @@ export function AuthPage() {
                   {error}
                 </p>
               )}
-              <p className="mt-5 text-center text-2xs leading-5 text-muted">
+              <p className="mt-5 flex flex-wrap items-center justify-center gap-x-1 text-center text-2xs leading-5 text-muted">
                 <Trans
                   i18nKey="auth.consent"
                   components={{
-                    terms: <Link to="/terms" className="text-primary" />,
-                    privacy: <Link to="/privacy" className="text-primary" />,
+                    terms: <Link to="/terms" className="inline-flex min-h-10 items-center text-primary" />,
+                    privacy: <Link to="/privacy" className="inline-flex min-h-10 items-center text-primary" />,
                   }}
                 />
               </p>

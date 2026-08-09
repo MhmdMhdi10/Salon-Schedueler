@@ -216,7 +216,7 @@ export function OwnerSubscriptionPage() {
                   {t(`owner.subscription.status.${subscription.status}`)}
                 </Badge>
               </div>
-              <p className="flex items-center gap-2 text-sm text-muted">
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
                 <CalendarClock className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span>{t('owner.subscription.expiresAt')}:</span>
                 <JalaliDate

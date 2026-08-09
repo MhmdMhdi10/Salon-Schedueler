@@ -39,16 +39,24 @@ else
   echo "[backend] schema already present — skipping db push."
 fi
 
-# 4. Apply the occupancy range + exclusion/CHECK constraints (idempotent).
+# 4. Apply additive schema migrations that must also reach existing dev DBs.
+#    Development bootstraps databases with db push, so these idempotent
+#    statements keep an already-created database in sync too.
+echo "[backend] applying additive schema migrations (idempotent)..."
+psql -v ON_ERROR_STOP=1 -f packages/backend/prisma/migrations/00000000000011_notification_event_type/migration.sql
+psql -v ON_ERROR_STOP=1 -f packages/backend/prisma/migrations/00000000000012_platform_admin/migration.sql
+psql -v ON_ERROR_STOP=1 -f packages/backend/prisma/migrations/00000000000013_salon_sms_settings/migration.sql
+
+# 5. Apply the occupancy range + exclusion/CHECK constraints (idempotent).
 echo "[backend] applying exclusion constraints (idempotent)..."
 psql -v ON_ERROR_STOP=1 -f docker/db/dev-constraints.sql
 
-# 4b. Seed dev-only sample data (idempotent): one bookable salon + service +
+# 5b. Seed dev-only sample data (idempotent): one bookable salon + service +
 #     staff + chair + working hours, with fixed UUIDs the web funnel targets.
 echo "[backend] applying dev seed data (idempotent)..."
 psql -v ON_ERROR_STOP=1 -f docker/db/dev-seed.sql
 
-# 5. Initial build of shared + backend, then start with watch reload.
+# 6. Initial build of shared + backend, then start with watch reload.
 #    Use --force so the initial build ignores the incremental .tsbuildinfo cache
 #    and re-emits every output. A container killed mid-emit can leave 0-byte .js
 #    files that the cache still records as "built", so a plain `tsc -b` would

@@ -89,6 +89,12 @@ vi.mock('../../../api/client', () => {
       setSalon: vi.fn().mockResolvedValue({ ok: true, autoApprove: false }),
       setStaff: vi.fn().mockResolvedValue({ ok: true, autoApprove: null }),
     },
+    staffAvailabilityApi: {
+      list: vi.fn().mockResolvedValue({ blocks: [] }),
+      add: vi.fn().mockResolvedValue({ block: {} }),
+      remove: vi.fn().mockResolvedValue({ ok: true }),
+      setManageOwn: vi.fn().mockResolvedValue({ ok: true, allowed: false }),
+    },
     brandAccentApi: {
       get: vi.fn().mockResolvedValue({ brandAccent: null }),
       set: vi.fn().mockResolvedValue({ ok: true, brandAccent: null }),

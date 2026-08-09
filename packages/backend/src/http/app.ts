@@ -4,6 +4,7 @@ import type { CancellationService } from '../scheduling/cancellation.js';
 import type { AuthService, Authorizer } from '../auth/index.js';
 import type { PaymentService } from '../payment/payment.service.js';
 import type { NotificationService } from '../notifications/notification.service.js';
+import type { NotificationSettingsService } from '../notifications/notification-settings.service.js';
 import type { BotChannel } from '../notifications/bot-channel.js';
 import type { BotService } from '../bots/index.js';
 import type { WaitlistService } from '../waitlist/waitlist.service.js';
@@ -21,6 +22,10 @@ import type { BookingFlow } from '../app/booking-flow.js';
 import type { CancellationFlow } from '../app/cancellation-flow.js';
 import type { SalonInboxService } from '../inbox/index.js';
 import type { WsInboxHub } from '../inbox/ws-inbox-hub.js';
+import type { AppointmentManagementService } from '../app/appointment-management.js';
+import type { BookingAbuseGuard } from '../security/booking-abuse-guard.js';
+import type { PlatformAdminService } from '../platform-admin/platform-admin.service.js';
+import { createRateLimit, principalOrIpRateLimitKey } from './middleware/rate-limit.js';
 import { makeAuth } from './middleware/auth.js';
 import { makeRbac } from './middleware/rbac.js';
 import { healthRouter } from './routes/health.routes.js';
@@ -28,6 +33,8 @@ import { authRouter } from './routes/auth.routes.js';
 import { salonRouter } from './routes/salon.routes.js';
 import { registrationRouter } from './routes/registration.routes.js';
 import { appointmentRouter } from './routes/appointment.routes.js';
+import { customerRouter } from './routes/customer.routes.js';
+import { waitlistRouter } from './routes/waitlist.routes.js';
 import { cardOrderRouter } from './routes/card-order.routes.js';
 import { transactionRouter } from './routes/transaction.routes.js';
 import { paymentInitiateRouter, paymentCallbackRouter } from './routes/payment.routes.js';
@@ -37,6 +44,7 @@ import { subscriptionRouter, subscriptionCallbackRouter } from './routes/subscri
 import { qrRouter } from './routes/qr.routes.js';
 import { deviceRouter } from './routes/device.routes.js';
 import { inboxRouter } from './routes/inbox.routes.js';
+import { platformAdminRouter } from './routes/platform-admin.routes.js';
 import { errorHandler } from './middleware/error-handler.js';
 
 /**
@@ -50,6 +58,8 @@ export interface Services {
   authService: AuthService;
   paymentService: PaymentService;
   notificationService: NotificationService;
+  /** Role-aware SMS audience preferences. Optional for legacy route fakes. */
+  notificationSettings?: NotificationSettingsService;
   /** Bot-based notification channel sitting behind notifications (Requirement 1.8). */
   botChannel: BotChannel;
   /** Inbound bot webhook dispatch / conversational entry point (Requirements 1.1, 1.6). */
@@ -75,6 +85,12 @@ export interface Services {
   salonInboxService: SalonInboxService;
   /** In-process WS hub; the WS route subscribes new sockets here for live delivery. */
   wsInboxHub: WsInboxHub;
+  /** Optional because route-level test fakes predate the MVP abuse layer. */
+  appointmentManagementService?: AppointmentManagementService;
+  /** Optional abuse checks; production composition always supplies it. */
+  bookingAbuseGuard?: BookingAbuseGuard;
+  /** Global operations center; optional for legacy route-test service fakes. */
+  platformAdminService?: PlatformAdminService;
 }
 
 /** Options for building the Express app. */
@@ -83,6 +99,8 @@ export interface BuildAppOptions {
   jwtAccessSecret: string;
   /** Shared secret guarding the public bot webhook routes (Requirement 8.1). */
   botWebhookSecret?: string;
+  /** Trust exactly one reverse-proxy hop when explicitly enabled. */
+  trustProxy?: boolean;
 }
 
 /**
@@ -96,6 +114,8 @@ export interface BuildAppOptions {
 export function buildApp(opts: BuildAppOptions): Express {
   const { services, jwtAccessSecret, botWebhookSecret } = opts;
   const app = express();
+
+  if (opts.trustProxy) app.set('trust proxy', 1);
 
   // ── CORS (dev / explicit origins only) ──────────────────────────────────────
   // The browser-based clients (the Vite web app via its dev proxy, and the
@@ -141,7 +161,9 @@ export function buildApp(opts: BuildAppOptions): Express {
     });
   }
 
-  app.use(express.json());
+  // Booking and onboarding payloads are small. A hard body limit prevents a
+  // public endpoint from becoming an accidental memory-amplification target.
+  app.use(express.json({ limit: '64kb' }));
 
   const { requireAuth, optionalAuth } = makeAuth(jwtAccessSecret);
   const { requireRole } = makeRbac(services.authorizer);
@@ -170,6 +192,14 @@ export function buildApp(opts: BuildAppOptions): Express {
   // add RBAC guards where the authorization matrix requires them (Requirement 2.4).
   const protectedRouter = Router();
   protectedRouter.use(requireAuth);
+  protectedRouter.use(
+    createRateLimit({
+      name: 'authenticated-api',
+      max: 180,
+      windowMs: 60_000,
+      keyGenerator: principalOrIpRateLimitKey,
+    }),
+  );
   protectedRouter.get('/me', (req, res) => {
     res.status(200).json({ principal: req.principal });
   });
@@ -177,6 +207,8 @@ export function buildApp(opts: BuildAppOptions): Express {
   protectedRouter.get('/admin/ping', requireRole('configure_salon'), (_req, res) => {
     res.status(200).json({ ok: true });
   });
+  protectedRouter.use(customerRouter(services));
+  protectedRouter.use(waitlistRouter(services));
   protectedRouter.use(appointmentRouter(services, requireRole));
   protectedRouter.use(cardOrderRouter(requireRole));
   protectedRouter.use(transactionRouter(services, requireRole));
@@ -186,6 +218,9 @@ export function buildApp(opts: BuildAppOptions): Express {
   protectedRouter.use(qrRouter(services, requireRole));
   protectedRouter.use(deviceRouter(services));
   protectedRouter.use(inboxRouter(services, requireRole));
+  if (services.platformAdminService) {
+    protectedRouter.use(platformAdminRouter(services, services.platformAdminService));
+  }
   app.use('/api', protectedRouter);
 
   app.use(errorHandler);

@@ -3,6 +3,7 @@ import type { Services } from '../app.js';
 import type { WebSocket as WsSocket } from 'ws';
 import type { HttpPrincipal } from '../middleware/auth.js';
 import type { RequireRole } from './appointment.routes.js';
+import { asyncRoute } from './route-helpers.js';
 import * as jwt from 'jsonwebtoken';
 
 /**
@@ -94,7 +95,7 @@ export function inboxRouter(
   const router = Router();
 
   /**
-   * GET /salons/:id/notifications?onlyUnread=&limit=
+   * GET /salons/:id/notifications?onlyUnread=&limit=&offset=
    * Returns the caller-visible notifications for the salon (owner/admin see
    * all; stylist sees all-staff + rows targeted to them).
    */
@@ -109,13 +110,20 @@ export function inboxRouter(
       const onlyUnread = req.query.onlyUnread === 'true' || req.query.onlyUnread === '1';
       const limitRaw = Number(req.query.limit ?? 50);
       const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(200, limitRaw)) : 50;
-      const rows = await services.salonInboxService.listForSalon(req.params.id, {
+      const offsetRaw = Number(req.query.offset ?? 0);
+      const offset = Number.isFinite(offsetRaw)
+        ? Math.min(1_000_000, Math.max(0, Math.trunc(offsetRaw)))
+        : 0;
+      const scope = {
         role: principal.role ?? 'Customer',
         staffMemberId: principal.staffMemberId,
         onlyUnread,
-        limit,
-      });
-      res.status(200).json({ notifications: rows });
+      };
+      const [rows, total] = await Promise.all([
+        services.salonInboxService.listForSalon(req.params.id, { ...scope, limit, offset }),
+        services.salonInboxService.countForSalon(req.params.id, scope),
+      ]);
+      res.status(200).json({ notifications: rows, total, limit, offset });
     },
   );
 
@@ -137,14 +145,22 @@ export function inboxRouter(
   );
 
   /** PATCH /notifications/:id/read — mark one row read. */
-  router.patch('/notifications/:id/read', async (req, res) => {
-    const row = await services.salonInboxService.markRead(req.params.id);
-    if (!row) {
-      res.status(404).json({ code: 'NOT_FOUND' });
-      return;
-    }
-    res.status(200).json({ notification: row });
-  });
+  router.patch(
+    '/notifications/:id/read',
+    asyncRoute(async (req, res) => {
+      const principal = req.principal!;
+      const row = await services.salonInboxService.markRead(req.params.id, {
+        salonId: principal.salonId,
+        role: principal.role ?? 'Customer',
+        staffMemberId: principal.staffMemberId,
+      });
+      if (!row) {
+        res.status(404).json({ code: 'NOT_FOUND' });
+        return;
+      }
+      res.status(200).json({ notification: row });
+    }),
+  );
 
   /** POST /salons/:id/notifications/read-all — clear the unread badge. */
   router.post(

@@ -69,7 +69,7 @@ export const RadioGroup = forwardRef<
                 disabled={option.disabled}
                 aria-describedby={option.helperText ? helperId : undefined}
                 className={cn(
-                  'mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center',
+                  'mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center',
                   // Invisible ≥44×44 hit area around the 20px visual control.
                   "relative after:absolute after:-inset-3 after:content-['']",
                   'rounded-pill border border-border bg-bg',
