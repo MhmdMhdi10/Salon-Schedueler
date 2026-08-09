@@ -60,6 +60,10 @@ const mockGetStaff = vi.fn();
 const mockGetChairs = vi.fn();
 const mockGetServices = vi.fn();
 const mockHolidaysList = vi.fn();
+const mockGetPending = vi.fn();
+const mockApproveAppointment = vi.fn();
+const mockRejectAppointment = vi.fn();
+const mockRescheduleAppointment = vi.fn();
 
 vi.mock('../../../api/client', () => {
   class ApiError extends Error {
@@ -83,6 +87,10 @@ vi.mock('../../../api/client', () => {
       getAnalytics: (...args: unknown[]) => mockGetAnalytics(...args),
       getStaff: (...args: unknown[]) => mockGetStaff(...args),
       getChairs: (...args: unknown[]) => mockGetChairs(...args),
+      getPending: (...args: unknown[]) => mockGetPending(...args),
+      approveAppointment: (...args: unknown[]) => mockApproveAppointment(...args),
+      rejectAppointment: (...args: unknown[]) => mockRejectAppointment(...args),
+      rescheduleAppointment: (...args: unknown[]) => mockRescheduleAppointment(...args),
     },
     salonApi: {
       getServices: (...args: unknown[]) => mockGetServices(...args),
@@ -166,6 +174,10 @@ beforeEach(() => {
   mockGetChairs.mockResolvedValue({ chairs: [] });
   mockGetServices.mockResolvedValue({ services: [] });
   mockHolidaysList.mockResolvedValue({ holidays: [] });
+  mockGetPending.mockResolvedValue({ appointments: [] });
+  mockApproveAppointment.mockResolvedValue({ status: 'confirmed' });
+  mockRejectAppointment.mockResolvedValue({ status: 'cancelled' });
+  mockRescheduleAppointment.mockResolvedValue({ status: 'confirmed' });
 });
 
 afterEach(() => {
@@ -341,6 +353,33 @@ describe('Skeleton and error states', () => {
         expect(mockGetCalendar).toHaveBeenCalledTimes(2);
       });
     });
+
+    it('shows backend approval conflicts inside the approval queue', async () => {
+      mockGetPending.mockResolvedValue({
+        appointments: [
+          {
+            id: 'pending-1',
+            startAt: '2026-04-15T09:00:00.000Z',
+            endAt: '2026-04-15T09:45:00.000Z',
+            serviceName: 'کوتاهی مو',
+            customerName: 'سارا',
+            status: 'pending',
+          },
+        ],
+      });
+      mockApproveAppointment.mockRejectedValue({ code: 'APPOINTMENT_NOT_PENDING' });
+
+      renderCalendarPage();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('owner-approval-queue')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole('button', { name: /تأیید/ }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toHaveTextContent('این رزرو قبلاً تعیین تکلیف شده است');
+      });
+    });
   });
 
   describe('Analytics page', () => {
@@ -456,6 +495,110 @@ describe('Jalali dates', () => {
 
       // Verify Persian weekday names are present
       expect(screen.getAllByText('شنبه').length).toBeGreaterThan(0);
+    });
+
+    it('opens daily view when a week day is selected', async () => {
+      renderCalendarPage();
+      await waitFor(() => {
+        expect(screen.getByTestId('owner-calendar-week')).toBeInTheDocument();
+      });
+
+      const firstDay = screen.getByTestId('owner-calendar-week').querySelector('[role="gridcell"]');
+      expect(firstDay).not.toBeNull();
+      fireEvent.click(firstDay as HTMLElement);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('owner-calendar-day')).toBeInTheDocument();
+      });
+    });
+
+    it('moves an appointment in place without refetching the whole calendar', async () => {
+      const start = new Date();
+      start.setHours(10, 0, 0, 0);
+      const end = new Date(start.getTime() + 45 * 60_000);
+      mockGetCalendar.mockResolvedValue({
+        appointments: [
+          {
+            id: 'appt-1',
+            startAt: start.toISOString(),
+            endAt: end.toISOString(),
+            serviceName: 'کوتاهی مو',
+            customerName: 'زهرا محمدی',
+            customerId: 'customer-1',
+            status: 'confirmed',
+          },
+        ],
+      });
+
+      renderCalendarPage();
+      await waitFor(() => {
+        expect(screen.getByTestId('owner-calendar-week')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole('tab', { name: /روز/ }));
+      await waitFor(() => {
+        expect(screen.getByText('زهرا محمدی')).toBeInTheDocument();
+      });
+
+      const calendarFetchesBeforeMove = mockGetCalendar.mock.calls.length;
+      fireEvent.click(screen.getByRole('button', { name: /تغییر زمان/ }));
+      fireEvent.change(screen.getByLabelText('ساعت شروع'), { target: { value: '11:00' } });
+      fireEvent.click(screen.getByRole('button', { name: 'ذخیره زمان' }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('status')).toHaveTextContent('بدون بارگذاری مجدد');
+      });
+      expect(mockRescheduleAppointment).toHaveBeenCalledWith('appt-1', expect.any(String));
+      expect(mockGetCalendar).toHaveBeenCalledTimes(calendarFetchesBeforeMove);
+    });
+
+    it('supports day-view drag and drop without refreshing the calendar', async () => {
+      const start = new Date();
+      start.setHours(10, 0, 0, 0);
+      const end = new Date(start.getTime() + 45 * 60_000);
+      mockGetCalendar.mockResolvedValue({
+        appointments: [
+          {
+            id: 'appt-1',
+            startAt: start.toISOString(),
+            endAt: end.toISOString(),
+            serviceName: 'کوتاهی مو',
+            customerName: 'زهرا محمدی',
+            customerId: 'customer-1',
+            status: 'confirmed',
+          },
+        ],
+      });
+
+      renderCalendarPage();
+      await waitFor(() => {
+        expect(screen.getByTestId('owner-calendar-week')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole('tab', { name: /روز/ }));
+      await waitFor(() => {
+        expect(screen.getByRole('group', { name: /کوتاهی مو/ })).toBeInTheDocument();
+      });
+
+      const dataTransfer = {
+        effectAllowed: 'move',
+        dropEffect: 'move',
+        types: ['text/plain'],
+        values: new Map<string, string>(),
+        setData(type: string, value: string) {
+          this.values.set(type, value);
+        },
+        getData(type: string) {
+          return this.values.get(type) ?? '';
+        },
+      };
+      const calendarFetchesBeforeMove = mockGetCalendar.mock.calls.length;
+      fireEvent.dragStart(screen.getByRole('group', { name: /کوتاهی مو/ }), { dataTransfer });
+      fireEvent.drop(screen.getByRole('row', { name: '11:00' }), { dataTransfer });
+
+      await waitFor(() => {
+        expect(screen.getByRole('status')).toHaveTextContent('بدون بارگذاری مجدد');
+      });
+      expect(mockRescheduleAppointment).toHaveBeenCalledWith('appt-1', expect.any(String));
+      expect(mockGetCalendar).toHaveBeenCalledTimes(calendarFetchesBeforeMove);
     });
   });
 });

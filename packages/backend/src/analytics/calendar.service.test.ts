@@ -29,8 +29,16 @@ describe('CalendarService', () => {
   describe('getChairCalendar', () => {
     it('returns appointments for a chair within the specified date range', async () => {
       const appointments = [
-        makeAppointment({ id: 'appt-1', startAt: new Date('2024-03-15T09:00:00Z'), endAt: new Date('2024-03-15T10:00:00Z') }),
-        makeAppointment({ id: 'appt-2', startAt: new Date('2024-03-15T11:00:00Z'), endAt: new Date('2024-03-15T12:00:00Z') }),
+        makeAppointment({
+          id: 'appt-1',
+          startAt: new Date('2024-03-15T09:00:00Z'),
+          endAt: new Date('2024-03-15T10:00:00Z'),
+        }),
+        makeAppointment({
+          id: 'appt-2',
+          startAt: new Date('2024-03-15T11:00:00Z'),
+          endAt: new Date('2024-03-15T12:00:00Z'),
+        }),
       ];
 
       const mockPrisma = {
@@ -149,7 +157,7 @@ describe('CalendarService', () => {
         },
         include: {
           service: { select: { name: true } },
-          customer: { select: { fullName: true } },
+          customer: { select: { fullName: true, phone: true } },
           staffMember: { select: { fullName: true } },
         },
         orderBy: { startAt: 'asc' },
@@ -210,6 +218,62 @@ describe('CalendarService', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].source).toBe('walkin');
+    });
+  });
+
+  describe('getCustomerProfile', () => {
+    it('returns salon-scoped customer context and recent appointments', async () => {
+      const customer = {
+        id: 'cust-1',
+        phone: '+989120000000',
+        fullName: 'سارا',
+        noShowCount: 1,
+        preferredStaff: { id: 'staff-1', fullName: 'زهرا', role: 'Stylist' },
+      };
+      const appointments = [
+        {
+          ...makeAppointment({ id: 'appt-2', customerId: 'cust-1' }),
+          service: { name: 'کوتاهی مو' },
+          staffMember: { fullName: 'زهرا' },
+        },
+      ];
+      const mockPrisma = {
+        customer: { findUnique: jest.fn().mockResolvedValue(customer) },
+        appointment: { findMany: jest.fn().mockResolvedValue(appointments) },
+      } as any;
+
+      const service = new CalendarService(mockPrisma);
+      const result = await service.getCustomerProfile('salon-1', 'cust-1');
+
+      expect(result).toEqual({ customer, appointments });
+      expect(mockPrisma.appointment.findMany).toHaveBeenCalledWith({
+        where: { salonId: 'salon-1', customerId: 'cust-1' },
+        include: {
+          service: { select: { name: true } },
+          staffMember: { select: { fullName: true } },
+        },
+        orderBy: { startAt: 'desc' },
+        take: 30,
+      });
+    });
+
+    it('hides a customer when no appointment exists in the requested salon', async () => {
+      const mockPrisma = {
+        customer: {
+          findUnique: jest.fn().mockResolvedValue({
+            id: 'cust-1',
+            phone: '+989120000000',
+            fullName: 'سارا',
+            noShowCount: 0,
+            preferredStaff: null,
+          }),
+        },
+        appointment: { findMany: jest.fn().mockResolvedValue([]) },
+      } as any;
+
+      const service = new CalendarService(mockPrisma);
+
+      await expect(service.getCustomerProfile('other-salon', 'cust-1')).resolves.toBeNull();
     });
   });
 });

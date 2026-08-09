@@ -450,6 +450,19 @@ export const cardOrderApi = {
     }),
 };
 
+export interface CalendarAppointment {
+  id: string;
+  startAt: string;
+  endAt: string;
+  status: string;
+  staffMemberId?: string | null;
+  customerId?: string | null;
+  serviceName?: string | null;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  staffName?: string | null;
+}
+
 // Admin endpoints
 export const adminApi = {
   getCalendar: (
@@ -470,6 +483,9 @@ export const adminApi = {
   /** The salon's bookings awaiting approval, oldest first (manage_appointments). */
   getPending: (salonId: string) =>
     request<{ appointments: unknown[] }>(`/salons/${salonId}/pending`),
+  /** Customer context opened from a calendar appointment. */
+  getCustomerProfile: (salonId: string, customerId: string) =>
+    request<CustomerProfileResponse>(`/salons/${salonId}/customers/${customerId}`),
   /** Approve a pending appointment (manage_appointments — Owner/Admin). */
   approveAppointment: (appointmentId: string) =>
     request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/approve`, {
@@ -480,6 +496,12 @@ export const adminApi = {
     request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/reject`, {
       method: 'POST',
     }),
+  /** Move an existing appointment in place; backend validates hours and conflicts. */
+  rescheduleAppointment: (appointmentId: string, startAt: string) =>
+    request<{ status: string; appointment: CalendarAppointment }>(
+      `/appointments/${appointmentId}/reschedule`,
+      { method: 'PATCH', body: { startAt } },
+    ),
   /**
    * Cancel a confirmed/held appointment from the calendar. The backend releases
    * the staff + chair, applies the deposit refund/retain policy, and notifies
@@ -533,6 +555,26 @@ export const adminApi = {
       { method: 'PATCH', body: { active } },
     ),
 };
+
+export interface CustomerProfileAppointment {
+  id: string;
+  startAt: string;
+  endAt: string;
+  status: string;
+  service?: { name?: string | null } | null;
+  staffMember?: { fullName?: string | null } | null;
+}
+
+export interface CustomerProfileResponse {
+  customer: {
+    id: string;
+    phone: string;
+    fullName: string | null;
+    noShowCount: number;
+    preferredStaff?: { id: string; fullName: string | null; role: string } | null;
+  };
+  appointments: CustomerProfileAppointment[];
+}
 
 /** A single row in the owner-panel transactions ledger. */
 export interface Transaction {
@@ -689,9 +731,7 @@ export const workingHoursApi = {
       body: { hours },
     }),
   getStaff: (salonId: string, staffId: string) =>
-    request<{ hours: WeeklyWorkingHour[] }>(
-      `/salons/${salonId}/staff/${staffId}/working-hours`,
-    ),
+    request<{ hours: WeeklyWorkingHour[] }>(`/salons/${salonId}/staff/${staffId}/working-hours`),
   setStaff: (salonId: string, staffId: string, hours: WeeklyWorkingHour[]) =>
     request<{ ok: boolean; hours: WeeklyWorkingHour[] }>(
       `/salons/${salonId}/staff/${staffId}/working-hours`,

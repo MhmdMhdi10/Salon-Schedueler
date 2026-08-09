@@ -2,6 +2,7 @@ import type { Response } from 'express';
 import { AuthError } from '../auth/index.js';
 import { RegistrationError } from '../registration/index.js';
 import { ValidationError } from '../catalog/validation-error.js';
+import { RescheduleError } from '../scheduling/scheduling-engine.js';
 
 /**
  * A domain error mapped to an HTTP status and a stable, client-facing error code.
@@ -51,6 +52,16 @@ export function mapDomainError(err: unknown): MappedError {
 
   if (err instanceof ValidationError) {
     return { status: 400, code: 'VALIDATION_ERROR' };
+  }
+
+  if (err instanceof RescheduleError) {
+    if (err.code === 'APPOINTMENT_NOT_FOUND') {
+      return { status: 404, code: err.code };
+    }
+    if (err.code === 'RESCHEDULE_INVALID_START') {
+      return { status: 400, code: err.code };
+    }
+    return { status: 409, code: err.code };
   }
 
   return { status: 500, code: 'INTERNAL' };

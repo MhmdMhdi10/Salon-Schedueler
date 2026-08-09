@@ -21,6 +21,7 @@ export type RequireRole = (
  * - POST /appointments/:id/no-show      -> markNoShow (RBAC: manage_appointments)
  * - POST /appointments/:id/approve      -> approve pending booking -> 'confirmed' + notify (RBAC: manage_appointments)
  * - POST /appointments/:id/reject       -> reject pending booking -> 'cancelled' + notify (RBAC: manage_appointments)
+ * - PATCH /appointments/:id/reschedule  -> move an existing booking in place (RBAC: manage_own_appointments)
  *
  * Booking customerId is taken from the authenticated principal; source defaults to
  * 'web'. A new booking is 'pending' (awaiting admin approval) — the customer is NOT
@@ -198,6 +199,29 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
     asyncRoute(async (req, res) => {
       const appointment = await services.bookingFlow.reject(req.params.id);
       res.status(200).json({ status: 'cancelled', appointment });
+    }),
+  );
+
+  // Move an existing booking without changing its id, customer, payment, or
+  // approval status. The scheduling engine performs the resource/availability
+  // checks and the database exclusion constraint closes the final race.
+  router.patch(
+    '/appointments/:id/reschedule',
+    requireCanManageAppointment,
+    asyncRoute(async (req, res) => {
+      if (!validateRequired(res, req.body, ['startAt'])) {
+        return;
+      }
+      if (typeof req.body.startAt !== 'string' || Number.isNaN(new Date(req.body.startAt).getTime())) {
+        res.status(400).json({ code: 'RESCHEDULE_INVALID_START', field: 'startAt' });
+        return;
+      }
+
+      const appointment = await services.schedulingEngine.reschedule({
+        appointmentId: req.params.id,
+        startAt: req.body.startAt,
+      });
+      res.status(200).json({ status: appointment.status, appointment });
     }),
   );
 

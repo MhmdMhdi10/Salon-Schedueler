@@ -29,8 +29,10 @@ const toCalendarDto = (a: any) => ({
   endAt: a.endAt,
   status: a.status,
   staffMemberId: a.staffMemberId,
+  customerId: a.customerId,
   serviceName: a.service?.name ?? null,
   customerName: a.customer?.fullName ?? null,
+  customerPhone: a.customer?.phone ?? null,
   staffName: a.staffMember?.fullName ?? null,
 });
 
@@ -137,9 +139,7 @@ function parseWorkingHours(body: unknown) {
  * same window applies to every day in it. Shared by the salon closure and the
  * per-stylist availability-block routes.
  */
-function parseDateWindow(
-  body: Record<string, unknown>,
-):
+function parseDateWindow(body: Record<string, unknown>):
   | {
       ok: true;
       onDate: string;
@@ -281,6 +281,40 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         staffScope,
       );
       res.status(200).json({ appointments: appointments.map(toCalendarDto) });
+    }),
+  );
+
+  // Customer context opened from an appointment. The calendar already proves
+  // the salon/staff relationship; this endpoint adds phone, no-show count and
+  // recent history without exposing another salon's appointments.
+  router.get(
+    '/salons/:id/customers/:customerId',
+    requireRole('view_own_appointments', (req) => ({
+      salonId: req.params.id,
+      staffMemberId: req.principal?.staffMemberId,
+    })),
+    asyncRoute(async (req, res) => {
+      const principal = req.principal!;
+      const profile = await services.calendarService.getCustomerProfile(
+        req.params.id,
+        req.params.customerId,
+        principal.role === 'Stylist' ? principal.staffMemberId : undefined,
+      );
+      if (!profile) {
+        res.status(404).json({ code: 'CUSTOMER_NOT_FOUND' });
+        return;
+      }
+      res.status(200).json({
+        customer: profile.customer,
+        appointments: profile.appointments.map((appointment) => ({
+          id: appointment.id,
+          startAt: appointment.startAt,
+          endAt: appointment.endAt,
+          status: appointment.status,
+          service: appointment.service,
+          staffMember: appointment.staffMember,
+        })),
+      });
     }),
   );
 
@@ -506,7 +540,9 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     '/salons/:id/booking-policy',
     requireRole('configure_salon'),
     asyncRoute(async (req, res) => {
-      const bookingWindowDays = await services.availabilityConfig.getBookingWindowDays(req.params.id);
+      const bookingWindowDays = await services.availabilityConfig.getBookingWindowDays(
+        req.params.id,
+      );
       res.status(200).json({ bookingWindowDays });
     }),
   );
@@ -638,9 +674,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
           ? req.body.durationMinutes
           : 30;
       const priceRial =
-        typeof req.body?.priceRial === 'number' && req.body.priceRial >= 0
-          ? req.body.priceRial
-          : 0;
+        typeof req.body?.priceRial === 'number' && req.body.priceRial >= 0 ? req.body.priceRial : 0;
       const service = await services.serviceCatalog.createService({
         salonId: req.params.id,
         name,
@@ -799,7 +833,9 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
       }
       const existing = await services.availabilityConfig.getHolidays(req.params.id);
       const alreadyClosed = existing.some(
-        (item) => toClosureDto(item).onDate === onDate && formatClosureTime((item as any).startTime) === null,
+        (item) =>
+          toClosureDto(item).onDate === onDate &&
+          formatClosureTime((item as any).startTime) === null,
       );
       if (!alreadyClosed) {
         await services.availabilityConfig.addHoliday(req.params.id, onDate);

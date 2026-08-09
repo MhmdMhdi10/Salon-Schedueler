@@ -668,6 +668,82 @@ describe('SchedulingEngine.getAvailability', () => {
   });
 });
 
+describe('SchedulingEngine.reschedule', () => {
+  const appointment = {
+    id: 'appt-1',
+    salonId: SALON_ID,
+    customerId: 'customer-1',
+    staffMemberId: STAFF_ID,
+    chairId: CHAIR_ID,
+    serviceId: SERVICE_ID,
+    startAt: new Date('2024-03-15T10:00:00.000Z'),
+    endAt: new Date('2024-03-15T10:45:00.000Z'),
+    status: 'confirmed',
+  };
+
+  function reschedulePrisma() {
+    const prisma = createMockPrisma({
+      salon: { findUnique: jest.fn().mockResolvedValue({ timezone: 'Asia/Tehran' }) },
+    });
+    prisma.appointment.findUnique = jest.fn().mockResolvedValue(appointment);
+    prisma.appointment.update = jest.fn().mockResolvedValue({
+      ...appointment,
+      startAt: new Date('2024-03-15T11:00:00.000Z'),
+      endAt: new Date('2024-03-15T11:45:00.000Z'),
+    });
+    prisma.service.findUnique.mockResolvedValue(standardService());
+    prisma.staffMember.findUnique = jest.fn().mockResolvedValue(standardStaff()[0]);
+    prisma.chair.findUnique = jest
+      .fn()
+      .mockResolvedValue({ ...standardChair()[0], chairEquipment: [] });
+    prisma.workingHours.findMany.mockResolvedValue(staffWorkingHoursForDay());
+    prisma.appointment.findMany.mockResolvedValue([]);
+    return prisma;
+  }
+
+  it('updates the existing row after validating the current resource pair', async () => {
+    const prisma = reschedulePrisma();
+    const engine = new SchedulingEngine(prisma);
+
+    const result = await engine.reschedule({
+      appointmentId: 'appt-1',
+      startAt: '2024-03-15T11:00:00.000Z',
+    });
+
+    expect(result.startAt).toEqual(new Date('2024-03-15T11:00:00.000Z'));
+    expect(prisma.appointment.update).toHaveBeenCalledWith({
+      where: { id: 'appt-1' },
+      data: {
+        startAt: new Date('2024-03-15T11:00:00.000Z'),
+        endAt: new Date('2024-03-15T11:45:00.000Z'),
+        staffMemberId: STAFF_ID,
+        chairId: CHAIR_ID,
+      },
+    });
+  });
+
+  it('rejects a move that collides with another active appointment', async () => {
+    const prisma = reschedulePrisma();
+    prisma.appointment.findMany.mockResolvedValue([{ id: 'appt-2' }]);
+    const engine = new SchedulingEngine(prisma);
+
+    await expect(
+      engine.reschedule({ appointmentId: 'appt-1', startAt: '2024-03-15T11:00:00.000Z' }),
+    ).rejects.toMatchObject({ code: 'RESCHEDULE_CONFLICT' });
+    expect(prisma.appointment.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects a move into a full-day closure', async () => {
+    const prisma = reschedulePrisma();
+    prisma.holiday.findMany.mockResolvedValue([{ startTime: null, endTime: null }]);
+    const engine = new SchedulingEngine(prisma);
+
+    await expect(
+      engine.reschedule({ appointmentId: 'appt-1', startAt: '2024-03-15T11:00:00.000Z' }),
+    ).rejects.toMatchObject({ code: 'RESCHEDULE_CLOSED' });
+  });
+});
+
 
 describe('SchedulingEngine.book', () => {
   // Helper to create a mock PrismaClient with booking defaults

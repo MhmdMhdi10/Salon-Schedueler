@@ -38,6 +38,35 @@ export interface BookingRequest {
   source: 'web' | 'mobile' | 'walkin' | 'bot'; // R13.1 (+ 'bot' for in-chat booking, Requirement 1.6)
 }
 
+/** Input for moving an existing appointment without creating a replacement row. */
+export interface RescheduleRequest {
+  appointmentId: string;
+  startAt: string;
+  /** Optional future extension for a staff-lane drag; current owner UI preserves both resources. */
+  staffMemberId?: string;
+  /** Optional future extension for a chair-lane drag; current owner UI preserves both resources. */
+  chairId?: string;
+}
+
+export type RescheduleErrorCode =
+  | 'APPOINTMENT_NOT_FOUND'
+  | 'APPOINTMENT_NOT_MOVABLE'
+  | 'RESCHEDULE_INVALID_START'
+  | 'RESCHEDULE_CLOSED'
+  | 'RESCHEDULE_OUTSIDE_HOURS'
+  | 'RESCHEDULE_CONFLICT';
+
+/** Stable, client-facing scheduling error used by the owner calendar move flow. */
+export class RescheduleError extends Error {
+  constructor(
+    public readonly code: RescheduleErrorCode,
+    message = code,
+  ) {
+    super(message);
+    this.name = 'RescheduleError';
+  }
+}
+
 /**
  * Result of a booking attempt.
  */
@@ -793,6 +822,196 @@ export class SchedulingEngine {
 
     // All retries exhausted — R9.6
     return { status: 'rejected', reason: 'slot_unavailable' };
+  }
+
+  /**
+   * Move an existing appointment in place.
+   *
+   * The owner calendar must never implement a move as cancel + create: doing so
+   * loses the appointment identity and can briefly release its slot. This method
+   * validates the exact staff/chair pair, then lets the PostgreSQL exclusion
+   * constraints arbitrate the final race during the single-row update.
+   */
+  async reschedule(req: RescheduleRequest): Promise<Appointment> {
+    const appointment = await this.prisma.appointment.findUnique({
+      where: { id: req.appointmentId },
+    });
+
+    if (!appointment) {
+      throw new RescheduleError('APPOINTMENT_NOT_FOUND');
+    }
+
+    if (!['pending', 'held', 'confirmed'].includes(String(appointment.status))) {
+      throw new RescheduleError('APPOINTMENT_NOT_MOVABLE');
+    }
+
+    const startAt = new Date(req.startAt);
+    if (Number.isNaN(startAt.getTime())) {
+      throw new RescheduleError('RESCHEDULE_INVALID_START');
+    }
+
+    const [service, salon] = await Promise.all([
+      this.prisma.service.findUnique({
+        where: { id: appointment.serviceId },
+        include: { serviceStaff: true, serviceEquipment: true },
+      }),
+      this.prisma.salon.findUnique({
+        where: { id: appointment.salonId },
+        select: { timezone: true },
+      }),
+    ]);
+
+    if (!service || service.salonId !== appointment.salonId || !salon) {
+      throw new RescheduleError('APPOINTMENT_NOT_MOVABLE');
+    }
+
+    const endAt = computeOccupancyEnd(startAt, service.durationMin, service.bufferMin);
+    // The scheduling engine represents time-only availability windows on the
+    // nominal salon date in UTC. Keep the same date contract as booking slots.
+    const date = req.startAt.slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      throw new RescheduleError('RESCHEDULE_INVALID_START');
+    }
+    const targetDate = new Date(`${date}T00:00:00.000Z`);
+    if (Number.isNaN(targetDate.getTime())) {
+      throw new RescheduleError('RESCHEDULE_INVALID_START');
+    }
+
+    const staffMemberId = req.staffMemberId ?? appointment.staffMemberId;
+    const chairId = req.chairId ?? appointment.chairId;
+
+    const [staff, chair, closures, staffHours, chairHours, daysOff, chairUnavailable, conflicts] =
+      await Promise.all([
+        this.prisma.staffMember.findUnique({ where: { id: staffMemberId } }),
+        this.prisma.chair.findUnique({
+          where: { id: chairId },
+          include: { chairEquipment: true },
+        }),
+        this.prisma.holiday.findMany({ where: { salonId: appointment.salonId, onDate: targetDate } }),
+        this.prisma.workingHours.findMany({
+          where: {
+            ownerKind: 'staff',
+            ownerId: staffMemberId,
+            weekday: targetDate.getUTCDay(),
+          },
+        }),
+        this.prisma.workingHours.findMany({
+          where: {
+            ownerKind: 'chair',
+            ownerId: chairId,
+            weekday: targetDate.getUTCDay(),
+          },
+        }),
+        this.prisma.dayOff.findMany({
+          where: { staffMemberId, onDate: targetDate },
+        }),
+        this.prisma.chairUnavailable.findMany({ where: { chairId } }),
+        this.prisma.appointment.findMany({
+          where: {
+            id: { not: appointment.id },
+            salonId: appointment.salonId,
+            // The checked-in generated Prisma client may predate the additive
+            // `pending` enum value. The database enum and runtime schema include
+            // it; keep this query compatible until prisma:generate runs.
+            status: { in: ['pending', 'held', 'confirmed'] as any },
+            startAt: { lt: endAt },
+            endAt: { gt: startAt },
+            OR: [{ staffMemberId }, { chairId }],
+          },
+          select: { id: true },
+        }),
+      ]);
+
+    if (!staff || staff.salonId !== appointment.salonId || !staff.active) {
+      throw new RescheduleError('RESCHEDULE_OUTSIDE_HOURS');
+    }
+    if (!chair || chair.salonId !== appointment.salonId || !chair.active) {
+      throw new RescheduleError('RESCHEDULE_OUTSIDE_HOURS');
+    }
+
+    const qualified = service.serviceStaff.some((item) => item.staffMemberId === staffMemberId);
+    if (!qualified) {
+      throw new RescheduleError('RESCHEDULE_OUTSIDE_HOURS');
+    }
+
+    const requiredEquipment = service.serviceEquipment.map((item) => item.equipmentId);
+    const chairEquipment = new Set(
+      (chair.chairEquipment ?? []).map((item) => item.equipmentId),
+    );
+    if (!requiredEquipment.every((equipmentId) => chairEquipment.has(equipmentId))) {
+      throw new RescheduleError('RESCHEDULE_OUTSIDE_HOURS');
+    }
+
+    const hasFullDayClosure = (closures as Array<{ startTime?: Date | null; endTime?: Date | null }>).some(
+      (closure) => closure.startTime == null || closure.endTime == null,
+    );
+    if (hasFullDayClosure) {
+      throw new RescheduleError('RESCHEDULE_CLOSED');
+    }
+
+    const overlapsWindow = (window: { startTime?: Date | null; endTime?: Date | null }) =>
+      window.startTime != null &&
+      window.endTime != null &&
+      intervalsOverlap(
+        { start: startAt, end: endAt },
+        {
+          start: this.timeToAbsolute(window.startTime, date),
+          end: this.timeToAbsolute(window.endTime, date),
+        },
+      );
+
+    if ((closures as Array<{ startTime?: Date | null; endTime?: Date | null }>).some(overlapsWindow)) {
+      throw new RescheduleError('RESCHEDULE_CLOSED');
+    }
+
+    const fitsHours = (hours: Array<{ startTime: Date; endTime: Date }>) =>
+      hours.some((hoursWindow) => {
+        const windowStart = this.timeToAbsolute(hoursWindow.startTime, date);
+        const windowEnd = this.timeToAbsolute(hoursWindow.endTime, date);
+        return startAt >= windowStart && endAt <= windowEnd;
+      });
+    if (!fitsHours(staffHours) || !fitsHours(chairHours)) {
+      throw new RescheduleError('RESCHEDULE_OUTSIDE_HOURS');
+    }
+
+    const blockedByDayOff = (daysOff as Array<{ startTime?: Date | null; endTime?: Date | null }>).some(
+      (dayOff) => dayOff.startTime == null || dayOff.endTime == null || overlapsWindow(dayOff),
+    );
+    if (blockedByDayOff) {
+      throw new RescheduleError('RESCHEDULE_OUTSIDE_HOURS');
+    }
+
+    const blockedByChair = (chairUnavailable as Array<{ periodStart: Date; periodEnd: Date }>).some(
+      (period) =>
+        intervalsOverlap(
+          { start: startAt, end: endAt },
+          { start: period.periodStart, end: period.periodEnd },
+        ),
+    );
+    if (blockedByChair) {
+      throw new RescheduleError('RESCHEDULE_OUTSIDE_HOURS');
+    }
+
+    if (conflicts.length > 0) {
+      throw new RescheduleError('RESCHEDULE_CONFLICT');
+    }
+
+    try {
+      return await this.prisma.appointment.update({
+        where: { id: appointment.id },
+        data: {
+          startAt,
+          endAt,
+          staffMemberId,
+          chairId,
+        },
+      });
+    } catch (error) {
+      if (this.isExclusionViolation(error)) {
+        throw new RescheduleError('RESCHEDULE_CONFLICT');
+      }
+      throw error;
+    }
   }
 
   /**

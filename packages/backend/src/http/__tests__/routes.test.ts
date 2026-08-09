@@ -4,6 +4,7 @@ import { buildApp, type Services } from '../app.js';
 import { Authorizer } from '../../auth/index.js';
 import { AuthError } from '../../auth/index.js';
 import { RegistrationError } from '../../registration/index.js';
+import { RescheduleError } from '../../scheduling/scheduling-engine.js';
 
 /**
  * Route-level tests driven with supertest against the app built by `buildApp`,
@@ -33,6 +34,7 @@ function makeServices() {
     },
     schedulingEngine: {
       getAvailability: jest.fn().mockResolvedValue([]),
+      reschedule: jest.fn(),
     },
     bookingFlow: {
       book: jest.fn(),
@@ -54,6 +56,7 @@ function makeServices() {
     calendarService: {
       getSalonCalendar: jest.fn().mockResolvedValue([]),
       getStaffCalendar: jest.fn().mockResolvedValue([]),
+      getCustomerProfile: jest.fn(),
       getAppointmentById: jest.fn(),
     },
     analyticsService: {
@@ -87,9 +90,7 @@ function makeServices() {
       setStaffManageOwnAvailability: jest.fn().mockResolvedValue(undefined),
     },
     qrService: {
-      buildSalonQrResponse: jest
-        .fn()
-        .mockResolvedValue({ payload: 'p', url: 'u', salonName: 's' }),
+      buildSalonQrResponse: jest.fn().mockResolvedValue({ payload: 'p', url: 'u', salonName: 's' }),
       buildStaffQrResponse: jest
         .fn()
         .mockResolvedValue({ payload: 'p', staffName: 'زهرا', salonName: 's' }),
@@ -144,9 +145,7 @@ describe('HTTP routes', () => {
     });
 
     it('maps OTP_EXPIRED to 401 OTP_EXPIRED', async () => {
-      fake.authService.verifyOtp.mockRejectedValue(
-        new AuthError('OTP_EXPIRED', 'expired'),
-      );
+      fake.authService.verifyOtp.mockRejectedValue(new AuthError('OTP_EXPIRED', 'expired'));
       const res = await request(app)
         .post('/api/auth/otp/verify')
         .send({ phone: '+989120000000', code: '000000' });
@@ -155,9 +154,7 @@ describe('HTTP routes', () => {
     });
 
     it('maps OTP_MISMATCH to 401 OTP_INVALID', async () => {
-      fake.authService.verifyOtp.mockRejectedValue(
-        new AuthError('OTP_MISMATCH', 'wrong'),
-      );
+      fake.authService.verifyOtp.mockRejectedValue(new AuthError('OTP_MISMATCH', 'wrong'));
       const res = await request(app)
         .post('/api/auth/otp/verify')
         .send({ phone: '+989120000000', code: '000000' });
@@ -175,9 +172,7 @@ describe('HTTP routes', () => {
     });
 
     it('returns 400 VALIDATION_ERROR when a field is missing', async () => {
-      const res = await request(app)
-        .post('/api/auth/otp/verify')
-        .send({ phone: '+989120000000' });
+      const res = await request(app).post('/api/auth/otp/verify').send({ phone: '+989120000000' });
       expect(res.status).toBe(400);
       expect(res.body.code).toBe('VALIDATION_ERROR');
       expect(fake.authService.verifyOtp).not.toHaveBeenCalled();
@@ -224,18 +219,14 @@ describe('HTTP routes', () => {
     });
 
     it('maps QR_MALFORMED to 400', async () => {
-      fake.salonRegistration.resolveQr.mockRejectedValue(
-        new RegistrationError('QR_MALFORMED'),
-      );
+      fake.salonRegistration.resolveQr.mockRejectedValue(new RegistrationError('QR_MALFORMED'));
       const res = await request(app).get('/api/salons/by-qr/bad');
       expect(res.status).toBe(400);
       expect(res.body).toEqual({ code: 'QR_MALFORMED' });
     });
 
     it('maps QR_UNREGISTERED to 404 (distinct from malformed)', async () => {
-      fake.salonRegistration.resolveQr.mockRejectedValue(
-        new RegistrationError('QR_UNREGISTERED'),
-      );
+      fake.salonRegistration.resolveQr.mockRejectedValue(new RegistrationError('QR_UNREGISTERED'));
       const res = await request(app).get('/api/salons/by-qr/unknown');
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ code: 'QR_UNREGISTERED' });
@@ -295,10 +286,7 @@ describe('HTTP routes', () => {
         .send({ brandAccent: 'rose' });
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true, brandAccent: 'rose' });
-      expect(fake.availabilityConfig.setSalonBrandAccent).toHaveBeenCalledWith(
-        'salon-1',
-        'rose',
-      );
+      expect(fake.availabilityConfig.setSalonBrandAccent).toHaveBeenCalledWith('salon-1', 'rose');
     });
 
     it('returns 403 FORBIDDEN for an Admin with no state change', async () => {
@@ -338,10 +326,7 @@ describe('HTTP routes', () => {
         .send({ brandAccent: null });
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true, brandAccent: null });
-      expect(fake.availabilityConfig.setSalonBrandAccent).toHaveBeenCalledWith(
-        'salon-1',
-        null,
-      );
+      expect(fake.availabilityConfig.setSalonBrandAccent).toHaveBeenCalledWith('salon-1', null);
     });
   });
 
@@ -544,7 +529,11 @@ describe('HTTP routes', () => {
         .set('Authorization', `Bearer ${staffToken('Owner')}`)
         .send({ hours });
       expect(res.status).toBe(200);
-      expect(fake.availabilityConfig.setWorkingHours).toHaveBeenCalledWith('staff', 'staff-1', hours);
+      expect(fake.availabilityConfig.setWorkingHours).toHaveBeenCalledWith(
+        'staff',
+        'staff-1',
+        hours,
+      );
     });
 
     it('stores a today-only booking policy', async () => {
@@ -792,6 +781,112 @@ describe('HTTP routes', () => {
     });
   });
 
+  describe('GET /api/salons/:id/customers/:customerId', () => {
+    it('returns customer context for an Owner without exposing other salons', async () => {
+      fake.calendarService.getCustomerProfile.mockResolvedValue({
+        customer: {
+          id: 'cust-1',
+          phone: '+989120000000',
+          fullName: 'سارا',
+          noShowCount: 1,
+          preferredStaff: null,
+        },
+        appointments: [
+          {
+            id: 'appt-1',
+            startAt: new Date('2024-03-15T09:00:00.000Z'),
+            endAt: new Date('2024-03-15T09:30:00.000Z'),
+            status: 'confirmed',
+            service: { name: 'کوتاهی مو' },
+            staffMember: { fullName: 'زهرا' },
+          },
+        ],
+      });
+
+      const res = await request(app)
+        .get('/api/salons/salon-1/customers/cust-1')
+        .set('Authorization', `Bearer ${staffToken('Owner')}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.customer).toMatchObject({ id: 'cust-1', phone: '+989120000000' });
+      expect(res.body.appointments[0]).toMatchObject({ id: 'appt-1', status: 'confirmed' });
+      expect(fake.calendarService.getCustomerProfile).toHaveBeenCalledWith(
+        'salon-1',
+        'cust-1',
+        undefined,
+      );
+    });
+
+    it('scopes a Stylist profile request to their own appointment history', async () => {
+      fake.calendarService.getCustomerProfile.mockResolvedValue({
+        customer: {
+          id: 'cust-1',
+          phone: '+989120000000',
+          fullName: 'سارا',
+          noShowCount: 0,
+          preferredStaff: null,
+        },
+        appointments: [],
+      });
+
+      const res = await request(app)
+        .get('/api/salons/salon-1/customers/cust-1')
+        .set('Authorization', `Bearer ${staffToken('Stylist')}`);
+
+      expect(res.status).toBe(200);
+      expect(fake.calendarService.getCustomerProfile).toHaveBeenCalledWith(
+        'salon-1',
+        'cust-1',
+        'staff-Stylist-1',
+      );
+    });
+  });
+
+  describe('PATCH /api/appointments/:id/reschedule', () => {
+    const currentAppointment = {
+      id: 'appt-1',
+      salonId: 'salon-1',
+      staffMemberId: 'staff-Owner-1',
+      status: 'confirmed',
+    };
+
+    it('moves an appointment in place for an Owner', async () => {
+      fake.calendarService.getAppointmentById.mockResolvedValue(currentAppointment);
+      fake.schedulingEngine.reschedule.mockResolvedValue({
+        ...currentAppointment,
+        startAt: new Date('2026-07-15T11:00:00.000Z'),
+        endAt: new Date('2026-07-15T11:45:00.000Z'),
+      });
+
+      const res = await request(app)
+        .patch('/api/appointments/appt-1/reschedule')
+        .send({ startAt: '2026-07-15T11:00:00.000Z' })
+        .set('Authorization', `Bearer ${staffToken('Owner')}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe('confirmed');
+      expect(fake.schedulingEngine.reschedule).toHaveBeenCalledWith({
+        appointmentId: 'appt-1',
+        startAt: '2026-07-15T11:00:00.000Z',
+      });
+    });
+
+    it('returns a stable conflict code when the target slot is taken', async () => {
+      fake.calendarService.getAppointmentById.mockResolvedValue(currentAppointment);
+      fake.schedulingEngine.reschedule.mockRejectedValue(
+        new RescheduleError('RESCHEDULE_CONFLICT'),
+      );
+
+      const res = await request(app)
+        .patch('/api/appointments/appt-1/reschedule')
+        .send({ startAt: '2026-07-15T11:00:00.000Z' })
+        .set('Authorization', `Bearer ${staffToken('Owner')}`);
+
+      expect(res.status).toBe(409);
+      expect(res.body).toEqual({ code: 'RESCHEDULE_CONFLICT' });
+    });
+  });
+
   // ── Per-stylist QR (protected, RBAC view_own_appointments) ───────────────────
   // Owner/Admin may fetch ANY stylist's QR; a Stylist may fetch ONLY their own
   // (staffId === their own staffMemberId). staffToken(role) signs
@@ -823,10 +918,7 @@ describe('HTTP routes', () => {
         .get('/api/salons/salon-1/staff/whoever/qr')
         .set('Authorization', `Bearer ${staffToken('Owner')}`);
       expect(res.status).toBe(200);
-      expect(fake.qrService.buildStaffQrResponse).toHaveBeenCalledWith(
-        'salon-1',
-        'whoever',
-      );
+      expect(fake.qrService.buildStaffQrResponse).toHaveBeenCalledWith('salon-1', 'whoever');
     });
   });
 

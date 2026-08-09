@@ -1,0 +1,2945 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f6f2ec" />
+    <meta
+      name="description"
+      content="داشبورد مقایسه آرا با مجموعه‌ای نماینده از پلتفرم‌های مدیریت سالن و اسپا"
+    />
+    <title>آرا در برابر اکوسیستم مدیریت سالن | مقایسه محصول</title>
+    <style>
+      :root {
+        --bg: #f6f2ec;
+        --surface: #fffdfa;
+        --surface-strong: #ffffff;
+        --surface-muted: #eeeae3;
+        --ink: #17213a;
+        --ink-soft: #35405b;
+        --muted: #5c677a;
+        --muted-2: #7b8492;
+        --line: #d8d3ca;
+        --line-strong: #bdb8ae;
+        --indigo: #3f48ae;
+        --indigo-deep: #29337f;
+        --indigo-soft: #e9eaff;
+        --coral: #d86658;
+        --coral-soft: #ffebe6;
+        --mint: #ccefe0;
+        --mint-deep: #126b57;
+        --amber: #a85e21;
+        --amber-soft: #fff0d7;
+        --unknown: #4a56a3;
+        --shadow: 0 18px 46px rgba(23, 33, 58, 0.08);
+        --shadow-soft: 0 6px 18px rgba(23, 33, 58, 0.06);
+        --radius-lg: 20px;
+        --radius-md: 15px;
+        --radius-sm: 10px;
+        --content: 1440px;
+        --focus: #ea9f2b;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        overflow-x: hidden;
+        color: var(--ink);
+        background: var(--bg);
+        font-family: Tahoma, Arial, sans-serif;
+        font-size: 15px;
+        line-height: 1.75;
+        text-rendering: optimizeLegibility;
+      }
+
+      body::before {
+        position: fixed;
+        z-index: -1;
+        inset: 0;
+        pointer-events: none;
+        content: "";
+        opacity: 0.28;
+        background-image:
+          linear-gradient(rgba(63, 72, 174, 0.045) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(63, 72, 174, 0.045) 1px, transparent 1px);
+        background-size: 36px 36px;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      button,
+      a {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      :focus-visible {
+        outline: 3px solid var(--focus);
+        outline-offset: 3px;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      .skip-link {
+        position: fixed;
+        z-index: 100;
+        top: 10px;
+        right: 16px;
+        padding: 8px 14px;
+        color: #fff;
+        background: var(--indigo-deep);
+        border-radius: var(--radius-sm);
+        transform: translateY(-150%);
+      }
+
+      .skip-link:focus {
+        transform: translateY(0);
+      }
+
+      .site-header {
+        position: sticky;
+        z-index: 20;
+        top: 0;
+        border-bottom: 1px solid rgba(189, 184, 174, 0.8);
+        background: rgba(246, 242, 236, 0.96);
+      }
+
+      .header-inner,
+      .page-shell {
+        width: min(var(--content), calc(100% - 40px));
+        margin-inline: auto;
+      }
+
+      .header-inner {
+        display: flex;
+        min-height: 68px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+      }
+
+      .brand {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 10px;
+        color: var(--ink);
+        font-size: 0.92rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-decoration: none;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 37px;
+        height: 37px;
+        place-items: center;
+        color: #fff;
+        background: var(--indigo);
+        border-radius: 11px 4px 11px 4px;
+        box-shadow: 4px 4px 0 var(--mint-deep);
+      }
+
+      .brand-mark svg {
+        width: 25px;
+        height: 25px;
+      }
+
+      .brand b {
+        color: var(--coral);
+        font-weight: 900;
+      }
+
+      .header-label {
+        margin-inline-start: 2px;
+        padding-inline-start: 14px;
+        color: var(--muted);
+        border-inline-start: 1px solid var(--line-strong);
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+
+      .brand-block {
+        display: inline-flex;
+        align-items: center;
+        gap: 13px;
+      }
+
+      .top-nav {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .top-nav a {
+        padding: 7px 11px;
+        color: var(--muted);
+        border-radius: 8px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .top-nav a:hover {
+        color: var(--indigo-deep);
+        background: var(--indigo-soft);
+      }
+
+      main {
+        padding-bottom: 72px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.45fr) minmax(290px, 0.55fr);
+        gap: clamp(34px, 7vw, 104px);
+        align-items: stretch;
+        padding-block: clamp(52px, 8vw, 102px) 48px;
+      }
+
+      .hero-copy {
+        max-width: 850px;
+      }
+
+      .eyebrow,
+      .section-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 15px;
+        color: var(--indigo);
+        font-size: 0.77rem;
+        font-weight: 900;
+        letter-spacing: 0.03em;
+      }
+
+      .eyebrow::before,
+      .section-kicker::before {
+        display: inline-block;
+        width: 26px;
+        height: 3px;
+        content: "";
+        background: var(--coral);
+        border-radius: 99px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1,
+      h2,
+      h3 {
+        letter-spacing: -0.04em;
+      }
+
+      h1 {
+        max-width: 800px;
+        margin-bottom: 21px;
+        font-size: clamp(2.4rem, 6.1vw, 5.5rem);
+        line-height: 1.08;
+        font-weight: 900;
+      }
+
+      .hero-lede {
+        max-width: 720px;
+        margin-bottom: 28px;
+        color: var(--ink-soft);
+        font-size: clamp(1rem, 1.65vw, 1.26rem);
+        line-height: 2;
+      }
+
+      .hero-lede strong {
+        color: var(--indigo-deep);
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .button {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 9px 16px;
+        border: 1px solid transparent;
+        border-radius: 10px;
+        font-size: 0.86rem;
+        font-weight: 900;
+        text-decoration: none;
+        transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease;
+      }
+
+      .button:hover {
+        transform: translateY(-2px);
+      }
+
+      .button-primary {
+        color: #fff;
+        background: var(--indigo);
+        box-shadow: 4px 4px 0 rgba(41, 51, 127, 0.18);
+      }
+
+      .button-primary:hover {
+        background: var(--indigo-deep);
+      }
+
+      .button-secondary {
+        color: var(--ink);
+        background: var(--surface-strong);
+        border-color: var(--line-strong);
+      }
+
+      .button-secondary:hover {
+        border-color: var(--indigo);
+        background: var(--indigo-soft);
+      }
+
+      .hero-aside {
+        align-self: stretch;
+        padding: 22px 0 14px 22px;
+        border-inline-start: 1px solid var(--line-strong);
+      }
+
+      .aside-label {
+        margin-bottom: 10px;
+        color: var(--muted-2);
+        font-size: 0.7rem;
+        font-weight: 900;
+        letter-spacing: 0.13em;
+      }
+
+      .aside-title {
+        margin-bottom: 24px;
+        font-size: 1.15rem;
+        line-height: 1.55;
+      }
+
+      .position-list {
+        display: grid;
+        gap: 13px;
+        margin: 0;
+      }
+
+      .position-item {
+        display: grid;
+        grid-template-columns: 10px 1fr;
+        gap: 10px;
+        align-items: start;
+      }
+
+      .position-dot {
+        width: 9px;
+        height: 9px;
+        margin-top: 8px;
+        background: var(--indigo);
+        border-radius: 2px;
+      }
+
+      .position-item:nth-child(2) .position-dot,
+      .decision-card:nth-child(2) .decision-number {
+        background: var(--coral);
+      }
+
+      .position-item:nth-child(3) .position-dot,
+      .decision-card:nth-child(3) .decision-number {
+        background: var(--mint-deep);
+      }
+
+      .position-item:nth-child(4) .position-dot,
+      .decision-card:nth-child(4) .decision-number {
+        background: var(--amber);
+      }
+
+      .position-item strong {
+        display: block;
+        margin-bottom: 2px;
+        font-size: 0.86rem;
+      }
+
+      .position-item span {
+        display: block;
+        color: var(--muted);
+        font-size: 0.77rem;
+        line-height: 1.75;
+      }
+
+      .report-note {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 27px;
+        padding: 7px 10px;
+        color: var(--muted);
+        background: var(--surface-muted);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        font-size: 0.74rem;
+      }
+
+      .report-note svg {
+        flex: 0 0 auto;
+        color: var(--coral);
+      }
+
+      .section {
+        scroll-margin-top: 90px;
+        padding-block: 43px;
+      }
+
+      .kpi-strip {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        background: var(--surface);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .kpi {
+        min-height: 104px;
+        padding: 18px 20px;
+        border-inline-start: 1px solid var(--line);
+      }
+
+      .kpi:first-child {
+        border-inline-start: 0;
+      }
+
+      .kpi-value {
+        display: block;
+        margin-bottom: 3px;
+        color: var(--indigo-deep);
+        font-size: 1.6rem;
+        font-weight: 900;
+        line-height: 1.2;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .kpi-label {
+        display: block;
+        color: var(--muted);
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+
+      .kpi:last-child .kpi-value {
+        color: var(--coral);
+        font-size: 1.15rem;
+      }
+
+      .mvp-section {
+        padding-top: 26px;
+      }
+
+      .mvp-section bdi {
+        display: inline-block;
+        direction: ltr;
+        white-space: nowrap;
+        vertical-align: baseline;
+      }
+
+      .mvp-band {
+        display: grid;
+        grid-template-columns: minmax(0, 1.22fr) minmax(250px, 0.78fr);
+        gap: 24px;
+        align-items: stretch;
+        padding: clamp(22px, 3.4vw, 34px);
+        color: #fff;
+        background: var(--indigo-deep);
+        border-radius: var(--radius-lg);
+        box-shadow: 8px 8px 0 rgba(204, 239, 224, 0.75);
+      }
+
+      .mvp-kicker {
+        margin-bottom: 12px;
+        color: var(--mint);
+        font-size: 0.7rem;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+      }
+
+      .mvp-band h2 {
+        max-width: 720px;
+        margin-bottom: 12px;
+        color: #fff;
+        font-size: clamp(1.65rem, 3.1vw, 2.7rem);
+        line-height: 1.25;
+      }
+
+      .mvp-band-copy > p:last-child {
+        max-width: 650px;
+        margin-bottom: 0;
+        color: #d8dcff;
+        font-size: 0.84rem;
+        line-height: 1.9;
+      }
+
+      .mvp-gate {
+        display: flex;
+        min-height: 150px;
+        flex-direction: column;
+        justify-content: center;
+        gap: 6px;
+        padding-inline-start: 23px;
+        border-inline-start: 1px solid rgba(255, 255, 255, 0.24);
+      }
+
+      .mvp-gate-label {
+        color: var(--coral-soft);
+        font-size: 0.7rem;
+        font-weight: 900;
+      }
+
+      .mvp-gate strong {
+        color: #fff;
+        font-size: 1rem;
+        line-height: 1.6;
+      }
+
+      .mvp-gate > span:last-child {
+        color: #d8dcff;
+        font-size: 0.73rem;
+      }
+
+      .mvp-status-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 17px;
+      }
+
+      .mvp-status-card {
+        min-height: 246px;
+        padding: 17px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-top: 4px solid var(--indigo);
+        border-radius: 13px;
+        box-shadow: var(--shadow-soft);
+      }
+
+      .mvp-status-card.is-shipped {
+        border-top-color: var(--mint-deep);
+      }
+
+      .mvp-status-card.is-missing {
+        border-top-color: var(--amber);
+      }
+
+      .mvp-status-card.is-deferred {
+        border-top-color: var(--coral);
+      }
+
+      .mvp-status-card.is-gate {
+        border-top-color: var(--indigo);
+      }
+
+      .mvp-card-head {
+        min-height: 29px;
+        margin-bottom: 13px;
+      }
+
+      .mvp-status-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 7px;
+        color: var(--indigo-deep);
+        background: var(--indigo-soft);
+        border-radius: 6px;
+        font-size: 0.67rem;
+        font-weight: 900;
+      }
+
+      .is-shipped .mvp-status-chip {
+        color: var(--mint-deep);
+        background: var(--mint);
+      }
+
+      .is-missing .mvp-status-chip {
+        color: var(--amber);
+        background: var(--amber-soft);
+      }
+
+      .is-deferred .mvp-status-chip {
+        color: #91443b;
+        background: var(--coral-soft);
+      }
+
+      .mvp-status-chip span {
+        font-size: 0.82rem;
+        line-height: 1;
+      }
+
+      .mvp-status-card h3 {
+        margin-bottom: 11px;
+        font-size: 0.97rem;
+        line-height: 1.45;
+      }
+
+      .mvp-status-card ul {
+        display: grid;
+        gap: 8px;
+        padding: 0;
+        margin: 0;
+        list-style: none;
+      }
+
+      .mvp-status-card li {
+        display: grid;
+        grid-template-columns: 17px 1fr;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 0.72rem;
+        line-height: 1.7;
+      }
+
+      .mvp-status-card li::before {
+        color: var(--indigo);
+        content: "•";
+        font-size: 1rem;
+        font-weight: 900;
+        line-height: 1.45;
+      }
+
+      .is-shipped li::before {
+        color: var(--mint-deep);
+        content: "✓";
+      }
+
+      .is-missing li::before {
+        color: var(--amber);
+        content: "!";
+      }
+
+      .is-deferred li::before {
+        color: var(--coral);
+        content: "×";
+      }
+
+      .is-gate li::before {
+        color: var(--indigo);
+        content: "↗";
+      }
+
+      .mvp-roadmap {
+        margin-top: 17px;
+        padding: 19px 20px 20px;
+        background: var(--surface);
+        border: 1px dashed var(--line-strong);
+        border-radius: var(--radius-md);
+      }
+
+      .mvp-roadmap-head {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 15px;
+      }
+
+      .mvp-roadmap-head .section-kicker {
+        margin-bottom: 7px;
+      }
+
+      .mvp-roadmap-head h3 {
+        margin-bottom: 0;
+        font-size: 1.05rem;
+      }
+
+      .mvp-roadmap-note {
+        color: var(--muted-2);
+        font-size: 0.7rem;
+      }
+
+      .mvp-timeline {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        padding: 0;
+        margin: 0;
+        list-style: none;
+      }
+
+      .mvp-timeline::before {
+        position: absolute;
+        top: 17px;
+        right: 10%;
+        left: 10%;
+        height: 1px;
+        content: "";
+        background: var(--line-strong);
+      }
+
+      .mvp-timeline li {
+        position: relative;
+        z-index: 1;
+        padding: 13px 14px;
+        background: #fffefa;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+
+      .mvp-step {
+        display: inline-flex;
+        min-height: 25px;
+        align-items: center;
+        padding: 3px 7px;
+        color: var(--indigo-deep);
+        background: var(--indigo-soft);
+        border-radius: 6px;
+        font-size: 0.64rem;
+        font-weight: 900;
+      }
+
+      .mvp-timeline li:nth-child(1) .mvp-step {
+        color: var(--mint-deep);
+        background: var(--mint);
+      }
+
+      .mvp-timeline li:nth-child(2) .mvp-step {
+        color: var(--amber);
+        background: var(--amber-soft);
+      }
+
+      .mvp-timeline li:nth-child(3) .mvp-step {
+        color: #91443b;
+        background: var(--coral-soft);
+      }
+
+      .mvp-timeline strong {
+        display: block;
+        margin-top: 9px;
+        color: var(--ink);
+        font-size: 0.79rem;
+      }
+
+      .mvp-timeline p {
+        margin: 3px 0 0;
+        color: var(--muted);
+        font-size: 0.69rem;
+        line-height: 1.7;
+      }
+
+      .mvp-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+        margin-top: 17px;
+      }
+
+      .section-heading {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 22px;
+      }
+
+      .section-heading h2 {
+        margin-bottom: 0;
+        font-size: clamp(1.55rem, 3vw, 2.65rem);
+        line-height: 1.18;
+      }
+
+      .section-heading p:not(.section-kicker) {
+        max-width: 470px;
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
+      .summary-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.04fr) minmax(400px, 0.96fr);
+        gap: 18px;
+        align-items: start;
+      }
+
+      .bottom-line,
+      .score-panel,
+      .method-panel {
+        padding: clamp(22px, 3.3vw, 34px);
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .bottom-line {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .bottom-line::after {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 132px;
+        height: 5px;
+        content: "";
+        background: var(--indigo);
+      }
+
+      .bottom-line h3,
+      .score-panel h3 {
+        margin-bottom: 10px;
+        font-size: 1.22rem;
+      }
+
+      .bottom-line > p,
+      .score-panel > p {
+        margin-bottom: 22px;
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
+      .decision-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+      }
+
+      .decision-card {
+        display: grid;
+        grid-template-columns: 28px 1fr;
+        gap: 10px;
+        align-items: start;
+        padding: 13px;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        background: #fffefa;
+      }
+
+      .decision-card:last-child {
+        grid-column: 1 / -1;
+      }
+
+      .decision-number {
+        display: grid;
+        width: 25px;
+        height: 25px;
+        place-items: center;
+        color: #fff;
+        background: var(--indigo);
+        border-radius: 7px 3px 7px 3px;
+        font-size: 0.67rem;
+        font-weight: 900;
+      }
+
+      .decision-card strong {
+        display: block;
+        margin-bottom: 2px;
+        font-size: 0.81rem;
+      }
+
+      .decision-card p {
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: 0.72rem;
+        line-height: 1.7;
+      }
+
+      .score-panel {
+        border-color: rgba(63, 72, 174, 0.26);
+        background: #fbfbff;
+      }
+
+      .score-modes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 22px;
+      }
+
+      .score-mode,
+      .filter-chip {
+        min-height: 35px;
+        padding: 6px 11px;
+        color: var(--muted);
+        background: transparent;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        font-size: 0.74rem;
+        font-weight: 900;
+      }
+
+      .score-mode:hover,
+      .filter-chip:hover {
+        color: var(--indigo-deep);
+        border-color: var(--indigo);
+        background: var(--indigo-soft);
+      }
+
+      .score-mode[aria-pressed="true"],
+      .filter-chip[aria-pressed="true"] {
+        color: #fff;
+        background: var(--indigo);
+        border-color: var(--indigo);
+      }
+
+      .score-chart {
+        display: grid;
+        gap: 10px;
+      }
+
+      .score-row {
+        display: grid;
+        grid-template-columns: minmax(112px, 0.7fr) minmax(100px, 1.35fr) 40px;
+        gap: 9px;
+        align-items: center;
+      }
+
+      .score-name {
+        min-width: 0;
+        overflow: hidden;
+        color: var(--ink-soft);
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .score-name small {
+        display: inline-block;
+        margin-inline-start: 4px;
+        color: var(--muted-2);
+        font-size: 0.62rem;
+        font-weight: 400;
+      }
+
+      .score-track {
+        position: relative;
+        height: 10px;
+        overflow: hidden;
+        direction: ltr;
+        background: #e7e8f4;
+        border-radius: 3px;
+      }
+
+      .score-fill {
+        display: block;
+        height: 100%;
+        width: calc(var(--score) * 1%);
+        background: var(--indigo);
+        border-radius: 3px;
+        transition: width 420ms cubic-bezier(0.2, 0.7, 0.2, 1);
+      }
+
+      .score-row:first-child .score-fill {
+        background: var(--coral);
+      }
+
+      .score-value {
+        color: var(--indigo-deep);
+        font-size: 0.76rem;
+        font-weight: 900;
+        text-align: left;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .chart-note {
+        display: flex;
+        gap: 8px;
+        margin-top: 20px;
+        padding-top: 15px;
+        color: var(--muted);
+        border-top: 1px dashed var(--line-strong);
+        font-size: 0.71rem;
+        line-height: 1.75;
+      }
+
+      .chart-note svg {
+        flex: 0 0 auto;
+        margin-top: 4px;
+        color: var(--coral);
+      }
+
+      .matrix-section {
+        padding-top: 65px;
+      }
+
+      .matrix-heading {
+        align-items: end;
+      }
+
+      .matrix-count {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 7px 10px;
+        color: var(--indigo-deep);
+        background: var(--indigo-soft);
+        border: 1px solid rgba(63, 72, 174, 0.22);
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .matrix-toolbar {
+        display: grid;
+        grid-template-columns: minmax(230px, 1fr) auto;
+        gap: 14px 18px;
+        align-items: center;
+        margin-bottom: 13px;
+        padding: 15px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+      }
+
+      .search-field {
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+
+      .search-field svg {
+        position: absolute;
+        right: 12px;
+        color: var(--muted-2);
+        pointer-events: none;
+      }
+
+      .search-field input {
+        width: 100%;
+        min-height: 42px;
+        padding: 8px 39px 8px 12px;
+        color: var(--ink);
+        background: var(--surface-strong);
+        border: 1px solid var(--line-strong);
+        border-radius: 9px;
+      }
+
+      .search-field input::placeholder {
+        color: var(--muted-2);
+      }
+
+      .filter-group {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 6px;
+      }
+
+      .filter-label {
+        margin-inline-end: 3px;
+        color: var(--muted-2);
+        font-size: 0.7rem;
+        font-weight: 900;
+      }
+
+      .filter-chip {
+        min-height: 33px;
+        padding-inline: 10px;
+        font-size: 0.71rem;
+      }
+
+      .toggle-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+        grid-column: 1 / -1;
+        padding-top: 10px;
+        border-top: 1px solid var(--line);
+      }
+
+      .switch-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--ink-soft);
+        font-size: 0.75rem;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      .switch-label input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+      }
+
+      .switch-ui {
+        position: relative;
+        display: inline-block;
+        width: 39px;
+        height: 22px;
+        flex: 0 0 auto;
+        background: var(--line-strong);
+        border-radius: 99px;
+        transition: background-color 160ms ease;
+      }
+
+      .switch-ui::after {
+        position: absolute;
+        top: 3px;
+        right: 3px;
+        width: 16px;
+        height: 16px;
+        content: "";
+        background: #fff;
+        border-radius: 50%;
+        box-shadow: 0 1px 3px rgba(23, 33, 58, 0.25);
+        transition: transform 160ms ease;
+      }
+
+      .switch-label input:checked + .switch-ui {
+        background: var(--indigo);
+      }
+
+      .switch-label input:checked + .switch-ui::after {
+        transform: translateX(-17px);
+      }
+
+      .switch-label input:focus-visible + .switch-ui {
+        outline: 3px solid var(--focus);
+        outline-offset: 3px;
+      }
+
+      .toolbar-note {
+        margin-inline-start: auto;
+        color: var(--muted-2);
+        font-size: 0.7rem;
+      }
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px 16px;
+        align-items: center;
+        margin-bottom: 14px;
+        color: var(--muted);
+        font-size: 0.7rem;
+      }
+
+      .legend-title {
+        color: var(--ink-soft);
+        font-weight: 900;
+      }
+
+      .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .matrix-scroll-note {
+        display: none;
+        align-items: center;
+        gap: 7px;
+        margin: 0 0 9px;
+        padding: 8px 10px;
+        color: var(--indigo-deep);
+        background: var(--indigo-soft);
+        border: 1px solid rgba(63, 72, 174, 0.2);
+        border-radius: 8px;
+        font-size: 0.7rem;
+        font-weight: 800;
+      }
+
+      .matrix-scroll-note::before {
+        content: "↔";
+        color: var(--coral);
+        font-size: 1rem;
+        line-height: 1;
+      }
+
+      .legend-mark,
+      .cell-status {
+        display: inline-grid;
+        width: 21px;
+        height: 21px;
+        place-items: center;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 900;
+        line-height: 1;
+      }
+
+      .mark-yes {
+        color: var(--mint-deep);
+        background: var(--mint);
+      }
+
+      .mark-add-on {
+        color: var(--amber);
+        background: var(--amber-soft);
+      }
+
+      .mark-no {
+        color: var(--muted);
+        background: var(--surface-muted);
+      }
+
+      .mark-unknown {
+        color: var(--unknown);
+        background: var(--indigo-soft);
+      }
+
+      .table-scroll {
+        max-width: 100%;
+        overflow: auto;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .comparison-table {
+        width: 100%;
+        min-width: 1180px;
+        table-layout: fixed;
+        border-collapse: separate;
+        border-spacing: 0;
+        color: var(--ink);
+        font-size: 0.72rem;
+      }
+
+      .comparison-table col.feature-col {
+        width: 245px;
+      }
+
+      .comparison-table col.platform-col {
+        width: 150px;
+      }
+
+      .comparison-table th,
+      .comparison-table td {
+        padding: 12px 11px;
+        text-align: right;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--line);
+        border-inline-start: 1px solid var(--line);
+      }
+
+      .comparison-table tr > :first-child {
+        border-inline-start: 0;
+      }
+
+      .comparison-table thead th {
+        position: sticky;
+        z-index: 4;
+        top: 0;
+        min-height: 80px;
+        background: #eef0ff;
+        border-bottom: 2px solid rgba(63, 72, 174, 0.22);
+      }
+
+      .comparison-table .sticky-col {
+        position: sticky;
+        z-index: 5;
+        right: 0;
+        background: var(--surface);
+        box-shadow: -9px 0 12px -14px rgba(23, 33, 58, 0.55);
+      }
+
+      .comparison-table thead .sticky-col {
+        z-index: 7;
+        background: #eef0ff;
+      }
+
+      .feature-head {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+
+      .feature-head strong {
+        font-size: 0.82rem;
+      }
+
+      .feature-head small {
+        color: var(--muted);
+        font-size: 0.65rem;
+        font-weight: 700;
+      }
+
+      .platform-head {
+        display: flex;
+        min-height: 62px;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 3px;
+      }
+
+      .platform-head strong {
+        font-size: 0.8rem;
+      }
+
+      .platform-head small {
+        color: var(--muted);
+        font-size: 0.62rem;
+        font-weight: 700;
+        line-height: 1.45;
+      }
+
+      .platform-badge {
+        display: inline-grid;
+        width: 25px;
+        height: 25px;
+        place-items: center;
+        color: #fff;
+        background: var(--indigo);
+        border-radius: 7px 2px 7px 2px;
+        font-size: 0.65rem;
+        font-weight: 900;
+      }
+
+      .platform-badge.coral {
+        background: var(--coral);
+      }
+
+      .platform-badge.mint {
+        color: var(--ink);
+        background: var(--mint);
+      }
+
+      .platform-badge.ink {
+        background: var(--ink);
+      }
+
+      .platform-badge.amber {
+        background: var(--amber);
+      }
+
+      .group-row th {
+        position: sticky;
+        z-index: 3;
+        right: 0;
+        padding: 8px 11px;
+        color: var(--indigo-deep);
+        background: #f0f0fa;
+        border-bottom: 1px solid rgba(63, 72, 174, 0.18);
+        border-inline-start: 0;
+        font-size: 0.7rem;
+        font-weight: 900;
+        letter-spacing: 0.03em;
+      }
+
+      .group-row th::before {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        margin-inline-end: 7px;
+        content: "";
+        background: var(--coral);
+        border-radius: 1px;
+      }
+
+      .feature-cell {
+        color: var(--ink-soft);
+        background: var(--surface);
+      }
+
+      .feature-cell strong {
+        display: block;
+        font-size: 0.75rem;
+      }
+
+      .feature-cell small {
+        display: block;
+        margin-top: 2px;
+        color: var(--muted-2);
+        font-size: 0.62rem;
+        line-height: 1.45;
+      }
+
+      .matrix-cell {
+        color: var(--muted);
+        background: var(--surface-strong);
+      }
+
+      .matrix-cell.cell-ara {
+        background: #fafaff;
+      }
+
+      .cell-wrap {
+        display: flex;
+        gap: 7px;
+        align-items: flex-start;
+      }
+
+      .cell-copy {
+        min-width: 0;
+        line-height: 1.55;
+      }
+
+      .status-yes .cell-copy {
+        color: var(--ink-soft);
+      }
+
+      .status-yes .cell-status {
+        color: var(--mint-deep);
+        background: var(--mint);
+      }
+
+      .status-add-on .cell-status {
+        color: var(--amber);
+        background: var(--amber-soft);
+      }
+
+      .status-no .cell-status {
+        color: var(--muted);
+        background: var(--surface-muted);
+      }
+
+      .status-unknown .cell-status {
+        color: var(--unknown);
+        background: var(--indigo-soft);
+      }
+
+      .matrix-empty {
+        padding: 42px 24px;
+        color: var(--muted);
+        text-align: center;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+      }
+
+      .matrix-empty strong {
+        display: block;
+        margin-bottom: 5px;
+        color: var(--ink);
+      }
+
+      .pricing-section {
+        padding-top: 65px;
+      }
+
+      .pricing-intro {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 0.73rem;
+      }
+
+      .pricing-intro svg {
+        flex: 0 0 auto;
+        color: var(--coral);
+      }
+
+      .pricing-layout {
+        display: grid;
+        grid-template-columns: minmax(255px, 0.72fr) minmax(0, 1.28fr);
+        gap: 18px;
+        align-items: stretch;
+      }
+
+      .price-spotlight {
+        display: flex;
+        min-height: 390px;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 27px;
+        color: #fff;
+        background: var(--indigo-deep);
+        border-radius: var(--radius-lg);
+        box-shadow: 8px 8px 0 rgba(204, 239, 224, 0.75);
+      }
+
+      .price-spotlight .eyebrow {
+        margin-bottom: 18px;
+        color: var(--mint);
+      }
+
+      .price-spotlight .eyebrow::before {
+        background: var(--mint);
+      }
+
+      .price-spotlight h3 {
+        margin-bottom: 7px;
+        font-size: 1.7rem;
+      }
+
+      .price-spotlight .price-subtitle {
+        margin-bottom: 30px;
+        color: #d8dcff;
+        font-size: 0.78rem;
+      }
+
+      .spotlight-price {
+        display: block;
+        margin-bottom: 5px;
+        color: #fff;
+        font-size: clamp(1.65rem, 3vw, 2.55rem);
+        font-weight: 900;
+        line-height: 1.2;
+      }
+
+      .spotlight-unit {
+        color: var(--mint);
+        font-size: 0.76rem;
+        font-weight: 800;
+      }
+
+      .price-spotlight .price-detail {
+        max-width: 32ch;
+        margin-top: 20px;
+        color: #d8dcff;
+        font-size: 0.77rem;
+        line-height: 1.8;
+      }
+
+      .spotlight-foot {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding-top: 17px;
+        color: #e4e6ff;
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+        font-size: 0.7rem;
+      }
+
+      .price-ledger {
+        overflow: hidden;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .price-ledger-head {
+        display: grid;
+        grid-template-columns: minmax(132px, 0.72fr) minmax(155px, 0.9fr) minmax(0, 1.35fr) 80px;
+        gap: 13px;
+        padding: 12px 16px;
+        color: var(--muted-2);
+        background: var(--surface-muted);
+        border-bottom: 1px solid var(--line);
+        font-size: 0.65rem;
+        font-weight: 900;
+      }
+
+      .price-row {
+        display: grid;
+        grid-template-columns: minmax(132px, 0.72fr) minmax(155px, 0.9fr) minmax(0, 1.35fr) 80px;
+        gap: 13px;
+        align-items: center;
+        padding: 13px 16px;
+      }
+
+      .price-row + .price-row {
+        border-top: 1px solid var(--line);
+      }
+
+      .price-platform {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .price-platform strong {
+        min-width: 0;
+        overflow: hidden;
+        font-size: 0.79rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .price-platform .platform-badge {
+        width: 23px;
+        height: 23px;
+        flex: 0 0 auto;
+      }
+
+      .price-main {
+        min-width: 0;
+      }
+
+      .price-amount {
+        display: block;
+        color: var(--indigo-deep);
+        font-size: 0.93rem;
+        font-weight: 900;
+        line-height: 1.45;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .price-unit {
+        display: block;
+        color: var(--muted-2);
+        font-size: 0.62rem;
+        line-height: 1.45;
+      }
+
+      .price-detail-compact {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.69rem;
+        line-height: 1.65;
+      }
+
+      .price-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 4px;
+        color: var(--indigo);
+        font-size: 0.67rem;
+        font-weight: 900;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .price-link:hover,
+      .source-link:hover {
+        color: var(--coral);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
+      .winners-section {
+        padding-top: 66px;
+      }
+
+      .winner-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .winner-card {
+        min-height: 190px;
+        padding: 18px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-top: 4px solid var(--indigo);
+        border-radius: 13px;
+        box-shadow: var(--shadow-soft);
+      }
+
+      .winner-card:nth-child(2) {
+        border-top-color: var(--coral);
+      }
+
+      .winner-card:nth-child(3) {
+        border-top-color: var(--mint-deep);
+      }
+
+      .winner-card:nth-child(4) {
+        border-top-color: var(--amber);
+      }
+
+      .winner-card:nth-child(5) {
+        border-top-color: var(--unknown);
+      }
+
+      .winner-card h3 {
+        margin-bottom: 11px;
+        font-size: 0.9rem;
+      }
+
+      .winner-card p {
+        margin-bottom: 14px;
+        color: var(--muted);
+        font-size: 0.72rem;
+        line-height: 1.75;
+      }
+
+      .winner-card strong {
+        display: block;
+        color: var(--ink);
+        font-size: 0.82rem;
+        line-height: 1.65;
+      }
+
+      .winner-card small {
+        display: block;
+        color: var(--muted-2);
+        font-size: 0.65rem;
+        line-height: 1.65;
+      }
+
+      .method-section {
+        padding-top: 70px;
+      }
+
+      .method-panel {
+        padding-bottom: 27px;
+      }
+
+      .method-callout {
+        display: grid;
+        grid-template-columns: 44px 1fr;
+        gap: 14px;
+        align-items: start;
+        margin-bottom: 27px;
+        padding: 17px;
+        background: var(--coral-soft);
+        border: 1px solid rgba(216, 102, 88, 0.28);
+        border-radius: 12px;
+      }
+
+      .method-callout-icon {
+        display: grid;
+        width: 37px;
+        height: 37px;
+        place-items: center;
+        color: #fff;
+        background: var(--coral);
+        border-radius: 8px 3px 8px 3px;
+      }
+
+      .method-callout strong {
+        display: block;
+        margin-bottom: 2px;
+        font-size: 0.86rem;
+      }
+
+      .method-callout p {
+        margin-bottom: 0;
+        color: #75423a;
+        font-size: 0.75rem;
+        line-height: 1.8;
+      }
+
+      .method-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+        gap: 28px;
+      }
+
+      .method-block h3 {
+        margin-bottom: 9px;
+        font-size: 0.95rem;
+      }
+
+      .method-block p,
+      .method-block li {
+        color: var(--muted);
+        font-size: 0.75rem;
+        line-height: 1.85;
+      }
+
+      .method-block ul {
+        padding: 0 20px 0 0;
+        margin: 0;
+      }
+
+      .method-block li + li {
+        margin-top: 6px;
+      }
+
+      .source-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 9px;
+      }
+
+      .source-card {
+        display: flex;
+        min-height: 93px;
+        flex-direction: column;
+        gap: 4px;
+        padding: 12px;
+        background: #fffefa;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+
+      .source-card strong {
+        font-size: 0.77rem;
+      }
+
+      .source-card p {
+        flex: 1;
+        margin: 0;
+        color: var(--muted-2);
+        font-size: 0.65rem;
+        line-height: 1.55;
+      }
+
+      .source-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px 10px;
+      }
+
+      .source-link {
+        color: var(--indigo);
+        font-size: 0.65rem;
+        font-weight: 900;
+        text-decoration: none;
+      }
+
+      .source-local {
+        display: inline-flex;
+        width: fit-content;
+        padding: 3px 6px;
+        color: var(--mint-deep);
+        background: var(--mint);
+        border-radius: 5px;
+        font-size: 0.62rem;
+        font-weight: 900;
+      }
+
+      .footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        padding-block: 22px 36px;
+        color: var(--muted-2);
+        border-top: 1px solid var(--line);
+        font-size: 0.68rem;
+      }
+
+      .footer p {
+        margin: 0;
+      }
+
+      .footer strong {
+        color: var(--ink-soft);
+      }
+
+      @media (max-width: 1120px) {
+        .hero {
+          gap: 42px;
+        }
+
+        .summary-layout,
+        .pricing-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .price-spotlight {
+          min-height: 0;
+        }
+
+        .winner-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .winner-card:last-child {
+          grid-column: auto;
+        }
+      }
+
+      @media (max-width: 820px) {
+        .header-inner,
+        .page-shell {
+          width: min(var(--content), calc(100% - 28px));
+        }
+
+        .header-inner {
+          min-height: 62px;
+        }
+
+        .top-nav a {
+          padding-inline: 7px;
+          font-size: 0.72rem;
+        }
+
+        .header-label {
+          display: none;
+        }
+
+        .hero {
+          grid-template-columns: 1fr;
+          gap: 25px;
+          padding-top: 49px;
+        }
+
+        h1 {
+          font-size: clamp(2.5rem, 12vw, 4rem);
+        }
+
+        .hero-aside {
+          padding: 22px 0 0;
+          border-top: 1px solid var(--line-strong);
+          border-inline-start: 0;
+        }
+
+        .mvp-band {
+          grid-template-columns: 1fr;
+        }
+
+        .mvp-gate {
+          min-height: 0;
+          padding: 18px 0 0;
+          border-top: 1px solid rgba(255, 255, 255, 0.24);
+          border-inline-start: 0;
+        }
+
+        .mvp-status-grid,
+        .mvp-timeline {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .mvp-timeline::before {
+          display: none;
+        }
+
+        .position-list {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .kpi-strip {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .kpi:nth-child(3) {
+          border-inline-start: 0;
+          border-top: 1px solid var(--line);
+        }
+
+        .kpi:nth-child(4) {
+          border-top: 1px solid var(--line);
+        }
+
+        .section-heading {
+          align-items: start;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .matrix-toolbar {
+          grid-template-columns: 1fr;
+        }
+
+        .matrix-scroll-note {
+          display: flex;
+        }
+
+        .filter-group {
+          justify-content: flex-start;
+        }
+
+        .toolbar-note {
+          margin-inline-start: 0;
+        }
+
+        .winner-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .method-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .source-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 540px) {
+        body {
+          font-size: 14px;
+        }
+
+        .brand {
+          font-size: 0.8rem;
+        }
+
+        .brand-mark {
+          width: 33px;
+          height: 33px;
+        }
+
+        .top-nav {
+          gap: 0;
+        }
+
+        .top-nav a:nth-child(4) {
+          display: none;
+        }
+
+        .hero {
+          padding-bottom: 25px;
+        }
+
+        .hero-lede {
+          font-size: 0.92rem;
+          line-height: 1.9;
+        }
+
+        .report-note {
+          align-items: flex-start;
+        }
+
+        .position-list {
+          grid-template-columns: 1fr;
+        }
+
+        .kpi {
+          min-height: 91px;
+          padding: 13px 14px;
+        }
+
+        .kpi-value {
+          font-size: 1.35rem;
+        }
+
+        .decision-grid,
+        .winner-grid,
+        .source-grid,
+        .mvp-status-grid,
+        .mvp-timeline {
+          grid-template-columns: 1fr;
+        }
+
+        .mvp-status-card {
+          min-height: 0;
+        }
+
+        .mvp-roadmap-head {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .mvp-actions .button {
+          width: 100%;
+        }
+
+        .decision-card:last-child {
+          grid-column: auto;
+        }
+
+        .score-row {
+          grid-template-columns: minmax(97px, 0.75fr) minmax(85px, 1.2fr) 35px;
+        }
+
+        .score-name {
+          font-size: 0.67rem;
+        }
+
+        .matrix-toolbar {
+          gap: 11px;
+          padding: 12px;
+        }
+
+        .filter-group {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 6px;
+        }
+
+        .filter-label {
+          grid-column: 1 / -1;
+          margin: 0;
+        }
+
+        .filter-chip {
+          width: 100%;
+          padding-inline: 7px;
+        }
+
+        .toggle-row {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 9px;
+        }
+
+        .toolbar-note {
+          margin: 0;
+        }
+
+        .price-spotlight {
+          padding: 22px;
+          box-shadow: 5px 5px 0 rgba(204, 239, 224, 0.75);
+        }
+
+        .price-ledger-head {
+          display: none;
+        }
+
+        .price-row {
+          grid-template-columns: 1fr auto;
+          gap: 5px 12px;
+          padding: 14px;
+        }
+
+        .price-main {
+          grid-column: 2;
+          grid-row: 1;
+          text-align: left;
+        }
+
+        .price-detail-compact {
+          grid-column: 1 / -1;
+          grid-row: 2;
+        }
+
+        .price-row .price-link {
+          grid-column: 1;
+          grid-row: 1;
+        }
+
+        .footer {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+
+        *,
+        *::before,
+        *::after {
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">پرش به محتوای اصلی</a>
+
+    <header class="site-header" aria-label="ناوبری اصلی">
+      <div class="header-inner">
+        <div class="brand-block">
+          <a class="brand" href="#top" aria-label="بازگشت به ابتدای مقایسه آرا">
+            <span class="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 24 14.2 8h3.4L24 24h-3.6l-1.35-4h-6.3l-1.3 4H8Zm5.8-7h4.3L16 10.7 13.8 17Z" fill="currentColor" />
+                <path d="M21.5 8h2.7v16h-2.7V8Z" fill="#CCEFE0" />
+              </svg>
+            </span>
+            <span>ARA <b>/ LAB</b></span>
+          </a>
+          <span class="header-label">مقایسه محصول</span>
+        </div>
+        <nav class="top-nav" aria-label="بخش‌های گزارش">
+          <a href="#mvp-verdict">MVP</a>
+          <a href="#summary">خلاصه</a>
+          <a href="#matrix">ماتریس</a>
+          <a href="#pricing">قیمت</a>
+          <a href="#methodology">روش</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <div class="page-shell">
+        <section class="section mvp-section" id="mvp-verdict" aria-labelledby="mvp-title">
+          <div class="mvp-band">
+            <div class="mvp-band-copy">
+              <p class="mvp-kicker"><bdi dir="ltr">ARA MVP / RELEASE ROOM</bdi> · ۰۱</p>
+              <h2 id="mvp-title">حکم MVP: هسته عملیات آماده است؛ حالا نوبت اعتبارسنجی واقعی است</h2>
+              <p>برای اعتبارسنجی عمومی، آرا باید روی عملیات روزانه و قابلیت اطمینان تمرکز کند؛ رشدهای جانبی فعلاً از مسیر انتشار کنار بمانند.</p>
+            </div>
+            <div class="mvp-gate">
+              <span class="mvp-gate-label">گیت تصمیم</span>
+              <strong>قبل از انتشار عمومی، با سالن واقعی بسنجید</strong>
+              <span>۳–۵ سالن · <bdi dir="ltr">booking</bdi>، خطا، تأیید، بازگشت</span>
+            </div>
+          </div>
+
+          <div class="mvp-status-grid" aria-label="وضعیت اجزای MVP آرا">
+            <article class="mvp-status-card is-shipped">
+              <div class="mvp-card-head">
+                <span class="mvp-status-chip"><span aria-hidden="true">✓</span> ارسال شده · P0</span>
+              </div>
+              <h3>هسته عملیات روزانه</h3>
+              <ul>
+                <li><span>خلاصه روزانه و تعداد نفرات</span></li>
+                <li><span>کلیک روز در نمای هفته/ماه → نمای روز</span></li>
+                <li><span>زمینه مشتری: تلفن، <bdi dir="ltr">SMS</bdi> و سابقه</span></li>
+                <li><span>خطاهای تأیید به‌صورت واضح نمایش داده می‌شوند</span></li>
+              </ul>
+            </article>
+
+            <article class="mvp-status-card is-shipped">
+              <div class="mvp-card-head">
+                <span class="mvp-status-chip"><span aria-hidden="true">✓</span> ارسال شده · P1</span>
+              </div>
+              <h3>جابه‌جایی امن نوبت</h3>
+              <ul>
+                <li><span>جابه‌جایی <bdi dir="ltr">drag &amp; drop</bdi> در روز، بدون بارگذاری مجدد صفحه.</span></li>
+                <li><span>بررسی تداخل، ساعات کاری و تعطیلی در backend؛ موبایل با «تغییر زمان».</span></li>
+              </ul>
+            </article>
+
+            <article class="mvp-status-card is-deferred">
+              <div class="mvp-card-head">
+                <span class="mvp-status-chip"><span aria-hidden="true">×</span> تعویق / حذف از MVP</span>
+              </div>
+              <h3>رشدهای خارج از گیت</h3>
+              <ul>
+                <li><span>مدیریت ارتباط با مشتری کامل و بازاریابی</span></li>
+                <li><span>وفادارسازی و جبران خدمات <bdi dir="ltr">(payroll / commission)</bdi></span></li>
+                <li><span>گسترش بازار و <bdi dir="ltr">marketplace / discovery</bdi></span></li>
+                <li><span>عمق سازمانی و چندشعبه‌ای <bdi dir="ltr">(enterprise / multi-branch)</bdi></span></li>
+                <li><span>اپ بومی برندشده</span></li>
+              </ul>
+            </article>
+
+            <article class="mvp-status-card is-gate">
+              <div class="mvp-card-head">
+                <span class="mvp-status-chip"><span aria-hidden="true">↗</span> گیت انتشار</span>
+              </div>
+              <h3>آزمون با سالن واقعی</h3>
+              <ul>
+                <li><span>۳–۵ سالن واقعی پیش از اعتبارسنجی عمومی</span></li>
+                <li><span>نرخ تکمیل رزرو <bdi dir="ltr">(booking completion)</bdi></span></li>
+                <li><span>نرخ خطای تقویم <bdi dir="ltr">(calendar error rate)</bdi> و زمان تأیید <bdi dir="ltr">(approval time)</bdi></span></li>
+                <li><span>استفاده مجدد <bdi dir="ltr">(repeat usage)</bdi></span></li>
+              </ul>
+            </article>
+          </div>
+
+          <div class="mvp-roadmap" aria-labelledby="mvp-roadmap-title">
+            <div class="mvp-roadmap-head">
+              <div>
+                <p class="section-kicker">اولویت اجرا</p>
+                <h3 id="mvp-roadmap-title">مسیر سه‌مرحله‌ای انتشار</h3>
+              </div>
+              <span class="mvp-roadmap-note">کمینه لازم برای یادگیری از بازار</span>
+            </div>
+            <ol class="mvp-timeline" aria-label="اولویت‌های اکنون، بعدی و بعدتر">
+              <li>
+                <span class="mvp-step">اکنون · <bdi dir="ltr">NOW</bdi></span>
+                <strong>پایلوت با سالن واقعی</strong>
+                <p>خلاصه روز، نمای روز، جابه‌جایی امن و خطاهای تأیید را در ۳–۵ سالن بسنجید.</p>
+              </li>
+              <li>
+                <span class="mvp-step">بعدی · <bdi dir="ltr">NEXT</bdi></span>
+                <strong>پایش کیفیت تقویم</strong>
+                <p>نرخ تکمیل رزرو، خطای تقویم، زمان تأیید و استفاده مجدد را ثبت و بهبود دهید.</p>
+              </li>
+              <li>
+                <span class="mvp-step">بعدتر · <bdi dir="ltr">LATER</bdi></span>
+                <strong>رشد پس از اعتبارسنجی</strong>
+                <p>مدیریت ارتباط با مشتری، وفادارسازی، حقوق، بازار و عمق سازمانی را بعداً بسنجید.</p>
+              </li>
+            </ol>
+          </div>
+
+          <div class="mvp-actions" aria-label="میانبرهای اعتبارسنجی MVP">
+            <a class="button button-primary" href="#matrix">بازبینی ماتریس قابلیت‌ها <span aria-hidden="true">↓</span></a>
+            <a class="button button-secondary" href="#summary">خواندن زمینه تصمیم‌گیری <span aria-hidden="true">↓</span></a>
+          </div>
+        </section>
+
+        <section class="hero" id="top" aria-labelledby="page-title">
+          <div class="hero-copy">
+            <p class="eyebrow">راهنمای انتخاب نرم‌افزار مدیریت سالن · ۲۰۲۶</p>
+            <h1 id="page-title">آرا در برابر اکوسیستم مدیریت سالن</h1>
+            <p class="hero-lede">
+              مقایسه‌ای تصمیم‌محور برای سالن‌های فارسی‌زبان؛ از <strong>تقویم جلالی و کنترل منابع</strong>
+              تا مارکت‌پلیس، پرداخت و مقیاس چندشعبه‌ای. «همه سایت‌ها» فهرستی بی‌انتهاست؛ این گزارش
+              مجموعه‌ای نماینده از ۱۱ پلتفرم شناخته‌شده را با منبع و تاریخ بازیابی کنار هم می‌گذارد.
+            </p>
+            <div class="hero-actions" aria-label="میانبرهای گزارش">
+              <button class="button button-primary" type="button" data-scroll="#matrix">
+                دیدن ماتریس قابلیت‌ها
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M3 5.5 8 10l5-4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+              <button class="button button-secondary" type="button" data-scroll="#methodology">
+                روش و منابع
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 2.5v11M3.5 8h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                </svg>
+              </button>
+            </div>
+            <p class="report-note">
+              <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none">
+                <path d="M12 8v5m0 3.5v.1M4.6 19h14.8a1.6 1.6 0 0 0 1.4-2.4L13.4 4a1.6 1.6 0 0 0-2.8 0L3.2 16.6A1.6 1.6 0 0 0 4.6 19Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              قیمت‌ها و قابلیت‌ها جهت تصمیم‌گیری اولیه‌اند؛ قبل از خرید، شرایط منطقه و پلن را دوباره بررسی کنید.
+            </p>
+          </div>
+
+          <aside class="hero-aside" aria-label="خط‌مشی انتخاب پلتفرم">
+            <p class="aside-label">BOTTOM LINE / ۰۱</p>
+            <h2 class="aside-title">نقشه سریع انتخاب، قبل از خیره‌شدن به جدول</h2>
+            <div class="position-list">
+              <div class="position-item">
+                <span class="position-dot" aria-hidden="true"></span>
+                <div><strong>سالن ایرانی</strong><span>آرا؛ جلالی، فارسی و کنترل داخلی در اولویت.</span></div>
+              </div>
+              <div class="position-item">
+                <span class="position-dot" aria-hidden="true"></span>
+                <div><strong>جذب از مارکت‌پلیس</strong><span>Booksy و Fresha؛ Mindbody نیز در مقیاس بزرگ‌تر.</span></div>
+              </div>
+              <div class="position-item">
+                <span class="position-dot" aria-hidden="true"></span>
+                <div><strong>POS و پرداخت</strong><span>Square، Vagaro و GlossGenius مسیر روشن‌تری دارند.</span></div>
+              </div>
+              <div class="position-item">
+                <span class="position-dot" aria-hidden="true"></span>
+                <div><strong>چندشعبه‌ای سازمانی</strong><span>Mindbody، Boulevard و Zenoti برای عملیات بزرگ‌تر.</span></div>
+              </div>
+            </div>
+          </aside>
+        </section>
+
+        <section class="section" aria-label="شاخص‌های گزارش">
+          <div class="kpi-strip">
+            <div class="kpi"><span class="kpi-value">۱۱</span><span class="kpi-label">پلتفرم نماینده</span></div>
+            <div class="kpi"><span class="kpi-value">۹</span><span class="kpi-label">محور مقایسه</span></div>
+            <div class="kpi"><span class="kpi-value">۹ اوت ۲۰۲۶</span><span class="kpi-label">آخرین به‌روزرسانی و بازیابی</span></div>
+            <div class="kpi"><span class="kpi-value" dir="ltr">USD / month</span><span class="kpi-label">قیمت ماهانه، قبل از مالیات</span></div>
+          </div>
+        </section>
+
+        <section class="section" id="summary" aria-labelledby="summary-title">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">خلاصه تصمیم</p>
+              <h2 id="summary-title">برنده مطلق نداریم؛ مسئله، تناسب است</h2>
+            </div>
+            <p>امتیازهای این صفحه جهت‌نما هستند، نه benchmark. ابتدا مدل کسب‌وکار سالن را انتخاب کنید؛ بعد سراغ قیمت و جزئیات بروید.</p>
+          </div>
+
+          <div class="summary-layout">
+            <article class="bottom-line">
+              <h3>خط پایین گزارش</h3>
+              <p>چه چیزی در انتخاب شما وزن بیشتری دارد؟ این چهار پاسخ نقطه شروع‌اند، نه حکم خرید.</p>
+              <div class="decision-grid">
+                <article class="decision-card">
+                  <span class="decision-number">A</span>
+                  <div><strong>بومی‌سازی فارسی / جلالی</strong><p>آرا قوی‌ترین تناسب را دارد؛ مسیر پیامک و پرداخت داخلی به استقرار وابسته است.</p></div>
+                </article>
+                <article class="decision-card">
+                  <span class="decision-number">B</span>
+                  <div><strong>مشتری‌گیری از بازار آماده</strong><p>Booksy و Fresha برای discovery؛ کارمزد و قواعد هر بازار جداست.</p></div>
+                </article>
+                <article class="decision-card">
+                  <span class="decision-number">C</span>
+                  <div><strong>POS و پرداخت</strong><p>Square، Vagaro و GlossGenius وقتی تراکنش و صندوق قلب عملیات است.</p></div>
+                </article>
+                <article class="decision-card">
+                  <span class="decision-number">D</span>
+                  <div><strong>تیم و زمان‌بندی دقیق</strong><p>آرا، Boulevard، Square و Mangomint برای کنترل ظرفیت و منبع، با تفاوت در عمق محصول.</p></div>
+                </article>
+                <article class="decision-card">
+                  <span class="decision-number">E</span>
+                  <div><strong>مقیاس چندشعبه‌ای</strong><p>Mindbody، Boulevard و Zenoti برای فرایندهای سازمانی؛ هزینه و راه‌اندازی بالاتر را بسنجید.</p></div>
+                </article>
+              </div>
+            </article>
+
+            <article class="score-panel" aria-labelledby="score-title">
+              <h3 id="score-title">امتیاز تناسب جهت‌نما</h3>
+              <p>یک روبریک کیفی ۰ تا ۱۰۰ بر اساس تمرکز محصول، قابلیت‌های مستند و تناسب بازار؛ جایگزین آزمون واقعی نیست.</p>
+              <div class="score-modes" role="group" aria-label="انتخاب سناریوی امتیاز تناسب">
+                <button class="score-mode" type="button" data-score-mode="iran" aria-pressed="true">سالن ایرانی</button>
+                <button class="score-mode" type="button" data-score-mode="solo" aria-pressed="false">سالن تک‌نفره</button>
+                <button class="score-mode" type="button" data-score-mode="team" aria-pressed="false">رشد تیم</button>
+                <button class="score-mode" type="button" data-score-mode="multi" aria-pressed="false">چندشعبه‌ای</button>
+              </div>
+              <div id="scoreChart" class="score-chart" role="list" aria-live="polite"></div>
+              <div class="chart-note">
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 8v5m0 3.5v.1M4.6 19h14.8a1.6 1.6 0 0 0 1.4-2.4L13.4 4a1.6 1.6 0 0 0-2.8 0L3.2 16.6A1.6 1.6 0 0 0 4.6 19Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <span id="scoreNote">در سناریوی سالن ایرانی، مزیت آرا از بومی‌سازی و کد فعلی زمان‌بندی می‌آید؛ این عدد اندازه‌گیری بازار نیست.</span>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section matrix-section" id="matrix" aria-labelledby="matrix-title">
+          <div class="section-heading matrix-heading">
+            <div>
+              <p class="section-kicker">ماتریس قابلیت‌ها</p>
+              <h2 id="matrix-title">از تقویم تا API، کنار هم</h2>
+            </div>
+            <div class="matrix-count" id="matrixCount" role="status" aria-live="polite">در حال آماده‌سازی…</div>
+          </div>
+
+          <div class="matrix-toolbar" aria-label="فیلترهای ماتریس">
+            <label class="search-field">
+              <span class="sr-only">جست‌وجوی پلتفرم</span>
+              <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none">
+                <circle cx="10.8" cy="10.8" r="6.8" stroke="currentColor" stroke-width="1.8" />
+                <path d="m16 16 5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+              </svg>
+              <input id="platformSearch" type="search" autocomplete="off" placeholder="جست‌وجو: Booksy، پرداخت، مارکت‌پلیس…" />
+            </label>
+            <div class="filter-group" role="group" aria-label="فیلتر مدل سالن">
+              <span class="filter-label">تناسب:</span>
+              <button class="filter-chip" type="button" data-persona="all" aria-pressed="true">همه</button>
+              <button class="filter-chip" type="button" data-persona="iran" aria-pressed="false">سالن ایرانی</button>
+              <button class="filter-chip" type="button" data-persona="solo" aria-pressed="false">تک‌نفره</button>
+              <button class="filter-chip" type="button" data-persona="team" aria-pressed="false">تیم در حال رشد</button>
+              <button class="filter-chip" type="button" data-persona="multi" aria-pressed="false">چندشعبه‌ای</button>
+            </div>
+            <div class="toggle-row">
+              <label class="switch-label">
+                <input id="publicPricingOnly" type="checkbox" />
+                <span class="switch-ui" aria-hidden="true"></span>
+                <span>فقط قیمت عمومی</span>
+              </label>
+              <label class="switch-label">
+                <input id="compactOnly" type="checkbox" checked />
+                <span class="switch-ui" aria-hidden="true"></span>
+                <span>فقط قابلیت‌های شاخص</span>
+              </label>
+              <span class="toolbar-note" id="matrixModeNote">نمای فشرده؛ برای جزئیات بیشتر، کل ماتریس را باز کنید.</span>
+            </div>
+          </div>
+
+          <div class="legend" aria-label="راهنمای وضعیت سلول‌ها">
+            <span class="legend-title">راهنما:</span>
+            <span class="legend-item"><span class="legend-mark mark-yes" aria-hidden="true">✓</span> داخلی / شامل</span>
+            <span class="legend-item"><span class="legend-mark mark-add-on" aria-hidden="true">◐</span> افزونه / وابسته به پلن</span>
+            <span class="legend-item"><span class="legend-mark mark-no" aria-hidden="true">—</span> در اسکوپ فعلی نیست / تأیید نشده</span>
+            <span class="legend-item"><span class="legend-mark mark-unknown" aria-hidden="true">?</span> سفارشی / نامشخص</span>
+          </div>
+
+          <p class="matrix-scroll-note">روی جدول افقی بکشید تا ستون‌های بیشتر را ببینید.</p>
+
+          <div class="table-scroll" tabindex="0" role="region" aria-labelledby="matrix-title" aria-describedby="matrixHint">
+            <span class="sr-only" id="matrixHint">برای دیدن ستون‌های بیشتر، جدول را به صورت افقی اسکرول کنید.</span>
+            <table class="comparison-table" id="comparisonTable">
+              <caption class="sr-only">مقایسه قابلیت‌ها و مدل قیمت یازده پلتفرم مدیریت سالن</caption>
+              <colgroup id="matrixCols"></colgroup>
+              <thead id="matrixHead"></thead>
+              <tbody id="matrixBody"></tbody>
+            </table>
+          </div>
+          <div class="matrix-empty" id="matrixEmpty" hidden role="status">
+            <strong>پلتفرمی با این فیلتر پیدا نشد.</strong>
+            جست‌وجو را پاک کنید یا فیلتر «فقط قیمت عمومی» را بردارید.
+          </div>
+        </section>
+
+        <section class="section pricing-section" id="pricing" aria-labelledby="pricing-title">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">قیمت و قرارداد</p>
+              <h2 id="pricing-title">قیمت شروع را با هزینه واقعی اشتباه نگیرید</h2>
+              <p class="pricing-intro">
+                <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 8v5m0 3.5v.1M4.6 19h14.8a1.6 1.6 0 0 0 1.4-2.4L13.4 4a1.6 1.6 0 0 0-2.8 0L3.2 16.6A1.6 1.6 0 0 0 4.6 19Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                قیمت‌های رقبا USD ماهانه و عمدتاً عمومی/آمریکا هستند؛ مالیات، processing، افزونه و منطقه می‌تواند نتیجه را عوض کند.
+              </p>
+            </div>
+          </div>
+          <div class="pricing-layout">
+            <article class="price-spotlight" aria-label="قیمت آرا">
+              <div>
+                <p class="eyebrow">ARA / وضعیت تجاری</p>
+                <h3>آرا</h3>
+                <p class="price-subtitle">محصول محلی Salon-Schedueler؛ مناسب سنجش تناسب، نه ادعای قیمت بازار.</p>
+                <span class="spotlight-price">اعلام نشده</span>
+                <span class="spotlight-unit">سفارشی / داخلی</span>
+                <p class="price-detail">در اسکوپ فعلی پروژه، قیمت عمومی، مالیات و کارمزد ارائه‌دهنده پرداخت منتشر نشده است. برای رقم نهایی باید استقرار و قرارداد مشخص شود.</p>
+              </div>
+              <div class="spotlight-foot">
+                <span class="legend-mark mark-unknown" aria-hidden="true">?</span>
+                <span>این خانه عمداً ادعای تجاری اضافه نمی‌کند.</span>
+              </div>
+            </article>
+            <div class="price-ledger" id="pricingLedger" aria-label="قیمت شروع پلتفرم‌های رقیب"></div>
+          </div>
+        </section>
+
+        <section class="section winners-section" aria-labelledby="winners-title">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">انتخاب سناریویی</p>
+              <h2 id="winners-title">کدام‌یک برنده می‌شود؟</h2>
+            </div>
+            <p>«برنده» در اینجا یعنی بهترین نقطه شروع برای یک نیاز مشخص؛ availability، قرارداد و عمق واقعی هر پلن باید جداگانه تأیید شود.</p>
+          </div>
+          <div class="winner-grid">
+            <article class="winner-card">
+              <h3>برای سالن ایرانی</h3>
+              <p>اولویت با Jalali/Persian-first و کنترل محلی عملیات است.</p>
+              <strong>آرا</strong>
+              <small>پرداخت و SMS داخلی: مسیر محلی، وضعیت نهایی وابسته به deployment.</small>
+            </article>
+            <article class="winner-card">
+              <h3>برای جذب از مارکت‌پلیس</h3>
+              <p>وقتی discovery و مشتری جدید از شبکه محصول مهم‌تر است.</p>
+              <strong>Booksy / Fresha / Mindbody</strong>
+              <small>Reach، fee و قواعد marketplace تغییرپذیر است.</small>
+            </article>
+            <article class="winner-card">
+              <h3>برای POS و پرداخت</h3>
+              <p>اگر صندوق، card processing و گزارش فروش روزانه محور است.</p>
+              <strong>Square / Vagaro / GlossGenius</strong>
+              <small>پردازش، کشور و add-on را با قرارداد واقعی بسنجید.</small>
+            </article>
+            <article class="winner-card">
+              <h3>برای enterprise</h3>
+              <p>برای عملیات چندشعبه‌ای و تیم‌های بزرگ‌تر.</p>
+              <strong>Boulevard / Mindbody / Zenoti</strong>
+              <small>معمولاً demo، راه‌اندازی و قیمت سفارشی پررنگ‌تر است.</small>
+            </article>
+            <article class="winner-card">
+              <h3>برای دقت زمان‌بندی تیم</h3>
+              <p>بر مبنای قابلیت‌های مستند زمان‌بندی و کنترل منابع.</p>
+              <strong>آرا / Boulevard / Square / Mangomint</strong>
+              <small>کد فعلی آرا منطق تداخل پرسنل و صندلی دارد.</small>
+            </article>
+          </div>
+        </section>
+
+        <section class="section method-section" id="methodology" aria-labelledby="method-title">
+          <div class="method-panel">
+            <div class="section-heading">
+              <div>
+                <p class="section-kicker">روش و منابع</p>
+                <h2 id="method-title">چطور این جدول را بخوانیم؟</h2>
+              </div>
+              <p>تاریخ بازیابی منابع: ۹ اوت ۲۰۲۶. لینک‌ها به صفحات رسمی هدایت می‌شوند.</p>
+            </div>
+            <div class="method-callout">
+              <span class="method-callout-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 8v5m0 3.5v.1M4.6 19h14.8a1.6 1.6 0 0 0 1.4-2.4L13.4 4a1.6 1.6 0 0 0-2.8 0L3.2 16.6A1.6 1.6 0 0 0 4.6 19Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </span>
+              <div>
+                <strong>نبودن علامت ✓ به معنی بد بودن محصول نیست.</strong>
+                <p>یعنی قابلیت در منبع عمومی یا اسکوپ فعلی کد تأیید نشده است. برای آرا، ادعاها بر اساس README، پیاده‌سازی‌های backend زمان‌بندی، auth، notifications، waitlist، catalog، analytics و subscription و مسیرهای owner web همین repository نوشته شده‌اند؛ «—» را به معنی نبودن در اسکوپ فعلی / عدم راستی‌آزمایی بخوانید.</p>
+              </div>
+            </div>
+            <div class="method-grid">
+              <div class="method-block">
+                <h3>قواعد داده</h3>
+                <ul>
+                  <li>هر سلول یک <span dir="ltr">status</span> دارد: <span dir="ltr">yes</span>، <span dir="ltr">add-on</span>، <span dir="ltr">no</span> یا <span dir="ltr">unknown</span>.</li>
+                  <li>قیمت‌ها USD ماهانه و قبل از مالیات‌اند؛ «از» با قیمت نهایی یکسان نیست.</li>
+                  <li>فیلتر عمومی قیمت، پلتفرم‌هایی با رقم شروع یا پلن رسمی قابل مشاهده را نشان می‌دهد.</li>
+                  <li>روبریک تناسب از ۰ تا ۱۰۰، heuristic و جهت‌نماست؛ benchmark مستقل نیست.</li>
+                </ul>
+              </div>
+              <div class="method-block">
+                <h3>منابع رسمی رقبا</h3>
+                <div class="source-grid" id="sourceGrid"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <footer class="footer">
+          <p><strong>ARA / LAB</strong> · گزارش مقایسه محصول · نماینده، نه فهرست همه محصولات جهان</p>
+          <p>بازیابی: <strong>۹ اوت ۲۰۲۶</strong> · قیمت‌ها ممکن است تغییر کنند.</p>
+        </footer>
+      </div>
+    </main>
+
+    <script>
+      (() => {
+        'use strict';
+
+        const faDigits = '۰۱۲۳۴۵۶۷۸۹';
+        const toFa = (value) => String(value).replace(/\d/g, (digit) => faDigits[digit]);
+        const normalize = (value) => String(value ?? '')
+          .toLocaleLowerCase('fa')
+          .replace(/[يى]/g, 'ی')
+          .replace(/ك/g, 'ک')
+          .trim();
+        const escapeHtml = (value) => String(value ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+        const cell = (status, text, note = '') => ({ status, text, note });
+
+        const statusMeta = {
+          yes: { mark: '✓', label: 'داخلی / شامل' },
+          'add-on': { mark: '◐', label: 'افزونه / وابسته به پلن' },
+          no: { mark: '—', label: 'در اسکوپ فعلی نیست / تأیید نشده' },
+          unknown: { mark: '?', label: 'سفارشی / نامشخص' },
+        };
+
+        const rows = [
+          { group: 'هزینه و قرارداد', key: 'entry', label: 'قیمت شروع ماهانه', hint: 'USD · قبل از مالیات', compact: true },
+          { group: 'هزینه و قرارداد', key: 'scaling', label: 'مدل مقیاس‌پذیری', hint: 'کاربر، شعبه یا add-on', compact: false },
+          { group: 'هزینه و قرارداد', key: 'trial', label: 'نسخه آزمایشی / پلن رایگان', hint: 'شرایط رسمی منتشرشده', compact: true },
+          { group: 'هزینه و قرارداد', key: 'marketFee', label: 'کارمزد مارکت‌پلیس', hint: 'مشتری جدید یا Boost', compact: true },
+          { group: 'هزینه و قرارداد', key: 'contract', label: 'قرارداد و راه‌اندازی', hint: 'شفافیت خرید / demo', compact: false },
+
+          { group: 'عملیات روزانه', key: 'jalali', label: 'تقویم شمسی / Jalali', hint: 'تناسب فارسی و هفته ایرانی', compact: true },
+          { group: 'عملیات روزانه', key: 'onlineBooking', label: 'رزرو آنلاین', hint: 'لینک عمومی یا storefront', compact: true },
+          { group: 'عملیات روزانه', key: 'calendar', label: 'تقویم روز / هفته / ماه', hint: 'دامنه دید برنامه', compact: true },
+          { group: 'عملیات روزانه', key: 'dragDrop', label: 'جابه‌جایی Drag & Drop', hint: 'reschedule در تقویم', compact: true },
+          { group: 'عملیات روزانه', key: 'approval', label: 'صف تأیید نوبت', hint: 'pending / approval queue', compact: true },
+          { group: 'عملیات روزانه', key: 'conflict', label: 'تداخل پرسنل / صندلی / منبع', hint: 'resource integrity', compact: true },
+          { group: 'عملیات روزانه', key: 'waitlist', label: 'لیست انتظار', hint: 'پرشدن slot و آزادشدن زمان', compact: true },
+          { group: 'عملیات روزانه', key: 'walkin', label: 'نوبت حضوری / Walk-in', hint: 'ورود دستی به برنامه', compact: true },
+          { group: 'عملیات روزانه', key: 'hours', label: 'ساعات کاری و ظرفیت', hint: 'availability / closures', compact: false },
+
+          { group: 'مشتری و ارتباط', key: 'profile', label: 'پروفایل و سابقه مشتری', hint: 'customer history', compact: true },
+          { group: 'مشتری و ارتباط', key: 'contact', label: 'تماس سریع / SMS', hint: 'shortcut یا provider', compact: true },
+          { group: 'مشتری و ارتباط', key: 'reminders', label: 'یادآوری و اعلان', hint: 'confirmation / reminder', compact: true },
+          { group: 'مشتری و ارتباط', key: 'forms', label: 'فرم و رضایت‌نامه', hint: 'intake / waiver', compact: false },
+          { group: 'مشتری و ارتباط', key: 'crm', label: 'CRM و بازاریابی', hint: 'segmentation / campaigns', compact: false },
+          { group: 'مشتری و ارتباط', key: 'loyalty', label: 'وفاداری و امتیاز', hint: 'loyalty / rewards', compact: false },
+
+          { group: 'پول و رشد', key: 'deposit', label: 'بیعانه / No-show hold', hint: 'نگهداشت و لغو', compact: true },
+          { group: 'پول و رشد', key: 'payments', label: 'پرداخت و POS', hint: 'processing / checkout', compact: true },
+          { group: 'پول و رشد', key: 'plans', label: 'اشتراک / پکیج / گیفت‌کارت', hint: 'recurring / prepaid', compact: false },
+          { group: 'پول و رشد', key: 'inventory', label: 'انبار و خرده‌فروشی', hint: 'retail inventory', compact: false },
+          { group: 'پول و رشد', key: 'payroll', label: 'حقوق و کمیسیون', hint: 'staff payout', compact: false },
+          { group: 'پول و رشد', key: 'analytics', label: 'تحلیل و گزارش', hint: 'revenue / utilization', compact: true },
+
+          { group: 'پلتفرم و مقیاس', key: 'mobile', label: 'موبایل / PWA', hint: 'بدون نصب یا client app', compact: true },
+          { group: 'پلتفرم و مقیاس', key: 'brandedApp', label: 'اپ برندشده', hint: 'native / white-label', compact: false },
+          { group: 'پلتفرم و مقیاس', key: 'marketplace', label: 'مارکت‌پلیس / Discovery', hint: 'جذب مشتری از شبکه', compact: true },
+          { group: 'پلتفرم و مقیاس', key: 'multiLocation', label: 'چندشعبه‌ای', hint: 'multi-location operations', compact: true },
+          { group: 'پلتفرم و مقیاس', key: 'qr', label: 'لینک / QR رزرو', hint: 'direct discovery', compact: true },
+          { group: 'پلتفرم و مقیاس', key: 'api', label: 'API و ادغام‌ها', hint: 'API / WebSocket / integrations', compact: false },
+        ];
+
+        const platforms = [
+          {
+            id: 'ara', name: 'Ara', faName: 'آرا', short: 'AR', tone: 'indigo', description: 'فارسی‌محور · کد محلی', publicPrice: false,
+            tags: ['iran', 'solo', 'team'],
+            fit: { iran: 96, solo: 76, team: 86, multi: 61 },
+            price: { amount: 'اعلام نشده', unit: 'داخلی / سفارشی', detail: 'قیمت تجاری عمومی در اسکوپ فعلی پروژه منتشر نشده است.', links: [] },
+            cells: {
+              entry: cell('unknown', 'اعلام نشده · سفارشی / داخلی', 'قیمت عمومی ادعا نمی‌شود.'),
+              scaling: cell('unknown', 'مدل تجاری عمومی منتشر نشده', 'برای استقرار باید استعلام شود.'),
+              trial: cell('unknown', 'در اسکوپ فعلی مشخص نیست'),
+              marketFee: cell('no', 'مارکت‌پلیس کاربرمحور ندارد'),
+              contract: cell('unknown', 'استقرار و قرارداد: استعلام'),
+              jalali: cell('yes', 'تقویم جلالی و هفته ایرانی', 'shared Jalali utilities و شنبه‌اول'),
+              onlineBooking: cell('yes', 'رزرو مستقیم با لینک / QR'),
+              calendar: cell('yes', 'روز، هفته، ماه و لیست'),
+              dragDrop: cell('yes', 'جابه‌جایی داخل تقویم بدون refresh', 'backend تداخل، ساعات کاری و تعطیلی را بررسی می‌کند؛ موبایل مسیر «تغییر زمان» دارد.'),
+              approval: cell('yes', 'pending و صف تأیید'),
+              conflict: cell('yes', 'تداخل پرسنل و صندلی کنترل می‌شود'),
+              waitlist: cell('yes', 'waitlist و آزادشدن resource window'),
+              walkin: cell('yes', 'رزرو دستی / Walk-in'),
+              hours: cell('yes', 'working hours، تعطیلی و availability'),
+              profile: cell('yes', 'context مشتری، پروفایل و سابقه'),
+              contact: cell('yes', 'تلفن و SMS از context مشتری'),
+              reminders: cell('yes', 'تأیید و اعلان از notification service'),
+              forms: cell('unknown', 'فرم / waiver در اسکوپ فعلی تأیید نشده'),
+              crm: cell('no', 'اتوماسیون CRM در اسکوپ فعلی نیست'),
+              loyalty: cell('no', 'وفاداری در اسکوپ فعلی نیست'),
+              deposit: cell('add-on', 'hold و شروع پرداخت؛ provider وابسته', 'مسیر پرداخت هست، provider تولیدی را ادعا نمی‌کنیم.'),
+              payments: cell('unknown', 'مسیر پرداخت هست؛ POS تولیدی ادعا نمی‌شود'),
+              plans: cell('yes', 'رابط اشتراک / billing'),
+              inventory: cell('no', 'در اسکوپ فعلی نیست'),
+              payroll: cell('no', 'در اسکوپ فعلی نیست'),
+              analytics: cell('yes', 'درآمد، utilization و پنجره‌های پرتراکم'),
+              mobile: cell('yes', 'وب PWA و mobile client'),
+              brandedApp: cell('no', 'اپ native برندشده تأیید نشده'),
+              marketplace: cell('no', 'در اسکوپ فعلی نیست'),
+              multiLocation: cell('unknown', 'چندشعبه‌ای در کد فعلی تأیید نشده'),
+              qr: cell('yes', 'QR و لینک مستقیم سالن'),
+              api: cell('yes', 'HTTP API و WebSocket integration'),
+            },
+          },
+          {
+            id: 'booksy', name: 'Booksy', faName: 'Booksy', short: 'BK', tone: 'coral', description: 'Marketplace-first', publicPrice: true,
+            tags: ['solo', 'team'],
+            fit: { iran: 48, solo: 86, team: 72, multi: 62 },
+            price: { amount: '$29.99', unit: '+ tax / month', detail: '+$20 per extra user؛ Boost: 30% first visit if enabled.', links: ['https://biz.booksy.com/pricing'] },
+            cells: {
+              entry: cell('yes', '$29.99 + tax / ماه'), scaling: cell('yes', '+$20 به‌ازای user اضافه'), trial: cell('unknown', 'شرایط آزمایشی را در خرید بررسی کنید'), marketFee: cell('add-on', 'Boost: ۳۰٪ اولین ویزیت'), contract: cell('yes', 'قیمت عمومی؛ شرایط منطقه‌ای'), onlineBooking: cell('yes', 'booking و discovery'), calendar: cell('yes', 'تقویم چندنمایه'), dragDrop: cell('yes', 'reschedule در تقویم'), approval: cell('unknown', 'در صفحه عمومی روشن نیست'), conflict: cell('unknown', 'جزئیات resource روشن نیست'), waitlist: cell('add-on', 'وابسته به plan / workflow'), walkin: cell('yes', 'رزرو دستی'), hours: cell('yes', 'ساعات و availability'), profile: cell('yes', 'پروفایل و سابقه'), contact: cell('add-on', 'پیام و ارتباط مشتری'), reminders: cell('yes', 'یادآوری نوبت'), forms: cell('unknown', 'در منبع عمومی تأیید نشد'), crm: cell('add-on', 'marketing tools'), loyalty: cell('add-on', 'وابسته به بازار / plan'), deposit: cell('add-on', 'پرداخت یا deposit وابسته به منطقه'), payments: cell('add-on', 'پرداخت وابسته به منطقه'), plans: cell('add-on', 'package / add-on'), inventory: cell('unknown', 'در صفحه قیمت روشن نیست'), payroll: cell('unknown', 'در منبع عمومی روشن نیست'), analytics: cell('yes', 'گزارش‌های کسب‌وکار'), mobile: cell('yes', 'mobile app'), brandedApp: cell('unknown', 'اپ برندشده در این مقایسه تأیید نشد'), marketplace: cell('yes', 'شبکه discovery اصلی'), multiLocation: cell('add-on', 'مدل تیم / چندکاربره'), qr: cell('yes', 'لینک booking'), api: cell('add-on', 'integration / API وابسته به plan'),
+            },
+          },
+          {
+            id: 'fresha', name: 'Fresha', faName: 'Fresha', short: 'FR', tone: 'mint', description: 'Marketplace + booking', publicPrice: true,
+            tags: ['solo', 'team', 'multi'],
+            fit: { iran: 52, solo: 88, team: 80, multi: 69 },
+            price: { amount: '$19.95', unit: 'solo / ماه', detail: 'Team: $14.95 per bookable team member؛ marketplace new-client fee و add-onها جدا.', links: ['https://www.fresha.com/pricing'] },
+            cells: {
+              entry: cell('yes', '$19.95 / solo / ماه'), scaling: cell('yes', '$14.95 به‌ازای bookable member'), trial: cell('unknown', 'شرایط پلن رایگان / آزمایشی را بررسی کنید'), marketFee: cell('add-on', 'کارمزد مشتری جدید در marketplace'), contract: cell('yes', 'اشتراک عمومی؛ شرایط منطقه‌ای'), onlineBooking: cell('yes', 'booking و profile'), calendar: cell('yes', 'روز / هفته / ماه'), dragDrop: cell('yes', 'جابه‌جایی نوبت'), approval: cell('unknown', 'در صفحه عمومی روشن نیست'), conflict: cell('add-on', 'منابع و ظرفیت وابسته به setup'), waitlist: cell('yes', 'waitlist / availability'), walkin: cell('yes', 'ثبت دستی'), hours: cell('yes', 'ساعات کاری'), profile: cell('yes', 'پروفایل و سابقه مشتری'), contact: cell('add-on', 'پیام و کمپین'), reminders: cell('yes', 'reminders'), forms: cell('add-on', 'فرم‌ها وابسته به plan'), crm: cell('add-on', 'marketing / CRM'), loyalty: cell('add-on', 'افزونه / region'), deposit: cell('add-on', 'deposit و cancellation rules'), payments: cell('add-on', 'payments / add-on'), plans: cell('add-on', 'packages و add-on'), inventory: cell('add-on', 'retail / inventory'), payroll: cell('unknown', 'در قیمت عمومی روشن نیست'), analytics: cell('yes', 'گزارش کسب‌وکار'), mobile: cell('yes', 'mobile app'), brandedApp: cell('unknown', 'در این منبع تأیید نشد'), marketplace: cell('yes', 'marketplace reach'), multiLocation: cell('add-on', 'چندشعبه‌ای / team setup'), qr: cell('yes', 'booking link'), api: cell('add-on', 'integration وابسته به plan'),
+            },
+          },
+          {
+            id: 'vagaro', name: 'Vagaro', faName: 'Vagaro', short: 'VG', tone: 'amber', description: 'Scheduling + payments', publicPrice: true,
+            tags: ['solo', 'team', 'multi'],
+            fit: { iran: 36, solo: 75, team: 82, multi: 81 },
+            price: { amount: '$23.99', unit: 'US base / ماه', detail: 'یک calendar؛ employee calendar اضافه $10 تا ۷ نفر. add-onها جدا.', links: ['https://support.vagaro.com/hc/en-us/articles/22781768988187-Vagaro-Plans-Pricing-and-Premium-Features'] },
+            cells: {
+              entry: cell('yes', '$23.99 / ماه · US base'), scaling: cell('yes', '+$10 برای هر employee calendar'), trial: cell('unknown', 'شرایط trial در صفحه قیمت بررسی شود'), marketFee: cell('unknown', 'کارمزد marketplace در منبع عمومی روشن نیست'), contract: cell('yes', 'قیمت رسمی؛ limited-time ذکر شده'), onlineBooking: cell('yes', 'booking سایت و app'), calendar: cell('yes', 'calendar عملیاتی'), dragDrop: cell('yes', 'reschedule'), approval: cell('unknown', 'در منبع عمومی روشن نیست'), conflict: cell('yes', 'staff / resource scheduling'), waitlist: cell('yes', 'waitlist'), walkin: cell('yes', 'walk-in'), hours: cell('yes', 'hours و availability'), profile: cell('yes', 'customer profile'), contact: cell('yes', 'SMS / email tools'), reminders: cell('yes', 'reminders'), forms: cell('add-on', 'فرم‌ها وابسته به feature'), crm: cell('add-on', 'marketing tools'), loyalty: cell('add-on', 'loyalty / promotions'), deposit: cell('yes', 'deposit و no-show tools'), payments: cell('yes', 'POS و processing'), plans: cell('yes', 'memberships / packages / gift cards'), inventory: cell('yes', 'inventory / retail'), payroll: cell('add-on', 'payroll add-on'), analytics: cell('yes', 'analytics'), mobile: cell('yes', 'mobile app'), brandedApp: cell('add-on', 'برندینگ / app وابسته به plan'), marketplace: cell('yes', 'Vagaro marketplace'), multiLocation: cell('add-on', 'وابسته به plan / location'), qr: cell('yes', 'booking link'), api: cell('add-on', 'integration وابسته به plan'),
+            },
+          },
+          {
+            id: 'square', name: 'Square Appointments', faName: 'Square', short: 'SQ', tone: 'ink', description: 'POS-first', publicPrice: true,
+            tags: ['solo', 'team', 'multi'],
+            fit: { iran: 41, solo: 79, team: 84, multi: 83 },
+            price: { amount: '$0 / $49 / $149', unit: 'Free / Plus / Premium · location', detail: 'برای tiers پولی ۳۰ روز trial؛ processing جدا و وابسته به بازار.', links: ['https://squareup.com/us/en/appointments/pricing'] },
+            cells: {
+              entry: cell('yes', '$0 / $49 / $149 به‌ازای location'), scaling: cell('yes', 'بر اساس location / tier'), trial: cell('yes', '۳۰ روز برای paid tiers'), marketFee: cell('no', 'marketplace جذب مشتری، محور اصلی نیست'), contract: cell('yes', 'پلن عمومی؛ US processing'), onlineBooking: cell('yes', 'booking page'), calendar: cell('yes', 'روز / هفته / ماه'), dragDrop: cell('yes', 'drag و reschedule'), approval: cell('unknown', 'در منبع عمومی تأیید نشد'), conflict: cell('yes', 'staff calendar / availability'), waitlist: cell('add-on', 'بسته به plan / setup'), walkin: cell('yes', 'manual appointment'), hours: cell('yes', 'hours / resources'), profile: cell('yes', 'customer directory'), contact: cell('yes', 'email / SMS tools'), reminders: cell('yes', 'reminders'), forms: cell('unknown', 'در این مقایسه تأیید نشد'), crm: cell('add-on', 'marketing / customer tools'), loyalty: cell('add-on', 'Square Loyalty'), deposit: cell('yes', 'prepayment / no-show policy'), payments: cell('yes', 'POS و card processing'), plans: cell('add-on', 'gift card / subscription tools'), inventory: cell('add-on', 'retail via Square ecosystem'), payroll: cell('add-on', 'Square Payroll'), analytics: cell('yes', 'sales / appointments reporting'), mobile: cell('yes', 'mobile app'), brandedApp: cell('no', 'native branded app در scope پایه نیست'), marketplace: cell('no', 'marketplace network ندارد'), multiLocation: cell('add-on', 'location tiers'), qr: cell('yes', 'booking link / QR'), api: cell('yes', 'Square APIs / integrations'),
+            },
+          },
+          {
+            id: 'glossgenius', name: 'GlossGenius', faName: 'GlossGenius', short: 'GG', tone: 'coral', description: 'Independent pros', publicPrice: true,
+            tags: ['solo', 'team'],
+            fit: { iran: 32, solo: 88, team: 58, multi: 45 },
+            price: { amount: '$28 / $56 / $168', unit: 'ماهانه · annual از $24 / $48 / $148', detail: 'flat 2.6% processing؛ ۱۴ روز trial.', links: ['https://support.glossgenius.com/en/articles/189-glossgenius-pricing-and-subscription-plans'] },
+            cells: {
+              entry: cell('yes', '$28 / $56 / $168 / ماه'), scaling: cell('yes', 'tier-based برای solo تا team'), trial: cell('yes', '۱۴ روز'), marketFee: cell('no', 'direct booking؛ marketplace اصلی نیست'), contract: cell('yes', 'پلن عمومی و processing مشخص'), onlineBooking: cell('yes', 'booking website'), calendar: cell('yes', 'calendar'), dragDrop: cell('yes', 'reschedule'), approval: cell('unknown', 'در منبع عمومی روشن نیست'), conflict: cell('unknown', 'جزئیات resource روشن نیست'), waitlist: cell('unknown', 'در این مقایسه تأیید نشد'), walkin: cell('yes', 'manual booking'), hours: cell('yes', 'availability'), profile: cell('yes', 'client profiles'), contact: cell('yes', 'text / email'), reminders: cell('yes', 'automated reminders'), forms: cell('add-on', 'فرم‌ها plan-dependent'), crm: cell('add-on', 'marketing tools'), loyalty: cell('add-on', 'در منبع قیمت جداست'), deposit: cell('yes', 'deposit / card on file'), payments: cell('yes', 'flat 2.6% processing'), plans: cell('yes', 'packages / gift cards'), inventory: cell('add-on', 'retail tools'), payroll: cell('add-on', 'وابسته به plan'), analytics: cell('yes', 'business insights'), mobile: cell('yes', 'mobile app'), brandedApp: cell('unknown', 'در منبع عمومی تأیید نشد'), marketplace: cell('no', 'marketplace network ندارد'), multiLocation: cell('add-on', 'وابسته به tier'), qr: cell('yes', 'booking link'), api: cell('unknown', 'API عمومی در این مقایسه تأیید نشد'),
+            },
+          },
+          {
+            id: 'boulevard', name: 'Boulevard', faName: 'Boulevard', short: 'BL', tone: 'mint', description: 'High-touch operations', publicPrice: true,
+            tags: ['team', 'multi'],
+            fit: { iran: 28, solo: 55, team: 87, multi: 90 },
+            price: { amount: 'از $158', unit: '/ month / location', detail: 'official 2026 blog؛ demo و quote برای package دقیق.', links: ['https://www.joinblvd.com/blog/best-salon-software', 'https://www.joinblvd.com/features/scheduling'] },
+            cells: {
+              entry: cell('yes', 'از $158 / location / ماه'), scaling: cell('yes', 'بر اساس location و package'), trial: cell('unknown', 'demo / quote'), marketFee: cell('no', 'marketplace اصلی محصول نیست'), contract: cell('add-on', 'راه‌اندازی و quote سازمانی'), onlineBooking: cell('yes', 'booking'), calendar: cell('yes', 'تقویم تیم و منبع'), dragDrop: cell('yes', 'drag و reschedule'), approval: cell('add-on', 'workflow وابسته به setup'), conflict: cell('yes', 'resource / room / staff scheduling'), waitlist: cell('yes', 'waitlist'), walkin: cell('yes', 'walk-in'), hours: cell('yes', 'availability و schedule'), profile: cell('yes', 'client profile'), contact: cell('yes', 'SMS / email'), reminders: cell('yes', 'reminders'), forms: cell('yes', 'forms / intake'), crm: cell('add-on', 'marketing / CRM'), loyalty: cell('add-on', 'وابسته به package'), deposit: cell('yes', 'deposits و cancellation'), payments: cell('yes', 'payments'), plans: cell('yes', 'memberships / packages / gift cards'), inventory: cell('add-on', 'retail'), payroll: cell('add-on', 'payroll / commission'), analytics: cell('yes', 'analytics'), mobile: cell('yes', 'mobile'), brandedApp: cell('add-on', 'branded app / package'), marketplace: cell('no', 'marketplace network ندارد'), multiLocation: cell('yes', 'multi-location'), qr: cell('yes', 'booking link'), api: cell('yes', 'integrations / API'),
+            },
+          },
+          {
+            id: 'mindbody', name: 'Mindbody', faName: 'Mindbody', short: 'MB', tone: 'amber', description: 'Network + enterprise', publicPrice: true,
+            tags: ['team', 'multi'],
+            fit: { iran: 23, solo: 44, team: 76, multi: 93 },
+            price: { amount: 'از $79', unit: '/ month / location · US Starter', detail: 'plan، add-on و processing متغیر؛ marketplace reach در محصول مهم است.', links: ['https://www.mindbodyonline.com/business/pricing'] },
+            cells: {
+              entry: cell('yes', 'از $79 / location / ماه'), scaling: cell('yes', 'location، staff و add-on'), trial: cell('unknown', 'شرایط demo / trial را بپرسید'), marketFee: cell('add-on', 'قواعد و fee شبکه وابسته به plan'), contract: cell('add-on', 'راه‌اندازی و processing متغیر'), onlineBooking: cell('yes', 'booking و marketplace'), calendar: cell('yes', 'calendar'), dragDrop: cell('yes', 'reschedule'), approval: cell('add-on', 'workflow وابسته به setup'), conflict: cell('yes', 'staff / room scheduling'), waitlist: cell('yes', 'waitlist'), walkin: cell('yes', 'manual booking'), hours: cell('yes', 'hours / capacity'), profile: cell('yes', 'client profile'), contact: cell('yes', 'communications'), reminders: cell('yes', 'automations'), forms: cell('add-on', 'forms وابسته به plan'), crm: cell('yes', 'marketing / CRM'), loyalty: cell('yes', 'loyalty / retention'), deposit: cell('add-on', 'payment policy'), payments: cell('add-on', 'payments / processing'), plans: cell('yes', 'memberships / packages'), inventory: cell('add-on', 'retail'), payroll: cell('add-on', 'staff pay'), analytics: cell('yes', 'analytics'), mobile: cell('yes', 'mobile'), brandedApp: cell('add-on', 'branded app'), marketplace: cell('yes', 'Mindbody network'), multiLocation: cell('yes', 'multi-location'), qr: cell('yes', 'booking link'), api: cell('add-on', 'integrations / API'),
+            },
+          },
+          {
+            id: 'zenoti', name: 'Zenoti', faName: 'Zenoti', short: 'ZN', tone: 'ink', description: 'Enterprise suite', publicPrice: false,
+            tags: ['team', 'multi'],
+            fit: { iran: 18, solo: 38, team: 79, multi: 96 },
+            price: { amount: 'قیمت سفارشی', unit: 'demo / enterprise', detail: 'قیمت عمومی ماهانه ارائه نشده؛ مناسب ارزیابی سازمانی.', links: ['https://www.zenoti.com/pricing-zenoti'] },
+            cells: {
+              entry: cell('unknown', 'قیمت سفارشی / demo'), scaling: cell('yes', 'enterprise و location'), trial: cell('unknown', 'demo و ارزیابی سازمانی'), marketFee: cell('unknown', 'در منبع قیمت روشن نیست'), contract: cell('add-on', 'implementation / enterprise quote'), onlineBooking: cell('yes', 'booking'), calendar: cell('yes', 'calendar و resource'), dragDrop: cell('yes', 'reschedule'), approval: cell('yes', 'workflow / approval'), conflict: cell('yes', 'resource integrity'), waitlist: cell('yes', 'waitlist'), walkin: cell('yes', 'walk-in'), hours: cell('yes', 'hours / capacity'), profile: cell('yes', 'client history'), contact: cell('yes', 'communication suite'), reminders: cell('yes', 'automations'), forms: cell('yes', 'forms / intake'), crm: cell('yes', 'CRM / marketing'), loyalty: cell('yes', 'loyalty'), deposit: cell('yes', 'payments policy'), payments: cell('yes', 'payments / POS'), plans: cell('yes', 'memberships / packages'), inventory: cell('yes', 'inventory / retail'), payroll: cell('yes', 'payroll / commission'), analytics: cell('yes', 'enterprise analytics'), mobile: cell('yes', 'mobile'), brandedApp: cell('add-on', 'branded app'), marketplace: cell('unknown', 'marketplace در این مقایسه تأیید نشد'), multiLocation: cell('yes', 'multi-location enterprise'), qr: cell('yes', 'booking link'), api: cell('yes', 'integrations / API'),
+            },
+          },
+          {
+            id: 'mangomint', name: 'Mangomint', faName: 'Mangomint', short: 'MM', tone: 'coral', description: 'Modern salon ops', publicPrice: true,
+            tags: ['team', 'multi'],
+            fit: { iran: 20, solo: 60, team: 85, multi: 86 },
+            price: { amount: '$120 + $10', unit: '/ month / location + user', detail: 'update رسمی ۲۳ جولای ۲۰۲۶؛ effective از ۱ اوت. phone / payroll / marketing جدا.', links: ['https://www.mangomint.com/blog/pricing-update-2026/', 'https://www.mangomint.com/pricing/'] },
+            cells: {
+              entry: cell('yes', '$120 / location + $10 / user'), scaling: cell('yes', 'location + user'), trial: cell('unknown', 'شرایط trial را از فروش بپرسید'), marketFee: cell('no', 'marketplace شبکه‌ای ندارد'), contract: cell('add-on', 'add-onهای phone / payroll / marketing'), onlineBooking: cell('yes', 'booking'), calendar: cell('yes', 'calendar'), dragDrop: cell('yes', 'drag و reschedule'), approval: cell('add-on', 'workflow وابسته به plan'), conflict: cell('yes', 'staff / room / resource'), waitlist: cell('yes', 'waitlist'), walkin: cell('yes', 'walk-in'), hours: cell('yes', 'hours / availability'), profile: cell('yes', 'client profile'), contact: cell('yes', 'communications'), reminders: cell('yes', 'reminders'), forms: cell('add-on', 'forms / intake'), crm: cell('add-on', 'marketing add-on'), loyalty: cell('add-on', 'وابسته به add-on'), deposit: cell('add-on', 'deposit / policy'), payments: cell('add-on', 'payments / processing'), plans: cell('yes', 'packages / memberships'), inventory: cell('add-on', 'retail'), payroll: cell('add-on', 'payroll add-on'), analytics: cell('yes', 'analytics'), mobile: cell('yes', 'mobile'), brandedApp: cell('add-on', 'branded app / add-on'), marketplace: cell('no', 'marketplace network ندارد'), multiLocation: cell('yes', 'multi-location'), qr: cell('yes', 'booking link'), api: cell('yes', 'integrations / API'),
+            },
+          },
+          {
+            id: 'phorest', name: 'Phorest', faName: 'Phorest', short: 'PH', tone: 'mint', description: 'Loyalty + branded growth', publicPrice: false,
+            tags: ['team', 'multi'],
+            fit: { iran: 24, solo: 48, team: 73, multi: 85 },
+            price: { amount: 'قیمت سفارشی', unit: 'استعلام / demo', detail: 'جایگاه‌گذاری روی branded app، loyalty و marketing.', links: ['https://www.phorest.com/pricing/'] },
+            cells: {
+              entry: cell('unknown', 'قیمت سفارشی / استعلام'), scaling: cell('yes', 'location و team'), trial: cell('unknown', 'در منبع عمومی روشن نیست'), marketFee: cell('no', 'marketplace شبکه‌ای در scope اصلی نیست'), contract: cell('add-on', 'demo و quote'), onlineBooking: cell('yes', 'online booking'), calendar: cell('yes', 'calendar'), dragDrop: cell('yes', 'reschedule'), approval: cell('unknown', 'در منبع عمومی روشن نیست'), conflict: cell('yes', 'staff / resource'), waitlist: cell('yes', 'waitlist'), walkin: cell('yes', 'walk-in'), hours: cell('yes', 'hours / capacity'), profile: cell('yes', 'client history'), contact: cell('yes', 'communications'), reminders: cell('yes', 'reminders'), forms: cell('yes', 'forms / consultation'), crm: cell('yes', 'marketing / CRM'), loyalty: cell('yes', 'loyalty'), deposit: cell('yes', 'deposit / policy'), payments: cell('add-on', 'payments وابسته به region'), plans: cell('yes', 'packages / memberships'), inventory: cell('yes', 'retail / inventory'), payroll: cell('add-on', 'staff pay'), analytics: cell('yes', 'analytics'), mobile: cell('yes', 'mobile'), brandedApp: cell('yes', 'branded app positioning'), marketplace: cell('no', 'marketplace network ندارد'), multiLocation: cell('yes', 'multi-location'), qr: cell('yes', 'booking link'), api: cell('add-on', 'integration وابسته به plan'),
+            },
+          },
+        ];
+
+        const scoreModes = {
+          iran: { label: 'سالن ایرانی', note: 'در سناریوی سالن ایرانی، مزیت آرا از بومی‌سازی و کد فعلی زمان‌بندی می‌آید؛ این عدد اندازه‌گیری بازار نیست.' },
+          solo: { label: 'سالن تک‌نفره', note: 'در سالن تک‌نفره، سادگی ورود، booking مستقیم و قیمت شروع وزن بیشتری دارند؛ fee و region را جداگانه بسنجید.' },
+          team: { label: 'رشد تیم', note: 'در رشد تیم، منابع، تداخل زمان، تعداد کاربر و عمق عملیات روزانه مهم‌تر از شبکه marketplace است.' },
+          multi: { label: 'چندشعبه‌ای', note: 'در چندشعبه‌ای، مدیریت location، rollout، گزارش‌گیری و قرارداد سازمانی تعیین‌کننده‌اند؛ demo الزامی است.' },
+        };
+
+        const sources = [
+          { name: 'Booksy', description: 'قیمت و Boost', links: [{ label: 'pricing', url: 'https://biz.booksy.com/pricing' }] },
+          { name: 'Fresha', description: 'قیمت solo و team', links: [{ label: 'pricing', url: 'https://www.fresha.com/pricing' }] },
+          { name: 'Vagaro', description: 'پلن‌ها و premium features', links: [{ label: 'plans', url: 'https://support.vagaro.com/hc/en-us/articles/22781768988187-Vagaro-Plans-Pricing-and-Premium-Features' }] },
+          { name: 'Square Appointments', description: 'Free / Plus / Premium', links: [{ label: 'pricing', url: 'https://squareup.com/us/en/appointments/pricing' }] },
+          { name: 'GlossGenius', description: 'پلن، trial و processing', links: [{ label: 'plans', url: 'https://support.glossgenius.com/en/articles/189-glossgenius-pricing-and-subscription-plans' }] },
+          { name: 'Boulevard', description: 'قیمت شروع و scheduling', links: [{ label: 'price context', url: 'https://www.joinblvd.com/blog/best-salon-software' }, { label: 'scheduling', url: 'https://www.joinblvd.com/features/scheduling' }] },
+          { name: 'Mindbody', description: 'قیمت کسب‌وکار', links: [{ label: 'pricing', url: 'https://www.mindbodyonline.com/business/pricing' }] },
+          { name: 'Zenoti', description: 'صفحه قیمت enterprise', links: [{ label: 'pricing', url: 'https://www.zenoti.com/pricing-zenoti' }] },
+          { name: 'Mangomint', description: 'به‌روزرسانی ۲۰۲۶ و قیمت', links: [{ label: 'update', url: 'https://www.mangomint.com/blog/pricing-update-2026/' }, { label: 'pricing', url: 'https://www.mangomint.com/pricing/' }] },
+          { name: 'Phorest', description: 'قیمت و استعلام', links: [{ label: 'pricing', url: 'https://www.phorest.com/pricing/' }] },
+          { name: 'Ara / اسکوپ محلی', description: 'README، backend services و مسیرهای owner web در همین repository', links: [], local: true },
+        ];
+
+        const refs = {
+          table: document.getElementById('comparisonTable'),
+          cols: document.getElementById('matrixCols'),
+          head: document.getElementById('matrixHead'),
+          body: document.getElementById('matrixBody'),
+          empty: document.getElementById('matrixEmpty'),
+          count: document.getElementById('matrixCount'),
+          modeNote: document.getElementById('matrixModeNote'),
+          search: document.getElementById('platformSearch'),
+          publicOnly: document.getElementById('publicPricingOnly'),
+          compactOnly: document.getElementById('compactOnly'),
+          scoreChart: document.getElementById('scoreChart'),
+          scoreNote: document.getElementById('scoreNote'),
+          ledger: document.getElementById('pricingLedger'),
+          sourceGrid: document.getElementById('sourceGrid'),
+        };
+
+        const state = { query: '', persona: 'all', publicOnly: false, compactOnly: true, scoreMode: 'iran' };
+
+        const iconArrow = '<span aria-hidden="true">↗</span>';
+
+        function filteredPlatforms() {
+          const query = normalize(state.query);
+          return platforms.filter((platform) => {
+            const matchesQuery = !query || normalize([platform.name, platform.faName, platform.description, platform.tags.join(' ')].join(' ')).includes(query);
+            const matchesPersona = state.persona === 'all' || platform.tags.includes(state.persona);
+            const matchesPrice = !state.publicOnly || platform.publicPrice;
+            return matchesQuery && matchesPersona && matchesPrice;
+          });
+        }
+
+        function getCell(platform, row) {
+          return platform.cells[row.key] || cell('unknown', 'بررسی نشده');
+        }
+
+        function renderMatrix() {
+          const visiblePlatforms = filteredPlatforms();
+          const visibleRows = rows.filter((row) => !state.compactOnly || row.compact);
+          refs.count.textContent = `${toFa(visiblePlatforms.length)} از ${toFa(platforms.length)} پلتفرم · ${toFa(visibleRows.length)} قابلیت`;
+          refs.modeNote.textContent = state.compactOnly
+            ? 'نمای فشرده؛ برای جزئیات بیشتر، کل ماتریس را باز کنید.'
+            : 'نمای کامل؛ ردیف‌های کم‌اهمیت‌تر نیز نمایش داده می‌شوند.';
+
+          if (!visiblePlatforms.length) {
+            refs.table.hidden = true;
+            refs.empty.hidden = false;
+            return;
+          }
+
+          refs.table.hidden = false;
+          refs.empty.hidden = true;
+          refs.cols.innerHTML = '<col class="feature-col">' + visiblePlatforms.map(() => '<col class="platform-col">').join('');
+          refs.head.innerHTML = `<tr><th scope="col" class="sticky-col"><span class="feature-head"><strong>قابلیت / معیار</strong><small>${toFa(visibleRows.length)} ردیف · title برای جزئیات هر سلول</small></span></th>${visiblePlatforms.map((platform) => `<th scope="col"><span class="platform-head"><span class="platform-badge ${escapeHtml(platform.tone)}">${escapeHtml(platform.short)}</span><strong>${escapeHtml(platform.faName)}</strong><small dir="ltr">${escapeHtml(platform.name)} · ${escapeHtml(platform.description)}</small></span></th>`).join('')}</tr>`;
+
+          let currentGroup = '';
+          let html = '';
+          visibleRows.forEach((row) => {
+            if (row.group !== currentGroup) {
+              currentGroup = row.group;
+              html += `<tr class="group-row"><th class="sticky-col" scope="rowgroup" colspan="${visiblePlatforms.length + 1}">${escapeHtml(row.group)}</th></tr>`;
+            }
+            html += `<tr><th scope="row" class="sticky-col feature-cell"><strong>${escapeHtml(row.label)}</strong><small>${escapeHtml(row.hint)}</small></th>`;
+            visiblePlatforms.forEach((platform) => {
+              const data = getCell(platform, row);
+              const meta = statusMeta[data.status] || statusMeta.unknown;
+              const title = `${meta.label} · ${data.text}${data.note ? ` · ${data.note}` : ''}`;
+              html += `<td class="matrix-cell status-${escapeHtml(data.status)} ${platform.id === 'ara' ? 'cell-ara' : ''}" title="${escapeHtml(title)}" aria-label="${escapeHtml(platform.faName)}، ${escapeHtml(row.label)}: ${escapeHtml(title)}"><span class="cell-wrap"><span class="cell-status" aria-hidden="true">${meta.mark}</span><span class="cell-copy">${escapeHtml(data.text)}</span></span></td>`;
+            });
+            html += '</tr>';
+          });
+          refs.body.innerHTML = html;
+        }
+
+        function renderScoreChart() {
+          const mode = scoreModes[state.scoreMode];
+          const ranked = [...platforms].sort((a, b) => b.fit[state.scoreMode] - a.fit[state.scoreMode]);
+          refs.scoreNote.textContent = mode.note;
+          refs.scoreChart.innerHTML = ranked.map((platform, index) => {
+            const score = platform.fit[state.scoreMode];
+            return `<div class="score-row" role="listitem" aria-label="${escapeHtml(platform.faName)}: ${score} از ۱۰۰"><span class="score-name">${index === 0 ? '۱.' : `${toFa(index + 1)}.`} ${escapeHtml(platform.faName)}<small dir="ltr">${escapeHtml(platform.name)}</small></span><span class="score-track" aria-hidden="true"><span class="score-fill" style="--score:${score}"></span></span><span class="score-value" dir="ltr">${score}</span></div>`;
+          }).join('');
+          document.querySelectorAll('[data-score-mode]').forEach((button) => {
+            button.setAttribute('aria-pressed', String(button.dataset.scoreMode === state.scoreMode));
+          });
+        }
+
+        function renderPricing() {
+          const competitors = platforms.filter((platform) => platform.id !== 'ara');
+          refs.ledger.innerHTML = `<div class="price-ledger-head"><span>پلتفرم</span><span>قیمت شروع</span><span>یادداشت قیمت / قرارداد</span><span>منبع</span></div>${competitors.map((platform) => `<article class="price-row"><div class="price-platform"><span class="platform-badge ${escapeHtml(platform.tone)}">${escapeHtml(platform.short)}</span><strong>${escapeHtml(platform.faName)}</strong></div><div class="price-main"><span class="price-amount" dir="ltr">${escapeHtml(platform.price.amount)}</span><span class="price-unit">${escapeHtml(platform.price.unit)}</span></div><p class="price-detail-compact">${escapeHtml(platform.price.detail)}</p><a class="price-link" href="${escapeHtml(platform.price.links[0] || '#methodology')}" ${platform.price.links.length ? 'target="_blank" rel="noreferrer"' : ''}>منبع ${iconArrow}</a></article>`).join('')}`;
+        }
+
+        function renderSources() {
+          refs.sourceGrid.innerHTML = sources.map((source, index) => `<article class="source-card"><strong>${toFa(index + 1)} · ${escapeHtml(source.name)}</strong><p>${escapeHtml(source.description)}</p>${source.local ? '<span class="source-local">کد محلی پروژه</span>' : `<div class="source-links">${source.links.map((link) => `<a class="source-link" href="${escapeHtml(link.url)}" target="_blank" rel="noreferrer">${escapeHtml(link.label)} ${iconArrow}</a>`).join('')}</div>`}</article>`).join('');
+        }
+
+        function updateFilterButtons() {
+          document.querySelectorAll('[data-persona]').forEach((button) => {
+            button.setAttribute('aria-pressed', String(button.dataset.persona === state.persona));
+          });
+        }
+
+        refs.search.addEventListener('input', (event) => {
+          state.query = event.target.value;
+          renderMatrix();
+        });
+
+        refs.publicOnly.addEventListener('change', (event) => {
+          state.publicOnly = event.target.checked;
+          renderMatrix();
+        });
+
+        refs.compactOnly.addEventListener('change', (event) => {
+          state.compactOnly = event.target.checked;
+          renderMatrix();
+        });
+
+        document.querySelectorAll('[data-persona]').forEach((button) => {
+          button.addEventListener('click', () => {
+            state.persona = button.dataset.persona;
+            updateFilterButtons();
+            renderMatrix();
+          });
+        });
+
+        document.querySelectorAll('[data-score-mode]').forEach((button) => {
+          button.addEventListener('click', () => {
+            state.scoreMode = button.dataset.scoreMode;
+            renderScoreChart();
+          });
+        });
+
+        document.querySelectorAll('[data-scroll]').forEach((button) => {
+          button.addEventListener('click', () => {
+            const target = document.querySelector(button.dataset.scroll);
+            target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          });
+        });
+
+        renderMatrix();
+        renderScoreChart();
+        renderPricing();
+        renderSources();
+      })();
+    </script>
+  </body>
+</html>

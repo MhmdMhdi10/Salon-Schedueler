@@ -57,7 +57,7 @@ export class CalendarService {
       },
       include: {
         service: { select: { name: true } },
-        customer: { select: { fullName: true } },
+        customer: { select: { fullName: true, phone: true } },
         staffMember: { select: { fullName: true } },
       },
       orderBy: { startAt: 'asc' },
@@ -84,7 +84,7 @@ export class CalendarService {
       },
       include: {
         service: { select: { name: true } },
-        customer: { select: { fullName: true } },
+        customer: { select: { fullName: true, phone: true } },
         staffMember: { select: { fullName: true } },
       },
       orderBy: { startAt: 'asc' },
@@ -110,7 +110,7 @@ export class CalendarService {
       },
       include: {
         service: { select: { name: true } },
-        customer: { select: { fullName: true } },
+        customer: { select: { fullName: true, phone: true } },
         staffMember: { select: { fullName: true } },
       },
       orderBy: { createdAt: 'asc' },
@@ -123,5 +123,44 @@ export class CalendarService {
    */
   async getAppointmentById(id: string): Promise<Appointment | null> {
     return this.prisma.appointment.findUnique({ where: { id } });
+  }
+
+  /**
+   * Return the customer context a salon needs at the appointment desk.
+   *
+   * The optional staff scope keeps a Stylist from seeing another stylist's
+   * history. A customer only becomes visible when they have an appointment in
+   * this salon, which prevents cross-salon profile enumeration.
+   */
+  async getCustomerProfile(salonId: string, customerId: string, staffMemberId?: string) {
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: customerId },
+      select: {
+        id: true,
+        phone: true,
+        fullName: true,
+        noShowCount: true,
+        preferredStaff: { select: { id: true, fullName: true, role: true } },
+      },
+    });
+    if (!customer) return null;
+
+    const appointments = await this.prisma.appointment.findMany({
+      where: {
+        salonId,
+        customerId,
+        ...(staffMemberId ? { staffMemberId } : {}),
+      },
+      include: {
+        service: { select: { name: true } },
+        staffMember: { select: { fullName: true } },
+      },
+      orderBy: { startAt: 'desc' },
+      take: 30,
+    });
+
+    if (appointments.length === 0) return null;
+
+    return { customer, appointments };
   }
 }
