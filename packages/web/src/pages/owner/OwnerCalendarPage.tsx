@@ -30,12 +30,14 @@ import {
   adminApi,
   approvalPolicyApi,
   bookingPolicyApi,
+  clientBookApi,
   emergencyScheduleApi,
   holidaysApi,
   salonApi,
   staffAvailabilityApi,
   workingHoursApi,
   type SalonClosure,
+  type SalonClient,
   type SalonStaff,
   type OwnerWaitlistEntry,
   type WeeklyWorkingHour,
@@ -2622,6 +2624,10 @@ function ManualBookingDialog({
   const [startAt, setStartAt] = useState('');
   const [phone, setPhone] = useState('');
   const [fullName, setFullName] = useState('');
+  const [selectedClient, setSelectedClient] = useState<SalonClient | null>(null);
+  const [clientSearch, setClientSearch] = useState('');
+  const [clientResults, setClientResults] = useState<SalonClient[]>([]);
+  const [clientSearchLoading, setClientSearchLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [contactLoading, setContactLoading] = useState(false);
@@ -2645,6 +2651,10 @@ function ManualBookingDialog({
     setStartAt(toInputValue());
     setPhone(initialPhone ?? '');
     setFullName(initialFullName ?? '');
+    setSelectedClient(null);
+    setClientSearch('');
+    setClientResults([]);
+    setClientSearchLoading(false);
     setContactStatus('idle');
     setError('');
     setLoading(true);
@@ -2676,6 +2686,57 @@ function ManualBookingDialog({
     initialFullName,
     initialServiceId,
   ]);
+
+  // Booksy/Fresha-style client lookup: search only after two characters so the
+  // dialog stays fast on a phone and does not load the whole client book.
+  useEffect(() => {
+    const term = clientSearch.trim();
+    const searchTerm = normalizeContactDigits(term);
+    if (!open || selectedClient || term.length < 2) {
+      setClientResults([]);
+      setClientSearchLoading(false);
+      return;
+    }
+
+    let active = true;
+    const timer = window.setTimeout(() => {
+      setClientSearchLoading(true);
+      clientBookApi
+        .list(salonId, searchTerm)
+        .then((response) => {
+          if (active) setClientResults(response.clients.slice(0, 6));
+        })
+        .catch(() => {
+          if (active) setClientResults([]);
+        })
+        .finally(() => {
+          if (active) setClientSearchLoading(false);
+        });
+    }, 250);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [clientSearch, open, salonId, selectedClient]);
+
+  const handleClientSelect = (client: SalonClient) => {
+    setSelectedClient(client);
+    setClientSearch('');
+    setClientResults([]);
+    setPhone(normalizeIranianMobile(client.phone) ?? client.phone);
+    setFullName(client.fullName?.trim() ?? '');
+    setError('');
+  };
+
+  const handleNewClient = () => {
+    setSelectedClient(null);
+    setClientSearch('');
+    setClientResults([]);
+    setPhone('');
+    setFullName('');
+    setError('');
+  };
 
   const handleContactPick = async () => {
     const picker = getContactPicker();
@@ -2772,39 +2833,110 @@ function ManualBookingDialog({
           نوبت حضوری هم از همان ظرفیت آرایشگر و صندلی استفاده می‌کند؛ بنابراین رزرو هم‌زمان ثبت نمی‌شود.
         </DialogDescription>
         <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <strong className="block text-sm text-text">ثبت سریع مشتری</strong>
-              <p className="m-0 mt-1 text-xs text-muted">
-                نام و شماره را از مخاطبین تلفن وارد کن.
+              <strong className="block text-sm text-text">مشتری</strong>
+              <p className="m-0 mt-1 text-xs leading-5 text-muted">
+                مشتری قبلی را پیدا کن یا اطلاعات مشتری جدید را وارد کن.
               </p>
             </div>
-            <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto">
-              <Button
-                type="button"
-                variant="secondary"
-                size="md"
-                className="w-full"
-                startIcon={<ContactRound className="h-4 w-4" />}
-                onClick={() => void handleContactPick()}
-                loading={contactLoading}
-                disabled={saving || loading || contactLoading}
-              >
-                انتخاب از مخاطبین تلفن
+            {selectedClient && (
+              <Button type="button" variant="ghost" size="md" onClick={handleNewClient} disabled={saving}>
+                تغییر
               </Button>
-              <label className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border bg-bg px-3 py-2 text-xs font-bold text-muted transition-colors hover:bg-elevated hover:text-text focus-within:outline focus-within:outline-2 focus-within:outline-focus">
-                <input
-                  type="file"
-                  accept=".vcf,text/vcard"
-                  className="sr-only"
-                  onChange={(event) => void handleVCardImport(event)}
-                  disabled={saving || loading || contactLoading}
-                />
-                <ContactRound className="h-3.5 w-3.5" aria-hidden="true" />
-                انتخاب فایل مخاطب (.vcf)
-              </label>
-            </div>
+            )}
           </div>
+
+          {selectedClient ? (
+            <div className="mt-3 flex items-center gap-3 rounded-lg border border-primary/20 bg-bg p-3">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <User className="size-5" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <strong className="block truncate text-sm text-text">
+                  {selectedClient.fullName?.trim() || 'مشتری بدون نام'}
+                </strong>
+                <span className="mt-0.5 block text-xs text-muted" dir="ltr">
+                  {toPersianDigits(normalizeIranianMobile(selectedClient.phone) ?? selectedClient.phone)}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <>
+              <TextField
+                label="جست‌وجوی مشتری قبلی"
+                placeholder="نام یا شماره موبایل"
+                value={clientSearch}
+                onChange={(event) => setClientSearch(event.target.value)}
+                disabled={saving || loading}
+                autoComplete="off"
+              />
+              {clientSearch.trim().length >= 2 && (
+                <div className="mt-2">
+                  {clientSearchLoading && (
+                    <p className="m-0 px-1 text-xs text-muted" role="status">
+                      در حال جست‌وجو…
+                    </p>
+                  )}
+                  {!clientSearchLoading && clientResults.length > 0 && (
+                    <ul className="max-h-44 overflow-y-auto rounded-lg border border-border bg-bg">
+                      {clientResults.map((client) => (
+                        <li key={client.id} className="border-b border-border last:border-b-0">
+                          <button
+                            type="button"
+                            className="flex min-h-12 w-full items-center gap-3 px-3 py-2 text-start transition-colors hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+                            onClick={() => handleClientSelect(client)}
+                          >
+                            <User className="size-4 shrink-0 text-primary" aria-hidden="true" />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-bold text-text">
+                                {client.fullName?.trim() || 'مشتری بدون نام'}
+                              </span>
+                              <span className="block text-xs text-muted" dir="ltr">
+                                {toPersianDigits(normalizeIranianMobile(client.phone) ?? client.phone)}
+                              </span>
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {!clientSearchLoading && clientResults.length === 0 && (
+                    <p className="m-0 px-1 text-xs text-muted">
+                      مشتری پیدا نشد؛ اطلاعات را دستی وارد کن.
+                    </p>
+                  )}
+                </div>
+              )}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button type="button" variant="secondary" size="md" onClick={handleNewClient} disabled={saving || loading}>
+                  مشتری جدید / ورود دستی
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="md"
+                  startIcon={<ContactRound className="h-4 w-4" />}
+                  onClick={() => void handleContactPick()}
+                  loading={contactLoading}
+                  disabled={saving || loading || contactLoading}
+                >
+                  از مخاطبین تلفن
+                </Button>
+                <label className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border bg-bg px-3 py-2 text-xs font-bold text-muted transition-colors hover:bg-elevated hover:text-text focus-within:outline focus-within:outline-2 focus-within:outline-focus">
+                  <input
+                    type="file"
+                    accept=".vcf,text/vcard"
+                    className="sr-only"
+                    onChange={(event) => void handleVCardImport(event)}
+                    disabled={saving || loading || contactLoading}
+                  />
+                  <ContactRound className="h-3.5 w-3.5" aria-hidden="true" />
+                  فایل مخاطب
+                </label>
+              </div>
+            </>
+          )}
           {contactStatus === 'success' && (
             <p role="status" className="m-0 mt-2 text-xs text-success">
               اطلاعات مخاطب وارد شد؛ قبل از ثبت بررسی کن.
