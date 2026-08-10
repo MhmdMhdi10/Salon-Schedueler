@@ -4017,9 +4017,10 @@ export function OwnerCalendarPage() {
               startIcon={<CalendarClock className="h-4 w-4" />}
               onClick={() => openManualBooking(anchor)}
               aria-label="ثبت نوبت حضوری"
+              title="ثبت نوبت حضوری"
               className="owner-calendar-booking-action"
             >
-              ثبت نوبت حضوری
+              <span className="owner-calendar-booking-label">ثبت نوبت حضوری</span>
             </Button>
             <div className="owner-calendar-desktop-actions">
               <Button
