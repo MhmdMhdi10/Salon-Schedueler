@@ -122,6 +122,21 @@ export function OwnerConfigurationPage() {
   );
 }
 
+/**
+ * Team management for salon owners. It reuses the existing staff/service
+ * configuration APIs but keeps the first-run flow focused on people and the
+ * services they perform.
+ */
+export function OwnerTeamPage() {
+  return (
+    <OwnerRoleGuard allow={['Owner']}>
+      <section data-testid="owner-team-page">
+        <OwnerConfigPage view="team" />
+      </section>
+    </OwnerRoleGuard>
+  );
+}
+
 /** Subscription management landing — real surface (task 5.3; R3.8, R3.9, R2.1). */
 export { OwnerSubscriptionPage } from './SubscriptionPage';
 

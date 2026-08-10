@@ -133,6 +133,9 @@ const OwnerAnalyticsPage = lazy(() =>
 const OwnerConfigurationPage = lazy(() =>
   import('./pages/owner').then((m) => ({ default: m.OwnerConfigurationPage })),
 );
+const OwnerTeamPage = lazy(() =>
+  import('./pages/owner').then((m) => ({ default: m.OwnerTeamPage })),
+);
 const OwnerSubscriptionPage = lazy(() =>
   import('./pages/owner').then((m) => ({ default: m.OwnerSubscriptionPage })),
 );
@@ -268,6 +271,7 @@ export function App() {
                       <Route path="calendar/working-hours" element={<OwnerWorkingHoursPage />} />
                       <Route path="analytics" element={<OwnerAnalyticsPage />} />
                       <Route path="config" element={<OwnerConfigurationPage />} />
+                      <Route path="team" element={<OwnerTeamPage />} />
                       <Route path="subscription" element={<OwnerSubscriptionPage />} />
                       <Route path="transactions" element={<OwnerTransactionsPage />} />
                       <Route path="notifications" element={<OwnerNotificationsPage />} />

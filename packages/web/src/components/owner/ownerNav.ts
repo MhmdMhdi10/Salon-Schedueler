@@ -44,6 +44,13 @@ export const OWNER_NAV: readonly OwnerNavItem[] = [
     roles: ['Owner', 'Admin', 'Stylist'],
   },
   {
+    // Team management is Owner-only, like the configuration route it uses.
+    labelKey: 'owner.nav.team',
+    to: '/owner/team',
+    icon: Users,
+    roles: ['Owner'],
+  },
+  {
     labelKey: 'owner.nav.clients',
     to: '/owner/clients',
     icon: Users,

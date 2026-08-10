@@ -236,6 +236,7 @@ describe('ownerNavForRole (RBAC matrix)', () => {
     const nav = ownerNavForRole('Owner');
     expect(nav.map((i) => i.to)).toEqual([
       '/owner/calendar',
+      '/owner/team',
       '/owner/clients',
       '/owner/marketing',
       '/owner/analytics',

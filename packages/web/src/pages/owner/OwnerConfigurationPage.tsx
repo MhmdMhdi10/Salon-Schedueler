@@ -67,6 +67,8 @@ import {
 
 type LoadStatus = 'loading' | 'success' | 'error';
 
+type ConfigurationView = 'all' | 'team';
+
 interface ServiceItem {
   id: string;
   name: string;
@@ -1007,7 +1009,13 @@ function ConfigSkeleton() {
 
 // ─── Main Page Content ───────────────────────────────────────────────────────
 
-function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) {
+function OwnerConfigPageContent({
+  salonId: salonIdProp,
+  view = 'all',
+}: {
+  salonId?: string;
+  view?: ConfigurationView;
+}) {
   const { t } = useTranslation();
   const params = useParams<{ salonId?: string }>();
   const { success, error: toastError } = useToast();
@@ -1071,12 +1079,18 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
 
   return (
     <div data-testid="admin-configuration" className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <SeoHead title={t('seo.titles.adminConfiguration')} />
+      <SeoHead
+        title={view === 'team' ? t('owner.team.title') : t('seo.titles.adminConfiguration')}
+      />
 
       {/* Page header */}
       <header className="flex flex-col gap-1">
-        <h1 className="text-xl text-display text-text">{t('admin.configuration')}</h1>
-        <p className="max-w-[60ch] text-sm text-muted">{t('admin.config.subtitle')}</p>
+        <h1 className="text-xl text-display text-text">
+          {view === 'team' ? t('owner.team.title') : t('admin.configuration')}
+        </h1>
+        <p className="max-w-[60ch] text-sm text-muted">
+          {view === 'team' ? t('owner.team.subtitle') : t('admin.config.subtitle')}
+        </p>
       </header>
 
       {/* Loading skeleton */}
@@ -1096,6 +1110,20 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
       {/* Success: collapsible card sections */}
       {status === 'success' && (
         <div className="flex flex-col gap-4">
+          {view === 'team' && (
+            <div
+              data-testid="owner-team-intro"
+              className="flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/10 p-3"
+            >
+              <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-contrast">
+                <Users className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <p className="m-0 text-sm font-bold text-text">{t('owner.team.flowTitle')}</p>
+                <p className="mt-1 text-xs leading-6 text-muted">{t('owner.team.flowBody')}</p>
+              </div>
+            </div>
+          )}
           <StaffSection
             staff={staff}
             salonId={salonId}
@@ -1108,11 +1136,13 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
             requestDelete={setPendingDelete}
           />
 
+          {view !== 'team' && (
           <SmsSettingsSection
             salonId={salonId}
             settings={smsSettings}
             onChange={setSmsSettings}
           />
+          )}
 
           <ServicesSection
             services={services}
@@ -1162,6 +1192,7 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
             requestDelete={setPendingDelete}
           />
 
+          {view !== 'team' && (
           <ChairsSection
             chairs={chairs}
             onAdd={(label) => {
@@ -1201,6 +1232,7 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
             }}
             requestDelete={setPendingDelete}
           />
+          )}
 
         </div>
       )}
@@ -1262,8 +1294,14 @@ function OwnerConfigPageContent({ salonId: salonIdProp }: { salonId?: string }) 
  * Preserved test hooks: `admin-configuration`, `config-loading`, `config-error`,
  * `staff-list`, `chairs-list`, `services-list`.
  */
-export function OwnerConfigPage({ salonId }: { salonId?: string }) {
+export function OwnerConfigPage({
+  salonId,
+  view = 'all',
+}: {
+  salonId?: string;
+  view?: ConfigurationView;
+}) {
   // Toasts surface through the app-root <ToastProvider> in App.tsx — a nested
   // per-page provider would silo this page's toasts from the app host.
-  return <OwnerConfigPageContent salonId={salonId} />;
+  return <OwnerConfigPageContent salonId={salonId} view={view} />;
 }
