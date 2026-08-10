@@ -79,6 +79,8 @@
 
   .owner-calendar-day-grid {
     order: 1;
+    overflow: visible;
+    touch-action: pan-y;
   }
 
   .owner-calendar-day-summary {
@@ -113,7 +115,8 @@
    above the floating tab bar. The secondary actions stay in a sheet. */
 @media (max-width: 63.9375rem) {
   .owner-calendar-page {
-    padding-block-end: 4.5rem;
+    padding-block-end: calc(7rem + env(safe-area-inset-bottom));
+    scroll-padding-block-end: calc(7rem + env(safe-area-inset-bottom));
   }
 
   .owner-calendar-actions {

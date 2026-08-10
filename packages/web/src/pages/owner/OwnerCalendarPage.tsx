@@ -537,6 +537,11 @@ function AppointmentBlock({
   const customer = appt.customerName;
   const { icon: statusIcon, label: statusLabel, ariaState } = statusIndicator(appt.status);
   const compact = compactView || (positioned && (height ?? 0) < 70);
+  const coarsePointer =
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(pointer: coarse)').matches;
+  const canDragAppointment = Boolean(onDragStart) && !coarsePointer;
   const canCancel = ['pending', 'held', 'confirmed', 'approved'].includes(appt.status ?? '');
   const canNoShow = appt.status === 'confirmed' && Boolean(onNoShow);
   const statusClass = isPending
@@ -565,20 +570,20 @@ function AppointmentBlock({
         colorClass,
         positioned ? 'absolute z-20' : '',
         onOpen && 'cursor-pointer',
-        onDragStart && 'cursor-grab active:cursor-grabbing',
+        canDragAppointment && 'cursor-grab active:cursor-grabbing',
       )}
       style={positionStyle}
       onClick={() => onOpen?.(appt)}
-      draggable={Boolean(onDragStart)}
-      onDragStart={(event) => onDragStart?.(event)}
-      onDragEnd={() => onDragEnd?.()}
+      draggable={canDragAppointment}
+      onDragStart={canDragAppointment ? onDragStart : undefined}
+      onDragEnd={canDragAppointment ? onDragEnd : undefined}
       role="article"
       aria-label={`${service} — ${customer ?? ''} — ${statusLabel}`}
       data-status={ariaState}
     >
       <span className="flex min-w-0 items-center gap-1.5">
         <Scissors className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
-        {onDragStart && (
+        {canDragAppointment && (
           <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted/60" aria-hidden="true" />
         )}
         <strong className="min-w-0 flex-1 truncate text-xs leading-tight">{service}</strong>
@@ -839,7 +844,7 @@ function DayView({
         className="owner-calendar-day-grid relative overflow-x-auto overflow-y-auto rounded-lg border border-border bg-surface"
         onKeyDown={handleGridKeyDown}
       >
-      <div className="relative min-w-[20rem]">
+      <div className="relative min-w-full sm:min-w-[20rem]">
         {/* Time rows */}
         {TIME_SLOTS.map((slot, idx) => {
           const timeStr = `${String(slot.hour).padStart(2, '0')}:${String(slot.minute).padStart(2, '0')}`;
