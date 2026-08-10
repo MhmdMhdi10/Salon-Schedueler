@@ -72,6 +72,8 @@ export function registrationRouter(services: Services): Router {
           salonName: input.salonName,
           ownerName: input.ownerName,
           phone: input.phone,
+          businessType: input.businessType,
+          specialties: input.specialties,
           timezone: input.timezone,
           brandAccent: input.brandAccent ?? null,
           services: input.services,

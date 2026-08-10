@@ -595,6 +595,50 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     }),
   );
 
+  // Client book: owners/admins can add a client, while stylists may read the
+  // same salon-scoped list so a client note is available at the appointment.
+  router.get(
+    '/salons/:id/clients',
+    requireRole('view_customer_notes', (req) => ({ salonId: req.params.id })),
+    asyncRoute(async (req, res) => {
+      if (!services.clientService) {
+        res.status(503).json({ code: 'CLIENT_BOOK_UNAVAILABLE' });
+        return;
+      }
+      const search = typeof req.query.search === 'string' ? req.query.search.trim() : undefined;
+      if (search && search.length > 80) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'search' });
+        return;
+      }
+      const clients = await services.clientService.list(req.params.id, search);
+      res.status(200).json({ clients });
+    }),
+  );
+
+  router.post(
+    '/salons/:id/clients',
+    requireRole('manage_appointments', (req) => ({ salonId: req.params.id })),
+    asyncRoute(async (req, res) => {
+      if (!services.clientService) {
+        res.status(503).json({ code: 'CLIENT_BOOK_UNAVAILABLE' });
+        return;
+      }
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const fullName = typeof body.fullName === 'string' ? body.fullName.trim() : '';
+      const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
+      if (fullName.length < 2 || fullName.length > 120) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'fullName' });
+        return;
+      }
+      if (!PHONE_RE.test(phone)) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'phone' });
+        return;
+      }
+      const client = await services.clientService.add(req.params.id, { fullName, phone });
+      res.status(201).json({ client });
+    }),
+  );
+
   // Role-based SMS audience preferences. The default is applied lazily when
   // the salon has never opened this page: stylist notices on, owner notices off.
   router.get(

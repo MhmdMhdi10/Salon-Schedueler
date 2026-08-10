@@ -303,7 +303,7 @@ describe('Owner panel — section routes mirror role-aware nav (R2.3)', () => {
   it('redirects a Stylist away from analytics to the calendar', async () => {
     renderOwnerApp('Stylist', '/owner/analytics');
 
-    // Stylist sees calendar only — analytics redirects to the calendar.
+    // Stylist cannot see analytics — it redirects to the calendar.
     expect(await screen.findByTestId('owner-calendar-page')).toBeInTheDocument();
     expect(screen.queryByTestId('owner-analytics-page')).not.toBeInTheDocument();
   });

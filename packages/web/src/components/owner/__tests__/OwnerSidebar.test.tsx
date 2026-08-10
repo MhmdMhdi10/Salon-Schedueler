@@ -68,9 +68,10 @@ describe('OwnerSidebar', () => {
   });
 
   describe('role filtering', () => {
-    it('Stylist sees only calendar, notifications, and personal QR', () => {
+    it('Stylist sees calendar, client book, notifications, and personal QR', () => {
       renderSidebar({ role: 'Stylist' });
       expect(screen.getByText('تقویم')).toBeInTheDocument();
+      expect(screen.getByText('مشتری‌ها')).toBeInTheDocument();
       expect(screen.getByText('اعلان‌ها')).toBeInTheDocument();
       expect(screen.getByText('بارکد من')).toBeInTheDocument();
       expect(screen.queryByText('آمار')).not.toBeInTheDocument();

@@ -167,31 +167,33 @@ function CollapsibleSection({
       aria-labelledby={`${id}-title`}
       className="scroll-mt-24 overflow-hidden"
     >
-      <button
-        type="button"
-        aria-expanded={expanded}
-        aria-controls={`${id}-content`}
-        onClick={() => setExpanded((v) => !v)}
-        className={cn(
-          'flex w-full items-center justify-between gap-3 p-4 sm:p-5',
-          'outline-none focus-visible:outline focus-visible:outline-2',
-          'focus-visible:outline-offset-[-2px] focus-visible:outline-focus',
-          'min-h-[44px] cursor-pointer rounded-lg',
-          'transition-colors duration-fast ease-standard hover:bg-elevated',
-        )}
-      >
-        <span className="flex min-w-0 items-center gap-3" id={`${id}-title`}>
-          <Icon className="h-5 w-5 shrink-0 text-muted" aria-hidden="true" />
-          <span className="min-w-0 break-words text-lg font-medium text-text">{title}</span>
-        </span>
-        <motion.span
-          animate={{ rotate: expanded ? 180 : 0 }}
-          transition={prefersReduced ? { duration: 0 } : { duration: 0.25, ease: [0.2, 0, 0, 1] }}
-          className="shrink-0 text-muted"
+      <h2 id={`${id}-title`} className="m-0">
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-controls={`${id}-content`}
+          onClick={() => setExpanded((v) => !v)}
+          className={cn(
+            'flex w-full items-center justify-between gap-3 p-4 sm:p-5',
+            'outline-none focus-visible:outline focus-visible:outline-2',
+            'focus-visible:outline-offset-[-2px] focus-visible:outline-focus',
+            'min-h-[44px] cursor-pointer rounded-lg',
+            'transition-colors duration-fast ease-standard hover:bg-elevated',
+          )}
         >
-          <ChevronDown className="h-5 w-5" aria-hidden="true" />
-        </motion.span>
-      </button>
+          <span className="flex min-w-0 items-center gap-3">
+            <Icon className="h-5 w-5 shrink-0 text-muted" aria-hidden="true" />
+            <span className="min-w-0 break-words text-lg font-medium text-text">{title}</span>
+          </span>
+          <motion.span
+            animate={{ rotate: expanded ? 180 : 0 }}
+            transition={prefersReduced ? { duration: 0 } : { duration: 0.25, ease: [0.2, 0, 0, 1] }}
+            className="shrink-0 text-muted"
+          >
+            <ChevronDown className="h-5 w-5" aria-hidden="true" />
+          </motion.span>
+        </button>
+      </h2>
 
       <AnimatePresence initial={false}>
         {expanded && (

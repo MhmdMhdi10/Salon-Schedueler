@@ -45,27 +45,29 @@ describe('OwnerBottomTabs', () => {
     expect(nav).toHaveAttribute('aria-label', 'ناوبری پنل');
   });
 
-  it('renders three tabs with Persian labels', () => {
+  it('renders daily-work tabs with Persian labels', () => {
     renderTabs();
     expect(screen.getByText('تقویم')).toBeInTheDocument();
-    expect(screen.getByText('آمار')).toBeInTheDocument();
+    expect(screen.getByText('مشتری‌ها')).toBeInTheDocument();
+    expect(screen.getByText('بازاریابی')).toBeInTheDocument();
+  });
+
+  it('keeps advanced tools in the overflow sheet', () => {
+    renderTabs();
+    fireEvent.click(screen.getByRole('button', { name: 'بیشتر' }));
+    expect(screen.getByText('QR و استند')).toBeInTheDocument();
     expect(screen.getByText('تنظیمات سالن')).toBeInTheDocument();
   });
 
-  it('uses the compact QR label in the tab bar', () => {
-    renderTabs();
-    expect(screen.getByText('QR')).toBeInTheDocument();
-  });
-
   it('sets aria-current="page" on the active tab based on route', () => {
-    renderTabs('/owner/analytics');
+    renderTabs('/owner/clients');
     const buttons = screen.getAllByRole('link');
     // Calendar tab (index 0) — not active
     expect(buttons[0]).not.toHaveAttribute('aria-current');
-    // Analytics tab (index 1) — active
+    // Clients tab (index 1) — active
     expect(buttons[1]).toHaveAttribute('aria-current', 'page');
-    // Config tab (index 3) — not active
-    expect(buttons[3]).not.toHaveAttribute('aria-current');
+    // Marketing tab (index 2) — not active
+    expect(buttons[2]).not.toHaveAttribute('aria-current');
   });
 
   it('highlights the calendar tab when on /owner/calendar', () => {
@@ -74,16 +76,15 @@ describe('OwnerBottomTabs', () => {
     expect(buttons[0]).toHaveAttribute('aria-current', 'page');
   });
 
-  it('highlights the config tab when on a config sub-route', () => {
+  it('marks the overflow button when on an advanced route', () => {
     renderTabs('/owner/config/services');
-    const buttons = screen.getAllByRole('link');
-    expect(buttons[3]).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'بیشتر' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('navigates to the correct route when a tab is clicked', () => {
     renderTabs('/owner/calendar');
     const buttons = screen.getAllByRole('link');
-    // Click analytics tab
+    // Click clients tab
     fireEvent.click(buttons[1]);
     expect(buttons[1]).toHaveAttribute('aria-current', 'page');
   });

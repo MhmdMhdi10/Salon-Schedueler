@@ -46,6 +46,10 @@ export const RegisterSalonSchema = z.object({
   ownerName: z.string().min(1).max(120),
   /** Owner login phone (Iranian mobile, normalized to Latin digits; required). */
   phone: z.string().regex(IRANIAN_MOBILE),
+  /** Business category selected at the start of onboarding. */
+  businessType: z.string().min(1).max(40).optional(),
+  /** Skills used to personalize the initial service suggestions. */
+  specialties: z.array(z.string().min(1).max(80)).max(12).default([]),
   /** IANA timezone; defaults to Tehran. */
   timezone: z.string().default('Asia/Tehran'),
   /** Optional storefront brand-accent key (skippable). */

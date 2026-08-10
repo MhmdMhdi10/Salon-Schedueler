@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useState } from 'react';
-import { CalendarDays, BarChart3, MoreHorizontal, QrCode, Settings } from 'lucide-react';
+import { CalendarDays, MoreHorizontal, Megaphone, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { OwnerRole } from '../../api/client';
 import { cn } from '../ui/cn';
@@ -23,8 +23,8 @@ interface TabDef {
 }
 
 /**
- * The four primary owner tabs shown in the mobile bottom bar.
- * Order: Calendar → Analytics → QR/Link → Settings.
+ * The primary owner tabs shown in the mobile bottom bar.
+ * Order: Calendar → Clients → Marketing. Advanced tools live in More.
  */
 const TABS: readonly TabDef[] = [
   {
@@ -35,27 +35,18 @@ const TABS: readonly TabDef[] = [
     roles: ['Owner', 'Admin', 'Stylist'],
   },
   {
-    key: 'analytics',
-    labelKey: 'owner.nav.analytics',
-    to: '/owner/analytics',
-    icon: BarChart3,
-    roles: ['Owner', 'Admin'],
+    key: 'clients',
+    labelKey: 'owner.nav.clients',
+    to: '/owner/clients',
+    icon: Users,
+    roles: ['Owner', 'Admin', 'Stylist'],
   },
   {
-    key: 'qr',
-    labelKey: 'owner.nav.qr',
-    mobileLabelKey: 'owner.nav.qrShort',
-    to: '/owner/qr',
-    icon: QrCode,
+    key: 'marketing',
+    labelKey: 'owner.nav.marketing',
+    to: '/owner/marketing',
+    icon: Megaphone,
     roles: ['Owner', 'Admin'],
-  },
-  {
-    key: 'config',
-    labelKey: 'owner.nav.configuration',
-    mobileLabelKey: 'owner.nav.configurationShort',
-    to: '/owner/config',
-    icon: Settings,
-    roles: ['Owner'],
   },
 ] as const;
 
@@ -73,7 +64,7 @@ export interface OwnerBottomTabsProps {
 /**
  * Mobile bottom tab bar for the owner dashboard (Req 8.5, 8.6, 10.6).
  *
- * Renders a fixed bottom nav with four primary tabs and a «بیشتر» overflow
+ * Renders a fixed bottom nav with three primary tabs and a «بیشتر» overflow
  * sheet for secondary destinations. Each item has a Lucide icon and Persian
  * label. An animated brand indicator slides between primary tabs using Framer
  * Motion `layoutId`; reduced-motion users get an instant indicator.

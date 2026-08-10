@@ -48,6 +48,7 @@ import { CancellationFlow } from './app/cancellation-flow.js';
 import { AppointmentManagementService } from './app/appointment-management.js';
 import { BookingAbuseGuard } from './security/booking-abuse-guard.js';
 import { PlatformAdminService } from './platform-admin/platform-admin.service.js';
+import { SalonClientService } from './customer/salon-client.service.js';
 
 // Provider ports + adapters.
 import type { SmsProvider } from './auth/sms-provider.interface.js';
@@ -255,6 +256,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     new PrismaWaitlistNotifier(smsProvider),
   );
   const customerService = new CustomerService(new PrismaCustomerRepository(prisma));
+  const clientService = new SalonClientService(prisma);
 
   // Analytics, catalog, registration, availability config.
   const analyticsService = new AnalyticsService(prisma);
@@ -347,6 +349,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     botService,
     waitlistService,
     customerService,
+    clientService,
     analyticsService,
     calendarService,
     serviceCatalog,

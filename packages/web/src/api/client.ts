@@ -267,6 +267,10 @@ export interface RegisterSalonInput {
   ownerName: string;
   /** Iranian mobile (Latin digits, `09xxxxxxxxx`) — the OTP login identity. */
   phone: string;
+  /** Business category selected at the start of onboarding. */
+  businessType?: string;
+  /** Skills selected during the first onboarding step. */
+  specialties?: string[];
   timezone?: string;
   /** Storefront brand-accent key (optional). */
   brandAccent?: string;
@@ -799,6 +803,31 @@ export const adminApi = {
       `/salons/${salonId}/chairs/${chairId}`,
       { method: 'PATCH', body: { active } },
     ),
+};
+
+// ─── Salon client book ─────────────────────────────────────────────────────
+
+/** A client row shown in the owner panel. */
+export interface SalonClient {
+  id: string;
+  fullName: string | null;
+  phone: string;
+  visits: number;
+  lastVisitAt: string | null;
+  noShowCount: number;
+  createdAt: string;
+}
+
+export const clientBookApi = {
+  list: (salonId: string, search?: string) =>
+    request<{ clients: SalonClient[] }>(
+      `/salons/${salonId}/clients${search ? `?search=${encodeURIComponent(search)}` : ''}`,
+    ),
+  add: (salonId: string, input: { fullName: string; phone: string }) =>
+    request<{ client: SalonClient }>(`/salons/${salonId}/clients`, {
+      method: 'POST',
+      body: input,
+    }),
 };
 
 // ─── Platform admin ─────────────────────────────────────────────────────────

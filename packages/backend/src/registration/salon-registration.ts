@@ -67,6 +67,8 @@ export class SalonRegistration {
     salonName: string;
     ownerName: string;
     phone: string;
+    businessType?: string;
+    specialties?: string[];
     timezone?: string;
     brandAccent?: string | null;
     services?: Array<{ name: string; durationMinutes: number; priceRial: number }>;
@@ -83,6 +85,8 @@ export class SalonRegistration {
         data: {
           name: input.salonName,
           qrToken,
+          ...(input.businessType ? { businessType: input.businessType } : {}),
+          ...(input.specialties?.length ? { specialties: input.specialties.slice(0, 12) } : {}),
           ...(input.timezone ? { timezone: input.timezone } : {}),
           ...(input.brandAccent ? { brandAccent: input.brandAccent } : {}),
         },

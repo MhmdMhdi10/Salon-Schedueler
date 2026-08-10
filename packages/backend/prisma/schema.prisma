@@ -83,6 +83,10 @@ model Salon {
   // bookings.
   active    Boolean  @default(true)
   timezone  String   @default("Asia/Tehran")
+  // Captured in first-step owner onboarding so the panel can personalize
+  // service suggestions without turning setup into a long questionnaire.
+  businessType String? @map("business_type")
+  specialties  String[] @default([])
   // Default booking-approval policy for the salon. false (default) => new
   // bookings are created 'pending' and need manual admin approval; true => they
   // are auto-confirmed on creation. A staff member can override this (below).
@@ -106,6 +110,7 @@ model Salon {
   qrScanEvents    QrScanEvent[]
   salonNotifications SalonNotification[]
   smsSettings     SalonSmsSettings?
+  salonClients    SalonClient[]
 
   @@map("salon")
 }
@@ -314,8 +319,24 @@ model Customer {
   waitlistEntries WaitlistEntry[]
   deviceTokens    DeviceToken[]
   botChats        BotChat[]
+  salonClients    SalonClient[]
 
   @@map("customer")
+}
+
+// A customer can visit more than one salon. This join preserves a salon's
+// client book even before the first appointment is entered.
+model SalonClient {
+  salonId    String   @map("salon_id") @db.Uuid
+  customerId String   @map("customer_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  salon    Salon    @relation(fields: [salonId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  @@id([salonId, customerId])
+  @@index([salonId, createdAt])
+  @@map("salon_client")
 }
 
 // ─── Customer Note ─────────────────────────────────────────────────────────────

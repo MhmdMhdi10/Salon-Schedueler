@@ -1,7 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Check, Plus, Scissors, ShieldCheck, Store, Trash2 } from 'lucide-react';
+import {
+  ArrowRight,
+  Check,
+  Eye,
+  Hand,
+  Plus,
+  Scissors,
+  ShieldCheck,
+  Sparkles,
+  Store,
+  Trash2,
+  type LucideIcon,
+} from 'lucide-react';
 import { normalizeDigits } from '@salon/shared';
 import {
   ApiError,
@@ -64,10 +76,11 @@ interface DraftService extends RegisterSalonServiceInput {
  * onboarding). A short, skippable questionnaire that provisions the salon and
  * lands the owner straight in their panel:
  *
- *   1. مشخصات  — salon name + owner name + phone (required)
- *   2. خدمات    — add the services the salon offers (skippable)
- *   3. راه‌اندازی — chairs + brand colour, then a summary + submit (skippable)
- *   4. ورود     — OTP sign-in with the phone just registered → owner panel
+ *   1. حوزه کاری — business type + specialties (required)
+ *   2. مشخصات    — salon name + owner name + phone (required)
+ *   3. خدمات     — add the services the salon offers (skippable)
+ *   4. راه‌اندازی — chairs + brand colour, then a summary + submit (skippable)
+ *   5. ورود      — OTP sign-in with the phone just registered → owner panel
  *
  * On submit it creates the salon, its Owner staff member, a free trial, and the
  * answered services/chairs/accent (so the panel is pre-filled), then sends an
@@ -91,6 +104,7 @@ function RegisterSalonContent() {
 
   const [step, setStep] = useState<Step>('category');
   const [category, setCategory] = useState('');
+  const [specialties, setSpecialties] = useState<string[]>([]);
 
   // Step 1 — identity (required).
   const [salonName, setSalonName] = useState('');
@@ -123,6 +137,10 @@ function RegisterSalonContent() {
 
   const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
   const normalizedPhone = useMemo(() => normalizePhone(phone), [phone]);
+  const selectedProfile = useMemo(
+    () => BUSINESS_PROFILES.find((profile) => profile.key === category),
+    [category],
+  );
   const codeValue = code.join('');
   const codeIsComplete = codeValue.length === OTP_LENGTH;
   const stepIndex = STEP_ORDER.indexOf(step);
@@ -225,6 +243,8 @@ function RegisterSalonContent() {
         salonName: salonName.trim(),
         ownerName: ownerName.trim(),
         phone: normalizedPhone,
+        businessType: category,
+        specialties,
         brandAccent: accentKey || undefined,
         services: services.map(({ name, durationMinutes, priceRial }) => ({
           name,
@@ -389,21 +409,75 @@ function RegisterSalonContent() {
         {step === 'category' ? (
           <section className="flex flex-1 flex-col pt-8">
             <div className="grid gap-3 sm:grid-cols-2">
-              {BUSINESS_CATEGORIES.map((item) => (
+              {BUSINESS_PROFILES.map((profile) => {
+                const Icon = profile.icon;
+                const selected = category === profile.key;
+                return (
                 <button
-                  key={item}
+                  key={profile.key}
                   type="button"
-                  onClick={() => setCategory(item)}
-                  aria-pressed={category === item}
+                  onClick={() => {
+                    setCategory(profile.key);
+                    setSpecialties([profile.specialties[0].key]);
+                  }}
+                  aria-pressed={selected}
+                  data-testid={`business-type-${profile.key}`}
                   className={cn(
-                    'flex min-h-14 items-center rounded-lg border-2 bg-elevated px-5 text-start font-medium text-text transition-colors duration-fast',
-                    category === item ? 'border-primary' : 'border-border',
+                    'flex min-h-[5.25rem] items-center gap-3 rounded-xl border-2 bg-elevated px-4 text-start text-text transition-colors duration-fast',
+                    selected ? 'border-primary bg-primary/5' : 'border-border',
                   )}
                 >
-                  {item}
+                  <span
+                    className={cn(
+                      'flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary',
+                      selected && 'bg-primary text-primary-contrast',
+                    )}
+                  >
+                    <Icon className="size-5" aria-hidden="true" />
+                  </span>
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span className="font-bold">{profile.label}</span>
+                    <span className="text-xs leading-5 text-muted">{profile.description}</span>
+                  </span>
                 </button>
-              ))}
+                );
+              })}
             </div>
+            {selectedProfile && (
+              <div className="flex flex-col gap-2 rounded-xl border border-border bg-bg p-4">
+                <p className="text-sm font-bold text-text">مهارت اصلی شما چیست؟</p>
+                <p className="text-xs leading-5 text-muted">
+                  چند مورد را انتخاب کنید تا خدمات پیشنهادی آرا از همین ابتدا برای شما آماده باشد.
+                </p>
+                <div className="flex flex-wrap gap-2" role="group" aria-label="مهارت‌های کاری">
+                  {selectedProfile.specialties.map((specialty) => {
+                    const selected = specialties.includes(specialty.key);
+                    return (
+                      <button
+                        key={specialty.key}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() =>
+                          setSpecialties((current) =>
+                            selected
+                              ? current.filter((key) => key !== specialty.key)
+                              : [...current, specialty.key],
+                          )
+                        }
+                        className={cn(
+                          'min-h-10 rounded-pill border px-3 text-sm transition-colors duration-fast',
+                          selected
+                            ? 'border-primary bg-primary/10 font-bold text-primary'
+                            : 'border-border bg-elevated text-text hover:border-primary',
+                        )}
+                      >
+                        {specialty.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <Button
               type="button"
               size="lg"
@@ -649,6 +723,14 @@ function RegisterSalonContent() {
                 {/* Compact summary so the owner can confirm before submitting. */}
                 <dl className="flex flex-col gap-2 rounded-md border border-border bg-bg p-3 text-sm">
                   <SummaryRow label={t('business.register.review.salon')} value={salonName} />
+                  <SummaryRow
+                    label="حوزه کاری"
+                    value={selectedProfile?.label ?? category}
+                  />
+                  <SummaryRow
+                    label="مهارت‌ها"
+                    value={specialties.length > 0 ? specialtyLabels(category, specialties) : '—'}
+                  />
                   <SummaryRow label={t('business.register.review.owner')} value={ownerName} />
                   <SummaryRow
                     label={t('business.register.review.phone')}
@@ -792,15 +874,105 @@ function RegisterSalonContent() {
   );
 }
 
-const BUSINESS_CATEGORIES = [
-  'آرایشگاه مردانه',
-  'سالن مو و زیبایی',
-  'سالن ناخن',
-  'اسپا و سلامت',
-  'ابرو و مژه',
-  'تتو و پیرسینگ',
-  'سایر',
+interface BusinessProfile {
+  key: string;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+  specialties: readonly { key: string; label: string }[];
+}
+
+const BUSINESS_PROFILES: readonly BusinessProfile[] = [
+  {
+    key: 'hair_salon',
+    label: 'سالن مو و زیبایی',
+    description: 'مو، رنگ، براشینگ و خدمات زیبایی',
+    icon: Scissors,
+    specialties: [
+      { key: 'haircut', label: 'کوتاهی مو' },
+      { key: 'color', label: 'رنگ و مش' },
+      { key: 'blowout', label: 'براشینگ' },
+      { key: 'bridal', label: 'شینیون و عروس' },
+    ],
+  },
+  {
+    key: 'barber',
+    label: 'آرایشگاه مردانه',
+    description: 'کوتاهی، اصلاح و استایل آقایان',
+    icon: Scissors,
+    specialties: [
+      { key: 'mens_haircut', label: 'کوتاهی مردانه' },
+      { key: 'beard', label: 'اصلاح صورت و ریش' },
+      { key: 'fade', label: 'فید و استایل' },
+    ],
+  },
+  {
+    key: 'nails',
+    label: 'ناخن',
+    description: 'مانیکور، پدیکور و طراحی ناخن',
+    icon: Hand,
+    specialties: [
+      { key: 'manicure', label: 'مانیکور' },
+      { key: 'pedicure', label: 'پدیکور' },
+      { key: 'nail_art', label: 'طراحی ناخن' },
+      { key: 'extensions', label: 'کاشت و ترمیم' },
+    ],
+  },
+  {
+    key: 'brows_lashes',
+    label: 'ابرو و مژه',
+    description: 'زیبایی چشم و فرم‌دهی ابرو',
+    icon: Eye,
+    specialties: [
+      { key: 'brows', label: 'اصلاح و قرینه‌سازی ابرو' },
+      { key: 'lash_lift', label: 'لیفت مژه' },
+      { key: 'lash_extension', label: 'اکستنشن مژه' },
+    ],
+  },
+  {
+    key: 'makeup',
+    label: 'میکاپ و گریم',
+    description: 'میکاپ روز، مجلسی و عروس',
+    icon: Sparkles,
+    specialties: [
+      { key: 'makeup', label: 'میکاپ' },
+      { key: 'bridal_makeup', label: 'میکاپ عروس' },
+      { key: 'skin_prep', label: 'پاکسازی و آماده‌سازی پوست' },
+    ],
+  },
+  {
+    key: 'spa',
+    label: 'اسپا و سلامت',
+    description: 'ماساژ، مراقبت پوست و آرامش',
+    icon: Sparkles,
+    specialties: [
+      { key: 'massage', label: 'ماساژ' },
+      { key: 'facial', label: 'فیشال و مراقبت پوست' },
+      { key: 'spa', label: 'اسپا' },
+    ],
+  },
+  {
+    key: 'tattoo',
+    label: 'تتو و پیرسینگ',
+    description: 'تتو، میکروپیگمنتیشن و پیرسینگ',
+    icon: Sparkles,
+    specialties: [
+      { key: 'tattoo', label: 'تتو' },
+      { key: 'microblading', label: 'میکروبلیدینگ' },
+      { key: 'piercing', label: 'پیرسینگ' },
+    ],
+  },
 ] as const;
+
+function specialtyLabels(category: string, keys: string[]): string {
+  const profile = BUSINESS_PROFILES.find((item) => item.key === category);
+  return (
+    profile?.specialties
+      .filter((item) => keys.includes(item.key))
+      .map((item) => item.label)
+      .join('، ') || '—'
+  );
+}
 
 /** Quick-add service presets (keys map to `business.register.services.presets.*`). */
 const SERVICE_PRESETS = ['haircut', 'color', 'highlights', 'blowout', 'makeup', 'nails'] as const;

@@ -118,6 +118,12 @@ const OwnerLayout = lazy(() =>
 const OwnerCalendarPage = lazy(() =>
   import('./pages/owner').then((m) => ({ default: m.OwnerCalendarPage })),
 );
+const OwnerClientsPage = lazy(() =>
+  import('./pages/owner').then((m) => ({ default: m.OwnerClientsPage })),
+);
+const OwnerMarketingPage = lazy(() =>
+  import('./pages/owner').then((m) => ({ default: m.OwnerMarketingPage })),
+);
 const OwnerWorkingHoursPage = lazy(() =>
   import('./pages/owner').then((m) => ({ default: m.OwnerWorkingHoursPage })),
 );
@@ -257,6 +263,8 @@ export function App() {
                     <Route path="/owner" element={<OwnerLayout />}>
                       <Route index element={<Navigate to="/owner/calendar" replace />} />
                       <Route path="calendar" element={<OwnerCalendarPage />} />
+                      <Route path="clients" element={<OwnerClientsPage />} />
+                      <Route path="marketing" element={<OwnerMarketingPage />} />
                       <Route path="calendar/working-hours" element={<OwnerWorkingHoursPage />} />
                       <Route path="analytics" element={<OwnerAnalyticsPage />} />
                       <Route path="config" element={<OwnerConfigurationPage />} />

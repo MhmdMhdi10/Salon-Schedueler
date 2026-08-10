@@ -166,7 +166,10 @@ describe('OwnerLayout — RBAC (R2.3)', () => {
     renderOwnerApp();
 
     await screen.findByTestId('owner-calendar-page');
-    expect(screen.getAllByRole('link', { name: 'تنظیمات سالن' }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole('link', { name: 'مشتری‌ها' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'بازاریابی' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'بیشتر' }));
+    expect(await screen.findByRole('link', { name: 'تنظیمات سالن' })).toBeInTheDocument();
   });
 
   it('limits a Stylist to the own-appointments view', async () => {

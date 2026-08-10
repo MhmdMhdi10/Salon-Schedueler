@@ -120,12 +120,12 @@ describe('OwnerShell — mobile (<lg)', () => {
     expect(tabBar).toBeInTheDocument();
   });
 
-  it('shows tabs for Calendar, Analytics, and Config', () => {
+  it('shows daily-work tabs for Calendar, Clients, and Marketing', () => {
     renderOwner({ role: 'Owner' });
     const tabBar = screen.getByTestId('owner-bottom-tabs');
     expect(within(tabBar).getByRole('link', { name: 'تقویم' })).toBeInTheDocument();
-    expect(within(tabBar).getByRole('link', { name: 'آمار' })).toBeInTheDocument();
-    expect(within(tabBar).getByRole('link', { name: 'تنظیمات سالن' })).toBeInTheDocument();
+    expect(within(tabBar).getByRole('link', { name: 'مشتری‌ها' })).toBeInTheDocument();
+    expect(within(tabBar).getByRole('link', { name: 'بازاریابی' })).toBeInTheDocument();
   });
 
   it('does NOT render the sidebar on mobile', () => {
@@ -236,6 +236,8 @@ describe('ownerNavForRole (RBAC matrix)', () => {
     const nav = ownerNavForRole('Owner');
     expect(nav.map((i) => i.to)).toEqual([
       '/owner/calendar',
+      '/owner/clients',
+      '/owner/marketing',
       '/owner/analytics',
       '/owner/qr',
       '/owner/config',
@@ -253,10 +255,11 @@ describe('ownerNavForRole (RBAC matrix)', () => {
     expect(paths).not.toContain('/owner/config');
   });
 
-  it('limits Stylist to calendar, notifications, and their personal QR', () => {
+  it('limits Stylist to calendar, client book, notifications, and personal QR', () => {
     const nav = ownerNavForRole('Stylist');
     expect(nav.map((i) => i.to)).toEqual([
       '/owner/calendar',
+      '/owner/clients',
       '/owner/notifications',
       '/owner/my-qr',
     ]);

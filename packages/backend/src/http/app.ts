@@ -9,6 +9,7 @@ import type { BotChannel } from '../notifications/bot-channel.js';
 import type { BotService } from '../bots/index.js';
 import type { WaitlistService } from '../waitlist/waitlist.service.js';
 import type { CustomerService } from '../customer/customer.service.js';
+import type { SalonClientService } from '../customer/salon-client.service.js';
 import type { AnalyticsService, CalendarService } from '../analytics/index.js';
 import type { ServiceCatalog } from '../catalog/service-catalog.js';
 import type {
@@ -66,6 +67,8 @@ export interface Services {
   botService: BotService;
   waitlistService: WaitlistService;
   customerService: CustomerService;
+  /** Salon-scoped client book used by the owner panel. */
+  clientService?: SalonClientService;
   analyticsService: AnalyticsService;
   calendarService: CalendarService;
   serviceCatalog: ServiceCatalog;

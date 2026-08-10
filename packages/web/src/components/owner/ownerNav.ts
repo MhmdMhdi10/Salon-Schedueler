@@ -7,6 +7,8 @@ import {
   QrCode,
   Receipt,
   Share2,
+  Users,
+  Megaphone,
   type LucideIcon,
 } from 'lucide-react';
 import type { OwnerRole } from '../../api/client';
@@ -31,8 +33,8 @@ export interface OwnerNavItem {
  * mobile).
  *
  * Role rules mirror the route guards in `pages/owner/index.tsx`: Owner sees
- * everything; Admin everything except configuration; Stylist only their
- * calendar, notifications, and personal QR.
+ * everything; Admin everything except configuration; Stylist sees their
+ * calendar, client book, notifications, and personal QR.
  */
 export const OWNER_NAV: readonly OwnerNavItem[] = [
   {
@@ -40,6 +42,18 @@ export const OWNER_NAV: readonly OwnerNavItem[] = [
     to: '/owner/calendar',
     icon: Calendar,
     roles: ['Owner', 'Admin', 'Stylist'],
+  },
+  {
+    labelKey: 'owner.nav.clients',
+    to: '/owner/clients',
+    icon: Users,
+    roles: ['Owner', 'Admin', 'Stylist'],
+  },
+  {
+    labelKey: 'owner.nav.marketing',
+    to: '/owner/marketing',
+    icon: Megaphone,
+    roles: ['Owner', 'Admin'],
   },
   {
     labelKey: 'owner.nav.analytics',

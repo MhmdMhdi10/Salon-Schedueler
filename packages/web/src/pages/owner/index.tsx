@@ -3,6 +3,8 @@ import { OwnerConfigPage } from './OwnerConfigurationPage';
 import { OwnerAnalyticsPageContent } from './OwnerAnalyticsPage';
 import { OwnerCalendarPage as OwnerCalendarPageImpl } from './OwnerCalendarPage';
 import { MyQrPage } from './MyQrPage';
+import { OwnerClientsPage as OwnerClientsPageImpl } from './OwnerClientsPage';
+import { OwnerMarketingPage as OwnerMarketingPageImpl } from './OwnerMarketingPage';
 import type { OwnerRole } from '../../api/client';
 
 export { OwnerWorkingHoursPage } from './OwnerWorkingHoursPage';
@@ -22,8 +24,9 @@ export function useOwnerContext(): OwnerOutletContext {
  * Route-level RBAC guard (task 5.2; R2.1, R2.3–R2.7).
  *
  * The {@link OwnerShell} navigation only *shows* the destinations a role may
- * reach (Owner = everything; Admin = no configuration; Stylist = calendar
- * only). This guard makes the **routes themselves** consistent with that nav:
+ * reach (Owner = everything; Admin = no configuration; Stylist = calendar,
+ * client book, notifications, and personal QR). This guard makes the
+ * **routes themselves** consistent with that nav:
  * a principal who deep-links or otherwise lands on a section their role can't
  * see is redirected back to the always-available calendar rather than rendering
  * a surface they shouldn't manage.
@@ -58,6 +61,24 @@ function OwnerRoleGuard({
  */
 export function OwnerCalendarPage() {
   return <OwnerCalendarPageImpl />;
+}
+
+/** Salon-scoped client book — readable by every staff member. */
+export function OwnerClientsPage() {
+  return (
+    <OwnerRoleGuard allow={['Owner', 'Admin', 'Stylist']}>
+      <OwnerClientsPageImpl />
+    </OwnerRoleGuard>
+  );
+}
+
+/** Lightweight marketing/share surface for owners and admins. */
+export function OwnerMarketingPage() {
+  return (
+    <OwnerRoleGuard allow={['Owner', 'Admin']}>
+      <OwnerMarketingPageImpl />
+    </OwnerRoleGuard>
+  );
 }
 
 /**
