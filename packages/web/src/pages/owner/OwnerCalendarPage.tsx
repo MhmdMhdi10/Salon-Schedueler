@@ -74,6 +74,18 @@ import './owner-calendar.css';
 type CalendarView = 'day' | 'week' | 'month' | 'list';
 type LoadStatus = 'loading' | 'success' | 'error';
 
+/** Booksy-style mobile default: show today's actionable schedule first. */
+function initialCalendarView(): CalendarView {
+  if (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(max-width: 47.9375rem)').matches
+  ) {
+    return 'day';
+  }
+  return 'week';
+}
+
 interface Appointment {
   id: string;
   startAt?: string;
@@ -1537,6 +1549,7 @@ function CalendarFilters({
   onStatusChange: (value: CalendarStatusFilter) => void;
   onClear: () => void;
 }) {
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const normalizedQuery = normalizeContactDigits(query.trim()).toLocaleLowerCase();
   const visibleCount = appointments.filter((appointment) => {
     if (staffId !== 'all' && appointment.staffMemberId !== staffId) return false;
@@ -1563,12 +1576,15 @@ function CalendarFilters({
     <section
       aria-label="فیلتر نوبت‌ها"
       data-testid="owner-calendar-filters"
-      className="rounded-xl border border-border bg-surface p-3 shadow-1"
+      className="owner-calendar-filters rounded-xl border border-border bg-surface p-3 shadow-1"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <SlidersHorizontal className="h-4 w-4 text-primary" aria-hidden="true" />
-          <h2 className="m-0 text-sm font-bold text-text">پیدا کردن نوبت</h2>
+          <h2 className="m-0 text-sm font-bold text-text">
+            <span className="hidden sm:inline">پیدا کردن نوبت</span>
+            <span className="sm:hidden">فیلتر نوبت‌ها</span>
+          </h2>
           {activeCount > 0 && (
             <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
               <Num value={String(activeCount)} /> فیلتر
@@ -1580,8 +1596,23 @@ function CalendarFilters({
             پاک کردن فیلترها
           </Button>
         )}
+        <button
+          type="button"
+          className="min-h-10 rounded-lg px-2 text-xs font-bold text-primary sm:hidden"
+          aria-controls="owner-calendar-filter-fields"
+          aria-expanded={filtersOpen}
+          onClick={() => setFiltersOpen((open) => !open)}
+        >
+          {filtersOpen ? 'بستن' : 'نمایش'}
+        </button>
       </div>
-      <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1.5fr)_minmax(10rem,1fr)_minmax(9rem,1fr)]">
+      <div
+        id="owner-calendar-filter-fields"
+        className={cn(
+          'mt-3 grid gap-2 sm:grid-cols-[minmax(0,1.5fr)_minmax(10rem,1fr)_minmax(9rem,1fr)]',
+          !filtersOpen && 'hidden sm:grid',
+        )}
+      >
         <TextField
           label="جست‌وجوی مشتری، شماره یا خدمت"
           labelHidden
@@ -2438,7 +2469,7 @@ function ViewToggle({
     <div
       role="tablist"
       aria-label={t('owner.calendar.viewToggle', { defaultValue: 'تغییر نما' })}
-      className="grid w-full grid-cols-4 rounded-xl border border-border bg-bg p-1 sm:inline-flex sm:w-auto sm:rounded-lg"
+      className="grid w-full grid-cols-2 rounded-xl border border-border bg-bg p-1 sm:inline-flex sm:w-auto sm:rounded-lg"
     >
       {tabs.map((tab) => (
         <button
@@ -2448,6 +2479,7 @@ function ViewToggle({
           aria-keyshortcuts={tab.shortcut}
           className={cn(
             'relative min-h-10 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors duration-fast ease-standard sm:min-h-0 sm:rounded-md sm:px-4 sm:text-sm',
+            (tab.key === 'month' || tab.key === 'list') && 'hidden sm:inline-flex',
             'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
             view === tab.key
               ? 'bg-primary text-primary-contrast shadow-1'
@@ -2468,10 +2500,12 @@ function DateNav({
   view,
   anchor,
   onNavigate,
+  onManage,
 }: {
   view: CalendarView;
   anchor: Date;
   onNavigate: (dir: -1 | 0 | 1) => void;
+  onManage: () => void;
 }) {
   const { t } = useTranslation();
   const jalali = jalaliDayDisplay(anchor);
@@ -2538,6 +2572,16 @@ function DateNav({
 
       <Button variant="ghost" size="md" onClick={() => onNavigate(0)} className="ms-1">
         {t('owner.calendar.today', { defaultValue: 'امروز' })}
+      </Button>
+
+      <Button
+        variant="ghost"
+        size="md"
+        aria-label="مدیریت روز"
+        onClick={onManage}
+        className="owner-calendar-manage-inline sm:hidden"
+      >
+        <Settings2 className="h-4 w-4" aria-hidden="true" />
       </Button>
     </nav>
   );
@@ -3196,7 +3240,7 @@ function OwnerWaitlistCard({
     <section
       data-testid="owner-waitlist"
       aria-label="صف انتظار"
-      className="rounded-2xl border border-warning/30 bg-warning/5 p-3 shadow-1 sm:p-4"
+      className="owner-calendar-approval rounded-2xl border border-warning/30 bg-warning/5 p-3 shadow-1 sm:p-4"
     >
       <header className="flex items-start gap-2">
         <ListChecks className="mt-0.5 h-5 w-5 shrink-0 text-warning" aria-hidden="true" />
@@ -3492,7 +3536,7 @@ export function OwnerCalendarPage() {
   const salonId = useSalonId();
   const navigate = useNavigate();
 
-  const [view, setView] = useState<CalendarView>('week');
+  const [view, setView] = useState<CalendarView>(() => initialCalendarView());
   const [anchor, setAnchor] = useState<Date>(() => new Date());
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [approvalReloadToken, setApprovalReloadToken] = useState(0);
@@ -3947,7 +3991,7 @@ export function OwnerCalendarPage() {
         <h1 className="text-xl text-display text-text">
           {t('owner.calendar.title', { defaultValue: 'تقویم' })}
         </h1>
-        <p className="text-sm text-muted">
+        <p className="hidden text-sm text-muted sm:block">
           {t('owner.calendar.subtitle', { defaultValue: 'مدیریت نوبت‌ها و برنامه‌ریزی روزانه' })}
         </p>
       </header>
@@ -3959,7 +4003,12 @@ export function OwnerCalendarPage() {
         </div>
         <div className="owner-calendar-nav-actions flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
           <div className="owner-calendar-date-nav">
-            <DateNav view={view} anchor={anchor} onNavigate={handleNavigate} />
+            <DateNav
+              view={view}
+              anchor={anchor}
+              onNavigate={handleNavigate}
+              onManage={() => setManageActionsOpen(true)}
+            />
           </div>
           <div className="owner-calendar-actions">
             <Button
@@ -4016,7 +4065,7 @@ export function OwnerCalendarPage() {
         </div>
       </div>
 
-      <p className="owner-calendar-hint -mt-3 text-xs text-muted">
+      <p className="owner-calendar-hint -mt-3 hidden text-xs text-muted sm:block">
         روی هر روز یا ساعت بزن تا همان‌جا تعطیلی کامل یا محدودیت ساعتی ثبت کنی.
       </p>
 

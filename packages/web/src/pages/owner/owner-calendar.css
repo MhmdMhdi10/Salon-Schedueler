@@ -19,6 +19,10 @@
   display: none;
 }
 
+.owner-calendar-manage-inline {
+  display: none;
+}
+
 @media (max-width: 47.9375rem) {
   .owner-calendar-page {
     gap: 0.75rem;
@@ -33,6 +37,7 @@
   .owner-calendar-header,
   .owner-calendar-view-toggle,
   .owner-calendar-date-nav,
+  .owner-calendar-filters,
   .owner-calendar-hint,
   .owner-calendar-content,
   .owner-calendar-actions,
@@ -45,17 +50,16 @@
     order: 1;
   }
 
-  .owner-calendar-view-toggle {
+  .owner-calendar-date-nav {
     order: 2;
   }
 
-  .owner-calendar-date-nav {
+  .owner-calendar-view-toggle {
     order: 3;
   }
 
-  .owner-calendar-hint {
+  .owner-calendar-filters {
     order: 4;
-    margin-block-start: -0.25rem;
   }
 
   .owner-calendar-content {
@@ -89,7 +93,7 @@
     bottom: calc(6.25rem + env(safe-area-inset-bottom));
     z-index: var(--z-nav);
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     inline-size: auto;
     max-inline-size: 30rem;
     margin-inline: auto;
@@ -108,15 +112,16 @@
     display: none;
   }
 
-  .owner-calendar-booking-action,
-  .owner-calendar-manage-trigger {
+  .owner-calendar-booking-action {
     display: inline-flex;
     min-block-size: 3rem;
     min-inline-size: 0;
     width: 100%;
   }
 
-  .owner-calendar-manage-trigger {
-    justify-content: center;
+  .owner-calendar-manage-inline {
+    display: inline-flex;
+    width: auto;
+    min-block-size: 2.5rem;
   }
 }
