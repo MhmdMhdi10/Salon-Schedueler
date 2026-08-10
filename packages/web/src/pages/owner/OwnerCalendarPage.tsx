@@ -10,6 +10,10 @@ import {
   Coffee,
   ContactRound,
   ChevronLeft,
+  ListChecks,
+  MessageCircle,
+  Phone,
+  SlidersHorizontal,
   ChevronRight,
   Clock,
   Hourglass,
@@ -33,6 +37,7 @@ import {
   workingHoursApi,
   type SalonClosure,
   type SalonStaff,
+  type OwnerWaitlistEntry,
   type WeeklyWorkingHour,
 } from '../../api/client';
 import { AppointmentDetailsSheet, MoveAppointmentDialog, type CalendarAppointmentLike } from './OwnerAppointmentPanels';
@@ -205,6 +210,27 @@ function getContactPicker(): ContactPicker | null {
   if (!window.isSecureContext) return null;
   const candidate = (navigator as Navigator & { contacts?: ContactPicker }).contacts;
   return candidate && typeof candidate.select === 'function' ? candidate : null;
+}
+
+/** Read common FN/TEL fields from a vCard exported by a phone contact app. */
+function parseVCard(text: string): { name?: string; phones: string[] } {
+  const lines = text.replace(/\r?\n[ \t]/g, '').split(/\r?\n/);
+  let name: string | undefined;
+  const phones: string[] = [];
+  const decode = (value: string) =>
+    value
+      .replace(/\\n/gi, '\n')
+      .replace(/\\,/g, ',')
+      .replace(/\\;/g, ';')
+      .trim();
+
+  for (const line of lines) {
+    const nameMatch = /^(?:item\d+\.)?FN(?:;[^:]*)?:(.*)$/i.exec(line);
+    if (nameMatch && !name) name = decode(nameMatch[1]);
+    const phoneMatch = /^(?:item\d+\.)?TEL(?:;[^:]*)?:(.*)$/i.exec(line);
+    if (phoneMatch) phones.push(decode(phoneMatch[1]));
+  }
+  return { name, phones };
 }
 
 /** Minutes since midnight from an ISO string. */
@@ -1478,6 +1504,131 @@ function ListView({ appointments, anchor, onCancel, onNoShow }: { appointments: 
   );
 }
 
+// ─── Calendar filters ────────────────────────────────────────────────────────
+
+type CalendarStatusFilter = 'all' | 'pending' | 'active' | 'completed' | 'cancelled' | 'no_show';
+
+function matchesCalendarStatus(appointment: Appointment, filter: CalendarStatusFilter): boolean {
+  if (filter === 'all') return true;
+  const status = appointment.status ?? '';
+  if (filter === 'active') return ['held', 'confirmed', 'approved'].includes(status);
+  if (filter === 'cancelled') return ['cancelled', 'rejected'].includes(status);
+  return status === filter;
+}
+
+function CalendarFilters({
+  appointments,
+  staff,
+  query,
+  staffId,
+  statusFilter,
+  onQueryChange,
+  onStaffChange,
+  onStatusChange,
+  onClear,
+}: {
+  appointments: Appointment[];
+  staff: SalonStaff[];
+  query: string;
+  staffId: string;
+  statusFilter: CalendarStatusFilter;
+  onQueryChange: (value: string) => void;
+  onStaffChange: (value: string) => void;
+  onStatusChange: (value: CalendarStatusFilter) => void;
+  onClear: () => void;
+}) {
+  const normalizedQuery = normalizeContactDigits(query.trim()).toLocaleLowerCase();
+  const visibleCount = appointments.filter((appointment) => {
+    if (staffId !== 'all' && appointment.staffMemberId !== staffId) return false;
+    if (!matchesCalendarStatus(appointment, statusFilter)) return false;
+    if (!normalizedQuery) return true;
+    const searchable = normalizeContactDigits(
+      [
+        appointment.customerName,
+        appointment.customerPhone,
+        appointment.serviceName,
+        appointment.staffName,
+      ]
+        .filter(Boolean)
+        .join(' '),
+    ).toLocaleLowerCase();
+    return searchable.includes(normalizedQuery);
+  }).length;
+  const activeCount =
+    (query.trim() ? 1 : 0) +
+    (staffId !== 'all' ? 1 : 0) +
+    (statusFilter !== 'all' ? 1 : 0);
+
+  return (
+    <section
+      aria-label="فیلتر نوبت‌ها"
+      data-testid="owner-calendar-filters"
+      className="rounded-xl border border-border bg-surface p-3 shadow-1"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <SlidersHorizontal className="h-4 w-4 text-primary" aria-hidden="true" />
+          <h2 className="m-0 text-sm font-bold text-text">پیدا کردن نوبت</h2>
+          {activeCount > 0 && (
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
+              <Num value={String(activeCount)} /> فیلتر
+            </span>
+          )}
+        </div>
+        {activeCount > 0 && (
+          <Button type="button" variant="ghost" size="md" onClick={onClear} className="!px-2 text-xs">
+            پاک کردن فیلترها
+          </Button>
+        )}
+      </div>
+      <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1.5fr)_minmax(10rem,1fr)_minmax(9rem,1fr)]">
+        <TextField
+          label="جست‌وجوی مشتری، شماره یا خدمت"
+          labelHidden
+          placeholder="نام، شماره یا خدمت را جست‌وجو کن"
+          value={query}
+          onChange={(event) => onQueryChange(event.target.value)}
+        />
+        <Select
+          label="آرایشگر"
+          labelHidden
+          value={staffId}
+          onValueChange={onStaffChange}
+          options={[
+            { value: 'all', label: 'همه آرایشگرها' },
+            ...staff
+              .filter((member) => member.active)
+              .map((member) => ({
+                value: member.id,
+                label: member.fullName || 'آرایشگر بدون نام',
+              })),
+          ]}
+          placeholder="آرایشگر"
+          emptyText="آرایشگری ثبت نشده است"
+        />
+        <Select
+          label="وضعیت"
+          labelHidden
+          value={statusFilter}
+          onValueChange={(value) => onStatusChange(value as CalendarStatusFilter)}
+          options={[
+            { value: 'all', label: 'همه وضعیت‌ها' },
+            { value: 'active', label: 'فعال' },
+            { value: 'pending', label: 'در انتظار تأیید' },
+            { value: 'completed', label: 'انجام شده' },
+            { value: 'cancelled', label: 'لغو شده' },
+            { value: 'no_show', label: 'عدم حضور' },
+          ]}
+          placeholder="وضعیت"
+        />
+      </div>
+      <p className="m-0 mt-2 text-xs text-muted" aria-live="polite">
+        <Num value={String(visibleCount)} /> نوبت در این بازه نمایش داده می‌شود.
+      </p>
+    </section>
+  );
+}
+
 // ─── Direct availability editor ─────────────────────────────────────────────
 
 function addThirtyMinutes(value: string): string {
@@ -2506,9 +2657,36 @@ function ManualBookingDialog({
     }
   };
 
+  const handleVCardImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    setContactLoading(true);
+    setContactStatus('idle');
+    try {
+      const parsed = parseVCard(await file.text());
+      const selectedPhone = parsed.phones
+        .map((value) => normalizeIranianMobile(value))
+        .find((value): value is string => Boolean(value));
+      if (!selectedPhone) {
+        setContactStatus('empty');
+        return;
+      }
+      setPhone(selectedPhone);
+      setFullName(parsed.name ?? '');
+      setContactStatus('success');
+    } catch {
+      setContactStatus('error');
+    } finally {
+      setContactLoading(false);
+    }
+  };
+
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!serviceId || !startAt || !/^09\d{9}$/.test(phone.trim())) {
+    const normalizedPhone = normalizeIranianMobile(phone);
+    if (!serviceId || !startAt || !normalizedPhone) {
       setError('خدمت، زمان و شماره موبایل معتبر وارد کنید.');
       return;
     }
@@ -2523,7 +2701,7 @@ function ManualBookingDialog({
       await adminApi.createManualAppointment(salonId, {
         serviceId,
         startAt: start.toISOString(),
-        phone: phone.trim(),
+        phone: normalizedPhone,
         ...(fullName.trim() ? { fullName: fullName.trim() } : {}),
       });
       onChanged();
@@ -2550,18 +2728,31 @@ function ManualBookingDialog({
                 نام و شماره را از مخاطبین تلفن وارد کن.
               </p>
             </div>
-            <Button
-              type="button"
-              variant="secondary"
-              size="md"
-              className="w-full shrink-0 sm:w-auto"
-              startIcon={<ContactRound className="h-4 w-4" />}
-              onClick={() => void handleContactPick()}
-              loading={contactLoading}
-              disabled={saving || loading || contactLoading}
-            >
-              انتخاب از مخاطبین تلفن
-            </Button>
+            <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto">
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                className="w-full"
+                startIcon={<ContactRound className="h-4 w-4" />}
+                onClick={() => void handleContactPick()}
+                loading={contactLoading}
+                disabled={saving || loading || contactLoading}
+              >
+                انتخاب از مخاطبین تلفن
+              </Button>
+              <label className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border bg-bg px-3 py-2 text-xs font-bold text-muted transition-colors hover:bg-elevated hover:text-text focus-within:outline focus-within:outline-2 focus-within:outline-focus">
+                <input
+                  type="file"
+                  accept=".vcf,text/vcard"
+                  className="sr-only"
+                  onChange={(event) => void handleVCardImport(event)}
+                  disabled={saving || loading || contactLoading}
+                />
+                <ContactRound className="h-3.5 w-3.5" aria-hidden="true" />
+                انتخاب فایل مخاطب (.vcf)
+              </label>
+            </div>
           </div>
           {contactStatus === 'success' && (
             <p role="status" className="m-0 mt-2 text-xs text-success">
@@ -2570,7 +2761,7 @@ function ManualBookingDialog({
           )}
           {contactStatus === 'unsupported' && (
             <p role="status" className="m-0 mt-2 text-xs text-muted">
-              انتخاب مستقیم مخاطبین در این مرورگر یا اتصال فعال نیست؛ شماره را دستی وارد کن.
+              انتخاب مستقیم مخاطبین فعال نیست؛ فایل .vcf مخاطب را انتخاب کن یا شماره را دستی وارد کن.
             </p>
           )}
           {contactStatus === 'empty' && (
@@ -2932,6 +3123,161 @@ function ApprovalQueue({
  * - Hover highlights on time cells
  * - Keyboard operable date navigation (RTL arrows)
  */
+function waitlistDateLabel(iso?: string): string {
+  if (!iso) return 'زمان نامشخص';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return 'زمان نامشخص';
+  const jalali = jalaliDayDisplay(date);
+  return (
+    PERSIAN_WEEKDAYS[iranianDayIndex(date)] +
+    ' ' +
+    toPersianDigits(String(jalali.jd)) +
+    ' ' +
+    getJalaliMonthName(jalali.jm)
+  );
+}
+
+function OwnerWaitlistCard({
+  salonId,
+  refreshKey,
+  onBook,
+}: {
+  salonId: string;
+  refreshKey: number;
+  onBook: (entry: OwnerWaitlistEntry) => void;
+}) {
+  const [entries, setEntries] = useState<OwnerWaitlistEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    if (typeof adminApi.getWaitlist !== 'function') {
+      setEntries([]);
+      setLoading(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    const from = new Date();
+    const to = new Date(from);
+    to.setDate(to.getDate() + 31);
+    setLoading(true);
+    setLoadError('');
+    adminApi
+      .getWaitlist(salonId, from.toISOString(), to.toISOString())
+      .then((response) => {
+        if (active) setEntries(response.waitlist ?? []);
+      })
+      .catch(() => {
+        if (active) {
+          setEntries([]);
+          setLoadError('صف انتظار بارگذاری نشد.');
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [salonId, refreshKey]);
+
+  if (loading && entries.length === 0) {
+    return null;
+  }
+  if (!loading && entries.length === 0 && !loadError) {
+    return null;
+  }
+
+  return (
+    <section
+      data-testid="owner-waitlist"
+      aria-label="صف انتظار"
+      className="rounded-2xl border border-warning/30 bg-warning/5 p-3 shadow-1 sm:p-4"
+    >
+      <header className="flex items-start gap-2">
+        <ListChecks className="mt-0.5 h-5 w-5 shrink-0 text-warning" aria-hidden="true" />
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="m-0 text-sm font-bold text-text">صف انتظار</h2>
+            <span className="rounded-full bg-warning/15 px-2 py-0.5 text-xs font-bold text-warning">
+              <Num value={String(entries.length)} />
+            </span>
+          </div>
+          <p className="m-0 mt-1 text-xs text-muted">
+            اگر زمانی خالی شد، مشتری مناسب را سریع به نوبت تبدیل کن.
+          </p>
+        </div>
+      </header>
+
+      {loadError ? (
+        <p role="alert" className="m-0 mt-3 text-xs text-danger">{loadError}</p>
+      ) : (
+        <ul role="list" className="mt-3 flex flex-col gap-2">
+          {entries.slice(0, 5).map((entry) => {
+            const phone = entry.customerPhone
+              ? normalizeIranianMobile(entry.customerPhone) ?? entry.customerPhone
+              : '';
+            return (
+              <li
+                key={entry.id}
+                className="flex flex-col gap-2 rounded-xl border border-warning/20 bg-surface p-2.5 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <strong className="block truncate text-sm text-text">
+                    {entry.customerName || 'مشتری بدون نام'}
+                  </strong>
+                  <span className="mt-1 block truncate text-xs text-muted">
+                    {entry.serviceName || 'خدمت انتخاب نشده'} · {waitlistDateLabel(entry.windowStart)} ·{' '}
+                    <Num value={clockTime(entry.windowStart) ?? '—'} /> تا <Num value={clockTime(entry.windowEnd) ?? '—'} />
+                  </span>
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {phone && (
+                    <>
+                      <a
+                        href={'tel:' + phone}
+                        aria-label={'تماس با ' + (entry.customerName || 'مشتری')}
+                        className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-md border border-success/30 bg-success/10 text-success hover:bg-success/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+                      >
+                        <Phone className="h-4 w-4" aria-hidden="true" />
+                      </a>
+                      <a
+                        href={'sms:' + phone}
+                        aria-label={'پیامک به ' + (entry.customerName || 'مشتری')}
+                        className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-md border border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+                      >
+                        <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                      </a>
+                    </>
+                  )}
+                  <Button
+                    type="button"
+                    size="md"
+                    variant="primary"
+                    onClick={() => onBook(entry)}
+                    disabled={!phone}
+                  >
+                    ثبت نوبت
+                  </Button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {entries.length > 5 && (
+        <p className="m-0 mt-2 text-xs text-muted">
+          <Num value={String(entries.length - 5)} /> مشتری دیگر در صف هستند.
+        </p>
+      )}
+    </section>
+  );
+}
+
 function QuickApprovalPolicy({ salonId, className }: { salonId: string; className?: string }) {
   const [autoApprove, setAutoApprove] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
@@ -3178,6 +3524,9 @@ export function OwnerCalendarPage() {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [moveAppointment, setMoveAppointment] = useState<CalendarAppointmentLike | null>(null);
   const [moveError, setMoveError] = useState('');
+  const [calendarQuery, setCalendarQuery] = useState('');
+  const [calendarStaffId, setCalendarStaffId] = useState('all');
+  const [calendarStatus, setCalendarStatus] = useState<CalendarStatusFilter>('all');
 
 
   // Track direction for animations
@@ -3301,6 +3650,42 @@ export function OwnerCalendarPage() {
   );
 
 
+  const filteredAppointments = useMemo(() => {
+    const normalizedQuery = normalizeContactDigits(calendarQuery.trim()).toLocaleLowerCase();
+    return appointments.filter((appointment) => {
+      if (calendarStaffId !== 'all' && appointment.staffMemberId !== calendarStaffId) {
+        return false;
+      }
+      if (!matchesCalendarStatus(appointment, calendarStatus)) return false;
+      if (!normalizedQuery) return true;
+      const searchable = normalizeContactDigits(
+        [
+          appointment.customerName,
+          appointment.customerPhone,
+          appointment.serviceName,
+          appointment.staffName,
+        ]
+          .filter(Boolean)
+          .join(' '),
+      ).toLocaleLowerCase();
+      return searchable.includes(normalizedQuery);
+    });
+  }, [appointments, calendarQuery, calendarStaffId, calendarStatus]);
+
+  const openWaitlistBooking = useCallback((entry: OwnerWaitlistEntry) => {
+    const start = new Date(entry.windowStart);
+    setManualCustomer({
+      phone: entry.customerPhone
+        ? normalizeIranianMobile(entry.customerPhone) ?? entry.customerPhone
+        : undefined,
+      fullName: entry.customerName ?? undefined,
+      serviceId: entry.serviceId,
+    });
+    setManualDate(Number.isNaN(start.getTime()) ? new Date() : start);
+    setManualStart(Number.isNaN(start.getTime()) ? undefined : clockTime(entry.windowStart) ?? undefined);
+    setManualOpen(true);
+  }, []);
+
   const openAppointmentList = useCallback((date: Date) => {
     setAppointmentListDate(new Date(date));
   }, []);
@@ -3308,14 +3693,14 @@ export function OwnerCalendarPage() {
   const appointmentListItems = useMemo(() => {
     if (!appointmentListDate) return [];
     const selectedKey = dateKey(appointmentListDate);
-    return appointments
+    return filteredAppointments
       .filter((item) => item.startAt && localDateKey(item.startAt) === selectedKey)
       .sort((a, b) => {
         const ta = a.startAt ? new Date(a.startAt).getTime() : 0;
         const tb = b.startAt ? new Date(b.startAt).getTime() : 0;
         return ta - tb;
       });
-  }, [appointments, appointmentListDate]);
+  }, [filteredAppointments, appointmentListDate]);
 
   const handleViewChange = useCallback(
     (newView: CalendarView) => {
@@ -3635,6 +4020,22 @@ export function OwnerCalendarPage() {
         روی هر روز یا ساعت بزن تا همان‌جا تعطیلی کامل یا محدودیت ساعتی ثبت کنی.
       </p>
 
+      <CalendarFilters
+        appointments={appointments}
+        staff={staff}
+        query={calendarQuery}
+        staffId={calendarStaffId}
+        statusFilter={calendarStatus}
+        onQueryChange={setCalendarQuery}
+        onStaffChange={setCalendarStaffId}
+        onStatusChange={setCalendarStatus}
+        onClear={() => {
+          setCalendarQuery('');
+          setCalendarStaffId('all');
+          setCalendarStatus('all');
+        }}
+      />
+
       {/* Pending approval queue — surfaced at top of calendar so owners can
           one-tap Approve/Reject without leaving the calendar view. */}
       <ApprovalQueue
@@ -3643,6 +4044,14 @@ export function OwnerCalendarPage() {
         onResolved={() => setReloadToken((n) => n + 1)}
         className="owner-calendar-approval"
       />
+
+      {role !== 'Stylist' && (
+        <OwnerWaitlistCard
+          salonId={salonId}
+          refreshKey={reloadToken}
+          onBook={openWaitlistBooking}
+        />
+      )}
 
       <CalendarActionsSheet
         salonId={salonId}
@@ -3702,7 +4111,7 @@ export function OwnerCalendarPage() {
                 >
                   {view === 'day' && (
                     <DayView
-                      appointments={appointments}
+                      appointments={filteredAppointments}
                       anchor={anchor}
                       closures={closures}
                       staffBlocks={staffCalendarBlocks}
@@ -3716,7 +4125,7 @@ export function OwnerCalendarPage() {
                   )}
                   {view === 'week' && (
                     <WeekView
-                      appointments={appointments}
+                      appointments={filteredAppointments}
                       anchor={anchor}
                       closures={closures}
                       staffBlocks={staffCalendarBlocks}
@@ -3729,7 +4138,7 @@ export function OwnerCalendarPage() {
                   )}
                   {view === 'month' && (
                     <MonthView
-                      appointments={appointments}
+                      appointments={filteredAppointments}
                       anchor={anchor}
                       closures={closures}
                       staffBlocks={staffCalendarBlocks}
@@ -3740,7 +4149,7 @@ export function OwnerCalendarPage() {
                       onOpenAppointment={openAppointment}
                     />
                   )}
-                  {view === 'list' && <ListView appointments={appointments} anchor={anchor} onCancel={setCancelAppointment} onNoShow={setNoShowAppointment} />}
+                  {view === 'list' && <ListView appointments={filteredAppointments} anchor={anchor} onCancel={setCancelAppointment} onNoShow={setNoShowAppointment} />}
                 </motion.div>
               </AnimatePresence>
             </motion.div>

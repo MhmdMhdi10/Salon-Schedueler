@@ -363,6 +363,47 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     }),
   );
 
+  /**
+   * Active waitlist for the owner calendar. The domain already keeps the queue
+   * in FIFO order; this route only enriches it with the small amount of data
+   * needed for a front-desk action (customer contact + service label).
+   */
+  router.get(
+    '/salons/:id/waitlist',
+    requireRole('manage_appointments', (req) => ({ salonId: req.params.id })),
+    asyncRoute(async (req, res) => {
+      const rawFrom = req.query.from;
+      const rawTo = req.query.to;
+      const from = rawFrom === undefined ? new Date() : parseDateParam(rawFrom);
+      const to =
+        rawTo === undefined
+          ? new Date(Date.now() + 31 * 24 * 60 * 60 * 1000)
+          : parseDateParam(rawTo);
+      if (!from || !to || to <= from || to.getTime() - from.getTime() > 366 * 24 * 60 * 60 * 1000) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: !from ? 'from' : 'to' });
+        return;
+      }
+
+      const [entries, catalog] = await Promise.all([
+        services.waitlistService.getWaitlist(req.params.id, from, to),
+        services.serviceCatalog.listServices(req.params.id),
+      ]);
+      const serviceNames = new Map(catalog.map((service) => [service.id, service.name]));
+      const waitlist = await Promise.all(
+        entries.map(async (entry) => {
+          const customer = await services.customerService.getProfile(entry.customerId);
+          return {
+            ...entry,
+            customerName: customer?.fullName ?? null,
+            customerPhone: customer?.phone ?? null,
+            serviceName: serviceNames.get(entry.serviceId) ?? null,
+          };
+        }),
+      );
+      res.status(200).json({ waitlist });
+    }),
+  );
+
   router.post(
     '/appointments/:id/reschedule-managed',
     requireCanManageAppointment,
@@ -424,6 +465,29 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         return;
       }
       res.status(200).json({ customer, appointments, notes, preferredStaff });
+    }),
+  );
+
+  router.post(
+    '/appointments/:id/customer-notes',
+    requireCanManageAppointment,
+    asyncRoute(async (req, res) => {
+      const body = typeof req.body?.body === 'string' ? req.body.body.trim() : '';
+      if (!body || body.length > 1000) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'body' });
+        return;
+      }
+      const appointment = await services.calendarService.getAppointmentById(req.params.id);
+      if (!appointment) {
+        res.status(404).json({ code: 'NOT_FOUND' });
+        return;
+      }
+      const note = await services.customerService.addNote(
+        appointment.customerId,
+        req.principal?.id ?? null,
+        body,
+      );
+      res.status(201).json({ note });
     }),
   );
 

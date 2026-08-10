@@ -119,6 +119,9 @@ export function AppointmentDetailsSheet({
   const [message, setMessage] = useState('');
   const [messageState, setMessageState] = useState<'idle' | 'sent' | 'error'>('idle');
   const [sending, setSending] = useState(false);
+  const [noteDraft, setNoteDraft] = useState('');
+  const [noteSaving, setNoteSaving] = useState(false);
+  const [noteError, setNoteError] = useState('');
 
   useEffect(() => {
     if (!open || !appointment) return;
@@ -127,6 +130,8 @@ export function AppointmentDetailsSheet({
     setLoadError('');
     setMessage('');
     setMessageState('idle');
+    setNoteDraft('');
+    setNoteError('');
     setLoading(true);
     adminApi
       .getAppointmentCustomer(appointment.id)
@@ -165,6 +170,31 @@ export function AppointmentDetailsSheet({
       setMessageState('error');
     } finally {
       setSending(false);
+    }
+  };
+
+  const addNote = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const body = noteDraft.trim();
+    if (!appointment || !body || noteSaving) return;
+    if (typeof adminApi.addCustomerNote !== 'function') {
+      setNoteError('ثبت یادداشت در این نسخه فعال نیست.');
+      return;
+    }
+    setNoteSaving(true);
+    setNoteError('');
+    try {
+      const result = await adminApi.addCustomerNote(appointment.id, body);
+      setOverview((current) =>
+        current
+          ? { ...current, notes: [result.note, ...current.notes] }
+          : current,
+      );
+      setNoteDraft('');
+    } catch {
+      setNoteError('ثبت یادداشت انجام نشد؛ دوباره تلاش کن.');
+    } finally {
+      setNoteSaving(false);
     }
   };
 
@@ -349,10 +379,41 @@ export function AppointmentDetailsSheet({
             </section>
 
             <section className="mt-4">
-              <h3 className="text-sm font-bold text-text">یادداشت‌ها</h3>
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-bold text-text">یادداشت‌ها</h3>
+                <span className="text-xs text-muted"><Num value={String(overview.notes.length)} /> یادداشت</span>
+              </div>
+              <form onSubmit={(event) => void addNote(event)} className="mt-2 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
+                <textarea
+                  value={noteDraft}
+                  onChange={(event) => {
+                    setNoteDraft(event.target.value);
+                    setNoteError('');
+                  }}
+                  maxLength={1000}
+                  rows={2}
+                  disabled={noteSaving}
+                  aria-label="یادداشت جدید مشتری"
+                  placeholder="مثلاً: رنگ مورد علاقه یا حساسیت مشتری…"
+                  className="w-full resize-none rounded-md border border-border bg-bg px-2.5 py-2 text-xs text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
+                />
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <span className="text-[0.68rem] text-muted"><Num value={String(noteDraft.length)} /> / <Num value="1000" /></span>
+                  <Button
+                    type="submit"
+                    size="md"
+                    variant="secondary"
+                    loading={noteSaving}
+                    disabled={noteSaving || !noteDraft.trim()}
+                  >
+                    ثبت یادداشت
+                  </Button>
+                </div>
+              </form>
+              {noteError && <p role="alert" className="mt-2 text-xs text-danger">{noteError}</p>}
               {overview.notes.length === 0 ? (
                 <p className="mt-2 rounded-lg border border-border bg-bg p-3 text-xs text-muted">
-                  یادداشتی برای این مشتری ثبت نشده است.
+                  هنوز یادداشتی ثبت نشده است.
                 </p>
               ) : (
                 <ul className="mt-2 flex flex-col gap-1.5" role="list">

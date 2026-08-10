@@ -599,6 +599,20 @@ export interface AppointmentCustomerOverview {
   preferredStaff: { id: string; fullName: string; role: string } | null;
 }
 
+export interface OwnerWaitlistEntry {
+  id: string;
+  salonId: string;
+  customerId: string;
+  serviceId: string;
+  windowStart: string;
+  windowEnd: string;
+  status: 'waiting' | 'notified' | 'fulfilled' | 'cancelled';
+  createdAt: string;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  serviceName?: string | null;
+}
+
 export const adminApi = {
   getCalendar: (
     salonId: string,
@@ -697,11 +711,25 @@ export const adminApi = {
     }),
   getAppointmentCustomer: (appointmentId: string) =>
     request<AppointmentCustomerOverview>('/appointments/' + appointmentId + '/customer'),
+  addCustomerNote: (appointmentId: string, body: string) =>
+    request<{ note: AppointmentCustomerOverview['notes'][number] }>(
+      '/appointments/' + appointmentId + '/customer-notes',
+      { method: 'POST', body: { body } },
+    ),
   sendCustomerMessage: (appointmentId: string, message: string) =>
     request<{ status: 'sent' }>('/appointments/' + appointmentId + '/message', {
       method: 'POST',
       body: { message },
     }),
+  getWaitlist: (salonId: string, from?: string, to?: string) => {
+    const query = new URLSearchParams({
+      ...(from ? { from } : {}),
+      ...(to ? { to } : {}),
+    }).toString();
+    return request<{ waitlist: OwnerWaitlistEntry[] }>(
+      '/salons/' + salonId + '/waitlist' + (query ? '?' + query : ''),
+    );
+  },
 
   /** The salon's money transactions (appointment + subscription payments), newest-first. */
   getTransactions: (salonId: string) =>
