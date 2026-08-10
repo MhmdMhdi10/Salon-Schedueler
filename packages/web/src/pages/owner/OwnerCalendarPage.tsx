@@ -163,7 +163,9 @@ function serviceColorClass(serviceName?: string): string {
 function isoDate(base: Date, days: number): string {
   const d = new Date(base);
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  // Calendar ranges represent local salon dates. Converting through UTC here
+  // shifts Tehran dates back by one day shortly after local midnight.
+  return dateKey(d);
 }
 
 /** Saturday that opens the Iranian week containing `date`. */
