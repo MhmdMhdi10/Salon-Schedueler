@@ -8,6 +8,7 @@ import {
   CalendarClock,
   CalendarOff,
   Coffee,
+  ContactRound,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -72,6 +73,7 @@ interface Appointment {
   id: string;
   startAt?: string;
   endAt?: string;
+  serviceId?: string;
   serviceName?: string;
   customerName?: string;
   staffName?: string;
@@ -80,6 +82,12 @@ interface Appointment {
   customerId?: string;
   staffMemberId?: string;
 }
+
+type ManualCustomerPrefill = {
+  phone?: string;
+  fullName?: string;
+  serviceId?: string;
+};
 
 interface StaffCalendarBlock extends SalonClosure {
   staffId: string;
@@ -159,6 +167,44 @@ function localDateKey(iso: string): string | null {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
   return dateKey(d);
+}
+
+type ContactPickerContact = {
+  name?: string[];
+  tel?: string[];
+};
+
+type ContactPicker = {
+  select: (
+    properties: string[],
+    options?: { multiple?: boolean },
+  ) => Promise<ContactPickerContact[]>;
+};
+
+/** Normalize Persian/Arabic digits before validating an Iranian mobile number. */
+function normalizeContactDigits(value: string): string {
+  const persian = '۰۱۲۳۴۵۶۷۸۹';
+  const arabic = '٠١٢٣٤٥٦٧٨٩';
+  return value
+    .replace(/[۰-۹]/g, (digit) => String(persian.indexOf(digit)))
+    .replace(/[٠-٩]/g, (digit) => String(arabic.indexOf(digit)));
+}
+
+/** Convert common local/international formats to the backend's 09xxxxxxxxx shape. */
+function normalizeIranianMobile(value: string): string | null {
+  let digits = normalizeContactDigits(value.trim()).replace(/[^0-9+]/g, '');
+  if (digits.startsWith('+98')) digits = '0' + digits.slice(3);
+  else if (digits.startsWith('0098')) digits = '0' + digits.slice(4);
+  else if (digits.startsWith('98') && digits.length === 12) digits = '0' + digits.slice(2);
+  else if (digits.startsWith('9') && digits.length === 10) digits = '0' + digits;
+  return /^09\d{9}$/.test(digits) ? digits : null;
+}
+
+function getContactPicker(): ContactPicker | null {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return null;
+  if (!window.isSecureContext) return null;
+  const candidate = (navigator as Navigator & { contacts?: ContactPicker }).contacts;
+  return candidate && typeof candidate.select === 'function' ? candidate : null;
 }
 
 /** Minutes since midnight from an ISO string. */
@@ -274,6 +320,7 @@ function toAppointment(appt: unknown, fallbackId: string): Appointment {
       id: str(rec.id) ?? fallbackId,
       startAt: str(rec.startAt),
       endAt: str(rec.endAt),
+      serviceId: str(rec.serviceId),
       serviceName: str(rec.serviceName),
       customerName: str(rec.customerName),
       staffName: str(rec.staffName),
@@ -623,6 +670,17 @@ function DayView({
     [appointments, anchorKey],
   );
   const positionedAppointments = useMemo(() => layoutAppointmentLanes(dayAppts), [dayAppts]);
+  const nextAppointment = useMemo(() => {
+    const now = Date.now();
+    const isCurrentDay = anchorKey === dateKey(new Date());
+    return dayAppts.find((item) => {
+      if (['cancelled', 'rejected', 'no_show', 'completed'].includes(item.status ?? '')) {
+        return false;
+      }
+      if (!isCurrentDay) return true;
+      return item.startAt ? new Date(item.startAt).getTime() >= now : false;
+    });
+  }, [anchorKey, dayAppts]);
 
   /** Grid starts at 07:00 = minute 420 */
   const gridStartMin = 7 * 60;
@@ -684,8 +742,8 @@ function DayView({
 
   return (
     <>
-      <div className="mb-3 flex flex-col gap-2 rounded-xl border border-primary/25 bg-primary/5 p-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+      <div className="mb-3 flex flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3 sm:flex-row sm:items-center">
+        <div className="min-w-0">
           <span className="block text-xs font-bold text-primary">خلاصه امروز</span>
           <div className="mt-1 flex items-baseline gap-2">
             <strong className="text-2xl font-black tabular-nums text-text">
@@ -695,7 +753,29 @@ function DayView({
             <span className="text-xs text-muted">· <Num value={dayAppts.length} /> نوبت</span>
           </div>
         </div>
-        <span className="text-xs text-muted">برای جابه‌جایی، نوبت را بکش و روی ساعت جدید رها کن.</span>
+        <div className="min-w-0 border-t border-primary/20 pt-2 sm:border-s sm:border-t-0 sm:ps-4 sm:pt-0">
+          <span className="block text-xs font-bold text-muted">نوبت بعدی</span>
+          {nextAppointment ? (
+            <button
+              type="button"
+              className="mt-1 flex max-w-full items-center gap-1.5 truncate text-sm font-bold text-text hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpenAppointment(nextAppointment);
+              }}
+              aria-label="مشاهده نوبت بعدی"
+            >
+              <Clock className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+              <Num value={clockTime(nextAppointment.startAt) ?? '—'} />
+              <span className="truncate text-muted">
+                · {nextAppointment.customerName || nextAppointment.serviceName || 'مشتری'}
+              </span>
+            </button>
+          ) : (
+            <span className="mt-1 block text-xs text-muted">برای این روز نوبت بعدی ثبت نشده</span>
+          )}
+        </div>
+        <span className="text-xs text-muted sm:ms-auto">برای جابه‌جایی، نوبت را بکش و روی ساعت جدید رها کن.</span>
       </div>
       {dayAppts.length > 12 && (
         <div className="mb-2 flex flex-col gap-2 rounded-lg border border-primary/25 bg-primary/5 p-2.5 sm:flex-row sm:items-center sm:justify-between">
@@ -2316,6 +2396,9 @@ function ManualBookingDialog({
   salonId,
   date,
   initialStart,
+  initialPhone,
+  initialFullName,
+  initialServiceId,
   open,
   onOpenChange,
   onChanged,
@@ -2323,6 +2406,9 @@ function ManualBookingDialog({
   salonId: string;
   date: Date;
   initialStart?: string;
+  initialPhone?: string;
+  initialFullName?: string;
+  initialServiceId?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onChanged: () => void;
@@ -2336,6 +2422,10 @@ function ManualBookingDialog({
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [contactLoading, setContactLoading] = useState(false);
+  const [contactStatus, setContactStatus] = useState<
+    'idle' | 'success' | 'unsupported' | 'empty' | 'error'
+  >('idle');
   const [error, setError] = useState('');
 
   const toInputValue = useCallback(() => {
@@ -2351,8 +2441,9 @@ function ManualBookingDialog({
   useEffect(() => {
     if (!open) return;
     setStartAt(toInputValue());
-    setPhone('');
-    setFullName('');
+    setPhone(initialPhone ?? '');
+    setFullName(initialFullName ?? '');
+    setContactStatus('idle');
     setError('');
     setLoading(true);
     salonApi
@@ -2364,14 +2455,56 @@ function ManualBookingDialog({
           durationMinutes: service.durationMinutes,
         }));
         setServices(next);
-        setServiceId((current) => current || next[0]?.id || '');
+        setServiceId(
+          initialServiceId && next.some((service) => service.id === initialServiceId)
+            ? initialServiceId
+            : next[0]?.id || '',
+        );
       })
       .catch(() => {
         setServices([]);
         setError('دریافت فهرست خدمات انجام نشد.');
       })
       .finally(() => setLoading(false));
-  }, [open, salonId, toInputValue]);
+  }, [
+    open,
+    salonId,
+    toInputValue,
+    initialPhone,
+    initialFullName,
+    initialServiceId,
+  ]);
+
+  const handleContactPick = async () => {
+    const picker = getContactPicker();
+    if (!picker) {
+      setContactStatus('unsupported');
+      return;
+    }
+
+    setContactLoading(true);
+    setContactStatus('idle');
+    try {
+      const contacts = await picker.select(['name', 'tel'], { multiple: false });
+      const contact = contacts[0];
+      const selectedPhone = (contact?.tel ?? [])
+        .map((value) => normalizeIranianMobile(value))
+        .find((value): value is string => Boolean(value));
+      if (!selectedPhone) {
+        setContactStatus('empty');
+        return;
+      }
+      setPhone(selectedPhone);
+      setFullName(contact?.name?.find((value) => value.trim())?.trim() ?? '');
+      setContactStatus('success');
+    } catch (error) {
+      if ((error as DOMException)?.name !== 'AbortError') {
+        setContactStatus('error');
+      }
+    } finally {
+      setContactLoading(false);
+    }
+  };
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -2409,6 +2542,48 @@ function ManualBookingDialog({
         <DialogDescription>
           نوبت حضوری هم از همان ظرفیت آرایشگر و صندلی استفاده می‌کند؛ بنابراین رزرو هم‌زمان ثبت نمی‌شود.
         </DialogDescription>
+        <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <strong className="block text-sm text-text">ثبت سریع مشتری</strong>
+              <p className="m-0 mt-1 text-xs text-muted">
+                نام و شماره را از مخاطبین تلفن وارد کن.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              className="w-full shrink-0 sm:w-auto"
+              startIcon={<ContactRound className="h-4 w-4" />}
+              onClick={() => void handleContactPick()}
+              loading={contactLoading}
+              disabled={saving || loading || contactLoading}
+            >
+              انتخاب از مخاطبین تلفن
+            </Button>
+          </div>
+          {contactStatus === 'success' && (
+            <p role="status" className="m-0 mt-2 text-xs text-success">
+              اطلاعات مخاطب وارد شد؛ قبل از ثبت بررسی کن.
+            </p>
+          )}
+          {contactStatus === 'unsupported' && (
+            <p role="status" className="m-0 mt-2 text-xs text-muted">
+              انتخاب مستقیم مخاطبین در این مرورگر یا اتصال فعال نیست؛ شماره را دستی وارد کن.
+            </p>
+          )}
+          {contactStatus === 'empty' && (
+            <p role="status" className="m-0 mt-2 text-xs text-warning">
+              این مخاطب شماره موبایل معتبر ندارد؛ شماره را دستی وارد کن.
+            </p>
+          )}
+          {contactStatus === 'error' && (
+            <p role="alert" className="m-0 mt-2 text-xs text-danger">
+              دریافت مخاطب انجام نشد؛ شماره را دستی وارد کن.
+            </p>
+          )}
+        </div>
         <form onSubmit={(event) => void submit(event)} className="mt-4 flex flex-col gap-3">
           <Select
             label="خدمت"
@@ -2988,6 +3163,7 @@ export function OwnerCalendarPage() {
   const [manualOpen, setManualOpen] = useState(false);
   const [manualDate, setManualDate] = useState<Date>(() => new Date());
   const [manualStart, setManualStart] = useState<string | undefined>();
+  const [manualCustomer, setManualCustomer] = useState<ManualCustomerPrefill>({});
   const [cancelAppointment, setCancelAppointment] = useState<Appointment | null>(null);
   const [cancelBusy, setCancelBusy] = useState(false);
   const [cancelError, setCancelError] = useState('');
@@ -3025,6 +3201,20 @@ export function OwnerCalendarPage() {
 
   const openAppointment = useCallback((appointment: Appointment) => {
     setSelectedAppointment(appointment);
+  }, []);
+
+  const openRebookAppointment = useCallback((appointment: CalendarAppointmentLike) => {
+    setManualCustomer({
+      phone: appointment.customerPhone
+        ? normalizeIranianMobile(appointment.customerPhone) ?? appointment.customerPhone
+        : undefined,
+      fullName: appointment.customerName,
+      serviceId: appointment.serviceId,
+    });
+    setManualDate(new Date());
+    setManualStart(undefined);
+    setSelectedAppointment(null);
+    setManualOpen(true);
   }, []);
 
   const openMoveDialog = useCallback((appointment: CalendarAppointmentLike) => {
@@ -3290,6 +3480,7 @@ export function OwnerCalendarPage() {
   }, []);
 
   const openManualBooking = useCallback((date: Date, start?: string) => {
+    setManualCustomer({});
     setManualDate(new Date(date));
     setManualStart(start);
     setManualOpen(true);
@@ -3576,6 +3767,9 @@ export function OwnerCalendarPage() {
         salonId={salonId}
         date={manualDate}
         initialStart={manualStart}
+        initialPhone={manualCustomer.phone}
+        initialFullName={manualCustomer.fullName}
+        initialServiceId={manualCustomer.serviceId}
         open={manualOpen}
         onOpenChange={setManualOpen}
         onChanged={() => setReloadToken((n) => n + 1)}
@@ -3597,6 +3791,7 @@ export function OwnerCalendarPage() {
           if (!next) setSelectedAppointment(null);
         }}
         onMove={openMoveDialog}
+        onRebook={openRebookAppointment}
       />
       <MoveAppointmentDialog
         open={Boolean(moveAppointment)}

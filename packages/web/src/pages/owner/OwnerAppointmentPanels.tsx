@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   CalendarDays,
+  CalendarPlus,
   History,
   MessageCircle,
   Move,
@@ -32,6 +33,7 @@ export interface CalendarAppointmentLike {
   id: string;
   startAt?: string;
   endAt?: string;
+  serviceId?: string;
   serviceName?: string;
   customerName?: string;
   staffName?: string;
@@ -103,11 +105,13 @@ export function AppointmentDetailsSheet({
   appointment,
   onOpenChange,
   onMove,
+  onRebook,
 }: {
   open: boolean;
   appointment: CalendarAppointmentLike | null;
   onOpenChange: (open: boolean) => void;
   onMove: (appointment: CalendarAppointmentLike) => void;
+  onRebook: (appointment: CalendarAppointmentLike) => void;
 }) {
   const [overview, setOverview] = useState<AppointmentCustomerOverview | null>(null);
   const [loading, setLoading] = useState(false);
@@ -206,6 +210,17 @@ export function AppointmentDetailsSheet({
               disabled={['cancelled', 'rejected', 'no_show', 'completed'].includes(appointment.status ?? '')}
             >
               انتقال به زمان دیگر
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              className="mt-2 w-full"
+              startIcon={<CalendarPlus className="h-4 w-4" />}
+              onClick={() => onRebook(appointment)}
+              disabled={!phone || ['cancelled', 'rejected', 'no_show'].includes(appointment.status || '')}
+            >
+              رزرو مجدد
             </Button>
           </section>
         )}
