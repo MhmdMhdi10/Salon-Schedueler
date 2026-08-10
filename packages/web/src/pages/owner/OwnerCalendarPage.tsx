@@ -779,8 +779,8 @@ function DayView({
   );
 
   return (
-    <>
-      <div className="mb-3 flex flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3 sm:flex-row sm:items-center">
+    <div className="owner-calendar-day-view flex flex-col">
+      <div className="owner-calendar-day-summary mb-3 flex flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3 sm:flex-row sm:items-center">
         <div className="min-w-0">
           <span className="block text-xs font-bold text-primary">خلاصه امروز</span>
           <div className="mt-1 flex items-baseline gap-2">
@@ -816,7 +816,7 @@ function DayView({
         <span className="text-xs text-muted sm:ms-auto">برای جابه‌جایی، نوبت را بکش و روی ساعت جدید رها کن.</span>
       </div>
       {dayAppts.length > 12 && (
-        <div className="mb-2 flex flex-col gap-2 rounded-lg border border-primary/25 bg-primary/5 p-2.5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="owner-calendar-day-overflow mb-2 flex flex-col gap-2 rounded-lg border border-primary/25 bg-primary/5 p-2.5 sm:flex-row sm:items-center sm:justify-between">
           <p className="m-0 text-xs text-muted">
             این روز <Num value={dayAppts.length} /> نوبت دارد؛ برای بررسی سریع، فهرست کامل را باز کن.
           </p>
@@ -836,7 +836,7 @@ function DayView({
         role="grid"
         aria-label={t('owner.calendar.dayGridLabel', { defaultValue: 'نمای روزانه' })}
         data-testid="owner-calendar-day"
-        className="relative overflow-x-auto overflow-y-auto rounded-lg border border-border bg-surface"
+        className="owner-calendar-day-grid relative overflow-x-auto overflow-y-auto rounded-lg border border-border bg-surface"
         onKeyDown={handleGridKeyDown}
       >
       <div className="relative min-w-[20rem]">
@@ -955,7 +955,7 @@ function DayView({
         </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
