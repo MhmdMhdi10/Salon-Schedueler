@@ -29,3 +29,6 @@ dist.stale/
 # OS / editor
 .DS_Store
 Thumbs.db
+
+# Runtime database backups
+/backups/postgres/

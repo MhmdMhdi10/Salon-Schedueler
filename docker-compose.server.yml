@@ -1,25 +1,77 @@
 services:
+  # Never expose stateful infrastructure or the development SMS inbox publicly.
   postgres:
     ports: !override []
   rabbitmq:
     ports: !override []
   sms-inbox:
+    profiles: ["dev"]
     ports: !override []
+
   backend:
+    image: salon-booking-backend-prod
+    build:
+      context: .
+      dockerfile: docker/backend-production.Dockerfile
+    command: ["node", "packages/backend/dist/main.js"]
+    depends_on: !override
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
       NODE_ENV: production
+      PORT: "3000"
       DATABASE_URL: "postgresql://salon:salon@postgres:5432/salon_dev?schema=public"
       JWT_ACCESS_SECRET: "${JWT_ACCESS_SECRET}"
       JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET}"
+      PAYMENT_GATEWAY: "${PAYMENT_GATEWAY:-zarinpal}"
+      ZARINPAL_MERCHANT_ID: "${ZARINPAL_MERCHANT_ID-}"
+      IDPAY_API_KEY: "${IDPAY_API_KEY-}"
       PAYMENT_CALLBACK_BASE_URL: "${PAYMENT_CALLBACK_BASE_URL}"
       PUBLIC_BASE_URL: "${PUBLIC_BASE_URL}"
+      CORS_ALLOW_ORIGIN: "${PUBLIC_BASE_URL}"
       OTP_WINDOW_SECONDS: "120"
       DEV_OTP_AUTO_FILL: "${DEV_OTP_AUTO_FILL}"
+      DEV_SMS_INBOX_URL: ""
+      NOTIFICATION_CRON_EXTERNAL: "true"
+      TRUST_PROXY: "true"
       RABBITMQ_URL: "amqp://salon:salon@rabbitmq:5672"
-      DEV_SMS_INBOX_URL: "http://sms-inbox:4000"
-    ports: !override
-      - "3000:3000"
+      SMS_QUEUE_MAX_ATTEMPTS: "${SMS_QUEUE_MAX_ATTEMPTS:-5}"
+      SMS_QUEUE_RETRY_DELAY_MS: "${SMS_QUEUE_RETRY_DELAY_MS:-30000}"
+      KAVENEGAR_API_KEY: "${KAVENEGAR_API_KEY-}"
+      KAVENEGAR_BASE_URL: "${KAVENEGAR_BASE_URL-}"
+      KAVENEGAR_SENDER: "${KAVENEGAR_SENDER-}"
+      SMSIR_API_KEY: "${SMSIR_API_KEY-}"
+      SMSIR_BASE_URL: "${SMSIR_BASE_URL-}"
+      SMSIR_LINE_NUMBER: "${SMSIR_LINE_NUMBER-}"
+      PUSHE_API_KEY: "${PUSHE_API_KEY-}"
+      PUSHE_BASE_URL: "${PUSHE_BASE_URL-}"
+      PUSHE_APP_ID: "${PUSHE_APP_ID-}"
+      NAJVA_API_KEY: "${NAJVA_API_KEY-}"
+      NAJVA_BASE_URL: "${NAJVA_BASE_URL-}"
+      TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN-}"
+      BALE_BOT_TOKEN: "${BALE_BOT_TOKEN-}"
+      BOT_WEBHOOK_SECRET: "${BOT_WEBHOOK_SECRET-}"
+      SUB_MONTHLY_RIAL: "${SUB_MONTHLY_RIAL-}"
+      SUB_QUARTERLY_RIAL: "${SUB_QUARTERLY_RIAL-}"
+      SUB_ANNUAL_RIAL: "${SUB_ANNUAL_RIAL-}"
+      SUB_TRIAL_DAYS: "${SUB_TRIAL_DAYS:-14}"
+    ports: !override []
+    volumes: !override []
+    tty: false
+
   sms-worker:
+    image: salon-booking-backend-prod
+    build:
+      context: .
+      dockerfile: docker/backend-production.Dockerfile
+    command: ["node", "packages/backend/dist/sms-worker.js"]
+    depends_on: !override
+      rabbitmq:
+        condition: service_healthy
+      backend:
+        condition: service_started
     environment:
       NODE_ENV: production
       DATABASE_URL: "postgresql://salon:salon@postgres:5432/salon_dev?schema=public"
@@ -27,7 +79,48 @@ services:
       JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET}"
       PAYMENT_CALLBACK_BASE_URL: "${PAYMENT_CALLBACK_BASE_URL}"
       RABBITMQ_URL: "amqp://salon:salon@rabbitmq:5672"
-      DEV_SMS_INBOX_URL: "http://sms-inbox:4000"
+      KAVENEGAR_API_KEY: "${KAVENEGAR_API_KEY-}"
+      KAVENEGAR_BASE_URL: "${KAVENEGAR_BASE_URL-}"
+      KAVENEGAR_SENDER: "${KAVENEGAR_SENDER-}"
+      SMSIR_API_KEY: "${SMSIR_API_KEY-}"
+      SMSIR_BASE_URL: "${SMSIR_BASE_URL-}"
+      SMSIR_LINE_NUMBER: "${SMSIR_LINE_NUMBER-}"
+      DEV_SMS_INBOX_URL: ""
+    volumes: !override []
+    tty: false
+
+  notification-cron:
+    image: salon-booking-backend-prod
+    build:
+      context: .
+      dockerfile: docker/backend-production.Dockerfile
+    command: ["node", "packages/backend/dist/notification-cron.js"]
+    depends_on: !override
+      backend:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: "postgresql://salon:salon@postgres:5432/salon_dev?schema=public"
+      JWT_ACCESS_SECRET: "${JWT_ACCESS_SECRET}"
+      JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET}"
+      PAYMENT_GATEWAY: "${PAYMENT_GATEWAY:-zarinpal}"
+      ZARINPAL_MERCHANT_ID: "${ZARINPAL_MERCHANT_ID-}"
+      IDPAY_API_KEY: "${IDPAY_API_KEY-}"
+      PAYMENT_CALLBACK_BASE_URL: "${PAYMENT_CALLBACK_BASE_URL}"
+      PUBLIC_BASE_URL: "${PUBLIC_BASE_URL}"
+      RABBITMQ_URL: "amqp://salon:salon@rabbitmq:5672"
+      KAVENEGAR_API_KEY: "${KAVENEGAR_API_KEY-}"
+      KAVENEGAR_BASE_URL: "${KAVENEGAR_BASE_URL-}"
+      KAVENEGAR_SENDER: "${KAVENEGAR_SENDER-}"
+      SMSIR_API_KEY: "${SMSIR_API_KEY-}"
+      SMSIR_BASE_URL: "${SMSIR_BASE_URL-}"
+      SMSIR_LINE_NUMBER: "${SMSIR_LINE_NUMBER-}"
+      DEV_SMS_INBOX_URL: ""
+      REMINDER_INTERVAL_MS: "${REMINDER_INTERVAL_MS:-60000}"
+      REMINDER_LEAD_TIME_MINUTES: "${REMINDER_LEAD_TIME_MINUTES:-60}"
+    volumes: !override []
+    tty: false
+
   web:
     image: salon-booking-web-prod
     build:
@@ -39,5 +132,9 @@ services:
     command: ["nginx", "-g", "daemon off;"]
     tty: false
     ports: !override
-      - "5173:5173"
-    volumes: !override []
+      - "80:80"
+      - "443:443"
+      - "5173:80"
+    volumes: !override
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /opt/salon-schedueler/ops/acme:/var/www/acme:ro
