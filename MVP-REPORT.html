@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>گزارش آمادگی MVP — سامانه رزرو سالن (آرا)</title>
+<style>
+:root {
+  --bg: #FFFFFF;
+  --surface: #F5F6F7;
+  --text: #111417;
+  --text-muted: #586170;
+  --border: #E4E7EA;
+  --primary: #0B7A68;
+  --success: #1F7A43;
+  --warning: #9A5B12;
+  --danger: #B3261E;
+  --info: #1F5FAE;
+  --radius: 10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.8;
+  padding: 2rem 1rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+h1 { font-size: 2rem; font-weight: 800; color: var(--primary); margin-bottom: 0.5rem; }
+h2 { font-size: 1.4rem; font-weight: 700; color: var(--text); margin-top: 2.5rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary); }
+h3 { font-size: 1.1rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+p, li { font-size: 1rem; color: var(--text); }
+ul, ol { padding-inline-start: 1.5rem; margin-bottom: 1rem; }
+li { margin-bottom: 0.4rem; }
+.subtitle { color: var(--text-muted); font-size: 1.1rem; margin-bottom: 2rem; }
+.verdict { background: var(--surface); border-radius: var(--radius); padding: 1.5rem; margin: 1.5rem 0; border-inline-start: 4px solid var(--primary); }
+.verdict.yes { border-color: var(--success); }
+.verdict.no { border-color: var(--danger); }
+.verdict.warn { border-color: var(--warning); }
+.badge { display: inline-block; padding: 0.2rem 0.7rem; border-radius: 999px; font-size: 0.85rem; font-weight: 600; }
+.badge-ok { background: #e6f4ea; color: var(--success); }
+.badge-warn { background: #fef3e0; color: var(--warning); }
+.badge-danger { background: #fde8e6; color: var(--danger); }
+.badge-info { background: #e3f2fd; color: var(--info); }
+table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.95rem; }
+th, td { padding: 0.6rem 0.8rem; text-align: right; border-bottom: 1px solid var(--border); }
+th { background: var(--surface); font-weight: 600; }
+tr:hover td { background: #f9fafb; }
+.section-card { background: var(--surface); border-radius: var(--radius); padding: 1.5rem; margin: 1rem 0; }
+.tree { font-family: monospace; direction: ltr; text-align: left; background: var(--surface); padding: 1rem; border-radius: var(--radius); font-size: 0.85rem; line-height: 1.6; overflow-x: auto; }
+.footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 0.85rem; text-align: center; }
+</style>
+</head>
+<body>
+
+<h1>🪄 گزارش آمادگی MVP — سامانه رزرو سالن «آرا»</h1>
+<p class="subtitle">تاریخ بررسی: ۲۲ مرداد ۱۴۰۵ · فرض: انتشار فردا (۲۳ مرداد)</p>
+
+<!-- ═══════════════════ بخش ۱: وضعیت فعلی ═══════════════════ -->
+<h2>۱. وضعیت فعلی — آیا پروژه برای MVP آماده است؟</h2>
+
+<div class="verdict yes">
+  <strong><span class="badge badge-ok">بله — با شرایط</span></strong>
+  <p style="margin-top:0.7rem;">
+    پروژه از نظر <strong>معماری، اسکیما، سرویس‌های دامنه، و فرانت‌اند</strong> بسیار بالغ‌تر از سطح MVP است.
+    اما چند مورد عملیاتی (دیپلوی، متغیرهای محیطی، تست یکپارچه‌سازی واقعی پرداخت) باید قبل از انتشار عمومی رفع شوند.
+  </p>
+</div>
+
+<h3>نقاط قوت کلیدی</h3>
+<ul>
+  <li><strong>اسکیمای دیتابیس:</strong> ۳۰ مدل، کاملاً پوشش‌دهنده سالن/نوبت/پرداخت/اشتراک/بات — فراتر از MVP</li>
+  <li><strong>بک‌اند:</strong> ۱۷+ سرویس دامنه، ۱۶ فایل روت، میان‌افزار RBAC/Rate-limit/Auth، موتور زمان‌بندی ۵۳KB با تست property-based</li>
+  <li><strong>فرانت‌اند:</strong> ۲۵+ صفحه پیاده‌شده، ۴۵+ کامپوننت، سیستم توکن کامل، PWA آماده، i18n فارسی ۹۲KB</li>
+  <li><strong>تست:</strong> ۵۰+ فایل تست (unit + property + integration + e2e + a11y)</li>
+  <li><strong>زیرساخت:</strong> Docker Compose (dev + prod)، CI/CD، Nginx، اسکریپت backup</li>
+  <li><strong>بازار ایران:</strong> تقویم جلالی، ارقام فارسی، درگاه زرین‌پال/آیدی‌پی، پیامک کاوه‌نگار/SMS.ir، بات تلگرام+بله</li>
+</ul>
+
+<h3>نقاط ضعف بحرانی (مانع انتشار)</h3>
+<ul>
+  <li><span class="badge badge-danger">بحرانی</span> <code>theme_color</code> در manifest.json هنوز <code>#2456D8</code> (نیلی قدیمی) — باید <code>#0B7A68</code> شود</li>
+  <li><span class="badge badge-danger">بحرانی</span> تست یکپارچه‌سازی واقعی درگاه پرداخت (Zarinpal sandbox) اجرا نشده</li>
+  <li><span class="badge badge-danger">بحرانی</span> هیچ rate-limit سراسری روی auth/OTP در production وجود ندارد (فقط فایل وجود دارد — باید تأیید شود فعال است)</li>
+  <li><span class="badge badge-warn">مهم</span> فایل <code>.env.example</code> بک‌اند ۳۰+ متغیر دارد — مستندات دیپلوی ناکافی</li>
+  <li><span class="badge badge-warn">مهم</span> صفحات Discovery/Search ساخته شده ولی غیرفعال — redirected to <code>/</code></li>
+</ul>
+
+<!-- ═══════════════════ بخش ۲: تغییرات ضروری ═══════════════════ -->
+<h2>۲. تغییرات ضروری قبل از انتشار</h2>
+
+<table>
+  <thead>
+    <tr><th>#</th><th>مورد</th><th>اولویت</th><th>تخمین زمان</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>۱</td><td>اصلاح <code>theme_color</code> در manifest.json به <code>#0B7A68</code></td><td><span class="badge badge-danger">P0</span></td><td>۵ دقیقه</td></tr>
+    <tr><td>۲</td><td>تست Sandbox درگاه زرین‌پال — تأیید جریان کامل پرداخت</td><td><span class="badge badge-danger">P0</span></td><td>۲ ساعت</td></tr>
+    <tr><td>۳</td><td>تأیید فعال بودن Rate Limit روی <code>/auth/otp</code> (جلوگیری از brute-force)</td><td><span class="badge badge-danger">P0</span></td><td>۳۰ دقیقه</td></tr>
+    <tr><td>۴</td><td>مستندسازی دیپلوی: یک <code>DEPLOY.md</code> با مراحل دقیق setup سرور</td><td><span class="badge badge-warn">P1</span></td><td>۲ ساعت</td></tr>
+    <tr><td>۵</td><td>تست پیامک واقعی (Kavenegar/SMS.ir) — ارسال OTP واقعی</td><td><span class="badge badge-warn">P1</span></td><td>۱ ساعت</td></tr>
+    <tr><td>۶</td><td>HTTPS + Domain setup (SSL cert, DNS) برای production</td><td><span class="badge badge-danger">P0</span></td><td>۲ ساعت</td></tr>
+    <tr><td>۷</td><td>بررسی و اطمینان از صحت CORS policy در production</td><td><span class="badge badge-warn">P1</span></td><td>۳۰ دقیقه</td></tr>
+    <tr><td>۸</td><td>Backup خودکار دیتابیس (cron job روی سرور)</td><td><span class="badge badge-warn">P1</span></td><td>۱ ساعت</td></tr>
+    <tr><td>۹</td><td>Health monitoring / Uptime check (UptimeRobot یا مشابه)</td><td><span class="badge badge-warn">P1</span></td><td>۳۰ دقیقه</td></tr>
+    <tr><td>۱۰</td><td>بررسی <code>NODE_ENV=production</code> و fail-fast secrets</td><td><span class="badge badge-danger">P0</span></td><td>۳۰ دقیقه</td></tr>
+  </tbody>
+</table>
+<p><strong>مجموع تخمینی:</strong> ~۱۰ ساعت کار فشرده (یک روز کامل توسعه‌دهنده)</p>
+
+<!-- ═══════════════════ بخش ۳: موارد حذفی ═══════════════════ -->
+<h2>۳. موارد حذفی — چه چیزهایی اضافه یا ناقص هستند</h2>
+
+<div class="section-card">
+<h3>پیشنهاد حذف/غیرفعال‌سازی برای MVP</h3>
+<table>
+  <thead><tr><th>مورد</th><th>وضعیت</th><th>دلیل حذف</th></tr></thead>
+  <tbody>
+    <tr><td>صفحات Discovery/Search (city, services)</td><td><span class="badge badge-info">ساخته‌شده، غیرفعال</span></td><td>درست — بدون محتوای واقعی (سالن‌های ثبت‌شده) بی‌فایده‌اند. بعد از جذب ۵۰+ سالن فعال کنید.</td></tr>
+    <tr><td>MarketingHome قدیمی (legacy)</td><td><span class="badge badge-warn">موجود</span></td><td>با BusinessLanding جدید جایگزین شده — فایل قدیمی قابل حذف</td></tr>
+    <tr><td>Three.js / R3F (سه‌بعدی)</td><td><span class="badge badge-warn">نصب‌شده</span></td><td>برای صفحه موفقیت رزرو استفاده شده — اگر عملکرد موبایل ضعیف است، با انیمیشن ساده‌تر جایگزین کنید</td></tr>
+    <tr><td>anime.js</td><td><span class="badge badge-info">وابستگی</span></td><td>اگر framer-motion کافی است، حذف کنید (کاهش bundle)</td></tr>
+    <tr><td>Ant Design</td><td><span class="badge badge-warn">نصب‌شده</span></td><td>کامپوننت‌های Radix + custom کافی هستند — بررسی کنید آیا واقعاً استفاده می‌شود</td></tr>
+    <tr><td>پلتفرم ادمین (۱۱ زیرصفحه)</td><td><span class="badge badge-ok">ساخته‌شده</span></td><td>حفظ کنید اما در MVP عمومی پنهان بماند — فقط با لینک مستقیم قابل دسترسی</td></tr>
+    <tr><td>React Native Mobile</td><td><span class="badge badge-info">اولیه</span></td><td>PWA وب برای MVP کافی است — اپ موبایل فاز ۲</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ═══════════════════ بخش ۴: موارد اضافه‌شدنی ═══════════════════ -->
+<h2>۴. موارد اضافه‌شدنی — چه چیزهایی کم است</h2>
+
+<h3>ضروری برای MVP (باید باشد)</h3>
+<ul>
+  <li><span class="badge badge-danger">P0</span> <strong>صفحه ثبت‌نام سالن (Onboarding):</strong> فرم wizard برای صاحب سالن جدید — <em>وجود دارد</em> ✓ (<code>/business/register</code> با ۴۳KB)</li>
+  <li><span class="badge badge-danger">P0</span> <strong>درگاه پرداخت عملیاتی:</strong> Zarinpal sandbox تست‌شده — <em>کد وجود دارد، تأیید عملیاتی لازم</em></li>
+  <li><span class="badge badge-danger">P0</span> <strong>ارسال واقعی پیامک OTP:</strong> adapter کاوه‌نگار + SMS.ir وجود دارد — <em>تست واقعی لازم</em></li>
+</ul>
+
+<h3>بسیار مهم (هفته اول بعد از لانچ)</h3>
+<ul>
+  <li><span class="badge badge-warn">P1</span> <strong>مدل Review/Rating:</strong> برای اعتمادسازی مشتری — در اسکیما نیست</li>
+  <li><span class="badge badge-warn">P1</span> <strong>گالری تصاویر سالن:</strong> مدل Image/Media — نمونه‌کار برای جذب مشتری حیاتی</li>
+  <li><span class="badge badge-warn">P1</span> <strong>آدرس و مختصات جغرافیایی سالن:</strong> برای نقشه و SEO محلی</li>
+  <li><span class="badge badge-warn">P1</span> <strong>دسته‌بندی خدمات:</strong> وقتی سالن ۲۰+ خدمت دارد، UX بدون دسته‌بندی ضعیف می‌شود</li>
+  <li><span class="badge badge-warn">P1</span> <strong>Terms of Service + Privacy Policy محتوا:</strong> صفحات وجود دارند اما محتوا باید حقوقی و واقعی باشد</li>
+</ul>
+
+<h3>مهم (ماه اول)</h3>
+<ul>
+  <li><span class="badge badge-info">P2</span> <strong>سیستم کد تخفیف/کوپن:</strong> برای کمپین‌های بازاریابی</li>
+  <li><span class="badge badge-info">P2</span> <strong>نوبت‌دهی چندخدمته:</strong> مشتری بتواند در یک رزرو چند خدمت انتخاب کند</li>
+  <li><span class="badge badge-info">P2</span> <strong>یادآوری خودکار (Push):</strong> cron وجود دارد اما push notification واقعی تست نشده</li>
+  <li><span class="badge badge-info">P2</span> <strong>Error tracking (Sentry):</strong> برای تشخیص سریع مشکلات production</li>
+  <li><span class="badge badge-info">P2</span> <strong>Analytics واقعی (GA4 یا جایگزین ایرانی):</strong> ردیابی فانل رزرو</li>
+</ul>
+
+<!-- ═══════════════════ بخش ۵: ساختار پروژه ═══════════════════ -->
+<h2>۵. ساختار پروژه</h2>
+
+<div class="tree">
+salon-booking-system/
+├── packages/
+│   ├── shared/        → types, schemas, QR, Jalali, slots, tokens
+│   ├── backend/       → Express API + Prisma + 17 domain services
+│   │   └── src/
+│   │       ├── auth/           (OTP + JWT + RBAC)
+│   │       ├── scheduling/     (engine 53KB + cancellation)
+│   │       ├── payment/        (Zarinpal + IDPay)
+│   │       ├── notifications/  (SMS + Push + Bot)
+│   │       ├── subscription/   (SaaS plans)
+│   │       ├── catalog/        (service CRUD)
+│   │       ├── analytics/      (KPIs + calendar)
+│   │       ├── bots/           (Telegram + Bale FSM)
+│   │       ├── http/routes/    (16 route files)
+│   │       └── app/            (booking + cancellation flows)
+│   ├── web/           → React 18 PWA (25+ pages, 45+ components)
+│   └── mobile/        → Expo 54 / React Native (early stage)
+├── docker/            → Dockerfiles (dev + prod) + nginx
+├── ops/               → backup/restore/readiness scripts
+├── e2e/               → Playwright suites
+└── .github/workflows/ → CI (a11y + Lighthouse)
+</div>
+
+<div class="verdict yes">
+<strong>ارزیابی: عالی.</strong> جداسازی مسئولیت‌ها تمیز، composition root واحد،
+تست‌ها co-located، وابستگی یک‌طرفه. تغییر ساختاری لازم نیست.
+</div>
+
+<h3>پیشنهادات جزئی</h3>
+<ul>
+<li>اضافه کردن <code>DEPLOY.md</code> — مراحل دقیق production deployment</li>
+<li>اضافه کردن <code>CHANGELOG.md</code> — ردیابی نسخه‌ها</li>
+<li>حذف وابستگی‌های بلااستفاده (audit: anime.js, antd)</li>
+</ul>
+
+<!-- ═══════════════════ بخش ۶: بیزینس پلن ═══════════════════ -->
+<h2>۶. بیزینس پلن — بازار ایران</h2>
+
+<h3>خلاصه محصول</h3>
+<p><strong>آرا</strong> — پلتفرم SaaS رزرو آنلاین نوبت سالن‌های زیبایی ایران. مشتری از طریق QR فیزیکی یا لینک مستقیم وارد می‌شود، خدمت/زمان انتخاب و آنلاین پرداخت می‌کند. صاحب سالن تقویم، تیم، و آمار را مدیریت می‌کند.</p>
+
+<h3>مدل درآمدی (اشتراک SaaS)</h3>
+<table>
+<thead><tr><th>پلن</th><th>قیمت ماهانه (تومان)</th><th>ویژگی‌ها</th></tr></thead>
+<tbody>
+<tr><td>آزمایشی</td><td>رایگان (۱۴ روز)</td><td>همه امکانات — محدودیت زمانی</td></tr>
+<tr><td>ماهانه</td><td>~۲۹۰,۰۰۰</td><td>نامحدود نوبت + پیامک + بات</td></tr>
+<tr><td>سه‌ماهه</td><td>~۲۴۰,۰۰۰/ماه</td><td>۱۷٪ تخفیف</td></tr>
+<tr><td>سالانه</td><td>~۱۹۰,۰۰۰/ماه</td><td>۳۵٪ تخفیف + پشتیبانی اولویت‌دار</td></tr>
+</tbody>
+</table>
+<p><em>قیمت‌ها قابل تنظیم از <code>.env</code> — متغیرهای <code>SUB_MONTHLY_RIAL</code> و مشابه.</em></p>
+
+<h3>بازار هدف</h3>
+<ul>
+<li><strong>اولیه:</strong> سالن‌های زیبایی زنانه در تهران (تخمین ۱۵,۰۰۰+ سالن فعال)</li>
+<li><strong>ثانویه:</strong> آرایشگاه‌های مردانه، سالن‌های ناخن، اسپا</li>
+<li><strong>سوم:</strong> شهرستان‌ها + مراکز زیبایی زنجیره‌ای</li>
+</ul>
+
+<h3>مزیت رقابتی</h3>
+<ul>
+<li>ورود از QR فیزیکی (بدون نیاز به نصب اپ — PWA)</li>
+<li>بات تلگرام + بله (کانال‌های محبوب ایرانی)</li>
+<li>تقویم جلالی + ارقام فارسی + RTL کامل</li>
+<li>درگاه‌های ایرانی (زرین‌پال/آیدی‌پی) — بدون واسطه</li>
+<li>بدون نیاز به نصب اپ (PWA installable)</li>
+</ul>
+
+<h3>KPIs هدف سال اول</h3>
+<table>
+<thead><tr><th>شاخص</th><th>هدف ماه ۳</th><th>هدف ماه ۶</th><th>هدف ماه ۱۲</th></tr></thead>
+<tbody>
+<tr><td>سالن‌های فعال</td><td>۵۰</td><td>۲۰۰</td><td>۵۰۰</td></tr>
+<tr><td>رزرو ماهانه</td><td>۱,۰۰۰</td><td>۸,۰۰۰</td><td>۲۵,۰۰۰</td></tr>
+<tr><td>درآمد ماهانه (تومان)</td><td>۱۵M</td><td>۵۰M</td><td>۱۰۰M</td></tr>
+<tr><td>Churn Rate</td><td>&lt;۱۵٪</td><td>&lt;۱۰٪</td><td>&lt;۸٪</td></tr>
+</tbody>
+</table>
+
+<!-- ═══════════════════ بخش ۷: استراتژی مارکتینگ ═══════════════════ -->
+<h2>۷. استراتژی مارکتینگ — عملی و مقرون‌به‌صرفه</h2>
+
+<h3>فاز ۱: لانچ (ماه ۱–۲) — بودجه: ۵–۱۰ میلیون تومان</h3>
+<table>
+<thead><tr><th>کانال</th><th>اقدام</th><th>هزینه تخمینی</th></tr></thead>
+<tbody>
+<tr><td>🎯 فروش مستقیم</td><td>مراجعه حضوری به ۱۰۰ سالن تهران، نصب QR رایگان + آموزش ۱۵ دقیقه‌ای</td><td>هزینه چاپ QR + حمل‌ونقل</td></tr>
+<tr><td>📱 اینستاگرام</td><td>صفحه اختصاصی + ریلز آموزشی (نحوه رزرو از دید مشتری)</td><td>تولید محتوا ~۳M/ماه</td></tr>
+<tr><td>💬 تلگرام/بله</td><td>گروه‌های صنفی آرایشگران — معرفی + دمو رایگان</td><td>رایگان</td></tr>
+<tr><td>🤝 Referral</td><td>هر سالن معرف = ۱ ماه رایگان</td><td>هزینه فرصت</td></tr>
+<tr><td>🎁 Trial</td><td>۱۴ روز رایگان بدون کارت — conversion بالا</td><td>پیش‌فرض سیستم</td></tr>
+</tbody>
+</table>
+
+<h3>فاز ۲: رشد (ماه ۳–۶) — بودجه: ۱۵–۲۵ میلیون/ماه</h3>
+<ul>
+<li><strong>اینفلوئنسر مارکتینگ:</strong> میکرو اینفلوئنسرهای حوزه زیبایی (۱۰–۵۰K فالوور) — هر کدام ~۲–۵M</li>
+<li><strong>تبلیغات یکتانت/تپسل:</strong> تارگت جغرافیایی (تهران → شهرستان‌ها)</li>
+<li><strong>SEO:</strong> فعال‌سازی صفحات Discovery بعد از ۵۰+ سالن — سئوی محلی</li>
+<li><strong>محتوای آموزشی:</strong> بلاگ + ویدیو (نکات مدیریت سالن، جذب مشتری)</li>
+<li><strong>همکاری با تأمین‌کنندگان:</strong> برندهای لوازم آرایشی = کانال معرفی به سالن‌ها</li>
+</ul>
+
+<h3>فاز ۳: تثبیت (ماه ۶–۱۲)</h3>
+<ul>
+<li><strong>برنامه وفاداری:</strong> سیستم تخفیف برای مشتریان وفادار هر سالن</li>
+<li><strong>Marketplace:</strong> فعال‌سازی صفحه جستجو — مشتری سالن پیدا می‌کند</li>
+<li><strong>اپ موبایل:</strong> لانچ نسخه React Native (push + offline)</li>
+<li><strong>B2B:</strong> پنل مدیریت زنجیره‌ای برای برندهای چند شعبه‌ای</li>
+</ul>
+
+<h3>تاکتیک‌های کم‌هزینه (همیشه فعال)</h3>
+<div class="section-card">
+<ul>
+<li>🏷️ <strong>QR فیزیکی رایگان:</strong> چاپ و نصب QR در سالن = بهترین کانال ارگانیک</li>
+<li>⭐ <strong>نمونه‌کار اینستاگرام:</strong> هر رزرو = فرصت محتوا (before/after)</li>
+<li>🔔 <strong>یادآوری خودکار:</strong> پیامک/بات = retention بالا + کاهش no-show</li>
+<li>📊 <strong>گزارش ماهانه رایگان:</strong> به صاحب سالن = ارزش perceived بالا</li>
+<li>🗣️ <strong>Word of mouth:</strong> تجربه خوب مشتری = بهترین تبلیغ (UX عالی = رشد ارگانیک)</li>
+</ul>
+</div>
+
+<!-- ═══════════════════ خلاصه نهایی ═══════════════════ -->
+<h2>خلاصه نهایی</h2>
+<div class="verdict yes">
+<p>
+<strong>پروژه آرا از نظر فنی در سطح بسیار بالایی قرار دارد</strong> — معماری تمیز، تست‌های گسترده، UI/UX حرفه‌ای فارسی، و اینتگریشن‌های بازار ایران.
+با <strong>~۱۰ ساعت کار عملیاتی</strong> (تست درگاه واقعی + SSL + مستندات دیپلوی) آماده انتشار MVP است.
+</p>
+<p style="margin-top:1rem;">
+<strong>بزرگ‌ترین ریسک فنی:</strong> عدم تست واقعی پرداخت و پیامک.<br>
+<strong>بزرگ‌ترین ریسک بیزینسی:</strong> جذب اولیه سالن‌ها (chicken-and-egg problem) — حل: فروش مستقیم + trial رایگان.
+</p>
+</div>
+
+<div class="footer">
+گزارش تولید شده توسط Kiro 👻 · ۲۲ مرداد ۱۴۰۵ · پروژه salon-booking-system
+</div>
+
+</body>
+</html>

@@ -27,7 +27,7 @@ import { useEffect } from 'react';
  * Signature default PWA `theme_color` — Booksy_Identity `--color-primary`
  * (`tokens.css` `:root`). Used when no per-salon accent color is supplied.
  */
-const SIGNATURE_THEME_COLOR = '#2456D8';
+const SIGNATURE_THEME_COLOR = '#0B7A68';
 
 /** Shared, static fields mirrored from `public/manifest.json`. */
 const SHARED_MANIFEST = {

@@ -1,7 +1,6 @@
 import { type ReactNode } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
-import { pageVariants, pageTransition } from '../../lib/motion-variants';
+import { cn } from './cn';
 
 /**
  * Route-transition wrapper. (The old CSS `Reveal` scroll-entrance duplicate of
@@ -18,31 +17,34 @@ export interface PageTransitionProps {
  * Route-transition wrapper: a soft, enter-only crossfade/slide keyed on the
  * current pathname, so each routed page arrives with a purposeful entrance.
  *
- * Deliberately **enter-only** (no `AnimatePresence mode="wait"` exit phase):
- * an exit-then-enter cycle would add ~300ms of dead time to every navigation
- * and interacts badly with `Suspense` chunk loading. The restraint doctrine
- * (Booksy directive §i) caps chrome motion at short opacity-led moves — this
- * is a 300ms token-eased fade with a 12px inline slide.
+ * Deliberately **enter-only** (no exit phase): an exit-then-enter cycle would
+ * add ~300ms of dead time to every navigation and interacts badly with
+ * `Suspense` chunk loading. The restraint doctrine (Booksy directive §i) caps
+ * chrome motion at short opacity-led moves — this is a `--dur-slow` token-eased
+ * fade with a 12px inline slide.
  *
- * Under `prefers-reduced-motion: reduce` the transform is dropped and only the
- * opacity crossfade remains (steering §9).
+ * Implemented as a **CSS animation** rather than framer-motion: this component
+ * sits in the app entry graph, so importing framer-motion here put ~44KB gzip
+ * of animation runtime on the initial JS of every public route and pushed the
+ * code-split budget (`scripts/analyze-bundle.mjs`). The `page-enter` keyframe in
+ * `tailwind.config.js` reproduces the former `pageVariants` values exactly.
+ *
+ * `key={pathname}` remounts the element per navigation, which restarts the CSS
+ * animation — the same trigger semantics the motion variant had.
+ *
+ * Under `prefers-reduced-motion: reduce` the `motion-safe:` variant drops the
+ * animation entirely and the content simply appears (steering §9). The slide
+ * direction follows writing direction via `--page-enter-shift`, flipped for LTR.
  */
 export function PageTransition({ children, className }: PageTransitionProps) {
   const { pathname } = useLocation();
-  const prefersReduced = useReducedMotion();
 
   return (
-    <motion.div
+    <div
       key={pathname}
-      variants={
-        prefersReduced ? { initial: { opacity: 0 }, animate: { opacity: 1 } } : pageVariants
-      }
-      initial="initial"
-      animate="animate"
-      transition={pageTransition}
-      className={className}
+      className={cn('motion-safe:animate-page-enter ltr:[--page-enter-shift:12px]', className)}
     >
       {children}
-    </motion.div>
+    </div>
   );
 }

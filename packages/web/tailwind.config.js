@@ -181,6 +181,16 @@ export default {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
         },
+        // Route entrance: opacity + a 12px slide from the inline-start edge.
+        // Mirrors the former framer-motion `pageVariants` exactly, but as CSS so
+        // the app entry chunk no longer statically pulls framer-motion (~44KB
+        // gzip) onto every public route. RTL sign-flip via the `rtl:`/`ltr:`
+        // variants at the call site is unnecessary: the translation is applied
+        // with a logical custom property (see `--page-enter-shift`).
+        'page-enter': {
+          '0%': { opacity: '0', transform: 'translateX(var(--page-enter-shift, -12px))' },
+          '100%': { opacity: '1', transform: 'translateX(0)' },
+        },
         // Scale-in for popovers, sheets, dialogs, badges.
         'scale-in': {
           '0%': { opacity: '0', transform: 'scale(0.96)' },
@@ -270,6 +280,7 @@ export default {
         'success-pop': 'success-pop var(--dur-slow) var(--ease-emphasized) both',
         'fade-up': 'fade-up var(--dur-base) var(--ease-standard) both',
         'fade-in': 'fade-in var(--dur-base) var(--ease-standard) both',
+        'page-enter': 'page-enter var(--dur-slow) var(--ease-standard) both',
         'scale-in': 'scale-in var(--dur-fast) var(--ease-emphasized) both',
         'slide-in-end': 'slide-in-end var(--dur-base) var(--ease-standard) both',
         shimmer: 'shimmer 1.6s var(--ease-standard) infinite',

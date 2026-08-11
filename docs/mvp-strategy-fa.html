@@ -1,0 +1,1584 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#17213a" />
+    <meta
+      name="description"
+      content="استراتژی شروع MVP سامانه رزرو و مدیریت سالن‌های زیبایی در بازار ایران"
+    />
+    <title>استراتژی شروع MVP | سامانه سالن</title>
+    <style>
+      :root {
+        --bg: #f5f1eb;
+        --surface: #fffdf9;
+        --surface-muted: #eee9e0;
+        --ink: #17213a;
+        --ink-soft: #38445f;
+        --muted: #697286;
+        --line: #ddd6ca;
+        --indigo: #3f48ae;
+        --indigo-deep: #29337f;
+        --indigo-soft: #e9eaff;
+        --coral: #d86658;
+        --coral-soft: #ffebe6;
+        --mint: #bfe8d7;
+        --mint-deep: #126b57;
+        --amber: #a85e21;
+        --amber-soft: #fff0d7;
+        --shadow: 0 18px 50px rgba(23, 33, 58, 0.09);
+        --radius-lg: 24px;
+        --radius-md: 16px;
+        --radius-sm: 10px;
+        --content: 1180px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        min-width: 320px;
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 86% 4%, rgba(216, 102, 88, 0.1), transparent 28rem),
+          radial-gradient(circle at 8% 20%, rgba(63, 72, 174, 0.08), transparent 25rem),
+          var(--bg);
+        font-family: Tahoma, Arial, sans-serif;
+        line-height: 1.85;
+        text-rendering: optimizeLegibility;
+      }
+
+      a {
+        color: var(--indigo-deep);
+      }
+
+      .shell {
+        width: min(var(--content), calc(100% - 36px));
+        margin-inline: auto;
+      }
+
+      .topbar {
+        position: sticky;
+        z-index: 10;
+        top: 0;
+        border-bottom: 1px solid rgba(221, 214, 202, 0.9);
+        background: rgba(245, 241, 235, 0.93);
+        backdrop-filter: blur(14px);
+      }
+
+      .topbar-inner {
+        display: flex;
+        min-height: 68px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 22px;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 11px;
+        color: var(--ink);
+        font-size: 0.9rem;
+        font-weight: 900;
+        text-decoration: none;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        color: #fff;
+        background: var(--indigo);
+        border-radius: 12px 4px 12px 4px;
+        box-shadow: 4px 4px 0 var(--mint-deep);
+        font-size: 1.05rem;
+      }
+
+      .brand b {
+        color: var(--coral);
+      }
+
+      .topnav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+
+      .topnav a {
+        padding: 6px 10px;
+        color: var(--muted);
+        border-radius: 8px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .topnav a:hover {
+        color: var(--indigo-deep);
+        background: var(--indigo-soft);
+      }
+
+      main {
+        padding: 48px 0 80px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 14px;
+        color: var(--indigo);
+        font-size: 0.76rem;
+        font-weight: 900;
+        letter-spacing: 0.04em;
+      }
+
+      .eyebrow::before {
+        display: inline-block;
+        width: 28px;
+        height: 3px;
+        content: "";
+        background: var(--coral);
+        border-radius: 99px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1,
+      h2,
+      h3 {
+        letter-spacing: -0.035em;
+        line-height: 1.25;
+      }
+
+      h1 {
+        max-width: 820px;
+        margin-bottom: 20px;
+        font-size: clamp(2.15rem, 5vw, 4.7rem);
+      }
+
+      h2 {
+        margin-bottom: 16px;
+        font-size: clamp(1.45rem, 2.8vw, 2.2rem);
+      }
+
+      h3 {
+        margin-bottom: 8px;
+        font-size: 1.08rem;
+      }
+
+      .lede {
+        max-width: 760px;
+        margin-bottom: 26px;
+        color: var(--ink-soft);
+        font-size: clamp(1rem, 1.7vw, 1.25rem);
+      }
+
+      .lede strong,
+      .highlight {
+        color: var(--indigo-deep);
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+        gap: 32px;
+        align-items: stretch;
+      }
+
+      .hero-copy {
+        padding: 18px 0 20px;
+      }
+
+      .decision-card {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 25px;
+        color: #fff;
+        background: linear-gradient(150deg, var(--indigo-deep), #515bc5);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+      }
+
+      .decision-card .label {
+        color: #cdd2ff;
+        font-size: 0.72rem;
+        font-weight: 900;
+        letter-spacing: 0.1em;
+      }
+
+      .decision-card h2 {
+        margin-top: 12px;
+        color: #fff;
+        font-size: 1.8rem;
+      }
+
+      .decision-card p {
+        color: #eef0ff;
+      }
+
+      .decision-card .mini-note {
+        margin-top: 18px;
+        padding-top: 16px;
+        color: #dfe2ff;
+        border-top: 1px solid rgba(255, 255, 255, 0.22);
+        font-size: 0.8rem;
+      }
+
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+        margin: 20px 0 0;
+      }
+
+      .pill {
+        display: inline-flex;
+        min-height: 35px;
+        align-items: center;
+        padding: 5px 11px;
+        color: var(--indigo-deep);
+        background: var(--indigo-soft);
+        border: 1px solid #d6d8ff;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 800;
+      }
+
+      .pill.coral {
+        color: #944338;
+        background: var(--coral-soft);
+        border-color: #ffd1c8;
+      }
+
+      .pill.mint {
+        color: var(--mint-deep);
+        background: #e1f4eb;
+        border-color: #c5e9d9;
+      }
+
+      .section {
+        margin-top: 76px;
+        scroll-margin-top: 92px;
+      }
+
+      .section-intro {
+        max-width: 760px;
+        color: var(--ink-soft);
+      }
+
+      .section-kicker {
+        margin-bottom: 8px;
+        color: var(--coral);
+        font-size: 0.72rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+      }
+
+      .card-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 22px;
+      }
+
+      .card {
+        padding: 20px;
+        background: rgba(255, 253, 249, 0.86);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow);
+      }
+
+      .card p,
+      .card li {
+        color: var(--ink-soft);
+        font-size: 0.9rem;
+      }
+
+      .card ul,
+      .card ol {
+        margin: 9px 0 0;
+        padding-right: 20px;
+      }
+
+      .number {
+        display: grid;
+        width: 31px;
+        height: 31px;
+        margin-bottom: 12px;
+        place-items: center;
+        color: #fff;
+        background: var(--indigo);
+        border-radius: 9px 3px 9px 3px;
+        font-weight: 900;
+      }
+
+      .number.coral {
+        background: var(--coral);
+      }
+
+      .number.mint {
+        color: var(--mint-deep);
+        background: var(--mint);
+      }
+
+      .table-wrap {
+        margin-top: 22px;
+        overflow-x: auto;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow);
+      }
+
+      table {
+        width: 100%;
+        min-width: 760px;
+        border-collapse: collapse;
+        text-align: right;
+      }
+
+      th,
+      td {
+        padding: 15px 16px;
+        vertical-align: top;
+        border-bottom: 1px solid var(--line);
+        font-size: 0.86rem;
+      }
+
+      th {
+        color: var(--indigo-deep);
+        background: #f1efff;
+        font-size: 0.78rem;
+        font-weight: 900;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      td:first-child {
+        width: 22%;
+        color: var(--ink);
+        font-weight: 900;
+      }
+
+      td:not(:first-child) {
+        color: var(--ink-soft);
+      }
+
+      .source-note {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 0.76rem;
+      }
+
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .metric {
+        padding: 18px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow);
+      }
+
+      .metric-number {
+        color: var(--indigo-deep);
+        font-size: clamp(1.25rem, 2.6vw, 2rem);
+        font-weight: 900;
+        line-height: 1.2;
+      }
+
+      .metric-label {
+        margin-top: 7px;
+        color: var(--ink-soft);
+        font-size: 0.78rem;
+      }
+
+      .wide-table table {
+        min-width: 1180px;
+      }
+
+      .matrix-table table {
+        min-width: 1320px;
+      }
+
+      .status {
+        display: inline-flex;
+        min-width: 27px;
+        min-height: 24px;
+        align-items: center;
+        justify-content: center;
+        padding: 2px 7px;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .status.yes {
+        color: var(--mint-deep);
+        background: #dff4e8;
+      }
+
+      .status.partial {
+        color: var(--amber);
+        background: var(--amber-soft);
+      }
+
+      .status.no {
+        color: #944338;
+        background: var(--coral-soft);
+      }
+
+      .status.unknown {
+        color: var(--muted);
+        background: var(--surface-muted);
+      }
+
+      .chart {
+        margin-top: 22px;
+        padding: 20px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow);
+      }
+
+      .chart-title {
+        margin-bottom: 14px;
+        color: var(--indigo-deep);
+        font-size: 0.9rem;
+        font-weight: 900;
+      }
+
+      .bar-row {
+        display: grid;
+        grid-template-columns: 110px minmax(100px, 1fr) minmax(180px, 0.85fr);
+        gap: 12px;
+        align-items: center;
+        margin-top: 10px;
+        font-size: 0.78rem;
+      }
+
+      .bar-row > strong {
+        color: var(--ink-soft);
+        font-size: 0.72rem;
+        font-weight: 700;
+      }
+
+      .bar-track {
+        display: block;
+        height: 15px;
+        overflow: hidden;
+        background: var(--surface-muted);
+        border-radius: 999px;
+      }
+
+      .bar-fill {
+        display: block;
+        width: var(--bar-width);
+        height: 100%;
+        background: linear-gradient(90deg, var(--indigo), var(--coral));
+        border-radius: inherit;
+      }
+
+      .bar-fill.medium {
+        background: linear-gradient(90deg, #7380dd, var(--indigo));
+      }
+
+      .bar-fill.small {
+        background: var(--mint-deep);
+      }
+
+      .bar-fill.unknown {
+        width: 17%;
+        background: repeating-linear-gradient(135deg, #c8c4bc 0 6px, #e4e0d8 6px 12px);
+      }
+
+      .insight-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 22px;
+      }
+
+      .insight {
+        padding: 22px;
+        border-radius: var(--radius-md);
+      }
+
+      .insight h3 {
+        margin-bottom: 10px;
+      }
+
+      .insight ul {
+        margin: 0;
+        padding-right: 20px;
+      }
+
+      .insight li {
+        margin-bottom: 8px;
+        color: var(--ink-soft);
+        font-size: 0.88rem;
+      }
+
+      .insight.win {
+        background: #e7f5ed;
+        border: 1px solid #c6e8d5;
+      }
+
+      .insight.risk {
+        background: var(--coral-soft);
+        border: 1px solid #ffd1c8;
+      }
+
+      .insight.rule {
+        background: var(--indigo-soft);
+        border: 1px solid #d6d8ff;
+      }
+
+      .mini-table td,
+      .mini-table th {
+        padding: 11px 12px;
+        font-size: 0.78rem;
+      }
+
+      .mvp-layout {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 22px;
+      }
+
+      .mvp-column {
+        padding: 20px;
+        border-radius: var(--radius-md);
+      }
+
+      .mvp-column h3 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .mvp-column ul {
+        margin: 12px 0 0;
+        padding-right: 20px;
+      }
+
+      .mvp-column li {
+        margin-bottom: 8px;
+        color: var(--ink-soft);
+        font-size: 0.88rem;
+      }
+
+      .mvp-p0 {
+        background: #e7f5ed;
+        border: 1px solid #c6e8d5;
+      }
+
+      .mvp-p1 {
+        background: var(--amber-soft);
+        border: 1px solid #f1d8ae;
+      }
+
+      .mvp-p2 {
+        background: var(--coral-soft);
+        border: 1px solid #ffd1c8;
+      }
+
+      .tag {
+        display: inline-flex;
+        padding: 2px 8px;
+        color: var(--mint-deep);
+        background: #c9edda;
+        border-radius: 999px;
+        font-size: 0.68rem;
+      }
+
+      .mvp-p1 .tag {
+        color: var(--amber);
+        background: #ffe2b4;
+      }
+
+      .mvp-p2 .tag {
+        color: #944338;
+        background: #ffd4cd;
+      }
+
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 22px;
+      }
+
+      .flow-step {
+        position: relative;
+        padding: 17px 14px;
+        text-align: center;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+      }
+
+      .flow-step:not(:last-child)::after {
+        position: absolute;
+        top: 50%;
+        left: -12px;
+        color: var(--coral);
+        content: "←";
+        font-size: 1.2rem;
+        font-weight: 900;
+        transform: translateY(-50%);
+      }
+
+      .flow-step strong {
+        display: block;
+        margin-bottom: 3px;
+        color: var(--indigo-deep);
+        font-size: 0.88rem;
+      }
+
+      .flow-step span {
+        color: var(--muted);
+        font-size: 0.74rem;
+      }
+
+      .timeline {
+        display: grid;
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .timeline-item {
+        display: grid;
+        grid-template-columns: 118px minmax(0, 1fr);
+        gap: 18px;
+        align-items: start;
+        padding: 17px 20px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+      }
+
+      .timeline-item strong {
+        color: var(--coral);
+        font-size: 0.86rem;
+      }
+
+      .timeline-item p {
+        margin: 0;
+        color: var(--ink-soft);
+        font-size: 0.9rem;
+      }
+
+      .pricing {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 22px;
+      }
+
+      .price-card {
+        padding: 22px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow);
+      }
+
+      .price-card.featured {
+        border: 2px solid var(--indigo);
+        transform: translateY(-5px);
+      }
+
+      .price-label {
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 900;
+      }
+
+      .price {
+        margin: 7px 0 5px;
+        color: var(--indigo-deep);
+        font-size: 1.65rem;
+        font-weight: 900;
+      }
+
+      .price-card p,
+      .price-card li {
+        color: var(--ink-soft);
+        font-size: 0.85rem;
+      }
+
+      .price-card ul {
+        margin: 12px 0 0;
+        padding-right: 18px;
+      }
+
+      .quote {
+        margin-top: 22px;
+        padding: 22px 24px;
+        color: var(--indigo-deep);
+        background: var(--indigo-soft);
+        border-right: 5px solid var(--indigo);
+        border-radius: var(--radius-md);
+        font-size: 1.05rem;
+        font-weight: 800;
+      }
+
+      .footer {
+        padding: 24px 0 36px;
+        color: var(--muted);
+        border-top: 1px solid var(--line);
+        font-size: 0.78rem;
+      }
+
+      .footer-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 8px;
+      }
+
+      @media (max-width: 900px) {
+        .hero-grid,
+        .card-grid,
+        .mvp-layout,
+        .pricing,
+        .metric-grid,
+        .insight-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .decision-card {
+          grid-column: 1 / -1;
+        }
+
+        .card:last-child,
+        .mvp-column:last-child,
+        .price-card:last-child {
+          grid-column: 1 / -1;
+        }
+      }
+
+      @media (max-width: 650px) {
+        .shell {
+          width: min(var(--content), calc(100% - 24px));
+        }
+
+        .topbar-inner {
+          min-height: 60px;
+        }
+
+        .topnav {
+          display: none;
+        }
+
+        main {
+          padding-top: 30px;
+        }
+
+        .hero-grid,
+        .card-grid,
+        .mvp-layout,
+        .pricing,
+        .metric-grid,
+        .insight-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .decision-card,
+        .card:last-child,
+        .mvp-column:last-child,
+        .price-card:last-child {
+          grid-column: auto;
+        }
+
+        .section {
+          margin-top: 56px;
+        }
+
+        .flow {
+          grid-template-columns: 1fr;
+        }
+
+        .flow-step:not(:last-child)::after {
+          top: auto;
+          right: 50%;
+          bottom: -20px;
+          left: auto;
+          content: "↓";
+          transform: translateX(50%);
+        }
+
+        .timeline-item {
+          grid-template-columns: 1fr;
+          gap: 4px;
+        }
+
+        .price-card.featured {
+          transform: none;
+        }
+      }
+
+      @media print {
+        .topbar {
+          position: static;
+        }
+
+        .decision-card,
+        .card,
+        .table-wrap,
+        .price-card {
+          box-shadow: none;
+        }
+
+        a {
+          color: inherit;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="shell topbar-inner">
+        <a class="brand" href="#top">
+          <span class="brand-mark" aria-hidden="true">س</span>
+          <span>Salon <b>MVP</b> Strategy</span>
+        </a>
+        <nav class="topnav" aria-label="ناوبری صفحه">
+          <a href="#decision">تصمیم</a>
+          <a href="#competitors">رقبا</a>
+          <a href="#iran-competitors">ایرانی‌ها</a>
+          <a href="#mvp">MVP</a>
+          <a href="#launch">لانچ</a>
+          <a href="#metrics">معیارها</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="top">
+      <div class="shell">
+        <section class="hero-grid" id="decision">
+          <div class="hero-copy">
+            <p class="eyebrow">استراتژی شروع · بازار ایران · ۱۱ اوت ۲۰۲۶</p>
+            <h1>با وب‌اپ/PWA شروع کن؛ اپ مشتری و مارکت‌پلیس را فعلاً نساز.</h1>
+            <p class="lede">
+              محصول اولیه باید یک <strong>B2B SaaS برای سالن‌دار</strong> باشد: مشتری از لینک
+              اینستاگرام یا واتساپ، بدون نصب اپ، نوبت بگیرد و سالن تقویم، مشتری، پیامک و بیعانه
+              را مدیریت کند.
+            </p>
+            <div class="pill-row" aria-label="اصول تصمیم">
+              <span class="pill">وب‌اپ/PWA</span>
+              <span class="pill coral">سالن‌دار اول</span>
+              <span class="pill mint">رزرو بدون نصب</span>
+              <span class="pill">یک شهر · یک سگمنت</span>
+            </div>
+          </div>
+
+          <aside class="decision-card">
+            <div>
+              <div class="label">DECISION</div>
+              <h2>نسخه اول باید «لینک رزرو + تقویم قابل‌اعتماد» باشد.</h2>
+              <p>
+                اپ Native فقط بعد از اثبات استفاده، برای مدیر و پرسنل. اپ مشتری مزیت توزیعی
+                ندارد و مارکت‌پلیس از روز اول گرفتار مشکل مرغ و تخم‌مرغ است.
+              </p>
+            </div>
+            <div class="mini-note">سرعت AI را صرف تست سریع‌تر کن، نه بزرگ‌تر کردن scope.</div>
+          </aside>
+        </section>
+
+        <section class="section" id="why">
+          <p class="section-kicker">چرا این انتخاب؟</p>
+          <h2>گلوگاه، کدنویسی نیست؛ توزیع و عادت کاربر است.</h2>
+          <p class="section-intro">
+            مشتری سالن معمولاً برای یک نوبت اپ جدید نصب نمی‌کند. سالن‌دار هم ابتدا دنبال جذب
+            مشتری از شبکه خودش است، نه حضور در یک مارکت‌پلیس خالی. بنابراین نقطه شروع باید لینکی
+            باشد که مستقیماً در بیو، دایرکت، واتساپ و QR استفاده شود.
+          </p>
+          <div class="card-grid">
+            <article class="card">
+              <span class="number">۱</span>
+              <h3>اصطکاک کمتر</h3>
+              <p>مشتری با مرورگر رزرو می‌کند؛ نصب، ثبت‌نام طولانی و وابستگی به اپ‌استور حذف می‌شود.</p>
+            </article>
+            <article class="card">
+              <span class="number coral">۲</span>
+              <h3>ارزش مستقیم برای خریدار</h3>
+              <p>سالن‌دار برای کاهش دایرکت، تداخل نوبت و عدم مراجعه پول می‌دهد.</p>
+            </article>
+            <article class="card">
+              <span class="number mint">۳</span>
+              <h3>یادگیری سریع‌تر</h3>
+              <p>با یک کلاینت وب، تغییرات سریع‌تر منتشر و رفتار واقعی سالن‌ها زودتر دیده می‌شود.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="competitors">
+          <p class="section-kicker">تحلیل رقبا</p>
+          <h2>بازار از «رزرو ساده» عبور کرده است.</h2>
+          <p class="section-intro">
+            رقبای داخلی و جهانی تقریباً همه روی تقویم، رزرو، پیامک، پرداخت و گزارش کار می‌کنند.
+            مزیت تو نباید تعداد قابلیت باشد؛ باید راه‌اندازی سریع، تجربه فارسی/شمسی، پایداری
+            زمان‌بندی و پشتیبانی واقعی باشد.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>دسته</th>
+                  <th>رقبا و جایگاه</th>
+                  <th>برداشت استراتژیک</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>نرم‌افزار تخصصی سالن</td>
+                  <td>
+                    <a href="https://sisno.ir/" target="_blank" rel="noreferrer">سیسنو</a> و
+                    <a href="https://noxar.ir/products/beauty" target="_blank" rel="noreferrer">نُکسار</a>؛
+                    CRM، پرسنل، پیامک، مالی، انبار و وفاداری.
+                  </td>
+                  <td>با suite کامل رقابت نکن. روی یک wedge کوچک، فعال‌سازی ساده و تجربه روزانه بهتر تمرکز کن.</td>
+                </tr>
+                <tr>
+                  <td>رزرو عمومی</td>
+                  <td>
+                    <a href="https://planyx.ir/" target="_blank" rel="noreferrer">پلنیکس</a>،
+                    <a href="https://www.alobiam.ir/" target="_blank" rel="noreferrer">الوبیام</a> و
+                    <a href="https://www.zamanoo.ir/pricing" target="_blank" rel="noreferrer">زمانو</a>؛
+                    لینک رزرو، بدون نصب، پرداخت و پیامک.
+                  </td>
+                  <td>«بدون نصب اپ» به‌تنهایی مزیت نیست؛ تفاوت باید در workflow سالن و onboarding باشد.</td>
+                </tr>
+                <tr>
+                  <td>مارکت‌پلیس</td>
+                  <td>
+                    <a href="https://nobatchi.app/" target="_blank" rel="noreferrer">نوبتچی</a>، نگینا،
+                    <a href="https://biz.booksy.com/pricing" target="_blank" rel="noreferrer">Booksy</a> و
+                    <a href="https://www.fresha.com/pricing" target="_blank" rel="noreferrer">Fresha</a>؛
+                    کشف سالن و جذب مشتری.
+                  </td>
+                  <td>تا وقتی supply و demand نداری، مارکت‌پلیس نساز. ابتدا مشتریان فعلی سالن را دیجیتال کن.</td>
+                </tr>
+                <tr>
+                  <td>عملیات/POS جهانی</td>
+                  <td>
+                    <a href="https://squareup.com/us/en/appointments/pricing" target="_blank" rel="noreferrer">Square</a> و
+                    <a href="https://www.mangomint.com/blog/pricing-update-2026/" target="_blank" rel="noreferrer">Mangomint</a>؛
+                    پرداخت، POS، منابع و چندشعبه‌ای.
+                  </td>
+                  <td>برای benchmark مناسب‌اند، اما پیچیدگی و وابستگی منطقه‌ای‌شان برای MVP ایران لازم نیست.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="source-note">
+            قیمت‌های رقبا snapshot صفحات رسمی در تاریخ این گزارش‌اند و ممکن است تغییر کنند.
+            <a href="comparisons/ara-salon-platforms/index.html">گزارش مقایسه ۱۵ پلتفرم داخل پروژه</a>
+            نیز قابل مشاهده است.
+          </p>
+        </section>
+
+        <section class="section" id="iran-competitors">
+          <p class="section-kicker">رقبای ایرانی · داده عمومی</p>
+          <h2>رقیب‌ها را باید در سه جبهه دید.</h2>
+          <p class="section-intro">
+            «نرم‌افزار عملیاتی سالن»، «رزرو عمومی» و «مارکت‌پلیس/دایرکتوری» مسئله یکسانی حل نمی‌کنند.
+            عدد کاربر این سه دسته قابل مقایسه مستقیم نیست. هر جا عددی در سایت یا کانال رسمی پیدا شده،
+            با برچسب <strong>ادعای خود شرکت</strong> آمده؛ هیچ‌کدام را آمار حسابرسی‌شده بازار فرض نکن.
+          </p>
+
+          <div class="metric-grid">
+            <article class="metric">
+              <div class="metric-number">+۱۲۰۰</div>
+              <div class="metric-label">سالن فعال؛ ادعای رسمی سیسنو</div>
+            </article>
+            <article class="metric">
+              <div class="metric-number">۶۰۰۰–۶۸۹۰+</div>
+              <div class="metric-label">پروفایل/مرکز؛ ادعاهای متفاوت ماهشو</div>
+            </article>
+            <article class="metric">
+              <div class="metric-number">۱۵۰٬۰۰۰</div>
+              <div class="metric-label">کسب‌وکار ثبت‌شده؛ ادعای عمومی بهترینو، همه دسته‌ها</div>
+            </article>
+            <article class="metric">
+              <div class="metric-number">۳–۵M</div>
+              <div class="metric-label">کاربر/بازدید ماهانه؛ ادعاهای متعارض بهترینو</div>
+            </article>
+          </div>
+
+          <div class="chart" aria-label="سیگنال اندازه عمومی رقبا">
+            <div class="chart-title">چارت سیگنال اندازه عمومی — سهم بازار نیست</div>
+            <div class="bar-row">
+              <span>بهترینو</span>
+              <span class="bar-track"><span class="bar-fill" style="--bar-width: 100%"></span></span>
+              <strong>۱۵۰k کسب‌وکار / ۳–۵M کاربر یا بازدید ادعایی</strong>
+            </div>
+            <div class="bar-row">
+              <span>ماهشو</span>
+              <span class="bar-track"><span class="bar-fill medium" style="--bar-width: 72%"></span></span>
+              <strong>۶k–۶۸۹۰+ پروفایل/مرکز ادعایی</strong>
+            </div>
+            <div class="bar-row">
+              <span>سیسنو</span>
+              <span class="bar-track"><span class="bar-fill medium" style="--bar-width: 34%"></span></span>
+              <strong>+۱۲۰۰ سالن فعال ادعایی</strong>
+            </div>
+            <div class="bar-row">
+              <span>پاهو</span>
+              <span class="bar-track"><span class="bar-fill small" style="--bar-width: 9%"></span></span>
+              <strong>۲۰+ متخصص/سالن؛ ادعای سایت در ۱۱ شهر</strong>
+            </div>
+            <div class="bar-row">
+              <span>نکسار، پلنیکس، زمانو، الوبیام</span>
+              <span class="bar-track"><span class="bar-fill unknown"></span></span>
+              <strong>کاربر فعال عمومی اعلام نشده</strong>
+            </div>
+            <p class="source-note">
+              این نوار فقط حجم <strong>شواهد عمومی</strong> را نشان می‌دهد؛ تعداد پروفایل، بازدید و سالن فعال
+              تعریف یکسان ندارند. درباره نکسار، پلنیکس، زمانو، الوبیام، نوبتچی و نوبتستان عدد عمومی معتبر پیدا نشد.
+            </p>
+          </div>
+
+          <h3 style="margin-top: 30px">جدول اندازه، قیمت و تهدید استراتژیک</h3>
+          <div class="table-wrap wide-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>رقیب</th>
+                  <th>مدل</th>
+                  <th>قیمت عمومی</th>
+                  <th>اندازه قابل مشاهده</th>
+                  <th>قابلیت/جایگاه اصلی</th>
+                  <th>تهدید برای MVP تو</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><a href="https://sisno.ir/" target="_blank" rel="noreferrer">سیسنو</a></td>
+                  <td>SaaS تخصصی سالن</td>
+                  <td>۲ ماه آزمایشی؛ ۶ ماه ۶M، ۱۲ ماه ۹M، ۲۴ ماه ۱۵M تومان</td>
+                  <td>+۱۲۰۰ سالن فعال؛ ادعای رسمی، حسابرسی‌نشده</td>
+                  <td>رزرو، مشتری، پرسنل، مالی، وفاداری، پیامک، گزارش، وب و اپ</td>
+                  <td><span class="status yes">بالا</span> در عملیات</td>
+                </tr>
+                <tr>
+                  <td><a href="https://noxar.ir/products/beauty" target="_blank" rel="noreferrer">نُکسار</a></td>
+                  <td>SaaS عمودی عمیق</td>
+                  <td>دموی کامل ۳۰روزه؛ قیمت عمومی در صفحه قابل مشاهده نیست</td>
+                  <td>اعلام عمومی نشده</td>
+                  <td>تقویم شمسی، بیعانه، CRM، POS، حقوق/کمیسیون، انبار، چندشعبه، وفاداری، کمپین</td>
+                  <td><span class="status yes">بالا</span> در عمق فیچر</td>
+                </tr>
+                <tr>
+                  <td><a href="https://planyx.ir/" target="_blank" rel="noreferrer">پلنیکس</a></td>
+                  <td>رزرو عمومی SaaS</td>
+                  <td>رایگان؛ حرفه‌ای ۱۴۹k؛ سازمانی ۳۴۹k تومان/ماه</td>
+                  <td>اعلام عمومی نشده</td>
+                  <td>لینک رزرو، بدون نصب، پرسنل، پرداخت، یادآوری پیامکی، گزارش</td>
+                  <td><span class="status yes">بالا</span> در سادگی و قیمت</td>
+                </tr>
+                <tr>
+                  <td><a href="https://www.zamanoo.ir/pricing" target="_blank" rel="noreferrer">زمانو</a></td>
+                  <td>Appointment OS عمومی</td>
+                  <td>پایه ۸۹۹k؛ حرفه‌ای ۱.۷۹۹M؛ پیشرفته ۳.۴۹۹M تومان/ماه</td>
+                  <td>عدد قابل اتکا ندارد؛ KPI صفحه اصلی صفر/دمو به نظر می‌رسد</td>
+                  <td>رزرو، ظرفیت، پرسنل، پرداخت، یادآوری، گزارش، چندشعبه</td>
+                  <td><span class="status partial">متوسط</span> در بازار عمومی</td>
+                </tr>
+                <tr>
+                  <td><a href="https://www.alobiam.ir/" target="_blank" rel="noreferrer">الوبیام</a></td>
+                  <td>رزرو + سایت‌ساز عمومی</td>
+                  <td>۴۰۰k ماهانه؛ ۱.۱M سه‌ماهه؛ ۳.۳M سالانه</td>
+                  <td>اعلام عمومی نشده</td>
+                  <td>سایت اختصاصی، رزرو، پرسنل نامحدود، پیامک/تلگرام/واتساپ، گزارش</td>
+                  <td><span class="status partial">متوسط</span> در کانال‌ها و قیمت</td>
+                </tr>
+                <tr>
+                  <td><a href="https://nobatchi.app/" target="_blank" rel="noreferrer">نوبتچی</a></td>
+                  <td>مارکت‌پلیس + اپ رزرو</td>
+                  <td>قیمت عمومی پیدا نشد</td>
+                  <td>کاربر/سالن عمومی اعلام نشده؛ محصول live و چندساله</td>
+                  <td>کشف سالن، جست‌وجو، نظر، پروفایل، بیعانه، اپ اندروید و PWA آیفون</td>
+                  <td><span class="status partial">متوسط</span> در جذب مشتری</td>
+                </tr>
+                <tr>
+                  <td><a href="https://maahsho.com/" target="_blank" rel="noreferrer">ماهشو</a></td>
+                  <td>دایرکتوری + لید/SEO</td>
+                  <td>جایگاه ویژه/توربو؛ قیمت عددی صفحه عمومی قابل استخراج نیست</td>
+                  <td>۶k تا ۶۸۹۰+ پروفایل/مرکز؛ دو ادعای متفاوت رسمی</td>
+                  <td>کشف متخصص، پروفایل، نظر، تماس مستقیم، SEO و پیشنهاد AI</td>
+                  <td><span class="status partial">متوسط</span> در توزیع، نه عملیات</td>
+                </tr>
+                <tr>
+                  <td><a href="https://behtarino.com/hub/about" target="_blank" rel="noreferrer">بهترینو</a></td>
+                  <td>دایرکتوری عمومی بزرگ</td>
+                  <td>عضویت پریمیوم پولی؛ مبلغ عمومی ثابت پیدا نشد</td>
+                  <td>۱۵۰k کسب‌وکار و ۳–۵M کاربر/بازدید ماهانه؛ خوداظهاری متعارض</td>
+                  <td>کشف محلی، نقشه، نظر، اپ، پروفایل و تبلیغ؛ همه دسته‌ها</td>
+                  <td><span class="status partial">غیرمستقیم</span> در acquisition</td>
+                </tr>
+                <tr>
+                  <td><a href="https://www.paho.ir/" target="_blank" rel="noreferrer">پاهو</a></td>
+                  <td>دایرکتوری محلی</td>
+                  <td>ثبت پایه رایگان؛ قیمت پریمیوم عمومی نیست</td>
+                  <td>۱۱ شهر و ۲۰+ متخصص/سالن؛ عدد ادعایی صفحه، نه آمار حسابرسی‌شده</td>
+                  <td>پروفایل، نظر، تماس/واتساپ؛ عملیات رزرو کامل ندارد</td>
+                  <td><span class="status no">پایین</span> مستقیم</td>
+                </tr>
+                <tr>
+                  <td><a href="https://nobatestan.ir/" target="_blank" rel="noreferrer">نوبتستان</a></td>
+                  <td>White-label رزرو</td>
+                  <td>برنزی ۴.۹۹۰M؛ نقره‌ای ۸.۹M؛ طلایی ۱۲.۹M تومان؛ دوره بسته روشن نیست</td>
+                  <td>اعلام عمومی نشده</td>
+                  <td>سایت/اپ، پرسنل، خدمات، پیامک، بیعانه، پرداخت، تأیید دستی، پنل ادمین</td>
+                  <td><span class="status partial">متوسط</span> در پروژه‌های سفارشی</td>
+                </tr>
+                <tr>
+                  <td><a href="https://nobyta.ir/" target="_blank" rel="noreferrer">نوبیتا</a> / <a href="https://nobatix.ir/" target="_blank" rel="noreferrer">نوبتیکس</a></td>
+                  <td>رزرو/مارکت‌پلیس کوچک‌تر</td>
+                  <td>اعلام عمومی نشده</td>
+                  <td>اعلام عمومی نشده</td>
+                  <td>رزرو، کمپین، تخفیف، SMS، گزارش یا کشف کسب‌وکار؛ جزئیات متغیر</td>
+                  <td><span class="status no">پایین</span> فعلاً، اما long tail</td>
+                </tr>
+                <tr>
+                  <td><a href="https://rezervnet.com/" target="_blank" rel="noreferrer">رزروِنت</a></td>
+                  <td>رزرو عمودی قدیمی‌تر</td>
+                  <td>اعلام عمومی نشده</td>
+                  <td>کاربر نامشخص؛ footprint عمومی کم/قدیمی</td>
+                  <td>رزرو، تقویم شمسی، پرسنل و پرداخت؛ وضعیت فعلی نیازمند اعتبارسنجی</td>
+                  <td><span class="status no">پایین</span> با ریسک داده قدیمی</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p class="source-note">
+            منابع قیمت و قابلیت‌ها: <a href="https://sisno.ir/plans" target="_blank" rel="noreferrer">پلن‌های سیسنو</a>،
+            <a href="https://planyx.ir/" target="_blank" rel="noreferrer">پلنیکس</a>،
+            <a href="https://www.zamanoo.ir/pricing" target="_blank" rel="noreferrer">زمانو</a>،
+            <a href="https://www.alobiam.ir/" target="_blank" rel="noreferrer">الوبیام</a>،
+            <a href="https://admin.noxar.ir/register" target="_blank" rel="noreferrer">دموی نکسار</a> و
+            <a href="https://nobatestan.ir/" target="_blank" rel="noreferrer">نوبتستان</a>.
+            منابع اندازه: <a href="https://maahsho.com/prosho/" target="_blank" rel="noreferrer">ماهشو</a>،
+            <a href="https://t.me/s/behtarinoHQ" target="_blank" rel="noreferrer">کانال رسمی بهترینو</a>،
+            <a href="https://sisno.ir/" target="_blank" rel="noreferrer">سیسنو</a> و
+            <a href="https://www.paho.ir/" target="_blank" rel="noreferrer">پاهو</a>.
+          </p>
+
+          <h3 style="margin-top: 30px">ماتریس فیچر — چه چیزی واقعاً اشباع شده؟</h3>
+          <p class="source-note">
+            ✓ یعنی در صفحه رسمی صریحاً آمده؛ ◐ یعنی محدود، add-on یا نامشخص؛ — یعنی در محصول/صفحه عمومی
+            دیده نشد. ستون MVP تو بر اساس scope و کد فعلی پروژه است، نه ادعای استفاده واقعی در production.
+          </p>
+          <div class="table-wrap matrix-table">
+            <table class="mini-table">
+              <thead>
+                <tr>
+                  <th>قابلیت</th>
+                  <th>سیسنو</th>
+                  <th>نکسار</th>
+                  <th>پلنیکس</th>
+                  <th>زمانو</th>
+                  <th>الوبیام</th>
+                  <th>نوبتچی</th>
+                  <th>ماهشو</th>
+                  <th>MVP تو</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>لینک رزرو بدون نصب</td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status partial">◐</span></td>
+                  <td><span class="status partial">◐</span></td>
+                  <td><span class="status yes">✓</span></td>
+                </tr>
+                <tr>
+                  <td>تقویم پرسنل/ظرفیت و تداخل‌گیری</td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status partial">◐</span></td>
+                  <td><span class="status partial">◐</span></td>
+                  <td><span class="status no">—</span></td>
+                  <td><span class="status yes">✓</span></td>
+                </tr>
+                <tr>
+                  <td>تقویم شمسی بومی</td>
+                  <td><span class="status unknown">؟</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status unknown">؟</span></td>
+                  <td><span class="status unknown">؟</span></td>
+                  <td><span class="status unknown">؟</span></td>
+                  <td><span class="status unknown">؟</span></td>
+                  <td><span class="status no">—</span></td>
+                  <td><span class="status yes">✓</span></td>
+                </tr>
+                <tr>
+                  <td>SMS/یادآوری</td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status partial">◐</span></td>
+                  <td><span class="status no">—</span></td>
+                  <td><span class="status yes">✓</span></td>
+                </tr>
+                <tr>
+                  <td>پرداخت/بیعانه/کنترل عدم مراجعه</td>
+                  <td><span class="status partial">◐</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status partial">◐</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status no">—</span></td>
+                  <td><span class="status yes">✓</span></td>
+                </tr>
+                <tr>
+                  <td>CRM/وفاداری/کمپین بازگشت</td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status partial">◐</span></td>
+                  <td><span class="status partial">◐</span></td>
+                  <td><span class="status partial">◐</span></td>
+                  <td><span class="status partial">◐</span></td>
+                  <td><span class="status no">—</span></td>
+                  <td><span class="status partial">◐</span></td>
+                </tr>
+                <tr>
+                  <td>مالی/POS/حقوق/انبار</td>
+                  <td><span class="status partial">◐</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status partial">◐</span></td>
+                  <td><span class="status partial">◐</span></td>
+                  <td><span class="status partial">◐</span></td>
+                  <td><span class="status no">—</span></td>
+                  <td><span class="status no">—</span></td>
+                  <td><span class="status no">—</span></td>
+                </tr>
+                <tr>
+                  <td>مارکت‌پلیس/کشف مشتری و SEO</td>
+                  <td><span class="status no">—</span></td>
+                  <td><span class="status no">—</span></td>
+                  <td><span class="status no">—</span></td>
+                  <td><span class="status no">—</span></td>
+                  <td><span class="status partial">◐</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status no">—</span></td>
+                </tr>
+                <tr>
+                  <td>اپ/PWA</td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status partial">◐</span></td>
+                  <td><span class="status partial">◐</span></td>
+                  <td><span class="status partial">◐</span></td>
+                  <td><span class="status partial">◐</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status partial">◐</span></td>
+                  <td><span class="status yes">✓</span></td>
+                </tr>
+                <tr>
+                  <td>قیمت شفاف عمومی</td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status no">—</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status yes">✓</span></td>
+                  <td><span class="status no">—</span></td>
+                  <td><span class="status no">—</span></td>
+                  <td><span class="status yes">✓</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="insight-grid">
+            <article class="insight win">
+              <h3>مزیت واقعی تو</h3>
+              <ul>
+                <li><strong>Instagram-first:</strong> سالن از مشتری موجود خودش استفاده می‌کند؛ به شبکه خالی مارکت‌پلیس وابسته نیست.</li>
+                <li><strong>هسته قابل اعتماد:</strong> تداخل‌گیری، تقویم شمسی، بیعانه، لغو/جابجایی، waitlist و QR در مسیر MVP تو هستند.</li>
+                <li><strong>فعال‌سازی سریع:</strong> یک لینک اختصاصی، import خدمات/پرسنل و راه‌اندازی زیر ۱۰ دقیقه؛ این باید وعده اصلی باشد.</li>
+                <li><strong>سرعت AI:</strong> تست onboarding، متن پیامک و workflow را سریع‌تر می‌کنی؛ این مزیت اجرایی است، نه moat دائمی.</li>
+                <li><strong>قیمت و مالکیت داده شفاف:</strong> بدون کمیسیون کشف مشتری و بدون اجبار سالن به پرداخت برای رتبه گرفتن.</li>
+              </ul>
+            </article>
+            <article class="insight risk">
+              <h3>ضعف واقعی تو</h3>
+              <ul>
+                <li>فعلاً هیچ کاربر فعال، retention، برند یا کانال توزیع اثبات‌شده‌ای نداری.</li>
+                <li>نکسار و سیسنو از نظر عمق عملیاتی جلوترند؛ با تعداد فیچر شکست‌شان نمی‌دهی.</li>
+                <li>پلنیکس «بدون نصب» و قیمت پایین دارد؛ بدون workflow بهتر، وب‌اپ تو commodity می‌شود.</li>
+                <li>ماهشو/بهترینو/نوبتچی در جذب تقاضا و SEO از تو جلوترند؛ برای MVP وارد جنگ discovery نشو.</li>
+                <li>SMS، پرداخت، پشتیبانی و اعتماد محلی باید در پایلوت واقعی اثبات شوند؛ وجود route در کد کافی نیست.</li>
+              </ul>
+            </article>
+          </div>
+
+          <article class="insight rule" style="margin-top: 16px">
+            <h3>نتیجه رقابتی</h3>
+            <ul>
+              <li><strong>رقیب مستقیم عملیاتی:</strong> سیسنو و نکسار. پاسخ: wedge کوچک‌تر، setup سریع‌تر و تجربه روزانه ساده‌تر.</li>
+              <li><strong>رقیب مستقیم رزرو:</strong> پلنیکس، زمانو و الوبیام. پاسخ: reliability تقویم + workflow اختصاصی سالن زیبایی، نه صرفاً booking link.</li>
+              <li><strong>رقیب جذب مشتری:</strong> ماهشو، بهترینو و نوبتچی. پاسخ: فعلاً آن‌ها را channel یا partner ببین، نه دسته‌ای که باید از روز اول بسازی.</li>
+              <li><strong>موضع پیشنهادی:</strong> «سیستم‌عامل رزرو اینستاگرامی برای سالن‌های ۲ تا ۸ نفره»؛ نه «یک اپ دیگر برای پیدا کردن سالن».</li>
+            </ul>
+          </article>
+        </section>
+
+        <section class="section" id="positioning">
+          <p class="section-kicker">جایگاه محصول</p>
+          <h2>یک سگمنت، یک پیام، یک نتیجه.</h2>
+          <div class="quote">
+            «برای سالن‌های زیبایی ۲ تا ۸ نفره که از اینستاگرام مشتری می‌گیرند، یک لینک رزرو فارسی
+            و سریع که تداخل نوبت و عدم مراجعه را کم می‌کند.»
+          </div>
+          <p class="section-intro" style="margin-top: 18px">
+            پیشنهاد پیش‌فرض: سالن‌های زنانه کوچک و متوسط در یک شهر. اگر ارتباط واقعی تو با
+            آرایشگاه‌های مردانه بیشتر است، همان سگمنت را انتخاب کن؛ دسترسی واقعی از اندازه بازار مهم‌تر است.
+          </p>
+        </section>
+
+        <section class="section" id="mvp">
+          <p class="section-kicker">محدوده MVP</p>
+          <h2>فقط چیزی را بساز که اولین پول را ممکن می‌کند.</h2>
+          <div class="mvp-layout">
+            <article class="mvp-column mvp-p0">
+              <h3><span class="tag">P0</span> برای لانچ</h3>
+              <ul>
+                <li>ثبت سالن، خدمات، قیمت و مدت خدمت</li>
+                <li>پرسنل، ساعات کاری، تعطیلی و مرخصی</li>
+                <li>تقویم شمسی و رابط RTL</li>
+                <li>صفحه رزرو اختصاصی + لینک بیو + QR</li>
+                <li>انتخاب خدمت، پرسنل، تاریخ و ساعت بدون نصب اپ</li>
+                <li>تقویم مدیر روزانه/هفتگی و ثبت دستی نوبت</li>
+                <li>تأیید، رد، لغو، جابه‌جایی و no-show</li>
+                <li>پرونده ساده مشتری و تاریخچه مراجعه</li>
+                <li>پیامک تأیید و یادآوری با یک provider</li>
+                <li>بیعانه با یک درگاه ایرانی</li>
+                <li>گزارش ساده نوبت، درآمد، لغو و عدم مراجعه</li>
+                <li>جلوگیری قطعی از double booking در backend</li>
+              </ul>
+            </article>
+            <article class="mvp-column mvp-p1">
+              <h3><span class="tag">P1</span> بعد از traction</h3>
+              <ul>
+                <li>لیست انتظار</li>
+                <li>یادآوری بازگشت مشتری</li>
+                <li>بسته‌های خدماتی و تخفیف</li>
+                <li>نقش‌های دقیق پرسنل</li>
+                <li>پورسانت پایه</li>
+                <li>اتصال بهتر به واتساپ/تلگرام</li>
+                <li>درون‌ریزی مشتریان از Excel</li>
+                <li>اپ Android برای مدیر یا پرسنل</li>
+              </ul>
+            </article>
+            <article class="mvp-column mvp-p2">
+              <h3><span class="tag">P2</span> فعلاً نساز</h3>
+              <ul>
+                <li>اپ Native مشتری</li>
+                <li>مارکت‌پلیس و discovery عمومی</li>
+                <li>review و امتیازدهی عمومی</li>
+                <li>انبار، فروشگاه و حسابداری کامل</li>
+                <li>حقوق و پورسانت پیشرفته</li>
+                <li>چندشعبه‌ای</li>
+                <li>اپ برندشده برای هر سالن</li>
+                <li>چت‌بات رزروکننده و AI خودمختار</li>
+              </ul>
+            </article>
+          </div>
+
+          <div class="flow" aria-label="جریان اصلی MVP">
+            <div class="flow-step"><strong>اینستاگرام</strong><span>لینک در bio یا دایرکت</span></div>
+            <div class="flow-step"><strong>صفحه رزرو</strong><span>بدون نصب اپ</span></div>
+            <div class="flow-step"><strong>انتخاب زمان</strong><span>خدمت و پرسنل</span></div>
+            <div class="flow-step"><strong>تأیید/بیعانه</strong><span>کاهش no-show</span></div>
+            <div class="flow-step"><strong>تقویم سالن</strong><span>پیامک و پیگیری</span></div>
+          </div>
+        </section>
+
+        <section class="section" id="launch">
+          <p class="section-kicker">برنامه لانچ</p>
+          <h2>۳۰ روز اول: فروش و یادگیری، نه feature race.</h2>
+          <div class="timeline">
+            <div class="timeline-item">
+              <strong>روز ۱ تا ۳</strong>
+              <p>با ۱۵ مدیر سالن صحبت کن، workflow واقعی را ببین، ۵ سالن پایلوت بگیر و حداقل ۳ تعهد پولی بگیر.</p>
+            </div>
+            <div class="timeline-item">
+              <strong>روز ۴ تا ۱۴</strong>
+              <p>برای هر سالن شخصاً خدمات و پرسنل را وارد کن، لینک را در بیو بگذار، QR چاپ کن و اولین رزروها را monitor کن.</p>
+            </div>
+            <div class="timeline-item">
+              <strong>روز ۱۵ تا ۲۱</strong>
+              <p>پیامک و بیعانه را پایدار کن، تداخل‌ها و نقاط ریزش را رفع کن و فقط مشکلات پرتکرار را بساز.</p>
+            </div>
+            <div class="timeline-item">
+              <strong>روز ۲۲ تا ۳۰</strong>
+              <p>از دوره آزمایشی خارج شو، پول بگیر، دو case study بساز و سالن‌هایی را که لینک را share نمی‌کنند دوباره ارزیابی کن.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="pricing">
+          <p class="section-kicker">قیمت‌گذاری اولیه</p>
+          <h2>قیمت را به‌عنوان فرضیه تست کن.</h2>
+          <div class="pricing">
+            <article class="price-card">
+              <div class="price-label">Design Partner</div>
+              <div class="price">۳۰ روز رایگان</div>
+              <p>برای ۱۰ سالن اول، در ازای feedback منظم و اجازه ساخت case study.</p>
+              <ul>
+                <li>onboarding شخصی</li>
+                <li>پشتیبانی مستقیم</li>
+                <li>بدون تعهد بلندمدت</li>
+              </ul>
+            </article>
+            <article class="price-card featured">
+              <div class="price-label">پلن پایه</div>
+              <div class="price">۳۰۰–۵۰۰ هزار تومان</div>
+              <p>تا ۳ پرسنل، یک سالن، لینک رزرو، پیامک محدود و گزارش پایه.</p>
+              <ul>
+                <li>بدون commission رزروهای خود سالن</li>
+                <li>هزینه پیامک جدا یا با سقف مشخص</li>
+                <li>پرداخت ماهانه</li>
+              </ul>
+            </article>
+            <article class="price-card">
+              <div class="price-label">پلن تیمی</div>
+              <div class="price">۷۰۰ هزار–۱ میلیون تومان</div>
+              <p>تا ۸ یا ۱۰ پرسنل، بیعانه، گزارش بهتر و نقش‌های تیمی.</p>
+              <ul>
+                <li>تخفیف سالانه ۱۵–۲۰٪</li>
+                <li>ارتقا بدون از دست دادن داده</li>
+                <li>پشتیبانی سریع‌تر</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="metrics">
+          <p class="section-kicker">معیار تصمیم</p>
+          <h2>MVP وقتی موفق است که استفاده و پرداخت هر دو رخ دهند.</h2>
+          <div class="card-grid">
+            <article class="card">
+              <span class="number">۱</span>
+              <h3>فعال‌سازی</h3>
+              <ul>
+                <li>راه‌اندازی هر سالن زیر ۳۰ دقیقه</li>
+                <li>اولین رزرو در ۲۴ ساعت</li>
+                <li>۷۰٪ سالن‌ها لینک را در بیو share کنند</li>
+              </ul>
+            </article>
+            <article class="card">
+              <span class="number coral">۲</span>
+              <h3>استفاده</h3>
+              <ul>
+                <li>۷ سالن از ۱۰ سالن، هفتگی فعال باشند</li>
+                <li>رزرو واقعی، نه فقط تست</li>
+                <li>صفر double booking</li>
+              </ul>
+            </article>
+            <article class="card">
+              <span class="number mint">۳</span>
+              <h3>پول</h3>
+              <ul>
+                <li>حداقل ۵ سالن بعد از trial پول بدهند</li>
+                <li>کاهش no-show با یادآوری/بیعانه</li>
+                <li>churn و زمان پشتیبانی قابل‌قبول</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="ai">
+          <p class="section-kicker">استفاده از AI</p>
+          <h2>AI را در onboarding و رشد استفاده کن؛ نه به‌عنوان منبع حقیقت زمان‌بندی.</h2>
+          <div class="card-grid">
+            <article class="card">
+              <h3>مناسب برای نسخه‌های اول</h3>
+              <ul>
+                <li>استخراج خدمات و قیمت از متن یا عکس منو</li>
+                <li>تولید متن صفحه رزرو و پیامک</li>
+                <li>پیشنهاد کمپین بازگشت مشتری</li>
+                <li>پاسخ‌گویی داخلی پشتیبانی</li>
+              </ul>
+            </article>
+            <article class="card">
+              <h3>غیرقابل‌مذاکره</h3>
+              <p>
+                منطق availability، ظرفیت، منابع و جلوگیری از تداخل باید deterministic و
+                backend-driven بماند. AI می‌تواند پیشنهاد بدهد؛ تأیید و اجرای نهایی با سیستم و کاربر است.
+              </p>
+            </article>
+            <article class="card">
+              <h3>فاز بعد</h3>
+              <p>
+                بعد از جمع‌شدن داده واقعی، خلاصه روزانه مدیر، تشخیص مشتری در معرض ریزش و پیشنهاد
+                زمان‌های کم‌تقاضا را اضافه کن.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="quote">
+            نسخه شروع پیشنهادی: یک شهر، یک سگمنت، ۱۰ سالن پایلوت، لینک رزرو مستقیم، تقویم قابل‌اعتماد،
+            پیامک و بیعانه. اپ و مارکت‌پلیس فقط بعد از اثبات استفاده و پرداخت.
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="shell">
+        <div>استراتژی MVP سامانه سالن · تهیه‌شده برای پروژه Salon Scheduler</div>
+        <div class="footer-links">
+          <a href="../README.md">README پروژه</a>
+          <a href="comparisons/ara-salon-platforms/index.html">گزارش مقایسه رقبا</a>
+          <a href="https://planyx.ir/" target="_blank" rel="noreferrer">منبع: پلنیکس</a>
+          <a href="https://sisno.ir/plans" target="_blank" rel="noreferrer">منبع: سیسنو</a>
+          <a href="https://www.zamanoo.ir/pricing" target="_blank" rel="noreferrer">منبع: زمانو</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -20,7 +20,7 @@ import { ensureAaFill } from '../../styles/contrast';
  */
 
 /** The signature default theme color (Booksy_Identity --color-primary). */
-const SIGNATURE_THEME_COLOR = '#2456D8';
+const SIGNATURE_THEME_COLOR = '#0B7A68';
 
 let lastManifestJson = '';
 const RealBlob = globalThis.Blob;

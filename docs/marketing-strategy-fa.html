@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>استراتژی کامل مارکتینگ — آرا | رزرو آنلاین سالن زیبایی</title>
+<style>
+:root {
+  --bg: #FFFFFF;
+  --surface: #F5F6F7;
+  --elevated: #FFFFFF;
+  --text: #111417;
+  --muted: #586170;
+  --border: #E4E7EA;
+  --primary: #0B7A68;
+  --accent: #05CFA6;
+  --success: #1F7A43;
+  --warning: #9A5B12;
+  --danger: #B3261E;
+  --info: #1F5FAE;
+  --r: 12px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
+  background: var(--bg); color: var(--text);
+  line-height: 1.85; font-size: 16px;
+}
+.wrap { max-width: 960px; margin: 0 auto; padding: 0 1.25rem 4rem; }
+
+/* Hero */
+.hero {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--primary) 8%, #fff), #fff);
+  border-bottom: 1px solid var(--border);
+  padding: 3.5rem 1.25rem 3rem; margin-bottom: 2.5rem;
+}
+.hero-inner { max-width: 960px; margin: 0 auto; }
+.eyebrow {
+  display: inline-flex; align-items: center; gap: .6rem;
+  font-size: .8rem; font-weight: 700; letter-spacing: .04em;
+  color: var(--primary); text-transform: uppercase; margin-bottom: 1rem;
+}
+.eyebrow::before { content: ''; width: 2.2rem; height: 2px; background: var(--primary); }
+h1 { font-size: 2.4rem; font-weight: 800; line-height: 1.2; letter-spacing: -.01em; }
+.lede { font-size: 1.15rem; color: var(--muted); margin-top: 1rem; max-width: 62ch; }
+
+h2 {
+  font-size: 1.55rem; font-weight: 800; line-height: 1.25;
+  margin: 3rem 0 1.25rem; padding-bottom: .6rem;
+  border-bottom: 2px solid var(--primary);
+}
+h3 { font-size: 1.15rem; font-weight: 700; margin: 1.75rem 0 .6rem; }
+h4 { font-size: 1rem; font-weight: 700; margin: 1.25rem 0 .4rem; color: var(--primary); }
+p { margin-bottom: .9rem; }
+ul, ol { padding-inline-start: 1.4rem; margin-bottom: 1rem; }
+li { margin-bottom: .45rem; }
+code {
+  background: var(--surface); padding: .12rem .4rem;
+  border-radius: 5px; font-size: .9em; direction: ltr; display: inline-block;
+}
+
+/* Cards & callouts */
+.card {
+  background: var(--surface); border-radius: var(--r);
+  padding: 1.4rem 1.5rem; margin: 1.25rem 0;
+}
+.card--bordered { background: var(--elevated); border: 1px solid var(--border); }
+.callout {
+  border-inline-start: 4px solid var(--primary);
+  background: var(--surface); border-radius: var(--r);
+  padding: 1.2rem 1.4rem; margin: 1.4rem 0;
+}
+.callout--warn { border-color: var(--warning); }
+.callout--danger { border-color: var(--danger); }
+.callout--ok { border-color: var(--success); }
+.callout strong:first-child { display: block; margin-bottom: .4rem; }
+
+/* Badges */
+.badge {
+  display: inline-block; padding: .16rem .65rem; border-radius: 999px;
+  font-size: .78rem; font-weight: 700; white-space: nowrap;
+}
+.b-ok { background: #e6f4ea; color: var(--success); }
+.b-warn { background: #fef3e0; color: var(--warning); }
+.b-danger { background: #fde8e6; color: var(--danger); }
+.b-info { background: #e3f2fd; color: var(--info); }
+.b-primary { background: color-mix(in srgb, var(--primary) 12%, #fff); color: var(--primary); }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; margin: 1.1rem 0; font-size: .95rem; }
+caption { text-align: right; font-weight: 700; padding-bottom: .5rem; color: var(--muted); font-size: .9rem; }
+th, td { padding: .65rem .8rem; text-align: right; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { background: var(--surface); font-weight: 700; font-size: .9rem; }
+tbody tr:hover td { background: color-mix(in srgb, var(--surface) 60%, #fff); }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Phase blocks */
+.phase {
+  border: 1px solid var(--border); border-radius: var(--r);
+  padding: 1.5rem; margin: 1.5rem 0;
+  background: var(--elevated);
+}
+.phase__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .8rem; margin-bottom: .9rem; }
+.phase__n {
+  width: 2.2rem; height: 2.2rem; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--primary); color: #fff; border-radius: 999px;
+  font-weight: 800; font-size: .95rem;
+}
+.phase__title { font-size: 1.2rem; font-weight: 800; }
+.phase__meta { color: var(--muted); font-size: .9rem; }
+
+/* Channel grid — deliberately uneven */
+.mosaic { display: grid; gap: 1rem; margin: 1.25rem 0; }
+@media (min-width: 720px) {
+  .mosaic { grid-template-columns: 1.5fr 1fr; }
+  .mosaic > :first-child { grid-row: span 2; }
+}
+.tile {
+  background: var(--surface); border-radius: var(--r);
+  padding: 1.25rem 1.35rem;
+}
+.tile--lead { background: color-mix(in srgb, var(--primary) 7%, var(--surface)); }
+.tile__icon { font-size: 1.6rem; line-height: 1; margin-bottom: .6rem; }
+.tile h4 { margin-top: 0; }
+
+/* KPI strip */
+.kpis { display: grid; gap: .8rem; margin: 1.25rem 0; }
+@media (min-width: 560px) { .kpis { grid-template-columns: repeat(4, 1fr); } }
+.kpi { background: var(--surface); border-radius: var(--r); padding: 1rem; text-align: center; }
+.kpi__v { font-size: 1.5rem; font-weight: 800; color: var(--primary); font-variant-numeric: tabular-nums; }
+.kpi__l { font-size: .82rem; color: var(--muted); margin-top: .2rem; }
+
+/* TOC */
+.toc { background: var(--surface); border-radius: var(--r); padding: 1.25rem 1.5rem; margin-bottom: 2rem; }
+.toc ol { margin-bottom: 0; }
+.toc a { color: var(--primary); text-decoration: none; font-weight: 600; }
+.toc a:hover { text-decoration: underline; }
+
+.footer {
+  margin-top: 3.5rem; padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted); font-size: .85rem; text-align: center;
+}
+@media print {
+  .hero { padding-top: 1rem; }
+  .phase, .card { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-inner">
+    <span class="eyebrow">استراتژی رشد · بازار ایران</span>
+    <h1>استراتژی کامل مارکتینگ آرا</h1>
+    <p class="lede">
+      نقشه راه عملی و مقرون‌به‌صرفه برای جذب سالن‌های زیبایی ایران به پلتفرم رزرو آنلاین آرا —
+      از لانچ تا ۵۰۰ سالن فعال در ۱۲ ماه.
+    </p>
+  </div>
+</header>
+
+<div class="wrap">
+
+<nav class="toc" aria-labelledby="toc-h">
+  <h3 id="toc-h" style="margin-top:0">فهرست</h3>
+  <ol>
+    <li><a href="#market">تحلیل بازار ایران</a></li>
+    <li><a href="#persona">مخاطب هدف و پرسونا</a></li>
+    <li><a href="#positioning">جایگاه‌یابی و پیام کلیدی</a></li>
+    <li><a href="#phases">سه فاز اجرایی</a></li>
+    <li><a href="#playbook">پلی‌بوک فروش مستقیم</a></li>
+    <li><a href="#content">استراتژی محتوا</a></li>
+    <li><a href="#retention">نگهداشت و کاهش Churn</a></li>
+    <li><a href="#kpi">شاخص‌ها و اهداف</a></li>
+    <li><a href="#risks">ریسک‌ها و پاسخ</a></li>
+  </ol>
+</nav>
+
+<h2 id="market">۱. تحلیل بازار ایران</h2>
+
+<table>
+<caption>اندازه بازار سالن‌های زیبایی ایران</caption>
+<thead><tr><th>بخش</th><th>تعداد تخمینی</th><th>قابل دسترس</th></tr></thead>
+<tbody>
+<tr><td>سالن زنانه — تهران</td><td class="num">~۱۵٫۰۰۰</td><td class="num">~۴٫۵۰۰</td></tr>
+<tr><td>سالن زنانه — کلان‌شهرها</td><td class="num">~۳۵٫۰۰۰</td><td class="num">~۸٫۰۰۰</td></tr>
+<tr><td>آرایشگاه مردانه</td><td class="num">~۶۰٫۰۰۰</td><td class="num">~۶٫۰۰۰</td></tr>
+<tr><td>ناخن / اسپا / کلینیک</td><td class="num">~۸٫۰۰۰</td><td class="num">~۳٫۰۰۰</td></tr>
+</tbody>
+</table>
+
+<h3>وضعیت رقابتی</h3>
+<div class="mosaic">
+  <div class="tile tile--lead">
+    <div class="tile__icon">📓</div>
+    <h4>رقیب اصلی: کاغذ و دایرکت</h4>
+    <ul style="margin-bottom:0">
+      <li>دفتر کاغذی یا نوت گوشی</li>
+      <li>هماهنگی نوبت در دایرکت اینستاگرام</li>
+      <li>بدون یادآوری → no-show ۱۵–۳۰٪</li>
+      <li>بدون پیش‌پرداخت → ضرر از کنسلی</li>
+    </ul>
+    <p style="margin-top:.8rem;margin-bottom:0"><strong>رقیب «نرم‌افزار دیگر» نیست، «کاغذ» است.</strong></p>
+  </div>
+  <div class="tile">
+    <div class="tile__icon">🏢</div>
+    <h4>رقبای داخلی</h4>
+    <p style="margin-bottom:0">سامانه‌های نوبت‌دهی پزشکی‌محور — بدون مدل صندلی/تجهیزات، بدون گالری نمونه‌کار.</p>
+  </div>
+  <div class="tile">
+    <div class="tile__icon">🌍</div>
+    <h4>رقبای خارجی</h4>
+    <p style="margin-bottom:0">Booksy / Fresha در ایران غیرقابل استفاده: تحریم پرداخت، بدون تقویم جلالی و پیامک ایرانی.</p>
+  </div>
+</div>
+
+<div class="callout callout--ok">
+<strong>نتیجه</strong>
+بازار بدون رقیب تخصصی است. مانع اصلی «رقابت» نیست، «تغییر عادت» است — استراتژی باید بر کاهش اصطکاک پذیرش تمرکز کند.
+</div>
+
+<h2 id="persona">۲. مخاطب هدف و پرسونا</h2>
+
+<div class="card card--bordered">
+<h3 style="margin-top:0">پرسونای اصلی: «مینا» — صاحب سالن زنانه</h3>
+<table>
+<tbody>
+<tr><th style="width:28%">سن / موقعیت</th><td>۳۲–۴۵ سال · سالن ۲ تا ۶ صندلی در تهران</td></tr>
+<tr><th>درآمد ماهانه سالن</th><td class="num">۸۰ تا ۳۰۰ میلیون تومان</td></tr>
+<tr><th>ابزار فعلی</th><td>دفتر کاغذی + دایرکت اینستاگرام + واتساپ</td></tr>
+<tr><th>سواد دیجیتال</th><td>متوسط — اینستاگرام حرفه‌ای، نرم‌افزار مدیریتی نه</td></tr>
+<tr><th>دردهای اصلی</th><td>
+۱. روزی ۲–۴ ساعت پاسخ دایرکت<br>
+۲. no-show و جای خالی<br>
+۳. نمی‌داند کدام خدمت سودآورتر است<br>
+۴. ترس از سپردن مشتری به پلتفرم
+</td></tr>
+<tr><th>انگیزه خرید</th><td>وقت آزاد + کاهش کنسلی + ظاهر حرفه‌ای‌تر</td></tr>
+<tr><th>مانع خرید</th><td>«مشتری‌هایم بلد نیستند آنلاین رزرو کنند» · هزینه ماهانه · ترس از پیچیدگی</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>پرسوناهای ثانویه</h3>
+<ul>
+<li><strong>«رضا» — آرایشگر مردانه:</strong> حجم بالا، خدمت کوتاه، حساس به قیمت. سرعت نوبت‌دهی مهم‌تر از گزارش.</li>
+<li><strong>«سارا» — استایلیست مستقل:</strong> بدون سالن ثابت، مشتری از اینستاگرام. لینک رزرو شخصی حیاتی است.</li>
+<li><strong>کلینیک چندشعبه‌ای:</strong> بلیط بزرگ‌تر، چرخه فروش طولانی‌تر — فاز ۳.</li>
+</ul>
+
+<div class="callout callout--warn">
+<strong>تصمیم استراتژیک</strong>
+فاز ۱ فقط روی «مینا». جذب هم‌زمان چهار پرسونا = پیام مبهم و هدر رفتن بودجه.
+</div>
+
+<h2 id="positioning">۳. جایگاه‌یابی و پیام کلیدی</h2>
+
+<div class="card">
+<h4 style="margin-top:0">بیانیه جایگاه‌یابی</h4>
+<p style="font-size:1.05rem;margin-bottom:0">
+برای <strong>صاحبان سالن زیبایی ایران</strong> که وقتشان صرف هماهنگی نوبت در دایرکت می‌شود،
+<strong>آرا</strong> یک دستیار نوبت‌دهی است که مشتری با یک اسکن QR خودش نوبت می‌گیرد و پیش‌پرداخت می‌دهد —
+<strong>بدون نصب اپ، با تقویم شمسی و پشتیبانی فارسی.</strong>
+</p>
+</div>
+
+<h3>پیام‌های کلیدی (به ترتیب اولویت)</h3>
+<table>
+<thead><tr><th>پیام</th><th>درد هدف</th><th>کانال مناسب</th></tr></thead>
+<tbody>
+<tr><td>«دیگر لازم نیست دایرکت جواب بدهی»</td><td>اتلاف وقت</td><td>اینستاگرام، فروش حضوری</td></tr>
+<tr><td>«مشتری پیش‌پرداخت می‌دهد، پس می‌آید»</td><td>no-show</td><td>فروش حضوری، گروه صنفی</td></tr>
+<tr><td>«مشتری اپ نصب نمی‌کند — فقط QR را اسکن می‌کند»</td><td>ترس از پیچیدگی</td><td>همه کانال‌ها</td></tr>
+<tr><td>«۱۴ روز رایگان، بدون کارت بانکی»</td><td>ریسک مالی</td><td>لندینگ، تبلیغات</td></tr>
+<tr><td>«می‌دانی کدام خدمت و کدام آرایشگر سودآورتر است»</td><td>نبود دید مالی</td><td>محتوا، ایمیل</td></tr>
+</tbody>
+</table>
+
+<div class="callout callout--danger">
+<strong>پیام‌هایی که نباید استفاده شود</strong>
+«نرم‌افزار مدیریت سالن» (خشک و ترسناک) · «سیستم CRM» (واژه بیگانه) ·
+«پلتفرم SaaS» (بی‌معنی برای مخاطب) · هر عبارتی که سالن را «عقب‌مانده» نشان دهد.
+</div>
+
+<h2 id="phases">۴. سه فاز اجرایی</h2>
+
+<div class="phase">
+  <div class="phase__head">
+    <span class="phase__n">۱</span>
+    <span class="phase__title">لانچ و اعتبارسنجی</span>
+    <span class="phase__meta">ماه ۱–۲ · بودجه ۵–۱۰ میلیون تومان · هدف: ۵۰ سالن فعال</span>
+  </div>
+  <p>هدف این فاز <strong>یادگیری است، نه مقیاس</strong>. با ۵۰ سالن واقعی می‌فهمی کجای محصول می‌لنگد.</p>
+  <table>
+  <thead><tr><th>اقدام</th><th>جزئیات</th><th>هزینه</th></tr></thead>
+  <tbody>
+  <tr><td><strong>فروش حضوری</strong></td><td>مراجعه به ۱۰۰ سالن تهران (۳ محله متمرکز)، نصب QR رایگان + آموزش ۱۵ دقیقه‌ای</td><td class="num">~۳M (چاپ + رفت‌وآمد)</td></tr>
+  <tr><td><strong>گروه‌های صنفی</strong></td><td>عضویت در گروه‌های تلگرام/واتساپ آرایشگران، معرفی بدون اسپم</td><td class="num">رایگان</td></tr>
+  <tr><td><strong>اینستاگرام پایه</strong></td><td>راه‌اندازی صفحه، ۱۲ پست اولیه، ۳ ریلز آموزشی</td><td class="num">~۳M</td></tr>
+  <tr><td><strong>Trial رایگان</strong></td><td>۱۴ روز بدون کارت بانکی — پیش‌فرض سیستم</td><td class="num">هزینه فرصت</td></tr>
+  <tr><td><strong>معرفی زنجیره‌ای</strong></td><td>هر سالن معرف = ۱ ماه رایگان برای هر دو طرف</td><td class="num">هزینه فرصت</td></tr>
+  </tbody>
+  </table>
+  <div class="callout" style="margin-bottom:0">
+  <strong>معیار موفقیت فاز ۱</strong>
+  ۵۰ سالن ثبت‌نام‌شده · ۳۰ سالن با حداقل ۵ رزرو واقعی · نرخ تبدیل trial→پرداخت بالای ۳۵٪
+  </div>
+</div>
+
+<div class="phase">
+  <div class="phase__head">
+    <span class="phase__n">۲</span>
+    <span class="phase__title">رشد</span>
+    <span class="phase__meta">ماه ۳–۶ · بودجه ۱۵–۲۵ میلیون/ماه · هدف: ۲۰۰ سالن</span>
+  </div>
+  <p>بعد از اثبات محصول، کانال‌های پرداختی فعال می‌شوند.</p>
+  <table>
+  <thead><tr><th>کانال</th><th>اقدام</th><th>هزینه ماهانه</th></tr></thead>
+  <tbody>
+  <tr><td><strong>میکرو اینفلوئنسر</strong></td><td>۳–۵ اینفلوئنسر حوزه زیبایی (۱۰–۵۰K فالوور) — نه سلبریتی</td><td class="num">۸–۱۵M</td></tr>
+  <tr><td><strong>یکتانت / تپسل</strong></td><td>تبلیغات کلیکی با تارگت جغرافیایی تهران</td><td class="num">۵–۸M</td></tr>
+  <tr><td><strong>SEO محلی</strong></td><td>فعال‌سازی صفحات شهر/خدمت پس از ۵۰+ سالن واقعی</td><td class="num">~۳M (محتوا)</td></tr>
+  <tr><td><strong>محتوای آموزشی</strong></td><td>بلاگ + ویدیو: نکات مدیریت سالن، جذب مشتری</td><td class="num">~۴M</td></tr>
+  <tr><td><strong>همکاری تأمین‌کننده</strong></td><td>برندهای لوازم آرایشی = کانال معرفی B2B</td><td class="num">پورسانتی</td></tr>
+  </tbody>
+  </table>
+  <div class="callout" style="margin-bottom:0">
+  <strong>معیار موفقیت فاز ۲</strong>
+  ۲۰۰ سالن فعال · CAC زیر ۴۰۰ هزار تومان · ماهانه ۸٫۰۰۰ رزرو · churn زیر ۱۰٪
+  </div>
+</div>
+
+<div class="phase">
+  <div class="phase__head">
+    <span class="phase__n">۳</span>
+    <span class="phase__title">تثبیت و گسترش</span>
+    <span class="phase__meta">ماه ۶–۱۲ · بودجه ۳۰–۵۰ میلیون/ماه · هدف: ۵۰۰ سالن</span>
+  </div>
+  <ul>
+    <li><strong>Marketplace:</strong> فعال‌سازی جستجو — مشتری سالن پیدا می‌کند (اثر شبکه‌ای دوطرفه)</li>
+    <li><strong>اپ موبایل:</strong> لانچ نسخه React Native — push notification و offline</li>
+    <li><strong>گسترش شهری:</strong> مشهد، اصفهان، شیراز، تبریز — با نماینده محلی</li>
+    <li><strong>B2B زنجیره‌ای:</strong> پنل چندشعبه‌ای برای برندهای بزرگ</li>
+    <li><strong>برنامه وفاداری:</strong> سیستم امتیاز/تخفیف برای مشتریان هر سالن</li>
+  </ul>
+  <div class="callout" style="margin-bottom:0">
+  <strong>معیار موفقیت فاز ۳</strong>
+  ۵۰۰ سالن · درآمد ماهانه ۱۰۰M تومان · ۲۵٫۰۰۰ رزرو/ماه · حضور در ۵ شهر
+  </div>
+</div>
+
+<h2 id="playbook">۵. پلی‌بوک فروش مستقیم</h2>
+<p>در فاز ۱ این <strong>مؤثرترین و ارزان‌ترین</strong> کانال است. اسکریپت عملی:</p>
+
+<h3>مراحل ملاقات حضوری (۱۵ دقیقه)</h3>
+<ol>
+<li><strong>ورود (۱ دقیقه):</strong> ساعت خلوت سالن بروید (۱۰–۱۲ صبح یا ۱۶–۱۷). «سلام، مزاحم نیستم؟ یک ابزار برای سالن‌ها ساختیم، دو دقیقه وقتتان را می‌گیرم.»</li>
+<li><strong>سؤال درد (۳ دقیقه):</strong> «روزی چند ساعت صرف جواب دادن دایرکت می‌کنید؟» — بگذارید خودش درد را بگوید.</li>
+<li><strong>دمو موبایلی (۵ دقیقه):</strong> QR را نشان دهید، با گوشی خودش اسکن کند، یک نوبت آزمایشی بگیرد. <em>لمس کردن مهم‌تر از توضیح است.</em></li>
+<li><strong>نمایش پنل (۳ دقیقه):</strong> تقویم و آمار را نشان دهید. «همین‌جا می‌بینید امروز چند نوبت دارید.»</li>
+<li><strong>بستن (۳ دقیقه):</strong> «۱۴ روز رایگان، بدون کارت. همین الان راه‌اندازی می‌کنم، QR را هم رویش می‌چسبانم.»</li>
+</ol>
+
+<h3>پاسخ به اعتراض‌های رایج</h3>
+<table>
+<thead><tr><th>اعتراض</th><th>پاسخ</th></tr></thead>
+<tbody>
+<tr><td>«مشتری‌های من بلد نیستند»</td><td>«فقط دوربین گوشی را می‌گیرند روی QR — مثل منوی رستوران. اپ نصب نمی‌کنند.»</td></tr>
+<tr><td>«گران است»</td><td>«اگر ماهی فقط ۲ نوبت no-show کمتر شود، هزینه‌اش درآمده. ۱۴ روز رایگان امتحان کنید.»</td></tr>
+<tr><td>«من به دفترم عادت دارم»</td><td>«دفترتان را نگه دارید. آرا موازی کار می‌کند — فقط دایرکت‌ها کم می‌شود.»</td></tr>
+<tr><td>«مشتری‌هایم را می‌دزدید؟»</td><td>«مشتری‌های شما مال شماست. لینک اختصاصی خودتان است، ما بین شما و مشتری نمی‌آییم.»</td></tr>
+<tr><td>«الان وقت ندارم»</td><td>«فقط QR را می‌گذارم و شماره‌ام را می‌دهم. هر وقت خواستید ۵ دقیقه راه‌اندازی می‌کنیم.»</td></tr>
+</tbody>
+</table>
+
+<div class="callout callout--warn">
+<strong>نکته حیاتی</strong>
+راه‌اندازی را <em>همان‌جا خودتان</em> انجام دهید — سرویس‌ها و ساعات کاری را وارد کنید.
+سالنی که با پنل خالی رها شود، هرگز برنمی‌گردد.
+</div>
+
+<h2 id="content">۶. استراتژی محتوا</h2>
+
+<h3>اینستاگرام — کانال اصلی</h3>
+<table>
+<thead><tr><th>نوع محتوا</th><th>تعداد/هفته</th><th>مثال</th></tr></thead>
+<tbody>
+<tr><td>ریلز آموزشی</td><td class="num">۲</td><td>«چطور در ۳۰ ثانیه نوبت بگیری» (از دید مشتری)</td></tr>
+<tr><td>نتیجه واقعی سالن</td><td class="num">۱</td><td>«سالن رز: ۴۰٪ کاهش کنسلی در یک ماه» + اسکرین‌شات آمار</td></tr>
+<tr><td>نکته مدیریت سالن</td><td class="num">۲</td><td>«۳ راه کاهش no-show» — ارزش بدون فروش</td></tr>
+<tr><td>استوری تعاملی</td><td class="num">۴–۵</td><td>نظرسنجی، پرسش‌وپاسخ، معرفی سالن‌های عضو</td></tr>
+</tbody>
+</table>
+
+<h3>بلاگ / SEO (فاز ۲ به بعد)</h3>
+<ul>
+<li><strong>کلمات کلیدی صاحب سالن:</strong> «نرم‌افزار نوبت‌دهی سالن زیبایی»، «مدیریت نوبت آرایشگاه»، «کاهش کنسلی نوبت»</li>
+<li><strong>کلمات کلیدی مشتری نهایی:</strong> «سالن زیبایی [محله]»، «قیمت کوتاهی مو تهران»، «رزرو آنلاین آرایشگاه»</li>
+<li><strong>محتوای ستون:</strong> راهنمای جامع «مدیریت سالن زیبایی» — ۳٫۰۰۰ کلمه، به‌روزرسانی فصلی</li>
+</ul>
+
+<div class="callout">
+<strong>ترتیب درست</strong>
+صفحات SEO محلی (شهر/خدمت) را <em>فقط پس از</em> ۵۰+ سالن واقعی فعال کنید.
+صفحه خالی = صفحه doorway = جریمه گوگل.
+</div>
+
+<h3>تاکتیک‌های همیشه‌فعال و کم‌هزینه</h3>
+<div class="mosaic">
+  <div class="tile tile--lead">
+    <div class="tile__icon">🏷️</div>
+    <h4>QR فیزیکی — بهترین کانال ارگانیک</h4>
+    <p>هر QR نصب‌شده در سالن، یک تبلیغ دائمی است که مشتری واقعی را وارد قیف می‌کند. هزینه: چاپ.</p>
+    <p style="margin-bottom:0"><strong>اقدام:</strong> استیکر باکیفیت + استند رومیزی برای هر سالن عضو، رایگان.</p>
+  </div>
+  <div class="tile">
+    <div class="tile__icon">🔔</div>
+    <h4>یادآوری خودکار</h4>
+    <p style="margin-bottom:0">پیامک/بات = کاهش no-show + retention. مزیت محصولی که خودش بازاریابی می‌کند.</p>
+  </div>
+  <div class="tile">
+    <div class="tile__icon">📊</div>
+    <h4>گزارش ماهانه رایگان</h4>
+    <p style="margin-bottom:0">ایمیل/پیامک خلاصه عملکرد ماه به صاحب سالن — ارزش perceived بالا، هزینه صفر.</p>
+  </div>
+</div>
+
+<h2 id="retention">۷. نگهداشت و کاهش Churn</h2>
+<p>در SaaS، <strong>نگهداشت مهم‌تر از جذب است</strong>. یک سالن که ۱۲ ماه بماند، ارزشش ۶ برابر سالنی است که ۲ ماه بماند.</p>
+
+<h3>لحظات حیاتی (Critical Moments)</h3>
+<table>
+<thead><tr><th>لحظه</th><th>ریسک</th><th>اقدام پیشگیرانه</th></tr></thead>
+<tbody>
+<tr><td>روز اول (Onboarding)</td><td>پنل خالی می‌ماند</td><td>راه‌اندازی حضوری/تلفنی — سرویس‌ها و ساعات را با هم پر کنید</td></tr>
+<tr><td>هفته اول</td><td>هیچ رزروی ثبت نمی‌شود</td><td>تماس پیگیری روز ۳ · بررسی نصب QR · آموزش معرفی به مشتری</td></tr>
+<tr><td>پایان trial (روز ۱۴)</td><td>تبدیل نمی‌شود</td><td>تماس روز ۱۰ + نمایش آمار «۱۴ روز شما» · تخفیف ماه اول</td></tr>
+<tr><td>ماه ۲–۳</td><td>استفاده کم می‌شود</td><td>هشدار کاهش فعالیت → تماس · معرفی قابلیت‌های استفاده‌نشده</td></tr>
+<tr><td>تمدید سالانه</td><td>churn</td><td>گزارش سالانه + تخفیف تمدید + معرفی قابلیت‌های جدید</td></tr>
+</tbody>
+</table>
+
+<h3>اهرم‌های نگهداشت</h3>
+<ul>
+<li><strong>داده‌محور بودن:</strong> هرچه سالن داده بیشتری در آرا داشته باشد، مهاجرت سخت‌تر می‌شود (switching cost سالم)</li>
+<li><strong>پشتیبانی فارسی سریع:</strong> پاسخ زیر ۲ ساعت در ساعات کاری — تمایز اصلی از رقبای خارجی</li>
+<li><strong>آموزش مستمر:</strong> ویدیوهای کوتاه قابلیت‌ها، وبینار ماهانه رایگان</li>
+<li><strong>گوش دادن:</strong> هر ماه با ۵ سالن تماس بگیرید و بپرسید چه کم است</li>
+</ul>
+
+<h2 id="kpi">۸. شاخص‌ها و اهداف</h2>
+
+<div class="kpis">
+  <div class="kpi"><div class="kpi__v">۵۰</div><div class="kpi__l">سالن — ماه ۳</div></div>
+  <div class="kpi"><div class="kpi__v">۲۰۰</div><div class="kpi__l">سالن — ماه ۶</div></div>
+  <div class="kpi"><div class="kpi__v">۵۰۰</div><div class="kpi__l">سالن — ماه ۱۲</div></div>
+  <div class="kpi"><div class="kpi__v">&lt;۸٪</div><div class="kpi__l">Churn هدف</div></div>
+</div>
+
+<table>
+<caption>شاخص‌های کلیدی به تفکیک دوره</caption>
+<thead><tr><th>شاخص</th><th>ماه ۳</th><th>ماه ۶</th><th>ماه ۱۲</th></tr></thead>
+<tbody>
+<tr><td>سالن فعال (با رزرو واقعی)</td><td class="num">۵۰</td><td class="num">۲۰۰</td><td class="num">۵۰۰</td></tr>
+<tr><td>رزرو ماهانه</td><td class="num">۱٫۰۰۰</td><td class="num">۸٫۰۰۰</td><td class="num">۲۵٫۰۰۰</td></tr>
+<tr><td>درآمد ماهانه (تومان)</td><td class="num">۱۵M</td><td class="num">۵۰M</td><td class="num">۱۰۰M</td></tr>
+<tr><td>CAC (هزینه جذب هر سالن)</td><td class="num">&lt;۲۰۰K</td><td class="num">&lt;۴۰۰K</td><td class="num">&lt;۵۰۰K</td></tr>
+<tr><td>Churn ماهانه</td><td class="num">&lt;۱۵٪</td><td class="num">&lt;۱۰٪</td><td class="num">&lt;۸٪</td></tr>
+<tr><td>تبدیل trial → پرداخت</td><td class="num">&gt;۳۵٪</td><td class="num">&gt;۴۰٪</td><td class="num">&gt;۴۵٪</td></tr>
+<tr><td>LTV / CAC</td><td class="num">&gt;۳×</td><td class="num">&gt;۴×</td><td class="num">&gt;۵×</td></tr>
+</tbody>
+</table>
+
+<div class="callout">
+<strong>شاخص شمالی (North Star)</strong>
+<span class="badge b-primary">تعداد رزرو موفق ماهانه در کل پلتفرم</span>
+این معیار هم ارزش سالن و هم ارزش مشتری نهایی را می‌سنجد — بهتر از «تعداد ثبت‌نام» که می‌تواند توخالی باشد.
+</div>
+
+<h2 id="risks">۹. ریسک‌ها و پاسخ</h2>
+<table>
+<thead><tr><th>ریسک</th><th>احتمال</th><th>پاسخ</th></tr></thead>
+<tbody>
+<tr><td>سالن‌ها پذیرش نمی‌کنند (تغییر عادت)</td><td><span class="badge b-danger">بالا</span></td><td>راه‌اندازی حضوری رایگان · موازی با دفتر کاغذی · trial بدون کارت</td></tr>
+<tr><td>مشتری نهایی از QR استفاده نمی‌کند</td><td><span class="badge b-warn">متوسط</span></td><td>UX بی‌نقص موبایل · بدون نیاز به نصب · بات تلگرام به‌عنوان کانال جایگزین</td></tr>
+<tr><td>مشکل درگاه پرداخت / تحریم</td><td><span class="badge b-warn">متوسط</span></td><td>دو درگاه موازی (زرین‌پال + آیدی‌پی) · امکان رزرو بدون پیش‌پرداخت</td></tr>
+<tr><td>ورود رقیب با سرمایه بزرگ</td><td><span class="badge b-info">پایین-متوسط</span></td><td>سرعت در جذب · عمق محصول (صندلی/تجهیزات) · روابط مستقیم با سالن‌ها</td></tr>
+<tr><td>محدودیت اینترنت / فیلترینگ</td><td><span class="badge b-warn">متوسط</span></td><td>هاست داخلی · PWA آفلاین‌پذیر · بات بله به‌عنوان جایگزین تلگرام</td></tr>
+<tr><td>Churn بالا بعد از trial</td><td><span class="badge b-danger">بالا</span></td><td>پیگیری فعال روز ۳ و ۱۰ · نمایش آمار ارزش‌آفرینی · تخفیف ماه اول</td></tr>
+</tbody>
+</table>
+
+<div class="callout callout--ok">
+<strong>خلاصه اجرایی</strong>
+بازار بدون رقیب تخصصی است و محصول از نظر فنی آماده. تنها گلوگاه <strong>پذیرش (adoption)</strong> است.
+پس ۸۰٪ انرژی فاز ۱ باید صرف <em>فروش حضوری و راه‌اندازی دستی</em> شود — نه تبلیغات.
+تبلیغات پرداختی فقط پس از اثبات نرخ تبدیل trial بالای ۳۵٪ معنا دارد.
+</div>
+
+<nav class="toc" aria-labelledby="toc-h">
+  <h3 id="toc-h" style="margin-top:0">فهرست</h3>
+  <ol>
+    <li><a href="#market">۱. تحلیل بازار ایران</a></li>
+    <li><a href="#persona">۲. مخاطب هدف و پرسونا</a></li>
+    <li><a href="#positioning">۳. جایگاه‌یابی و پیام کلیدی</a></li>
+    <li><a href="#phases">۴. سه فاز اجرایی</a></li>
+    <li><a href="#channels">۵. کانال‌ها و بودجه</a></li>
+    <li><a href="#playbook">۶. پلی‌بوک فروش مستقیم</a></li>
+    <li><a href="#content">۷. استراتژی محتوا</a></li>
+    <li><a href="#retention">۸. نگهداشت و کاهش Churn</a></li>
+    <li><a href="#kpi">۹. شاخص‌ها و اهداف</a></li>
+    <li><a href="#risks">۱۰. ریسک‌ها و پاسخ</a></li>
+  </ol>
+</nav>
+
+<!-- ═══════════ ۱ ═══════════ -->
+<h2 id="market">۱. تحلیل بازار ایران</h2>
+
+<h3>اندازه بازار</h3>
+<table>
+<caption>تخمین بازار سالن‌های زیبایی ایران</caption>
+<thead><tr><th>بخش</th><th>تعداد تخمینی</th><th>قابل دسترس (SAM)</th></tr></thead>
+<tbody>
+<tr><td>سالن زیبایی زنانه — تهران</td><td class="num">~۱۵٫۰۰۰</td><td class="num">~۴٫۵۰۰</td></tr>
+<tr><td>سالن زیبایی زنانه — کلان‌شهرها</td><td class="num">~۳۵٫۰۰۰</td><td class="num">~۸٫۰۰۰</td></tr>
+<tr><td>آرایشگاه مردانه</td><td class="num">~۶۰٫۰۰۰</td><td class="num">~۶٫۰۰۰</td></tr>
+<tr><td>سالن ناخن / اسپا / کلینیک زیبایی</td><td class="num">~۸٫۰۰۰</td><td class="num">~۳٫۰۰۰</td></tr>
+</tbody>
+</table>
+<p class="num" style="color:var(--muted);font-size:.9rem">
+SAM = سالن‌هایی با حجم کافی مشتری و آمادگی دیجیتال (اینستاگرام فعال، پذیرش پرداخت آنلاین).
+</p>
+
+<h3>وضعیت رقابتی</h3>
+<div class="mosaic">
+  <div class="tile tile--lead">
+    <div class="tile__icon">📓</div>
+    <h4>وضع موجود: دفتر کاغذی + دایرکت اینستاگرام</h4>
+    <p style="margin-bottom:.6rem">اکثریت مطلق سالن‌های ایرانی نوبت را دستی مدیریت می‌کنند:</p>
+    <ul style="margin-bottom:0">
+      <li>دفتر کاغذی یا نوت گوشی</li>
+      <li>هماهنگی نوبت در دایرکت اینستاگرام (زمان‌بر)</li>
+      <li>بدون یادآوری خودکار → نرخ no-show بالا (۱۵–۳۰٪)</li>
+      <li>بدون پیش‌پرداخت → ضرر مالی از کنسلی</li>
+    </ul>
+    <p style="margin-top:.8rem;margin-bottom:0"><strong>این بزرگ‌ترین فرصت است</strong> — رقیب اصلی «نرم‌افزار دیگر» نیست، «کاغذ» است.</p>
+  </div>
+  <div class="tile">
+    <div class="tile__icon">🏢</div>
+    <h4>رقبای داخلی</h4>
+    <p style="margin-bottom:0">چند سامانه نوبت‌دهی عمومی (پزشکی‌محور) وجود دارد اما تخصصی سالن زیبایی نیستند: بدون مدل صندلی/تجهیزات، بدون گالری نمونه‌کار، UX ضعیف موبایل.</p>
+  </div>
+  <div class="tile">
+    <div class="tile__icon">🌍</div>
+    <h4>رقبای خارجی</h4>
+    <p style="margin-bottom:0">Booksy / Fresha در ایران عملاً غیرقابل استفاده‌اند: تحریم پرداخت، بدون تقویم جلالی، بدون پیامک ایرانی، بدون پشتیبانی فارسی.</p>
+  </div>
+</div>
+
+<div class="callout callout--ok">
+<strong>نتیجه تحلیل</strong>
+بازار عملاً بدون رقیب تخصصی است. مانع اصلی «رقابت» نیست، «تغییر عادت» است — پس استراتژی باید بر
+<em>کاهش اصطکاک پذیرش</em> تمرکز کند، نه بر تمایز از رقیب.
+</div>
+
+<!-- ═══════════ ۲ ═══════════ -->
+<h2 id="persona">۲. مخاطب هدف و پرسونا</h2>
+
+<div class="card card--bordered">
+<h3 style="margin-top:0">پرسونای اصلی: «مینا» — صاحب سالن زنانه</h3>
+<table>
+<tbody>
+<tr><th style="width:30%">سن / موقعیت</th><td>۳۲–۴۵ سال · صاحب سالن ۲ تا ۶ صندلی در تهران</td></tr>
+<tr><th>درآمد ماهانه سالن</th><td class="num">۸۰ تا ۳۰۰ میلیون تومان</td></tr>
+<tr><th>ابزار فعلی</th><td>دفتر کاغذی + دایرکت اینستاگرام + واتساپ</td></tr>
+<tr><th>سواد دیجیتال</th><td>متوسط — اینستاگرام حرفه‌ای، اما نرم‌افزار مدیریتی نه</td></tr>
+<tr><th>دردهای اصلی</th><td>
+  ۱. روزی ۲–۴ ساعت صرف پاسخ دایرکت<br>
+  ۲. مشتری نمی‌آید و جای خالی می‌ماند (no-show)<br>
+  ۳. نمی‌داند کدام خدمت سودآورتر است<br>
+  ۴. نگران است مشتری‌ها را «به یک پلتفرم» بسپارد
+</td></tr>
+<tr><th>انگیزه خرید</th><td>وقت آزاد بیشتر + کاهش کنسلی + ظاهر حرفه‌ای‌تر نزد مشتری</td></tr>
+<tr><th>مانع خرید</th><td>«مشتری‌های من بلد نیستند آنلاین رزرو کنند» · هزینه ماهانه · ترس از پیچیدگی</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>پرسونای ثانویه</h3>
+<ul>
+<li><strong>«رضا» — آرایشگر مردانه:</strong> حجم بالا، خدمت کوتاه، حساس به قیمت. نوبت‌دهی سریع مهم‌تر از گزارش است.</li>
+<li><strong>«سارا» — استایلیست مستقل (تک‌نفره):</strong> بدون سالن ثابت، مشتری از اینستاگرام. لینک رزرو شخصی برایش حیاتی است.</li>
+<li><strong>«کلینیک زیبایی چندشعبه‌ای»:</strong> بلیط بزرگ‌تر، چرخه فروش طولانی‌تر. فاز ۳.</li>
+</ul>
+
+<div class="callout callout--warn">
+<strong>تصمیم استراتژیک</strong>
+فاز ۱ فقط روی «مینا» تمرکز کند. تلاش برای جذب هم‌زمان چهار پرسونا = پیام مبهم و هدر رفتن بودجه.
+</div>
+
+</div>
+
+<div class="footer">
+  تدوین‌شده توسط Kiro 👻 · مرداد ۱۴۰۵ · پروژه آرا (salon-booking-system)
+</div>
+</body>
+</html>

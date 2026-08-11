@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import * as RadixDialog from '@radix-ui/react-dialog';
 import {
   Check,
   ExternalLink,
@@ -17,21 +16,25 @@ import i18n from '../i18n';
 import { salonApi } from '../api/client';
 import { JsonLd, SeoHead, SITE_URL } from '../components/seo';
 import type { JsonLdNode } from '../components/seo';
-import {
-  DirText,
-  IconButton,
-  ImageCarousel,
-  JalaliDate,
-  Num,
-  Picture,
-  Rating,
-  RatingStars,
-  SalonPlaceholder,
-  Spinner,
-  cn,
-  formatRial,
-  toPersianDigits,
-} from '../components/ui';
+// Direct module imports (not the `components/ui` barrel): the barrel re-exports the
+// framer-motion–backed components, so importing through it widens this public route's
+// static graph. Keeps the code-split budget honest (scripts/analyze-bundle.mjs).
+import { DirText } from '../components/ui/DirText';
+import { IconButton } from '../components/ui/IconButton';
+import { ImageCarousel } from '../components/ui/ImageCarousel';
+import { JalaliDate } from '../components/ui/JalaliDate';
+import { Num, toPersianDigits } from '../components/ui/Num';
+import { Picture } from '../components/ui/Picture';
+import { Rating } from '../components/ui/Rating';
+import { RatingStars } from '../components/ui/RatingStars';
+import { SalonPlaceholder } from '../components/ui/SalonPlaceholder';
+import { Spinner } from '../components/ui/Spinner';
+import { cn } from '../components/ui/cn';
+import { formatRial } from '../components/ui/Money';
+
+// Lazy: the gallery lightbox is the only thing on this route that needs
+// @radix-ui/react-dialog, and it only opens on user interaction.
+const GalleryLightbox = lazy(() => import('./SalonProfileLightbox'));
 import type { CarouselImage } from '../components/ui/ImageCarousel';
 import { TenantTheme } from '../components/theme';
 import {
@@ -139,74 +142,6 @@ function ProfileGallery({
   );
 }
 
-/**
- * Full-screen gallery lightbox built directly on Radix Dialog (focus trap,
- * `Esc` + overlay close) around the shared `ImageCarousel` (RTL-safe track,
- * keyboard arrows, swipe). Motion: token-timed fade/scale keyframes gated by
- * `motion-safe:`; reduced motion falls back to opacity.
- */
-function GalleryLightbox({
-  salon,
-  openAt,
-  onClose,
-}: {
-  salon: SalonProfile;
-  openAt: number | null;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const images: CarouselImage[] = salon.gallery.map((image) => ({
-    src: image.src,
-    alt: image.alt,
-    width: image.width,
-    height: image.height,
-  }));
-
-  return (
-    <RadixDialog.Root open={openAt !== null} onOpenChange={(open) => !open && onClose()}>
-      <RadixDialog.Portal>
-        <RadixDialog.Overlay
-          className={cn(
-            'fixed inset-0 z-overlay bg-overlay',
-            'motion-safe:data-[state=open]:animate-fade-in',
-            'motion-safe:data-[state=closed]:animate-fade-out',
-          )}
-        />
-        <RadixDialog.Content
-          aria-modal="true"
-          className={cn(
-            'fixed inset-0 z-dialog m-auto h-fit w-[calc(100%-var(--space-8))] max-w-4xl',
-            'rounded-lg outline-none',
-            'motion-safe:data-[state=open]:animate-scale-in',
-            'motion-safe:data-[state=closed]:animate-fade-out',
-          )}
-        >
-          <RadixDialog.Title className="sr-only">
-            {t('salon.profile.lightboxTitle', { name: salon.name })}
-          </RadixDialog.Title>
-          <RadixDialog.Description className="sr-only">
-            {t('salon.profile.galleryAria', { name: salon.name })}
-          </RadixDialog.Description>
-          <ImageCarousel
-            images={images}
-            eagerFirst={false}
-            initialIndex={openAt ?? 0}
-            className="aspect-video w-full overflow-hidden rounded-lg bg-ink"
-          />
-          <RadixDialog.Close asChild>
-            <IconButton
-              aria-label={t('common.close', 'بستن')}
-              variant="ghost"
-              className="absolute -top-12 end-0 h-10 min-h-0 w-10 min-w-0 text-ink-contrast hover:text-ink-contrast"
-            >
-              <X className="h-5 w-5" />
-            </IconButton>
-          </RadixDialog.Close>
-        </RadixDialog.Content>
-      </RadixDialog.Portal>
-    </RadixDialog.Root>
-  );
-}
 
 /* ─── Open-now helpers ─────────────────────────────────────────────────── */
 
@@ -561,7 +496,15 @@ export function SalonProfilePage() {
         <header>
           <ProfileGallery salon={salon} onOpen={setLightboxAt} />
         </header>
-        <GalleryLightbox salon={salon} openAt={lightboxAt} onClose={() => setLightboxAt(null)} />
+        {lightboxAt !== null && (
+          <Suspense fallback={null}>
+            <GalleryLightbox
+              salon={salon}
+              openAt={lightboxAt}
+              onClose={() => setLightboxAt(null)}
+            />
+          </Suspense>
+        )}
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_22.5rem]">
           <div className="min-w-0">
