@@ -43,6 +43,7 @@ import {
   type WeeklyWorkingHour,
 } from '../../api/client';
 import { AppointmentDetailsSheet, MoveAppointmentDialog, type CalendarAppointmentLike } from './OwnerAppointmentPanels';
+import { ContactImport } from '../../components/ContactImport';
 import { useAuth } from '../../auth/AuthContext';
 import { useSalonId } from '../../auth/useSalonId';
 import { usePagination } from '../../hooks/usePagination';
@@ -2980,15 +2981,24 @@ function ManualBookingDialog({
             dir="ltr"
           />
           <div className="grid gap-3 sm:grid-cols-2">
-            <TextField
-              label="موبایل مشتری"
-              placeholder="09xxxxxxxxx"
-              value={phone}
-              onChange={(event) => setPhone(event.target.value)}
-              disabled={saving}
-              inputMode="tel"
-              dir="ltr"
-            />
+            <div>
+              <TextField
+                label="موبایل مشتری"
+                placeholder="09xxxxxxxxx"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                disabled={saving}
+                inputMode="tel"
+                dir="ltr"
+              />
+              <ContactImport
+                disabled={saving}
+                onSelect={(contact) => {
+                  setPhone(contact.phone);
+                  setFullName(contact.fullName);
+                }}
+              />
+            </div>
             <TextField
               label="نام مشتری (اختیاری)"
               value={fullName}
