@@ -1,5 +1,6 @@
 import {
   Calendar,
+  ContactRound,
   BarChart3,
   Bell,
   Settings,
@@ -7,7 +8,8 @@ import {
   QrCode,
   Receipt,
   Share2,
-  Users,
+  UserRound,
+  UsersRound,
   Megaphone,
   type LucideIcon,
 } from 'lucide-react';
@@ -26,7 +28,7 @@ export interface OwnerNavItem {
 /**
  * The **single source of truth** for owner-panel destinations (R2.4, R2.6,
  * R2.7, R2.8). The desktop sidebar, the mobile bottom tab bar (primary tabs +
- * the «بیشتر» overflow sheet), and any future nav surface all consume this one
+ * the profile screen), and any future nav surface all consume this one
  * list via {@link ownerNavForRole} — three separately hardcoded lists
  * previously disagreed (config shown to Admins who are route-guarded out,
  * my-qr unreachable from desktop, transactions/notifications stranded on
@@ -47,13 +49,13 @@ export const OWNER_NAV: readonly OwnerNavItem[] = [
     // Team management is Owner-only, like the configuration route it uses.
     labelKey: 'owner.nav.team',
     to: '/owner/team',
-    icon: Users,
+    icon: UsersRound,
     roles: ['Owner'],
   },
   {
     labelKey: 'owner.nav.clients',
     to: '/owner/clients',
-    icon: Users,
+    icon: ContactRound,
     roles: ['Owner', 'Admin', 'Stylist'],
   },
   {
@@ -104,6 +106,12 @@ export const OWNER_NAV: readonly OwnerNavItem[] = [
     labelKey: 'owner.nav.myQr',
     to: '/owner/my-qr',
     icon: Share2,
+    roles: ['Owner', 'Admin', 'Stylist'],
+  },
+  {
+    labelKey: 'owner.nav.profile',
+    to: '/owner/profile',
+    icon: UserRound,
     roles: ['Owner', 'Admin', 'Stylist'],
   },
 ] as const;

@@ -1,0 +1,124 @@
+/* Profile surface: identity leads, account data follows, tools stay secondary. */
+.owner-profile-page__intro {
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 58%, transparent);
+  padding-block-end: 1.1rem;
+}
+
+.owner-profile-page__eyebrow,
+.owner-profile-card-label {
+  color: var(--color-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.owner-profile-page__eyebrow {
+  margin-block-end: 0.35rem;
+  color: var(--color-primary);
+}
+
+.owner-profile-identity {
+  border-color: color-mix(in srgb, var(--color-primary) 22%, var(--color-border));
+  background: color-mix(in srgb, var(--color-primary) 5%, var(--color-surface));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-border) 46%, transparent),
+    0 8px 22px -16px rgba(0, 0, 0, 0.35);
+}
+
+.owner-profile-avatar-frame {
+  padding: 0.25rem;
+  background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+  box-shadow: 0 0 0 0.25rem color-mix(in srgb, var(--color-primary) 7%, transparent);
+}
+
+.owner-profile-status-dot {
+  position: absolute;
+  right: 0.15rem;
+  bottom: 0.15rem;
+  width: 0.8rem;
+  height: 0.8rem;
+  border: 0.16rem solid var(--color-surface);
+  border-radius: 999px;
+  background: var(--color-success);
+}
+
+.owner-profile-status-dot--inactive {
+  background: var(--color-muted);
+}
+
+.owner-profile-account-badge {
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 11%, var(--color-surface));
+}
+
+.owner-profile-account-badge--inactive {
+  color: var(--color-muted);
+  background: color-mix(in srgb, var(--color-border) 28%, var(--color-surface));
+}
+
+.owner-profile-account-details {
+  border-color: color-mix(in srgb, var(--color-border) 76%, transparent);
+  background: var(--color-surface);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-border) 24%, transparent),
+    0 5px 14px -14px rgba(0, 0, 0, 0.4);
+}
+
+.owner-profile-account-details > div,
+.owner-profile-account-details dt,
+.owner-profile-account-details dd {
+  border-color: color-mix(in srgb, var(--color-border) 72%, transparent);
+}
+
+.owner-profile-meta {
+  border-color: color-mix(in srgb, var(--color-border) 72%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 74%, var(--color-bg));
+}
+
+.owner-profile-tool {
+  border-color: color-mix(in srgb, var(--color-border) 76%, transparent);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-border) 28%, transparent),
+    0 5px 14px -14px rgba(0, 0, 0, 0.4);
+}
+
+.owner-profile-tool:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 42%, var(--color-border));
+  background: var(--color-elevated);
+}
+
+.owner-profile-tool__icon {
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+}
+
+.owner-profile-section-count {
+  min-width: 1.7rem;
+  min-height: 1.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--color-muted);
+  background: color-mix(in srgb, var(--color-border) 45%, var(--color-bg));
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.owner-profile-sign-out {
+  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 7%, var(--color-surface));
+}
+
+.owner-profile-sign-out:hover {
+  background: color-mix(in srgb, var(--color-danger) 13%, var(--color-surface));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .owner-profile-tool {
+    transition: none;
+  }
+}

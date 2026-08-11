@@ -71,6 +71,14 @@ const statusAccent: Record<ToastStatus, string> = {
   error: 'text-danger',
 };
 
+const statusBorder: Record<ToastStatus, string> = {
+  success: 'border-s-success',
+  info: 'border-s-info',
+  error: 'border-s-danger',
+};
+
+const MAX_VISIBLE_TOASTS = 4;
+
 /**
  * Map status → Radix live-region semantics: errors are assertive (`role=alert`,
  * `aria-live=assertive`); success/info are polite (`role=status`,
@@ -83,7 +91,7 @@ function toastType(status: ToastStatus): RadixToast.ToastProps['type'] {
 
 export interface ToastProviderProps {
   children: React.ReactNode;
-  /** Default auto-dismiss duration (ms). Defaults to 3000. */
+  /** Default auto-dismiss duration (ms). Defaults to 4500. Errors stay visible longer. */
   duration?: number;
   /** Swipe direction to dismiss. Defaults to `right` (toward inline-end in RTL). */
   swipeDirection?: RadixToast.ToastProviderProps['swipeDirection'];
@@ -101,7 +109,7 @@ export interface ToastProviderProps {
  */
 export function ToastProvider({
   children,
-  duration = 3000,
+  duration = 4500,
   swipeDirection = 'right',
 }: ToastProviderProps) {
   // `t` is taken by the toast record in the render map, so alias the i18n fn.
@@ -128,7 +136,10 @@ export function ToastProvider({
 
   const toast = useCallback((options: ToastOptions) => {
     const id = ++idRef.current;
-    setToasts((prev) => [...prev, { ...options, id, open: true }]);
+    setToasts((prev) => [
+      ...prev,
+      { ...options, id, open: true },
+    ].slice(-MAX_VISIBLE_TOASTS));
     return id;
   }, []);
 
@@ -150,17 +161,21 @@ export function ToastProvider({
         {toasts.map((t) => {
           const status = t.status ?? 'info';
           const Icon = statusIcon[status];
+          const visibleDuration =
+            t.duration ?? (status === 'error' ? Math.max(duration, 8000) : duration);
           return (
             <RadixToast.Root
               key={t.id}
               type={toastType(status)}
-              duration={t.duration}
+              duration={visibleDuration}
               open={t.open}
+              aria-atomic="true"
               onOpenChange={(open) => {
                 if (!open) dismiss(t.id);
               }}
               className={cn(
-                'flex items-start gap-3 rounded-md border border-border bg-elevated p-3 shadow-3',
+                'flex w-full items-start gap-3 rounded-md border border-border bg-elevated p-3 shadow-3',
+                statusBorder[status],
                 'transition-opacity duration-base ease-standard',
                 'data-[state=closed]:opacity-0',
             // Brief slide entrance; viewport is top-anchored so it never
@@ -224,6 +239,7 @@ export function ToastProvider({
           data-theme={scopeTheme}
           className={cn(
             'fixed inset-x-2 top-0 z-toast m-0 mx-auto flex w-auto max-w-sm list-none flex-col gap-2 p-2',
+            'sm:inset-x-auto sm:end-4 sm:w-[min(26rem,calc(100vw-2rem))]',
             // Keep success/error feedback below the status-bar cutout on phones.
             'pt-[max(var(--space-2),env(safe-area-inset-top))] outline-none',
           )}

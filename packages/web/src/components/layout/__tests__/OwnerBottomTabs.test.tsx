@@ -9,7 +9,7 @@ import '../../../i18n';
  *
  * Covers: tab rendering with Persian labels, active tab detection from the
  * route, nav landmark with aria-label, aria-current="page" on the active tab,
- * compact icon-only layout, touch target sizing (≥ 64px), indicator presence
+ * visible labels, touch target sizing (≥ 64px), indicator presence
  * on active tab, navigation
  * on click, and safe-area-inset-bottom respect.
  */
@@ -52,11 +52,12 @@ describe('OwnerBottomTabs', () => {
     expect(screen.getByText('بازاریابی')).toBeInTheDocument();
   });
 
-  it('keeps advanced tools in the overflow sheet', () => {
+  it('exposes profile as a first-class navigation destination', () => {
     renderTabs();
-    fireEvent.click(screen.getByRole('button', { name: 'بیشتر' }));
-    expect(screen.getByText('QR و استند')).toBeInTheDocument();
-    expect(screen.getByText('تنظیمات سالن')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'پروفایل' })).toHaveAttribute(
+      'href',
+      '/owner/profile',
+    );
   });
 
   it('sets aria-current="page" on the active tab based on route', () => {
@@ -76,9 +77,9 @@ describe('OwnerBottomTabs', () => {
     expect(buttons[0]).toHaveAttribute('aria-current', 'page');
   });
 
-  it('marks the overflow button when on an advanced route', () => {
-    renderTabs('/owner/config/services');
-    expect(screen.getByRole('button', { name: 'بیشتر' })).toHaveAttribute('aria-current', 'page');
+  it('marks the profile link when on the profile route', () => {
+    renderTabs('/owner/profile');
+    expect(screen.getByRole('link', { name: 'پروفایل' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('navigates to the correct route when a tab is clicked', () => {
@@ -91,26 +92,28 @@ describe('OwnerBottomTabs', () => {
 
   it('keeps compact icon-only tabs with at least 64px touch targets', () => {
     const { container } = renderTabs();
-    const buttons = container.querySelectorAll('a');
-    buttons.forEach((btn) => {
-      expect(btn.className).toContain('min-h-[64px]');
-      expect(btn.className).toContain('gap-0');
-      expect(btn.querySelector('svg')).toHaveClass('h-6', 'w-6');
+    const links = container.querySelectorAll('a');
+    links.forEach((link) => {
+      expect(link.className).toContain('min-h-[64px]');
+      expect(link.className).toContain('gap-1');
+      expect(link.querySelector('svg')).toHaveClass('h-5', 'w-5');
     });
+    expect(screen.getByText('پروفایل')).toBeInTheDocument();
   });
 
   it('renders the animated indicator on the active tab', () => {
-    const { container } = renderTabs('/owner/analytics');
+    const { container } = renderTabs('/owner/profile');
     // The indicator is a motion.span with the bg-primary class
     const indicator = container.querySelector('[class*="bg-primary"]');
     expect(indicator).toBeInTheDocument();
   });
 
-  it('opens the glass overflow sheet', () => {
+  it('marks the profile destination for integration testing', () => {
     renderTabs();
-    fireEvent.click(screen.getByRole('button', { name: 'بیشتر' }));
-    expect(document.querySelector('.owner-more-sheet')).toBeInTheDocument();
-    expect(document.querySelector('.owner-more-item')).toBeInTheDocument();
+    expect(screen.getByTestId('owner-profile-trigger')).toHaveAttribute(
+      'href',
+      '/owner/profile',
+    );
   });
 
   it('respects safe-area-inset-bottom via padding class', () => {

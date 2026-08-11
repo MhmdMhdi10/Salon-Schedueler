@@ -13,6 +13,11 @@ export { OwnerWorkingHoursPage } from './OwnerWorkingHoursPage';
 export interface OwnerOutletContext {
   /** The authenticated principal's role (RBAC). */
   role: OwnerRole;
+  /** Salon scope and staff identity used by the profile surface. */
+  salonId?: string;
+  staffMemberId?: string;
+  /** Shared shell sign-out handler for the profile surface. */
+  onSignOut?: () => void;
 }
 
 /** Typed accessor for the owner outlet context (role-aware pages). */
@@ -164,3 +169,6 @@ export function OwnerMyQrPage() {
     </section>
   );
 }
+
+/** First-class account/profile surface for the owner panel. */
+export { OwnerProfilePage } from './OwnerProfilePage';

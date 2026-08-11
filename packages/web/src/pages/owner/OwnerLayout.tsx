@@ -18,7 +18,7 @@ import {
 /** Auth/bootstrap lifecycle for the owner panel. */
 type OwnerAuthState =
   | { phase: 'loading' }
-  | { phase: 'authenticated'; role: OwnerRole; salonId: string }
+  | { phase: 'authenticated'; role: OwnerRole; salonId: string; staffMemberId?: string }
   | { phase: 'unauthenticated' }
   | { phase: 'customer' }
   | { phase: 'platform-admin' };
@@ -79,6 +79,7 @@ export function OwnerLayout() {
           phase: 'authenticated',
           role: principal.role,
           salonId: principal.salonId ?? DEFAULT_SALON_ID,
+          staffMemberId: principal.staffMemberId,
         });
       } catch {
         // A present-but-rejected token means the session is no longer valid.
@@ -131,7 +132,14 @@ export function OwnerLayout() {
     <TooltipProvider>
       <OwnerShell role={state.role} salonId={state.salonId} onSignOut={handleSignOut}>
         <SeoHead title={t('owner.title')} />
-        <Outlet context={{ role: state.role }} />
+        <Outlet
+          context={{
+            role: state.role,
+            salonId: state.salonId,
+            staffMemberId: state.staffMemberId,
+            onSignOut: handleSignOut,
+          }}
+        />
       </OwnerShell>
     </TooltipProvider>
   );

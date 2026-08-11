@@ -1,4 +1,4 @@
-/* Compact floating dock inspired by Instagram's rounded mobile nav. */
+/* Floating mobile dock: four explicit destinations, including profile. */
 .owner-bottom-tabs {
   inset-inline: 1rem;
   bottom: 0.75rem;
@@ -31,28 +31,23 @@
   box-shadow: inset 0 0.0625rem 0 color-mix(in srgb, rgb(255 255 255) 24%, transparent);
 }
 
-/* The overflow sheet uses the same translucent surface as the floating dock. */
-.owner-more-sheet {
-  border-color: color-mix(in srgb, var(--color-border) 72%, rgb(255 255 255) 28%);
-  background: color-mix(in srgb, var(--color-elevated) 68%, transparent);
-  box-shadow:
-    0 -1rem 2.5rem rgba(0, 0, 0, 0.28),
-    inset 0 0.0625rem 0 rgba(255, 255, 255, 0.18);
-  -webkit-backdrop-filter: blur(1.35rem) saturate(1.45);
-  backdrop-filter: blur(1.35rem) saturate(1.45);
+.owner-bottom-tabs__label {
+  max-inline-size: 5.5rem;
+  overflow: hidden;
+  color: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.owner-more-item {
-  border-color: color-mix(in srgb, var(--color-border) 68%, rgb(255 255 255) 12%);
-  background: color-mix(in srgb, var(--color-surface) 52%, transparent);
-  box-shadow: inset 0 0.0625rem 0 rgba(255, 255, 255, 0.06);
-  -webkit-backdrop-filter: blur(0.75rem) saturate(1.25);
-  backdrop-filter: blur(0.75rem) saturate(1.25);
+.owner-bottom-tabs a[data-testid='owner-profile-trigger'] {
+  color: var(--color-text);
 }
 
-.owner-more-item.owner-more-item--active {
-  border-color: color-mix(in srgb, var(--color-primary) 58%, transparent);
-  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+.owner-bottom-tabs a[data-testid='owner-profile-trigger'][aria-current='page'] {
+  color: var(--color-primary);
 }
 
 @media (max-width: 23.75rem) {
@@ -60,9 +55,12 @@
     inset-inline: 0.75rem;
   }
 
-  .owner-bottom-tabs a,
-  .owner-bottom-tabs button {
-    gap: 0.4rem;
+  .owner-bottom-tabs a {
+    gap: 0.35rem;
     padding-inline: 0;
+  }
+
+  .owner-bottom-tabs__label {
+    font-size: 0.62rem;
   }
 }
