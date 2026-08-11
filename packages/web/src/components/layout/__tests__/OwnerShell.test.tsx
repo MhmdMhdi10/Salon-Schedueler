@@ -246,6 +246,7 @@ describe('ownerNavForRole (RBAC matrix)', () => {
       '/owner/notifications',
       '/owner/subscription',
       '/owner/my-qr',
+      '/owner/profile',
     ]);
   });
 
@@ -263,6 +264,7 @@ describe('ownerNavForRole (RBAC matrix)', () => {
       '/owner/clients',
       '/owner/notifications',
       '/owner/my-qr',
+      '/owner/profile',
     ]);
   });
 });

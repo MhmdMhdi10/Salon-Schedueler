@@ -464,6 +464,14 @@ interface AppointmentBlockProps {
   onOpen?: (appointment: Appointment) => void;
   onDragStart?: (event: React.DragEvent<HTMLDivElement>) => void;
   onDragEnd?: () => void;
+  onPointerDown?: (event: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerMove?: (event: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerUp?: (event: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerCancel?: (event: React.PointerEvent<HTMLDivElement>) => void;
+  onTouchStart?: (event: React.TouchEvent<HTMLDivElement>) => void;
+  onTouchMove?: (event: React.TouchEvent<HTMLDivElement>) => void;
+  onTouchEnd?: (event: React.TouchEvent<HTMLDivElement>) => void;
+  onTouchCancel?: (event: React.TouchEvent<HTMLDivElement>) => void;
   appt: Appointment;
   onCancel?: (appointment: Appointment) => void;
   onNoShow?: (appointment: Appointment) => void;
@@ -520,6 +528,14 @@ function AppointmentBlock({
   onOpen,
   onDragStart,
   onDragEnd,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onPointerCancel,
+  onTouchStart,
+  onTouchMove,
+  onTouchEnd,
+  onTouchCancel,
   onCancel,
   onNoShow,
   compactView = false,
@@ -547,6 +563,17 @@ function AppointmentBlock({
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(pointer: coarse)').matches;
   const canDragAppointment = Boolean(onDragStart) && !coarsePointer;
+  // Native HTML drag-and-drop is not dispatched by touch browsers. Keep it
+  // for mouse/trackpad, and use explicit touch events for phones/tablets.
+  // maxTouchPoints also covers browsers whose pointer media query is wrong
+  // (common in installed PWAs and embedded mobile webviews).
+  const supportsTouch =
+    typeof window !== 'undefined' &&
+    typeof navigator !== 'undefined' &&
+    (navigator.maxTouchPoints > 0 || 'ontouchstart' in window);
+  const canTouchDragAppointment = Boolean(onTouchStart) && (coarsePointer || supportsTouch);
+  const canPointerTouchDragAppointment =
+    Boolean(onPointerDown) && !canDragAppointment && !canTouchDragAppointment;
   const canCancel = ['pending', 'held', 'confirmed', 'approved'].includes(appt.status ?? '');
   const canNoShow = appt.status === 'confirmed' && Boolean(onNoShow);
   const statusClass = isPending
@@ -576,19 +603,29 @@ function AppointmentBlock({
         positioned ? 'absolute z-20' : '',
         onOpen && 'cursor-pointer',
         canDragAppointment && 'cursor-grab active:cursor-grabbing',
+        (canTouchDragAppointment || canPointerTouchDragAppointment) &&
+          'touch-none cursor-grab active:cursor-grabbing',
       )}
       style={positionStyle}
       onClick={() => onOpen?.(appt)}
       draggable={canDragAppointment}
       onDragStart={canDragAppointment ? onDragStart : undefined}
       onDragEnd={canDragAppointment ? onDragEnd : undefined}
+      onPointerDown={canPointerTouchDragAppointment ? onPointerDown : undefined}
+      onPointerMove={canPointerTouchDragAppointment ? onPointerMove : undefined}
+      onPointerUp={canPointerTouchDragAppointment ? onPointerUp : undefined}
+      onPointerCancel={canPointerTouchDragAppointment ? onPointerCancel : undefined}
+      onTouchStart={canTouchDragAppointment ? onTouchStart : undefined}
+      onTouchMove={canTouchDragAppointment ? onTouchMove : undefined}
+      onTouchEnd={canTouchDragAppointment ? onTouchEnd : undefined}
+      onTouchCancel={canTouchDragAppointment ? onTouchCancel : undefined}
       role="article"
       aria-label={`${service} — ${customer ?? ''} — ${statusLabel}`}
       data-status={ariaState}
     >
       <span className="flex min-w-0 items-center gap-1.5">
         <Scissors className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
-        {canDragAppointment && (
+        {(canDragAppointment || canTouchDragAppointment || canPointerTouchDragAppointment) && (
           <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted/60" aria-hidden="true" />
         )}
         <strong className="min-w-0 flex-1 truncate text-xs leading-tight">{service}</strong>
@@ -612,6 +649,7 @@ function AppointmentBlock({
               event.stopPropagation();
               onCancel(appt);
             }}
+            onPointerDown={(event) => event.stopPropagation()}
           >
             <X className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
@@ -704,6 +742,15 @@ function DayView({
   const [focusedRow, setFocusedRow] = useState<number | null>(null);
   const [draggedAppointmentId, setDraggedAppointmentId] = useState<string | null>(null);
   const [dropTargetTime, setDropTargetTime] = useState<string | null>(null);
+  const touchDragRef = useRef<{
+    appointment: Appointment;
+    pointerId: number;
+    startX: number;
+    startY: number;
+    active: boolean;
+    dropTime: string | null;
+  } | null>(null);
+  const suppressAppointmentClickRef = useRef(0);
   const anchorKey = dateKey(anchor);
 
   const dayAppts = useMemo(
@@ -776,16 +823,226 @@ function DayView({
     setDropTargetTime(null);
   }, []);
 
+  const getDropTimeFromPointer = useCallback((clientY: number) => {
+    const grid = gridRef.current;
+    if (!grid) return null;
+    const rect = grid.getBoundingClientRect();
+    const y = Math.max(0, clientY - rect.top + grid.scrollTop);
+    const index = Math.min(TIME_SLOTS.length - 1, Math.floor(y / SLOT_HEIGHT));
+    const slot = TIME_SLOTS[index];
+    return String(slot.hour).padStart(2, '0') + ':' + String(slot.minute).padStart(2, '0');
+  }, []);
+
+  const handleTouchPointerDown = useCallback(
+    (appointment: Appointment, event: React.PointerEvent<HTMLDivElement>) => {
+      if (!event.isPrimary) return;
+      if (
+        event.target instanceof Element &&
+        event.target.closest('button,a,input,select,textarea')
+      ) {
+        return;
+      }
+      event.stopPropagation();
+      touchDragRef.current = {
+        appointment,
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        active: false,
+        dropTime: null,
+      };
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch {
+        // Pointer capture is unavailable in a few embedded webviews.
+      }
+    },
+    [],
+  );
+
+  const handleTouchPointerMove = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const drag = touchDragRef.current;
+      if (!drag || drag.pointerId !== event.pointerId) return;
+
+      const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
+      if (!drag.active) {
+        if (distance < 10) return;
+        drag.active = true;
+        setDraggedAppointmentId(drag.appointment.id);
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      const nextTime = getDropTimeFromPointer(event.clientY);
+      if (drag.dropTime !== nextTime) {
+        drag.dropTime = nextTime;
+        setDropTargetTime(nextTime);
+      }
+    },
+    [getDropTimeFromPointer],
+  );
+
+  const resetTouchDrag = useCallback(() => {
+    touchDragRef.current = null;
+    setDraggedAppointmentId(null);
+    setDropTargetTime(null);
+  }, []);
+
+  // Mobile browsers may dispatch a delayed click after a completed drag. Keep
+  // that click from opening appointment details or selecting the drop slot.
+  const suppressDelayedClick = useCallback(() => {
+    suppressAppointmentClickRef.current = Date.now() + 2000;
+  }, []);
+
+  const handleTouchPointerUp = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const drag = touchDragRef.current;
+      if (!drag || drag.pointerId !== event.pointerId) return;
+
+      if (drag.active) {
+        event.preventDefault();
+        event.stopPropagation();
+        // Set guard before optimistic state updates can re-render the block.
+        suppressDelayedClick();
+        if (drag.dropTime) onMove(drag.appointment, anchor, drag.dropTime);
+      }
+      resetTouchDrag();
+    },
+    [anchor, onMove, resetTouchDrag, suppressDelayedClick],
+  );
+
+  const handleTouchPointerCancel = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const drag = touchDragRef.current;
+      if (drag?.pointerId === event.pointerId) resetTouchDrag();
+    },
+    [resetTouchDrag],
+  );
+
+  const handleTouchStart = useCallback(
+    (appointment: Appointment, event: React.TouchEvent<HTMLDivElement>) => {
+      const touch = event.changedTouches[0] ?? event.touches[0];
+      if (!touch || event.touches.length !== 1) return;
+      if (
+        event.target instanceof Element &&
+        event.target.closest('button,a,input,select,textarea')
+      ) {
+        return;
+      }
+
+      event.stopPropagation();
+      touchDragRef.current = {
+        appointment,
+        pointerId: touch.identifier,
+        startX: touch.clientX,
+        startY: touch.clientY,
+        active: false,
+        dropTime: null,
+      };
+    },
+    [],
+  );
+
+  const handleTouchMove = useCallback(
+    (event: React.TouchEvent<HTMLDivElement>) => {
+      const drag = touchDragRef.current;
+      if (!drag) return;
+
+      const touch =
+        Array.from(event.touches).find((item) => item.identifier === drag.pointerId) ??
+        Array.from(event.changedTouches).find((item) => item.identifier === drag.pointerId);
+      if (!touch) return;
+
+      const distance = Math.hypot(touch.clientX - drag.startX, touch.clientY - drag.startY);
+      if (!drag.active) {
+        if (distance < 10) return;
+        drag.active = true;
+        setDraggedAppointmentId(drag.appointment.id);
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      const nextTime = getDropTimeFromPointer(touch.clientY);
+      if (drag.dropTime !== nextTime) {
+        drag.dropTime = nextTime;
+        setDropTargetTime(nextTime);
+      }
+    },
+    [getDropTimeFromPointer],
+  );
+
+  const handleTouchEnd = useCallback(
+    (event: React.TouchEvent<HTMLDivElement>) => {
+      const drag = touchDragRef.current;
+      if (!drag) return;
+
+      const touch = Array.from(event.changedTouches).find(
+        (item) => item.identifier === drag.pointerId,
+      );
+      if (!touch) return;
+
+      if (drag.active) {
+        event.preventDefault();
+        event.stopPropagation();
+        suppressDelayedClick();
+        if (drag.dropTime) onMove(drag.appointment, anchor, drag.dropTime);
+      }
+      resetTouchDrag();
+    },
+    [anchor, onMove, resetTouchDrag, suppressDelayedClick],
+  );
+
+  const handleTouchCancel = useCallback(
+    (event: React.TouchEvent<HTMLDivElement>) => {
+      const drag = touchDragRef.current;
+      if (!drag) return;
+      const touch = Array.from(event.changedTouches).find(
+        (item) => item.identifier === drag.pointerId,
+      );
+      if (touch) resetTouchDrag();
+    },
+    [resetTouchDrag],
+  );
+
+  const handleAppointmentOpen = useCallback(
+    (appointment: Appointment) => {
+      if (suppressAppointmentClickRef.current > Date.now()) {
+        suppressAppointmentClickRef.current = 0;
+        return;
+      }
+      suppressAppointmentClickRef.current = 0;
+      onOpenAppointment(appointment);
+    },
+    [onOpenAppointment],
+  );
+
   const handleDrop = useCallback(
     (time: string, event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
       event.stopPropagation();
       const id = event.dataTransfer.getData('text/plain') || draggedAppointmentId;
       const appointment = dayAppts.find((item) => item.id === id);
-      if (appointment) onMove(appointment, anchor, time);
+      if (appointment) {
+        suppressDelayedClick();
+        onMove(appointment, anchor, time);
+      }
       finishDrag();
     },
-    [anchor, dayAppts, draggedAppointmentId, finishDrag, onMove],
+    [anchor, dayAppts, draggedAppointmentId, finishDrag, onMove, suppressDelayedClick],
+  );
+
+  const handleGridSlotClick = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>, time: string) => {
+      if (suppressAppointmentClickRef.current > Date.now()) {
+        event.preventDefault();
+        event.stopPropagation();
+        suppressAppointmentClickRef.current = 0;
+        return;
+      }
+      onSelectSlot(anchor, time);
+    },
+    [anchor, onSelectSlot],
   );
 
   return (
@@ -887,7 +1144,7 @@ function DayView({
                 if (dropTargetTime === timeStr) setDropTargetTime(null);
               }}
               onDrop={(event) => handleDrop(timeStr, event)}
-              onClick={() => onSelectSlot(anchor, timeStr)}
+              onClick={(event) => handleGridSlotClick(event, timeStr)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
                   event.preventDefault();
@@ -955,9 +1212,17 @@ function DayView({
                   laneCount={laneCount}
                   onCancel={onCancel}
                   onNoShow={onNoShow}
-                  onOpen={onOpenAppointment}
+                  onOpen={handleAppointmentOpen}
                   onDragStart={(event) => handleDragStart(appt, event)}
                   onDragEnd={finishDrag}
+                  onPointerDown={(event) => handleTouchPointerDown(appt, event)}
+                  onPointerMove={handleTouchPointerMove}
+                  onPointerUp={handleTouchPointerUp}
+                  onPointerCancel={handleTouchPointerCancel}
+                  onTouchStart={(event) => handleTouchStart(appt, event)}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                  onTouchCancel={handleTouchCancel}
                 />
               </div>
             );

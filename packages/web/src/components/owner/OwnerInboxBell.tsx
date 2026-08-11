@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Check, CheckCheck } from 'lucide-react';
+import { Bell, Check, CheckCheck, X } from 'lucide-react';
 import { inboxApi, type SalonNotification } from '../../api/client';
 import { useSalonId } from '../../auth/useSalonId';
 import { useInboxWs } from '../../hooks/useInboxWs';
@@ -59,6 +59,8 @@ export function OwnerInboxBell() {
   const [recent, setRecent] = useState<SalonNotification[]>([]);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [liveAlert, setLiveAlert] = useState<SalonNotification | null>(null);
+  const liveAlertTimerRef = useRef<number | null>(null);
   const anchorRef = useRef<HTMLDivElement>(null);
   const readOnOpenRef = useRef(false);
 
@@ -90,11 +92,27 @@ export function OwnerInboxBell() {
     return () => clearInterval(id);
   }, [refreshAll]);
 
-  // Live event arrived — prepend to the recent list + bump unread.
+  // Live event arrived — prepend to the recent list, bump unread, and show
+  // an accessible alert even when the notification panel is closed.
   useEffect(() => {
     if (!lastEvent) return;
     setUnread((u) => u + 1);
     setRecent((list) => [lastEvent, ...list.filter((n) => n.id !== lastEvent.id)].slice(0, 6));
+    setLiveAlert(lastEvent);
+    if (liveAlertTimerRef.current !== null) {
+      window.clearTimeout(liveAlertTimerRef.current);
+    }
+    liveAlertTimerRef.current = window.setTimeout(() => {
+      setLiveAlert(null);
+      liveAlertTimerRef.current = null;
+    }, 6500);
+
+    return () => {
+      if (liveAlertTimerRef.current !== null) {
+        window.clearTimeout(liveAlertTimerRef.current);
+        liveAlertTimerRef.current = null;
+      }
+    };
   }, [lastEvent]);
 
   // Close on outside click.
@@ -217,6 +235,35 @@ export function OwnerInboxBell() {
 
   return (
     <div ref={anchorRef} className="relative">
+      {liveAlert && (
+        <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          data-testid="owner-live-alert"
+          className={cn(
+            'fixed inset-x-3 top-[4.5rem] z-toast mx-auto flex w-auto max-w-sm items-start gap-3',
+            'rounded-xl border border-primary/30 bg-surface p-3 shadow-3',
+            'sm:inset-x-auto sm:end-4 sm:top-20 sm:mx-0 sm:w-[22rem]',
+          )}
+        >
+          <span className="mt-0.5 text-lg leading-none" aria-hidden="true">
+            {typeIcon(liveAlert.type)}
+          </span>
+          <div className="min-w-0 flex-1">
+            <strong className="block truncate text-sm text-text">{liveAlert.title}</strong>
+            <p className="mt-1 line-clamp-2 text-xs text-muted">{liveAlert.body}</p>
+          </div>
+          <button
+            type="button"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted hover:bg-elevated hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+            aria-label="بستن اعلان"
+            onClick={() => setLiveAlert(null)}
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+      )}
       <button
         type="button"
         onClick={toggleOpen}

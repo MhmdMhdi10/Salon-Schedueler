@@ -50,6 +50,9 @@ vi.mock('../../../api/client', () => {
     salonApi: {
       getServices: vi.fn().mockResolvedValue({ services: [] }),
     },
+    qrApi: {
+      getSalonQr: vi.fn().mockResolvedValue({ salonName: 'سالن آرا', payload: '', url: '' }),
+    },
     holidaysApi: {
       list: vi.fn().mockResolvedValue({ holidays: [] }),
     },
@@ -69,7 +72,7 @@ vi.mock('../../../api/client', () => {
 import { OwnerLayout } from '../OwnerLayout';
 import { AuthProvider } from '../../../auth/AuthContext';
 import { HeaderAuthNav } from '../../../components/layout/HeaderAuthNav';
-import { OwnerCalendarPage, OwnerConfigurationPage } from '..';
+import { OwnerCalendarPage, OwnerConfigurationPage, OwnerProfilePage } from '..';
 
 function renderOwnerApp(initialPath = '/owner/calendar') {
   return render(
@@ -80,6 +83,7 @@ function renderOwnerApp(initialPath = '/owner/calendar') {
             <Route path="/owner" element={<OwnerLayout />}>
               <Route path="calendar" element={<OwnerCalendarPage />} />
               <Route path="config" element={<OwnerConfigurationPage />} />
+              <Route path="profile" element={<OwnerProfilePage />} />
             </Route>
             <Route path="/auth" element={<div data-testid="auth-surface">ورود</div>} />
             <Route path="/account" element={<div data-testid="account-surface">حساب</div>} />
@@ -168,8 +172,7 @@ describe('OwnerLayout — RBAC (R2.3)', () => {
     await screen.findByTestId('owner-calendar-page');
     expect(screen.getByRole('link', { name: 'مشتری‌ها' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'بازاریابی' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'بیشتر' }));
-    expect(await screen.findByRole('link', { name: 'تنظیمات سالن' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'پروفایل' })).toBeInTheDocument();
   });
 
   it('limits a Stylist to the own-appointments view', async () => {

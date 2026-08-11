@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type UIEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
@@ -90,6 +90,19 @@ export function OwnerShell({ children, role, salonName, salonId, onSignOut, clas
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const prefersReducedMotion = useReducedMotion();
   const contentRef = useRef<HTMLElement | null>(null);
+  const profileScrollPositionRef = useRef<{ top: number; left: number } | null>(null);
+
+  const handleContentScroll = useCallback(
+    (event: UIEvent<HTMLElement>) => {
+      if (!pathname.startsWith('/owner/profile')) return;
+      const target = event.currentTarget;
+      profileScrollPositionRef.current = {
+        top: target.scrollTop,
+        left: target.scrollLeft,
+      };
+    },
+    [pathname],
+  );
 
   // Sidebar collapsed state — persisted to localStorage
   const [collapsed, setCollapsed] = useState(getPersistedCollapsed);
@@ -118,14 +131,31 @@ export function OwnerShell({ children, role, salonName, salonId, onSignOut, clas
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  useEffect(() => {
-    // Each panel page owns its scroll position; a new tab should always open
-    // at its top, like an iOS tab transition.
-    if (contentRef.current) {
-      contentRef.current.scrollTop = 0;
-      contentRef.current.scrollLeft = 0;
-    }
-  }, [routeKey]);
+  useLayoutEffect(() => {
+    const isProfileRoute = pathname.startsWith('/owner/profile');
+    const savedPosition = isProfileRoute ? profileScrollPositionRef.current : null;
+
+    // Restore after routed content has been committed, before the next paint.
+    // Other owner sections intentionally start at the top.
+    const frame = window.requestAnimationFrame(() => {
+      const target = contentRef.current;
+      if (!target) return;
+      const top = savedPosition?.top ?? 0;
+      const left = savedPosition?.left ?? 0;
+      if (typeof target.scrollTo === 'function') {
+        target.scrollTo({ top, left, behavior: 'auto' });
+      } else {
+        // jsdom does not implement Element.scrollTo; direct assignment keeps
+        // the same behavior in tests and older embedded webviews.
+        target.scrollTop = top;
+        target.scrollLeft = left;
+      }
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [pathname, routeKey]);
 
   return (
     <ThemeScope
@@ -195,6 +225,7 @@ export function OwnerShell({ children, role, salonName, salonId, onSignOut, clas
           ref={contentRef}
           id={OWNER_CONTENT_ID}
           tabIndex={0}
+          onScroll={handleContentScroll}
           className={cn(
             'min-w-0 flex-1 overscroll-contain overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-4 sm:py-5',
             isDesktop && 'w-full',
@@ -227,7 +258,9 @@ export function OwnerShell({ children, role, salonName, salonId, onSignOut, clas
       </div>
 
       {/* Mobile bottom tabs — visible only below lg */}
-      {!isDesktop && <OwnerBottomTabs role={role} />}
+      {!isDesktop && (
+        <OwnerBottomTabs role={role} />
+      )}
     </ThemeScope>
   );
 }

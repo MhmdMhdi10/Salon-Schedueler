@@ -149,6 +149,9 @@ const OwnerTransactionsPage = lazy(() =>
 const OwnerNotificationsPage = lazy(() =>
   import('./pages/owner').then((m) => ({ default: m.OwnerNotificationsPage })),
 );
+const OwnerProfilePage = lazy(() =>
+  import('./pages/owner').then((m) => ({ default: m.OwnerProfilePage })),
+);
 
 // Global platform operations center — deliberately separate from the
 // tenant-scoped owner shell. It is reachable only with a PlatformAdmin JWT.
@@ -265,6 +268,7 @@ export function App() {
                      */}
                     <Route path="/owner" element={<OwnerLayout />}>
                       <Route index element={<Navigate to="/owner/calendar" replace />} />
+                      <Route path="profile" element={<OwnerProfilePage />} />
                       <Route path="calendar" element={<OwnerCalendarPage />} />
                       <Route path="clients" element={<OwnerClientsPage />} />
                       <Route path="marketing" element={<OwnerMarketingPage />} />

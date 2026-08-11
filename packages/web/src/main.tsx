@@ -11,9 +11,12 @@ import { reportWebVitals } from './utils/webVitals';
 // worker ("Cannot use import statement outside a module"). Skip it in dev.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch((err) => {
-      console.warn('Service worker registration failed:', err);
-    });
+    void navigator.serviceWorker
+      .register('/sw.js', { updateViaCache: 'none' })
+      .then((registration) => registration.update())
+      .catch((err) => {
+        console.warn('Service worker registration failed:', err);
+      });
   });
 }
 
