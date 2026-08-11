@@ -629,10 +629,22 @@ describe('Jalali dates', () => {
         getData(type: string) {
           return this.values.get(type) ?? '';
         },
+        setDragImage() {},
       };
       const calendarFetchesBeforeMove = mockGetCalendar.mock.calls.length;
-      fireEvent.dragStart(screen.getByRole('article', { name: /کوتاهی مو/ }), { dataTransfer });
-      fireEvent.drop(screen.getByRole('row', { name: '11:00' }), { dataTransfer });
+      const appointmentCard = screen.getByRole('article', { name: /کوتاهی مو/ });
+      const dragHandle = screen.getByLabelText('دسته جابه‌جایی نوبت');
+      const targetRow = screen.getByRole('row', { name: '11:00' });
+      const elementsFromPoint = document.elementsFromPoint;
+      try {
+        document.elementsFromPoint = () => [dragHandle];
+        fireEvent.dragStart(appointmentCard, { dataTransfer, clientX: 1, clientY: 1 });
+        document.elementsFromPoint = () => [targetRow];
+        fireEvent.dragOver(targetRow, { dataTransfer, clientX: 1, clientY: 1 });
+        fireEvent.drop(targetRow, { dataTransfer, clientX: 1, clientY: 1 });
+      } finally {
+        document.elementsFromPoint = elementsFromPoint;
+      }
 
       await waitFor(() => {
         expect(mockRescheduleAppointment).toHaveBeenCalledWith('appt-1', expect.any(String), undefined);

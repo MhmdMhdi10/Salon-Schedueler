@@ -83,6 +83,12 @@ if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};
 }
 
+// Pragmatic drag and drop uses this hit-testing API while resolving the
+// active drop target. jsdom does not implement layout hit testing.
+if (!document.elementsFromPoint) {
+  document.elementsFromPoint = () => [];
+}
+
 // Unmount React trees between tests so DOM state never leaks across cases.
 afterEach(() => {
   cleanup();

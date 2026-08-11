@@ -3,6 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
+  draggable,
+  dropTargetForElements,
+} from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
+import {
   Check,
   CheckCircle2,
   CalendarClock,
@@ -76,6 +80,15 @@ import './owner-calendar.css';
 
 type CalendarView = 'day' | 'week' | 'month' | 'list';
 type LoadStatus = 'loading' | 'success' | 'error';
+
+const CALENDAR_APPOINTMENT_DRAG_TYPE = 'salon-calendar-appointment';
+const CALENDAR_SLOT_DROP_TYPE = 'salon-calendar-slot';
+
+function getCalendarAppointmentId(data: Record<string | symbol, unknown>): string | null {
+  return data.type === CALENDAR_APPOINTMENT_DRAG_TYPE && typeof data.appointmentId === 'string'
+    ? data.appointmentId
+    : null;
+}
 
 /** Booksy-style mobile default: show today's actionable schedule first. */
 function initialCalendarView(): CalendarView {
@@ -462,7 +475,7 @@ const dateSlideTransition = {
 
 interface AppointmentBlockProps {
   onOpen?: (appointment: Appointment) => void;
-  onDragStart?: (event: React.DragEvent<HTMLDivElement>) => void;
+  draggableId?: string;
   onDragEnd?: () => void;
   appt: Appointment;
   onCancel?: (appointment: Appointment) => void;
@@ -518,7 +531,7 @@ function statusIndicator(status: string | undefined): {
 function AppointmentBlock({
   appt,
   onOpen,
-  onDragStart,
+  draggableId,
   onDragEnd,
   onCancel,
   onNoShow,
@@ -529,6 +542,8 @@ function AppointmentBlock({
   laneCount = 1,
   positioned = false,
 }: AppointmentBlockProps) {
+  const draggableRef = useRef<HTMLDivElement>(null);
+  const dragHandleRef = useRef<HTMLSpanElement>(null);
   const isPending = appt.status === 'pending';
   const isCancelled = appt.status === 'cancelled' || appt.status === 'rejected';
   const colorClass = isPending
@@ -542,11 +557,7 @@ function AppointmentBlock({
   const customer = appt.customerName;
   const { icon: statusIcon, label: statusLabel, ariaState } = statusIndicator(appt.status);
   const compact = compactView || (positioned && (height ?? 0) < 70);
-  const coarsePointer =
-    typeof window !== 'undefined' &&
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(pointer: coarse)').matches;
-  const canDragAppointment = Boolean(onDragStart) && !coarsePointer;
+  const canDragAppointment = Boolean(draggableId);
   const canCancel = ['pending', 'held', 'confirmed', 'approved'].includes(appt.status ?? '');
   const canNoShow = appt.status === 'confirmed' && Boolean(onNoShow);
   const statusClass = isPending
@@ -565,8 +576,24 @@ function AppointmentBlock({
       }
     : undefined;
 
+  useEffect(() => {
+    const element = draggableRef.current;
+    if (!element || !draggableId) return;
+
+    return draggable({
+      element,
+      dragHandle: dragHandleRef.current ?? undefined,
+      getInitialData: () => ({
+        type: CALENDAR_APPOINTMENT_DRAG_TYPE,
+        appointmentId: draggableId,
+      }),
+      onDrop: () => onDragEnd?.(),
+    });
+  }, [draggableId, onDragEnd]);
+
   return (
     <div
+      ref={draggableRef}
       className={cn(
         'flex flex-col justify-start gap-1 overflow-hidden rounded-lg border border-border border-s-4 bg-surface px-2.5 py-2 text-text shadow-1',
         compact && 'gap-0.5 px-2 py-1.5',
@@ -579,9 +606,6 @@ function AppointmentBlock({
       )}
       style={positionStyle}
       onClick={() => onOpen?.(appt)}
-      draggable={canDragAppointment}
-      onDragStart={canDragAppointment ? onDragStart : undefined}
-      onDragEnd={canDragAppointment ? onDragEnd : undefined}
       role="article"
       aria-label={`${service} — ${customer ?? ''} — ${statusLabel}`}
       data-status={ariaState}
@@ -589,7 +613,13 @@ function AppointmentBlock({
       <span className="flex min-w-0 items-center gap-1.5">
         <Scissors className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
         {canDragAppointment && (
-          <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted/60" aria-hidden="true" />
+          <span
+            ref={dragHandleRef}
+            className="flex h-6 w-6 shrink-0 cursor-grab items-center justify-center touch-none text-muted/60"
+            aria-label="دسته جابه‌جایی نوبت"
+          >
+            <GripVertical className="h-3.5 w-3.5" aria-hidden="true" />
+          </span>
         )}
         <strong className="min-w-0 flex-1 truncate text-xs leading-tight">{service}</strong>
         {start && (
@@ -702,7 +732,6 @@ function DayView({
   const gridRef = useRef<HTMLDivElement>(null);
   const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [focusedRow, setFocusedRow] = useState<number | null>(null);
-  const [draggedAppointmentId, setDraggedAppointmentId] = useState<string | null>(null);
   const [dropTargetTime, setDropTargetTime] = useState<string | null>(null);
   const anchorKey = dateKey(anchor);
 
@@ -761,32 +790,41 @@ function DayView({
     [focusedRow],
   );
 
-  const handleDragStart = useCallback(
-    (appointment: Appointment, event: React.DragEvent<HTMLDivElement>) => {
-      event.stopPropagation();
-      event.dataTransfer.effectAllowed = 'move';
-      event.dataTransfer.setData('text/plain', appointment.id);
-      setDraggedAppointmentId(appointment.id);
-    },
-    [],
-  );
-
   const finishDrag = useCallback(() => {
-    setDraggedAppointmentId(null);
     setDropTargetTime(null);
   }, []);
 
-  const handleDrop = useCallback(
-    (time: string, event: React.DragEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const id = event.dataTransfer.getData('text/plain') || draggedAppointmentId;
-      const appointment = dayAppts.find((item) => item.id === id);
-      if (appointment) onMove(appointment, anchor, time);
-      finishDrag();
-    },
-    [anchor, dayAppts, draggedAppointmentId, finishDrag, onMove],
-  );
+  useEffect(() => {
+    const cleanups = TIME_SLOTS.flatMap((slot, index) => {
+      const element = rowRefs.current[index];
+      if (!element) return [];
+
+      const timeStr = `${String(slot.hour).padStart(2, '0')}:${String(slot.minute).padStart(2, '0')}`;
+      return [
+        dropTargetForElements({
+          element,
+          canDrop: ({ source }) => getCalendarAppointmentId(source.data) !== null,
+          getData: () => ({ type: CALENDAR_SLOT_DROP_TYPE, time: timeStr }),
+          onDragEnter: ({ source }) => {
+            if (getCalendarAppointmentId(source.data)) setDropTargetTime(timeStr);
+          },
+          onDragLeave: () => {
+            setDropTargetTime((current) => (current === timeStr ? null : current));
+          },
+          onDrop: ({ source }) => {
+            const appointmentId = getCalendarAppointmentId(source.data);
+            const appointment = appointmentId
+              ? dayAppts.find((item) => item.id === appointmentId)
+              : undefined;
+            if (appointment) onMove(appointment, anchor, timeStr);
+            setDropTargetTime(null);
+          },
+        }),
+      ];
+    });
+
+    return () => cleanups.forEach((cleanup) => cleanup());
+  }, [anchor, dayAppts, onMove]);
 
   return (
     <div className="owner-calendar-day-view flex flex-col">
@@ -877,16 +915,6 @@ function DayView({
               tabIndex={isFocused || (focusedRow === null && idx === 0) ? 0 : -1}
               aria-label={timeStr}
               onFocus={() => setFocusedRow(idx)}
-              onDragOver={(event) => {
-                if (!draggedAppointmentId) return;
-                event.preventDefault();
-                event.dataTransfer.dropEffect = 'move';
-                setDropTargetTime(timeStr);
-              }}
-              onDragLeave={() => {
-                if (dropTargetTime === timeStr) setDropTargetTime(null);
-              }}
-              onDrop={(event) => handleDrop(timeStr, event)}
               onClick={() => onSelectSlot(anchor, timeStr)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
@@ -956,7 +984,7 @@ function DayView({
                   onCancel={onCancel}
                   onNoShow={onNoShow}
                   onOpen={onOpenAppointment}
-                  onDragStart={(event) => handleDragStart(appt, event)}
+                  draggableId={appt.id}
                   onDragEnd={finishDrag}
                 />
               </div>
