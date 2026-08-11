@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight,
   Check,
@@ -99,6 +99,8 @@ export function RegisterSalonPage() {
 function RegisterSalonContent() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const referralToken = searchParams.get('referral')?.trim() || undefined;
   const { success } = useToast();
   const { refresh: refreshAuth } = useAuth();
 
@@ -252,6 +254,7 @@ function RegisterSalonContent() {
           ...(priceRial ? { priceRial } : {}),
         })),
         chairCount: toIntOrZero(chairCount),
+        referralToken,
       });
       // Salon created — send the OTP so the owner can sign straight in.
       const response = await authApi.requestOtp(normalizedPhone);

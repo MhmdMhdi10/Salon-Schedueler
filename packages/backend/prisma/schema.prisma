@@ -111,6 +111,7 @@ model Salon {
   salonNotifications SalonNotification[]
   smsSettings     SalonSmsSettings?
   salonClients    SalonClient[]
+  referrals       SalonReferral[]
 
   @@map("salon")
 }
@@ -320,6 +321,7 @@ model Customer {
   deviceTokens    DeviceToken[]
   botChats        BotChat[]
   salonClients    SalonClient[]
+  referrals       SalonReferral[]
 
   @@map("customer")
 }
@@ -599,6 +601,36 @@ model QrScanEvent {
   salon Salon @relation(fields: [salonId], references: [id])
 
   @@map("qr_scan_event")
+}
+
+model SalonReferral {
+  id                 String    @id @default(uuid()) @db.Uuid
+  referrerId         String    @map("referrer_id") @db.Uuid
+  salonId            String?   @map("salon_id") @db.Uuid
+  salonName          String    @map("salon_name")
+  salonPhone         String?   @map("salon_phone")
+  salonInstagram     String?   @map("salon_instagram")
+  city               String?
+  normalizedKey      String    @unique @map("normalized_key")
+  claimToken         String    @unique @map("claim_token")
+  status             String    @default("submitted")
+  qualifyingBookings Int       @default(0) @map("qualifying_bookings")
+  requiredBookings   Int       @default(3) @map("required_bookings")
+  rewardAmountRial   BigInt    @map("reward_amount_rial")
+  rewardStatus       String    @default("locked") @map("reward_status")
+  rewardExpiresAt    DateTime? @map("reward_expires_at") @db.Timestamptz
+  claimedAt          DateTime? @map("claimed_at") @db.Timestamptz
+  qualifiedAt        DateTime? @map("qualified_at") @db.Timestamptz
+  redeemedAt         DateTime? @map("redeemed_at") @db.Timestamptz
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  referrer Customer @relation(fields: [referrerId], references: [id])
+  salon    Salon?   @relation(fields: [salonId], references: [id], onDelete: SetNull)
+
+  @@index([referrerId, createdAt])
+  @@index([salonId, status])
+  @@map("salon_referral")
 }
 
 // ─── Platform Admin ─────────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ import { BookingAbuseError } from '../security/booking-abuse-guard.js';
 import { BookingConflictError } from '../app/appointment-management.js';
 import { AppointmentStateError } from '../scheduling/scheduling-engine.js';
 import { PlatformAdminError } from '../platform-admin/platform-admin.service.js';
+import { ReferralConflictError } from '../referral/referral.service.js';
 
 /**
  * A domain error mapped to an HTTP status and a stable, client-facing error code.
@@ -32,6 +33,10 @@ export interface MappedError {
  * | Anything else            | 500    | INTERNAL              |
  */
 export function mapDomainError(err: unknown): MappedError {
+  if (err instanceof ReferralConflictError) {
+    return { status: 409, code: 'REFERRAL_EXISTS' };
+  }
+
   if (err instanceof BookingAbuseError) {
     switch (err.code) {
       case 'BOT_DETECTED':
