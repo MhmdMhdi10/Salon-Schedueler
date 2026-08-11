@@ -85,6 +85,14 @@ export function registrationRouter(services: Services): Router {
         // in and the subscription would simply read `expired` until purchase.
         await services.subscriptionService.startTrial(salon.id);
 
+        if (input.referralToken && services.referralService) {
+          try {
+            await services.referralService.linkSalon(input.referralToken, salon.id);
+          } catch (error) {
+            console.warn('[referral] could not link salon signup:', error);
+          }
+        }
+
         res.status(201).json({ salonId: salon.id, salonName: salon.name });
       } catch (err) {
         if (isUniqueViolation(err)) {

@@ -18,7 +18,8 @@ for migration in \
   packages/backend/prisma/migrations/00000000000011_notification_event_type/migration.sql \
   packages/backend/prisma/migrations/00000000000012_platform_admin/migration.sql \
   packages/backend/prisma/migrations/00000000000013_salon_sms_settings/migration.sql \
-  packages/backend/prisma/migrations/00000000000014_business_profile_and_clients/migration.sql
+  packages/backend/prisma/migrations/00000000000014_business_profile_and_clients/migration.sql \
+  packages/backend/prisma/migrations/00000000000015_referral_mvp/migration.sql
 do
   psql "$cli_database_url" -v ON_ERROR_STOP=1 -f "$migration" >/dev/null
 done

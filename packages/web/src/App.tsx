@@ -78,6 +78,9 @@ const MySalonsPage = lazy(() =>
 const CustomerDashboardPage = lazy(() =>
   import('./pages/CustomerDashboardPage').then((m) => ({ default: m.CustomerDashboardPage })),
 );
+const ReferralPage = lazy(() =>
+  import('./pages/ReferralPage').then((m) => ({ default: m.ReferralPage })),
+);
 const AvailabilityPage = lazy(() =>
   import('./pages/AvailabilityPage').then((m) => ({
     default: m.AvailabilityPage,
@@ -345,6 +348,7 @@ export function App() {
                         <Route path="/account" element={<CustomerDashboardPage />} />
                         <Route path="/salon/:salonId/waitlist" element={<WaitlistPage />} />
                         <Route path="/my-salons" element={<MySalonsPage />} />
+                        <Route path="/refer-salon" element={<ReferralPage />} />
                       </Route>
                       <Route path="/qr/:payload" element={<QrLandingPage />} />
                       {/*

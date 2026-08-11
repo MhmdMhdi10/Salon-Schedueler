@@ -58,6 +58,7 @@ export const RegisterSalonSchema = z.object({
   services: z.array(RegisterSalonServiceSchema).max(50).default([]),
   /** Optional number of chairs to pre-create, named «صندلی N» (skippable). */
   chairCount: z.number().int().min(0).max(50).default(0),
+  referralToken: z.string().min(1).max(120).optional(),
 });
 
 export type RegisterSalon = z.infer<typeof RegisterSalonSchema>;

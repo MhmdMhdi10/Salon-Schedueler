@@ -11,6 +11,7 @@ import {
   Clock3,
   CreditCard,
   Percent,
+  QrCode,
   RefreshCw,
   Scissors,
   TrendingDown,
@@ -137,6 +138,16 @@ interface SourceRow {
   revenueRial: number;
 }
 
+interface CampaignSourceRow {
+  source: string;
+  scans: number;
+}
+
+interface CampaignScanReport {
+  total: number;
+  sources: CampaignSourceRow[];
+}
+
 interface CustomerRow {
   id: string;
   name: string | null;
@@ -161,6 +172,7 @@ interface AnalyticsModel {
   services: ServiceRow[];
   staff: StaffRow[];
   sources: SourceRow[];
+  campaignScans: CampaignScanReport;
   customers: CustomerRow[];
 }
 
@@ -195,6 +207,7 @@ function toModel(raw: {
   const staffUtilization = record(raw.staffUtilization);
   const summary = record(raw.summary);
   const comparison = record(raw.comparison);
+  const campaignScans = record(raw.campaignScans);
   const revenueTotal =
     typeof raw.revenue === 'number' ? raw.revenue : num(revenue.totalRial);
   const legacyCount = num(revenue.appointmentCount) ?? 0;
@@ -292,6 +305,13 @@ function toModel(raw: {
       bookings: num(row.bookings) ?? 0,
       revenueRial: num(row.revenueRial) ?? 0,
     })),
+    campaignScans: {
+      total: num(campaignScans.total) ?? 0,
+      sources: array(campaignScans.sources).map((row) => ({
+        source: str(row.source) ?? 'unknown',
+        scans: num(row.scans) ?? 0,
+      })),
+    },
     customers: array(raw.customers).map((row, index) => ({
       id: str(row.id) ?? 'customer-' + index,
       name: str(row.name) ?? null,
@@ -365,6 +385,12 @@ function sourceLabel(source: string): string {
     mobile: 'موبایل',
     walkin: 'حضوری',
     bot: 'ربات',
+    qr: 'QR',
+    instagram_bio: 'اینستاگرام ـ بیو',
+    instagram_story: 'اینستاگرام ـ استوری',
+    whatsapp: 'واتساپ',
+    google: 'گوگل',
+    referral: 'معرفی مشتری',
   };
   return labels[source] ?? source;
 }
@@ -1199,6 +1225,33 @@ export function OwnerAnalyticsPageContent({ salonId: salonIdProp }: { salonId?: 
               </div>
             </Card>
           )}
+
+          <Card as="section" data-testid="analytics-campaign-scans" className="min-w-0 border-primary/20 bg-primary/5">
+            <div className="mb-4 flex items-center gap-2">
+              <QrCode className="h-5 w-5 text-primary" aria-hidden="true" />
+              <CardTitle as="h2" className="text-base font-bold">کانال‌های جذب</CardTitle>
+            </div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-3xl font-black text-text"><Num value={model.campaignScans.total} /></p>
+                <p className="mt-1 text-sm text-muted">اسکن لینک‌های کمپین در این بازه</p>
+              </div>
+              {model.campaignScans.sources.length > 0 ? (
+                <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                  {model.campaignScans.sources.map((row) => (
+                    <div key={row.source} className="flex min-w-0 items-center justify-between gap-3 rounded-md border border-border bg-surface p-3">
+                      <span className="truncate text-sm text-text">{sourceLabel(row.source)}</span>
+                      <span className="shrink-0 text-sm font-bold text-text"><Num value={row.scans} /></span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="max-w-xl text-sm leading-6 text-muted">
+                  هنوز اسکن کمپینی ثبت نشده. از صفحه بازاریابی، لینک جداگانه بیو، استوری، واتساپ یا QR بساز تا نتیجه هر کانال دیده شود.
+                </p>
+              )}
+            </div>
+          </Card>
 
           <motion.div variants={itemVariants} initial="hidden" animate="visible">
             <Card as="section" data-testid="analytics-busiest-section" className="min-w-0">

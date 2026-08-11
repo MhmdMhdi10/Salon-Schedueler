@@ -108,6 +108,17 @@ export interface AnalyticsSourceRow {
   revenueRial: number;
 }
 
+/** Campaign arrivals grouped by the UTM source used in salon-owned links. */
+export interface AnalyticsCampaignSourceRow {
+  source: string;
+  scans: number;
+}
+
+export interface AnalyticsCampaignScanReport {
+  total: number;
+  sources: AnalyticsCampaignSourceRow[];
+}
+
 /** Customer-level activity for the selected reporting period. */
 export interface AnalyticsCustomerRow {
   id: string;
@@ -128,6 +139,13 @@ export interface AnalyticsComparison {
   collectedRial: number;
 }
 
+interface QrScanEventDelegate {
+  findMany(args: {
+    where: { salonId: string; createdAt: { gte: Date; lt: Date } };
+    select: { source: true };
+  }): Promise<Array<{ source: string }>>;
+}
+
 export interface AnalyticsDashboardReport {
   utilization: UtilizationReport;
   staffUtilization: UtilizationReport;
@@ -140,6 +158,7 @@ export interface AnalyticsDashboardReport {
   services: AnalyticsServiceRow[];
   staff: AnalyticsStaffRow[];
   sources: AnalyticsSourceRow[];
+  campaignScans: AnalyticsCampaignScanReport;
   customers: AnalyticsCustomerRow[];
 }
 
@@ -308,16 +327,25 @@ export class AnalyticsService {
     const previousFrom = new Date(from.getTime() - periodMs);
     const previousTo = new Date(from);
 
-    const [appointmentsRaw, paymentsRaw, previousAppointmentsRaw, previousPaymentsRaw, salon, utilization, staffUtilization] =
-      await Promise.all([
-        this.loadDashboardAppointments(salonId, from, to),
-        this.loadDashboardPayments(salonId, from, to),
-        this.loadDashboardAppointments(salonId, previousFrom, previousTo),
-        this.loadDashboardPayments(salonId, previousFrom, previousTo),
-        this.prisma.salon.findUnique({ where: { id: salonId }, select: { timezone: true } }),
-        this.chairUtilization(salonId, from, to),
-        this.staffUtilization(salonId, from, to),
-      ]);
+    const [
+      appointmentsRaw,
+      paymentsRaw,
+      previousAppointmentsRaw,
+      previousPaymentsRaw,
+      salon,
+      utilization,
+      staffUtilization,
+      campaignScans,
+    ] = await Promise.all([
+      this.loadDashboardAppointments(salonId, from, to),
+      this.loadDashboardPayments(salonId, from, to),
+      this.loadDashboardAppointments(salonId, previousFrom, previousTo),
+      this.loadDashboardPayments(salonId, previousFrom, previousTo),
+      this.prisma.salon.findUnique({ where: { id: salonId }, select: { timezone: true } }),
+      this.chairUtilization(salonId, from, to),
+      this.staffUtilization(salonId, from, to),
+      this.loadCampaignScans(salonId, from, to),
+    ]);
 
     const appointments = appointmentsRaw as DashboardAppointment[];
     const payments = paymentsRaw as DashboardPayment[];
@@ -345,7 +373,35 @@ export class AnalyticsService {
       services: this.buildServiceRows(appointments),
       staff: this.buildStaffRows(appointments),
       sources: this.buildSourceRows(appointments),
+      campaignScans,
       customers: this.buildCustomerRows(appointments),
+    };
+  }
+
+  private async loadCampaignScans(
+    salonId: string,
+    from: Date,
+    to: Date,
+  ): Promise<AnalyticsCampaignScanReport> {
+    const delegate = (this.prisma as unknown as { qrScanEvent?: QrScanEventDelegate }).qrScanEvent;
+    // Older test doubles and pre-expansion databases may not expose the delegate.
+    // Keep analytics backward-compatible and return an honest empty report.
+    if (!delegate) return { total: 0, sources: [] };
+
+    const events = await delegate.findMany({
+      where: { salonId, createdAt: { gte: from, lt: to } },
+      select: { source: true },
+    });
+    const counts = new Map<string, number>();
+    for (const event of events) {
+      const source = event.source.trim() || 'unknown';
+      counts.set(source, (counts.get(source) ?? 0) + 1);
+    }
+    return {
+      total: events.length,
+      sources: [...counts.entries()]
+        .map(([source, scans]) => ({ source, scans }))
+        .sort((a, b) => b.scans - a.scans || a.source.localeCompare(b.source)),
     };
   }
 

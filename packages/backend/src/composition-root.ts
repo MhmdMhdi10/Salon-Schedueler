@@ -49,6 +49,7 @@ import { AppointmentManagementService } from './app/appointment-management.js';
 import { BookingAbuseGuard } from './security/booking-abuse-guard.js';
 import { PlatformAdminService } from './platform-admin/platform-admin.service.js';
 import { SalonClientService } from './customer/salon-client.service.js';
+import { ReferralService } from './referral/referral.service.js';
 
 // Provider ports + adapters.
 import type { SmsProvider } from './auth/sms-provider.interface.js';
@@ -320,6 +321,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
   );
   const bookingAbuseGuard = new BookingAbuseGuard(prisma);
   const platformAdminService = new PlatformAdminService(prisma);
+  const referralService = new ReferralService(prisma, { publicBaseUrl: config.publicBaseUrl });
 
   // Conversational in-chat booking (task 7.2): a BotSession-backed state machine
   // (service → date → slot → confirm, with an in-chat OTP sub-flow when the chat
@@ -366,6 +368,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     appointmentManagementService,
     bookingAbuseGuard,
     platformAdminService,
+    referralService,
   };
 
   return { prisma, services, config };

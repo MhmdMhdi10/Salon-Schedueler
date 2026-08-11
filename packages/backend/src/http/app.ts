@@ -47,6 +47,8 @@ import { deviceRouter } from './routes/device.routes.js';
 import { inboxRouter } from './routes/inbox.routes.js';
 import { platformAdminRouter } from './routes/platform-admin.routes.js';
 import { errorHandler } from './middleware/error-handler.js';
+import { referralPublicRouter, referralRouter } from './routes/referral.routes.js';
+import type { ReferralService } from '../referral/referral.service.js';
 
 /**
  * All domain services and the authorizer, constructed by the Composition_Root and
@@ -94,6 +96,7 @@ export interface Services {
   bookingAbuseGuard?: BookingAbuseGuard;
   /** Global operations center; optional for legacy route-test service fakes. */
   platformAdminService?: PlatformAdminService;
+  referralService?: ReferralService;
 }
 
 /** Options for building the Express app. */
@@ -182,6 +185,7 @@ export function buildApp(opts: BuildAppOptions): Express {
   // account; they then sign in via OTP with the phone they registered.
   app.use('/api', registrationRouter(services));
   app.use('/api', salonRouter(services, optionalAuth));
+  app.use('/api', referralPublicRouter(services));
   app.use('/api', paymentCallbackRouter(services));
   app.use('/api', subscriptionCallbackRouter(services));
   // Bot webhooks: public (no requireAuth), guarded by a webhook-secret path
@@ -211,6 +215,9 @@ export function buildApp(opts: BuildAppOptions): Express {
     res.status(200).json({ ok: true });
   });
   protectedRouter.use(customerRouter(services));
+  if (services.referralService) {
+    protectedRouter.use(referralRouter(services, requireRole));
+  }
   protectedRouter.use(waitlistRouter(services));
   protectedRouter.use(appointmentRouter(services, requireRole));
   protectedRouter.use(cardOrderRouter(requireRole));

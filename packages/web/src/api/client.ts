@@ -246,6 +246,52 @@ export const customerApi = {
     }),
 };
 
+// ─── Customer referral program ───────────────────────────────────────────────
+export interface SalonReferral {
+  id: string;
+  salonId: string | null;
+  salonName: string;
+  salonPhone: string | null;
+  salonInstagram: string | null;
+  city: string | null;
+  claimToken?: string;
+  claimUrl?: string;
+  status: string;
+  qualifyingBookings: number;
+  requiredBookings: number;
+  rewardAmountRial: number;
+  rewardStatus: string;
+  rewardExpiresAt: string | null;
+  claimedAt: string | null;
+  qualifiedAt: string | null;
+  redeemedAt: string | null;
+  createdAt: string;
+  referrerName?: string | null;
+  referrerPhone?: string;
+  linkedSalonName?: string | null;
+}
+
+export const referralApi = {
+  create: (input: {
+    salonName: string;
+    city: string;
+    salonPhone?: string;
+    salonInstagram?: string;
+  }) => request<{ referral: SalonReferral }>('/referrals', { method: 'POST', body: input }),
+  listMine: () => request<{ referrals: SalonReferral[] }>('/customers/me/referrals'),
+  getClaimPreview: (token: string) =>
+    request<{
+      referral: Pick<
+        SalonReferral,
+        'salonName' | 'city' | 'status' | 'rewardAmountRial' | 'requiredBookings'
+      >;
+    }>('/referrals/claim/' + encodeURIComponent(token)),
+  listSalon: (salonId: string) =>
+    request<{ referrals: SalonReferral[] }>('/salons/' + salonId + '/referrals'),
+  redeem: (id: string) =>
+    request<{ referral: SalonReferral }>('/referrals/' + id + '/redeem', { method: 'POST' }),
+};
+
 // ─── Salon registration (public onboarding) ─────────────────────────────────
 // Self-service salon sign-up from the marketing landing. Creates the salon, its
 // Owner staff member (the `phone` becomes the OTP login that mints an Owner
@@ -278,6 +324,8 @@ export interface RegisterSalonInput {
   services?: RegisterSalonServiceInput[];
   /** Number of chairs to pre-create (optional). */
   chairCount?: number;
+  /** Referral token from a customer invite link (optional). */
+  referralToken?: string;
 }
 
 /** Server acknowledgement of a created salon. */
@@ -640,6 +688,7 @@ export const adminApi = {
       services?: unknown;
       staff?: unknown;
       sources?: unknown;
+      campaignScans?: unknown;
       customers?: unknown;
     }>(
       `/salons/${salonId}/analytics?from=${from}&to=${to}`,
