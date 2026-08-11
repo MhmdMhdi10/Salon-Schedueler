@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f6f2ec" />
     <meta
       name="description"
-      content="داشبورد مقایسه آرا با مجموعه‌ای نماینده از پلتفرم‌های مدیریت سالن و اسپا"
+      content="داشبورد مقایسه آرا با مجموعه‌ای نماینده از ۱۵ پلتفرم مدیریت سالن و اسپا"
     />
     <title>آرا در برابر اکوسیستم مدیریت سالن | مقایسه محصول</title>
     <style>
@@ -272,7 +272,8 @@
         letter-spacing: -0.04em;
       }
 
-      h1 {
+      h1,
+      .hero-title {
         max-width: 800px;
         margin-bottom: 21px;
         font-size: clamp(2.4rem, 6.1vw, 5.5rem);
@@ -424,6 +425,23 @@
       .report-note svg {
         flex: 0 0 auto;
         color: var(--coral);
+      }
+
+      .scope-note {
+        display: block;
+        max-width: 790px;
+        margin-top: 12px;
+        padding: 10px 12px;
+        color: var(--muted);
+        background: rgba(255, 253, 250, 0.72);
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        font-size: 0.72rem;
+        line-height: 1.85;
+      }
+
+      .scope-note strong {
+        color: var(--ink-soft);
       }
 
       .section {
@@ -2172,42 +2190,46 @@
 
     <main id="main">
       <div class="page-shell">
+        <h1 class="sr-only" id="page-title">آرا در برابر اکوسیستم مدیریت سالن</h1>
         <section class="section mvp-section" id="mvp-verdict" aria-labelledby="mvp-title">
           <div class="mvp-band">
             <div class="mvp-band-copy">
               <p class="mvp-kicker"><bdi dir="ltr">ARA MVP / RELEASE ROOM</bdi> · ۰۱</p>
-              <h2 id="mvp-title">حکم MVP: هسته عملیات آماده است؛ حالا نوبت اعتبارسنجی واقعی است</h2>
-              <p>برای اعتبارسنجی عمومی، آرا باید روی عملیات روزانه و قابلیت اطمینان تمرکز کند؛ رشدهای جانبی فعلاً از مسیر انتشار کنار بمانند.</p>
+              <h2 id="mvp-title">برای MVP عملیاتی: بله؛ برای انتشار عمومی: هنوز چند گیت لازم است</h2>
+              <p>هسته لازم برای یک پایلوت ساده و کاربردی وجود دارد؛ کامل‌بودن محصول با کامل‌بودن MVP یکی نیست. ابتدا با سالن واقعی یاد بگیریم، بعد سراغ عمق محصول برویم.</p>
             </div>
             <div class="mvp-gate">
               <span class="mvp-gate-label">گیت تصمیم</span>
-              <strong>قبل از انتشار عمومی، با سالن واقعی بسنجید</strong>
-              <span>۳–۵ سالن · <bdi dir="ltr">booking</bdi>، خطا، تأیید، بازگشت</span>
+              <strong>پایلوت آماده است؛ انتشار عمومی مشروط است</strong>
+              <span>HTTPS، اعلان تولیدی، backup/restore، export/delete و پایش خطا باید بسته شوند.</span>
             </div>
           </div>
 
           <div class="mvp-status-grid" aria-label="وضعیت اجزای MVP آرا">
             <article class="mvp-status-card is-shipped">
               <div class="mvp-card-head">
-                <span class="mvp-status-chip"><span aria-hidden="true">✓</span> ارسال شده · P0</span>
+                <span class="mvp-status-chip"><span aria-hidden="true">✓</span> ارسال شود · P0</span>
               </div>
               <h3>هسته عملیات روزانه</h3>
               <ul>
-                <li><span>خلاصه روزانه و تعداد نفرات</span></li>
-                <li><span>کلیک روز در نمای هفته/ماه → نمای روز</span></li>
-                <li><span>زمینه مشتری: تلفن، <bdi dir="ltr">SMS</bdi> و سابقه</span></li>
-                <li><span>خطاهای تأیید به‌صورت واضح نمایش داده می‌شوند</span></li>
+                <li><span>تقویم روزانه، تعداد نفرات و کلیک هفته/ماه → روز</span></li>
+                <li><span>جابه‌جایی امن <bdi dir="ltr">drag &amp; drop</bdi> بدون refresh کل صفحه</span></li>
+                <li><span>صف تأیید، وضعیت خطا و مدیریت تداخل</span></li>
+                <li><span>پروفایل، سابقه، یادداشت، تماس و <bdi dir="ltr">SMS</bdi></span></li>
+                <li><span>رزرو دستی/‌<bdi dir="ltr">walk-in</bdi>، ساعات کاری و تعطیلی</span></li>
               </ul>
             </article>
 
             <article class="mvp-status-card is-shipped">
               <div class="mvp-card-head">
-                <span class="mvp-status-chip"><span aria-hidden="true">✓</span> ارسال شده · P1</span>
+                <span class="mvp-status-chip"><span aria-hidden="true">✓</span> ارسال شود · P1</span>
               </div>
-              <h3>جابه‌جایی امن نوبت</h3>
+              <h3>رشد کم‌ریسک برای روز اول</h3>
               <ul>
-                <li><span>جابه‌جایی <bdi dir="ltr">drag &amp; drop</bdi> در روز، بدون بارگذاری مجدد صفحه.</span></li>
-                <li><span>بررسی تداخل، ساعات کاری و تعطیلی در backend؛ موبایل با «تغییر زمان».</span></li>
+                <li><span>لیست انتظار با تماس، پیامک و تبدیل سریع به رزرو</span></li>
+                <li><span>لینک/QR رزرو مستقیم و یادآوری‌های پایه</span></li>
+                <li><span>گزارش ساده درآمد، بهره‌برداری و پنجره‌های پرتراکم</span></li>
+                <li><span>تماس و پیامک به‌صورت مسیر قابل مشاهده و قابل پایش</span></li>
               </ul>
             </article>
 
@@ -2217,11 +2239,12 @@
               </div>
               <h3>رشدهای خارج از گیت</h3>
               <ul>
-                <li><span>مدیریت ارتباط با مشتری کامل و بازاریابی</span></li>
-                <li><span>وفادارسازی و جبران خدمات <bdi dir="ltr">(payroll / commission)</bdi></span></li>
-                <li><span>گسترش بازار و <bdi dir="ltr">marketplace / discovery</bdi></span></li>
-                <li><span>عمق سازمانی و چندشعبه‌ای <bdi dir="ltr">(enterprise / multi-branch)</bdi></span></li>
-                <li><span>اپ بومی برندشده</span></li>
+                <li><span><bdi dir="ltr">POS</bdi>، انبار، حقوق و کمیسیون</span></li>
+                <li><span>وفاداری و اتوماسیون بازاریابی</span></li>
+                <li><span>مارکت‌پلیس و جذب مشتری از شبکه</span></li>
+                <li><span>اپ native برندشده</span></li>
+                <li><span>جریان‌های پیچیده تکرارشونده، گروهی و منبع‌محور</span></li>
+                <li><span>عمق سازمانی چندشعبه‌ای</span></li>
               </ul>
             </article>
 
@@ -2229,12 +2252,13 @@
               <div class="mvp-card-head">
                 <span class="mvp-status-chip"><span aria-hidden="true">↗</span> گیت انتشار</span>
               </div>
-              <h3>آزمون با سالن واقعی</h3>
+              <h3>پنج شرط قبل از انتشار عمومی</h3>
               <ul>
-                <li><span>۳–۵ سالن واقعی پیش از اعتبارسنجی عمومی</span></li>
-                <li><span>نرخ تکمیل رزرو <bdi dir="ltr">(booking completion)</bdi></span></li>
-                <li><span>نرخ خطای تقویم <bdi dir="ltr">(calendar error rate)</bdi> و زمان تأیید <bdi dir="ltr">(approval time)</bdi></span></li>
-                <li><span>استفاده مجدد <bdi dir="ltr">(repeat usage)</bdi></span></li>
+                <li><span>HTTPS و provider اعلان تولیدی با مشاهده delivery</span></li>
+                <li><span>backup/restore و مسیر export/delete داده</span></li>
+                <li><span>onboarding کوتاه برای اولین سالن</span></li>
+                <li><span>متریک پایلوت و مانیتورینگ خطا</span></li>
+                <li><span>smoke نهایی تأیید، تداخل و <bdi dir="ltr">drag &amp; drop</bdi> با ۳–۵ سالن</span></li>
               </ul>
             </article>
           </div>
@@ -2243,25 +2267,25 @@
             <div class="mvp-roadmap-head">
               <div>
                 <p class="section-kicker">اولویت اجرا</p>
-                <h3 id="mvp-roadmap-title">مسیر سه‌مرحله‌ای انتشار</h3>
+                <h3 id="mvp-roadmap-title">مسیر سه‌مرحله‌ای تصمیم</h3>
               </div>
               <span class="mvp-roadmap-note">کمینه لازم برای یادگیری از بازار</span>
             </div>
             <ol class="mvp-timeline" aria-label="اولویت‌های اکنون، بعدی و بعدتر">
               <li>
                 <span class="mvp-step">اکنون · <bdi dir="ltr">NOW</bdi></span>
-                <strong>پایلوت با سالن واقعی</strong>
-                <p>خلاصه روز، نمای روز، جابه‌جایی امن و خطاهای تأیید را در ۳–۵ سالن بسنجید.</p>
+                <strong>اکنون: پایلوت + بستن گیت‌ها</strong>
+                <p>هسته عملیات را در ۳–۵ سالن اجرا کنید و HTTPS، اعلان، backup و onboarding را بسنجید.</p>
               </li>
               <li>
                 <span class="mvp-step">بعدی · <bdi dir="ltr">NEXT</bdi></span>
-                <strong>پایش کیفیت تقویم</strong>
-                <p>نرخ تکمیل رزرو، خطای تقویم، زمان تأیید و استفاده مجدد را ثبت و بهبود دهید.</p>
+                <strong>بعدی: پایش و بهبود</strong>
+                <p>نرخ تکمیل رزرو، خطای تقویم، زمان تأیید، delivery اعلان و استفاده مجدد را ثبت کنید.</p>
               </li>
               <li>
                 <span class="mvp-step">بعدتر · <bdi dir="ltr">LATER</bdi></span>
-                <strong>رشد پس از اعتبارسنجی</strong>
-                <p>مدیریت ارتباط با مشتری، وفادارسازی، حقوق، بازار و عمق سازمانی را بعداً بسنجید.</p>
+                <strong>بعدتر: عمق پس از تناسب</strong>
+                <p>POS، وفاداری، بازاریابی، marketplace و چندشعبه‌ای را فقط بعد از شواهد بازار اضافه کنید.</p>
               </li>
             </ol>
           </div>
@@ -2272,14 +2296,14 @@
           </div>
         </section>
 
-        <section class="hero" id="top" aria-labelledby="page-title">
+        <section class="hero" id="top" aria-labelledby="hero-title">
           <div class="hero-copy">
             <p class="eyebrow">راهنمای انتخاب نرم‌افزار مدیریت سالن · ۲۰۲۶</p>
-            <h1 id="page-title">آرا در برابر اکوسیستم مدیریت سالن</h1>
+            <h2 class="hero-title" id="hero-title">آرا در برابر اکوسیستم مدیریت سالن</h2>
             <p class="hero-lede">
               مقایسه‌ای تصمیم‌محور برای سالن‌های فارسی‌زبان؛ از <strong>تقویم جلالی و کنترل منابع</strong>
-              تا مارکت‌پلیس، پرداخت و مقیاس چندشعبه‌ای. «همه سایت‌ها» فهرستی بی‌انتهاست؛ این گزارش
-              مجموعه‌ای نماینده از ۱۱ پلتفرم شناخته‌شده را با منبع و تاریخ بازیابی کنار هم می‌گذارد.
+              تا مارکت‌پلیس، پرداخت و مقیاس چندشعبه‌ای. این گزارش به‌جای ادعای بررسی تک‌تک اپ‌ها در همه کشورها،
+              پوششی نماینده از ۱۵ پلتفرم و دسته اصلی بازار را با منبع و تاریخ بازیابی کنار هم می‌گذارد.
             </p>
             <div class="hero-actions" aria-label="میانبرهای گزارش">
               <button class="button button-primary" type="button" data-scroll="#matrix">
@@ -2301,6 +2325,7 @@
               </svg>
               قیمت‌ها و قابلیت‌ها جهت تصمیم‌گیری اولیه‌اند؛ قبل از خرید، شرایط منطقه و پلن را دوباره بررسی کنید.
             </p>
+            <p class="scope-note"><strong>دامنه نماینده:</strong> <bdi dir="ltr">Marketplace / discovery</bdi>: Booksy، Fresha، StyleSeat · <bdi dir="ltr">SMB all-in-one / payments</bdi>: Square Appointments، Vagaro، Setmore، Salonized، Timely · <bdi dir="ltr">Independent-pro / modern salon ops</bdi>: GlossGenius، Mangomint · <bdi dir="ltr">Team / mid-market / enterprise</bdi>: Boulevard، Mindbody، Zenoti، Phorest · آرا: محصول محلی فارسی‌محور. این دسته‌بندی نماینده است، نه ادعای تست hands-on همه محصولات.</p>
           </div>
 
           <aside class="hero-aside" aria-label="خط‌مشی انتخاب پلتفرم">
@@ -2329,9 +2354,9 @@
 
         <section class="section" aria-label="شاخص‌های گزارش">
           <div class="kpi-strip">
-            <div class="kpi"><span class="kpi-value">۱۱</span><span class="kpi-label">پلتفرم نماینده</span></div>
-            <div class="kpi"><span class="kpi-value">۹</span><span class="kpi-label">محور مقایسه</span></div>
-            <div class="kpi"><span class="kpi-value">۹ اوت ۲۰۲۶</span><span class="kpi-label">آخرین به‌روزرسانی و بازیابی</span></div>
+            <div class="kpi"><span class="kpi-value" id="platformKpi">۱۵</span><span class="kpi-label">پلتفرم نماینده</span></div>
+            <div class="kpi"><span class="kpi-value" id="featureKpi">۳۲</span><span class="kpi-label">قابلیت قابل مقایسه</span></div>
+            <div class="kpi"><span class="kpi-value">۱۰ اوت ۲۰۲۶</span><span class="kpi-label">آخرین به‌روزرسانی و بازیابی</span></div>
             <div class="kpi"><span class="kpi-value" dir="ltr">USD / month</span><span class="kpi-label">قیمت ماهانه، قبل از مالیات</span></div>
           </div>
         </section>
@@ -2447,7 +2472,7 @@
           <div class="table-scroll" tabindex="0" role="region" aria-labelledby="matrix-title" aria-describedby="matrixHint">
             <span class="sr-only" id="matrixHint">برای دیدن ستون‌های بیشتر، جدول را به صورت افقی اسکرول کنید.</span>
             <table class="comparison-table" id="comparisonTable">
-              <caption class="sr-only">مقایسه قابلیت‌ها و مدل قیمت یازده پلتفرم مدیریت سالن</caption>
+              <caption class="sr-only">مقایسه قابلیت‌ها و مدل قیمت ۱۵ پلتفرم نماینده مدیریت سالن</caption>
               <colgroup id="matrixCols"></colgroup>
               <thead id="matrixHead"></thead>
               <tbody id="matrixBody"></tbody>
@@ -2540,7 +2565,7 @@
                 <p class="section-kicker">روش و منابع</p>
                 <h2 id="method-title">چطور این جدول را بخوانیم؟</h2>
               </div>
-              <p>تاریخ بازیابی منابع: ۹ اوت ۲۰۲۶. لینک‌ها به صفحات رسمی هدایت می‌شوند.</p>
+              <p>تاریخ بازیابی منابع: ۱۰ اوت ۲۰۲۶. لینک‌ها به صفحات رسمی هدایت می‌شوند.</p>
             </div>
             <div class="method-callout">
               <span class="method-callout-icon" aria-hidden="true">
@@ -2549,8 +2574,8 @@
                 </svg>
               </span>
               <div>
-                <strong>نبودن علامت ✓ به معنی بد بودن محصول نیست.</strong>
-                <p>یعنی قابلیت در منبع عمومی یا اسکوپ فعلی کد تأیید نشده است. برای آرا، ادعاها بر اساس README، پیاده‌سازی‌های backend زمان‌بندی، auth، notifications، waitlist، catalog، analytics و subscription و مسیرهای owner web همین repository نوشته شده‌اند؛ «—» را به معنی نبودن در اسکوپ فعلی / عدم راستی‌آزمایی بخوانید.</p>
+                <strong>سطح اطمینان: مستندات رسمی + راستی‌آزمایی کد، نه trial دستی</strong>
+                <p>ردیف رقبا بر اساس صفحات رسمی عمومی و قیمت‌گذاری منتشرشده است، نه آزمون عملی هر اپ در هر کشور. ردیف‌های آرا بر اساس پیاده‌سازی فعلی repository و verification سرور نوشته شده‌اند. نبودن علامت ✓ به معنی بد بودن محصول نیست؛ یعنی قابلیت در منبع عمومی یا اسکوپ فعلی کد تأیید نشده است.</p>
               </div>
             </div>
             <div class="method-grid">
@@ -2560,6 +2585,7 @@
                   <li>هر سلول یک <span dir="ltr">status</span> دارد: <span dir="ltr">yes</span>، <span dir="ltr">add-on</span>، <span dir="ltr">no</span> یا <span dir="ltr">unknown</span>.</li>
                   <li>قیمت‌ها USD ماهانه و قبل از مالیات‌اند؛ «از» با قیمت نهایی یکسان نیست.</li>
                   <li>فیلتر عمومی قیمت، پلتفرم‌هایی با رقم شروع یا پلن رسمی قابل مشاهده را نشان می‌دهد.</li>
+                  <li>پوشش چهار دسته بازار نماینده است؛ فهرست همه اپ‌های هر کشور نیست.</li>
                   <li>روبریک تناسب از ۰ تا ۱۰۰، heuristic و جهت‌نماست؛ benchmark مستقل نیست.</li>
                 </ul>
               </div>
@@ -2573,7 +2599,7 @@
 
         <footer class="footer">
           <p><strong>ARA / LAB</strong> · گزارش مقایسه محصول · نماینده، نه فهرست همه محصولات جهان</p>
-          <p>بازیابی: <strong>۹ اوت ۲۰۲۶</strong> · قیمت‌ها ممکن است تغییر کنند.</p>
+          <p>بازیابی: <strong>۱۰ اوت ۲۰۲۶</strong> · قیمت‌ها ممکن است تغییر کنند.</p>
         </footer>
       </div>
     </main>
@@ -2685,6 +2711,42 @@
             },
           },
           {
+            id: 'styleseat', name: 'StyleSeat', faName: 'StyleSeat', short: 'SS', tone: 'coral', description: 'Discovery marketplace', publicPrice: false,
+            tags: ['solo', 'team'],
+            fit: { iran: 22, solo: 78, team: 55, multi: 30 },
+            price: { amount: 'نامشخص', unit: 'مدل حرفه‌ای / marketplace', detail: 'صفحه رسمی معرفی و رزرو مشتری را توضیح می‌دهد؛ قیمت طرف حرفه‌ای در منبع این مقایسه روشن نیست.', links: ['https://help.styleseat.com/articles/13612632-what-is-styleseat'] },
+            cells: {
+              entry: cell('unknown', 'قیمت طرف حرفه‌ای روشن نیست'), scaling: cell('unknown', 'مدل مقیاس‌پذیری روشن نیست'), trial: cell('unknown', 'در منبع رسمی تأیید نشد'), marketFee: cell('unknown', 'marketplace وجود دارد؛ fee حرفه‌ای روشن نیست'), contract: cell('unknown', 'شرایط حرفه‌ای در این منبع روشن نیست'), jalali: cell('unknown', 'در منبع رسمی تأیید نشد'), onlineBooking: cell('yes', 'رزرو و مدیریت نوبت از app'), calendar: cell('unknown', 'تقویم حرفه‌ای در این منبع تأیید نشد'), dragDrop: cell('unknown', 'در منبع رسمی تأیید نشد'), approval: cell('unknown', 'در منبع رسمی تأیید نشد'), conflict: cell('unknown', 'در منبع رسمی تأیید نشد'), waitlist: cell('unknown', 'در منبع رسمی تأیید نشد'), walkin: cell('unknown', 'در منبع رسمی تأیید نشد'), hours: cell('unknown', 'در منبع رسمی تأیید نشد'), profile: cell('yes', 'پروفایل، review، قیمت و خدمات'), contact: cell('unknown', 'در منبع رسمی تأیید نشد'), reminders: cell('yes', 'یادآوری خودکار پیامکی'), forms: cell('unknown', 'در منبع رسمی تأیید نشد'), crm: cell('unknown', 'در منبع رسمی تأیید نشد'), loyalty: cell('unknown', 'در منبع رسمی تأیید نشد'), deposit: cell('add-on', 'no-show protection / card policy'), payments: cell('unknown', 'پرداخت حرفه‌ای در این منبع روشن نیست'), plans: cell('unknown', 'در منبع رسمی تأیید نشد'), inventory: cell('unknown', 'در منبع رسمی تأیید نشد'), payroll: cell('unknown', 'در منبع رسمی تأیید نشد'), analytics: cell('unknown', 'در منبع رسمی تأیید نشد'), mobile: cell('yes', 'اپ رزرو مشتری'), brandedApp: cell('unknown', 'در منبع رسمی تأیید نشد'), marketplace: cell('yes', 'بازار discovery اصلی'), multiLocation: cell('unknown', 'در منبع رسمی تأیید نشد'), qr: cell('unknown', 'در منبع رسمی تأیید نشد'), api: cell('unknown', 'در منبع رسمی تأیید نشد'),
+            },
+          },
+          {
+            id: 'setmore', name: 'Setmore', faName: 'Setmore', short: 'SM', tone: 'mint', description: 'Simple booking + teams', publicPrice: true,
+            tags: ['solo', 'team'],
+            fit: { iran: 34, solo: 82, team: 77, multi: 58 },
+            price: { amount: '$0 / $5', unit: 'Free / Pro · user / month · annual', detail: 'Free تا ۴ کاربر؛ Pro کاربر نامحدود، branded app، SMS و قابلیت‌های بیشتر؛ منطقه و billing مهم است.', links: ['https://www.setmore.com/pricing'] },
+            cells: {
+              entry: cell('yes', '$0 / $5 به‌ازای user / ماه'), scaling: cell('yes', 'بر اساس user / staff calendar'), trial: cell('yes', 'پلن Free'), marketFee: cell('unknown', 'marketplace در منبع رسمی روشن نیست'), contract: cell('yes', 'پلن عمومی و ماهانه/سالانه'), jalali: cell('unknown', 'در منبع رسمی تأیید نشد'), onlineBooking: cell('yes', 'booking page / widget / social'), calendar: cell('yes', 'calendar تیم و mobile'), dragDrop: cell('unknown', 'در صفحه قیمت تأیید نشد'), approval: cell('unknown', 'در صفحه قیمت تأیید نشد'), conflict: cell('yes', 'team calendars و working hours'), waitlist: cell('unknown', 'در صفحه قیمت تأیید نشد'), walkin: cell('unknown', 'در صفحه قیمت تأیید نشد'), hours: cell('yes', 'working hours و vacation'), profile: cell('yes', 'profile، history، notes و labels'), contact: cell('yes', 'team messaging و SMS/email'), reminders: cell('yes', 'email؛ SMS در Pro'), forms: cell('unknown', 'در صفحه قیمت تأیید نشد'), crm: cell('unknown', 'در صفحه قیمت تأیید نشد'), loyalty: cell('unknown', 'در صفحه قیمت تأیید نشد'), deposit: cell('yes', 'deposits'), payments: cell('yes', 'online و in-person payments'), plans: cell('unknown', 'recurring appointment هست؛ package روشن نیست'), inventory: cell('unknown', 'در صفحه قیمت تأیید نشد'), payroll: cell('unknown', 'در صفحه قیمت تأیید نشد'), analytics: cell('yes', 'analytics و reports'), mobile: cell('yes', 'iOS / Android'), brandedApp: cell('yes', 'branded mobile app / PWA'), marketplace: cell('unknown', 'در منبع رسمی تأیید نشد'), multiLocation: cell('unknown', 'برای سازمان بزرگ‌تر استعلام شود'), qr: cell('yes', 'custom QR code'), api: cell('add-on', 'API در Pro'),
+            },
+          },
+          {
+            id: 'timely', name: 'Timely', faName: 'Timely', short: 'TM', tone: 'amber', description: 'Salon ops + payments', publicPrice: true,
+            tags: ['solo', 'team', 'multi'],
+            fit: { iran: 28, solo: 78, team: 85, multi: 76 },
+            price: { amount: '$26 / $39 / $47', unit: 'Build / Elevate / Innovate · staff / month · US', detail: '۱۴ روز trial؛ بدون قرارداد ثابت؛ processing و availability منطقه‌ای جداست.', links: ['https://www.gettimely.com/pricing/', 'https://www.gettimely.com/industry/salon-software/'] },
+            cells: {
+              entry: cell('yes', '$26 / $39 / $47 به‌ازای staff / ماه'), scaling: cell('yes', 'بر اساس bookable staff'), trial: cell('yes', '۱۴ روز بدون کارت'), marketFee: cell('no', 'بدون new-client fee در pricing'), contract: cell('yes', 'بدون fixed-term contract'), jalali: cell('unknown', 'در منبع رسمی تأیید نشد'), onlineBooking: cell('yes', 'رزرو آنلاین ۲۴/۷'), calendar: cell('yes', 'online appointment calendar'), dragDrop: cell('unknown', 'در منبع رسمی تأیید نشد'), approval: cell('unknown', 'در منبع رسمی تأیید نشد'), conflict: cell('yes', 'staff، roster و access control'), waitlist: cell('add-on', 'Elevate / Innovate'), walkin: cell('unknown', 'در منبع رسمی تأیید نشد'), hours: cell('yes', 'roster و schedule تیم'), profile: cell('yes', 'client profile و history'), contact: cell('yes', 'SMS / email messaging'), reminders: cell('yes', 'confirmation و reminder'), forms: cell('add-on', 'digital consultation forms'), crm: cell('add-on', 'marketing tools / campaigns'), loyalty: cell('add-on', 'Elevate / Innovate'), deposit: cell('yes', 'deposit و cancellation fee'), payments: cell('yes', 'online و in-salon payments'), plans: cell('yes', 'packages / gift vouchers'), inventory: cell('yes', 'stock management'), payroll: cell('unknown', 'در منبع رسمی تأیید نشد'), analytics: cell('yes', 'business و financial reports'), mobile: cell('yes', 'mobile app'), brandedApp: cell('unknown', 'در منبع رسمی تأیید نشد'), marketplace: cell('no', 'booking مستقیم؛ marketplace network ادعا نشده'), multiLocation: cell('yes', 'multiple locations'), qr: cell('unknown', 'در منبع رسمی تأیید نشد'), api: cell('add-on', 'Zapier API در Innovate'),
+            },
+          },
+          {
+            id: 'salonized', name: 'Salonized', faName: 'Salonized', short: 'SZ', tone: 'indigo', description: 'European salon suite', publicPrice: true,
+            tags: ['solo', 'team', 'multi'],
+            fit: { iran: 26, solo: 77, team: 80, multi: 75 },
+            price: { amount: '€21 / €39', unit: 'Appointments / Basic · Eurozone / month', detail: 'employee، location، SMS و payments می‌توانند جداگانه اضافه شوند؛ قیمت منطقه‌ای است.', links: ['https://help.salonized.com/en/articles/572113-what-are-salonized-plans-and-pricings', 'https://salonized.com/'] },
+            cells: {
+              entry: cell('yes', '€21 / €39 / ماه · Eurozone'), scaling: cell('yes', 'employee و location اضافه'), trial: cell('unknown', 'در منبع قیمت تأیید نشد'), marketFee: cell('no', 'marketplace network در scope اصلی نیست'), contract: cell('yes', 'پلن عمومی؛ region-dependent'), jalali: cell('unknown', 'در منبع رسمی تأیید نشد'), onlineBooking: cell('yes', 'booking widget / website'), calendar: cell('yes', 'digital calendar'), dragDrop: cell('unknown', 'در منبع رسمی تأیید نشد'), approval: cell('unknown', 'در منبع رسمی تأیید نشد'), conflict: cell('yes', 'employee و room/equipment resources'), waitlist: cell('add-on', 'Basic / Pro یا Boost'), walkin: cell('yes', 'ثبت appointment دستی'), hours: cell('yes', 'opening hours و absence'), profile: cell('yes', 'customer file، history، notes و reports'), contact: cell('yes', 'email / SMS'), reminders: cell('yes', 'email و SMS reminders'), forms: cell('add-on', 'consultation / intake وابسته به plan'), crm: cell('add-on', 'marketing / rebook reminders'), loyalty: cell('add-on', 'Basic / Pro'), deposit: cell('add-on', 'payment / cancellation policy'), payments: cell('add-on', 'Salonized Pay'), plans: cell('yes', 'gift cards / packages'), inventory: cell('yes', 'product management'), payroll: cell('unknown', 'در منبع رسمی تأیید نشد'), analytics: cell('yes', 'treatment و financial reports'), mobile: cell('unknown', 'دسترسی از هرجا؛ اپ native در منبع قیمت تأیید نشد'), brandedApp: cell('unknown', 'در منبع رسمی تأیید نشد'), marketplace: cell('no', 'booking widget مستقیم؛ marketplace network ندارد'), multiLocation: cell('yes', 'extra locations'), qr: cell('unknown', 'در منبع رسمی تأیید نشد'), api: cell('unknown', 'در منبع رسمی تأیید نشد'),
+            },
+          },
+          {
             id: 'booksy', name: 'Booksy', faName: 'Booksy', short: 'BK', tone: 'coral', description: 'Marketplace-first', publicPrice: true,
             tags: ['solo', 'team'],
             fit: { iran: 48, solo: 86, team: 72, multi: 62 },
@@ -2785,7 +2847,11 @@
 
         const sources = [
           { name: 'Booksy', description: 'قیمت و Boost', links: [{ label: 'pricing', url: 'https://biz.booksy.com/pricing' }] },
+          { name: 'StyleSeat', description: 'معرفی marketplace و booking مشتری', links: [{ label: 'overview', url: 'https://help.styleseat.com/articles/13612632-what-is-styleseat' }] },
           { name: 'Fresha', description: 'قیمت solo و team', links: [{ label: 'pricing', url: 'https://www.fresha.com/pricing' }] },
+          { name: 'Setmore', description: 'Free / Pro و ماتریس قابلیت‌ها', links: [{ label: 'pricing + features', url: 'https://www.setmore.com/pricing' }] },
+          { name: 'Timely', description: 'نرم‌افزار سالن و قیمت per staff', links: [{ label: 'salon software', url: 'https://www.gettimely.com/industry/salon-software/' }, { label: 'pricing', url: 'https://www.gettimely.com/pricing/' }] },
+          { name: 'Salonized', description: 'پلن‌ها، add-onها و overview', links: [{ label: 'plans', url: 'https://help.salonized.com/en/articles/572113-what-are-salonized-plans-and-pricings' }, { label: 'overview', url: 'https://salonized.com/' }] },
           { name: 'Vagaro', description: 'پلن‌ها و premium features', links: [{ label: 'plans', url: 'https://support.vagaro.com/hc/en-us/articles/22781768988187-Vagaro-Plans-Pricing-and-Premium-Features' }] },
           { name: 'Square Appointments', description: 'Free / Plus / Premium', links: [{ label: 'pricing', url: 'https://squareup.com/us/en/appointments/pricing' }] },
           { name: 'GlossGenius', description: 'پلن، trial و processing', links: [{ label: 'plans', url: 'https://support.glossgenius.com/en/articles/189-glossgenius-pricing-and-subscription-plans' }] },
@@ -2802,9 +2868,12 @@
           cols: document.getElementById('matrixCols'),
           head: document.getElementById('matrixHead'),
           body: document.getElementById('matrixBody'),
+          caption: document.querySelector('#comparisonTable caption'),
           empty: document.getElementById('matrixEmpty'),
           count: document.getElementById('matrixCount'),
           modeNote: document.getElementById('matrixModeNote'),
+          platformKpi: document.getElementById('platformKpi'),
+          featureKpi: document.getElementById('featureKpi'),
           search: document.getElementById('platformSearch'),
           publicOnly: document.getElementById('publicPricingOnly'),
           compactOnly: document.getElementById('compactOnly'),
@@ -2835,6 +2904,9 @@
         function renderMatrix() {
           const visiblePlatforms = filteredPlatforms();
           const visibleRows = rows.filter((row) => !state.compactOnly || row.compact);
+          refs.platformKpi.textContent = toFa(platforms.length);
+          refs.featureKpi.textContent = toFa(rows.length);
+          refs.caption.textContent = `مقایسه قابلیت‌ها و مدل قیمت ${toFa(platforms.length)} پلتفرم نماینده مدیریت سالن`;
           refs.count.textContent = `${toFa(visiblePlatforms.length)} از ${toFa(platforms.length)} پلتفرم · ${toFa(visibleRows.length)} قابلیت`;
           refs.modeNote.textContent = state.compactOnly
             ? 'نمای فشرده؛ برای جزئیات بیشتر، کل ماتریس را باز کنید.'
