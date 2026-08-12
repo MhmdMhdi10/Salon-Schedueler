@@ -238,7 +238,12 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'ساعات کاری هفتگی' }));
     fireEvent.click(await screen.findByRole('button', { name: 'شروع 09:00' }));
     const wheels = await screen.findAllByRole('listbox');
-    fireEvent.click(within(wheels[0]).getByRole('option', { name: '10' }));
+    const hourOption = within(wheels[0]).getByRole('option', { name: '10' });
+    fireEvent.click(hourOption);
+    // Wait for the wheel to actually commit the selection (`aria-selected`) before
+    // confirming: clicking «تأیید ساعت» in the same tick reads pre-update state and
+    // makes this assertion flaky under parallel-suite load.
+    await waitFor(() => expect(hourOption).toHaveAttribute('aria-selected', 'true'));
     fireEvent.click(screen.getByRole('button', { name: 'تأیید ساعت' }));
     expect(await screen.findByRole('button', { name: 'شروع 10:00' })).toBeInTheDocument();
   });

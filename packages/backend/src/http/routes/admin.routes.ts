@@ -404,6 +404,29 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     }),
   );
 
+  /**
+   * Return recent customer history visible from this salon's front desk.
+   * CalendarService enforces the salon and optional stylist history scope;
+   * the route only supplies the authenticated role's staff scope.
+   */
+  router.get(
+    '/salons/:id/customers/:customerId',
+    requireRole('view_customer_notes', (req) => ({ salonId: req.params.id })),
+    asyncRoute(async (req, res) => {
+      const principal = req.principal!;
+      const profile = await services.calendarService.getCustomerProfile(
+        req.params.id,
+        req.params.customerId,
+        principal.role === 'Stylist' ? principal.staffMemberId : undefined,
+      );
+      if (!profile) {
+        res.status(404).json({ code: 'NOT_FOUND' });
+        return;
+      }
+      res.status(200).json(profile);
+    }),
+  );
+
   router.post(
     '/appointments/:id/reschedule-managed',
     requireCanManageAppointment,

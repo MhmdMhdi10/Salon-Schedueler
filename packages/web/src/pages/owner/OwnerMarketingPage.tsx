@@ -282,7 +282,7 @@ export function OwnerMarketingPage() {
                 }`}
               >
                 <span className="font-bold">{source.label}</span>
-                <span className="mr-1 text-xs opacity-75">{source.hint}</span>
+                <span className="ms-1 text-xs opacity-75">{source.hint}</span>
               </button>
             ))}
           </div>
