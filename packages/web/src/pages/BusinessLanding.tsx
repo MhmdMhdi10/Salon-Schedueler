@@ -264,7 +264,6 @@ export function BusinessLanding() {
                 width={1536}
                 height={1024}
                 loading="eager"
-                fetchpriority="high"
                 decoding="async"
                 className="h-full w-full object-cover motion-safe:animate-ken-burns-hero"
               />
