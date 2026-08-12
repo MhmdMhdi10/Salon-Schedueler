@@ -53,7 +53,9 @@ describe('PWA Configuration', () => {
       const mainContent = readFileSync(mainPath, 'utf-8');
 
       expect(mainContent).toContain('serviceWorker');
-      expect(mainContent).toContain("register('/sw.js')");
+      // Production registration also disables HTTP cache reuse so an updated
+      // worker is picked up immediately after deploy.
+      expect(mainContent).toMatch(/\.register\(['"]\/sw\.js['"]/);
     });
   });
 

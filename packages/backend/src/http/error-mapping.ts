@@ -4,7 +4,7 @@ import { RegistrationError } from '../registration/index.js';
 import { ValidationError } from '../catalog/validation-error.js';
 import { BookingAbuseError } from '../security/booking-abuse-guard.js';
 import { BookingConflictError } from '../app/appointment-management.js';
-import { AppointmentStateError } from '../scheduling/scheduling-engine.js';
+import { AppointmentStateError, RescheduleError } from '../scheduling/scheduling-engine.js';
 import { PlatformAdminError } from '../platform-admin/platform-admin.service.js';
 import { ReferralConflictError } from '../referral/referral.service.js';
 
@@ -56,6 +56,16 @@ export function mapDomainError(err: unknown): MappedError {
 
   if (err instanceof AppointmentStateError) {
     return { status: 409, code: 'APPOINTMENT_NOT_PENDING' };
+  }
+
+  if (err instanceof RescheduleError) {
+    const status =
+      err.code === 'APPOINTMENT_NOT_FOUND'
+        ? 404
+        : err.code === 'RESCHEDULE_INVALID_START'
+          ? 400
+          : 409;
+    return { status, code: err.code };
   }
 
   if (err instanceof AuthError) {

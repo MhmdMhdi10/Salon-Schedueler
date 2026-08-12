@@ -105,6 +105,7 @@ function ProfileLink({
           </span>
           <span className="mt-1 block truncate text-xs text-muted">{t(hintKey)}</span>
         </span>
+        {/* RTL-native: this trailing chevron points toward the next profile surface. */}
         <ChevronLeft
           className="h-4 w-4 shrink-0 text-muted transition-transform group-hover:-translate-x-0.5"
           aria-hidden="true"
@@ -328,6 +329,7 @@ export function OwnerProfilePage() {
               <span className="block text-sm font-bold">{t('owner.signOut')}</span>
               <span className="mt-1 block text-xs opacity-75">{t('owner.profile.signOutHint')}</span>
             </span>
+            {/* RTL-native: this trailing chevron points toward the sign-out action. */}
             <ChevronLeft className="h-4 w-4 shrink-0" aria-hidden="true" />
           </button>
         </div>

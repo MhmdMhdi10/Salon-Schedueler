@@ -55,10 +55,12 @@ describe('Dialog', () => {
   });
 
   it('has no serious/critical a11y violations while open', async () => {
-    const { rtlContainer } = renderRtl(<Example />);
+    renderRtl(<Example />);
     fireEvent.click(screen.getByRole('button', { name: 'باز کردن' }));
     await screen.findByRole('dialog');
-    await expectNoSeriousA11yViolations(rtlContainer);
+    // Radix portals the dialog outside the RTL wrapper and marks the
+    // background wrapper aria-hidden. Audit the visible modal itself.
+    await expectNoSeriousA11yViolations(screen.getByRole('dialog'));
   });
 });
 
@@ -88,10 +90,12 @@ describe('Sheet', () => {
   });
 
   it('has no serious/critical a11y violations while open', async () => {
-    const { rtlContainer } = renderRtl(<Example />);
+    renderRtl(<Example />);
     fireEvent.click(screen.getByRole('button', { name: 'انتخاب زمان' }));
     await screen.findByRole('dialog');
-    await expectNoSeriousA11yViolations(rtlContainer);
+    // Radix portals the sheet outside the RTL wrapper and marks the
+    // background wrapper aria-hidden. Audit the visible modal itself.
+    await expectNoSeriousA11yViolations(screen.getByRole('dialog'));
   });
 });
 
