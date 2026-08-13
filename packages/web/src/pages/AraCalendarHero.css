@@ -1,0 +1,2406 @@
+/* -------------------------------------------------------------------------
+ * Ara calendar-first landing
+ *
+ * One product scene only: the real Ara calendar is the desktop surface, the
+ * same calendar language is condensed into the phone, and the supporting
+ * features rise from that surface as physical objects.
+ * ---------------------------------------------------------------------- */
+
+.ara-calendar-page {
+  --ara-calendar-bg: #0b1013;
+  --ara-calendar-surface: #151f24;
+  --ara-calendar-surface-strong: #1c2b31;
+  --ara-calendar-border: #30434b;
+  --ara-calendar-muted: #9aacb3;
+  --ara-calendar-ink: #f4f7f7;
+  --ara-calendar-teal: #2de0be;
+  --ara-calendar-blue: #77a7ff;
+  --ara-calendar-violet: #8a72f4;
+  --ara-calendar-rose: #f18aaf;
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  min-height: 620px;
+  overflow: hidden;
+  color: var(--ara-calendar-ink);
+  font-family: inherit;
+}
+
+.ara-calendar-page,
+.ara-calendar-page * {
+  box-sizing: border-box;
+}
+
+.ara-calendar-main {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 52% 72%, rgba(45, 224, 190, 0.08), transparent 30rem),
+    radial-gradient(circle at 15% 10%, rgba(119, 167, 255, 0.08), transparent 25rem),
+    var(--ara-calendar-bg);
+}
+
+.ara-calendar-main::before,
+.ara-calendar-main::after {
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  content: '';
+  pointer-events: none;
+}
+
+.ara-calendar-main::before {
+  top: 16%;
+  right: 42%;
+  width: 1px;
+  height: 1px;
+  box-shadow:
+    140px 20px 0 rgba(119, 167, 255, 0.4),
+    330px 140px 0 rgba(45, 224, 190, 0.45),
+    -260px 240px 0 rgba(138, 114, 244, 0.3),
+    80px 420px 0 rgba(241, 138, 175, 0.28),
+    -420px 360px 0 rgba(119, 167, 255, 0.24);
+}
+
+.ara-calendar-main::after {
+  right: -18rem;
+  bottom: -21rem;
+  width: 50rem;
+  height: 50rem;
+  background: radial-gradient(circle, rgba(45, 224, 190, 0.07), transparent 64%);
+  filter: blur(10px);
+}
+
+.ara-calendar-brand-rail {
+  position: absolute;
+  top: 14px;
+  right: max(24px, 5vw);
+  left: max(24px, 5vw);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.ara-calendar-brand-logo,
+.ara-calendar-brand-actions {
+  pointer-events: auto;
+}
+
+.ara-calendar-brand-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 112px;
+  height: 54px;
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  border-radius: 18px;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+.ara-calendar-brand-logo:hover {
+  border-color: rgba(119, 167, 255, 0.22);
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-2px);
+}
+
+.ara-calendar-brand-logo img {
+  display: block;
+  width: 108px;
+  height: 54px;
+  object-fit: contain;
+  filter: drop-shadow(0 9px 15px rgba(0, 0, 0, 0.22));
+}
+
+.ara-calendar-brand-logo-light {
+  display: none !important;
+}
+
+.ara-calendar-brand-logo-dark {
+  display: block !important;
+}
+
+[data-theme='light'] .ara-calendar-brand-logo-light {
+  display: block !important;
+}
+
+[data-theme='light'] .ara-calendar-brand-logo-dark {
+  display: none !important;
+}
+
+.ara-calendar-brand-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ara-calendar-login,
+.ara-calendar-theme-toggle {
+  border: 1px solid #33434a !important;
+  background: rgba(24, 35, 40, 0.88) !important;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.24);
+  color: #f4f7f7 !important;
+  backdrop-filter: blur(16px);
+}
+
+.ara-calendar-login {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 16px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+.ara-calendar-login:hover {
+  border-color: var(--ara-calendar-teal) !important;
+  color: var(--ara-calendar-teal) !important;
+  transform: translateY(-2px);
+}
+
+.ara-calendar-theme-toggle {
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  border-radius: 50% !important;
+}
+
+.ara-calendar-hero {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.72fr) minmax(0, 1.28fr);
+  align-items: center;
+  gap: clamp(22px, 4vw, 70px);
+  width: min(1370px, calc(100% - 72px));
+  height: 100%;
+  margin: 0 auto;
+  padding: 76px 0 16px;
+}
+
+.ara-calendar-copy {
+  position: relative;
+  z-index: 20;
+  max-width: 470px;
+  justify-self: end;
+  text-align: right;
+}
+
+.ara-calendar-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ara-calendar-blue);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.ara-calendar-eyebrow i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ara-calendar-teal);
+  box-shadow: 0 0 0 5px rgba(45, 224, 190, 0.11);
+}
+
+.ara-calendar-copy h1 {
+  max-width: 500px;
+  margin: 13px 0 0;
+  color: var(--ara-calendar-ink);
+  font-size: clamp(36px, 4.2vw, 66px);
+  font-weight: 950;
+  letter-spacing: -0.065em;
+  line-height: 1.16;
+}
+
+.ara-calendar-copy h1 span {
+  display: block;
+  color: var(--ara-calendar-teal);
+}
+
+.ara-calendar-copy > p {
+  max-width: 430px;
+  margin: 18px 0 0;
+  color: #b3c1c6;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 2;
+}
+
+.ara-calendar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.ara-calendar-button {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding-inline: 17px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.ara-calendar-button svg {
+  width: 17px;
+  height: 17px;
+}
+
+.ara-calendar-button:hover {
+  transform: translateY(-3px);
+}
+
+.ara-calendar-button-primary {
+  background: var(--ara-calendar-teal);
+  box-shadow: 0 16px 32px rgba(45, 224, 190, 0.2);
+  color: #071916;
+}
+
+.ara-calendar-button-primary:hover {
+  box-shadow: 0 20px 38px rgba(45, 224, 190, 0.3);
+}
+
+.ara-calendar-button-secondary {
+  border-color: #34484f;
+  background: rgba(19, 29, 34, 0.78);
+  color: #eef6f6;
+  cursor: pointer;
+}
+
+.ara-calendar-button-secondary:hover {
+  border-color: #637f87;
+  background: #1d2c32;
+}
+
+.ara-calendar-trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 16px;
+  margin: 16px 0 0;
+  padding: 0;
+  color: #9bb0b6;
+  font-size: 10px;
+  font-weight: 750;
+  list-style: none;
+}
+
+.ara-calendar-trust li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ara-calendar-trust svg {
+  width: 13px;
+  height: 13px;
+  color: var(--ara-calendar-teal);
+}
+
+.ara-calendar-copy-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  color: #6e858d;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.ara-calendar-copy-note span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ara-calendar-teal);
+  box-shadow: 0 0 0 5px rgba(45, 224, 190, 0.1);
+}
+
+.ara-calendar-visual-wrap {
+  position: relative;
+  z-index: 5;
+  min-width: 0;
+  height: min(660px, 77vh);
+}
+
+.ara-calendar-hero-scene {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  perspective: 1600px;
+  perspective-origin: 50% 46%;
+  touch-action: pan-y;
+}
+
+.ara-calendar-scene-glow {
+  position: absolute;
+  right: 8%;
+  bottom: 12%;
+  left: 6%;
+  height: 29%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse,
+    rgba(45, 224, 190, 0.22),
+    rgba(99, 93, 235, 0.07) 42%,
+    transparent 72%
+  );
+  filter: blur(26px);
+  pointer-events: none;
+}
+
+.ara-calendar-scene-content {
+  position: absolute;
+  inset: 0;
+  transform: var(--ara-calendar-scene-transform);
+  transform-style: preserve-3d;
+  transition: transform 420ms cubic-bezier(0.22, 0.8, 0.28, 1);
+}
+
+.ara-calendar-desktop-device {
+  position: absolute;
+  top: 12%;
+  right: 3%;
+  width: min(88%, 800px);
+  transform: rotateX(4deg) rotateY(-7deg) translateZ(24px);
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 45px 30px rgba(0, 0, 0, 0.4));
+}
+
+.ara-calendar-desktop-frame {
+  position: relative;
+  padding: 10px 10px 12px;
+  border: 1px solid #51656d;
+  border-radius: 20px 20px 14px 14px;
+  background: linear-gradient(145deg, #273941, #10191d 75%);
+  box-shadow:
+    0 0 0 6px rgba(45, 224, 190, 0.045),
+    0 32px 62px rgba(0, 0, 0, 0.48),
+    inset 0 1px rgba(255, 255, 255, 0.12);
+  transform-style: preserve-3d;
+}
+
+.ara-calendar-desktop-frame::before {
+  position: absolute;
+  top: 8px;
+  right: 50%;
+  width: 52px;
+  height: 4px;
+  border-radius: 99px;
+  background: #50636a;
+  content: '';
+  transform: translateX(50%);
+}
+
+.ara-calendar-desktop-screen {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  border: 1px solid #19262b;
+  border-radius: 12px;
+  background: #f4f6f7;
+  transform: translateZ(12px);
+}
+
+.ara-calendar-desktop-ui {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #f8fbfc;
+  color: #203744;
+  /* Ara's owner panel is RTL-first: the navigation rail sits on the right
+     and the calendar workspace opens toward the left. */
+  direction: rtl;
+}
+
+.ara-calendar-desktop-sidebar {
+  display: flex;
+  width: 42px;
+  flex: 0 0 42px;
+  flex-direction: column;
+  align-items: center;
+  gap: 13px;
+  padding: 15px 0 11px;
+  background: linear-gradient(180deg, #102c35, #0c1d23);
+  color: #8caeb4;
+}
+
+.ara-calendar-desktop-sidebar strong {
+  margin-bottom: 4px;
+  color: #efffff;
+  font-size: 12px;
+  font-weight: 950;
+  direction: rtl;
+}
+
+.ara-calendar-desktop-sidebar span {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 8px;
+}
+
+.ara-calendar-desktop-sidebar span.is-active {
+  background: #2ccfb2;
+  color: #083a38;
+  box-shadow: 0 7px 13px rgba(44, 207, 178, 0.26);
+}
+
+.ara-calendar-desktop-sidebar span.is-bottom {
+  margin-top: auto;
+}
+
+.ara-calendar-desktop-sidebar svg {
+  width: 14px;
+  height: 14px;
+}
+
+.ara-calendar-desktop-body {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  padding: 15px 17px 10px;
+  direction: rtl;
+}
+
+.ara-calendar-desktop-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ara-calendar-desktop-heading > div {
+  display: grid;
+  gap: 4px;
+}
+
+.ara-calendar-desktop-heading small {
+  color: #78919b;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.ara-calendar-desktop-heading strong {
+  color: #173544;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.ara-calendar-desktop-heading > span {
+  padding: 7px 10px;
+  border-radius: 7px;
+  background: #087f72;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 950;
+}
+
+.ara-calendar-desktop-tabs {
+  display: flex;
+  gap: 5px;
+  margin-top: 12px;
+}
+
+.ara-calendar-desktop-tabs span {
+  padding: 5px 9px;
+  border-radius: 6px;
+  color: #718791;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.ara-calendar-desktop-tabs span.is-active {
+  background: #e2f7f3;
+  color: #087f72;
+}
+
+.ara-calendar-desktop-team {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 9px;
+  padding: 7px 0;
+  border-top: 1px solid #e3ecef;
+  border-bottom: 1px solid #e3ecef;
+  color: #7c929a;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.ara-calendar-desktop-team span:not(:first-child) {
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: #f1f5f6;
+}
+
+.ara-calendar-desktop-team span.is-selected {
+  background: #daf4ef;
+  color: #087f72;
+}
+
+.ara-calendar-desktop-grid {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  grid-template-columns: 29px minmax(0, 1fr);
+  margin-top: 7px;
+  direction: ltr;
+}
+
+.ara-calendar-desktop-hours {
+  display: grid;
+  grid-template-rows: repeat(6, 1fr);
+  padding-top: 7px;
+  color: #9babb1;
+  font-size: 8px;
+  direction: ltr;
+}
+
+.ara-calendar-desktop-grid-body {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border-left: 1px solid #dfe9eb;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(20% - 1px),
+    #e9eff0 calc(20% - 1px),
+    #e9eff0 20%
+  );
+}
+
+.ara-calendar-desktop-grid-body::before,
+.ara-calendar-desktop-grid-body::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #edf2f3;
+  content: '';
+}
+
+.ara-calendar-desktop-grid-body::before {
+  left: 33.33%;
+}
+
+.ara-calendar-desktop-grid-body::after {
+  left: 66.66%;
+}
+
+.ara-calendar-desktop-grid-body > i {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: rgba(165, 190, 196, 0.25);
+}
+
+.ara-calendar-desktop-grid-body > i:nth-child(1) {
+  top: 20%;
+}
+
+.ara-calendar-desktop-grid-body > i:nth-child(2) {
+  top: 40%;
+}
+
+.ara-calendar-desktop-grid-body > i:nth-child(3) {
+  top: 60%;
+}
+
+.ara-calendar-desktop-grid-body > i:nth-child(4) {
+  top: 80%;
+}
+
+.ara-calendar-desktop-grid-body > i:nth-child(5) {
+  top: 91%;
+}
+
+.ara-calendar-desktop-appointment {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  gap: 4px;
+  width: 29%;
+  min-height: 56px;
+  padding: 8px;
+  border-radius: 6px;
+  box-shadow: 0 6px 12px rgba(35, 83, 90, 0.12);
+  direction: rtl;
+  text-align: right;
+}
+
+.ara-calendar-desktop-appointment strong {
+  overflow: hidden;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ara-calendar-desktop-appointment small {
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 7px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ara-calendar-desktop-appointment.is-teal {
+  top: 6%;
+  right: 68%;
+  height: 28%;
+  background: linear-gradient(145deg, #39cbb9, #138c83);
+}
+
+.ara-calendar-desktop-appointment.is-violet {
+  top: 37%;
+  right: 34%;
+  height: 22%;
+  background: linear-gradient(145deg, #9582ef, #6954cf);
+}
+
+.ara-calendar-desktop-appointment.is-rose {
+  top: 66%;
+  right: 3%;
+  height: 20%;
+  background: linear-gradient(145deg, #e987ad, #bd4d79);
+}
+
+.ara-calendar-desktop-gloss {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    118deg,
+    rgba(255, 255, 255, 0.08),
+    transparent 31%,
+    transparent 68%,
+    rgba(45, 224, 190, 0.07)
+  );
+  pointer-events: none;
+}
+
+.ara-calendar-desktop-ui + .ara-calendar-desktop-gloss {
+  z-index: 3;
+}
+
+.ara-calendar-desktop-base {
+  position: relative;
+  width: 42%;
+  height: 20px;
+  margin: -1px auto 0;
+  border: 1px solid #3f5259;
+  border-top: 0;
+  border-radius: 0 0 12px 12px;
+  background: linear-gradient(180deg, #25363c, #10191d);
+  box-shadow: 0 18px 22px rgba(0, 0, 0, 0.34);
+  transform: translateZ(-10px);
+}
+
+.ara-calendar-desktop-base span {
+  display: block;
+  width: 50%;
+  height: 5px;
+  margin: 3px auto 0;
+  border-radius: 99px;
+  background: #46626b;
+}
+
+.ara-calendar-phone {
+  position: absolute;
+  right: 0;
+  bottom: 7%;
+  z-index: 12;
+  width: 176px;
+  transform: rotateX(5deg) rotateY(-10deg) rotateZ(-3deg) translateZ(164px);
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 35px 26px rgba(0, 0, 0, 0.48));
+}
+
+.ara-calendar-phone-shell {
+  position: relative;
+  padding: 8px;
+  border: 1px solid #63777e;
+  border-radius: 31px;
+  background: linear-gradient(145deg, #293b42, #0b1215 70%);
+  box-shadow:
+    0 0 0 5px rgba(45, 224, 190, 0.06),
+    inset 0 1px rgba(255, 255, 255, 0.16),
+    0 36px 65px rgba(0, 0, 0, 0.52);
+  transform-style: preserve-3d;
+}
+
+.ara-calendar-phone-camera {
+  position: absolute;
+  top: 13px;
+  right: 50%;
+  z-index: 2;
+  width: 43px;
+  height: 8px;
+  border-radius: 99px;
+  background: #071012;
+  transform: translateX(50%);
+}
+
+.ara-calendar-phone-screen {
+  position: relative;
+  overflow: hidden;
+  height: 355px;
+  border-radius: 24px;
+  background: #fbfcfd;
+  color: #0b1728;
+  direction: rtl;
+  text-align: right;
+}
+
+.ara-calendar-phone-topbar {
+  display: flex;
+  height: 54px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 6px;
+  border-bottom: 1px solid #e2e8ed;
+  background: #fff;
+}
+
+.ara-calendar-phone-back {
+  color: #102438;
+  font-size: 30px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.ara-calendar-phone-progress {
+  display: flex;
+  gap: 4px;
+  direction: ltr;
+}
+
+.ara-calendar-phone-progress i {
+  display: block;
+  width: 25px;
+  height: 4px;
+  border-radius: 99px;
+  background: #0b897a;
+}
+
+.ara-calendar-phone-brand {
+  display: grid;
+  gap: 0;
+  color: #0b1728;
+  line-height: 1.05;
+  text-align: right;
+}
+
+.ara-calendar-phone-brand strong {
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.ara-calendar-phone-brand small {
+  color: #0b897a;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.ara-calendar-phone-body {
+  padding: 12px 11px 7px;
+}
+
+.ara-calendar-phone-heading {
+  display: grid;
+  gap: 3px;
+}
+
+.ara-calendar-phone-heading span {
+  color: #0b897a;
+  font-size: 8px;
+  font-weight: 850;
+}
+
+.ara-calendar-phone-heading strong {
+  color: #0b1728;
+  font-size: 20px;
+  font-weight: 950;
+  letter-spacing: -0.05em;
+}
+
+.ara-calendar-phone-tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 9px;
+  padding: 3px;
+  border: 1px solid #e0e6eb;
+  border-radius: 10px;
+  background: #f6f8fa;
+}
+
+.ara-calendar-phone-tabs span {
+  flex: 1;
+  padding: 5px 2px;
+  border-radius: 7px;
+  color: #667789;
+  font-size: 8px;
+  font-weight: 850;
+  text-align: center;
+}
+
+.ara-calendar-phone-tabs .is-active {
+  background: #0b897a;
+  color: #fff;
+}
+
+.ara-calendar-phone-day-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  color: #16273b;
+  font-size: 9px;
+}
+
+.ara-calendar-phone-day-row span {
+  color: #0b897a;
+  font-size: 19px;
+  line-height: 1;
+}
+
+.ara-calendar-phone-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ara-calendar-phone-appointment {
+  display: grid;
+  grid-template-columns: 31px minmax(0, 1fr) 14px;
+  align-items: center;
+  gap: 5px;
+  min-height: 44px;
+  padding: 5px 6px;
+  border: 1px solid #dce6e9;
+  border-right: 3px solid #0b897a;
+  border-radius: 8px;
+  background: #f9fbfc;
+  box-shadow: 0 5px 12px rgba(24, 62, 75, 0.08);
+}
+
+.ara-calendar-phone-appointment.is-violet {
+  border-right-color: #8067e7;
+}
+.ara-calendar-phone-appointment.is-rose {
+  border-right-color: #d96d96;
+}
+
+.ara-calendar-phone-time {
+  color: #0b897a;
+  font-size: 8px;
+  font-weight: 950;
+}
+
+.ara-calendar-phone-appointment > div {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.ara-calendar-phone-appointment strong {
+  overflow: hidden;
+  color: #182b40;
+  font-size: 8px;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ara-calendar-phone-appointment small {
+  overflow: hidden;
+  color: #7a8a98;
+  font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ara-calendar-phone-appointment svg {
+  width: 12px;
+  height: 12px;
+  color: #0b897a;
+}
+
+.ara-calendar-phone-empty {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 7px 6px;
+  border: 1px dashed #83c8be;
+  border-radius: 8px;
+  background: #f0fbf9;
+  color: #34736e;
+  font-size: 7px;
+  font-weight: 800;
+}
+
+.ara-calendar-phone-empty svg {
+  width: 12px;
+  height: 12px;
+}
+
+.ara-calendar-phone-empty strong {
+  color: #0b897a;
+  font-size: 8px;
+}
+
+.ara-calendar-phone-nav {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  height: 48px;
+  align-items: center;
+  border-top: 1px solid #e2e8ed;
+  background: #fff;
+}
+
+.ara-calendar-phone-nav span {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  color: #8a98a5;
+  font-size: 7px;
+  font-weight: 800;
+}
+
+.ara-calendar-phone-nav svg {
+  width: 14px;
+  height: 14px;
+}
+
+.ara-calendar-phone-nav .is-active {
+  color: #0b897a;
+}
+
+.ara-calendar-feature-objects {
+  position: absolute;
+  inset: 0;
+  z-index: 18;
+  pointer-events: none;
+  transform-style: preserve-3d;
+}
+
+.ara-calendar-float-card,
+.ara-calendar-float-pill {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  border: 1px solid #4e6770;
+  background: linear-gradient(145deg, rgba(31, 48, 56, 0.98), rgba(14, 24, 29, 0.97));
+  box-shadow:
+    0 24px 38px rgba(0, 0, 0, 0.42),
+    0 0 0 4px rgba(45, 224, 190, 0.055),
+    inset 0 1px rgba(255, 255, 255, 0.1);
+  color: #f5f9f9;
+  transform-style: preserve-3d;
+}
+
+.ara-calendar-float-card {
+  gap: 9px;
+  min-width: 216px;
+  padding: 9px 11px;
+  border-radius: 15px;
+}
+
+.ara-calendar-float-card > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.ara-calendar-float-card small {
+  color: #9fb2b8;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.ara-calendar-float-card strong {
+  overflow: hidden;
+  color: #f5f9f9;
+  font-size: 10px;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ara-calendar-float-card > svg {
+  width: 16px;
+  height: 16px;
+  margin-inline-start: auto;
+  color: var(--ara-calendar-teal);
+}
+
+.ara-calendar-float-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+}
+
+.ara-calendar-float-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.ara-calendar-float-icon.is-violet {
+  background: #30285c;
+  color: #b7a9ff;
+}
+.ara-calendar-float-icon.is-teal {
+  background: #164d4a;
+  color: #63ebd7;
+}
+.ara-calendar-float-icon.is-blue {
+  background: #1c3d74;
+  color: #9fc2ff;
+}
+
+.ara-calendar-float-status {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  margin-inline-start: auto;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(45, 224, 190, 0.16);
+  color: var(--ara-calendar-teal);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.ara-calendar-float-booking {
+  top: 28%;
+  left: 2%;
+  transform: translateZ(210px) rotateZ(-5deg) rotateY(8deg);
+  animation: ara-calendar-float-booking 5.4s ease-in-out infinite;
+}
+
+.ara-calendar-float-reminder {
+  top: 49%;
+  right: 0;
+  transform: translateZ(238px) rotateZ(4deg) rotateY(-7deg);
+  animation: ara-calendar-float-reminder 5.8s ease-in-out 0.6s infinite;
+}
+
+.ara-calendar-float-service {
+  bottom: 13%;
+  left: 20%;
+  min-width: 238px;
+  transform: translateZ(190px) rotateZ(3deg) rotateY(6deg);
+  animation: ara-calendar-float-service 5.2s ease-in-out 0.9s infinite;
+}
+
+.ara-calendar-float-orb {
+  position: absolute;
+  top: 1%;
+  right: 12%;
+  display: grid;
+  width: 116px;
+  height: 116px;
+  place-items: center;
+  align-content: center;
+  border: 1px solid rgba(241, 138, 175, 0.7);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 25%, #59344a, #241b27 70%);
+  box-shadow:
+    0 0 0 8px rgba(241, 138, 175, 0.08),
+    0 28px 42px rgba(0, 0, 0, 0.46),
+    inset 0 1px rgba(255, 255, 255, 0.14);
+  color: #f6a4c1;
+  transform: translateZ(260px) rotateY(-9deg);
+  animation: ara-calendar-float-orb 6.8s ease-in-out infinite;
+}
+
+.ara-calendar-float-orb svg {
+  width: 22px;
+  height: 22px;
+}
+
+.ara-calendar-float-orb strong {
+  margin-top: 3px;
+  color: #fff2f6;
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.ara-calendar-float-orb small {
+  color: #d99bb1;
+  font-size: 7px;
+  font-weight: 850;
+}
+
+.ara-calendar-orb-ring {
+  position: absolute;
+  inset: -19px;
+  border: 1px dashed rgba(241, 138, 175, 0.38);
+  border-radius: 50%;
+  transform: rotateX(66deg) rotateZ(-13deg);
+}
+
+.ara-calendar-float-pill {
+  right: 8%;
+  bottom: 2%;
+  gap: 7px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: #d7fffa;
+  font-size: 9px;
+  font-weight: 900;
+  transform: translateZ(230px) rotateZ(-2deg);
+  animation: ara-calendar-float-pill 5s ease-in-out 0.3s infinite;
+}
+
+.ara-calendar-float-pill svg {
+  width: 15px;
+  height: 15px;
+  color: var(--ara-calendar-teal);
+}
+
+.ara-calendar-float-sparkle {
+  position: absolute;
+  display: grid;
+  width: 29px;
+  height: 29px;
+  place-items: center;
+  border: 1px solid rgba(119, 167, 255, 0.35);
+  border-radius: 10px;
+  background: rgba(36, 70, 128, 0.42);
+  color: #a8c6ff;
+  transform: translateZ(255px) rotateZ(12deg);
+  animation: ara-calendar-sparkle 4.6s ease-in-out infinite;
+}
+
+.ara-calendar-float-sparkle svg {
+  width: 15px;
+  height: 15px;
+}
+
+.ara-calendar-float-sparkle-one {
+  top: 40%;
+  right: 29%;
+}
+.ara-calendar-float-sparkle-two {
+  right: 25%;
+  bottom: 27%;
+  animation-delay: 1.3s;
+}
+
+.ara-calendar-scene-caption {
+  position: absolute;
+  right: 14%;
+  bottom: 1%;
+  left: 10%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #6f858c;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.ara-calendar-scene-caption span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ara-calendar-scene-caption svg {
+  width: 13px;
+  height: 13px;
+  color: var(--ara-calendar-teal);
+}
+
+@keyframes ara-calendar-float-booking {
+  0%,
+  100% {
+    transform: translateZ(210px) rotateZ(-5deg) rotateY(8deg) translateY(0);
+  }
+  50% {
+    transform: translateZ(245px) rotateZ(-3deg) rotateY(8deg) translateY(-9px);
+  }
+}
+
+@keyframes ara-calendar-float-reminder {
+  0%,
+  100% {
+    transform: translateZ(238px) rotateZ(4deg) rotateY(-7deg) translateY(0);
+  }
+  50% {
+    transform: translateZ(267px) rotateZ(2deg) rotateY(-7deg) translateY(8px);
+  }
+}
+
+@keyframes ara-calendar-float-service {
+  0%,
+  100% {
+    transform: translateZ(190px) rotateZ(3deg) rotateY(6deg) translateY(0);
+  }
+  50% {
+    transform: translateZ(220px) rotateZ(1deg) rotateY(6deg) translateY(-7px);
+  }
+}
+
+@keyframes ara-calendar-float-orb {
+  0%,
+  100% {
+    transform: translateZ(260px) rotateY(-9deg) translateY(0);
+  }
+  50% {
+    transform: translateZ(294px) rotateY(-9deg) translateY(-12px);
+  }
+}
+
+@keyframes ara-calendar-float-pill {
+  0%,
+  100% {
+    transform: translateZ(230px) rotateZ(-2deg) translateY(0);
+  }
+  50% {
+    transform: translateZ(263px) rotateZ(-1deg) translateY(-6px);
+  }
+}
+
+@keyframes ara-calendar-sparkle {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: translateZ(255px) rotateZ(12deg) scale(0.94);
+  }
+  50% {
+    opacity: 1;
+    transform: translateZ(285px) rotateZ(22deg) scale(1.08);
+  }
+}
+
+.ara-calendar-video-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(4, 8, 12, 0.8);
+  backdrop-filter: blur(12px);
+}
+
+.ara-calendar-video-frame {
+  width: min(900px, 100%);
+  overflow: hidden;
+  border: 1px solid #465d66;
+  border-radius: 24px;
+  background: #0d1519;
+  box-shadow: 0 35px 100px rgba(0, 0, 0, 0.6);
+}
+
+.ara-calendar-video-frame video {
+  display: block;
+  width: 100%;
+  max-height: 78vh;
+}
+
+.ara-calendar-video-close {
+  position: fixed;
+  top: 24px;
+  left: 24px;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid #465d66;
+  border-radius: 50%;
+  background: #1a292e;
+  color: #fff;
+  cursor: pointer;
+}
+
+.ara-calendar-video-close svg {
+  width: 19px;
+  height: 19px;
+}
+
+[data-theme='light'] .ara-calendar-page {
+  --ara-calendar-bg: #f2f7fa;
+  --ara-calendar-surface: #fff;
+  --ara-calendar-surface-strong: #edf5f8;
+  --ara-calendar-border: #c8d7df;
+  --ara-calendar-muted: #667c86;
+  --ara-calendar-ink: #102236;
+  --ara-calendar-teal: #087f72;
+  --ara-calendar-blue: #2559dc;
+}
+
+[data-theme='light'] .ara-calendar-main {
+  background:
+    radial-gradient(circle at 52% 72%, rgba(16, 181, 175, 0.12), transparent 30rem),
+    radial-gradient(circle at 15% 10%, rgba(37, 89, 220, 0.1), transparent 25rem),
+    var(--ara-calendar-bg);
+}
+
+[data-theme='light'] .ara-calendar-login,
+[data-theme='light'] .ara-calendar-theme-toggle {
+  border-color: #c5d3dc !important;
+  background: rgba(255, 255, 255, 0.82) !important;
+  box-shadow: 0 12px 26px rgba(27, 51, 91, 0.11);
+  color: #17243a !important;
+}
+
+[data-theme='light'] .ara-calendar-copy > p {
+  color: #5f7180;
+}
+
+[data-theme='light'] .ara-calendar-button-secondary {
+  border-color: #c3d2da;
+  background: rgba(255, 255, 255, 0.76);
+  color: #17243a;
+}
+
+[data-theme='light'] .ara-calendar-copy-note,
+[data-theme='light'] .ara-calendar-trust {
+  color: #627782;
+}
+
+@media (max-width: 1080px) {
+  .ara-calendar-hero {
+    grid-template-columns: minmax(275px, 0.65fr) minmax(0, 1.35fr);
+    gap: 20px;
+    width: min(100% - 40px, 1040px);
+  }
+
+  .ara-calendar-copy h1 {
+    font-size: clamp(34px, 5vw, 51px);
+  }
+
+  .ara-calendar-visual-wrap {
+    height: min(600px, 72vh);
+  }
+
+  .ara-calendar-float-card {
+    min-width: 188px;
+  }
+
+  .ara-calendar-float-service {
+    left: 13%;
+  }
+}
+
+@media (max-width: 820px) {
+  .ara-calendar-page {
+    min-height: 0;
+  }
+
+  .ara-calendar-brand-rail {
+    top: 7px;
+    right: 10px;
+    left: 10px;
+  }
+
+  .ara-calendar-brand-logo {
+    width: 88px;
+    height: 43px;
+    padding: 1px 3px;
+  }
+
+  .ara-calendar-brand-logo img {
+    width: 82px;
+    height: 40px;
+  }
+
+  .ara-calendar-brand-actions {
+    gap: 5px;
+  }
+
+  .ara-calendar-login {
+    min-height: 35px;
+    padding-inline: 11px;
+    font-size: 10px;
+  }
+
+  .ara-calendar-theme-toggle {
+    width: 35px !important;
+    min-width: 35px !important;
+    height: 35px !important;
+    min-height: 35px !important;
+  }
+
+  .ara-calendar-hero {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0;
+    width: min(100% - 24px, 620px);
+    padding: 73px 0 5px;
+  }
+
+  .ara-calendar-copy {
+    max-width: 620px;
+    justify-self: center;
+    text-align: center;
+  }
+
+  .ara-calendar-eyebrow {
+    font-size: 9px;
+  }
+
+  .ara-calendar-copy h1 {
+    margin-top: 5px;
+    font-size: clamp(28px, 7vw, 39px);
+    line-height: 1.15;
+  }
+
+  .ara-calendar-copy > p {
+    max-width: 500px;
+    margin: 6px auto 0;
+    font-size: 10px;
+    line-height: 1.7;
+  }
+
+  .ara-calendar-actions {
+    justify-content: center;
+    gap: 6px;
+    margin-top: 9px;
+  }
+
+  .ara-calendar-button {
+    min-height: 38px;
+    padding-inline: 10px;
+    font-size: 9px;
+  }
+
+  .ara-calendar-button svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .ara-calendar-trust {
+    justify-content: center;
+    gap: 3px 10px;
+    margin-top: 6px;
+    font-size: 7px;
+  }
+
+  .ara-calendar-trust svg {
+    width: 10px;
+    height: 10px;
+  }
+
+  .ara-calendar-copy-note {
+    display: none;
+  }
+
+  .ara-calendar-visual-wrap {
+    height: min(390px, 45svh);
+    min-height: 310px;
+    margin-top: 3px;
+  }
+
+  .ara-calendar-desktop-device {
+    top: 12%;
+    right: 2%;
+    width: 88%;
+    transform: rotateX(3deg) rotateY(-6deg) translateZ(20px);
+  }
+
+  .ara-calendar-phone {
+    right: -1%;
+    bottom: 4%;
+    width: 139px;
+    transform: rotateX(4deg) rotateY(-8deg) rotateZ(-3deg) translateZ(130px);
+  }
+
+  .ara-calendar-phone-screen {
+    height: 283px;
+  }
+
+  .ara-calendar-phone-shell {
+    padding: 6px;
+    border-radius: 25px;
+  }
+
+  .ara-calendar-phone-topbar {
+    height: 43px;
+    padding: 7px 8px 4px;
+  }
+
+  .ara-calendar-phone-camera {
+    top: 9px;
+    width: 35px;
+    height: 6px;
+  }
+
+  .ara-calendar-phone-progress i {
+    width: 18px;
+    height: 3px;
+  }
+
+  .ara-calendar-phone-brand strong {
+    font-size: 11px;
+  }
+
+  .ara-calendar-phone-brand small {
+    font-size: 7px;
+  }
+
+  .ara-calendar-phone-back {
+    font-size: 24px;
+  }
+
+  .ara-calendar-phone-body {
+    padding: 8px 7px 5px;
+  }
+
+  .ara-calendar-phone-heading strong {
+    font-size: 15px;
+  }
+
+  .ara-calendar-phone-heading span,
+  .ara-calendar-phone-tabs span,
+  .ara-calendar-phone-day-row,
+  .ara-calendar-phone-time {
+    font-size: 7px;
+  }
+
+  .ara-calendar-phone-tabs {
+    margin-top: 6px;
+  }
+
+  .ara-calendar-phone-tabs span {
+    padding: 3px 1px;
+  }
+
+  .ara-calendar-phone-day-row {
+    margin-top: 6px;
+  }
+
+  .ara-calendar-phone-list {
+    gap: 4px;
+    margin-top: 5px;
+  }
+
+  .ara-calendar-phone-appointment {
+    grid-template-columns: 24px minmax(0, 1fr) 11px;
+    min-height: 33px;
+    gap: 3px;
+    padding: 3px 4px;
+  }
+
+  .ara-calendar-phone-appointment strong {
+    font-size: 6px;
+  }
+
+  .ara-calendar-phone-appointment small {
+    font-size: 5px;
+  }
+
+  .ara-calendar-phone-appointment svg {
+    width: 9px;
+    height: 9px;
+  }
+
+  .ara-calendar-phone-empty {
+    margin-top: 5px;
+    padding: 4px;
+    font-size: 5px;
+  }
+
+  .ara-calendar-phone-empty strong {
+    font-size: 6px;
+  }
+
+  .ara-calendar-phone-nav {
+    height: 38px;
+  }
+
+  .ara-calendar-phone-nav span {
+    font-size: 5px;
+  }
+
+  .ara-calendar-phone-nav svg {
+    width: 11px;
+    height: 11px;
+  }
+
+  .ara-calendar-float-card {
+    min-width: 150px;
+    gap: 5px;
+    padding: 6px 7px;
+    border-radius: 10px;
+  }
+
+  .ara-calendar-float-card small {
+    font-size: 6px;
+  }
+
+  .ara-calendar-float-card strong {
+    font-size: 7px;
+  }
+
+  .ara-calendar-float-icon {
+    width: 23px;
+    height: 23px;
+    border-radius: 7px;
+  }
+
+  .ara-calendar-float-icon svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .ara-calendar-float-card > svg {
+    width: 11px;
+    height: 11px;
+  }
+
+  .ara-calendar-float-booking {
+    top: 31%;
+    left: -1%;
+  }
+
+  .ara-calendar-float-reminder {
+    top: 49%;
+    right: 1%;
+  }
+
+  .ara-calendar-float-service {
+    bottom: 11%;
+    left: 8%;
+    min-width: 166px;
+  }
+
+  .ara-calendar-float-orb {
+    top: 1%;
+    right: 14%;
+    width: 78px;
+    height: 78px;
+  }
+
+  .ara-calendar-float-orb svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .ara-calendar-float-orb strong {
+    font-size: 10px;
+  }
+
+  .ara-calendar-float-orb small {
+    font-size: 5px;
+  }
+
+  .ara-calendar-orb-ring {
+    inset: -12px;
+  }
+
+  .ara-calendar-float-pill {
+    right: 13%;
+    bottom: 2%;
+    padding: 5px 7px;
+    font-size: 6px;
+  }
+
+  .ara-calendar-float-pill svg {
+    width: 10px;
+    height: 10px;
+  }
+
+  .ara-calendar-float-sparkle {
+    width: 21px;
+    height: 21px;
+  }
+
+  .ara-calendar-float-sparkle svg {
+    width: 11px;
+    height: 11px;
+  }
+
+  .ara-calendar-scene-caption {
+    right: 13%;
+    bottom: 0;
+    left: 4%;
+    font-size: 6px;
+  }
+
+  .ara-calendar-scene-caption svg {
+    width: 9px;
+    height: 9px;
+  }
+}
+
+@media (max-width: 560px) {
+  .ara-calendar-hero {
+    width: calc(100% - 16px);
+    padding-top: 68px;
+  }
+
+  .ara-calendar-eyebrow {
+    font-size: 8px;
+  }
+
+  .ara-calendar-copy h1 {
+    margin-top: 3px;
+    font-size: clamp(26px, 7.2vw, 31px);
+  }
+
+  .ara-calendar-copy > p {
+    max-width: 350px;
+    font-size: 9px;
+  }
+
+  .ara-calendar-actions {
+    margin-top: 7px;
+  }
+
+  .ara-calendar-button {
+    min-height: 36px;
+    padding-inline: 8px;
+    font-size: 8px;
+  }
+
+  .ara-calendar-trust {
+    gap: 2px 7px;
+    font-size: 6px;
+  }
+
+  .ara-calendar-visual-wrap {
+    height: min(360px, 43svh);
+    min-height: 275px;
+  }
+
+  .ara-calendar-desktop-device {
+    top: 13%;
+    right: 0;
+    width: 94%;
+  }
+
+  .ara-calendar-desktop-frame {
+    padding: 5px 5px 7px;
+    border-radius: 12px 12px 9px 9px;
+  }
+
+  .ara-calendar-desktop-screen {
+    border-radius: 7px;
+  }
+
+  .ara-calendar-desktop-base {
+    height: 12px;
+  }
+
+  .ara-calendar-desktop-base span {
+    height: 3px;
+    margin-top: 2px;
+  }
+
+  .ara-calendar-phone {
+    right: -1%;
+    bottom: 5%;
+    width: 116px;
+  }
+
+  .ara-calendar-phone-screen {
+    height: 238px;
+  }
+
+  .ara-calendar-phone-body {
+    padding-inline: 6px;
+  }
+
+  .ara-calendar-phone-heading strong {
+    font-size: 13px;
+  }
+
+  .ara-calendar-phone-appointment {
+    min-height: 29px;
+  }
+
+  .ara-calendar-phone-appointment strong {
+    font-size: 5px;
+  }
+
+  .ara-calendar-phone-appointment small {
+    font-size: 4px;
+  }
+
+  .ara-calendar-phone-nav {
+    height: 32px;
+  }
+
+  .ara-calendar-float-booking {
+    top: 31%;
+    left: -3%;
+  }
+
+  .ara-calendar-float-reminder {
+    top: 52%;
+    right: -4%;
+  }
+
+  .ara-calendar-float-service,
+  .ara-calendar-float-customers,
+  .ara-calendar-float-sparkle-two {
+    display: none;
+  }
+
+  .ara-calendar-float-pill {
+    right: 9%;
+    bottom: 0;
+  }
+
+  .ara-calendar-float-sparkle-one {
+    top: 42%;
+    right: 31%;
+  }
+
+  .ara-calendar-scene-caption {
+    display: none;
+  }
+}
+
+@media (max-height: 700px) and (max-width: 820px) {
+  .ara-calendar-hero {
+    padding-top: 61px;
+  }
+
+  .ara-calendar-copy h1 {
+    font-size: 26px;
+  }
+
+  .ara-calendar-copy > p {
+    margin-top: 3px;
+    line-height: 1.45;
+  }
+
+  .ara-calendar-visual-wrap {
+    min-height: 245px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ara-calendar-scene-content,
+  .ara-calendar-float-card,
+  .ara-calendar-float-orb,
+  .ara-calendar-float-pill,
+  .ara-calendar-float-sparkle,
+  .ara-calendar-button,
+  .ara-calendar-brand-logo,
+  .ara-calendar-login {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Keep the product scene crisp and let the calendar/phone geometry create
+   the depth. Heavy offset shadows made the MVP feel like stacked screenshots,
+   especially on the light presentation. */
+
+.ara-calendar-desktop-device,
+.ara-calendar-phone {
+  filter: none;
+}
+
+[data-theme='dark'] .ara-calendar-page[data-ara-landing-theme='night'] {
+  --ara-calendar-bg: #0a1013;
+  --ara-calendar-surface: #152229;
+  --ara-calendar-surface-strong: #1b2d35;
+  --ara-calendar-border: rgba(161, 190, 199, 0.2);
+  --ara-calendar-muted: #789099;
+  --ara-calendar-ink: #f4f8f8;
+  --ara-calendar-teal: #2de0be;
+  --ara-calendar-blue: #77a7ff;
+  --ara-calendar-violet: #a18bff;
+  --ara-calendar-rose: #f58eb3;
+}
+
+[data-theme='dark'] .ara-calendar-page[data-ara-landing-theme='night'] .ara-calendar-main {
+  background:
+    radial-gradient(circle at 52% 72%, rgba(45, 224, 190, 0.08), transparent 30rem),
+    radial-gradient(circle at 15% 10%, rgba(119, 167, 255, 0.11), transparent 25rem),
+    var(--ara-calendar-bg);
+}
+
+.ara-calendar-desktop-frame,
+.ara-calendar-desktop-base,
+.ara-calendar-phone-shell,
+.ara-calendar-float-card,
+.ara-calendar-float-pill,
+.ara-calendar-float-orb {
+  box-shadow: none;
+}
+
+.ara-calendar-scene-glow {
+  opacity: 0.42;
+  filter: blur(30px);
+}
+
+.ara-calendar-copy-note {
+  max-width: 460px;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.8;
+}
+
+.ara-calendar-copy-note > svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--ara-calendar-teal);
+}
+
+.ara-calendar-copy-note > span {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.ara-calendar-float-sparkle,
+.ara-calendar-float-sparkle-one,
+.ara-calendar-float-sparkle-two {
+  display: none;
+}
+
+@media (max-width: 820px) {
+  .ara-calendar-copy-note {
+    display: none;
+  }
+}
+
+/* No artificial cast shadows on either presentation. Depth is carried by
+   the device frames, borders and perspective so the hero stays crisp in
+   both dark and light mode. */
+
+.ara-calendar-page *,
+.ara-calendar-page *::before,
+.ara-calendar-page *::after {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+.ara-calendar-page .ara-calendar-brand-logo img,
+.ara-calendar-page .ara-calendar-desktop-device,
+.ara-calendar-page .ara-calendar-phone {
+  filter: none !important;
+}
+
+/* The scroll story already explains the supporting features beside this
+   scene. Keep its first viewport focused on the two real product surfaces. */
+
+.ara-calendar-hero-scene.is-compact .ara-calendar-feature-objects,
+.ara-calendar-hero-scene.is-compact .ara-calendar-scene-caption {
+  display: none;
+}
+
+.ara-calendar-hero-scene.is-compact .ara-calendar-scene-glow {
+  opacity: 0.22;
+}
+
+/* Customer-facing booking surface for the hero phone. It deliberately reads
+   as the public reservation flow, while the larger desktop surface remains
+   the salon owner's calendar. */
+.ara-calendar-booking-screen {
+  background: var(--ara-scene-screen, #fbfcfd);
+}
+
+.ara-calendar-booking-screen .ara-calendar-phone-progress i {
+  width: 21px;
+  background: var(--ara-scene-border, #dce6e9);
+}
+
+.ara-calendar-booking-screen .ara-calendar-phone-progress i.is-active {
+  background: var(--ara-scene-accent, #0b897a);
+}
+
+.ara-calendar-booking-body {
+  display: grid;
+  gap: 6px;
+  padding: 9px 10px 6px;
+}
+
+.ara-calendar-booking-salon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px;
+  border: 1px solid var(--ara-scene-border, #e0e6eb);
+  border-radius: 8px;
+  background: var(--ara-scene-screen-soft, #f6f8fa);
+}
+
+.ara-calendar-booking-salon-mark {
+  display: grid;
+  width: 23px;
+  height: 23px;
+  flex: 0 0 23px;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--ara-scene-accent, #0b897a);
+  color: var(--ara-scene-accent-ink, #fff);
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.ara-calendar-booking-salon > span:last-child,
+.ara-calendar-booking-service > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.ara-calendar-booking-salon strong,
+.ara-calendar-booking-service strong {
+  overflow: hidden;
+  color: var(--ara-scene-ink, #182b40);
+  font-size: 8px;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ara-calendar-booking-salon small,
+.ara-calendar-booking-service small {
+  overflow: hidden;
+  color: var(--ara-scene-muted, #7a8a98);
+  font-size: 6px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ara-calendar-booking-heading {
+  gap: 2px;
+}
+
+.ara-calendar-booking-heading span {
+  color: var(--ara-scene-accent, #0b897a);
+}
+
+.ara-calendar-booking-heading strong {
+  color: var(--ara-scene-ink, #0b1728);
+  font-size: 16px;
+}
+
+.ara-calendar-booking-service {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 13px;
+  align-items: center;
+  gap: 5px;
+  min-height: 36px;
+  padding: 5px 6px;
+  border: 1px solid var(--ara-scene-border, #dce6e9);
+  border-right: 3px solid var(--ara-scene-accent, #0b897a);
+  border-radius: 8px;
+  background: var(--ara-scene-screen-raised, #f9fbfc);
+}
+
+.ara-calendar-booking-service-icon {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--ara-scene-accent, #0b897a) 16%, transparent);
+  color: var(--ara-scene-accent, #0b897a);
+}
+
+.ara-calendar-booking-service-icon svg,
+.ara-calendar-booking-service > svg {
+  width: 12px;
+  height: 12px;
+  color: var(--ara-scene-accent, #0b897a);
+}
+
+.ara-calendar-booking-date-heading,
+.ara-calendar-booking-time-heading {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ara-scene-muted, #667789);
+  font-size: 7px;
+  font-weight: 850;
+}
+
+.ara-calendar-booking-date-heading {
+  margin-top: 1px;
+}
+
+.ara-calendar-booking-date-heading svg,
+.ara-calendar-booking-time-heading svg {
+  width: 11px;
+  height: 11px;
+  color: var(--ara-scene-accent, #0b897a);
+}
+
+.ara-calendar-booking-date-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.ara-calendar-booking-date-row span {
+  display: grid;
+  gap: 2px;
+  padding: 5px 2px;
+  border: 1px solid var(--ara-scene-border, #e0e6eb);
+  border-radius: 7px;
+  background: var(--ara-scene-screen-soft, #f6f8fa);
+  color: var(--ara-scene-muted, #667789);
+  text-align: center;
+}
+
+.ara-calendar-booking-date-row span.is-selected {
+  border-color: var(--ara-scene-accent, #0b897a);
+  background: color-mix(in srgb, var(--ara-scene-accent, #0b897a) 15%, transparent);
+  color: var(--ara-scene-accent, #0b897a);
+}
+
+.ara-calendar-booking-date-row small {
+  font-size: 6px;
+  font-weight: 750;
+}
+
+.ara-calendar-booking-date-row strong {
+  color: var(--ara-scene-ink, #182b40);
+  font-size: 7px;
+  font-weight: 950;
+}
+
+.ara-calendar-booking-date-row span.is-selected strong {
+  color: var(--ara-scene-accent, #0b897a);
+}
+
+.ara-calendar-booking-time-heading {
+  margin-top: 1px;
+}
+
+.ara-calendar-booking-times {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.ara-calendar-booking-times span {
+  padding: 5px 1px;
+  border: 1px solid var(--ara-scene-border, #dce6e9);
+  border-radius: 6px;
+  background: var(--ara-scene-screen-raised, #f9fbfc);
+  color: var(--ara-scene-ink, #182b40);
+  font-size: 7px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.ara-calendar-booking-times span.is-selected {
+  border-color: var(--ara-scene-accent, #0b897a);
+  background: var(--ara-scene-accent, #0b897a);
+  color: var(--ara-scene-accent-ink, #fff);
+}
+
+.ara-calendar-booking-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  padding: 6px 7px;
+  border-radius: 8px;
+  background: var(--ara-scene-accent, #0b897a);
+  color: var(--ara-scene-accent-ink, #fff);
+}
+
+.ara-calendar-booking-footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 6px;
+  font-weight: 850;
+}
+
+.ara-calendar-booking-footer svg {
+  width: 10px;
+  height: 10px;
+}
+
+.ara-calendar-booking-footer strong {
+  font-size: 9px;
+  font-weight: 950;
+}
+
+@media (max-width: 820px) {
+  .ara-calendar-booking-body {
+    gap: 4px;
+    padding: 7px 7px 5px;
+  }
+
+  .ara-calendar-booking-salon {
+    padding: 4px 5px;
+  }
+
+  .ara-calendar-booking-heading strong {
+    font-size: 14px;
+  }
+
+  .ara-calendar-booking-service {
+    min-height: 32px;
+    padding: 4px 5px;
+  }
+
+  .ara-calendar-booking-date-row span {
+    padding-block: 4px;
+  }
+}
+
+@media (max-width: 520px) {
+  .ara-calendar-booking-screen .ara-calendar-phone-progress i {
+    width: 15px;
+    height: 3px;
+  }
+
+  .ara-calendar-booking-body {
+    gap: 2px;
+    padding: 5px 6px 2px;
+  }
+
+  .ara-calendar-booking-salon {
+    gap: 4px;
+    padding: 3px 4px;
+  }
+
+  .ara-calendar-booking-salon-mark {
+    width: 17px;
+    height: 17px;
+    flex-basis: 17px;
+    border-radius: 5px;
+    font-size: 8px;
+  }
+
+  .ara-calendar-booking-salon strong,
+  .ara-calendar-booking-service strong {
+    font-size: 6px;
+  }
+
+  .ara-calendar-booking-salon small,
+  .ara-calendar-booking-service small {
+    font-size: 4px;
+  }
+
+  .ara-calendar-booking-heading strong {
+    font-size: 11px;
+  }
+
+  .ara-calendar-booking-service {
+    grid-template-columns: 19px minmax(0, 1fr) 9px;
+    gap: 3px;
+    min-height: 26px;
+    padding: 3px 4px;
+    border-right-width: 2px;
+  }
+
+  .ara-calendar-booking-service-icon {
+    width: 17px;
+    height: 17px;
+    border-radius: 5px;
+  }
+
+  .ara-calendar-booking-service-icon svg,
+  .ara-calendar-booking-service > svg {
+    width: 9px;
+    height: 9px;
+  }
+
+  .ara-calendar-booking-date-heading,
+  .ara-calendar-booking-time-heading {
+    gap: 2px;
+    font-size: 5px;
+  }
+
+  .ara-calendar-booking-date-heading svg,
+  .ara-calendar-booking-time-heading svg {
+    width: 8px;
+    height: 8px;
+  }
+
+  .ara-calendar-booking-date-row {
+    gap: 2px;
+  }
+
+  .ara-calendar-booking-date-row span {
+    gap: 1px;
+    padding: 3px 1px;
+    border-radius: 5px;
+  }
+
+  .ara-calendar-booking-date-row small {
+    font-size: 4px;
+  }
+
+  .ara-calendar-booking-date-row strong {
+    font-size: 5px;
+  }
+
+  .ara-calendar-booking-times {
+    gap: 2px;
+  }
+
+  .ara-calendar-booking-times span {
+    padding: 4px 0;
+    border-radius: 5px;
+    font-size: 5px;
+  }
+
+  .ara-calendar-booking-footer {
+    padding: 4px 5px;
+    border-radius: 6px;
+  }
+
+  .ara-calendar-booking-footer span {
+    gap: 2px;
+    font-size: 4px;
+  }
+
+  .ara-calendar-booking-footer svg {
+    width: 7px;
+    height: 7px;
+  }
+
+  .ara-calendar-booking-footer strong {
+    font-size: 7px;
+  }
+}

@@ -1,0 +1,17 @@
+[data-shell='funnel'] .funnel-cta-bar {
+  box-shadow: 0 -0.75rem 2rem color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+@media (max-width: 47.9375rem) {
+  [data-shell='funnel'] .funnel-content-with-cta {
+    padding-bottom: calc(8rem + env(safe-area-inset-bottom));
+  }
+
+  [data-shell='funnel'] .funnel-cta-bar {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: var(--z-nav);
+    width: 100%;
+  }
+}

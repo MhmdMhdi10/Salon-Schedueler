@@ -796,7 +796,7 @@ export const adminApi = {
       bufferMinutes?: number;
       priceRial?: number;
       requiresDeposit?: boolean;
-      depositRial?: number;
+      depositRial?: number | null;
     },
   ) =>
     request<{

@@ -216,7 +216,10 @@ export function AvailabilityPage() {
   const isMobile = useIsMobile();
   const minDate = useMemo(() => todayISO(), []);
   const [bookingWindowDays, setBookingWindowDays] = useState(14);
-  const maxDate = useMemo(() => addDaysISO(minDate, bookingWindowDays), [minDate, bookingWindowDays]);
+  const maxDate = useMemo(
+    () => addDaysISO(minDate, bookingWindowDays),
+    [minDate, bookingWindowDays],
+  );
   const upcomingDays = useMemo(
     () => buildUpcomingDays(Math.min(bookingWindowDays + 1, 31)),
     [bookingWindowDays],
@@ -248,6 +251,11 @@ export function AvailabilityPage() {
       .getServices(salonId)
       .then((res) => {
         setServices(res.services);
+        setSelectedService((current) => {
+          const currentIsValid =
+            current.length > 0 && res.services.some((service) => service.id === current);
+          return currentIsValid ? current : (res.services[0]?.id ?? '');
+        });
         setServicesStatus('ready');
       })
       .catch(() => setServicesStatus('error'));

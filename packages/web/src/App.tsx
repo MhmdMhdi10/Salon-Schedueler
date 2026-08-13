@@ -50,6 +50,11 @@ const BusinessLanding = lazy(() =>
     default: m.BusinessLanding,
   })),
 );
+const AraMvpLanding = lazy(() =>
+  import('./pages/AraMvpLanding').then((m) => ({
+    default: m.AraMvpLanding,
+  })),
+);
 const RegisterSalonPage = lazy(() =>
   import('./pages/business/RegisterSalonPage').then((m) => ({
     default: m.RegisterSalonPage,
@@ -203,7 +208,7 @@ function HomeEntryPage() {
     return <Navigate to={isPlatformAdmin ? '/platform-admin' : isStaff ? '/owner' : '/account'} replace />;
   }
 
-  return <BusinessLanding />;
+  return <AraMvpLanding />;
 }
 
 function AdminEntryPage() {
@@ -300,6 +305,10 @@ export function App() {
                     </Route>
                     <Route path="/booking/success" element={<BookingSuccessPage />} />
 
+                    {/* Ara MVP landing owns its full viewport and therefore
+                     * intentionally renders outside AppShell chrome. */}
+                    <Route path="/" element={<HomeEntryPage />} />
+
                     {/* Public + customer + admin surfaces, inside the app shell.
                      * The INNER Suspense keeps the shell chrome (sticky header,
                      * footer) mounted while a page chunk loads — only the main
@@ -317,13 +326,9 @@ export function App() {
                         </AppShell>
                       }
                     >
-                      {/* Launch home: owner-acquisition is the primary product.
-                       * Marketplace discovery stays out of navigation and old
-                       * public discovery URLs return here until that product is
-                       * ready to launch. Direct salon profiles and booking links
-                       * remain available below. */}
-                      <Route path="/" element={<HomeEntryPage />} />
+                      {/* Public salon acquisition and customer surfaces. */}
                       <Route path="/business" element={<Navigate to="/" replace />} />
+                      <Route path="/business/legacy" element={<BusinessLanding />} />
 
                       {/* Salon self-registration onboarding wizard (noindex) */}
                       <Route path="/business/register" element={<RegisterSalonPage />} />

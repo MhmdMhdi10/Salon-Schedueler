@@ -3,6 +3,7 @@ import { Outlet, useParams } from 'react-router-dom';
 import { brandAccentApi } from '../../api/client';
 import { TenantTheme } from './TenantTheme';
 import { BookingFlowTransition } from '../ui/BookingFlowTransition';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 /**
  * Storefront booking-funnel theming boundary (signature-ui-system R4.2/R4.7/R4.8).
@@ -18,19 +19,14 @@ import { BookingFlowTransition } from '../ui/BookingFlowTransition';
  * renders — it simply tints once the accent arrives. The funnel pages render in
  * the `<Outlet />`.
  *
- * **Step Transitions (Req 7.7):** wraps the routed content in
- * {@link BookingFlowTransition} — a Framer Motion `AnimatePresence` wrapper with
- * directional slide variants (`stepVariants`). Direction is positive when
- * advancing (step index increases) and negative when going back. RTL-aware: in
- * RTL, forward slides content from inline-end (left, negative x) and backward
- * from inline-start (right, positive x). Under `prefers-reduced-motion` only an
- * instant swap remains — no transform animation gates content.
- *
- * Transition timing: 250ms with standard decelerate easing `[0.2, 0, 0, 1]`,
- * matching the design spec for step-to-step slides (Req 3.1, 3.5, 3.7, 7.7).
+ * On desktop, step transitions use the existing directional animation. On
+ * mobile, the route wrapper is intentionally skipped: transformed ancestors
+ * become containing blocks for fixed thumb-zone CTAs and would move them away
+ * from the viewport edge.
  */
 export function FunnelTenantTheme() {
   const { salonId } = useParams<{ salonId: string }>();
+  const isMobile = useMediaQuery('(max-width: 47.9375rem)');
   const [accentKey, setAccentKey] = useState<string | null>(null);
 
   useEffect(() => {
@@ -52,9 +48,13 @@ export function FunnelTenantTheme() {
 
   return (
     <TenantTheme accentKey={accentKey}>
-      <BookingFlowTransition>
+      {isMobile ? (
         <Outlet />
-      </BookingFlowTransition>
+      ) : (
+        <BookingFlowTransition>
+          <Outlet />
+        </BookingFlowTransition>
+      )}
     </TenantTheme>
   );
 }

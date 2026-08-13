@@ -63,6 +63,7 @@ export function AppShell({ children, className, headerVariant }: AppShellProps) 
         : 'default';
   const variant = headerVariant ?? derived;
   const isBare = variant === 'bare';
+  const isOwnerLanding = pathname === '/';
   const hideFooter = pathname === '/account';
 
   return (
@@ -102,7 +103,9 @@ export function AppShell({ children, className, headerVariant }: AppShellProps) 
         {children}
       </main>
 
-      {isBare ? null : <PwaInstallPrompt />}
+      {/* Keep the owner-acquisition hero focused; install can be offered after
+          the user enters the product instead of obscuring the first CTA. */}
+      {isBare || isOwnerLanding ? null : <PwaInstallPrompt />}
       {isBare || hideFooter ? null : <PublicFooter />}
     </div>
   );

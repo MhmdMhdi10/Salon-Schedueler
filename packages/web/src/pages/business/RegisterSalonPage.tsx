@@ -29,6 +29,8 @@ import { BrandLogo } from '../../components/brand';
 import { Button, TextField, cn, toPersianDigits, useToast } from '../../components/ui';
 import { ACCENTS, accentVars } from '../../components/theme/accents';
 
+import './RegisterSalonPage.css';
+
 /** Iranian mobile pattern: `09` followed by 9 digits (ui-ux §7). */
 const PHONE_PATTERN = /^09\d{9}$/;
 /** Number of digits in the SMS one-time code. */
@@ -156,6 +158,12 @@ function RegisterSalonContent() {
     return () => window.clearInterval(timer);
   }, [secondsLeft]);
 
+  // Every step is a new reading surface. Start it at the top so a short
+  // mobile viewport never opens halfway through the next form.
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [step]);
+
   // ── Step 1: validate identity, then advance ──────────────────────────────
   const handleInfoNext = () => {
     const errors: typeof infoErrors = {};
@@ -230,6 +238,25 @@ function RegisterSalonContent() {
     setSvcName('');
     setSvcDuration('');
     setSvcPrice('');
+    setSvcError('');
+  };
+
+  const handleAddPresetService = (presetKey: (typeof SERVICE_PRESETS)[number]) => {
+    const name = t(`business.register.services.presets.${presetKey}`);
+    const alreadyAdded = services.some((service) => service.name === name);
+    if (alreadyAdded) {
+      setSvcName(name);
+      return;
+    }
+
+    setServices((prev) => [
+      ...prev,
+      {
+        key: `${Date.now()}-${prev.length}`,
+        name,
+      },
+    ]);
+    setSvcName('');
     setSvcError('');
   };
 
@@ -349,12 +376,19 @@ function RegisterSalonContent() {
   };
 
   return (
-    <div className="flex min-h-screen min-h-[100dvh] w-full flex-col bg-bg" data-testid="register-salon-page">
+    <div
+      className="flex min-h-screen min-h-[100dvh] w-full flex-col bg-bg"
+      data-testid="register-salon-page"
+    >
       <SeoHead title={t('business.register.title')} />
 
       <header className="border-b border-border bg-elevated">
         <div className="mx-auto flex h-14 w-full max-w-2xl items-center gap-2 px-3 sm:gap-5 sm:px-4">
-          <Link to="/" aria-label="آرا" className="inline-flex min-h-10 shrink-0 items-center no-underline">
+          <Link
+            to="/"
+            aria-label="آرا"
+            className="inline-flex min-h-10 shrink-0 items-center no-underline"
+          >
             <BrandLogo className="h-9" />
           </Link>
           <div
@@ -388,7 +422,7 @@ function RegisterSalonContent() {
         </div>
       </header>
 
-      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-3 py-6 sm:px-4 sm:py-10">
+      <div className="register-form-content mx-auto flex w-full max-w-2xl flex-1 flex-col px-3 py-6 sm:px-4 sm:py-10">
         <p className="text-sm font-medium text-primary">
           مرحله {toPersianDigits(stepIndex + 1)} از {toPersianDigits(STEP_ORDER.length)}
         </p>
@@ -406,7 +440,9 @@ function RegisterSalonContent() {
         <p className="mt-2 text-sm text-muted">
           {step === 'category'
             ? 'با انتخاب حوزه کاری، آرا را متناسب با نیازهای شما آماده می‌کنیم.'
-            : t('business.register.subtitle')}
+            : step === 'services'
+              ? t('business.register.services.subtitle')
+              : t('business.register.subtitle')}
         </p>
 
         {step === 'category' ? (
@@ -416,33 +452,33 @@ function RegisterSalonContent() {
                 const Icon = profile.icon;
                 const selected = category === profile.key;
                 return (
-                <button
-                  key={profile.key}
-                  type="button"
-                  onClick={() => {
-                    setCategory(profile.key);
-                    setSpecialties([profile.specialties[0].key]);
-                  }}
-                  aria-pressed={selected}
-                  data-testid={`business-type-${profile.key}`}
-                  className={cn(
-                    'flex min-h-[5.25rem] items-center gap-3 rounded-xl border-2 bg-elevated px-4 text-start text-text transition-colors duration-fast',
-                    selected ? 'border-primary bg-primary/5' : 'border-border',
-                  )}
-                >
-                  <span
+                  <button
+                    key={profile.key}
+                    type="button"
+                    onClick={() => {
+                      setCategory(profile.key);
+                      setSpecialties([profile.specialties[0].key]);
+                    }}
+                    aria-pressed={selected}
+                    data-testid={`business-type-${profile.key}`}
                     className={cn(
-                      'flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary',
-                      selected && 'bg-primary text-primary-contrast',
+                      'flex min-h-[5.25rem] items-center gap-3 rounded-xl border-2 bg-elevated px-4 text-start text-text transition-colors duration-fast',
+                      selected ? 'border-primary bg-primary/5' : 'border-border',
                     )}
                   >
-                    <Icon className="size-5" aria-hidden="true" />
-                  </span>
-                  <span className="flex min-w-0 flex-col gap-0.5">
-                    <span className="font-bold">{profile.label}</span>
-                    <span className="text-xs leading-5 text-muted">{profile.description}</span>
-                  </span>
-                </button>
+                    <span
+                      className={cn(
+                        'flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary',
+                        selected && 'bg-primary text-primary-contrast',
+                      )}
+                    >
+                      <Icon className="size-5" aria-hidden="true" />
+                    </span>
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="font-bold">{profile.label}</span>
+                      <span className="text-xs leading-5 text-muted">{profile.description}</span>
+                    </span>
+                  </button>
                 );
               })}
             </div>
@@ -487,7 +523,7 @@ function RegisterSalonContent() {
               fullWidth
               disabled={!category}
               onClick={() => setStep('info')}
-              className="mt-auto"
+              className="register-fixed-primary mt-auto"
             >
               {t('business.register.next')}
             </Button>
@@ -559,50 +595,67 @@ function RegisterSalonContent() {
             )}
 
             {step === 'services' && (
-              <div className="flex flex-col gap-4">
-                <StepHeading
-                  icon={<Scissors className="h-5 w-5" aria-hidden="true" />}
-                  title={t('business.register.services.title')}
-                  subtitle={t('business.register.services.subtitle')}
-                />
-
+              <div className="flex flex-col gap-4" data-testid="register-services-step">
                 {/* Quick-add presets fill the service-name draft. */}
                 <div className="flex flex-col gap-2">
-                  <span className="text-xs font-medium text-muted">
-                    {t('business.register.services.presetsLabel')}
-                  </span>
-                  <div className="flex flex-wrap gap-2">
-                    {SERVICE_PRESETS.map((presetKey) => (
-                      <button
-                        key={presetKey}
-                        type="button"
-                        onClick={() =>
-                          setSvcName(t(`business.register.services.presets.${presetKey}`))
-                        }
-                        className="inline-flex min-h-9 items-center gap-1 rounded-pill border border-border bg-bg px-3 py-1 text-xs text-text transition-colors duration-fast ease-standard hover:border-primary hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                      >
-                        <Plus className="h-3 w-3" aria-hidden="true" />
-                        {t(`business.register.services.presets.${presetKey}`)}
-                      </button>
-                    ))}
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs font-bold text-text">
+                      {t('business.register.services.presetsLabel')}
+                    </span>
+                    <span className="text-2xs text-muted">یکی را انتخاب کنید</span>
+                  </div>
+                  <div
+                    className="-mx-1 overflow-x-auto px-1 pb-1"
+                    role="group"
+                    aria-label="خدمات پیشنهادی"
+                  >
+                    <div className="flex w-max gap-2">
+                      {SERVICE_PRESETS.map((presetKey) => {
+                        const presetName = t(`business.register.services.presets.${presetKey}`);
+                        const isAdded = services.some((service) => service.name === presetName);
+                        return (
+                          <button
+                            key={presetKey}
+                            type="button"
+                            aria-pressed={isAdded}
+                            onClick={() => handleAddPresetService(presetKey)}
+                            className={cn(
+                              'inline-flex min-h-9 shrink-0 items-center gap-1 rounded-pill border px-3 py-1 text-xs transition-colors duration-fast ease-standard focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+                              isAdded
+                                ? 'border-primary bg-primary/10 font-bold text-primary'
+                                : 'border-border bg-bg text-text hover:border-primary hover:text-primary',
+                            )}
+                          >
+                            {isAdded ? (
+                              <Check className="h-3 w-3" aria-hidden="true" />
+                            ) : (
+                              <Plus className="h-3 w-3" aria-hidden="true" />
+                            )}
+                            {presetName}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto]">
-                  <TextField
-                    id="svcName"
-                    label={t('business.register.services.nameLabel')}
-                    placeholder={t('business.register.services.namePlaceholder')}
-                    value={svcName}
-                    onChange={(e) => setSvcName(e.target.value)}
-                  />
+                <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-[minmax(0,1fr)_7rem_9rem]">
+                  <div className="col-span-2 min-w-0 sm:col-span-1">
+                    <TextField
+                      id="svcName"
+                      label={t('business.register.services.nameLabel')}
+                      placeholder={t('business.register.services.namePlaceholder')}
+                      value={svcName}
+                      onChange={(e) => setSvcName(e.target.value)}
+                    />
+                  </div>
                   <TextField
                     id="svcDuration"
                     label={t('business.register.services.durationLabel')}
                     inputMode="numeric"
                     dir="ltr"
                     placeholder="۳۰"
-                    containerClassName="sm:w-28"
+                    containerClassName="min-w-0 w-full"
                     value={svcDuration}
                     onChange={(e) => setSvcDuration(e.target.value)}
                   />
@@ -612,7 +665,7 @@ function RegisterSalonContent() {
                     inputMode="numeric"
                     dir="ltr"
                     placeholder="۵۰۰۰۰۰"
-                    containerClassName="sm:w-36"
+                    containerClassName="min-w-0 w-full"
                     value={svcPrice}
                     onChange={(e) => setSvcPrice(e.target.value)}
                   />
@@ -622,12 +675,13 @@ function RegisterSalonContent() {
                     {svcError}
                   </p>
                 )}
-                <div>
+                <div className="flex justify-end">
                   <Button
                     type="button"
                     variant="secondary"
                     startIcon={<Plus className="h-4 w-4" />}
                     onClick={handleAddService}
+                    className="w-full sm:w-auto"
                   >
                     {t('business.register.services.addCta')}
                   </Button>
@@ -665,13 +719,18 @@ function RegisterSalonContent() {
                   </ul>
                 )}
 
+                {services.length === 0 && (
+                  <p className="text-xs leading-5 text-muted" role="status">
+                    برای ادامه، حداقل یک خدمت را از پیشنهادها انتخاب یا با نام دلخواه اضافه کنید.
+                  </p>
+                )}
+
                 <StepNav
                   onBack={() => setStep('info')}
                   onNext={() => setStep('setup')}
-                  onSkip={() => setStep('setup')}
                   nextLabel={t('business.register.next')}
-                  skipLabel={t('business.register.skip')}
                   backLabel={t('business.register.back')}
+                  nextDisabled={services.length === 0}
                 />
               </div>
             )}
@@ -726,10 +785,7 @@ function RegisterSalonContent() {
                 {/* Compact summary so the owner can confirm before submitting. */}
                 <dl className="flex flex-col gap-2 rounded-md border border-border bg-bg p-3 text-sm">
                   <SummaryRow label={t('business.register.review.salon')} value={salonName} />
-                  <SummaryRow
-                    label="حوزه کاری"
-                    value={selectedProfile?.label ?? category}
-                  />
+                  <SummaryRow label="حوزه کاری" value={selectedProfile?.label ?? category} />
                   <SummaryRow
                     label="مهارت‌ها"
                     value={specialties.length > 0 ? specialtyLabels(category, specialties) : '—'}
@@ -1006,7 +1062,7 @@ function StepHeading({
   );
 }
 
-/** Bottom navigation for a skippable step: primary next + (back · skip). */
+/** Bottom navigation for an onboarding step: primary next + (back · optional skip). */
 function StepNav({
   onBack,
   onNext,
@@ -1014,19 +1070,28 @@ function StepNav({
   nextLabel,
   skipLabel,
   backLabel,
+  nextDisabled,
   loading,
 }: {
   onBack: () => void;
   onNext: () => void;
-  onSkip: () => void;
+  onSkip?: () => void;
   nextLabel: string;
-  skipLabel: string;
+  skipLabel?: string;
   backLabel: string;
+  nextDisabled?: boolean;
   loading?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-3 pt-1">
-      <Button type="button" size="lg" fullWidth onClick={onNext} loading={loading}>
+    <div className="register-step-nav flex flex-col gap-3 pt-1">
+      <Button
+        type="button"
+        size="lg"
+        fullWidth
+        onClick={onNext}
+        loading={loading}
+        disabled={nextDisabled || loading}
+      >
         {nextLabel}
       </Button>
       <div className="flex items-center justify-between gap-2">
@@ -1039,9 +1104,13 @@ function StepNav({
         >
           {backLabel}
         </Button>
-        <Button type="button" variant="ghost" size="md" onClick={onSkip} disabled={loading}>
-          {skipLabel}
-        </Button>
+        {onSkip && skipLabel ? (
+          <Button type="button" variant="ghost" size="md" onClick={onSkip} disabled={loading}>
+            {skipLabel}
+          </Button>
+        ) : (
+          <span aria-hidden="true" />
+        )}
       </div>
     </div>
   );

@@ -43,7 +43,7 @@
 }
 
 .owner-bottom-tabs a[data-testid='owner-profile-trigger'] {
-  color: var(--color-text);
+  color: var(--color-text-muted);
 }
 
 .owner-bottom-tabs a[data-testid='owner-profile-trigger'][aria-current='page'] {

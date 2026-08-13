@@ -38,11 +38,18 @@ export interface PageTransitionProps {
  */
 export function PageTransition({ children, className }: PageTransitionProps) {
   const { pathname } = useLocation();
+  // The onboarding form owns fixed thumb-zone actions on mobile. A transformed
+  // animation wrapper would become their containing block and make `fixed`
+  // behave like absolute positioning inside the form instead of the viewport.
+  const usesFixedActions = pathname === '/business/register';
 
   return (
     <div
       key={pathname}
-      className={cn('motion-safe:animate-page-enter ltr:[--page-enter-shift:12px]', className)}
+      className={cn(
+        !usesFixedActions && 'motion-safe:animate-page-enter ltr:[--page-enter-shift:12px]',
+        className,
+      )}
     >
       {children}
     </div>

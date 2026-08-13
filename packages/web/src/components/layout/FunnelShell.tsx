@@ -5,6 +5,8 @@ import { Num } from '../ui/Num';
 import { Avatar } from '../ui/Avatar';
 import { cn } from '../ui/cn';
 
+import './funnel-shell.css';
+
 /** Stable id the funnel `<main>` exposes (skip-link target / focus). */
 export const FUNNEL_CONTENT_ID = 'funnel-content';
 
@@ -86,7 +88,10 @@ export function FunnelShell({
   return (
     <div
       data-shell="funnel"
-      className={cn('flex min-h-screen min-h-[100dvh] flex-col overflow-x-hidden bg-bg text-text', className)}
+      className={cn(
+        'flex min-h-screen min-h-[100dvh] flex-col overflow-x-hidden bg-bg text-text',
+        className,
+      )}
     >
       {/* Minimal top bar: back affordance (inline-start) + salon name. */}
       <header className="border-b border-border bg-elevated">
@@ -103,7 +108,9 @@ export function FunnelShell({
               </span>
             </div>
           ) : (
-            <span className="min-w-0 flex-1 truncate text-md font-bold text-text">{t('app.title')}</span>
+            <span className="min-w-0 flex-1 truncate text-md font-bold text-text">
+              {t('app.title')}
+            </span>
           )}
           <div className="flex basis-16 flex-1 gap-1" aria-hidden="true">
             {FUNNEL_STEPS.map((step, index) => (
@@ -174,7 +181,7 @@ export function FunnelShell({
         className={cn(
           'mx-auto w-full max-w-2xl flex-1 px-3 py-6 sm:px-4 sm:py-10',
           // Reserve room so the sticky CTA never covers the card's tail.
-          cta && 'pb-[calc(var(--space-10)+env(safe-area-inset-bottom))]',
+          cta && 'funnel-content-with-cta pb-[calc(var(--space-10)+env(safe-area-inset-bottom))]',
         )}
       >
         {children}
@@ -185,7 +192,7 @@ export function FunnelShell({
         <div
           data-testid="funnel-cta-bar"
           className={cn(
-            'sticky bottom-0 z-sticky border-t border-border bg-surface',
+            'funnel-cta-bar sticky bottom-0 z-sticky border-t border-border bg-surface',
             'pb-[env(safe-area-inset-bottom)]',
           )}
         >

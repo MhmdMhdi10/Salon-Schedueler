@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -1732,21 +1732,23 @@ function TimeWheelField({
   const [open, setOpen] = useState(false);
   const [hour, setHour] = useState(Number(value.split(':')[0] ?? 0));
   const [minute, setMinute] = useState(Number(value.split(':')[1] ?? 0));
+  const selectedHourRef = useRef(hour);
+  const selectedMinuteRef = useRef(minute);
   const hourRef = useRef<HTMLDivElement>(null);
   const minuteRef = useRef<HTMLDivElement>(null);
   const hours = useMemo(() => Array.from({ length: 24 }, (_, index) => index), []);
   const minutes = useMemo(() => Array.from({ length: 60 }, (_, index) => index), []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
     const nextHour = Number(value.split(':')[0] ?? 0);
     const nextMinute = Number(value.split(':')[1] ?? 0);
+    selectedHourRef.current = nextHour;
+    selectedMinuteRef.current = nextMinute;
     setHour(nextHour);
     setMinute(nextMinute);
-    requestAnimationFrame(() => {
-      setTimeWheelPosition(hourRef.current, nextHour);
-      setTimeWheelPosition(minuteRef.current, nextMinute);
-    });
+    setTimeWheelPosition(hourRef.current, nextHour);
+    setTimeWheelPosition(minuteRef.current, nextMinute);
   }, [open, value]);
 
   const wheel = (
@@ -1754,6 +1756,7 @@ function TimeWheelField({
     selected: number,
     setSelected: (value: number) => void,
     ref: React.RefObject<HTMLDivElement>,
+    selectedRef: React.MutableRefObject<number>,
     ariaLabel: string,
   ) => (
     <div className="relative overflow-hidden rounded-2xl border border-border bg-bg shadow-inner">
@@ -1768,7 +1771,9 @@ function TimeWheelField({
             0,
             Math.min(values.length - 1, Math.round(event.currentTarget.scrollTop / TIME_WHEEL_ITEM_HEIGHT)),
           );
-          setSelected(values[index]);
+          const nextValue = values[index];
+          selectedRef.current = nextValue;
+          setSelected(nextValue);
         }}
       >
         {values.map((item) => (
@@ -1783,8 +1788,12 @@ function TimeWheelField({
               selected === item ? 'scale-110 font-black text-text' : 'scale-90 text-muted/45',
             )}
             onClick={() => {
+              selectedRef.current = item;
               setSelected(item);
-              setTimeWheelPosition(ref.current, item, true);
+              // Do not animate this correction: an in-flight smooth scroll can
+              // emit intermediate scroll events and overwrite the value just
+              // selected before the user confirms the dialog.
+              setTimeWheelPosition(ref.current, item);
             }}
           >
             <Num value={String(item).padStart(2, '0')} />
@@ -1814,16 +1823,18 @@ function TimeWheelField({
           <DialogTitle className="text-center text-xl">{label}</DialogTitle>
           <DialogDescription className="text-center">برای انتخاب، ساعت و دقیقه را بالا یا پایین بکش.</DialogDescription>
           <div className="relative mx-auto mt-5 grid max-w-[19rem] grid-cols-[1fr_auto_1fr] items-center gap-3" dir="ltr">
-            {wheel(hours, hour, setHour, hourRef, 'ساعت')}
+            {wheel(hours, hour, setHour, hourRef, selectedHourRef, 'ساعت')}
             <span className="text-2xl font-black text-muted">:</span>
-            {wheel(minutes, minute, setMinute, minuteRef, 'دقیقه')}
+            {wheel(minutes, minute, setMinute, minuteRef, selectedMinuteRef, 'دقیقه')}
           </div>
           <div className="mt-5 flex justify-center gap-2">
             <DialogClose asChild><Button variant="ghost">انصراف</Button></DialogClose>
             <Button
               variant="primary"
               onClick={() => {
-                onChange(`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`);
+                onChange(
+                  `${String(selectedHourRef.current).padStart(2, '0')}:${String(selectedMinuteRef.current).padStart(2, '0')}`,
+                );
                 setOpen(false);
               }}
             >

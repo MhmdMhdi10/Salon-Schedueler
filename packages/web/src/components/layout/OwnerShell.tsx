@@ -81,7 +81,14 @@ function getPersistedCollapsed(): boolean {
  * Layout uses tokens-only styling, logical properties for RTL correctness,
  * and env(safe-area-inset-bottom) for bottom tab bar on mobile.
  */
-export function OwnerShell({ children, role, salonName, salonId, onSignOut, className }: OwnerShellProps) {
+export function OwnerShell({
+  children,
+  role,
+  salonName,
+  salonId,
+  onSignOut,
+  className,
+}: OwnerShellProps) {
   const { t } = useTranslation();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
@@ -231,8 +238,7 @@ export function OwnerShell({ children, role, salonName, salonId, onSignOut, clas
             isDesktop && 'w-full',
             // On mobile, reserve the compact rendered tab bar (~65px) plus breathing
             // room so the last card can scroll completely above fixed nav.
-            !isDesktop &&
-              'pb-[calc(var(--space-10)+var(--space-3)+env(safe-area-inset-bottom))]',
+            !isDesktop && 'pb-[calc(var(--space-10)+var(--space-6)+env(safe-area-inset-bottom))]',
           )}
         >
           <AnimatePresence initial={false} mode="wait">
@@ -258,9 +264,7 @@ export function OwnerShell({ children, role, salonName, salonId, onSignOut, clas
       </div>
 
       {/* Mobile bottom tabs — visible only below lg */}
-      {!isDesktop && (
-        <OwnerBottomTabs role={role} />
-      )}
+      {!isDesktop && <OwnerBottomTabs role={role} />}
     </ThemeScope>
   );
 }

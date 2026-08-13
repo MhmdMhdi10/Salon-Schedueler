@@ -3,25 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#FFFFFF" />
+    <meta name="theme-color" content="#0F1111" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
     <!-- Apply the persisted theme before first paint so there is no flash of
        the wrong theme (matches src/components/theme/ThemeProvider.tsx:
-       localStorage 'salon-theme' → light). The OS `prefers-color-scheme` is
-       intentionally NOT consulted: a dark-OS visitor still lands on the warm
-       porcelain palette and only flips to dark via the explicit toggle. Kept
-       inline and dependency-free so it runs before the module bundle loads. -->
+       localStorage 'salon-theme' → dark). The OS `prefers-color-scheme` is
+       intentionally NOT consulted: visitors land on Ara's dark default and
+       can switch with the explicit toggle. Kept inline and dependency-free so
+       it runs before the module bundle loads. -->
     <script>
       (function () {
         try {
           var stored = localStorage.getItem('salon-theme');
-          var theme = stored === 'dark' ? 'dark' : 'light';
+          var theme = stored === 'light' ? 'light' : 'dark';
           document.documentElement.setAttribute('data-theme', theme);
           var meta = document.querySelector('meta[name="theme-color"]');
           if (meta) meta.setAttribute('content', theme === 'dark' ? '#0F1111' : '#FFFFFF');
         } catch (e) {
-          document.documentElement.setAttribute('data-theme', 'light');
+          document.documentElement.setAttribute('data-theme', 'dark');
         }
       })();
     </script>

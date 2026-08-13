@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   Armchair,
   BellRing,
+  CheckCircle2,
   ChevronDown,
   Clock,
   Plus,
@@ -13,6 +14,7 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
+import { normalizeDigits } from '@salon/shared';
 import {
   adminApi,
   salonApi,
@@ -73,11 +75,30 @@ interface ServiceItem {
   id: string;
   name: string;
   durationMinutes: number;
+  bufferMinutes?: number;
   priceRial: number;
   requiresDeposit?: boolean;
   depositRial?: number | null;
   staffIds?: string[];
 }
+
+interface ServiceDraft {
+  name: string;
+  durationMinutes: string;
+  bufferMinutes: string;
+  priceRial: string;
+  requiresDeposit: boolean;
+  depositRial: string;
+}
+
+type ServicePatch = {
+  name: string;
+  durationMinutes: number;
+  bufferMinutes: number;
+  priceRial: number;
+  requiresDeposit: boolean;
+  depositRial: number | null;
+};
 
 const DEFAULT_SMS_SETTINGS: SmsSettings = {
   ownerBooking: false,
@@ -135,6 +156,23 @@ function toEntry(item: unknown, fallbackId: string): Entry {
     if (typeof rec.id === 'string') return { id: rec.id, label };
   }
   return { id: fallbackId, label };
+}
+
+function wholeNumber(value: string): number {
+  const normalized = normalizeDigits(value).replace(/[\s,٬،]/g, '');
+  const parsed = Number.parseInt(normalized, 10);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function serviceDraftFrom(service: ServiceItem): ServiceDraft {
+  return {
+    name: service.name,
+    durationMinutes: String(service.durationMinutes),
+    bufferMinutes: String(service.bufferMinutes ?? 0),
+    priceRial: String(service.priceRial),
+    requiresDeposit: service.requiresDeposit === true,
+    depositRial: service.depositRial == null ? '' : String(service.depositRial),
+  };
 }
 
 // ─── CollapsibleSection ──────────────────────────────────────────────────────
@@ -381,6 +419,11 @@ function StaffSection({
     }
   };
 
+  const reactivateStaff = async (id: string) => {
+    await patchStaff(id, { active: true });
+    window.dispatchEvent(new Event('salon-config-changed'));
+  };
+
   return (
     <CollapsibleSection id="staff" icon={Users} title={t('admin.staff')}>
       {staff.length === 0 ? (
@@ -463,21 +506,32 @@ function StaffSection({
                     )}
                   </AnimatePresence>
                 </div>
-                <IconButton
-                  variant="danger"
-                  aria-label={t('admin.config.staff.deactivateLabel', { name })}
-                  onClick={() =>
-                    requestDelete({
-                      id: member.id,
-                      label: name,
-                      kind: 'deactivate',
-                      onConfirm: () => void deactivateStaff(member.id, name),
-                    })
-                  }
-                  className="h-9 min-h-0 w-9 min-w-0 shrink-0"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </IconButton>
+                {member.active ? (
+                  <IconButton
+                    variant="danger"
+                    aria-label={t('admin.config.staff.deactivateLabel', { name })}
+                    onClick={() =>
+                      requestDelete({
+                        id: member.id,
+                        label: name,
+                        kind: 'deactivate',
+                        onConfirm: () => void deactivateStaff(member.id, name),
+                      })
+                    }
+                    className="h-9 min-h-0 w-9 min-w-0 shrink-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </IconButton>
+                ) : (
+                  <IconButton
+                    variant="secondary"
+                    aria-label={`فعال‌سازی ${name}`}
+                    onClick={() => void reactivateStaff(member.id)}
+                    className="h-9 min-h-0 w-9 min-w-0 shrink-0"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                  </IconButton>
+                )}
               </AnimatedListItem>
             );
             })}
@@ -546,6 +600,7 @@ function ServicesSection({
   services,
   staff,
   onStaffChange,
+  onUpdate,
   onAdd,
   onRemove,
   requestDelete,
@@ -553,13 +608,15 @@ function ServicesSection({
   services: ServiceItem[];
   staff: SalonStaff[];
   onStaffChange: (serviceId: string, staffIds: string[]) => Promise<void>;
+  onUpdate: (serviceId: string, patch: ServicePatch) => Promise<void>;
   onAdd: (service: {
     name: string;
     durationMinutes: number;
+    bufferMinutes: number;
     priceRial: number;
     requiresDeposit: boolean;
-    depositRial?: number;
-  }) => void;
+    depositRial: number | null;
+  }) => Promise<void>;
   onRemove: (id: string) => void;
   requestDelete: (state: DeleteState) => void;
 }) {
@@ -570,6 +627,9 @@ function ServicesSection({
   const [requiresDeposit, setRequiresDeposit] = useState(false);
   const [deposit, setDeposit] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, ServiceDraft>>({});
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [formError, setFormError] = useState('');
   const {
     page,
     pageItems,
@@ -579,22 +639,97 @@ function ServicesSection({
   } = usePagination(services, 6);
   const eligibleStaff = staff.filter((member) => member.active && member.role !== 'Admin');
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const trimmed = name.trim();
-    if (!trimmed) return;
-    onAdd({
-      name: trimmed,
-      durationMinutes: Number.parseInt(duration, 10) || 0,
-      priceRial: Number.parseInt(price, 10) || 0,
-      requiresDeposit,
-      ...(requiresDeposit ? { depositRial: Number.parseInt(deposit, 10) || 0 } : {}),
-    });
-    setName('');
-    setDuration('');
-    setPrice('');
-    setRequiresDeposit(false);
-    setDeposit('');
+    const durationMinutes = wholeNumber(duration);
+    const priceRial = wholeNumber(price);
+    const depositRial = wholeNumber(deposit);
+    if (!trimmed) {
+      setFormError('نام خدمت را وارد کنید.');
+      return;
+    }
+    if (durationMinutes < 5 || durationMinutes > 480) {
+      setFormError('مدت خدمت باید بین ۵ تا ۴۸۰ دقیقه باشد.');
+      return;
+    }
+    if (requiresDeposit && depositRial <= 0) {
+      setFormError('مبلغ بیعانه را وارد کنید.');
+      return;
+    }
+    setFormError('');
+    try {
+      await onAdd({
+        name: trimmed,
+        durationMinutes,
+        bufferMinutes: 0,
+        priceRial,
+        requiresDeposit,
+        depositRial: requiresDeposit ? depositRial : null,
+      });
+      setName('');
+      setDuration('');
+      setPrice('');
+      setRequiresDeposit(false);
+      setDeposit('');
+    } catch {
+      // Parent owns the server error toast; keep values so retry is possible.
+    }
+  };
+
+  const toggleEditing = (service: ServiceItem) => {
+    setEditingId((current) => (current === service.id ? null : service.id));
+    setDrafts((current) => ({
+      ...current,
+      [service.id]: current[service.id] ?? serviceDraftFrom(service),
+    }));
+  };
+
+  const updateDraft = (serviceId: string, patch: Partial<ServiceDraft>) => {
+    setDrafts((current) => ({
+      ...current,
+      [serviceId]: { ...current[serviceId], ...patch },
+    }));
+  };
+
+  const saveService = async (service: ServiceItem) => {
+    const draft = drafts[service.id] ?? serviceDraftFrom(service);
+    const nameValue = draft.name.trim();
+    const durationMinutes = wholeNumber(draft.durationMinutes);
+    const bufferMinutes = wholeNumber(draft.bufferMinutes);
+    const priceRial = wholeNumber(draft.priceRial);
+    const depositRial = wholeNumber(draft.depositRial);
+    if (!nameValue) {
+      setFormError('نام خدمت را وارد کنید.');
+      return;
+    }
+    if (durationMinutes < 5 || durationMinutes > 480) {
+      setFormError('مدت خدمت باید بین ۵ تا ۴۸۰ دقیقه باشد.');
+      return;
+    }
+    if (bufferMinutes < 0 || bufferMinutes > 120) {
+      setFormError('فاصله بین نوبت‌ها باید بین ۰ تا ۱۲۰ دقیقه باشد.');
+      return;
+    }
+    if (draft.requiresDeposit && depositRial <= 0) {
+      setFormError('مبلغ بیعانه را وارد کنید.');
+      return;
+    }
+    setFormError('');
+    setSavingId(service.id);
+    try {
+      await onUpdate(service.id, {
+        name: nameValue,
+        durationMinutes,
+        bufferMinutes,
+        priceRial,
+        requiresDeposit: draft.requiresDeposit,
+        depositRial: draft.requiresDeposit ? depositRial : null,
+      });
+      setEditingId(null);
+    } finally {
+      setSavingId(null);
+    }
   };
 
   return (
@@ -627,7 +762,7 @@ function ServicesSection({
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <button
                   type="button"
-                  onClick={() => setEditingId(editingId === service.id ? null : service.id)}
+                  onClick={() => toggleEditing(service)}
                   className={cn(
                     'inline-flex min-h-10 items-center text-start text-sm font-medium text-text',
                     'rounded px-1 -mx-1 transition-colors duration-fast',
@@ -668,7 +803,7 @@ function ServicesSection({
                     type="button"
                     aria-expanded={editingId === service.id}
                     aria-controls={`service-staff-${service.id}`}
-                    onClick={() => setEditingId(editingId === service.id ? null : service.id)}
+                    onClick={() => toggleEditing(service)}
                     className={cn(
                       'inline-flex min-h-10 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold text-primary',
                       'border-primary/40 bg-primary/10 transition-colors duration-fast hover:bg-primary/20',
@@ -691,6 +826,48 @@ function ServicesSection({
                     id={`service-staff-${service.id}`}
                     className="mt-2 flex flex-col gap-2 rounded-lg border border-border bg-bg p-2"
                   >
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <TextField
+                        label="نام خدمت"
+                        value={drafts[service.id]?.name ?? service.name}
+                        onChange={(event) => updateDraft(service.id, { name: event.target.value })}
+                      />
+                      <TextField
+                        label="مدت (دقیقه)"
+                        inputMode="numeric"
+                        dir="ltr"
+                        value={drafts[service.id]?.durationMinutes ?? String(service.durationMinutes)}
+                        onChange={(event) => updateDraft(service.id, { durationMinutes: event.target.value })}
+                      />
+                      <TextField
+                        label="فاصله بین نوبت‌ها (دقیقه)"
+                        inputMode="numeric"
+                        dir="ltr"
+                        value={drafts[service.id]?.bufferMinutes ?? String(service.bufferMinutes ?? 0)}
+                        onChange={(event) => updateDraft(service.id, { bufferMinutes: event.target.value })}
+                      />
+                      <TextField
+                        label="قیمت (ریال)"
+                        inputMode="numeric"
+                        dir="ltr"
+                        value={drafts[service.id]?.priceRial ?? String(service.priceRial)}
+                        onChange={(event) => updateDraft(service.id, { priceRial: event.target.value })}
+                      />
+                    </div>
+                    <Switch
+                      checked={drafts[service.id]?.requiresDeposit ?? service.requiresDeposit === true}
+                      onCheckedChange={(value) => updateDraft(service.id, { requiresDeposit: value })}
+                      label="دریافت بیعانه"
+                    />
+                    {(drafts[service.id]?.requiresDeposit ?? service.requiresDeposit === true) && (
+                      <TextField
+                        label="مبلغ بیعانه (ریال)"
+                        inputMode="numeric"
+                        dir="ltr"
+                        value={drafts[service.id]?.depositRial ?? String(service.depositRial ?? '')}
+                        onChange={(event) => updateDraft(service.id, { depositRial: event.target.value })}
+                      />
+                    )}
                     <p className="m-0 text-xs font-semibold text-text">
                       چه کسی این خدمت را انجام می‌دهد؟
                     </p>
@@ -724,6 +901,18 @@ function ServicesSection({
                         })}
                       </div>
                     )}
+                    {formError && <p className="m-0 text-sm text-danger" role="alert">{formError}</p>}
+                    <Button
+                      type="button"
+                      size="md"
+                      loading={savingId === service.id}
+                      disabled={savingId !== null}
+                      startIcon={<CheckCircle2 className="h-4 w-4" />}
+                      onClick={() => void saveService(service)}
+                      className="self-start"
+                    >
+                      ذخیره تغییرات خدمت
+                    </Button>
                   </div>
                 )}
               </div>
@@ -892,7 +1081,7 @@ function ChairsSection({
   requestDelete,
 }: {
   chairs: Entry[];
-  onAdd: (label: string) => void;
+  onAdd: (label: string) => Promise<void>;
   onRemove: (id: string) => void;
   requestDelete: (state: DeleteState) => void;
 }) {
@@ -906,12 +1095,16 @@ function ChairsSection({
     goToPage,
   } = usePagination(chairs, 6);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const trimmed = value.trim();
     if (trimmed) {
-      onAdd(trimmed);
-      setValue('');
+      try {
+        await onAdd(trimmed);
+        setValue('');
+      } catch {
+        // Parent owns the error toast; keep the value for retry.
+      }
     }
   };
 
@@ -1162,32 +1355,96 @@ function OwnerConfigPageContent({
                 toastError({ title: 'ذخیره آرایشگرهای خدمت انجام نشد' });
               }
             }}
+            onUpdate={async (serviceId, patch) => {
+              const previous = services;
+              setServices((current) =>
+                current.map((service) =>
+                  service.id === serviceId ? { ...service, ...patch } : service,
+                ),
+              );
+              try {
+                const result = await adminApi.updateService(salonId, serviceId, patch);
+                setServices((current) =>
+                  current.map((service) =>
+                    service.id === serviceId ? { ...service, ...result.service } : service,
+                  ),
+                );
+                window.dispatchEvent(new Event('salon-config-changed'));
+                success({ title: 'خدمت با موفقیت به‌روزرسانی شد' });
+              } catch (reason) {
+                setServices(previous);
+                toastError({
+                  title: reason instanceof ApiError ? reason.message : 'ذخیره خدمت انجام نشد',
+                });
+                throw reason;
+              }
+            }}
             onAdd={(service) => {
-              adminApi
-                .createService(salonId, service)
-                .then((res) => {
-                  setServices((prev) => [
-                    ...prev,
-                    { ...res.service, staffIds: res.service.staffIds ?? staff.filter((member) => member.active && member.role !== 'Admin').map((member) => member.id) },
-                  ]);
-                  window.dispatchEvent(new Event('salon-config-changed'));
-                })
-                .catch(() => {});
+              return adminApi.createService(salonId, service).then((res) => {
+                setServices((prev) => [
+                  ...prev,
+                  {
+                    ...res.service,
+                    staffIds:
+                      res.service.staffIds ??
+                      staff
+                        .filter((member) => member.active && member.role !== 'Admin')
+                        .map((member) => member.id),
+                  },
+                ]);
+                window.dispatchEvent(new Event('salon-config-changed'));
+              }).catch((reason) => {
+                toastError({
+                  title: reason instanceof ApiError ? reason.message : 'افزودن خدمت انجام نشد',
+                });
+                throw reason;
+              });
             }}
             onRemove={(id) => {
               const removed = services.find((s) => s.id === id);
+              const previous = services;
               setServices((prev) => prev.filter((s) => s.id !== id));
-              adminApi.deleteService(salonId, id).catch(() => {});
-              if (removed) {
-                const idx = services.findIndex((s) => s.id === id);
-                undoToast(removed.name, () =>
-                  setServices((prev) => {
-                    const next = [...prev];
-                    next.splice(Math.min(idx, next.length), 0, removed);
-                    return next;
-                  }),
-                );
-              }
+              const idx = removed ? services.findIndex((s) => s.id === id) : -1;
+              adminApi.deleteService(salonId, id).then(() => {
+                window.dispatchEvent(new Event('salon-config-changed'));
+                if (!removed) return;
+                undoToast(removed.name, () => {
+                  void adminApi
+                    .createService(salonId, {
+                      name: removed.name,
+                      durationMinutes: removed.durationMinutes,
+                      bufferMinutes: removed.bufferMinutes ?? 0,
+                      priceRial: removed.priceRial,
+                      requiresDeposit: removed.requiresDeposit === true,
+                      depositRial: removed.depositRial ?? null,
+                    })
+                    .then(async (res) => {
+                      if (removed.staffIds !== undefined) {
+                        await adminApi.setServiceStaff(salonId, res.service.id, removed.staffIds);
+                      }
+                      setServices((prev) => {
+                        const next = [...prev];
+                        next.splice(
+                          Math.min(idx, next.length),
+                          0,
+                          { ...res.service, staffIds: removed.staffIds ?? res.service.staffIds },
+                        );
+                        return next;
+                      });
+                      window.dispatchEvent(new Event('salon-config-changed'));
+                    })
+                    .catch((reason) => {
+                      toastError({
+                        title: reason instanceof ApiError ? reason.message : 'بازگردانی خدمت انجام نشد',
+                      });
+                    });
+                });
+              }).catch((reason) => {
+                setServices(previous);
+                toastError({
+                  title: reason instanceof ApiError ? reason.message : 'حذف خدمت انجام نشد',
+                });
+              });
             }}
             requestDelete={setPendingDelete}
           />
@@ -1196,39 +1453,44 @@ function OwnerConfigPageContent({
           <ChairsSection
             chairs={chairs}
             onAdd={(label) => {
-              adminApi
-                .createChair(salonId, { name: label })
-                .then((res) => {
-                  setChairs((prev) => [...prev, toEntry(res.chair, res.chair.id)]);
-                  window.dispatchEvent(new Event('salon-config-changed'));
-                })
-                .catch(() => {});
+              return adminApi.createChair(salonId, { name: label }).then((res) => {
+                setChairs((prev) => [...prev, toEntry(res.chair, res.chair.id)]);
+                window.dispatchEvent(new Event('salon-config-changed'));
+              }).catch((reason) => {
+                toastError({
+                  title: reason instanceof ApiError ? reason.message : 'افزودن صندلی انجام نشد',
+                });
+                throw reason;
+              });
             }}
             onRemove={(id) => {
               const removed = chairs.find((c) => c.id === id);
-              let undone = false;
+              const previous = chairs;
               setChairs((prev) => prev.filter((e) => e.id !== id));
-              const removal = adminApi.deleteChair(salonId, id).then(() => {
+              const idx = removed ? chairs.findIndex((c) => c.id === id) : -1;
+              adminApi.deleteChair(salonId, id).then(() => {
                 window.dispatchEvent(new Event('salon-config-changed'));
-              }).catch(() => {
-                if (removed && !undone) setChairs((prev) => [...prev, removed]);
-              });
-              if (removed) {
-                const idx = chairs.findIndex((c) => c.id === id);
+                if (!removed) return;
                 undoToast(removed.label, () => {
-                  undone = true;
-                  void removal.then(() =>
-                    adminApi.setChairActive(salonId, id, true).then(() => {
-                      window.dispatchEvent(new Event('salon-config-changed'));
-                    }),
-                  );
-                  setChairs((prev) => {
-                    const next = [...prev];
-                    next.splice(Math.min(idx, next.length), 0, removed);
-                    return next;
+                  void adminApi.setChairActive(salonId, id, true).then(() => {
+                    setChairs((prev) => {
+                      const next = prev.filter((entry) => entry.id !== id);
+                      next.splice(Math.min(idx, next.length), 0, removed);
+                      return next;
+                    });
+                    window.dispatchEvent(new Event('salon-config-changed'));
+                  }).catch((reason) => {
+                    toastError({
+                      title: reason instanceof ApiError ? reason.message : 'بازگردانی صندلی انجام نشد',
+                    });
                   });
                 });
-              }
+              }).catch((reason) => {
+                setChairs(previous);
+                toastError({
+                  title: reason instanceof ApiError ? reason.message : 'حذف صندلی انجام نشد',
+                });
+              });
             }}
             requestDelete={setPendingDelete}
           />

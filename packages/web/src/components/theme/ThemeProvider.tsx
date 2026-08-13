@@ -4,11 +4,10 @@ import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useSt
  * Light/dark theming for the PWA (R1.8, R3.3, R3.4, R11.4).
  *
  * Resolution order on first load: stored user choice (`localStorage`) →
- * **light default**. The OS `prefers-color-scheme` is intentionally **not**
- * auto-followed: the storefront should land on the clean light Booksy_Identity
- * surface every time regardless of the visitor's OS scheme (so a dark-OS
- * visitor doesn't see a stark night-mode brand on first paint). Users opt in
- * to dark via the explicit toggle, and that choice persists.
+ * **dark default**. The OS `prefers-color-scheme` is intentionally **not**
+ * auto-followed: the storefront should land on the focused dark Ara surface
+ * every time regardless of the visitor's OS scheme. Users can switch to light
+ * via the explicit toggle, and that choice persists.
  *
  * The active theme is written as `data-theme` on `<html>` (the hook the token
  * stylesheet and Tailwind's `darkMode: ['class','[data-theme="dark"]']` config
@@ -46,7 +45,7 @@ interface ThemeContextValue {
   toggleTheme: () => void;
   /**
    * Whether the user has made an explicit, persisted choice. When false the
-   * app is on the light default (the OS `prefers-color-scheme` is intentionally
+   * app is on the dark default (the OS `prefers-color-scheme` is intentionally
    * never consulted — see the module doc).
    */
   hasExplicitChoice: boolean;
@@ -64,11 +63,11 @@ function readStoredTheme(): Theme | null {
   }
 }
 
-/** localStorage → light. The OS `prefers-color-scheme` is intentionally not
- * consulted; a dark-OS visitor still lands on the light Booksy_Identity
- * surface on first paint and only flips to dark if they explicitly toggle. */
+/** localStorage → dark. The OS `prefers-color-scheme` is intentionally not
+ * consulted; visitors land on the dark Ara surface on first paint and only
+ * switch when they explicitly toggle. */
 function resolveInitialTheme(): Theme {
-  return readStoredTheme() ?? 'light';
+  return readStoredTheme() ?? 'dark';
 }
 
 /** Apply the theme to `<html>` and keep `<meta name="theme-color">` in sync. */
@@ -96,7 +95,7 @@ export interface ThemeProviderProps {
 }
 
 /**
- * Provides theme state to the tree and applies it to the document (light
+ * Provides theme state to the tree and applies it to the document (dark
  * default; explicit user choice persists — the OS preference is not followed).
  */
 export function ThemeProvider({ children, defaultTheme }: ThemeProviderProps) {
@@ -111,8 +110,7 @@ export function ThemeProvider({ children, defaultTheme }: ThemeProviderProps) {
   }, [theme]);
 
   // We intentionally do NOT subscribe to `prefers-color-scheme` changes (see
-  // the module doc): a dark-OS visitor stays on the warm porcelain palette and
-  // only flips when they explicitly toggle.
+  // the module doc): the dark default only changes when the visitor toggles.
 
   const setTheme = useCallback((next: Theme) => {
     setThemeState(next);
