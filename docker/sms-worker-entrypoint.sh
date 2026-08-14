@@ -12,9 +12,9 @@ echo "[sms-worker] waiting for the compiled worker bundle (built by backend)..."
 # -s (not -f): the bundle must be non-empty. An interrupted backend build can
 # leave a 0-byte dist/sms-worker.js; waiting on mere existence would exec an
 # empty file. Wait until the backend's build writes real content.
-until [ -s packages/backend/dist/sms-worker.js ]; do
+until [ -s backend/dist/sms-worker.js ]; do
   sleep 2
 done
 
 echo "[sms-worker] starting on broker ${RABBITMQ_URL:-<unset>}"
-exec node --watch packages/backend/dist/sms-worker.js
+exec node --watch backend/dist/sms-worker.js

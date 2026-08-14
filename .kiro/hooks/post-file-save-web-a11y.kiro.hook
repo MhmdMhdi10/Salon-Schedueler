@@ -3,7 +3,7 @@
   "name": "Web a11y/contrast on save",
   "description": "Runs the web contrast + axe suites when a web component/style file is saved (advisory).",
   "event": "PostFileSave",
-  "matcher": "packages/web/.*\\.(ts|tsx|css)$",
+  "matcher": "frontend/.*\\.(ts|tsx|css)$",
   "action": {
     "type": "runCommand",
     "command": "npm run test --workspace @salon/web -- styles/contrast.test.ts styles/tenant-contrast.test.ts styles/distinctiveness.test.ts",

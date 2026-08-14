@@ -467,7 +467,7 @@ ON CONFLICT (id) DO UPDATE SET
   created_at = EXCLUDED.created_at;
 
 -- ─── Marketplace demo salons (booking-data UUID contract) ────────────────────
--- Every demo profile in packages/web/src/data/salons.ts points its
+-- Every demo profile in frontend/src/data/salons.ts points its
 -- `bookingSalonId` at one of these FIXED UUIDs (implementation contract):
 --   salon-maryam      → aa000001-0000-4000-8000-000000000001
 --   shahin-barbershop → aa000002-0000-4000-8000-000000000002

@@ -2,7 +2,7 @@
 -- exclusion / CHECK constraints.
 --
 -- It mirrors:
---   packages/backend/prisma/migrations/00000000000001_exclusion_constraints/migration.sql
+--   backend/prisma/migrations/00000000000001_exclusion_constraints/migration.sql
 -- but is safe to run repeatedly. These objects are not represented in the
 -- Prisma schema, so the Docker dev entrypoint applies them with psql AFTER
 -- `prisma db push` has created the base tables.

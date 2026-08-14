@@ -54,6 +54,10 @@ export const RegisterSalonSchema = z.object({
   timezone: z.string().default('Asia/Tehran'),
   /** Optional storefront brand-accent key (skippable). */
   brandAccent: z.string().max(40).optional(),
+  /** Primary service location selected during onboarding. */
+  workMode: z
+    .enum(['fixed_salon', 'rented_chair', 'home', 'mobile', 'hybrid', 'not_decided'])
+    .default('not_decided'),
   /** Optional services to pre-create (skippable). */
   services: z.array(RegisterSalonServiceSchema).max(50).default([]),
   /** Optional number of chairs to pre-create, named «صندلی N» (skippable). */

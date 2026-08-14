@@ -3,9 +3,9 @@ set -euo pipefail
 cd /app
 
 echo "[notification-cron] waiting for compiled worker bundle..."
-until [ -s packages/backend/dist/notification-cron.js ]; do
+until [ -s backend/dist/notification-cron.js ]; do
   sleep 1
 done
 
 echo "[notification-cron] starting reminder/cancellation scheduler"
-exec node packages/backend/dist/notification-cron.js
+exec node backend/dist/notification-cron.js

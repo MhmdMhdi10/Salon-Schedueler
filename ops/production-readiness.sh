@@ -7,7 +7,10 @@ failures=0
 
 env_value() {
   local key="$1" value
-  value="$(sed -n "s/^${key}=//p" .env | head -n 1 || true)"
+  value="$(printenv "$key" 2>/dev/null || true)"
+  if [[ -z "$value" && -f .env ]]; then
+    value="$(sed -n "s/^${key}=//p" .env | head -n 1 || true)"
+  fi
   value="${value#\"}"
   value="${value%\"}"
   printf '%s' "$value"
@@ -24,6 +27,18 @@ value="$(env_value PAYMENT_CALLBACK_BASE_URL)"
 
 value="$(env_value DEV_OTP_AUTO_FILL)"
 [[ "$value" == "false" ]] && pass_check "OTP auto-fill disabled" || fail_check "DEV_OTP_AUTO_FILL must be false"
+
+for key in POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB RABBITMQ_USER RABBITMQ_PASSWORD; do
+  value="$(env_value "$key")"
+  [[ -n "$value" ]] && pass_check "$key is configured" || fail_check "$key is missing"
+done
+
+for key in DATABASE_URL RABBITMQ_URL; do
+  value="$(env_value "$key")"
+  [[ "$value" == postgresql://* || "$value" == amqp://* || "$value" == amqps://* ]] \
+    && pass_check "$key uses an explicit connection URL" \
+    || fail_check "$key is missing or has an invalid scheme"
+done
 
 for key in JWT_ACCESS_SECRET JWT_REFRESH_SECRET; do
   value="$(env_value "$key")"
@@ -46,7 +61,7 @@ docker compose -f docker-compose.yml -f docker-compose.server.yml config --quiet
   && pass_check "compose configuration is valid" \
   || fail_check "compose configuration is invalid"
 
-for service in backend sms-worker notification-cron web; do
+for service in backend sms-worker notification-cron frontend; do
   if docker compose -f docker-compose.yml -f docker-compose.server.yml ps --status running --format '{{.Service}}' | grep -qx "$service"; then
     pass_check "$service is running"
   else
@@ -54,7 +69,8 @@ for service in backend sms-worker notification-cron web; do
   fi
 done
 
-if compgen -G "$repo_dir/backups/postgres/salon_dev_*.sql.gz" >/dev/null; then
+if compgen -G "$repo_dir/backups/postgres/postgres_*.sql.gz" >/dev/null \
+  || compgen -G "$repo_dir/backups/postgres/salon_dev_*.sql.gz" >/dev/null; then
   pass_check "PostgreSQL backup exists"
 else
   fail_check "PostgreSQL backup missing"

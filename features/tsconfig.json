@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "tsBuildInfoFile": "../artifacts/features.tsbuildinfo",
+    "lib": ["ES2022", "DOM"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": ["node", "@cucumber/cucumber", "@playwright/test"]
+  },
+  "include": ["./**/*.ts", "../e2e/fixtures.ts"]
+}

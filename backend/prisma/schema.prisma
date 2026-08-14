@@ -1,0 +1,709 @@
+// Salon Booking System — Prisma schema
+// PostgreSQL datasource with UUID primary keys.
+// Money fields are BigInt (Iranian Rial). Exclusion constraints and
+// btree_gist are applied via raw SQL migration in task 2.2.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ─────────────────────────────────────────────────────────────────────
+
+enum StaffRole {
+  Owner
+  Admin
+  Stylist
+}
+
+enum SalonWorkMode {
+  fixed_salon
+  rented_chair
+  home
+  mobile
+  hybrid
+  not_decided
+}
+
+enum ChairKind {
+  physical
+  mobile
+}
+
+enum AppointmentLocation {
+  salon
+  customer
+}
+
+enum ApptStatus {
+  // Awaiting salon admin approval. Reserves the slot (participates in the
+  // no-overlap exclusion constraints) but is NOT yet a confirmed booking and
+  // the customer has NOT been notified. An admin moves it to `confirmed`
+  // (approve) or `cancelled` (reject).
+  pending
+  held
+  confirmed
+  cancelled
+  completed
+  no_show
+  expired
+}
+
+enum ApptSource {
+  web
+  mobile
+  walkin
+  bot
+}
+
+// ─── Bot platform ────────────────────────────────────────────────────────────
+
+enum BotPlatform {
+  telegram
+  bale
+}
+
+// ─── Subscription enums ──────────────────────────────────────────────────────
+
+enum SubscriptionStatus {
+  trial
+  active
+  grace
+  expired
+}
+
+enum SubscriptionPlanKind {
+  trial
+  monthly
+  quarterly
+  annual
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  refunded
+  retained
+  failed
+}
+
+// ─── Salon ─────────────────────────────────────────────────────────────────────
+
+model Salon {
+  id                String        @id @default(uuid()) @db.Uuid
+  name              String
+  qrToken           String        @unique @map("qr_token")
+  // Platform-level lifecycle switch. A suspended salon remains queryable by
+  // the global admin and keeps historical data, but cannot receive new public
+  // bookings.
+  active            Boolean       @default(true)
+  timezone          String        @default("Asia/Tehran")
+  // Captured in first-step owner onboarding so the panel can personalize
+  // service suggestions without turning setup into a long questionnaire.
+  businessType      String?       @map("business_type")
+  specialties       String[]      @default([])
+  // Default booking-approval policy for the salon. false (default) => new
+  // bookings are created 'pending' and need manual admin approval; true => they
+  // are auto-confirmed on creation. A staff member can override this (below).
+  autoApprove       Boolean       @default(false) @map("auto_approve")
+  // Inclusive future booking horizon. 0 means customers may book today only.
+  bookingWindowDays Int           @default(14) @map("booking_window_days")
+  // Per-salon Brand_Accent key for storefront theming (signature-ui-system R4.1).
+  // Additive + nullable: null = use the signature default palette. The value is an
+  // opaque accent key (e.g. "rose") resolved client-side against the curated ACCENTS.
+  brandAccent       String?       @map("brand_accent")
+  // Where this business normally delivers services. `mobile` uses a per-staff
+  // mobile lane instead of a physical chair; `hybrid` exposes both choices.
+  workMode          SalonWorkMode @default(not_decided) @map("work_mode")
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  staffMembers       StaffMember[]
+  chairs             Chair[]
+  equipment          Equipment[]
+  services           Service[]
+  holidays           Holiday[]
+  appointments       Appointment[]
+  waitlistEntries    WaitlistEntry[]
+  subscription       Subscription?
+  qrScanEvents       QrScanEvent[]
+  salonNotifications SalonNotification[]
+  smsSettings        SalonSmsSettings?
+  salonClients       SalonClient[]
+  referrals          SalonReferral[]
+
+  @@map("salon")
+}
+
+// ─── Staff Member ──────────────────────────────────────────────────────────────
+
+model StaffMember {
+  id                        String    @id @default(uuid()) @db.Uuid
+  salonId                   String    @map("salon_id") @db.Uuid
+  fullName                  String    @map("full_name")
+  role                      StaffRole
+  active                    Boolean   @default(true)
+  // Per-stylist override of the salon's approval policy. null => inherit the
+  // salon default; true => this stylist's bookings auto-confirm; false => this
+  // stylist's bookings always need manual approval.
+  autoApprove               Boolean?  @map("auto_approve")
+  // When true, the salon has granted this stylist the right to manage their OWN
+  // availability — block a full day or an hour-range for themselves only (never
+  // the whole salon). Default false => only Owner/Admin can block their time.
+  manageOwnAvailability     Boolean   @default(false) @map("manage_own_availability")
+  // Owner-controlled permission for approving/rejecting this stylist's own
+  // pending appointments. Owner/Admin always retain override.
+  canApproveOwnAppointments Boolean   @default(false) @map("can_approve_own_appointments")
+  // Optional hard assignment for rented-chair workflows. Null means shared
+  // physical capacity; a set value restricts this staff member to that chair.
+  assignedChairId           String?   @unique @map("assigned_chair_id") @db.Uuid
+  // Mobile capacity lane for hybrid/mobile workflows. Kept separate from the
+  // physical assignment so one stylist can offer both in-salon and customer-
+  // location bookings at the same time.
+  mobileChairId             String?   @unique @map("mobile_chair_id") @db.Uuid
+  // Optional login phone. When a staff member's phone matches the phone used in
+  // OTP login, the issued JWT carries their role + staffMemberId so the RBAC
+  // matrix (Authorizer) applies. Nullable + unique: most staff rows may have no
+  // login yet, and a phone identifies at most one staff member.
+  phone                     String?   @unique
+
+  salon               Salon               @relation(fields: [salonId], references: [id])
+  assignedChair       Chair?              @relation("AssignedStaffChair", fields: [assignedChairId], references: [id], onDelete: SetNull)
+  mobileChair         Chair?              @relation("MobileStaffChair", fields: [mobileChairId], references: [id], onDelete: SetNull)
+  serviceStaff        ServiceStaff[]
+  daysOff             DayOff[]
+  appointments        Appointment[]
+  customerNotes       CustomerNote[]      @relation("NoteAuthor")
+  customersPreferring Customer[]          @relation("PreferredStaff")
+  botChats            BotChat[]
+  salonNotifications  SalonNotification[]
+
+  @@map("staff_member")
+}
+
+// ─── Chair ─────────────────────────────────────────────────────────────────────
+
+model Chair {
+  id      String    @id @default(uuid()) @db.Uuid
+  salonId String    @map("salon_id") @db.Uuid
+  name    String
+  active  Boolean   @default(true)
+  kind    ChairKind @default(physical)
+
+  salon              Salon              @relation(fields: [salonId], references: [id])
+  assignedStaff      StaffMember?       @relation("AssignedStaffChair")
+  mobileStaff        StaffMember?       @relation("MobileStaffChair")
+  chairEquipment     ChairEquipment[]
+  unavailablePeriods ChairUnavailable[]
+  appointments       Appointment[]
+
+  @@map("chair")
+}
+
+// ─── Equipment ─────────────────────────────────────────────────────────────────
+
+model Equipment {
+  id      String @id @default(uuid()) @db.Uuid
+  salonId String @map("salon_id") @db.Uuid
+  name    String
+
+  salon            Salon              @relation(fields: [salonId], references: [id])
+  chairEquipment   ChairEquipment[]
+  serviceEquipment ServiceEquipment[]
+
+  @@map("equipment")
+}
+
+// ─── Chair ↔ Equipment (many-to-many) ──────────────────────────────────────────
+
+model ChairEquipment {
+  chairId     String @map("chair_id") @db.Uuid
+  equipmentId String @map("equipment_id") @db.Uuid
+
+  chair     Chair     @relation(fields: [chairId], references: [id])
+  equipment Equipment @relation(fields: [equipmentId], references: [id])
+
+  @@id([chairId, equipmentId])
+  @@map("chair_equipment")
+}
+
+// ─── Service ───────────────────────────────────────────────────────────────────
+
+model Service {
+  id              String  @id @default(uuid()) @db.Uuid
+  salonId         String  @map("salon_id") @db.Uuid
+  name            String
+  durationMin     Int     @map("duration_min")
+  bufferMin       Int     @map("buffer_min")
+  priceRial       BigInt  @map("price_rial")
+  requiresDeposit Boolean @default(false) @map("requires_deposit")
+  depositRial     BigInt? @map("deposit_rial")
+
+  salon            Salon              @relation(fields: [salonId], references: [id])
+  serviceStaff     ServiceStaff[]
+  serviceEquipment ServiceEquipment[]
+  appointments     Appointment[]
+  waitlistEntries  WaitlistEntry[]
+
+  @@map("service")
+}
+
+// ─── Service ↔ Staff (many-to-many) ────────────────────────────────────────────
+
+model ServiceStaff {
+  serviceId     String @map("service_id") @db.Uuid
+  staffMemberId String @map("staff_member_id") @db.Uuid
+
+  service     Service     @relation(fields: [serviceId], references: [id])
+  staffMember StaffMember @relation(fields: [staffMemberId], references: [id])
+
+  @@id([serviceId, staffMemberId])
+  @@map("service_staff")
+}
+
+// ─── Service ↔ Equipment (many-to-many) ────────────────────────────────────────
+
+model ServiceEquipment {
+  serviceId   String @map("service_id") @db.Uuid
+  equipmentId String @map("equipment_id") @db.Uuid
+
+  service   Service   @relation(fields: [serviceId], references: [id])
+  equipment Equipment @relation(fields: [equipmentId], references: [id])
+
+  @@id([serviceId, equipmentId])
+  @@map("service_equipment")
+}
+
+// ─── Working Hours ─────────────────────────────────────────────────────────────
+
+model WorkingHours {
+  id        String   @id @default(uuid()) @db.Uuid
+  ownerKind String   @map("owner_kind") // 'staff' | 'chair'
+  ownerId   String   @map("owner_id") @db.Uuid
+  weekday   Int // 0 (Sunday) – 6 (Saturday)
+  startTime DateTime @map("start_time") @db.Time
+  endTime   DateTime @map("end_time") @db.Time
+
+  @@map("working_hours")
+}
+
+// ─── Day Off ───────────────────────────────────────────────────────────────────
+
+model DayOff {
+  id            String    @id @default(uuid()) @db.Uuid
+  staffMemberId String    @map("staff_member_id") @db.Uuid
+  onDate        DateTime  @map("on_date") @db.Date
+  // Optional time-of-day window for a PARTIAL-day block (mirrors Holiday). Both
+  // null => the stylist is off the WHOLE day; both set => only [startTime,endTime)
+  // on `onDate` is blocked for THIS stylist (e.g. a midday break). The times use
+  // the same nominal salon clock as WorkingHours and are carved out per-staff by
+  // the scheduling engine via timeToAbsolute — the rest of the salon is unaffected.
+  startTime     DateTime? @map("start_time") @db.Time
+  endTime       DateTime? @map("end_time") @db.Time
+
+  staffMember StaffMember @relation(fields: [staffMemberId], references: [id])
+
+  @@map("day_off")
+}
+
+// ─── Chair Unavailable ─────────────────────────────────────────────────────────
+
+model ChairUnavailable {
+  id          String   @id @default(uuid()) @db.Uuid
+  chairId     String   @map("chair_id") @db.Uuid
+  periodStart DateTime @map("period_start") @db.Timestamptz
+  periodEnd   DateTime @map("period_end") @db.Timestamptz
+
+  chair Chair @relation(fields: [chairId], references: [id])
+
+  @@map("chair_unavailable")
+}
+
+// ─── Holiday ───────────────────────────────────────────────────────────────────
+
+model Holiday {
+  id        String    @id @default(uuid()) @db.Uuid
+  salonId   String    @map("salon_id") @db.Uuid
+  onDate    DateTime  @map("on_date") @db.Date
+  // Optional time-of-day window for a PARTIAL-day closure. Both null => the
+  // whole day is closed (a full holiday); both set => only [startTime,endTime)
+  // on `onDate` is blocked (e.g. a midday break, or "no bookings after 18:00").
+  // The times use the same nominal salon clock as WorkingHours and are compared
+  // by the scheduling engine via timeToAbsolute, so a closure cleanly carves a
+  // hole out of the working-hours window.
+  startTime DateTime? @map("start_time") @db.Time
+  endTime   DateTime? @map("end_time") @db.Time
+
+  salon Salon @relation(fields: [salonId], references: [id])
+
+  @@map("holiday")
+}
+
+// ─── Customer ──────────────────────────────────────────────────────────────────
+
+model Customer {
+  id               String  @id @default(uuid()) @db.Uuid
+  phone            String  @unique
+  fullName         String? @map("full_name")
+  preferredStaffId String? @map("preferred_staff_id") @db.Uuid
+  noShowCount      Int     @default(0) @map("no_show_count")
+
+  preferredStaff  StaffMember?    @relation("PreferredStaff", fields: [preferredStaffId], references: [id])
+  appointments    Appointment[]
+  customerNotes   CustomerNote[]
+  waitlistEntries WaitlistEntry[]
+  deviceTokens    DeviceToken[]
+  botChats        BotChat[]
+  salonClients    SalonClient[]
+  referrals       SalonReferral[]
+
+  @@map("customer")
+}
+
+// A customer can visit more than one salon. This join preserves a salon's
+// client book even before the first appointment is entered.
+model SalonClient {
+  salonId    String   @map("salon_id") @db.Uuid
+  customerId String   @map("customer_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  salon    Salon    @relation(fields: [salonId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  @@id([salonId, customerId])
+  @@index([salonId, createdAt])
+  @@map("salon_client")
+}
+
+// ─── Customer Note ─────────────────────────────────────────────────────────────
+
+model CustomerNote {
+  id         String   @id @default(uuid()) @db.Uuid
+  customerId String   @map("customer_id") @db.Uuid
+  authorId   String?  @map("author_id") @db.Uuid
+  body       String
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  customer Customer     @relation(fields: [customerId], references: [id])
+  author   StaffMember? @relation("NoteAuthor", fields: [authorId], references: [id])
+
+  @@map("customer_note")
+}
+
+// ─── Appointment ───────────────────────────────────────────────────────────────
+
+model Appointment {
+  id              String              @id @default(uuid()) @db.Uuid
+  salonId         String              @map("salon_id") @db.Uuid
+  customerId      String              @map("customer_id") @db.Uuid
+  staffMemberId   String              @map("staff_member_id") @db.Uuid
+  chairId         String              @map("chair_id") @db.Uuid
+  serviceId       String              @map("service_id") @db.Uuid
+  startAt         DateTime            @map("start_at") @db.Timestamptz
+  endAt           DateTime            @map("end_at") @db.Timestamptz
+  status          ApptStatus
+  source          ApptSource
+  locationType    AppointmentLocation @default(salon) @map("location_type")
+  locationAddress String?             @map("location_address")
+  holdExpiresAt   DateTime?           @map("hold_expires_at") @db.Timestamptz
+  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz
+
+  salon            Salon             @relation(fields: [salonId], references: [id])
+  customer         Customer          @relation(fields: [customerId], references: [id])
+  staffMember      StaffMember       @relation(fields: [staffMemberId], references: [id])
+  chair            Chair             @relation(fields: [chairId], references: [id])
+  service          Service           @relation(fields: [serviceId], references: [id])
+  payments         Payment[]
+  notificationLogs NotificationLog[]
+
+  @@map("appointment")
+}
+
+// ─── Payment ───────────────────────────────────────────────────────────────────
+
+model Payment {
+  id            String        @id @default(uuid()) @db.Uuid
+  appointmentId String        @map("appointment_id") @db.Uuid
+  amountRial    BigInt        @map("amount_rial")
+  status        PaymentStatus @default(pending)
+  gateway       String // 'zarinpal' | 'idpay'
+  authority     String?
+  refId         String?       @map("ref_id")
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+
+  @@map("payment")
+}
+
+// ─── Waitlist Entry ────────────────────────────────────────────────────────────
+
+model WaitlistEntry {
+  id          String   @id @default(uuid()) @db.Uuid
+  salonId     String   @map("salon_id") @db.Uuid
+  customerId  String   @map("customer_id") @db.Uuid
+  serviceId   String   @map("service_id") @db.Uuid
+  windowStart DateTime @map("window_start") @db.Timestamptz
+  windowEnd   DateTime @map("window_end") @db.Timestamptz
+  status      String   @default("waiting") // waiting | notified | fulfilled | cancelled
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  salon    Salon    @relation(fields: [salonId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+  service  Service  @relation(fields: [serviceId], references: [id])
+
+  @@map("waitlist_entry")
+}
+
+// ─── OTP ───────────────────────────────────────────────────────────────────────
+
+model Otp {
+  id          String    @id @default(uuid()) @db.Uuid
+  phone       String
+  codeHash    String    @map("code_hash")
+  issuedAt    DateTime  @default(now()) @map("issued_at") @db.Timestamptz
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz
+  consumedAt  DateTime? @map("consumed_at") @db.Timestamptz
+  invalidated Boolean   @default(false)
+
+  @@map("otp")
+}
+
+// ─── Device Token ──────────────────────────────────────────────────────────────
+
+model DeviceToken {
+  id          String  @id @default(uuid()) @db.Uuid
+  customerId  String  @map("customer_id") @db.Uuid
+  token       String
+  platform    String
+  pushEnabled Boolean @default(true) @map("push_enabled")
+
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  @@map("device_token")
+}
+
+// ─── Notification Log ──────────────────────────────────────────────────────────
+
+model NotificationLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  appointmentId String?  @map("appointment_id") @db.Uuid
+  type          String   @default("generic") // confirmation | reminder | cancellation | booking_notice | generic
+  channel       String // 'sms' | 'push'
+  status        String // 'sent' | 'failed'
+  error         String?
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+
+  @@map("notification_log")
+}
+
+// Per-salon SMS audience preferences. Stylist notifications are enabled by
+// default; owner notifications are opt-in so busy salon owners do not receive
+// duplicate traffic for every appointment.
+model SalonSmsSettings {
+  id                  String   @id @default(uuid()) @db.Uuid
+  salonId             String   @unique @map("salon_id") @db.Uuid
+  ownerBooking        Boolean  @default(false) @map("owner_booking")
+  stylistBooking      Boolean  @default(true) @map("stylist_booking")
+  ownerReminder       Boolean  @default(false) @map("owner_reminder")
+  stylistReminder     Boolean  @default(true) @map("stylist_reminder")
+  ownerCancellation   Boolean  @default(false) @map("owner_cancellation")
+  stylistCancellation Boolean  @default(true) @map("stylist_cancellation")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  salon Salon @relation(fields: [salonId], references: [id])
+
+  @@map("salon_sms_settings")
+}
+
+// ─── Bot Chat ──────────────────────────────────────────────────────────────────
+// شناسهٔ گفت‌وگوی ربات برای یک مشتری یا یک عضو staff (صاحب سالن).
+// یکی از customerId یا staffMemberId پر است.
+
+// ─── Salon Inbox Notification ───────────────────────────────────────────────────
+// رویدادهایی که باید صاحب سالن / staff / ادمین در پنل ببینند (نوبت در انتظار تأیید،
+// تأیید/رد نوبت، سفارش کارت، مشتری جدید ...). realtime تحویل با WebSocket می‌شود
+// و سطر در DB برای Inbox باقی می‌ماند تا لمس خوانده‌شدن track شود.
+
+model SalonNotification {
+  id            String    @id @default(uuid()) @db.Uuid
+  salonId       String    @map("salon_id") @db.Uuid
+  /// Target role scope: 'owner' | 'admin' | 'stylist' | 'all-staff'
+  audience      String    @default("owner") @map("audience")
+  /// For stylist-scoped notifications; null otherwise.
+  staffMemberId String?   @map("staff_member_id") @db.Uuid
+  /// Type discriminator used by the UI to resolve an icon + Persian template.
+  /// E.g. 'booking.pending' | 'booking.approved' | 'booking.rejected' |
+  /// 'order.created' | 'subscription.expiring' | 'new.customer' | 'new.review'.
+  type          String
+  /// Human-readable Persian title rendered as the inbox row heading.
+  title         String
+  /// Human-readable Persian body (may be reused verbatim in the toast).
+  body          String
+  /// Optional structured payload (e.g. appointmentId, orderId, customerName).
+  payload       Json?
+  readAt        DateTime? @map("read_at") @db.Timestamptz
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  salon       Salon        @relation(fields: [salonId], references: [id])
+  staffMember StaffMember? @relation(fields: [staffMemberId], references: [id])
+
+  @@index([salonId, createdAt])
+  @@index([salonId, readAt])
+  @@index([salonId, audience, readAt])
+  @@index([salonId, staffMemberId, readAt])
+  @@map("salon_notification")
+}
+
+model BotChat {
+  id            String      @id @default(uuid()) @db.Uuid
+  platform      BotPlatform
+  chatId        String      @map("chat_id")
+  customerId    String?     @map("customer_id") @db.Uuid
+  staffMemberId String?     @map("staff_member_id") @db.Uuid
+  linkedAt      DateTime    @default(now()) @map("linked_at") @db.Timestamptz
+
+  customer    Customer?    @relation(fields: [customerId], references: [id])
+  staffMember StaffMember? @relation(fields: [staffMemberId], references: [id])
+
+  @@unique([platform, chatId])
+  @@map("bot_chat")
+}
+
+// ─── Bot Session ───────────────────────────────────────────────────────────────
+// وضعیت گفت‌وگوی رزرو داخل ربات (ماشین حالت، سروری نگه‌داری می‌شود).
+
+model BotSession {
+  id        String      @id @default(uuid()) @db.Uuid
+  platform  BotPlatform
+  chatId    String      @map("chat_id")
+  step      String // service|date|slot|confirm|otp|done
+  draftJson Json        @map("draft_json") // {salonId, serviceId, date, startAt}
+  updatedAt DateTime    @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([platform, chatId])
+  @@map("bot_session")
+}
+
+// ─── Subscription ────────────────────────────────────────────────────────────────
+
+model Subscription {
+  id         String               @id @default(uuid()) @db.Uuid
+  salonId    String               @unique @map("salon_id") @db.Uuid
+  status     SubscriptionStatus   @default(trial)
+  planKind   SubscriptionPlanKind @default(trial) @map("plan_kind")
+  startedAt  DateTime             @default(now()) @map("started_at") @db.Timestamptz
+  expiresAt  DateTime             @map("expires_at") @db.Timestamptz
+  graceUntil DateTime?            @map("grace_until") @db.Timestamptz
+  createdAt  DateTime             @default(now()) @map("created_at") @db.Timestamptz
+
+  salon    Salon                 @relation(fields: [salonId], references: [id])
+  payments SubscriptionPayment[]
+
+  @@map("subscription")
+}
+
+// ─── Subscription Payment ──────────────────────────────────────────────────────
+// پرداخت اشتراک — جدا از Payment رزرو، اما از همان PaymentService استفاده می‌کند.
+
+model SubscriptionPayment {
+  id             String               @id @default(uuid()) @db.Uuid
+  subscriptionId String               @map("subscription_id") @db.Uuid
+  planKind       SubscriptionPlanKind @map("plan_kind")
+  amountRial     BigInt               @map("amount_rial")
+  status         PaymentStatus        @default(pending)
+  gateway        String
+  authority      String?
+  refId          String?              @map("ref_id")
+  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+
+  @@map("subscription_payment")
+}
+
+// ─── QR Scan Event ─────────────────────────────────────────────────────────────
+
+model QrScanEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  salonId   String   @map("salon_id") @db.Uuid
+  source    String // utm_source, e.g. "qr"
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  salon Salon @relation(fields: [salonId], references: [id])
+
+  @@map("qr_scan_event")
+}
+
+model SalonReferral {
+  id                 String    @id @default(uuid()) @db.Uuid
+  referrerId         String    @map("referrer_id") @db.Uuid
+  salonId            String?   @map("salon_id") @db.Uuid
+  salonName          String    @map("salon_name")
+  salonPhone         String?   @map("salon_phone")
+  salonInstagram     String?   @map("salon_instagram")
+  city               String?
+  normalizedKey      String    @unique @map("normalized_key")
+  claimToken         String    @unique @map("claim_token")
+  status             String    @default("submitted")
+  qualifyingBookings Int       @default(0) @map("qualifying_bookings")
+  requiredBookings   Int       @default(3) @map("required_bookings")
+  rewardAmountRial   BigInt    @map("reward_amount_rial")
+  rewardStatus       String    @default("locked") @map("reward_status")
+  rewardExpiresAt    DateTime? @map("reward_expires_at") @db.Timestamptz
+  claimedAt          DateTime? @map("claimed_at") @db.Timestamptz
+  qualifiedAt        DateTime? @map("qualified_at") @db.Timestamptz
+  redeemedAt         DateTime? @map("redeemed_at") @db.Timestamptz
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  referrer Customer @relation(fields: [referrerId], references: [id])
+  salon    Salon?   @relation(fields: [salonId], references: [id], onDelete: SetNull)
+
+  @@index([referrerId, createdAt])
+  @@index([salonId, status])
+  @@map("salon_referral")
+}
+
+// ─── Platform Admin ─────────────────────────────────────────────────────────
+// Global operators are intentionally separate from salon StaffMember rows.
+// A platform admin has no salon tenant and receives a distinct JWT role.
+
+model PlatformAdmin {
+  id          String    @id @default(uuid()) @db.Uuid
+  phone       String    @unique
+  fullName    String    @map("full_name")
+  role        String    @default("super_admin")
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  lastLoginAt DateTime? @map("last_login_at") @db.Timestamptz
+
+  auditLogs PlatformAuditLog[]
+
+  @@map("platform_admin")
+}
+
+// Immutable operator trail for global state changes. Metadata is structured so
+// the panel can show the before/after context without leaking request bodies.
+model PlatformAuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  adminId    String   @map("admin_id") @db.Uuid
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id") @db.Uuid
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  admin PlatformAdmin @relation(fields: [adminId], references: [id])
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
+  @@index([adminId, createdAt])
+  @@map("platform_audit_log")
+}

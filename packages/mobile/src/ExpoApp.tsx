@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import './i18n';
 import { ThemeProvider, useTheme } from './theme';
 import type { RnTheme } from './theme';
+import { authApi, setAccessToken } from './api/client';
+import { clearRefreshToken, loadRefreshToken, saveRefreshToken } from './auth/secure-storage';
 import {
   AuthScreen,
   QrScanScreen,
@@ -34,6 +36,44 @@ function AppShell() {
 
   const [route, setRoute] = useState<Route>('auth');
   const [salonId, setSalonId] = useState<string | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const restoreSession = async () => {
+      const refreshToken = await loadRefreshToken();
+      if (!refreshToken) {
+        if (mounted) setAuthReady(true);
+        return;
+      }
+
+      try {
+        const tokens = await authApi.refresh(refreshToken);
+        setAccessToken(tokens.accessToken);
+        await saveRefreshToken(tokens.refreshToken);
+        if (mounted) setRoute('qr');
+      } catch {
+        setAccessToken(null);
+        await clearRefreshToken();
+      } finally {
+        if (mounted) setAuthReady(true);
+      }
+    };
+
+    void restoreSession();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  if (!authReady) {
+    return (
+      <View style={styles.root}>
+        <ActivityIndicator color={theme.colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>
@@ -64,7 +104,12 @@ function AppShell() {
 
       <ScrollView contentContainerStyle={styles.body}>
         {route === 'auth' ? (
-          <AuthScreen onAuthenticated={() => setRoute('qr')} />
+          <AuthScreen
+            onAuthenticated={() => setRoute('qr')}
+            persistTokens={async ({ refreshToken }) => {
+              await saveRefreshToken(refreshToken);
+            }}
+          />
         ) : null}
 
         {route === 'qr' ? (

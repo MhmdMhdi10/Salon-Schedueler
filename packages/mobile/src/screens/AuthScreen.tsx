@@ -62,7 +62,7 @@ function formatCountdown(totalSeconds: number): string {
 export interface AuthScreenProps {
   /** Invoked after tokens are stored, so the host can navigate onward. */
   onAuthenticated?: () => void;
-  /** Optional token persistence (e.g. secure storage / AsyncStorage). */
+  /** Optional token persistence (the Expo runtime uses SecureStore). */
   persistTokens?: PersistTokens;
 }
 
@@ -231,7 +231,6 @@ export function AuthScreen({ onAuthenticated, persistTokens }: AuthScreenProps) 
             <View style={styles.otpRow}>
               {code.map((digit, index) => (
                 <TextInput
-                  // eslint-disable-next-line react/no-array-index-key
                   key={index}
                   testID={`otp-input-${index}`}
                   ref={(el: TextInputInstance | null) => {

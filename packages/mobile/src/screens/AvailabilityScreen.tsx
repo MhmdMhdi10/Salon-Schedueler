@@ -282,7 +282,6 @@ export function AvailabilityScreen({
           t('booking.stepTime'),
           t('booking.stepConfirm'),
         ].map((label, i) => (
-          // eslint-disable-next-line react/no-array-index-key
           <View key={i} style={styles.step}>
             <Text style={styles.stepNum}>{toPersianDigits(i + 1)}</Text>
             <Text style={styles.stepLabel}>{label}</Text>
@@ -395,7 +394,6 @@ export function AvailabilityScreen({
 
           <View style={styles.weekRow}>
             {WEEKDAY_LABELS.map((label, i) => (
-              // eslint-disable-next-line react/no-array-index-key
               <Text key={i} style={styles.weekday}>
                 {label}
               </Text>
@@ -405,7 +403,6 @@ export function AvailabilityScreen({
           <View style={styles.dayGrid}>
             {monthDays.map((cell, i) =>
               cell === null ? (
-                // eslint-disable-next-line react/no-array-index-key
                 <View key={`blank-${i}`} style={styles.dayCell} />
               ) : (
                 <Pressable

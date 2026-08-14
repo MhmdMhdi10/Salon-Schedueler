@@ -1,0 +1,9 @@
+{
+  "include": ["src/**/controllers/**/*.controller.ts"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.spec.ts", "features/**", "scripts/**"],
+  "extension": [".ts"],
+  "reporter": ["text", "text-summary", "lcov"],
+  "all": true,
+  "src": ["src"],
+  "clean": true
+}

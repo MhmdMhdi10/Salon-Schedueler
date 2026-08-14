@@ -26,6 +26,7 @@ function readApiBaseUrl(): string {
   // default. Wrapped in try/catch so non-Expo runtimes (tests/Node) are safe.
   try {
     // Lazy require so Jest/Node (where `expo-constants` is absent) never break.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const Constants = require('expo-constants').default;
     const extra =
       Constants?.expoConfig?.extra ?? Constants?.manifest?.extra ?? undefined;

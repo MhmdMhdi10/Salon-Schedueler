@@ -24,7 +24,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/postgres/initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U salon -d salon_dev" ]
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
       interval: 5s
       timeout: 5s
       retries: 12
@@ -96,6 +96,17 @@ services:
       # Development only: return the generated OTP so the web form can fill it
       # automatically. Production keeps this disabled and uses real SMS.
       DEV_OTP_AUTO_FILL: "true"
+      # Cucumber creates one isolated salon per scenario. This only affects the
+      # development container; production keeps the registration limit at 15.
+      E2E_REGISTRATION_IP_LIMIT: "500"
+      E2E_OTP_REQUEST_IP_LIMIT: "1000"
+      E2E_OTP_REQUEST_PHONE_LIMIT: "500"
+      E2E_OTP_VERIFY_IP_LIMIT: "1000"
+      E2E_OTP_VERIFY_PHONE_LIMIT: "500"
+      E2E_BOOKING_IP_LIMIT: "200"
+      E2E_BOOKING_CUSTOMER_LIMIT: "100"
+      E2E_APPOINTMENT_MUTATION_LIMIT: "200"
+      E2E_AUTH_API_LIMIT: "1000"
       # Dev convenience: widen the OTP validity window to 10 minutes so manual
       # testing (read code from logs → type it) isn't rushed by the 2-minute
       # production default. Do NOT carry this into production.
@@ -112,7 +123,7 @@ services:
     volumes:
       - ./:/app
       - backend-root-node-modules:/app/node_modules
-      - backend-backend-node-modules:/app/packages/backend/node_modules
+      - backend-backend-node-modules:/app/backend/node_modules
       - backend-shared-node-modules:/app/packages/shared/node_modules
     healthcheck:
       test:
@@ -155,7 +166,7 @@ services:
     volumes:
       - ./:/app
       - backend-root-node-modules:/app/node_modules
-      - backend-backend-node-modules:/app/packages/backend/node_modules
+      - backend-backend-node-modules:/app/backend/node_modules
       - backend-shared-node-modules:/app/packages/shared/node_modules
     restart: unless-stopped
 
@@ -183,11 +194,11 @@ services:
     volumes:
       - ./:/app
       - backend-root-node-modules:/app/node_modules
-      - backend-backend-node-modules:/app/packages/backend/node_modules
+      - backend-backend-node-modules:/app/backend/node_modules
       - backend-shared-node-modules:/app/packages/shared/node_modules
     restart: unless-stopped
 
-  web:
+  frontend:
     image: salon-booking-web-dev
     build:
       context: .
@@ -204,7 +215,7 @@ services:
       - backend
     environment:
       # The browser calls same-origin /api; the Vite dev server proxies it to the
-      # backend over the compose network (see packages/web/vite.config.ts).
+      # backend over the compose network (see frontend/vite.config.ts).
       VITE_PROXY_TARGET: "http://backend:3000"
       # Live edits: the source is bind-mounted, but native fs events aren't
       # reliably delivered into the container, so Vite would never see host edits
@@ -217,9 +228,9 @@ services:
       - "5173:5173"
     volumes:
       - ./:/app
-      - web-root-node-modules:/app/node_modules
-      - web-web-node-modules:/app/packages/web/node_modules
-      - web-shared-node-modules:/app/packages/shared/node_modules
+      - frontend-root-node-modules:/app/node_modules
+      - frontend-frontend-node-modules:/app/frontend/node_modules
+      - frontend-shared-node-modules:/app/packages/shared/node_modules
     restart: unless-stopped
 
   # Expo / React Native dev server (Metro). Start it with the `mobile` profile:
@@ -278,9 +289,9 @@ volumes:
   backend-root-node-modules:
   backend-backend-node-modules:
   backend-shared-node-modules:
-  web-root-node-modules:
-  web-web-node-modules:
-  web-shared-node-modules:
+  frontend-root-node-modules:
+  frontend-frontend-node-modules:
+  frontend-shared-node-modules:
   mobile-root-node-modules:
   mobile-mobile-node-modules:
   mobile-shared-node-modules:

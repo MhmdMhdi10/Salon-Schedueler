@@ -26,6 +26,7 @@ export function getAccessToken(): string | null {
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    'X-Auth-Client': 'mobile',
     ...options.headers,
   };
 
@@ -63,6 +64,11 @@ export const authApi = {
   requestOtp: (phone: string) => request<void>('/auth/otp/request', { method: 'POST', body: { phone } }),
   verifyOtp: (phone: string, code: string) =>
     request<{ accessToken: string; refreshToken: string }>('/auth/otp/verify', { method: 'POST', body: { phone, code } }),
+  refresh: (refreshToken: string) =>
+    request<{ accessToken: string; refreshToken: string }>('/auth/refresh', {
+      method: 'POST',
+      body: { refreshToken },
+    }),
 };
 
 // Salon endpoints

@@ -14,17 +14,17 @@
 #      regression (seo §12; R10.1) and (b) a Core Web Vitals budget breach —
 #      LCP < 2.5s, CLS < 0.1, and total-blocking-time as the lab proxy for the
 #      field-only INP < 200ms target (seo §9; R9.4). Config:
-#      packages/web/lighthouserc.json.
+#      frontend/lighthouserc.json.
 #
 # FIELD INP: INP cannot be measured in the lab, so the real-user INP < 200ms
 # budget is observed in production via the consent-aware, PII-free `web-vitals`
-# field reporting wired in packages/web/src/utils/webVitals.ts (seo §12).
+# field reporting wired in frontend/src/utils/webVitals.ts (seo §12).
 #
 # HONESTY NOTE (R10.7, ui-ux §10): these automated checks are a FLOOR, not a
 # certificate. Full WCAG 2.2 AA conformance still requires manual testing with
 # assistive technologies (VoiceOver / TalkBack / NVDA — all in RTL/Farsi),
 # keyboard-only runs, and expert accessibility review. See
-# packages/web/docs/accessibility.md.
+# frontend/docs/accessibility.md.
 
 name: Web Accessibility and Core Web Vitals
 
@@ -32,11 +32,11 @@ on:
   push:
     branches: [main]
     paths:
-      - 'packages/web/**'
+      - 'frontend/**'
       - '.github/workflows/web-a11y.yml'
   pull_request:
     paths:
-      - 'packages/web/**'
+      - 'frontend/**'
       - '.github/workflows/web-a11y.yml'
 
 jobs:
@@ -68,6 +68,6 @@ jobs:
 
       # Gate 2 — Lighthouse a11y + Core Web Vitals against the prerendered
       # URLs on a mid-range mobile profile. Config lives in
-      # packages/web/lighthouserc.json (staticDistDir ./dist).
+      # frontend/lighthouserc.json (staticDistDir ./dist).
       - name: Run Lighthouse accessibility + CWV gate
-        run: npx --yes @lhci/cli@0.13.x autorun --config=packages/web/lighthouserc.json
+        run: npx --yes @lhci/cli@0.13.x autorun --config=frontend/lighthouserc.json

@@ -1,8 +1,15 @@
 services:
   # Never expose stateful infrastructure or the development SMS inbox publicly.
   postgres:
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER:?POSTGRES_USER is required in production}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required in production}"
+      POSTGRES_DB: "${POSTGRES_DB:?POSTGRES_DB is required in production}"
     ports: !override []
   rabbitmq:
+    environment:
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER:?RABBITMQ_USER is required in production}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required in production}"
     ports: !override []
   sms-inbox:
     profiles: ["dev"]
@@ -13,7 +20,7 @@ services:
     build:
       context: .
       dockerfile: docker/backend-production.Dockerfile
-    command: ["node", "packages/backend/dist/main.js"]
+    command: ["node", "backend/dist/main.js"]
     depends_on: !override
       postgres:
         condition: service_healthy
@@ -22,21 +29,21 @@ services:
     environment:
       NODE_ENV: production
       PORT: "3000"
-      DATABASE_URL: "postgresql://salon:salon@postgres:5432/salon_dev?schema=public"
-      JWT_ACCESS_SECRET: "${JWT_ACCESS_SECRET}"
-      JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET}"
+      DATABASE_URL: "${DATABASE_URL:?DATABASE_URL is required in production}"
+      JWT_ACCESS_SECRET: "${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is required in production}"
+      JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required in production}"
       PAYMENT_GATEWAY: "${PAYMENT_GATEWAY:-zarinpal}"
       ZARINPAL_MERCHANT_ID: "${ZARINPAL_MERCHANT_ID-}"
       IDPAY_API_KEY: "${IDPAY_API_KEY-}"
-      PAYMENT_CALLBACK_BASE_URL: "${PAYMENT_CALLBACK_BASE_URL}"
-      PUBLIC_BASE_URL: "${PUBLIC_BASE_URL}"
-      CORS_ALLOW_ORIGIN: "${PUBLIC_BASE_URL}"
+      PAYMENT_CALLBACK_BASE_URL: "${PAYMENT_CALLBACK_BASE_URL:?PAYMENT_CALLBACK_BASE_URL is required in production}"
+      PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is required in production}"
+      CORS_ALLOW_ORIGIN: "${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is required in production}"
       OTP_WINDOW_SECONDS: "120"
-      DEV_OTP_AUTO_FILL: "${DEV_OTP_AUTO_FILL}"
+      DEV_OTP_AUTO_FILL: "false"
       DEV_SMS_INBOX_URL: ""
       NOTIFICATION_CRON_EXTERNAL: "true"
       TRUST_PROXY: "true"
-      RABBITMQ_URL: "amqp://salon:salon@rabbitmq:5672"
+      RABBITMQ_URL: "${RABBITMQ_URL:?RABBITMQ_URL is required in production}"
       SMS_QUEUE_MAX_ATTEMPTS: "${SMS_QUEUE_MAX_ATTEMPTS:-5}"
       SMS_QUEUE_RETRY_DELAY_MS: "${SMS_QUEUE_RETRY_DELAY_MS:-30000}"
       KAVENEGAR_API_KEY: "${KAVENEGAR_API_KEY-}"
@@ -66,7 +73,7 @@ services:
     build:
       context: .
       dockerfile: docker/backend-production.Dockerfile
-    command: ["node", "packages/backend/dist/sms-worker.js"]
+    command: ["node", "backend/dist/sms-worker.js"]
     depends_on: !override
       rabbitmq:
         condition: service_healthy
@@ -74,11 +81,11 @@ services:
         condition: service_started
     environment:
       NODE_ENV: production
-      DATABASE_URL: "postgresql://salon:salon@postgres:5432/salon_dev?schema=public"
-      JWT_ACCESS_SECRET: "${JWT_ACCESS_SECRET}"
-      JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET}"
-      PAYMENT_CALLBACK_BASE_URL: "${PAYMENT_CALLBACK_BASE_URL}"
-      RABBITMQ_URL: "amqp://salon:salon@rabbitmq:5672"
+      DATABASE_URL: "${DATABASE_URL:?DATABASE_URL is required in production}"
+      JWT_ACCESS_SECRET: "${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is required in production}"
+      JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required in production}"
+      PAYMENT_CALLBACK_BASE_URL: "${PAYMENT_CALLBACK_BASE_URL:?PAYMENT_CALLBACK_BASE_URL is required in production}"
+      RABBITMQ_URL: "${RABBITMQ_URL:?RABBITMQ_URL is required in production}"
       KAVENEGAR_API_KEY: "${KAVENEGAR_API_KEY-}"
       KAVENEGAR_BASE_URL: "${KAVENEGAR_BASE_URL-}"
       KAVENEGAR_SENDER: "${KAVENEGAR_SENDER-}"
@@ -94,21 +101,21 @@ services:
     build:
       context: .
       dockerfile: docker/backend-production.Dockerfile
-    command: ["node", "packages/backend/dist/notification-cron.js"]
+    command: ["node", "backend/dist/notification-cron.js"]
     depends_on: !override
       backend:
         condition: service_started
     environment:
       NODE_ENV: production
-      DATABASE_URL: "postgresql://salon:salon@postgres:5432/salon_dev?schema=public"
-      JWT_ACCESS_SECRET: "${JWT_ACCESS_SECRET}"
-      JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET}"
+      DATABASE_URL: "${DATABASE_URL:?DATABASE_URL is required in production}"
+      JWT_ACCESS_SECRET: "${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is required in production}"
+      JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required in production}"
       PAYMENT_GATEWAY: "${PAYMENT_GATEWAY:-zarinpal}"
       ZARINPAL_MERCHANT_ID: "${ZARINPAL_MERCHANT_ID-}"
       IDPAY_API_KEY: "${IDPAY_API_KEY-}"
-      PAYMENT_CALLBACK_BASE_URL: "${PAYMENT_CALLBACK_BASE_URL}"
-      PUBLIC_BASE_URL: "${PUBLIC_BASE_URL}"
-      RABBITMQ_URL: "amqp://salon:salon@rabbitmq:5672"
+      PAYMENT_CALLBACK_BASE_URL: "${PAYMENT_CALLBACK_BASE_URL:?PAYMENT_CALLBACK_BASE_URL is required in production}"
+      PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is required in production}"
+      RABBITMQ_URL: "${RABBITMQ_URL:?RABBITMQ_URL is required in production}"
       KAVENEGAR_API_KEY: "${KAVENEGAR_API_KEY-}"
       KAVENEGAR_BASE_URL: "${KAVENEGAR_BASE_URL-}"
       KAVENEGAR_SENDER: "${KAVENEGAR_SENDER-}"
@@ -121,7 +128,7 @@ services:
     volumes: !override []
     tty: false
 
-  web:
+  frontend:
     image: salon-booking-web-prod
     build:
       context: .

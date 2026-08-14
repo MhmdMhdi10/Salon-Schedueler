@@ -22,11 +22,11 @@ echo "[backend] Postgres is ready."
 
 # 2. Generate the Prisma client (no DB connection required).
 #    The prisma CLI and @prisma/client are backend-workspace dependencies and are
-#    NOT hoisted to the root node_modules, so run prisma FROM packages/backend
+#    NOT hoisted to the root node_modules, so run prisma FROM backend
 #    (npx searches that dir's node_modules/.bin and up). Running it from /app would
 #    fail with "prisma: not found". The default prisma/schema.prisma resolves there.
 echo "[backend] generating Prisma client..."
-( cd packages/backend && npx prisma generate )
+( cd backend && npx prisma generate )
 
 # 3. Create the schema on first run only (when the 'salon' table is absent).
 #    There is no table-creating Prisma migration, so we use `db push`. psql uses
@@ -34,7 +34,7 @@ echo "[backend] generating Prisma client..."
 SALON_TABLE="$(psql -tAc "SELECT to_regclass('public.salon')" || true)"
 if [ -z "${SALON_TABLE//[[:space:]]/}" ]; then
   echo "[backend] no schema detected — pushing Prisma schema (creates tables)..."
-  ( cd packages/backend && npx prisma db push --skip-generate )
+  ( cd backend && npx prisma db push --skip-generate )
 else
   echo "[backend] schema already present — skipping db push."
 fi
@@ -43,11 +43,12 @@ fi
 #    Development bootstraps databases with db push, so these idempotent
 #    statements keep an already-created database in sync too.
 echo "[backend] applying additive schema migrations (idempotent)..."
-psql -v ON_ERROR_STOP=1 -f packages/backend/prisma/migrations/00000000000011_notification_event_type/migration.sql
-psql -v ON_ERROR_STOP=1 -f packages/backend/prisma/migrations/00000000000012_platform_admin/migration.sql
-psql -v ON_ERROR_STOP=1 -f packages/backend/prisma/migrations/00000000000013_salon_sms_settings/migration.sql
-psql -v ON_ERROR_STOP=1 -f packages/backend/prisma/migrations/00000000000014_business_profile_and_clients/migration.sql
-psql -v ON_ERROR_STOP=1 -f packages/backend/prisma/migrations/00000000000015_referral_mvp/migration.sql
+psql -v ON_ERROR_STOP=1 -f backend/prisma/migrations/00000000000011_notification_event_type/migration.sql
+psql -v ON_ERROR_STOP=1 -f backend/prisma/migrations/00000000000012_platform_admin/migration.sql
+psql -v ON_ERROR_STOP=1 -f backend/prisma/migrations/00000000000013_salon_sms_settings/migration.sql
+psql -v ON_ERROR_STOP=1 -f backend/prisma/migrations/00000000000014_business_profile_and_clients/migration.sql
+psql -v ON_ERROR_STOP=1 -f backend/prisma/migrations/00000000000015_referral_mvp/migration.sql
+psql -v ON_ERROR_STOP=1 -f backend/prisma/migrations/00000000000016_solo_work_modes/migration.sql
 
 # 5. Apply the occupancy range + exclusion/CHECK constraints (idempotent).
 echo "[backend] applying exclusion constraints (idempotent)..."
@@ -66,8 +67,8 @@ psql -v ON_ERROR_STOP=1 -f docker/db/dev-seed.sql
 #    class resolves to undefined → "X is not a constructor"). Forcing a clean
 #    emit on start makes the dev container self-heal from an interrupted build.
 echo "[backend] building @salon/shared + @salon/backend..."
-npx tsc -b packages/shared packages/backend --force
+npx tsc -b packages/shared backend --force
 
 echo "[backend] starting API (watch reload) on http://localhost:${PORT:-3000}"
-npx tsc -b packages/shared packages/backend --watch --preserveWatchOutput &
-exec node --watch packages/backend/dist/main.js
+npx tsc -b packages/shared backend --watch --preserveWatchOutput &
+exec node --watch backend/dist/main.js

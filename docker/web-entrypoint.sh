@@ -16,7 +16,7 @@ cd /app
 # We fingerprint the lockfile (falling back to the manifests) and reinstall
 # whenever it differs from the fingerprint recorded after the last install.
 deps_fingerprint() {
-  cat package-lock.json packages/web/package.json packages/shared/package.json 2>/dev/null \
+  cat package-lock.json frontend/package.json packages/shared/package.json 2>/dev/null \
     | sha256sum | cut -d' ' -f1
 }
 STAMP_FILE=node_modules/.salon-web-deps-stamp
@@ -34,4 +34,7 @@ npx tsc -b packages/shared
 npx tsc -b packages/shared --watch --preserveWatchOutput &
 
 echo "[web] starting Vite dev server on http://localhost:5173"
-exec npm run dev --workspace @salon/web -- --host 0.0.0.0 --port 5173
+# Named Docker volumes can retain Vite's optimized dependency metadata across
+# dependency changes. Force one fresh optimization on every dev-container boot
+# so browsers never receive a stale `Outdated Optimize Dep` response.
+exec npm run dev --workspace @salon/web -- --host 0.0.0.0 --port 5173 --force

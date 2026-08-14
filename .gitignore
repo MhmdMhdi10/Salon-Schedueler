@@ -6,8 +6,8 @@ coverage/
 .env.*
 !.env.example
 
-# Generated at build time by packages/web/scripts/generate-sitemap.mjs
-packages/web/public/sitemap.xml
+# Generated at build time by frontend/scripts/generate-sitemap.mjs
+frontend/public/sitemap.xml
 
 # Test artifacts / temp output
 .tmp-test/

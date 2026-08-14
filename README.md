@@ -6,8 +6,8 @@ TypeScript monorepo managed with npm workspaces:
 | Workspace | Package | Purpose |
 | --- | --- | --- |
 | `packages/shared` | `@salon/shared` | Framework-agnostic pure utilities (QR codec, Jalali date conversion, slot/interval math) shared across all packages. |
-| `packages/backend` | `@salon/backend` | HTTP API and domain services (scheduling, auth, payment, notifications, waitlist, analytics, catalog). |
-| `packages/web` | `@salon/web` | Web PWA (customer booking + admin console). |
+| `backend` | `@salon/backend` | HTTP API and domain services (scheduling, auth, payment, notifications, waitlist, analytics, catalog). |
+| `frontend` | `@salon/web` | Web PWA (customer booking + admin console). |
 | `packages/mobile` | `@salon/mobile` | React Native mobile client. |
 
 ## Prerequisites
@@ -55,7 +55,7 @@ curl http://localhost:3000/healthz
 ```
 
 Configuration is read from environment variables (see
-[`packages/backend/.env.example`](packages/backend/.env.example)). In development,
+[`backend/.env.example`](backend/.env.example)). In development,
 safe defaults are used for missing secrets; in production
 (`NODE_ENV=production`) the server fails fast if a required secret is absent.
 
@@ -84,11 +84,11 @@ migrations applied, the gated tests execute and exercise the real database behav
 The web PWA gates accessibility in CI two ways: axe assertions baked into the
 component/page suites (`npm run test --workspace @salon/web`, fail on serious/critical
 violations) and a Lighthouse accessibility audit of the prerendered public pages
-(`packages/web/lighthouserc.json`, wired in `.github/workflows/web-a11y.yml`). These
+(`frontend/lighthouserc.json`, wired in `.github/workflows/web-a11y.yml`). These
 automated checks are a **floor, not a certificate** — full WCAG 2.2 AA conformance also
 requires manual assistive-technology testing (VoiceOver/TalkBack/NVDA in RTL/Farsi),
 keyboard-only runs, and expert review. See
-[`packages/web/docs/accessibility.md`](packages/web/docs/accessibility.md) for the full
+[`frontend/docs/accessibility.md`](frontend/docs/accessibility.md) for the full
 note and how to run the checks locally.
 
 ## Database migrations
@@ -102,7 +102,7 @@ npm run prisma:migrate  --workspace @salon/backend
 ```
 
 `prisma:migrate` applies every migration under
-`packages/backend/prisma/migrations`, including the hand-authored raw SQL migration
+`backend/prisma/migrations`, including the hand-authored raw SQL migration
 `00000000000001_exclusion_constraints/migration.sql`. That migration enables the
 `btree_gist` extension and adds the `EXCLUDE` constraints that make the
 double-resource booking invariant correct by construction, so it **must** be applied
@@ -130,7 +130,7 @@ The domain services (scheduling, auth, payment, notifications, waitlist, analyti
 catalog, registration, availability config) are **framework-agnostic** classes that
 take their collaborators via constructor injection. They are constructed in exactly one
 place — the composition root at
-[`packages/backend/src/composition-root.ts`](packages/backend/src/composition-root.ts) —
+[`backend/src/composition-root.ts`](backend/src/composition-root.ts) —
 which reads configuration, builds the Prisma client, selects the external
 provider/payment adapters (falling back to dev/log adapters when credentials are
 absent), and injects everything into the HTTP layer. Route handlers consume those
@@ -138,7 +138,7 @@ injected instances and never construct services ad hoc.
 
 Cross-service orchestration that the domain services intentionally do not own lives in
 a thin application layer at
-[`packages/backend/src/app`](packages/backend/src/app): `BookingFlow` sends a
+[`backend/src/app`](backend/src/app): `BookingFlow` sends a
 confirmation after a booking is confirmed (directly or via the payment callback), and
 `CancellationFlow` notifies the waitlist when a cancellation or hold expiry frees a
 resource window. These flows wrap the engine so `SchedulingEngine` and
@@ -186,7 +186,7 @@ docker compose down                     # stop (keep data)
 docker compose down -v                  # stop and wipe the database volume
 
 # After changing the Prisma schema, re-sync the dev DB then re-apply constraints:
-docker compose exec backend npx prisma db push --schema packages/backend/prisma/schema.prisma
+docker compose exec backend npx prisma db push --schema backend/prisma/schema.prisma
 docker compose exec backend psql -v ON_ERROR_STOP=1 -f docker/db/dev-constraints.sql
 ```
 

@@ -109,7 +109,7 @@ Pexels:
 
 ### 3.1 Landing Page Hero (ParallaxHero)
 
-**Status:** ✅ Placeholder files exist at `packages/web/public/images/hero-salon-interior-*`
+**Status:** ✅ Placeholder files exist at `frontend/public/images/hero-salon-interior-*`
 
 | File | Dimensions | Format | Aspect Ratio |
 |------|-----------|--------|--------------|
@@ -162,7 +162,7 @@ warm lighting. Must have negative space (dark areas) for Persian headline overla
 
 ### 3.3 Marketing / Feature Section Images
 
-**Status:** ✅ Placeholder files exist at `packages/web/public/images/benefit-*`
+**Status:** ✅ Placeholder files exist at `frontend/public/images/benefit-*`
 
 | File | Dimensions | Format | Aspect Ratio |
 |------|-----------|--------|--------------|

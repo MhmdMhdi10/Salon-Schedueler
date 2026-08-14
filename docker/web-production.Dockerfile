@@ -31,5 +31,5 @@ RUN npm run build:production --workspace @salon/web
 
 FROM nginx:1.27-alpine
 
-COPY --from=build /app/packages/web/dist /usr/share/nginx/html
+COPY --from=build /app/frontend/dist /usr/share/nginx/html
 COPY docker/nginx.server.conf /etc/nginx/conf.d/default.conf

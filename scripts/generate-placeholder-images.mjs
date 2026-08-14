@@ -14,7 +14,7 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-const OUT_DIR = join(import.meta.dirname, '..', 'packages', 'web', 'public', 'images');
+const OUT_DIR = join(import.meta.dirname, '..', 'web', 'public', 'images');
 mkdirSync(OUT_DIR, { recursive: true });
 
 // -- Minimal valid JPEG (1x1 pixel, #2A1E2E dark plum — matches brand surface) --
@@ -102,5 +102,5 @@ for (const { name, buffer } of files) {
   console.log(`  ✓ ${name} (${buffer.length} bytes)`);
 }
 
-console.log(`\n✅ Created ${created} placeholder images in packages/web/public/images/`);
+console.log(`\n✅ Created ${created} placeholder images in frontend/public/images/`);
 console.log('   These are 1x1px development placeholders. Replace with real photography for production.');

@@ -21,27 +21,23 @@ config.resolver.nodeModulesPaths = [
 // 3. Let Metro follow the symlinked workspace package.
 config.resolver.disableHierarchicalLookup = false;
 
-// 4. The monorepo mixes React versions: the web app pins React 18 while this
-// Expo (SDK 54) app needs React 19 + react-native 0.81. npm hoists react-native
-// to the repo root, where — via hierarchical lookup — it would otherwise resolve
-// the root's React 18. Mixing two React copies in one bundle crashes at runtime
-// ("Cannot read property 'S'/'default' of undefined"). Force EVERY `react` /
-// `react-dom` request (including react-native's own) to the single React 19
-// copy nested in this package, so the whole bundle shares one React instance.
+// 4. The monorepo intentionally keeps separate renderers: web uses React 18,
+// while Expo (SDK 57) uses React 19 + react-native 0.86. Force every React
+// request inside the native bundle to its one React 19 copy; sharing the web
+// React 18 copy would crash the native renderer at runtime.
 const singleReact = {
-  react: path.resolve(projectRoot, 'node_modules/react'),
-  'react-dom': path.resolve(projectRoot, 'node_modules/react-dom'),
+  react: path.dirname(require.resolve('react/package.json', { paths: [projectRoot] })),
+  'react-dom': path.dirname(require.resolve('react-dom/package.json', { paths: [projectRoot] })),
 };
 config.resolver.extraNodeModules = {
   ...singleReact,
   'react-native': path.resolve(workspaceRoot, 'node_modules/react-native'),
 };
 
-const mobileModules = path.resolve(projectRoot, 'node_modules');
 const defaultResolveRequest = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   // Pin react / react-dom (and their subpaths like react/jsx-runtime) to the
-  // single React 19 copy nested in this package, no matter who imports them.
+  // single native copy, no matter who imports them.
   if (
     moduleName === 'react' ||
     moduleName === 'react-dom' ||
@@ -50,7 +46,7 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   ) {
     return {
       type: 'sourceFile',
-      filePath: require.resolve(moduleName, { paths: [mobileModules] }),
+      filePath: require.resolve(moduleName, { paths: [projectRoot] }),
     };
   }
   return defaultResolveRequest

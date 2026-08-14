@@ -62,7 +62,7 @@ export interface ColorPalette {
  * bright signature teal (#05CFA6) reserved as a large decorative fill. The deep
  * teal clears WCAG AA (4.5:1) both as text on white and as a fill under white
  * text, resolving booksy's literal teal failing AA as small text. Every pairing
- * is WCAG 2.2 AA verified in `web/src/styles/contrast.test.ts`.
+ * is WCAG 2.2 AA verified in `frontend/src/styles/contrast.test.ts`.
  */
 export const lightColors: ColorPalette = {
   bg: '#FFFFFF',

@@ -2,7 +2,19 @@ import { z } from 'zod';
 
 export const StaffRoleSchema = z.enum(['Owner', 'Admin', 'Stylist']);
 
+export const SalonWorkModeSchema = z.enum([
+  'fixed_salon',
+  'rented_chair',
+  'home',
+  'mobile',
+  'hybrid',
+  'not_decided',
+]);
+
+export const AppointmentLocationSchema = z.enum(['salon', 'customer']);
+
 export const AppointmentStatusSchema = z.enum([
+  'pending',
   'held',
   'confirmed',
   'cancelled',

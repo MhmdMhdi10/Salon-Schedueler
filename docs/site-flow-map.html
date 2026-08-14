@@ -1,0 +1,2511 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="نقشه بصری نقش‌ها، routeها و جریان‌های سامانه رزرو سالن آرا" />
+    <title>نقشه بصری کل سایت | آرا</title>
+    <style>
+      :root {
+        --bg: #071015;
+        --bg-soft: #0b171d;
+        --surface: #102129;
+        --surface-2: #142b34;
+        --surface-3: #1a3540;
+        --ink: #edf7f7;
+        --muted: #9bb2b7;
+        --line: #29444d;
+        --teal: #20d8c1;
+        --teal-soft: rgba(32, 216, 193, 0.13);
+        --blue: #73a7ff;
+        --violet: #b49bff;
+        --amber: #ffc66d;
+        --rose: #ff8eab;
+        --green: #7ce6a7;
+        --red: #ff8585;
+        --shadow: 0 18px 55px rgba(0, 0, 0, 0.28);
+        --radius: 18px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        min-width: 320px;
+        overflow-x: hidden;
+        background:
+          radial-gradient(900px 500px at 100% -10%, rgba(32, 216, 193, 0.12), transparent 65%),
+          radial-gradient(700px 420px at 0% 12%, rgba(115, 167, 255, 0.1), transparent 62%),
+          var(--bg);
+        color: var(--ink);
+        font-family: Vazirmatn, IRANSans, Tahoma, system-ui, sans-serif;
+        line-height: 1.65;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      a {
+        color: inherit;
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        padding: 56px 24px 34px;
+        border-bottom: 1px solid var(--line);
+        text-align: center;
+      }
+      .hero::before,
+      .hero::after {
+        position: absolute;
+        width: 320px;
+        height: 320px;
+        border: 1px solid rgba(32, 216, 193, 0.18);
+        border-radius: 50%;
+        content: '';
+        pointer-events: none;
+      }
+      .hero::before {
+        inset: -160px auto auto -90px;
+      }
+      .hero::after {
+        inset: auto -110px -200px auto;
+      }
+      .eyebrow {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 12px;
+        border: 1px solid rgba(32, 216, 193, 0.35);
+        border-radius: 999px;
+        background: var(--teal-soft);
+        color: var(--teal);
+        font-size: 0.78rem;
+        font-weight: 800;
+      }
+      .hero h1 {
+        position: relative;
+        max-width: 900px;
+        margin: 16px auto 8px;
+        font-size: clamp(1.9rem, 4vw, 3.6rem);
+        line-height: 1.2;
+        letter-spacing: -0.04em;
+      }
+      .hero p {
+        position: relative;
+        max-width: 680px;
+        margin: 0 auto;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+      .hero-actions {
+        position: relative;
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 24px;
+      }
+      .filter,
+      .print-btn {
+        min-height: 42px;
+        padding: 8px 15px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(16, 33, 41, 0.86);
+        color: var(--ink);
+        transition: 160ms ease;
+      }
+      .filter:hover,
+      .print-btn:hover,
+      .filter.is-active {
+        border-color: var(--teal);
+        background: var(--teal-soft);
+        color: var(--teal);
+      }
+      .print-btn {
+        color: var(--muted);
+      }
+
+      .toolbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        padding: 12px 18px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(7, 16, 21, 0.88);
+        backdrop-filter: blur(18px);
+      }
+      .search {
+        width: min(360px, 100%);
+        min-height: 42px;
+        padding: 8px 14px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        outline: none;
+        background: var(--surface);
+        color: var(--ink);
+      }
+      .search:focus {
+        border-color: var(--teal);
+        box-shadow: 0 0 0 3px var(--teal-soft);
+      }
+
+      .toc {
+        display: flex;
+        gap: 8px;
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 18px 22px 2px;
+        overflow-x: auto;
+        scrollbar-width: thin;
+      }
+      .toc a {
+        flex: 0 0 auto;
+        padding: 6px 11px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--muted);
+        font-size: 0.78rem;
+        text-decoration: none;
+      }
+      .toc a:hover {
+        border-color: var(--teal);
+        color: var(--teal);
+      }
+
+      main {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 0 22px 90px;
+      }
+      section {
+        margin-top: 46px;
+        scroll-margin-top: 78px;
+      }
+      .section-heading {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+      .section-heading h2 {
+        margin: 0;
+        font-size: clamp(1.25rem, 2vw, 1.75rem);
+        letter-spacing: -0.03em;
+      }
+      .section-heading p {
+        max-width: 560px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+      .metric {
+        padding: 15px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: linear-gradient(145deg, var(--surface-2), var(--surface));
+      }
+      .metric strong {
+        display: block;
+        color: var(--teal);
+        font-size: 1.65rem;
+        line-height: 1.1;
+      }
+      .metric span {
+        display: block;
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 0.76rem;
+      }
+
+      .diagram {
+        position: relative;
+        min-width: 0;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: linear-gradient(160deg, rgba(20, 43, 52, 0.78), rgba(10, 24, 30, 0.92));
+        box-shadow: var(--shadow);
+      }
+      .diagram-label {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 14px;
+        color: var(--muted);
+        font-size: 0.76rem;
+      }
+      .diagram-label b {
+        color: var(--ink);
+        font-size: 0.9rem;
+      }
+      .direction {
+        direction: ltr;
+        color: var(--teal);
+      }
+
+      .overview-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        direction: ltr;
+      }
+      .overview-column {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-width: 0;
+        padding: 12px;
+        border: 1px dashed var(--line);
+        border-radius: 14px;
+        direction: rtl;
+      }
+      .overview-column:not(:last-child)::after {
+        position: absolute;
+        top: 50%;
+        right: -22px;
+        z-index: 2;
+        color: var(--teal);
+        content: '→';
+        font-size: 1.5rem;
+        font-weight: 900;
+      }
+      .column-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: 7px;
+        border-bottom: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.74rem;
+        font-weight: 800;
+      }
+
+      .flow-scroll {
+        min-width: 0;
+        max-width: 100%;
+        overflow-x: auto;
+        padding-bottom: 4px;
+      }
+      .flow-row {
+        display: flex;
+        align-items: stretch;
+        justify-content: flex-start;
+        min-width: max-content;
+        direction: ltr;
+      }
+      .flow-row > .flow-node {
+        direction: rtl;
+      }
+      .flow-arrow {
+        display: flex;
+        flex: 0 0 42px;
+        align-items: center;
+        justify-content: center;
+        color: var(--teal);
+        font-size: 1.25rem;
+        font-weight: 900;
+      }
+      .flow-arrow.muted {
+        color: var(--muted);
+      }
+
+      .flow-node {
+        position: relative;
+        width: 172px;
+        min-height: 92px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-top: 3px solid var(--blue);
+        border-radius: 14px;
+        background: linear-gradient(155deg, var(--surface-3), var(--surface));
+        color: var(--ink);
+        text-align: start;
+        transition: 180ms ease;
+      }
+      button.flow-node {
+        cursor: pointer;
+      }
+      .flow-node:hover,
+      .flow-node.is-open {
+        border-color: var(--teal);
+        box-shadow:
+          0 0 0 3px var(--teal-soft),
+          0 14px 34px rgba(0, 0, 0, 0.22);
+        transform: translateY(-2px);
+      }
+      .flow-node .node-top {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .flow-node .node-icon {
+        font-size: 1.15rem;
+        line-height: 1;
+      }
+      .flow-node strong {
+        display: block;
+        font-size: 0.86rem;
+        line-height: 1.35;
+      }
+      .flow-node small {
+        display: block;
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 0.7rem;
+        line-height: 1.5;
+      }
+      .flow-node code,
+      .route-chip code {
+        display: block;
+        margin-top: 5px;
+        overflow: hidden;
+        direction: ltr;
+        color: #bfe9e4;
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        font-size: 0.66rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .node-detail {
+        display: none;
+        margin-top: 9px;
+        padding-top: 8px;
+        border-top: 1px dashed var(--line);
+        color: var(--muted);
+        font-size: 0.7rem;
+        line-height: 1.6;
+      }
+      .flow-node.is-open .node-detail {
+        display: block;
+      }
+      .flow-node.role-visitor,
+      .flow-node.role-customer {
+        border-top-color: var(--green);
+      }
+      .flow-node.role-owner {
+        border-top-color: var(--violet);
+      }
+      .flow-node.role-admin {
+        border-top-color: var(--teal);
+      }
+      .flow-node.role-stylist {
+        border-top-color: var(--amber);
+      }
+      .flow-node.role-platform {
+        border-top-color: var(--rose);
+      }
+      .flow-node.role-system {
+        border-top-color: var(--muted);
+      }
+      .flow-node.status-pending {
+        border-top-color: var(--amber);
+      }
+      .flow-node.status-confirmed {
+        border-top-color: var(--green);
+      }
+      .flow-node.status-cancelled,
+      .flow-node.status-expired {
+        border-top-color: var(--red);
+      }
+      .flow-node.status-held {
+        border-top-color: var(--blue);
+      }
+
+      .branch-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 14px;
+      }
+      .branch {
+        position: relative;
+        min-width: 0;
+        overflow: hidden;
+        padding: 13px;
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: rgba(7, 16, 21, 0.42);
+      }
+      .branch::before {
+        position: absolute;
+        top: -9px;
+        right: 18px;
+        padding: 0 7px;
+        background: var(--bg-soft);
+        color: var(--muted);
+        content: attr(data-label);
+        font-size: 0.7rem;
+      }
+      .branch .flow-node {
+        width: 156px;
+        min-height: 82px;
+      }
+      .branch .flow-arrow {
+        flex-basis: 30px;
+      }
+
+      .swimlanes {
+        display: grid;
+        gap: 10px;
+      }
+      .swimlane {
+        display: grid;
+        grid-template-columns: 130px minmax(0, 1fr);
+        gap: 12px;
+        align-items: stretch;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: rgba(7, 16, 21, 0.3);
+      }
+      .lane-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 76px;
+        padding: 8px;
+        border-radius: 11px;
+        background: var(--surface-2);
+        color: var(--ink);
+        font-size: 0.78rem;
+        font-weight: 800;
+        text-align: center;
+      }
+      .lane-track {
+        min-width: 0;
+        overflow-x: auto;
+        padding-bottom: 2px;
+      }
+      .lane-track .flow-row {
+        min-height: 76px;
+      }
+      .lane-track .flow-node {
+        width: 155px;
+        min-height: 76px;
+      }
+
+      .route-groups {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .route-group {
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: var(--surface);
+      }
+      .route-group h3 {
+        margin: 0 0 10px;
+        font-size: 0.9rem;
+      }
+      .route-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+      .route-chip {
+        display: inline-block;
+        max-width: 100%;
+        padding: 7px 9px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: var(--bg-soft);
+        color: var(--muted);
+        font-size: 0.72rem;
+      }
+      .route-chip code {
+        margin: 0;
+        color: var(--ink);
+      }
+      .route-chip small {
+        display: block;
+        margin-top: 3px;
+        color: var(--muted);
+      }
+
+      .permission-grid {
+        display: grid;
+        grid-template-columns: 1.5fr repeat(5, minmax(72px, 0.7fr));
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+      }
+      .permission-grid > div {
+        min-height: 45px;
+        padding: 9px 10px;
+        border-bottom: 1px solid var(--line);
+        border-inline-start: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--muted);
+        font-size: 0.72rem;
+        text-align: center;
+      }
+      .permission-grid > div:nth-child(6n + 1) {
+        border-inline-start: 0;
+        text-align: start;
+        color: var(--ink);
+      }
+      .permission-grid > div:nth-last-child(-n + 6) {
+        border-bottom: 0;
+      }
+      .permission-grid .head {
+        background: var(--surface-3);
+        color: var(--ink);
+        font-weight: 800;
+      }
+      .yes {
+        color: var(--green) !important;
+        font-size: 1rem !important;
+        font-weight: 900;
+      }
+      .no {
+        color: var(--red) !important;
+        font-size: 1rem !important;
+        font-weight: 900;
+      }
+      .limited {
+        color: var(--amber) !important;
+        font-size: 0.68rem !important;
+        font-weight: 800;
+      }
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 9px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--muted);
+        font-size: 0.7rem;
+      }
+      .legend i {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--teal);
+      }
+      .legend .visitor i {
+        background: var(--green);
+      }
+      .legend .owner i {
+        background: var(--violet);
+      }
+      .legend .admin i {
+        background: var(--teal);
+      }
+      .legend .stylist i {
+        background: var(--amber);
+      }
+      .legend .platform i {
+        background: var(--rose);
+      }
+      .legend .system i {
+        background: var(--muted);
+      }
+
+      .filtered-out {
+        opacity: 0.14;
+        filter: saturate(0.15);
+      }
+      .search-out {
+        display: none !important;
+      }
+      .empty-search {
+        display: none;
+        padding: 28px;
+        border: 1px dashed var(--line);
+        border-radius: var(--radius);
+        color: var(--muted);
+        text-align: center;
+      }
+      .empty-search.is-visible {
+        display: block;
+      }
+      footer {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 0 22px 40px;
+        color: var(--muted);
+        font-size: 0.76rem;
+        text-align: center;
+      }
+
+      @media (max-width: 900px) {
+        .metrics {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .route-groups {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 680px) {
+        .hero {
+          padding: 38px 16px 26px;
+        }
+        .toolbar {
+          align-items: stretch;
+          flex-direction: column;
+        }
+        .search {
+          width: 100%;
+        }
+        main {
+          padding-inline: 13px;
+        }
+        .toc {
+          padding-inline: 13px;
+        }
+        .section-heading {
+          align-items: start;
+          flex-direction: column;
+        }
+        .metrics {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .overview-grid,
+        .branch-grid,
+        .route-groups {
+          grid-template-columns: 1fr;
+        }
+        .overview-column:not(:last-child)::after {
+          top: auto;
+          right: 50%;
+          bottom: -25px;
+          transform: rotate(90deg);
+        }
+        .overview-column {
+          margin-bottom: 12px;
+        }
+        .swimlane {
+          grid-template-columns: 1fr;
+        }
+        .lane-label {
+          min-height: 46px;
+        }
+        .permission-grid {
+          grid-template-columns: 1.3fr repeat(5, minmax(58px, 0.7fr));
+          overflow-x: auto;
+        }
+        .permission-grid > div {
+          min-width: 58px;
+        }
+        .permission-grid > div:nth-child(6n + 1) {
+          min-width: 150px;
+        }
+      }
+
+      @media print {
+        :root {
+          --bg: #fff;
+          --bg-soft: #f6f8f8;
+          --surface: #fff;
+          --surface-2: #f0f4f4;
+          --surface-3: #e7eeee;
+          --ink: #102129;
+          --muted: #536a70;
+          --line: #c9d7d9;
+        }
+        body {
+          background: #fff;
+          color: #102129;
+        }
+        .hero {
+          padding: 24px;
+        }
+        .toolbar,
+        .toc,
+        .hero-actions {
+          display: none;
+        }
+        .diagram,
+        .route-group,
+        .metric,
+        .branch,
+        .swimlane {
+          box-shadow: none;
+        }
+        .node-detail {
+          display: block;
+        }
+        section {
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="hero">
+      <span class="eyebrow">آرا · محصول رزرو و مدیریت سالن</span>
+      <h1>نقشه‌ی بصری کل سایت</h1>
+      <p>
+        همه‌ی نقش‌ها، routeها، سناریوهای ورود، رزرو، مدیریت سالن، ادمین پلتفرم و جریان‌های خودکار؛
+        روی هر کارت کلیک کن.
+      </p>
+      <div class="hero-actions" aria-label="فیلتر نقش‌ها">
+        <button class="filter is-active" data-filter="all">همه</button>
+        <button class="filter" data-filter="visitor">بازدیدکننده</button>
+        <button class="filter" data-filter="customer">مشتری</button>
+        <button class="filter" data-filter="owner">مالک سالن</button>
+        <button class="filter" data-filter="admin">ادمین سالن</button>
+        <button class="filter" data-filter="stylist">آرایشگر</button>
+        <button class="filter" data-filter="platform">ادمین پلتفرم</button>
+        <button class="filter" data-filter="system">سیستم</button>
+        <button class="print-btn" type="button" id="print">چاپ / PDF</button>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <input
+        class="search"
+        id="search"
+        type="search"
+        placeholder="جست‌وجوی route یا سناریو…"
+        aria-label="جست‌وجوی route یا سناریو"
+      />
+    </div>
+
+    <nav class="toc" aria-label="فهرست نمودارها">
+      <a href="#overview">نقشه کل</a>
+      <a href="#entry">ورودی‌ها</a>
+      <a href="#customer">مشتری و رزرو</a>
+      <a href="#onboarding">ثبت‌نام سالن</a>
+      <a href="#capacity">مدل فعالیت و ظرفیت</a>
+      <a href="#owner">پنل سالن</a>
+      <a href="#platform">پلتفرم</a>
+      <a href="#system">سیستم</a>
+      <a href="#guards">خطا و guard</a>
+      <a href="#access">دسترسی</a>
+      <a href="#routes">routeها</a>
+    </nav>
+
+    <main>
+      <section id="overview">
+        <div class="section-heading">
+          <div><h2>۱ · نقشه‌ی کل سیستم</h2></div>
+          <p>چه کسی از کجا وارد می‌شود، به کدام سطح می‌رسد و خروجی اصلی چیست.</p>
+        </div>
+        <div class="metrics">
+          <div class="metric"><strong>۷</strong><span>نقش و لایه‌ی سیستم</span></div>
+          <div class="metric"><strong>۶</strong><span>مدل فعالیت و محل خدمت</span></div>
+          <div class="metric"><strong>۵</strong><span>جریان اصلی محصول</span></div>
+          <div class="metric"><strong>۲۴+</strong><span>route وب</span></div>
+          <div class="metric"><strong>۷</strong><span>وضعیت نوبت</span></div>
+        </div>
+        <div class="diagram">
+          <div class="diagram-label">
+            <b>Actors → Surfaces → Outcomes</b><span class="direction">جهت حرکت: چپ → راست</span>
+          </div>
+          <div class="overview-grid">
+            <div class="overview-column">
+              <div class="column-title"><span>افراد و سرویس‌ها</span><span>۰۱</span></div>
+              <button class="flow-node role-visitor" data-roles="visitor customer" type="button">
+                <div class="node-top">
+                  <span class="node-icon">👀</span><strong>بازدیدکننده</strong>
+                </div>
+                <small>هنوز وارد حساب نشده</small>
+                <div class="node-detail">Landing، پروفایل عمومی، QR و صفحات معرفی را می‌بیند.</div>
+              </button>
+              <button class="flow-node role-customer" data-roles="customer" type="button">
+                <div class="node-top"><span class="node-icon">💇</span><strong>مشتری</strong></div>
+                <small>رزرو و پیگیری نوبت</small>
+                <div class="node-detail">
+                  با OTP وارد می‌شود؛ رزرو، لغو، waitlist و حساب شخصی دارد.
+                </div>
+              </button>
+              <button class="flow-node role-owner" data-roles="owner" type="button">
+                <div class="node-top">
+                  <span class="node-icon">👑</span><strong>مالک سالن</strong>
+                </div>
+                <small>مدیریت کامل سالن</small>
+                <div class="node-detail">همه‌ی عملیات سالن + تنظیمات، آمار، QR و اشتراک.</div>
+              </button>
+              <button class="flow-node role-admin" data-roles="admin" type="button">
+                <div class="node-top">
+                  <span class="node-icon">🛠️</span><strong>ادمین سالن</strong>
+                </div>
+                <small>عملیات روزمره</small>
+                <div class="node-detail">
+                  تأیید/رد، تقویم، عدم‌حضور و مشتری‌ها؛ بدون تنظیمات سالن.
+                </div>
+              </button>
+              <button class="flow-node role-stylist" data-roles="stylist" type="button">
+                <div class="node-top">
+                  <span class="node-icon">✂️</span><strong>آرایشگر</strong>
+                </div>
+                <small>دسترسی محدود</small>
+                <div class="node-detail">فقط نوبت‌های خودش و یادداشت مشتری را می‌بیند.</div>
+              </button>
+              <button class="flow-node role-platform" data-roles="platform" type="button">
+                <div class="node-top">
+                  <span class="node-icon">🌐</span><strong>ادمین پلتفرم</strong>
+                </div>
+                <small>کنترل کل محصول</small>
+                <div class="node-detail">سالن‌ها، کاربران، پرداخت‌ها، اشتراک و audit log.</div>
+              </button>
+            </div>
+            <div class="overview-column">
+              <div class="column-title"><span>سطح‌ها و routeها</span><span>۰۲</span></div>
+              <button class="flow-node role-visitor" data-roles="visitor customer" type="button">
+                <div class="node-top">
+                  <span class="node-icon">🏠</span><strong>Landing / Public</strong>
+                </div>
+                <code>/</code>
+                <div class="node-detail">
+                  معرفی آرا، شروع رایگان، ورود، درباره، تماس و صفحات قانونی.
+                </div>
+              </button>
+              <button class="flow-node role-customer" data-roles="visitor customer" type="button">
+                <div class="node-top">
+                  <span class="node-icon">📅</span><strong>Booking Funnel</strong>
+                </div>
+                <code>/salon/:id/book</code>
+                <div class="node-detail">خدمت → تاریخ → زمان → احراز هویت → تأیید → رسید.</div>
+              </button>
+              <button class="flow-node role-owner" data-roles="owner admin stylist" type="button">
+                <div class="node-top">
+                  <span class="node-icon">📊</span><strong>Owner Panel</strong>
+                </div>
+                <code>/owner/*</code>
+                <div class="node-detail">
+                  تقویم، مشتری، تیم، خدمات، QR، مارکتینگ، آمار و اشتراک.
+                </div>
+              </button>
+              <button class="flow-node role-platform" data-roles="platform" type="button">
+                <div class="node-top">
+                  <span class="node-icon">🛰️</span><strong>Platform Console</strong>
+                </div>
+                <code>/platform-admin/*</code>
+                <div class="node-detail">داشبورد سراسری با تفکیک سالن، مشتری، کارمند و رویداد.</div>
+              </button>
+              <button class="flow-node role-system" data-roles="system" type="button">
+                <div class="node-top">
+                  <span class="node-icon">⚙️</span><strong>Core API + Workers</strong>
+                </div>
+                <small>Auth · Scheduling · Payments · Notify</small>
+                <div class="node-detail">
+                  احراز هویت، جلوگیری از تداخل، پرداخت، پیامک، پوش و محاسبه وضعیت.
+                </div>
+              </button>
+            </div>
+            <div class="overview-column">
+              <div class="column-title"><span>نتیجه‌ی قابل مشاهده</span><span>۰۳</span></div>
+              <button
+                class="flow-node status-confirmed"
+                data-roles="customer owner admin system"
+                type="button"
+              >
+                <div class="node-top">
+                  <span class="node-icon">✅</span><strong>نوبت قطعی</strong>
+                </div>
+                <small>confirmed</small>
+                <div class="node-detail">مشتری و سالن مطلع می‌شوند؛ slot اشغال می‌ماند.</div>
+              </button>
+              <button class="flow-node role-owner" data-roles="owner admin stylist" type="button">
+                <div class="node-top">
+                  <span class="node-icon">🗓️</span><strong>تقویم عملیاتی</strong>
+                </div>
+                <small>روز / هفته / منابع</small>
+                <div class="node-detail">رزروها با staff و chair سازگار نمایش داده می‌شوند.</div>
+              </button>
+              <button class="flow-node role-customer" data-roles="customer" type="button">
+                <div class="node-top">
+                  <span class="node-icon">🔔</span><strong>اعلان و حساب</strong>
+                </div>
+                <small>پیامک · پوش · سابقه</small>
+                <div class="node-detail">تأیید، رد، یادآوری، لغو و سابقه در حساب مشتری.</div>
+              </button>
+              <button class="flow-node role-platform" data-roles="platform" type="button">
+                <div class="node-top">
+                  <span class="node-icon">📈</span><strong>دید سراسری</strong>
+                </div>
+                <small>گزارش و audit</small>
+                <div class="node-detail">کنترل سلامت و عملکرد کل سامانه از یک کنسول.</div>
+              </button>
+              <button
+                class="flow-node status-cancelled"
+                data-roles="customer owner admin system"
+                type="button"
+              >
+                <div class="node-top">
+                  <span class="node-icon">↩️</span><strong>شاخه‌ی جایگزین</strong>
+                </div>
+                <small>لغو · رد · انقضا · خطا</small>
+                <div class="node-detail">
+                  هر خط پایان مسیر، اعلان و آزادسازی resource خودش را دارد.
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="entry">
+        <div class="section-heading">
+          <div><h2>۲ · تمام دروازه‌های ورود</h2></div>
+          <p>کاربر از هر نقطه وارد شود، در نهایت یا به رزرو می‌رسد یا به پنل مناسب نقش خودش.</p>
+        </div>
+        <div class="diagram">
+          <div class="diagram-label">
+            <b>ورودی کاربر</b><span>Anonymous → Authenticated → Role-based destination</span>
+          </div>
+          <div class="flow-scroll">
+            <div class="flow-row">
+              <button class="flow-node role-visitor" data-roles="visitor customer" type="button">
+                <div class="node-top">
+                  <span class="node-icon">🌐</span><strong>Landing</strong>
+                </div>
+                <code>/</code>
+                <div class="node-detail">شروع رزرو یا ثبت سالن.</div>
+              </button>
+              <span class="flow-arrow">→</span>
+              <button class="flow-node role-visitor" data-roles="visitor customer" type="button">
+                <div class="node-top">
+                  <span class="node-icon">🏷️</span><strong>پروفایل سالن</strong>
+                </div>
+                <code>/s/:slug</code>
+                <div class="node-detail">خدمات، معرفی و CTA رزرو.</div>
+              </button>
+              <span class="flow-arrow">→</span>
+              <button class="flow-node role-customer" data-roles="visitor customer" type="button">
+                <div class="node-top"><span class="node-icon">📆</span><strong>رزرو</strong></div>
+                <code>/salon/:id/book</code>
+                <div class="node-detail">ورود به funnel اختصاصی سالن.</div>
+              </button>
+              <span class="flow-arrow">→</span>
+              <button
+                class="flow-node role-customer"
+                data-roles="customer owner admin stylist platform"
+                type="button"
+              >
+                <div class="node-top"><span class="node-icon">🔐</span><strong>OTP</strong></div>
+                <code>/auth</code>
+                <div class="node-detail">شماره موبایل + کد ۶ رقمی.</div>
+              </button>
+              <span class="flow-arrow">→</span>
+              <button class="flow-node role-owner" data-roles="owner" type="button">
+                <div class="node-top"><span class="node-icon">👑</span><strong>مالک</strong></div>
+                <code>/owner</code>
+                <div class="node-detail">به calendar هدایت می‌شود.</div>
+              </button>
+              <span class="flow-arrow">→</span>
+              <button class="flow-node role-customer" data-roles="customer" type="button">
+                <div class="node-top"><span class="node-icon">🧑</span><strong>مشتری</strong></div>
+                <code>/account</code>
+                <div class="node-detail">حساب و سابقه نوبت‌ها.</div>
+              </button>
+            </div>
+          </div>
+          <div class="branch-grid">
+            <div class="branch" data-label="ورود اختصاصی سالن">
+              <div class="flow-scroll">
+                <div class="flow-row">
+                  <button class="flow-node role-visitor" data-roles="visitor owner" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">✨</span><strong>صاحب سالن</strong>
+                    </div>
+                    <small>شروع رایگان</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-owner" data-roles="owner" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">🧭</span><strong>Onboarding</strong>
+                    </div>
+                    <code>/business/register</code></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-owner" data-roles="owner" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">📊</span><strong>پنل مالک</strong>
+                    </div>
+                    <code>/owner/calendar</code>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="branch" data-label="ورود QR / ربات">
+              <div class="flow-scroll">
+                <div class="flow-row">
+                  <button
+                    class="flow-node role-customer"
+                    data-roles="visitor customer"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">▣</span><strong>QR سالن</strong>
+                    </div>
+                    <code>/qr/:payload</code></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-customer" data-roles="customer" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">🤖</span><strong>ربات</strong>
+                    </div>
+                    <small>تلگرام / بله</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-customer" data-roles="customer" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">✅</span><strong>تأیید رزرو</strong>
+                    </div>
+                    <small>در چت</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="customer">
+        <div class="section-heading">
+          <div><h2>۳ · مشتری: از ورود تا نتیجه‌ی نوبت</h2></div>
+          <p>دو مسیر اصلی رزرو + لغو و لیست انتظار.</p>
+        </div>
+        <div class="diagram">
+          <div class="diagram-label">
+            <b>مسیر مشترک رزرو</b
+            ><span>Availability فقط slotهای واقعاً قابل رزرو را نشان می‌دهد.</span>
+          </div>
+          <div class="flow-scroll">
+            <div class="flow-row">
+              <button class="flow-node role-customer" data-roles="visitor customer" type="button">
+                <div class="node-top"><span class="node-icon">🏷️</span><strong>سالن</strong></div>
+                <small>QR / profile / link</small></button
+              ><span class="flow-arrow">→</span>
+              <button class="flow-node role-customer" data-roles="visitor customer" type="button">
+                <div class="node-top">
+                  <span class="node-icon">💇</span><strong>انتخاب خدمت</strong>
+                </div>
+                <code>/services</code></button
+              ><span class="flow-arrow">→</span>
+              <button class="flow-node role-customer" data-roles="visitor customer" type="button">
+                <div class="node-top">
+                  <span class="node-icon">🗓️</span><strong>تاریخ و زمان</strong>
+                </div>
+                <small>availability</small></button
+              ><span class="flow-arrow">→</span>
+              <button class="flow-node role-customer" data-roles="visitor customer" type="button">
+                <div class="node-top">
+                  <span class="node-icon">✂️</span><strong>آرایشگر</strong>
+                </div>
+                <small>اختیاری / هرکدام</small></button
+              ><span class="flow-arrow">→</span>
+              <button class="flow-node role-customer" data-roles="visitor customer" type="button">
+                <div class="node-top">
+                  <span class="node-icon">📍</span><strong>محل خدمت</strong>
+                </div>
+                <small>سالن / محل مشتری</small>
+                <div class="node-detail">
+                  mobile فقط محل مشتری است؛ hybrid هر دو انتخاب را نشان می‌دهد و برای محل مشتری
+                  آدرس لازم است.
+                </div></button
+              ><span class="flow-arrow">→</span>
+              <button class="flow-node role-customer" data-roles="visitor customer" type="button">
+                <div class="node-top">
+                  <span class="node-icon">🔐</span><strong>احراز هویت</strong>
+                </div>
+                <small>اگر وارد نیست</small></button
+              ><span class="flow-arrow">→</span>
+              <button class="flow-node role-customer" data-roles="customer" type="button">
+                <div class="node-top"><span class="node-icon">🧾</span><strong>تأیید</strong></div>
+                <code>/book/confirm</code>
+              </button>
+            </div>
+          </div>
+          <div class="branch-grid">
+            <div class="branch" data-label="بدون بیعانه · مسیر پیش‌فرض">
+              <div class="flow-scroll">
+                <div class="flow-row">
+                  <button
+                    class="flow-node status-pending"
+                    data-roles="customer owner admin system"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">⏳</span><strong>pending</strong>
+                    </div>
+                    <small>در انتظار سالن</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-owner" data-roles="owner admin" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">🛠️</span><strong>تأیید / رد</strong>
+                    </div>
+                    <small>مالک یا ادمین</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button
+                    class="flow-node status-confirmed"
+                    data-roles="customer owner admin system"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">✅</span><strong>confirmed</strong>
+                    </div>
+                    <small>پیامک تأیید</small>
+                  </button>
+                </div>
+              </div>
+              <div class="flow-scroll" style="margin-top: 8px">
+                <div class="flow-row">
+                  <span class="flow-arrow muted">یا</span
+                  ><button
+                    class="flow-node status-cancelled"
+                    data-roles="customer owner admin system"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">✕</span><strong>cancelled</strong>
+                    </div>
+                    <small>پیامک رد</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="branch" data-label="با بیعانه">
+              <div class="flow-scroll">
+                <div class="flow-row">
+                  <button class="flow-node status-held" data-roles="customer system" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">🔒</span><strong>held</strong>
+                    </div>
+                    <small>۱۵ دقیقه</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button
+                    class="flow-node role-customer"
+                    data-roles="customer system"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">💳</span><strong>درگاه</strong>
+                    </div>
+                    <small>پرداخت آنلاین</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button
+                    class="flow-node status-confirmed"
+                    data-roles="customer system"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">✅</span><strong>confirmed</strong>
+                    </div>
+                    <small>بدون تأیید ادمین</small>
+                  </button>
+                </div>
+              </div>
+              <div class="flow-scroll" style="margin-top: 8px">
+                <div class="flow-row">
+                  <span class="flow-arrow muted">بدون پرداخت →</span
+                  ><button
+                    class="flow-node status-expired"
+                    data-roles="customer system"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">⌛</span><strong>expired</strong>
+                    </div>
+                    <small>اسلات آزاد</small></button
+                  ><span class="flow-arrow muted">/ refund</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="diagram" style="margin-top: 14px">
+          <div class="diagram-label">
+            <b>تصمیم محل ارائه خدمت</b><span>قبل از نمایش slot، ظرفیت درست انتخاب می‌شود.</span>
+          </div>
+          <div class="branch-grid">
+            <div class="branch" data-label="fixed · home · rented chair">
+              <div class="flow-scroll">
+                <div class="flow-row">
+                  <button class="flow-node role-system" data-roles="system" type="button">
+                    <div class="node-top"><span class="node-icon">🪑</span><strong>physical chair</strong></div>
+                    <small>ساعت صندلی + ساعت آرایشگر</small>
+                  </button><span class="flow-arrow">→</span>
+                  <button class="flow-node role-customer" data-roles="customer" type="button">
+                    <div class="node-top"><span class="node-icon">🏠</span><strong>در سالن / محل کار</strong></div>
+                    <small>بدون آدرس مشتری</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="branch" data-label="mobile">
+              <div class="flow-scroll">
+                <div class="flow-row">
+                  <button class="flow-node role-customer" data-roles="customer" type="button">
+                    <div class="node-top"><span class="node-icon">🗺️</span><strong>آدرس مشتری</strong></div>
+                    <small>الزامی قبل از ثبت</small>
+                  </button><span class="flow-arrow">→</span>
+                  <button class="flow-node role-system" data-roles="system" type="button">
+                    <div class="node-top"><span class="node-icon">🚗</span><strong>mobile lane</strong></div>
+                    <small>لاین اختصاصی همان آرایشگر</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="flow-scroll" style="margin-top: 10px">
+            <div class="flow-row">
+              <button class="flow-node role-customer" data-roles="customer" type="button">
+                <div class="node-top"><span class="node-icon">🔀</span><strong>hybrid</strong></div>
+                <small>انتخاب مشتری: سالن یا محل مشتری</small>
+              </button><span class="flow-arrow">→</span>
+              <button class="flow-node role-system" data-roles="system" type="button">
+                <div class="node-top"><span class="node-icon">⚖️</span><strong>دو ظرفیت مستقل</strong></div>
+                <small>physical + mobile؛ بدون تداخل با هم</small>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="diagram" style="margin-top: 14px">
+          <div class="diagram-label">
+            <b>شاخه‌های بعد از رزرو</b><span>هر رویداد، وضعیت و اعلان خودش را دارد.</span>
+          </div>
+          <div class="swimlanes">
+            <div class="swimlane" data-roles="customer owner admin system">
+              <div class="lane-label">لغو نوبت</div>
+              <div class="lane-track">
+                <div class="flow-row">
+                  <button class="flow-node role-customer" data-roles="customer" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">📱</span><strong>مشتری لغو می‌کند</strong>
+                    </div>
+                    <small>cancel</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button
+                    class="flow-node status-cancelled"
+                    data-roles="customer owner admin system"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">↩️</span><strong>cancelled</strong>
+                    </div>
+                    <small>resource آزاد</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-system" data-roles="system customer" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">🔔</span><strong>اعلان waitlist</strong>
+                    </div>
+                    <small>نفر اول صف</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="swimlane" data-roles="customer owner admin">
+              <div class="lane-label">لیست انتظار</div>
+              <div class="lane-track">
+                <div class="flow-row">
+                  <button class="flow-node role-customer" data-roles="customer" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">🧍</span><strong>صف پر</strong>
+                    </div>
+                    <small>waiting</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-system" data-roles="system customer" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">📨</span><strong>notified</strong>
+                    </div>
+                    <small>پیامک فرصت</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node status-confirmed" data-roles="customer" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">🎯</span><strong>fulfilled</strong>
+                    </div>
+                    <small>رزرو کرد</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="swimlane" data-roles="customer system">
+              <div class="lane-label">بعد از تأیید</div>
+              <div class="lane-track">
+                <div class="flow-row">
+                  <button class="flow-node status-confirmed" data-roles="customer" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">✅</span><strong>confirmed</strong>
+                    </div>
+                    <small>نوبت قطعی</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-system" data-roles="system customer" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">⏰</span><strong>یادآوری</strong>
+                    </div>
+                    <small>۶۰ دقیقه قبل</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button
+                    class="flow-node status-confirmed"
+                    data-roles="customer owner admin"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">🏁</span><strong>completed</strong>
+                    </div>
+                    <small>پایان خدمت</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="onboarding">
+        <div class="section-heading">
+          <div><h2>۴ · صاحب سالن: ثبت‌نام تطبیقی</h2></div>
+          <p>
+            پرسش‌های اولیه بر اساس «یک‌نفره / تیم / سالن / شروع کار» تغییر می‌کنند؛ مراحل اختیاری
+            Skip دارند.
+          </p>
+        </div>
+        <div class="diagram">
+          <div class="diagram-label">
+            <b>/business/register</b><span>Required فقط نام، مالک و موبایل است.</span>
+          </div>
+          <div class="flow-scroll">
+            <div class="flow-row">
+              <button class="flow-node role-owner" data-roles="visitor owner" type="button">
+                <div class="node-top">
+                  <span class="node-icon">👤</span><strong>نوع فعالیت</strong>
+                </div>
+                <small>یک نفرم / تیم / سالن / شروع</small></button
+              ><span class="flow-arrow">→</span>
+              <button class="flow-node role-owner" data-roles="visitor owner" type="button">
+                <div class="node-top">
+                  <span class="node-icon">🧭</span><strong>سؤال شرطی</strong>
+                </div>
+                <small>محل کار یا اندازه تیم</small>
+                <div class="node-detail">
+                  Solo: محل کار · Team/Salon: تعداد · Goal: هدف اصلی
+                </div></button
+              ><span class="flow-arrow">→</span>
+              <button class="flow-node role-owner" data-roles="visitor owner" type="button">
+                <div class="node-top">
+                  <span class="node-icon">💇</span><strong>حوزه کاری</strong>
+                </div>
+                <small>پروفایل + خدمت اصلی</small></button
+              ><span class="flow-arrow">→</span>
+              <button class="flow-node role-owner" data-roles="visitor owner" type="button">
+                <div class="node-top">
+                  <span class="node-icon">🪪</span><strong>اطلاعات اجباری</strong>
+                </div>
+                <small>نام سالن · نام · موبایل</small></button
+              ><span class="flow-arrow">→</span>
+              <button class="flow-node role-owner" data-roles="visitor owner" type="button">
+                <div class="node-top"><span class="node-icon">✂️</span><strong>خدمات</strong></div>
+                <small>dropdown + مدت + قیمت</small></button
+              ><span class="flow-arrow">→</span>
+              <button class="flow-node role-owner" data-roles="visitor owner" type="button">
+                <div class="node-top">
+                  <span class="node-icon">🎨</span><strong>راه‌اندازی</strong>
+                </div>
+                <small>صندلی + رنگ + خلاصه</small></button
+              ><span class="flow-arrow">→</span>
+              <button class="flow-node role-owner" data-roles="owner" type="button">
+                <div class="node-top"><span class="node-icon">📨</span><strong>OTP</strong></div>
+                <small>ورود به پنل</small>
+              </button>
+            </div>
+          </div>
+          <div class="branch-grid">
+            <div class="branch" data-label="سناریوهای adaptive">
+              <div class="flow-scroll">
+                <div class="flow-row">
+                  <button class="flow-node role-owner" data-roles="owner" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">👤</span><strong>یک‌نفره</strong>
+                    </div>
+                    <small>کجا کار می‌کنی؟</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-owner" data-roles="owner" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">🏠</span><strong>خانه / ثابت / اجاره</strong>
+                    </div>
+                    <small>پیش‌فرض: ۱ صندلی</small>
+                  </button>
+                </div>
+              </div>
+              <div class="flow-scroll" style="margin-top: 8px">
+                <div class="flow-row">
+                  <button class="flow-node role-owner" data-roles="owner" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">👥</span><strong>تیم / سالن</strong>
+                    </div>
+                    <small>چند نفر / صندلی؟</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-owner" data-roles="owner" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">🔢</span><strong>۲–۳ · ۴–۸ · ۹+</strong>
+                    </div>
+                    <small>پیش‌فرض صندلی قابل ویرایش</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="branch" data-label="Skip و خروج امن">
+              <div class="flow-scroll">
+                <div class="flow-row">
+                  <button class="flow-node role-owner" data-roles="visitor owner" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">⏭️</span><strong>Skip اختیاری</strong>
+                    </div>
+                    <small>شناخت / مسیر / حوزه / خدمات / setup</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-owner" data-roles="owner" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">🪪</span><strong>اطلاعات اجباری</strong>
+                    </div>
+                    <small>بدون این مرحله ثبت نمی‌شود</small>
+                  </button>
+                </div>
+              </div>
+              <div class="flow-scroll" style="margin-top: 8px">
+                <div class="flow-row">
+                  <button
+                    class="flow-node status-cancelled"
+                    data-roles="visitor owner"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">⚠️</span><strong>موبایل تکراری</strong>
+                    </div>
+                    <small>برگشت به اطلاعات</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-owner" data-roles="owner" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">🔁</span><strong>اصلاح و ادامه</strong>
+                    </div>
+                    <small>PHONE_TAKEN</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="capacity">
+        <div class="section-heading">
+          <div><h2>۵ · مدل فعالیت، جایگاه و محل رزرو</h2></div>
+          <p>هر مدل کاری ظرفیت مخصوص خودش را دارد؛ حالت ترکیبی هم‌زمان هر دو مسیر را باز می‌کند.</p>
+        </div>
+        <div class="diagram">
+          <div class="diagram-label">
+            <b>Onboarding / Settings → Capacity → Booking</b><span>جایگاه فیزیکی و مسیر سیار مستقل‌اند</span>
+          </div>
+          <div class="swimlanes">
+            <div class="swimlane" data-roles="owner stylist customer">
+              <div class="lane-label">سالن یا محل ثابت</div>
+              <div class="lane-track">
+                <div class="flow-row">
+                  <button class="flow-node role-owner" data-roles="owner" type="button">
+                    <div class="node-top"><span class="node-icon">🏠</span><strong>fixed / home</strong></div>
+                    <small>محل ارائه خدمت ثابت</small>
+                  </button><span class="flow-arrow">→</span>
+                  <button class="flow-node role-system" data-roles="system" type="button">
+                    <div class="node-top"><span class="node-icon">🪑</span><strong>physical chair</strong></div>
+                    <small>مشترک یا اختصاصی</small>
+                  </button><span class="flow-arrow">→</span>
+                  <button class="flow-node role-customer" data-roles="customer" type="button">
+                    <div class="node-top"><span class="node-icon">📍</span><strong>در سالن / محل کار</strong></div>
+                    <small>بدون آدرس مشتری</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="swimlane" data-roles="owner stylist customer">
+              <div class="lane-label">صندلی یا اتاق اجاره‌ای</div>
+              <div class="lane-track">
+                <div class="flow-row">
+                  <button class="flow-node role-owner" data-roles="owner" type="button">
+                    <div class="node-top"><span class="node-icon">🔑</span><strong>rented chair</strong></div>
+                    <small>انتخاب آرایشگر</small>
+                  </button><span class="flow-arrow">→</span>
+                  <button class="flow-node role-system" data-roles="system" type="button">
+                    <div class="node-top"><span class="node-icon">🔒</span><strong>اختصاص ثابت</strong></div>
+                    <small>نوبت روی صندلی دیگر نمی‌رود</small>
+                  </button><span class="flow-arrow">→</span>
+                  <button class="flow-node role-customer" data-roles="customer" type="button">
+                    <div class="node-top"><span class="node-icon">📍</span><strong>رزرو محل کار</strong></div>
+                    <small>ساعت آرایشگر + صندلی</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="swimlane" data-roles="owner stylist customer">
+              <div class="lane-label">خدمات در محل مشتری</div>
+              <div class="lane-track">
+                <div class="flow-row">
+                  <button class="flow-node role-owner" data-roles="owner" type="button">
+                    <div class="node-top"><span class="node-icon">🚗</span><strong>mobile</strong></div>
+                    <small>مسیر سیار اختصاصی هر آرایشگر</small>
+                  </button><span class="flow-arrow">→</span>
+                  <button class="flow-node role-customer" data-roles="customer" type="button">
+                    <div class="node-top"><span class="node-icon">🗺️</span><strong>آدرس مشتری</strong></div>
+                    <small>آدرس قبل از ثبت اجباری</small>
+                  </button><span class="flow-arrow">→</span>
+                  <button class="flow-node role-system" data-roles="system" type="button">
+                    <div class="node-top"><span class="node-icon">🧭</span><strong>mobile lane</strong></div>
+                    <small>بدون صندلی فیزیکی</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="swimlane" data-roles="owner stylist customer">
+              <div class="lane-label">حالت ترکیبی</div>
+              <div class="lane-track">
+                <div class="flow-row">
+                  <button class="flow-node role-owner" data-roles="owner" type="button">
+                    <div class="node-top"><span class="node-icon">🔀</span><strong>hybrid</strong></div>
+                    <small>سالن + محل مشتری</small>
+                  </button><span class="flow-arrow">→</span>
+                  <button class="flow-node role-customer" data-roles="customer" type="button">
+                    <div class="node-top"><span class="node-icon">⚖️</span><strong>انتخاب محل</strong></div>
+                    <small>در سالن یا در محل شما</small>
+                  </button><span class="flow-arrow">→</span>
+                  <button class="flow-node role-system" data-roles="system" type="button">
+                    <div class="node-top"><span class="node-icon">🧩</span><strong>دو ظرفیت مستقل</strong></div>
+                    <small>physical chair + mobile lane</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="diagram">
+          <div class="diagram-label">
+            <b>Approval flow</b><span>مالک مجوز تأیید نوبت‌های خودش را برای هر آرایشگر تعیین می‌کند</span>
+          </div>
+          <div class="flow-scroll">
+            <div class="flow-row">
+              <button class="flow-node status-pending" data-roles="customer system owner admin stylist" type="button">
+                <div class="node-top"><span class="node-icon">⏳</span><strong>رزرو جدید</strong></div>
+                <small>pending · ظرفیت رزرو می‌ماند</small>
+              </button><span class="flow-arrow">→</span>
+              <button class="flow-node role-owner" data-roles="owner admin" type="button">
+                <div class="node-top"><span class="node-icon">👑</span><strong>مالک / ادمین</strong></div>
+                <small>تأیید یا رد همه نوبت‌ها</small>
+              </button><span class="flow-arrow">یا</span>
+              <button class="flow-node role-stylist" data-roles="stylist" type="button">
+                <div class="node-top"><span class="node-icon">✂️</span><strong>آرایشگر همان نوبت</strong></div>
+                <small>فقط با مجوز مالک</small>
+              </button><span class="flow-arrow">→</span>
+              <button class="flow-node status-confirmed" data-roles="customer system" type="button">
+                <div class="node-top"><span class="node-icon">✅</span><strong>تأیید</strong></div>
+                <small>confirmed + اطلاع‌رسانی</small>
+              </button>
+            </div>
+          </div>
+          <div class="flow-scroll" style="margin-top: 10px">
+            <div class="flow-row">
+              <span class="flow-arrow muted">یا</span>
+              <button class="flow-node role-owner" data-roles="owner admin stylist" type="button">
+                <div class="node-top"><span class="node-icon">↩️</span><strong>رد نوبت</strong></div>
+                <small>مالک / ادمین یا آرایشگرِ مجاز</small>
+              </button><span class="flow-arrow">→</span>
+              <button class="flow-node status-cancelled" data-roles="customer system" type="button">
+                <div class="node-top"><span class="node-icon">✕</span><strong>cancelled</strong></div>
+                <small>اطلاع‌رسانی + آزادسازی ظرفیت</small>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="owner">
+        <div class="section-heading">
+          <div><h2>۶ · پنل سالن: نقش‌ها و عملیات</h2></div>
+          <p>مالک و تیم داخل یک shell هستند؛ دسترسی هر route از روی role فیلتر می‌شود.</p>
+        </div>
+        <div class="diagram">
+          <div class="diagram-label">
+            <b>/owner/*</b><span>ورود به /owner → انتقال خودکار به /owner/calendar</span>
+          </div>
+          <div class="swimlanes">
+            <div class="swimlane" data-roles="owner admin stylist">
+              <div class="lane-label">همه‌ی staff</div>
+              <div class="lane-track">
+                <div class="flow-row">
+                  <button
+                    class="flow-node role-owner"
+                    data-roles="owner admin stylist"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">🗓️</span><strong>تقویم</strong>
+                    </div>
+                    <code>/owner/calendar</code></button
+                  ><span class="flow-arrow">→</span>
+                  <button
+                    class="flow-node role-owner"
+                    data-roles="owner admin stylist"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">👥</span><strong>مشتری‌ها</strong>
+                    </div>
+                    <code>/owner/clients</code></button
+                  ><span class="flow-arrow">→</span>
+                  <button
+                    class="flow-node role-owner"
+                    data-roles="owner admin stylist"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">🔔</span><strong>اعلان‌ها</strong>
+                    </div>
+                    <code>/owner/notifications</code></button
+                  ><span class="flow-arrow">→</span>
+                  <button
+                    class="flow-node role-owner"
+                    data-roles="owner admin stylist"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">👤</span><strong>پروفایل</strong>
+                    </div>
+                    <code>/owner/profile</code>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="swimlane" data-roles="owner admin">
+              <div class="lane-label">مالک + ادمین</div>
+              <div class="lane-track">
+                <div class="flow-row">
+                  <button class="flow-node role-admin" data-roles="owner admin" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">⏳</span><strong>صف تأیید</strong>
+                    </div>
+                    <small>approve / reject</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-admin" data-roles="owner admin" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">🚫</span><strong>عدم‌حضور</strong>
+                    </div>
+                    <small>no-show</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-admin" data-roles="owner admin" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">⌛</span><strong>لیست انتظار</strong>
+                    </div>
+                    <code>/owner/...</code></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-owner" data-roles="owner admin" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">💳</span><strong>اشتراک</strong>
+                    </div>
+                    <code>/owner/subscription</code>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="swimlane" data-roles="owner">
+              <div class="lane-label">فقط مالک</div>
+              <div class="lane-track">
+                <div class="flow-row">
+                  <button class="flow-node role-owner" data-roles="owner" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">⚙️</span><strong>پیکربندی</strong>
+                    </div>
+                    <code>/owner/config</code></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-owner" data-roles="owner" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">📈</span><strong>آمار</strong>
+                    </div>
+                    <code>/owner/analytics</code></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-owner" data-roles="owner" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">👥</span><strong>تیم</strong>
+                    </div>
+                    <code>/owner/team</code></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-owner" data-roles="owner" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">▣</span><strong>QR سالن</strong>
+                    </div>
+                    <code>/owner/qr</code>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="swimlane" data-roles="owner stylist system">
+              <div class="lane-label">ظرفیت و مجوز</div>
+              <div class="lane-track">
+                <div class="flow-row">
+                  <button class="flow-node role-owner" data-roles="owner" type="button">
+                    <div class="node-top"><span class="node-icon">⚙️</span><strong>تنظیم مدل فعالیت</strong></div>
+                    <small>fixed · rented · mobile · hybrid</small>
+                  </button><span class="flow-arrow">→</span>
+                  <button class="flow-node role-system" data-roles="system" type="button">
+                    <div class="node-top"><span class="node-icon">🪑</span><strong>اختصاص ظرفیت</strong></div>
+                    <small>صندلی فیزیکی یا mobile lane</small>
+                  </button><span class="flow-arrow">→</span>
+                  <button class="flow-node role-owner" data-roles="owner" type="button">
+                    <div class="node-top"><span class="node-icon">🛡️</span><strong>اعطای مجوز</strong></div>
+                    <small>تأیید / رد نوبت‌های خودش</small>
+                  </button><span class="flow-arrow">→</span>
+                  <button class="flow-node role-stylist" data-roles="stylist" type="button">
+                    <div class="node-top"><span class="node-icon">✂️</span><strong>صف شخصی آرایشگر</strong></div>
+                    <small>فقط نوبت‌های خودش</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="swimlane" data-roles="stylist">
+              <div class="lane-label">آرایشگر</div>
+              <div class="lane-track">
+                <div class="flow-row">
+                  <button class="flow-node role-stylist" data-roles="stylist" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">🗓️</span><strong>نوبت‌های خودش</strong>
+                    </div>
+                    <small>فقط read / own</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-stylist" data-roles="stylist" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">📝</span><strong>یادداشت مشتری</strong>
+                    </div>
+                    <small>دیدن</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node status-cancelled" data-roles="stylist" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">🔒</span><strong>تنظیمات قفل</strong>
+                    </div>
+                    <small>بدون config؛ approve فقط با مجوز مالک</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="platform">
+        <div class="section-heading">
+          <div><h2>۷ · ادمین پلتفرم</h2></div>
+          <p>سطح جدا از پنل سالن؛ به‌جای tenant، کل سامانه را می‌بیند.</p>
+        </div>
+        <div class="diagram">
+          <div class="diagram-label">
+            <b>/platform-admin/*</b><span>فقط PlatformAdmin JWT</span>
+          </div>
+          <div class="flow-scroll">
+            <div class="flow-row">
+              <button class="flow-node role-platform" data-roles="platform" type="button">
+                <div class="node-top">
+                  <span class="node-icon">📊</span><strong>Dashboard</strong>
+                </div>
+                <code>/platform-admin</code></button
+              ><span class="flow-arrow">→</span>
+              <button class="flow-node role-platform" data-roles="platform" type="button">
+                <div class="node-top"><span class="node-icon">🏷️</span><strong>Salons</strong></div>
+                <code>/salons</code></button
+              ><span class="flow-arrow">→</span>
+              <button class="flow-node role-platform" data-roles="platform" type="button">
+                <div class="node-top">
+                  <span class="node-icon">🧑</span><strong>Customers</strong>
+                </div>
+                <code>/customers</code></button
+              ><span class="flow-arrow">→</span>
+              <button class="flow-node role-platform" data-roles="platform" type="button">
+                <div class="node-top"><span class="node-icon">👥</span><strong>Staff</strong></div>
+                <code>/staff</code></button
+              ><span class="flow-arrow">→</span>
+              <button class="flow-node role-platform" data-roles="platform" type="button">
+                <div class="node-top">
+                  <span class="node-icon">📅</span><strong>Appointments</strong>
+                </div>
+                <code>/appointments</code>
+              </button>
+            </div>
+          </div>
+          <div class="flow-scroll" style="margin-top: 12px">
+            <div class="flow-row">
+              <button class="flow-node role-platform" data-roles="platform" type="button">
+                <div class="node-top">
+                  <span class="node-icon">💳</span><strong>Payments</strong>
+                </div>
+                <code>/payments</code></button
+              ><span class="flow-arrow">→</span>
+              <button class="flow-node role-platform" data-roles="platform" type="button">
+                <div class="node-top">
+                  <span class="node-icon">🔁</span><strong>Subscriptions</strong>
+                </div>
+                <code>/subscriptions</code></button
+              ><span class="flow-arrow">→</span>
+              <button class="flow-node role-platform" data-roles="platform" type="button">
+                <div class="node-top">
+                  <span class="node-icon">⏳</span><strong>Waitlist</strong>
+                </div>
+                <code>/waitlist</code></button
+              ><span class="flow-arrow">→</span>
+              <button class="flow-node role-platform" data-roles="platform" type="button">
+                <div class="node-top">
+                  <span class="node-icon">▣</span><strong>QR Scans</strong>
+                </div>
+                <code>/qr-scans</code></button
+              ><span class="flow-arrow">→</span>
+              <button class="flow-node role-platform" data-roles="platform" type="button">
+                <div class="node-top">
+                  <span class="node-icon">🧾</span><strong>Audit Logs</strong>
+                </div>
+                <code>/audit-logs</code>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="system">
+        <div class="section-heading">
+          <div><h2>۸ · جریان‌های خودکار و زیرساخت</h2></div>
+          <p>کارهایی که بدون کلیک کاربر، وضعیت سیستم را جلو می‌برند.</p>
+        </div>
+        <div class="diagram">
+          <div class="swimlanes">
+            <div class="swimlane" data-roles="system customer">
+              <div class="lane-label">زمان‌بندی</div>
+              <div class="lane-track">
+                <div class="flow-row">
+                  <button class="flow-node role-system" data-roles="system" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">⏱️</span><strong>زمان فرا می‌رسد</strong>
+                    </div>
+                    <small>cron / worker</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-system" data-roles="system" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">🔔</span><strong>Reminder</strong>
+                    </div>
+                    <small>۶۰ دقیقه قبل</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button
+                    class="flow-node role-customer"
+                    data-roles="customer system"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">📱</span><strong>SMS / Push</strong>
+                    </div>
+                    <small>notification_log</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="swimlane" data-roles="system customer">
+              <div class="lane-label">Hold</div>
+              <div class="lane-track">
+                <div class="flow-row">
+                  <button class="flow-node status-held" data-roles="system customer" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">🔒</span><strong>held</strong>
+                    </div>
+                    <small>۱۵ دقیقه</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-system" data-roles="system" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">⌛</span><strong>expiry check</strong>
+                    </div>
+                    <small>بدون پرداخت</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button
+                    class="flow-node status-expired"
+                    data-roles="system customer"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">↩️</span><strong>expired</strong>
+                    </div>
+                    <small>آزادسازی slot</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="swimlane" data-roles="system owner admin customer">
+              <div class="lane-label">کنترل اشتراک</div>
+              <div class="lane-track">
+                <div class="flow-row">
+                  <button class="flow-node role-system" data-roles="system" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">📅</span><strong>trial / active</strong>
+                    </div>
+                    <small>محاسبه لحظه‌ای</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button
+                    class="flow-node status-pending"
+                    data-roles="system owner admin"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">⚠️</span><strong>grace</strong>
+                    </div>
+                    <small>مهلت تمدید</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button
+                    class="flow-node status-cancelled"
+                    data-roles="system owner admin"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">🔒</span><strong>expired / 402</strong>
+                    </div>
+                    <small>نوشتن بسته</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="swimlane" data-roles="system customer">
+              <div class="lane-label">Availability</div>
+              <div class="lane-track">
+                <div class="flow-row">
+                  <button class="flow-node role-system" data-roles="system customer" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">🧮</span><strong>خدمت + staff</strong>
+                    </div>
+                    <small>duration / qualification</small></button
+                  ><span class="flow-arrow">+</span>
+                  <button class="flow-node role-system" data-roles="system customer" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">💺</span><strong>chair + hours</strong>
+                    </div>
+                    <small>resource compatibility</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-customer" data-roles="customer" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">✅</span><strong>slot قابل رزرو</strong>
+                    </div>
+                    <small>بدون تداخل DB</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="guards">
+        <div class="section-heading">
+          <div><h2>۹ · guardها و مسیرهای خطا</h2></div>
+          <p>هر شکست، مقصد مشخص دارد؛ کاربر در بن‌بست یا صفحه‌ی سفید رها نمی‌شود.</p>
+        </div>
+        <div class="diagram">
+          <div class="diagram-label">
+            <b>Failure paths</b><span>خطا → حفظ context → retry یا مقصد امن</span>
+          </div>
+          <div class="swimlanes">
+            <div class="swimlane" data-roles="visitor customer owner admin stylist platform">
+              <div class="lane-label">Auth Guard</div>
+              <div class="lane-track">
+                <div class="flow-row">
+                  <button
+                    class="flow-node role-customer"
+                    data-roles="visitor customer owner admin stylist platform"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">🚪</span><strong>route خصوصی</strong>
+                    </div>
+                    <small>کاربر anonymous</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button
+                    class="flow-node role-customer"
+                    data-roles="visitor customer owner admin stylist platform"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">🔐</span><strong>/auth</strong>
+                    </div>
+                    <small>returnTo ذخیره می‌شود</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button
+                    class="flow-node role-customer"
+                    data-roles="customer owner admin stylist platform"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">📨</span><strong>OTP</strong>
+                    </div>
+                    <small>درخواست / verify</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button
+                    class="flow-node status-confirmed"
+                    data-roles="customer owner admin stylist platform"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">↪️</span><strong>مقصد اصلی</strong>
+                    </div>
+                    <small>پنل یا ادامه‌ی رزرو</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="swimlane" data-roles="customer owner admin stylist platform system">
+              <div class="lane-label">OTP نامعتبر / منقضی</div>
+              <div class="lane-track">
+                <div class="flow-row">
+                  <button
+                    class="flow-node role-customer"
+                    data-roles="customer owner admin stylist platform"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">⌨️</span><strong>کد اشتباه</strong>
+                    </div>
+                    <small>invalid / expired</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button
+                    class="flow-node status-cancelled"
+                    data-roles="customer owner admin stylist platform system"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">⚠️</span><strong>خطای inline</strong>
+                    </div>
+                    <small>اطلاعات پاک نمی‌شود</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button
+                    class="flow-node role-customer"
+                    data-roles="customer owner admin stylist platform"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">🔁</span><strong>ارسال مجدد</strong>
+                    </div>
+                    <small>cooldown → retry</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="swimlane" data-roles="customer owner admin stylist platform">
+              <div class="lane-label">Role Guard</div>
+              <div class="lane-track">
+                <div class="flow-row">
+                  <button
+                    class="flow-node role-customer"
+                    data-roles="customer owner admin stylist platform"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">🪪</span><strong>توکن خوانده شد</strong>
+                    </div>
+                    <small>role / tenant</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button
+                    class="flow-node status-cancelled"
+                    data-roles="customer owner admin stylist platform"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">🚫</span><strong>دسترسی ندارد</strong>
+                    </div>
+                    <small>redirect امن</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button
+                    class="flow-node role-owner"
+                    data-roles="owner admin stylist"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">🏢</span><strong>/owner</strong>
+                    </div>
+                    <small>اگر staff</small></button
+                  ><span class="flow-arrow">یا</span>
+                  <button class="flow-node role-platform" data-roles="platform" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">🌐</span><strong>/platform-admin</strong>
+                    </div>
+                    <small>اگر platform</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="swimlane" data-roles="customer system">
+              <div class="lane-label">رزرو هم‌زمان</div>
+              <div class="lane-track">
+                <div class="flow-row">
+                  <button class="flow-node role-customer" data-roles="customer" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">👆</span><strong>slot دیده شد</strong>
+                    </div>
+                    <small>قبل از submit</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button
+                    class="flow-node status-cancelled"
+                    data-roles="customer system"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">⚡</span><strong>دیگری گرفت</strong>
+                    </div>
+                    <small>conflict / unavailable</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-customer" data-roles="customer" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">🗓️</span><strong>انتخاب زمان دیگر</strong>
+                    </div>
+                    <small>state حفظ می‌شود</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="swimlane" data-roles="customer system">
+              <div class="lane-label">پرداخت</div>
+              <div class="lane-track">
+                <div class="flow-row">
+                  <button class="flow-node status-held" data-roles="customer system" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">💳</span><strong>در حال انتقال</strong>
+                    </div>
+                    <small>gateway redirect</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button
+                    class="flow-node status-cancelled"
+                    data-roles="customer system"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">⚠️</span><strong>درگاه شکست خورد</strong>
+                    </div>
+                    <small>retry surface</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button class="flow-node role-customer" data-roles="customer" type="button">
+                    <div class="node-top">
+                      <span class="node-icon">🔁</span><strong>تلاش دوباره</strong>
+                    </div>
+                    <small>بدون جعل موفقیت</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="swimlane" data-roles="visitor customer owner admin stylist platform">
+              <div class="lane-label">Fallback</div>
+              <div class="lane-track">
+                <div class="flow-row">
+                  <button
+                    class="flow-node role-visitor"
+                    data-roles="visitor customer owner admin stylist platform"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">🔗</span><strong>URL قدیمی</strong>
+                    </div>
+                    <small>/admin/*</small></button
+                  ><span class="flow-arrow">→</span>
+                  <button
+                    class="flow-node role-owner"
+                    data-roles="owner admin stylist"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">↪️</span><strong>redirect</strong>
+                    </div>
+                    <small>owner panel جدید</small></button
+                  ><span class="flow-arrow">یا</span>
+                  <button
+                    class="flow-node status-cancelled"
+                    data-roles="visitor customer owner admin stylist platform"
+                    type="button"
+                  >
+                    <div class="node-top">
+                      <span class="node-icon">🧭</span><strong>404</strong>
+                    </div>
+                    <small>home + search + categories</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="access">
+        <div class="section-heading">
+          <div><h2>۱۰ · ماتریس دسترسی</h2></div>
+          <p>✓ کامل · محدود فقط خودش · ✕ غیرمجاز</p>
+        </div>
+        <div class="diagram">
+          <div class="permission-grid" role="table" aria-label="ماتریس دسترسی نقش‌ها">
+            <div class="head">عملیات</div>
+            <div class="head">مالک</div>
+            <div class="head">ادمین</div>
+            <div class="head">آرایشگر</div>
+            <div class="head">مشتری</div>
+            <div class="head">پلتفرم</div>
+            <div>تقویم و دیدن نوبت‌ها</div>
+            <div class="yes">✓</div>
+            <div class="yes">✓</div>
+            <div class="limited">خودش</div>
+            <div class="no">✕</div>
+            <div class="yes">✓</div>
+            <div>تأیید / رد / عدم‌حضور</div>
+            <div class="yes">✓</div>
+            <div class="yes">✓</div>
+            <div class="no">✕</div>
+            <div class="no">✕</div>
+            <div class="yes">✓</div>
+            <div>تأیید / رد نوبت‌های خودش با مجوز مالک</div>
+            <div class="yes">✓</div>
+            <div class="yes">✓</div>
+            <div class="limited">با مجوز</div>
+            <div class="no">✕</div>
+            <div class="yes">✓</div>
+            <div>پیکربندی سالن</div>
+            <div class="yes">✓</div>
+            <div class="no">✕</div>
+            <div class="no">✕</div>
+            <div class="no">✕</div>
+            <div class="yes">✓</div>
+            <div>آمار سالن</div>
+            <div class="yes">✓</div>
+            <div class="no">✕</div>
+            <div class="no">✕</div>
+            <div class="no">✕</div>
+            <div class="yes">✓</div>
+            <div>رزرو به‌عنوان مشتری</div>
+            <div class="yes">✓</div>
+            <div class="yes">✓</div>
+            <div class="yes">✓</div>
+            <div class="yes">✓</div>
+            <div class="yes">✓</div>
+            <div>کنترل کل tenantها</div>
+            <div class="no">✕</div>
+            <div class="no">✕</div>
+            <div class="no">✕</div>
+            <div class="no">✕</div>
+            <div class="yes">✓</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="routes">
+        <div class="section-heading">
+          <div><h2>۱۱ · نقشه‌ی routeها</h2></div>
+          <p>برای دیدن جزئیات، در جست‌وجوی بالا مسیر یا کلمه‌ی کلیدی وارد کن.</p>
+        </div>
+        <div class="route-groups">
+          <div class="route-group" data-roles="visitor customer">
+            <h3>🌐 عمومی / بازاریابی</h3>
+            <div class="route-chips">
+              <span class="route-chip"><code>/</code><small>Landing</small></span
+              ><span class="route-chip"><code>/s/:slug</code><small>پروفایل سالن</small></span
+              ><span class="route-chip"><code>/about</code><small>درباره</small></span
+              ><span class="route-chip"><code>/contact</code><small>تماس</small></span
+              ><span class="route-chip"><code>/privacy</code><small>حریم خصوصی</small></span
+              ><span class="route-chip"><code>/terms</code><small>قوانین</small></span>
+            </div>
+          </div>
+          <div class="route-group" data-roles="visitor owner">
+            <h3>✨ جذب صاحب سالن</h3>
+            <div class="route-chips">
+              <span class="route-chip"
+                ><code>/business/register</code><small>ثبت‌نام adaptive</small></span
+              ><span class="route-chip"
+                ><code>/business/legacy</code><small>legacy landing</small></span
+              ><span class="route-chip"><code>/referral</code><small>ارجاع</small></span>
+            </div>
+          </div>
+          <div class="route-group" data-roles="visitor customer">
+            <h3>📅 رزرو عمومی</h3>
+            <div class="route-chips">
+              <span class="route-chip"><code>/qr/:payload</code><small>ورود QR</small></span
+              ><span class="route-chip"
+                ><code>/salon/:id/book</code><small>availability</small></span
+              ><span class="route-chip"
+                ><code>/salon/:id/book/confirm</code><small>تأیید</small></span
+              ><span class="route-chip"><code>/booking/success</code><small>رسید</small></span>
+            </div>
+          </div>
+          <div class="route-group" data-roles="customer">
+            <h3>🧑 حساب مشتری</h3>
+            <div class="route-chips">
+              <span class="route-chip"><code>/auth</code><small>OTP</small></span
+              ><span class="route-chip"><code>/account</code><small>داشبورد</small></span
+              ><span class="route-chip"
+                ><code>/my-salons</code><small>سالن‌های ذخیره‌شده</small></span
+              ><span class="route-chip"><code>/refer-salon</code><small>معرفی سالن</small></span
+              ><span class="route-chip"
+                ><code>/salon/:id/waitlist</code><small>waitlist</small></span
+              >
+            </div>
+          </div>
+          <div class="route-group" data-roles="owner admin stylist">
+            <h3>🏢 پنل سالن</h3>
+            <div class="route-chips">
+              <span class="route-chip"><code>/owner/calendar</code><small>تقویم</small></span
+              ><span class="route-chip"><code>/owner/clients</code><small>مشتری‌ها</small></span
+              ><span class="route-chip"><code>/owner/team</code><small>تیم</small></span
+              ><span class="route-chip"><code>/owner/config</code><small>تنظیمات</small></span
+              ><span class="route-chip"><code>/owner/analytics</code><small>آمار</small></span
+              ><span class="route-chip"><code>/owner/marketing</code><small>مارکتینگ</small></span
+              ><span class="route-chip"><code>/owner/subscription</code><small>اشتراک</small></span
+              ><span class="route-chip"
+                ><code>/owner/transactions</code><small>تراکنش‌ها</small></span
+              ><span class="route-chip"
+                ><code>/owner/notifications</code><small>اعلان‌ها</small></span
+              ><span class="route-chip"><code>/owner/qr</code><small>QR</small></span
+              ><span class="route-chip"
+                ><code>POST /appointments/:id/approve</code><small>تأیید نوبت</small></span
+              ><span class="route-chip"
+                ><code>POST /appointments/:id/reject</code><small>رد نوبت</small></span
+              ><span class="route-chip"
+                ><code>POST /staff/:id/approve-own</code><small>مجوز آرایشگر</small></span
+            </div>
+          </div>
+          <div class="route-group" data-roles="customer owner admin stylist system">
+            <h3>🧩 ظرفیت و محل رزرو</h3>
+            <div class="route-chips">
+              <span class="route-chip"
+                ><code>GET /salons/:id/booking-policy</code><small>مدل فعالیت و محل‌های مجاز</small></span
+              ><span class="route-chip"
+                ><code>GET /salons/:id/availability</code><small>slot بر اساس chair / lane</small></span
+              ><span class="route-chip"
+                ><code>POST /salons/:id/appointments/manual</code><small>رزرو دستی در سالن یا محل مشتری</small></span
+            </div>
+          </div>
+          <div class="route-group" data-roles="platform">
+            <h3>🛰️ پلتفرم</h3>
+            <div class="route-chips">
+              <span class="route-chip"><code>/platform-admin</code><small>dashboard</small></span
+              ><span class="route-chip"
+                ><code>/platform-admin/salons</code><small>سالن‌ها</small></span
+              ><span class="route-chip"
+                ><code>/platform-admin/customers</code><small>مشتری‌ها</small></span
+              ><span class="route-chip"
+                ><code>/platform-admin/staff</code><small>کارکنان</small></span
+              ><span class="route-chip"
+                ><code>/platform-admin/appointments</code><small>نوبت‌ها</small></span
+              ><span class="route-chip"
+                ><code>/platform-admin/subscriptions</code><small>اشتراک</small></span
+              ><span class="route-chip"
+                ><code>/platform-admin/payments</code><small>پرداخت</small></span
+              ><span class="route-chip"
+                ><code>/platform-admin/waitlist</code><small>صف انتظار</small></span
+              ><span class="route-chip"
+                ><code>/platform-admin/qr-scans</code><small>اسکن QR</small></span
+              ><span class="route-chip"
+                ><code>/platform-admin/audit-logs</code><small>audit</small></span
+              >
+            </div>
+          </div>
+          <div class="route-group" data-roles="visitor customer owner admin stylist platform">
+            <h3>↪️ مسیرهای legacy / guard</h3>
+            <div class="route-chips">
+              <span class="route-chip"><code>/admin</code><small>redirect بر اساس role</small></span
+              ><span class="route-chip"
+                ><code>/admin/config</code><small>→ /owner/config</small></span
+              ><span class="route-chip"
+                ><code>/admin/calendar</code><small>→ /owner/calendar</small></span
+              ><span class="route-chip"
+                ><code>/admin/analytics</code><small>→ /owner/analytics</small></span
+              ><span class="route-chip"><code>*</code><small>404</small></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="legend">
+        <div class="section-heading">
+          <div><h2>نحوه‌ی استفاده</h2></div>
+          <p>
+            برای ارائه یا مرور محصول، فیلتر نقش را بزن؛ برای جزئیات، کارت را باز کن؛ برای خروجی،
+            چاپ/PDF.
+          </p>
+        </div>
+        <div class="diagram">
+          <div class="legend">
+            <span class="visitor"><i></i>بازدیدکننده</span>
+            <span class="owner"><i></i>مالک سالن</span>
+            <span class="admin"><i></i>ادمین سالن</span>
+            <span class="stylist"><i></i>آرایشگر</span>
+            <span class="platform"><i></i>ادمین پلتفرم</span>
+            <span class="system"><i></i>سیستم</span>
+          </div>
+          <div class="empty-search" id="empty-search">چیزی با این جست‌وجو پیدا نشد.</div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      نقشه‌ی بصری سامانه رزرو سالن آرا · آخرین به‌روزرسانی: ۱۴۰۵/۰۵/۲۳ · بر اساس routeها و جریان‌های موجود در پروژه
+    </footer>
+
+    <script>
+      (() => {
+        const filters = [...document.querySelectorAll('[data-filter]')];
+        const searchable = [...document.querySelectorAll('.flow-node, .route-chip, .route-group')];
+        const sections = [...document.querySelectorAll('main section')];
+        const search = document.querySelector('#search');
+        const empty = document.querySelector('#empty-search');
+
+        function applyRole(role) {
+          filters.forEach((button) =>
+            button.classList.toggle('is-active', button.dataset.filter === role),
+          );
+          document.querySelectorAll('[data-roles]').forEach((element) => {
+            const roles = (element.dataset.roles || '').split(/\s+/);
+            element.classList.toggle('filtered-out', role !== 'all' && !roles.includes(role));
+          });
+        }
+
+        function applySearch() {
+          const query = search.value.trim().toLocaleLowerCase('fa');
+          let visible = 0;
+          searchable.forEach((element) => {
+            const matches = !query || element.textContent.toLocaleLowerCase('fa').includes(query);
+            element.classList.toggle('search-out', !matches);
+            if (matches) visible += 1;
+          });
+          sections.forEach((section) => {
+            const hasVisible = section.querySelector(
+              '.flow-node:not(.search-out), .route-chip:not(.search-out)',
+            );
+            section.classList.toggle('search-out', Boolean(query && !hasVisible));
+          });
+          empty.classList.toggle('is-visible', Boolean(query && visible === 0));
+        }
+
+        filters.forEach((button) =>
+          button.addEventListener('click', () => applyRole(button.dataset.filter)),
+        );
+        search.addEventListener('input', applySearch);
+        document.querySelector('#print').addEventListener('click', () => window.print());
+        document.querySelectorAll('.flow-node').forEach((node) => {
+          node.addEventListener('click', () => node.classList.toggle('is-open'));
+        });
+      })();
+    </script>
+  </body>
+</html>

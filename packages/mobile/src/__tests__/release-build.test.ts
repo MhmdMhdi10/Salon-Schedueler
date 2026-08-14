@@ -19,9 +19,11 @@ describe('Release Build Configuration', () => {
   });
 
   describe('Root build.gradle', () => {
-    it('configures compileSdkVersion and minSdkVersion', () => {
-      expect(rootBuildGradle).toContain('compileSdkVersion');
-      expect(rootBuildGradle).toContain('minSdkVersion');
+    it('uses Expo and React Native managed Android version catalogs', () => {
+      expect(rootBuildGradle).toContain('expo-root-project');
+      expect(rootBuildGradle).toContain('com.facebook.react.rootproject');
+      expect(appBuildGradle).toMatch(/compileSdk(?:Version)?\s/);
+      expect(appBuildGradle).toContain('minSdkVersion');
     });
 
     it('includes Google and Maven Central repositories', () => {
@@ -32,11 +34,11 @@ describe('Release Build Configuration', () => {
 
   describe('App build.gradle', () => {
     it('defines the application namespace', () => {
-      expect(appBuildGradle).toContain('namespace "app.salon.booking"');
+      expect(appBuildGradle).toMatch(/namespace ['"]app\.salon\.booking['"]/);
     });
 
     it('configures product flavors dimension "store"', () => {
-      expect(appBuildGradle).toContain('flavorDimensions "store"');
+      expect(appBuildGradle).toMatch(/flavorDimensions ['"]store['"]/);
     });
 
     it('has a cafebazaar product flavor', () => {
@@ -58,8 +60,14 @@ describe('Release Build Configuration', () => {
       expect(appBuildGradle).toContain('keyAlias');
     });
 
+    it('does not depend on a local ignored debug keystore', () => {
+      expect(appBuildGradle).not.toContain("storeFile file('debug.keystore')");
+      expect(appBuildGradle).toContain('debug signing is supplied by the Android Gradle plugin');
+    });
+
     it('enables minification for release builds', () => {
-      expect(appBuildGradle).toContain('minifyEnabled true');
+      expect(appBuildGradle).toContain('minifyEnabled enableMinifyInReleaseBuilds');
+      expect(appBuildGradle).toMatch(/enableMinifyInReleaseBuilds\s*=.*\?: true/);
     });
 
     it('applies required plugins', () => {

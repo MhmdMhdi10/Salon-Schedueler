@@ -26,7 +26,7 @@ services:
     environment:
       PUBLIC_BASE_URL: "http://192.168.1.190:5273"
 
-  web:
+  frontend:
     ports: !override
       - "5273:5173"
     environment:
