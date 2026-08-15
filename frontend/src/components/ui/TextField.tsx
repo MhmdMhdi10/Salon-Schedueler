@@ -15,6 +15,8 @@ export interface TextFieldProps
   id?: string;
   /** Wrapper className (the outer field group). */
   containerClassName?: string;
+  /** Optional control rendered inside the input at its logical end. */
+  endAdornment?: React.ReactNode;
 }
 
 /**
@@ -28,27 +30,54 @@ export interface TextFieldProps
  * autoComplete=tel`) or the OTP field without extra plumbing.
  */
 export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function TextField(
-  { label, helperText, error, labelHidden, required, id, className, containerClassName, ...rest },
+  {
+    label,
+    helperText,
+    error,
+    labelHidden,
+    required,
+    id,
+    className,
+    containerClassName,
+    endAdornment,
+    ...rest
+  },
   ref,
 ) {
   const hasError = Boolean(error);
   const hasHelper = Boolean(helperText);
   const { controlId, helperId, errorId, describedBy } = useFieldIds(id, hasHelper, hasError);
+  const inputClassName = controlClasses(hasError, cn(endAdornment && 'pe-36', className));
 
   return (
     <div className={cn('w-full', containerClassName)}>
       <FieldLabel htmlFor={controlId} hidden={labelHidden} required={required}>
         {label}
       </FieldLabel>
-      <input
-        ref={ref}
-        id={controlId}
-        required={required}
-        aria-invalid={hasError || undefined}
-        aria-describedby={describedBy}
-        className={controlClasses(hasError, className)}
-        {...rest}
-      />
+      {endAdornment ? (
+        <div className="relative">
+          <input
+            ref={ref}
+            id={controlId}
+            required={required}
+            aria-invalid={hasError || undefined}
+            aria-describedby={describedBy}
+            className={inputClassName}
+            {...rest}
+          />
+          <div className="absolute inset-y-1 end-1 flex items-center">{endAdornment}</div>
+        </div>
+      ) : (
+        <input
+          ref={ref}
+          id={controlId}
+          required={required}
+          aria-invalid={hasError || undefined}
+          aria-describedby={describedBy}
+          className={inputClassName}
+          {...rest}
+        />
+      )}
       {hasError ? (
         <FieldError id={errorId}>{error}</FieldError>
       ) : (

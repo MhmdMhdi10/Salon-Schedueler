@@ -39,15 +39,24 @@
     <style>
       #app-boot-loader {
         position: fixed;
-        inset: 0;
+        /* Keep boot content centered in the visual viewport. The app reserves
+           a stable scrollbar gutter once its content mounts; `inset: 0`
+           would otherwise make this overlay recenter a few pixels left. */
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
         z-index: 9999;
         display: grid;
         place-items: center;
+        overflow: hidden;
+        contain: paint;
         background: #ffffff;
         color: #071b3c;
         transition:
-          opacity 250ms ease,
-          visibility 250ms ease;
+          opacity 180ms ease,
+          visibility 180ms ease;
       }
       [data-theme='dark'] #app-boot-loader {
         background: #0f1111;
@@ -58,88 +67,133 @@
         visibility: hidden;
       }
       .app-boot-loader__content {
+        box-sizing: border-box;
         display: grid;
+        width: min(280px, calc(100vw - 48px));
+        height: 240px;
+        grid-template-rows: 104px 30px 22px 4px;
+        align-content: center;
         justify-items: center;
-        gap: 18px;
+        row-gap: 10px;
+        text-align: center;
       }
       .app-boot-loader__mark {
         position: relative;
         display: grid;
-        width: 88px;
-        height: 88px;
+        width: 104px;
+        height: 104px;
         place-items: center;
+        isolation: isolate;
       }
       .app-boot-loader__mark::before,
       .app-boot-loader__mark::after {
         position: absolute;
-        inset: 0;
-        border: 2px solid rgba(36, 86, 216, 0.22);
-        border-radius: 24px;
+        inset: 7px;
+        border-radius: 30px;
         content: '';
-        animation: app-boot-ring 1.5s ease-out infinite;
+        pointer-events: none;
+      }
+      .app-boot-loader__mark::before {
+        border: 1px solid rgba(36, 86, 216, 0.28);
+        animation: app-boot-ring 1.8s ease-out infinite;
       }
       .app-boot-loader__mark::after {
-        animation-delay: 0.55s;
+        inset: 0;
+        border: 1px solid rgba(11, 122, 104, 0.42);
+        border-right-color: transparent;
+        border-top-color: #05cfa6;
+        animation: app-boot-orbit 1.35s linear infinite;
       }
       .app-boot-loader__mark img {
+        position: relative;
+        z-index: 1;
         width: 64px;
         height: 64px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
         border-radius: 16px;
-        animation: app-boot-float 1.2s ease-in-out infinite alternate;
+        box-shadow:
+          0 0 0 7px rgba(11, 122, 104, 0.08),
+          0 12px 24px rgba(0, 0, 0, 0.22);
       }
       .app-boot-loader__label {
+        align-self: center;
         margin: 0;
+        min-height: 30px;
+        color: inherit;
         font:
           700 15px/1.8 Tahoma,
           Arial,
           sans-serif;
+        white-space: nowrap;
+      }
+      .app-boot-loader__hint {
+        align-self: center;
+        margin: 0;
+        min-height: 22px;
+        color: rgba(166, 173, 173, 0.82);
+        font:
+          400 12px/1.8 Tahoma,
+          Arial,
+          sans-serif;
+        white-space: nowrap;
+      }
+      [data-theme='light'] .app-boot-loader__hint {
+        color: rgba(88, 97, 112, 0.82);
       }
       .app-boot-loader__track {
-        width: 132px;
-        height: 3px;
+        position: relative;
+        width: 168px;
+        height: 4px;
         overflow: hidden;
+        border: 1px solid rgba(36, 86, 216, 0.14);
         border-radius: 99px;
-        background: rgba(36, 86, 216, 0.12);
+        background: rgba(36, 86, 216, 0.1);
       }
       .app-boot-loader__track::after {
-        display: block;
-        width: 45%;
-        height: 100%;
+        position: absolute;
+        inset-block: 0;
+        inset-inline-start: 0;
+        width: 34px;
         border-radius: inherit;
-        background: #0b7a68;
+        background: #05cfa6;
+        box-shadow: 0 0 12px rgba(5, 207, 166, 0.58);
         content: '';
-        animation: app-boot-track 1s ease-in-out infinite alternate;
+        animation: app-boot-track 1.05s cubic-bezier(0.23, 1, 0.32, 1) infinite;
       }
       @keyframes app-boot-ring {
         0% {
-          opacity: 0.9;
-          transform: scale(0.72);
+          opacity: 0;
+          transform: scale(0.76);
+        }
+        35% {
+          opacity: 0.7;
         }
         100% {
           opacity: 0;
-          transform: scale(1.18);
+          transform: scale(1.14);
         }
       }
-      @keyframes app-boot-float {
-        from {
-          transform: translateY(2px) scale(0.98);
-        }
+      @keyframes app-boot-orbit {
         to {
-          transform: translateY(-2px) scale(1.02);
+          transform: rotate(360deg);
         }
       }
       @keyframes app-boot-track {
-        from {
-          transform: translateX(90%);
+        0% {
+          opacity: 0.25;
+          transform: translateX(155%);
         }
-        to {
-          transform: translateX(-120%);
+        35% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0.25;
+          transform: translateX(-255%);
         }
       }
       @media (prefers-reduced-motion: reduce) {
         .app-boot-loader__mark::before,
         .app-boot-loader__mark::after,
-        .app-boot-loader__mark img,
         .app-boot-loader__track::after {
           animation: none;
         }
@@ -154,6 +208,7 @@
           <img src="/icons/icon-192.png" width="64" height="64" alt="" />
         </span>
         <p class="app-boot-loader__label">آرا در حال آماده‌شدن است…</p>
+        <p class="app-boot-loader__hint">فقط چند لحظه تا ورود شما</p>
         <span class="app-boot-loader__track" aria-hidden="true"></span>
       </div>
     </div>

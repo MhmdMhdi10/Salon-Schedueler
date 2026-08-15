@@ -91,6 +91,7 @@ export function registrationRouter(services: Services): Router {
           brandAccent: input.brandAccent ?? null,
           workMode: input.workMode,
           services: input.services,
+          teamMembers: input.teamMembers,
           chairCount: input.chairCount,
         });
 

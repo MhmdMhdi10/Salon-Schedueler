@@ -2,10 +2,6 @@
   padding-bottom: calc(7rem + env(safe-area-inset-bottom));
 }
 
-.register-specialties-panel {
-  scroll-margin-block: 1rem 6rem;
-}
-
 .register-step-nav {
   position: relative;
 }
@@ -53,5 +49,9 @@
 @media (min-width: 48rem) {
   .register-form-content {
     padding-bottom: 2rem;
+  }
+
+  .register-step-nav {
+    margin-block-start: 0.75rem;
   }
 }

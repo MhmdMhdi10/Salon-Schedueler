@@ -78,6 +78,8 @@ const statusBorder: Record<ToastStatus, string> = {
 };
 
 const MAX_VISIBLE_TOASTS = 4;
+const DEFAULT_TOAST_DURATION = 2800;
+const LONG_TOAST_DURATION = 5200;
 
 /**
  * Map status → Radix live-region semantics: errors are assertive (`role=alert`,
@@ -91,7 +93,7 @@ function toastType(status: ToastStatus): RadixToast.ToastProps['type'] {
 
 export interface ToastProviderProps {
   children: React.ReactNode;
-  /** Default auto-dismiss duration (ms). Defaults to 4500. Errors stay visible longer. */
+  /** Default auto-dismiss duration (ms). Defaults to 2800. Errors/actions stay longer. */
   duration?: number;
   /** Swipe direction to dismiss. Defaults to `right` (toward inline-end in RTL). */
   swipeDirection?: RadixToast.ToastProviderProps['swipeDirection'];
@@ -109,7 +111,7 @@ export interface ToastProviderProps {
  */
 export function ToastProvider({
   children,
-  duration = 4500,
+  duration = DEFAULT_TOAST_DURATION,
   swipeDirection = 'right',
 }: ToastProviderProps) {
   // `t` is taken by the toast record in the render map, so alias the i18n fn.
@@ -162,7 +164,8 @@ export function ToastProvider({
           const status = t.status ?? 'info';
           const Icon = statusIcon[status];
           const visibleDuration =
-            t.duration ?? (status === 'error' ? Math.max(duration, 8000) : duration);
+            t.duration ??
+            (t.onUndo || status === 'error' ? Math.max(duration, LONG_TOAST_DURATION) : duration);
           return (
             <RadixToast.Root
               key={t.id}

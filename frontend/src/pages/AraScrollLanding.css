@@ -77,7 +77,8 @@ html:has(.ara-scroll-page) body {
 
 .ara-scroll-hero,
 .ara-scroll-feature,
-.ara-scroll-final-cta {
+.ara-scroll-final-cta,
+.ara-scroll-landing-footer {
   scroll-snap-align: start;
   scroll-snap-stop: always;
 }

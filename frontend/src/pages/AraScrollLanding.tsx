@@ -25,6 +25,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { JsonLd, SeoHead, SITE_NAME, SITE_URL } from '../components/seo';
 import { ThemeToggle, useTheme } from '../components/theme';
+import { PublicFooter } from '../components/layout/AppShell';
 import { AraCalendarHero } from './AraCalendarHero';
 import './AraScrollLanding.css';
 
@@ -1145,6 +1146,10 @@ export function AraScrollLanding() {
           </Link>
         </section>
       </main>
+
+      <div className="ara-scroll-landing-footer" data-ara-scroll-section="footer">
+        <PublicFooter />
+      </div>
 
       <div className="ara-scroll-progress" aria-hidden="true">
         <span>پیشرفت معرفی</span>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowRight,
   Check,
@@ -27,7 +28,15 @@ import {
 import { useAuth } from '../../auth/AuthContext';
 import { SeoHead } from '../../components/seo';
 import { BrandLogo } from '../../components/brand';
-import { Button, Select, TextField, cn, toPersianDigits, useToast } from '../../components/ui';
+import {
+  Button,
+  Checkbox,
+  Select,
+  TextField,
+  cn,
+  toPersianDigits,
+  useToast,
+} from '../../components/ui';
 import { ACCENTS, accentVars } from '../../components/theme/accents';
 
 import './RegisterSalonPage.css';
@@ -54,6 +63,7 @@ const STEP_ORDER: readonly Step[] = [
 type WorkMode = 'solo' | 'team' | 'salon' | 'starting';
 type Workspace = 'fixed_salon' | 'rented_chair' | 'home' | 'mobile' | 'not_decided';
 type TeamRange = '2_3' | '4_8' | '9_plus';
+type SalonCapacityRange = '1_3' | '4_8' | '9_plus';
 type MainGoal = 'online_booking' | 'calendar' | 'client_management' | 'all';
 
 const WORKSPACES: readonly Workspace[] = [
@@ -64,6 +74,7 @@ const WORKSPACES: readonly Workspace[] = [
   'not_decided',
 ] as const;
 const TEAM_RANGES: readonly TeamRange[] = ['2_3', '4_8', '9_plus'] as const;
+const SALON_CAPACITY_RANGES: readonly SalonCapacityRange[] = ['1_3', '4_8', '9_plus'] as const;
 const MAIN_GOALS: readonly MainGoal[] = [
   'online_booking',
   'calendar',
@@ -71,10 +82,22 @@ const MAIN_GOALS: readonly MainGoal[] = [
   'all',
 ] as const;
 
-const CHAIR_COUNT_BY_RANGE: Record<TeamRange, string> = {
+const CHAIR_COUNT_BY_TEAM_RANGE: Record<TeamRange, string> = {
   '2_3': '3',
   '4_8': '6',
   '9_plus': '10',
+};
+
+const CHAIR_COUNT_BY_SALON_CAPACITY: Record<SalonCapacityRange, string> = {
+  '1_3': '3',
+  '4_8': '6',
+  '9_plus': '10',
+};
+
+const TEAM_MEMBER_LIMIT_BY_RANGE: Record<TeamRange, number> = {
+  '2_3': 3,
+  '4_8': 8,
+  '9_plus': 10,
 };
 
 const WORK_MODES: readonly { key: WorkMode; icon: LucideIcon }[] = [
@@ -121,7 +144,7 @@ interface DraftService extends RegisterSalonServiceInput {
  * lands the owner straight in their panel:
  *
  *   1. شناخت مسیر — solo, team, salon owner, or starting out
- *   2. سؤال مرتبط — workspace or team size, based on the selected path
+ *   2. سؤال مرتبط — workspace, team size, or salon capacity, based on the selected path
  *   3. حوزه کاری — business type + primary specialty (skippable)
  *   4. مشخصات    — salon name + owner name + phone (required)
  *   5. خدمات     — add the services the salon offers (skippable)
@@ -154,6 +177,9 @@ function RegisterSalonContent() {
   const [workMode, setWorkMode] = useState<WorkMode | ''>('');
   const [workspace, setWorkspace] = useState<Workspace | ''>('');
   const [teamRange, setTeamRange] = useState<TeamRange | ''>('');
+  const [salonCapacity, setSalonCapacity] = useState<SalonCapacityRange | ''>('');
+  const [teamMembersEnabled, setTeamMembersEnabled] = useState(false);
+  const [teamMemberNames, setTeamMemberNames] = useState<string[]>([]);
   const [mainGoal, setMainGoal] = useState<MainGoal | ''>('');
   const [category, setCategory] = useState('');
   const [specialties, setSpecialties] = useState<string[]>([]);
@@ -189,7 +215,6 @@ function RegisterSalonContent() {
   const [secondsLeft, setSecondsLeft] = useState(0);
 
   const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
-  const specialtiesRef = useRef<HTMLDivElement | null>(null);
   const normalizedPhone = useMemo(() => normalizePhone(phone), [phone]);
   const selectedProfile = useMemo(
     () => BUSINESS_PROFILES.find((profile) => profile.key === category),
@@ -199,6 +224,7 @@ function RegisterSalonContent() {
   const codeIsComplete = codeValue.length === OTP_LENGTH;
   const stepIndex = STEP_ORDER.indexOf(step);
   const isMobileWorkspace = workspace === 'mobile';
+  const prefersReducedMotion = useReducedMotion();
 
   // Resend countdown for the OTP step.
   useEffect(() => {
@@ -219,6 +245,9 @@ function RegisterSalonContent() {
     setWorkMode(value);
     setWorkspace('');
     setTeamRange('');
+    setSalonCapacity('');
+    setTeamMembersEnabled(false);
+    setTeamMemberNames([]);
     setMainGoal('');
     // Give the final setup step a useful starting point even if the follow-up
     // question is skipped. The owner can still edit it before submitting.
@@ -228,9 +257,11 @@ function RegisterSalonContent() {
   const contextAnswerReady =
     workMode === 'solo' || workMode === 'starting'
       ? Boolean(workspace)
-      : workMode === 'team' || workMode === 'salon'
+      : workMode === 'team'
         ? Boolean(teamRange)
-        : false;
+        : workMode === 'salon'
+          ? Boolean(salonCapacity)
+          : false;
 
   const handleWizardBack = () => {
     if (step === 'category') {
@@ -241,8 +272,10 @@ function RegisterSalonContent() {
   };
 
   const handleContextNext = () => {
-    if (workMode === 'team' || workMode === 'salon') {
-      setChairCount(teamRange ? CHAIR_COUNT_BY_RANGE[teamRange] : '3');
+    if (workMode === 'team') {
+      setChairCount(teamRange ? CHAIR_COUNT_BY_TEAM_RANGE[teamRange] : '3');
+    } else if (workMode === 'salon') {
+      setChairCount(salonCapacity ? CHAIR_COUNT_BY_SALON_CAPACITY[salonCapacity] : '3');
     } else if (workspace === 'mobile') {
       // Mobile work has no physical chair. The backend creates one private
       // mobile capacity lane for the owner instead.
@@ -365,6 +398,9 @@ function RegisterSalonContent() {
           ...(durationMinutes ? { durationMinutes } : {}),
           ...(priceRial ? { priceRial } : {}),
         })),
+        teamMembers: teamMemberNames
+          .map((fullName) => ({ fullName: fullName.trim() }))
+          .filter((member) => member.fullName.length > 0),
         chairCount: isMobileWorkspace ? 0 : toIntOrZero(chairCount),
         referralToken,
       });
@@ -507,6 +543,19 @@ function RegisterSalonContent() {
       </header>
 
       <div className="register-form-content mx-auto flex w-full max-w-2xl flex-1 flex-col px-3 py-6 sm:px-4 sm:py-10">
+        <AnimatePresence initial={false} mode="wait">
+          <motion.div
+            key={step}
+            initial={prefersReducedMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={prefersReducedMotion ? undefined : { opacity: 0 }}
+            transition={
+              prefersReducedMotion
+                ? { duration: 0 }
+                : { duration: 0.22, ease: [0.2, 0, 0, 1] }
+            }
+            className="min-w-0"
+          >
         <p className="text-sm font-medium text-primary">
           مرحله {toPersianDigits(stepIndex + 1)} از {toPersianDigits(STEP_ORDER.length)}
         </p>
@@ -567,7 +616,7 @@ function RegisterSalonContent() {
             />
           </section>
         ) : step === 'context' ? (
-          <section className="flex flex-1 flex-col pt-8">
+          <section className="flex flex-col pt-8">
             <StepHeading
               icon={
                 workMode === 'salon' ? (
@@ -597,21 +646,111 @@ function RegisterSalonContent() {
               />
             )}
 
-            {(workMode === 'team' || workMode === 'salon') && (
+            {workMode === 'team' && (
+              <>
+                <Select
+                  id="teamRange"
+                  label={t('business.register.context.teamSizeTeamLabel')}
+                  value={teamRange}
+                  onValueChange={(value) => {
+                    const nextRange = value as TeamRange;
+                    setTeamRange(nextRange);
+                    setTeamMemberNames((previous) =>
+                      previous.slice(0, TEAM_MEMBER_LIMIT_BY_RANGE[nextRange]),
+                    );
+                  }}
+                  options={TEAM_RANGES.map((option) => ({
+                    value: option,
+                    label: t(`business.register.context.teamSizeTeamOptions.${option}`),
+                  }))}
+                  placeholder={t('business.register.context.teamSizeTeamPlaceholder')}
+                  containerClassName="mt-5"
+                />
+
+                <div className="mt-4 rounded-md border border-border bg-bg p-3">
+                  <Checkbox
+                    id="teamMembersEnabled"
+                    checked={teamMembersEnabled}
+                    onCheckedChange={(checked) => {
+                      const enabled = checked === true;
+                      setTeamMembersEnabled(enabled);
+                      if (enabled) {
+                        setTeamMemberNames((previous) => (previous.length ? previous : ['']));
+                      } else {
+                        setTeamMemberNames([]);
+                      }
+                    }}
+                    label={t('business.register.context.teamMembersToggle')}
+                    helperText={t('business.register.context.teamMembersHelper')}
+                  />
+
+                  {teamMembersEnabled && (
+                    <div className="mt-3 flex flex-col gap-3 border-t border-border pt-3">
+                      {teamMemberNames.map((name, index) => (
+                        <div key={index} className="flex items-end gap-2">
+                          <TextField
+                            id={`teamMember-${index}`}
+                            label={t('business.register.context.teamMemberLabel', {
+                              number: toPersianDigits(index + 1),
+                            })}
+                            placeholder={t('business.register.context.teamMemberPlaceholder')}
+                            containerClassName="min-w-0 flex-1"
+                            value={name}
+                            onChange={(event) => {
+                              const nextName = event.target.value;
+                              setTeamMemberNames((previous) =>
+                                previous.map((member, memberIndex) =>
+                                  memberIndex === index ? nextName : member,
+                                ),
+                              );
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            aria-label={t('business.register.context.removeTeamMember', {
+                              number: toPersianDigits(index + 1),
+                            })}
+                            onClick={() =>
+                              setTeamMemberNames((previous) =>
+                                previous.filter((_, memberIndex) => memberIndex !== index),
+                              )
+                            }
+                          >
+                            <Trash2 className="h-4 w-4" aria-hidden="true" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        startIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
+                        disabled={
+                          !teamRange ||
+                          teamMemberNames.length >= TEAM_MEMBER_LIMIT_BY_RANGE[teamRange]
+                        }
+                        onClick={() => setTeamMemberNames((previous) => [...previous, ''])}
+                        className="w-full sm:w-fit"
+                      >
+                        {t('business.register.context.addTeamMember')}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {workMode === 'salon' && (
               <Select
-                id="teamRange"
-                label={t(
-                  workMode === 'salon'
-                    ? 'business.register.context.teamSizeSalonLabel'
-                    : 'business.register.context.teamSizeTeamLabel',
-                )}
-                value={teamRange}
-                onValueChange={(value) => setTeamRange(value as TeamRange)}
-                options={TEAM_RANGES.map((option) => ({
+                id="salonCapacity"
+                label={t('business.register.context.salonCapacityLabel')}
+                value={salonCapacity}
+                onValueChange={(value) => setSalonCapacity(value as SalonCapacityRange)}
+                options={SALON_CAPACITY_RANGES.map((option) => ({
                   value: option,
-                  label: t(`business.register.context.teamSizeOptions.${option}`),
+                  label: t(`business.register.context.salonCapacityOptions.${option}`),
                 }))}
-                placeholder={t('business.register.context.teamSizePlaceholder')}
+                placeholder={t('business.register.context.salonCapacityPlaceholder')}
                 containerClassName="mt-5"
               />
             )}
@@ -640,7 +779,7 @@ function RegisterSalonContent() {
             />
           </section>
         ) : step === 'category' ? (
-          <section className="flex flex-1 flex-col pt-8">
+          <section className="flex flex-col pt-8">
             <div className="grid gap-3 sm:grid-cols-2">
               {BUSINESS_PROFILES.map((profile) => {
                 const Icon = profile.icon;
@@ -652,14 +791,6 @@ function RegisterSalonContent() {
                     onClick={() => {
                       setCategory(profile.key);
                       setSpecialties([profile.specialties[0].key]);
-                      if (window.matchMedia('(max-width: 47.9375rem)').matches) {
-                        window.requestAnimationFrame(() => {
-                          specialtiesRef.current?.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'start',
-                          });
-                        });
-                      }
                     }}
                     aria-pressed={selected}
                     data-testid={`business-type-${profile.key}`}
@@ -684,31 +815,33 @@ function RegisterSalonContent() {
                 );
               })}
             </div>
-            {selectedProfile && (
-              <div
-                ref={specialtiesRef}
-                className="register-specialties-panel flex flex-col gap-2 rounded-xl border border-border bg-bg p-4"
-              >
-                <p className="text-sm font-bold text-text">
-                  {t('business.register.category.specialtyTitle')}
-                </p>
-                <p className="text-xs leading-5 text-muted">
-                  {t('business.register.category.specialtySubtitle')}
-                </p>
-                <Select
-                  label={t('business.register.category.specialtyLabel')}
-                  labelHidden
-                  value={specialties[0] ?? ''}
-                  onValueChange={(value) => setSpecialties(value ? [value] : [])}
-                  options={selectedProfile.specialties.map((specialty) => ({
+            <div className="register-specialties-panel flex flex-col gap-2 rounded-xl border border-border bg-bg p-4">
+              <p className="text-sm font-bold text-text">
+                {t('business.register.category.specialtyTitle')}
+              </p>
+              <p className="text-xs leading-5 text-muted">
+                {t('business.register.category.specialtySubtitle')}
+              </p>
+              <Select
+                label={t('business.register.category.specialtyLabel')}
+                labelHidden
+                disabled={!selectedProfile}
+                value={selectedProfile ? (specialties[0] ?? '') : ''}
+                onValueChange={(value) => setSpecialties(value ? [value] : [])}
+                options={
+                  selectedProfile?.specialties.map((specialty) => ({
                     value: specialty.key,
                     label: specialty.label,
-                  }))}
-                  placeholder={t('business.register.category.specialtyPlaceholder')}
-                  containerClassName="w-full"
-                />
-              </div>
-            )}
+                  })) ?? []
+                }
+                placeholder={
+                  selectedProfile
+                    ? t('business.register.category.specialtyPlaceholder')
+                    : t('business.register.category.specialtyDisabledPlaceholder')
+                }
+                containerClassName="w-full"
+              />
+            </div>
             <StepNav
               onBack={() => setStep(workMode ? 'context' : 'profile')}
               onNext={() => setStep('info')}
@@ -787,30 +920,34 @@ function RegisterSalonContent() {
 
             {step === 'services' && (
               <div className="flex flex-col gap-4" data-testid="register-services-step">
-                <Select
-                  id="svcPreset"
-                  label={t('business.register.services.presetsLabel')}
-                  placeholder="یک خدمت را انتخاب کنید"
-                  value={selectedPresetKey}
-                  options={SERVICE_PRESETS.filter((presetKey) => {
-                    const presetName = t(`business.register.services.presets.${presetKey}`);
-                    return !services.some((service) => service.name === presetName);
-                  }).map((presetKey) => ({
-                    value: presetKey,
-                    label: t(`business.register.services.presets.${presetKey}`),
-                  }))}
-                  emptyText="همهٔ خدمات پیشنهادی اضافه شده‌اند"
-                  onValueChange={(value) =>
-                    handleSelectPresetService(value as (typeof SERVICE_PRESETS)[number])
-                  }
-                />
-
                 <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-[minmax(0,1fr)_8.5rem_9.5rem]">
                   <div className="col-span-2 min-w-0 sm:col-span-1">
                     <TextField
                       id="svcName"
                       label={t('business.register.services.nameLabel')}
                       placeholder={t('business.register.services.namePlaceholder')}
+                      endAdornment={
+                        <Select
+                          id="svcPreset"
+                          label={t('business.register.services.presetsLabel')}
+                          labelHidden
+                          placeholder={t('business.register.services.presetsPlaceholder')}
+                          value={selectedPresetKey}
+                          options={SERVICE_PRESETS.filter((presetKey) => {
+                            const presetName = t(`business.register.services.presets.${presetKey}`);
+                            return !services.some((service) => service.name === presetName);
+                          }).map((presetKey) => ({
+                            value: presetKey,
+                            label: t(`business.register.services.presets.${presetKey}`),
+                          }))}
+                          emptyText={t('business.register.services.presetsEmpty')}
+                          onValueChange={(value) =>
+                            handleSelectPresetService(value as (typeof SERVICE_PRESETS)[number])
+                          }
+                          containerClassName="w-36 shrink-0"
+                          className="h-9 min-h-9 border-0 bg-transparent px-2 py-1 text-xs text-primary shadow-none focus-visible:outline-offset-0"
+                        />
+                      }
                       value={svcName}
                       onChange={(e) => {
                         setSelectedPresetKey('');
@@ -982,11 +1119,37 @@ function RegisterSalonContent() {
                     value={
                       workspace
                         ? t(`business.register.context.workspaceOptions.${workspace}`)
-                        : teamRange
-                          ? t(`business.register.context.teamSizeOptions.${teamRange}`)
-                          : t('business.register.review.none')
+                        : workMode === 'team' && teamRange
+                          ? t(`business.register.context.teamSizeTeamOptions.${teamRange}`)
+                          : workMode === 'salon' && salonCapacity
+                            ? t(
+                                `business.register.context.salonCapacityOptions.${salonCapacity}`,
+                              )
+                            : t('business.register.review.none')
                     }
                   />
+                  {workMode === 'team' && (
+                    <SummaryRow
+                      label={t('business.register.review.team')}
+                      value={
+                        teamMemberNames.filter((name) => name.trim().length > 0).length > 0
+                          ? t('business.register.review.teamCount', {
+                              count: toPersianDigits(
+                                teamMemberNames.filter((name) => name.trim().length > 0).length,
+                              ),
+                            })
+                          : t('business.register.review.none')
+                      }
+                    />
+                  )}
+                  {workMode === 'salon' && salonCapacity && (
+                    <SummaryRow
+                      label={t('business.register.review.capacity')}
+                      value={t(
+                        `business.register.context.salonCapacityOptions.${salonCapacity}`,
+                      )}
+                    />
+                  )}
                   <SummaryRow
                     label={t('business.register.review.goal')}
                     value={
@@ -1137,7 +1300,7 @@ function RegisterSalonContent() {
 
         {/* Already have an account? */}
         {step !== 'otp' && step !== 'profile' && (
-          <p className="text-center text-sm text-muted">
+          <p className="mt-6 shrink-0 pb-1 text-center text-sm text-muted">
             {t('business.register.haveAccount')}{' '}
             <Link
               to="/auth"
@@ -1147,6 +1310,8 @@ function RegisterSalonContent() {
             </Link>
           </p>
         )}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -1295,7 +1460,11 @@ function ChoiceCard({
         <span className="font-bold">{label}</span>
         <span className="text-xs leading-5 text-muted">{description}</span>
       </span>
-      {selected && <Check className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />}
+      {selected ? (
+        <Check className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+      ) : (
+        <span className="size-4 shrink-0" aria-hidden="true" />
+      )}
     </button>
   );
 }

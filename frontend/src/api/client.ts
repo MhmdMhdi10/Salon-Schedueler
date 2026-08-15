@@ -277,6 +277,11 @@ export interface RegisterSalonServiceInput {
   priceRial?: number;
 }
 
+/** A team member name captured during salon onboarding. */
+export interface RegisterSalonTeamMemberInput {
+  fullName: string;
+}
+
 /** Salon self-registration payload (mirrors the backend `RegisterSalonSchema`). */
 export interface RegisterSalonInput {
   salonName: string;
@@ -294,6 +299,8 @@ export interface RegisterSalonInput {
   workMode?: 'fixed_salon' | 'rented_chair' | 'home' | 'mobile' | 'hybrid' | 'not_decided';
   /** Services to pre-create (optional). */
   services?: RegisterSalonServiceInput[];
+  /** Team members to pre-create as Stylist staff records (optional). */
+  teamMembers?: RegisterSalonTeamMemberInput[];
   /** Number of chairs to pre-create (optional). */
   chairCount?: number;
   /** Referral token from a customer invite link (optional). */

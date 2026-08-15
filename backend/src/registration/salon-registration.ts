@@ -73,6 +73,7 @@ export class SalonRegistration {
     brandAccent?: string | null;
     workMode?: 'fixed_salon' | 'rented_chair' | 'home' | 'mobile' | 'hybrid' | 'not_decided';
     services?: Array<{ name: string; durationMinutes: number; priceRial: number }>;
+    teamMembers?: Array<{ fullName: string }>;
     chairCount?: number;
   }): Promise<{ salon: Salon; ownerStaffId: string }> {
     const qrToken = randomUUID();
@@ -108,18 +109,34 @@ export class SalonRegistration {
       // Default working hours for the owner (all 7 weekdays, 09:00–20:00) so a
       // freshly-registered salon is immediately bookable. The scheduling engine
       // returns no slots until at least one staff member has working_hours.
+      const staffMembers: StaffMember[] = [owner];
+      for (const member of (input.teamMembers ?? []).slice(0, 50)) {
+        const createdMember = await tx.staffMember.create({
+          data: {
+            salonId: salon.id,
+            fullName: member.fullName,
+            role: 'Stylist',
+          },
+        });
+        staffMembers.push(createdMember);
+      }
+
+      // Give every onboarding-created staff member the same usable default
+      // schedule as the owner. Owners can refine hours later in the panel.
       await tx.workingHours.createMany({
-        data: Array.from({ length: 7 }, (_, weekday) => ({
-          ownerKind: 'staff',
-          ownerId: owner.id,
-          weekday,
-          startTime: new Date('1970-01-01T09:00:00'),
-          endTime: new Date('1970-01-01T20:00:00'),
-        })),
+        data: staffMembers.flatMap((member) =>
+          Array.from({ length: 7 }, (_, weekday) => ({
+            ownerKind: 'staff',
+            ownerId: member.id,
+            weekday,
+            startTime: new Date('1970-01-01T09:00:00'),
+            endTime: new Date('1970-01-01T20:00:00'),
+          })),
+        ),
       });
 
-      // Create the requested services and link each to the owner so the engine
-      // can find qualified staff (service_staff is a hard precondition).
+      // Create the requested services and link each to every onboarding staff
+      // member so the engine can find qualified staff immediately.
       if (services.length > 0) {
         const created = await tx.service.createMany({
           data: services.map((s) => ({
@@ -138,10 +155,12 @@ export class SalonRegistration {
           select: { id: true },
         });
         await tx.serviceStaff.createMany({
-          data: serviceRows.map((s) => ({
-            serviceId: s.id,
-            staffMemberId: owner.id,
-          })),
+          data: serviceRows.flatMap((service) =>
+            staffMembers.map((member) => ({
+              serviceId: service.id,
+              staffMemberId: member.id,
+            })),
+          ),
         });
       }
 

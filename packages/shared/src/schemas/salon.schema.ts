@@ -29,6 +29,13 @@ export const RegisterSalonServiceSchema = z.object({
 
 export type RegisterSalonService = z.infer<typeof RegisterSalonServiceSchema>;
 
+/** A team member name captured during salon self-registration. */
+export const RegisterSalonTeamMemberSchema = z.object({
+  fullName: z.string().trim().min(1).max(120),
+});
+
+export type RegisterSalonTeamMember = z.infer<typeof RegisterSalonTeamMemberSchema>;
+
 /**
  * Salon self-registration payload (public, unauthenticated). Creates the salon,
  * its Owner staff member (logging in with `phone` mints an Owner token), starts
@@ -60,6 +67,8 @@ export const RegisterSalonSchema = z.object({
     .default('not_decided'),
   /** Optional services to pre-create (skippable). */
   services: z.array(RegisterSalonServiceSchema).max(50).default([]),
+  /** Optional team members to pre-create as Stylist staff records. */
+  teamMembers: z.array(RegisterSalonTeamMemberSchema).max(50).default([]),
   /** Optional number of chairs to pre-create, named «صندلی N» (skippable). */
   chairCount: z.number().int().min(0).max(50).default(0),
   referralToken: z.string().min(1).max(120).optional(),

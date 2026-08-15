@@ -277,7 +277,7 @@ function FooterLink({ to, children }: { to: string; children: React.ReactNode })
  * disappeared). No app-store badges (no native apps yet) and no dead social
  * placeholders.
  */
-function PublicFooter() {
+export function PublicFooter() {
   const { t } = useTranslation();
   const year = toPersianDigits(new Date().getFullYear());
   return (
