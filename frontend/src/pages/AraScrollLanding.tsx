@@ -840,6 +840,17 @@ export function AraScrollLanding() {
   const progressScale = useTransform(scrollYProgress, [0, 1], [0, 1]);
 
   useEffect(() => {
+    // Android browsers can trap touch scrolling when mandatory snap is
+    // combined with always-stop sections. Keep the desktop/iOS interaction
+    // unchanged and let Android use native vertical touch scrolling.
+    const root = document.documentElement;
+    if (!/Android/i.test(navigator.userAgent)) return;
+
+    root.classList.add('ara-scroll-android');
+    return () => root.classList.remove('ara-scroll-android');
+  }, []);
+
+  useEffect(() => {
     const url = new URL(window.location.href);
     if (!url.searchParams.has('theme')) return;
 
