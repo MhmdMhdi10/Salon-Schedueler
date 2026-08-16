@@ -47,7 +47,6 @@ import {
   type WeeklyWorkingHour,
 } from '../../api/client';
 import { AppointmentDetailsSheet, MoveAppointmentDialog, type CalendarAppointmentLike } from './OwnerAppointmentPanels';
-import { ContactImport } from '../../components/ContactImport';
 import { useAuth } from '../../auth/AuthContext';
 import { useSalonId } from '../../auth/useSalonId';
 import { usePagination } from '../../hooks/usePagination';
@@ -2945,18 +2944,23 @@ function ManualBookingDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !saving && onOpenChange(next)}>
-      <DialogContent>
-        <DialogTitle>ثبت نوبت حضوری</DialogTitle>
-        <DialogDescription>
+      <DialogContent className="manual-booking-dialog !w-[calc(100%-1rem)] !max-w-lg !max-h-[calc(100dvh-1rem)] !rounded-2xl !p-4 sm:!p-5">
+        <DialogTitle className="!text-xl !font-bold tracking-tight">ثبت نوبت حضوری</DialogTitle>
+        <DialogDescription className="!mt-2 max-w-xl leading-6">
           نوبت حضوری هم از همان ظرفیت آرایشگر و صندلی استفاده می‌کند؛ بنابراین رزرو هم‌زمان ثبت نمی‌شود.
         </DialogDescription>
-        <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-3">
+        <div className="mt-5 rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <strong className="block text-sm text-text">مشتری</strong>
-              <p className="m-0 mt-1 text-xs leading-5 text-muted">
-                مشتری قبلی را پیدا کن یا اطلاعات مشتری جدید را وارد کن.
-              </p>
+            <div className="flex min-w-0 items-start gap-2.5">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <User className="size-4" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <h3 className="m-0 text-sm font-bold text-text">مشتری</h3>
+                <p className="m-0 mt-1 text-xs leading-5 text-muted">
+                  مشتری قبلی را پیدا کن یا اطلاعات مشتری جدید را وارد کن.
+                </p>
+              </div>
             </div>
             {selectedClient && (
               <Button type="button" variant="ghost" size="md" onClick={handleNewClient} disabled={saving}>
@@ -3026,14 +3030,15 @@ function ManualBookingDialog({
                   )}
                 </div>
               )}
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button type="button" variant="secondary" size="md" onClick={handleNewClient} disabled={saving || loading}>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Button type="button" variant="secondary" size="md" className="w-full" onClick={handleNewClient} disabled={saving || loading}>
                   مشتری جدید / ورود دستی
                 </Button>
                 <Button
                   type="button"
                   variant="ghost"
                   size="md"
+                  className="w-full"
                   startIcon={<ContactRound className="h-4 w-4" />}
                   onClick={() => void handleContactPick()}
                   loading={contactLoading}
@@ -3041,7 +3046,7 @@ function ManualBookingDialog({
                 >
                   از مخاطبین تلفن
                 </Button>
-                <label className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border bg-bg px-3 py-2 text-xs font-bold text-muted transition-colors hover:bg-elevated hover:text-text focus-within:outline focus-within:outline-2 focus-within:outline-focus">
+                <label className="col-span-2 inline-flex min-h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border bg-bg px-3 py-2 text-xs font-bold text-muted transition-colors hover:bg-elevated hover:text-text focus-within:outline focus-within:outline-2 focus-within:outline-focus">
                   <input
                     type="file"
                     accept=".vcf,text/vcard"
@@ -3076,7 +3081,7 @@ function ManualBookingDialog({
             </p>
           )}
         </div>
-        <form onSubmit={(event) => void submit(event)} className="mt-4 flex flex-col gap-3">
+        <form onSubmit={(event) => void submit(event)} className="mt-5 flex flex-col gap-4">
           <Select
             label="خدمت"
             value={serviceId}
@@ -3130,13 +3135,6 @@ function ManualBookingDialog({
                 inputMode="tel"
                 dir="ltr"
               />
-              <ContactImport
-                disabled={saving}
-                onSelect={(contact) => {
-                  setPhone(contact.phone);
-                  setFullName(contact.fullName);
-                }}
-              />
             </div>
             <TextField
               label="نام مشتری (اختیاری)"
@@ -3146,11 +3144,11 @@ function ManualBookingDialog({
             />
           </div>
           {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-          <div className="mt-2 flex justify-end gap-2">
+          <div className="mt-2 flex items-center justify-end gap-2">
             <DialogClose asChild>
-              <Button type="button" variant="ghost" disabled={saving}>انصراف</Button>
+              <Button type="button" variant="ghost" className="min-w-20" disabled={saving}>انصراف</Button>
             </DialogClose>
-            <Button type="submit" loading={saving} disabled={saving || loading || !serviceId}>
+            <Button type="submit" className="min-w-28" loading={saving} disabled={saving || loading || !serviceId}>
               ثبت نوبت
             </Button>
           </div>

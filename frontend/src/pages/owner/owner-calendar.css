@@ -23,6 +23,17 @@
   display: none;
 }
 
+/* Keep manual booking compact on phones without exposing a second scrollbar. */
+.manual-booking-dialog {
+  -ms-overflow-style: none;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+}
+
+.manual-booking-dialog::-webkit-scrollbar {
+  display: none;
+}
+
 @media (max-width: 47.9375rem) {
   .owner-calendar-page {
     gap: 0.75rem;

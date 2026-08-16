@@ -255,3 +255,163 @@ export function BarberIcon({
     </svg>
   );
 }
+
+/** Tailored onboarding glyphs — intentionally separate from generic icon libraries. */
+export function OnboardingProfileIcon({
+  className,
+  'aria-hidden': ariaHidden = true,
+  ...rest
+}: CategoryIconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.8"
+      aria-hidden={ariaHidden}
+      focusable={false}
+      xmlns="http://www.w3.org/2000/svg"
+      {...rest}
+    >
+      <circle cx="10" cy="8" r="3.25" />
+      <path d="M3.75 19.25c.55-3.35 2.65-5.3 6.25-5.3s5.7 1.95 6.25 5.3" />
+      <path d="m17.25 5.25 1.35-1.35 1.35 1.35m-1.35-1.35v3.1" />
+    </svg>
+  );
+}
+
+export function OnboardingTeamIcon({
+  className,
+  'aria-hidden': ariaHidden = true,
+  ...rest
+}: CategoryIconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.8"
+      aria-hidden={ariaHidden}
+      focusable={false}
+      xmlns="http://www.w3.org/2000/svg"
+      {...rest}
+    >
+      <circle cx="9" cy="8" r="2.8" />
+      <circle cx="16.25" cy="8.75" r="2.15" />
+      <path d="M3.75 19.25c.5-3.2 2.25-5.05 5.25-5.05s4.8 1.85 5.3 5.05" />
+      <path d="M14.15 14.35c.65-.45 1.35-.68 2.15-.68 2.05 0 3.35 1.25 3.7 3.75" />
+    </svg>
+  );
+}
+
+export function OnboardingSalonIcon({
+  className,
+  'aria-hidden': ariaHidden = true,
+  ...rest
+}: CategoryIconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.8"
+      aria-hidden={ariaHidden}
+      focusable={false}
+      xmlns="http://www.w3.org/2000/svg"
+      {...rest}
+    >
+      <path d="M4 9.5h16l-1.2-4H5.2L4 9.5Z" />
+      <path d="M5 9.5v9.75h14V9.5" />
+      <path d="M4 9.5c.65 1.15 1.45 1.7 2.4 1.7.95 0 1.75-.55 2.4-1.7.65 1.15 1.45 1.7 2.4 1.7.95 0 1.75-.55 2.4-1.7.65 1.15 1.45 1.7 2.4 1.7.95 0 1.75-.55 2.4-1.7" />
+      <path d="M9 19.25v-4.5h3.75v4.5m3.25-6.25h.01" />
+    </svg>
+  );
+}
+
+export function OnboardingRouteIcon({
+  className,
+  'aria-hidden': ariaHidden = true,
+  ...rest
+}: CategoryIconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.8"
+      aria-hidden={ariaHidden}
+      focusable={false}
+      xmlns="http://www.w3.org/2000/svg"
+      {...rest}
+    >
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="m14.9 9.1-2.2 5-4.7 2.1 2.2-5 4.7-2.1Z" />
+      <path d="M12 3.5v1.5m0 14v1.5M3.5 12H5m14 0h1.5" />
+      <circle cx="12" cy="12" r=".85" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function OnboardingSecurityIcon({
+  className,
+  'aria-hidden': ariaHidden = true,
+  ...rest
+}: CategoryIconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.8"
+      aria-hidden={ariaHidden}
+      focusable={false}
+      xmlns="http://www.w3.org/2000/svg"
+      {...rest}
+    >
+      <path d="m12 3.5 6.2 2.4v5.15c0 4.05-2.5 7.35-6.2 9.45-3.7-2.1-6.2-5.4-6.2-9.45V5.9L12 3.5Z" />
+      <circle cx="12" cy="10.9" r="1.65" />
+      <path d="M12 12.55v2.5" />
+    </svg>
+  );
+}
+
+export function TattooIcon({
+  className,
+  'aria-hidden': ariaHidden = true,
+  ...rest
+}: CategoryIconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.8"
+      aria-hidden={ariaHidden}
+      focusable={false}
+      xmlns="http://www.w3.org/2000/svg"
+      {...rest}
+    >
+      <path d="m5 18.75 2.1-5.25L16.8 3.8l3.4 3.4-9.7 9.7L5 18.75Z" />
+      <path d="m14.25 6.35 3.4 3.4M7.1 13.5l3.4 3.4" />
+      <path d="M17.8 15.1c0 1.8-1.35 3.3-3 3.3s-3-1.5-3-3.3c0-1.35 1.6-2.7 3-4.25 1.4 1.55 3 2.9 3 4.25Z" />
+    </svg>
+  );
+}
