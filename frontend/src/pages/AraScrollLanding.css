@@ -15,6 +15,29 @@ html:has(.ara-scroll-page) body {
   overflow-x: hidden;
 }
 
+/* Android Chrome/WebView may refuse a touch gesture when a full-page story
+   combines mandatory snap with `scroll-snap-stop: always`. Keep snap as a
+   gentle landing aid, but leave gesture ownership with the page. */
+html.ara-scroll-android:has(.ara-scroll-page) {
+  scroll-snap-type: y proximity;
+}
+
+html.ara-scroll-android:has(.ara-scroll-page) body {
+  overscroll-behavior-y: auto;
+}
+
+html.ara-scroll-android .ara-scroll-page {
+  touch-action: pan-y;
+  overscroll-behavior-y: auto;
+}
+
+html.ara-scroll-android .ara-scroll-hero,
+html.ara-scroll-android .ara-scroll-feature,
+html.ara-scroll-android .ara-scroll-final-cta,
+html.ara-scroll-android .ara-scroll-landing-footer {
+  scroll-snap-stop: normal;
+}
+
 .ara-scroll-page {
   --ara-scroll-bg: #0a1013;
   --ara-scroll-bg-soft: #0f191e;
