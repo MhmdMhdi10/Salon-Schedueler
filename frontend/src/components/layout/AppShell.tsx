@@ -93,7 +93,7 @@ export function AppShell({ children, className, headerVariant }: AppShellProps) 
         <DefaultHeader />
       ) : null}
 
-      {isBare && (
+      {isBare && pathname !== '/business/register' && (
         <div className="fixed end-3 top-3 z-nav">
           <ThemeToggle />
         </div>

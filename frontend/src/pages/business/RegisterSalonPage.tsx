@@ -2,21 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import {
-  ArrowRight,
-  Check,
-  Eye,
-  Hand,
-  Plus,
-  Scissors,
-  ShieldCheck,
-  Sparkles,
-  Store,
-  Trash2,
-  User,
-  Users,
-  type LucideIcon,
-} from 'lucide-react';
+import { ArrowRight, Check, Plus, Trash2 } from 'lucide-react';
 import { normalizeDigits } from '@salon/shared';
 import {
   ApiError,
@@ -28,6 +14,7 @@ import {
 import { useAuth } from '../../auth/AuthContext';
 import { SeoHead } from '../../components/seo';
 import { BrandLogo } from '../../components/brand';
+import { ThemeToggle } from '../../components/theme/ThemeToggle';
 import {
   Button,
   Checkbox,
@@ -38,6 +25,21 @@ import {
   useToast,
 } from '../../components/ui';
 import { ACCENTS, accentVars } from '../../components/theme/accents';
+import {
+  BarberIcon,
+  BrowsIcon,
+  HaircutIcon,
+  MakeupIcon,
+  NailsIcon,
+  OnboardingProfileIcon,
+  OnboardingRouteIcon,
+  OnboardingSalonIcon,
+  OnboardingSecurityIcon,
+  OnboardingTeamIcon,
+  SkinIcon,
+  TattooIcon,
+} from '../../components/icons';
+import type { CategoryIconProps } from '../../components/icons';
 
 import './RegisterSalonPage.css';
 
@@ -100,11 +102,11 @@ const TEAM_MEMBER_LIMIT_BY_RANGE: Record<TeamRange, number> = {
   '9_plus': 10,
 };
 
-const WORK_MODES: readonly { key: WorkMode; icon: LucideIcon }[] = [
-  { key: 'solo', icon: User },
-  { key: 'team', icon: Users },
-  { key: 'salon', icon: Store },
-  { key: 'starting', icon: Sparkles },
+const WORK_MODES: readonly { key: WorkMode; icon: React.ComponentType<CategoryIconProps> }[] = [
+  { key: 'solo', icon: OnboardingProfileIcon },
+  { key: 'team', icon: OnboardingTeamIcon },
+  { key: 'salon', icon: OnboardingSalonIcon },
+  { key: 'starting', icon: OnboardingRouteIcon },
 ] as const;
 
 /**
@@ -539,6 +541,7 @@ function RegisterSalonContent() {
           ) : (
             <span className="size-10" aria-hidden="true" />
           )}
+          <ThemeToggle className="shrink-0" />
         </div>
       </header>
 
@@ -589,7 +592,7 @@ function RegisterSalonContent() {
         {step === 'profile' ? (
           <section className="flex flex-1 flex-col pt-8">
             <StepHeading
-              icon={<User className="h-5 w-5" aria-hidden="true" />}
+              icon={<OnboardingProfileIcon className="h-5 w-5" aria-hidden="true" />}
               title={t('business.register.profile.question')}
               subtitle={t('business.register.profile.helper')}
             />
@@ -620,11 +623,11 @@ function RegisterSalonContent() {
             <StepHeading
               icon={
                 workMode === 'salon' ? (
-                  <Store className="h-5 w-5" aria-hidden="true" />
+                  <OnboardingSalonIcon className="h-5 w-5" aria-hidden="true" />
                 ) : workMode === 'team' ? (
-                  <Users className="h-5 w-5" aria-hidden="true" />
+                  <OnboardingTeamIcon className="h-5 w-5" aria-hidden="true" />
                 ) : (
-                  <Sparkles className="h-5 w-5" aria-hidden="true" />
+                  <OnboardingRouteIcon className="h-5 w-5" aria-hidden="true" />
                 )
               }
               title={t('business.register.context.question')}
@@ -815,7 +818,7 @@ function RegisterSalonContent() {
                 );
               })}
             </div>
-            <div className="register-specialties-panel flex flex-col gap-2 rounded-xl border border-border bg-bg p-4">
+            <div className="register-specialties-panel mt-4 flex flex-col gap-2 rounded-xl border border-border bg-bg p-4">
               <p className="text-sm font-bold text-text">
                 {t('business.register.category.specialtyTitle')}
               </p>
@@ -863,7 +866,7 @@ function RegisterSalonContent() {
                 }}
               >
                 <StepHeading
-                  icon={<Store className="h-5 w-5" aria-hidden="true" />}
+                  icon={<OnboardingSalonIcon className="h-5 w-5" aria-hidden="true" />}
                   title={t('business.register.info.title')}
                   subtitle={t('business.register.info.subtitle')}
                 />
@@ -1054,7 +1057,7 @@ function RegisterSalonContent() {
             {step === 'setup' && (
               <div className="flex flex-col gap-5">
                 <StepHeading
-                  icon={<Store className="h-5 w-5" aria-hidden="true" />}
+                  icon={<OnboardingSalonIcon className="h-5 w-5" aria-hidden="true" />}
                   title={t('business.register.setup.title')}
                   subtitle={t('business.register.setup.subtitle')}
                 />
@@ -1217,7 +1220,7 @@ function RegisterSalonContent() {
                 }}
               >
                 <StepHeading
-                  icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
+                  icon={<OnboardingSecurityIcon className="h-5 w-5" aria-hidden="true" />}
                   title={t('business.register.verify.title')}
                   subtitle={t('business.register.verify.subtitle', {
                     phone: toPersianDigits(normalizedPhone),
@@ -1321,7 +1324,7 @@ interface BusinessProfile {
   key: string;
   label: string;
   description: string;
-  icon: LucideIcon;
+  icon: React.ComponentType<CategoryIconProps>;
   specialties: readonly { key: string; label: string }[];
 }
 
@@ -1330,7 +1333,7 @@ const BUSINESS_PROFILES: readonly BusinessProfile[] = [
     key: 'hair_salon',
     label: 'سالن مو و زیبایی',
     description: 'مو، رنگ، براشینگ و خدمات زیبایی',
-    icon: Scissors,
+    icon: HaircutIcon,
     specialties: [
       { key: 'haircut', label: 'کوتاهی مو' },
       { key: 'color', label: 'رنگ و مش' },
@@ -1342,7 +1345,7 @@ const BUSINESS_PROFILES: readonly BusinessProfile[] = [
     key: 'barber',
     label: 'آرایشگاه مردانه',
     description: 'کوتاهی، اصلاح و استایل آقایان',
-    icon: Scissors,
+    icon: BarberIcon,
     specialties: [
       { key: 'mens_haircut', label: 'کوتاهی مردانه' },
       { key: 'beard', label: 'اصلاح صورت و ریش' },
@@ -1353,7 +1356,7 @@ const BUSINESS_PROFILES: readonly BusinessProfile[] = [
     key: 'nails',
     label: 'ناخن',
     description: 'مانیکور، پدیکور و طراحی ناخن',
-    icon: Hand,
+    icon: NailsIcon,
     specialties: [
       { key: 'manicure', label: 'مانیکور' },
       { key: 'pedicure', label: 'پدیکور' },
@@ -1365,7 +1368,7 @@ const BUSINESS_PROFILES: readonly BusinessProfile[] = [
     key: 'brows_lashes',
     label: 'ابرو و مژه',
     description: 'زیبایی چشم و فرم‌دهی ابرو',
-    icon: Eye,
+    icon: BrowsIcon,
     specialties: [
       { key: 'brows', label: 'اصلاح و قرینه‌سازی ابرو' },
       { key: 'lash_lift', label: 'لیفت مژه' },
@@ -1376,7 +1379,7 @@ const BUSINESS_PROFILES: readonly BusinessProfile[] = [
     key: 'makeup',
     label: 'میکاپ و گریم',
     description: 'میکاپ روز، مجلسی و عروس',
-    icon: Sparkles,
+    icon: MakeupIcon,
     specialties: [
       { key: 'makeup', label: 'میکاپ' },
       { key: 'bridal_makeup', label: 'میکاپ عروس' },
@@ -1387,7 +1390,7 @@ const BUSINESS_PROFILES: readonly BusinessProfile[] = [
     key: 'spa',
     label: 'اسپا و سلامت',
     description: 'ماساژ، مراقبت پوست و آرامش',
-    icon: Sparkles,
+    icon: SkinIcon,
     specialties: [
       { key: 'massage', label: 'ماساژ' },
       { key: 'facial', label: 'فیشال و مراقبت پوست' },
@@ -1398,7 +1401,7 @@ const BUSINESS_PROFILES: readonly BusinessProfile[] = [
     key: 'tattoo',
     label: 'تتو و پیرسینگ',
     description: 'تتو، میکروپیگمنتیشن و پیرسینگ',
-    icon: Sparkles,
+    icon: TattooIcon,
     specialties: [
       { key: 'tattoo', label: 'تتو' },
       { key: 'microblading', label: 'میکروبلیدینگ' },
@@ -1429,7 +1432,7 @@ function ChoiceCard({
   onSelect,
   testId,
 }: {
-  icon: LucideIcon;
+  icon: React.ComponentType<CategoryIconProps>;
   label: string;
   description: string;
   selected: boolean;
@@ -1516,39 +1519,42 @@ function StepNav({
   loading?: boolean;
 }) {
   return (
-    <div className="register-step-nav flex flex-col gap-3 pt-1">
-      <Button
-        type="button"
-        size="lg"
-        fullWidth
-        onClick={onNext}
-        loading={loading}
-        disabled={nextDisabled || loading}
-      >
-        {nextLabel}
-      </Button>
-      <div className="flex items-center justify-between gap-2">
-        {onBack ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="md"
-            startIcon={<ArrowRight className="h-4 w-4 rtl:-scale-x-100" />}
-            onClick={onBack}
-          >
-            {backLabel}
-          </Button>
-        ) : (
-          <span aria-hidden="true" />
-        )}
-        {onSkip && skipLabel ? (
-          <Button type="button" variant="ghost" size="md" onClick={onSkip} disabled={loading}>
-            {skipLabel}
-          </Button>
-        ) : (
-          <span aria-hidden="true" />
-        )}
+    <div className="register-step-nav-shell">
+      <div className="register-step-nav flex flex-col gap-3 pt-1">
+        <Button
+          type="button"
+          size="lg"
+          fullWidth
+          onClick={onNext}
+          loading={loading}
+          disabled={nextDisabled || loading}
+        >
+          {nextLabel}
+        </Button>
+        <div className="flex items-center justify-between gap-2">
+          {onBack ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="md"
+              startIcon={<ArrowRight className="h-4 w-4 rtl:-scale-x-100" />}
+              onClick={onBack}
+            >
+              {backLabel}
+            </Button>
+          ) : (
+            <span aria-hidden="true" />
+          )}
+          {onSkip && skipLabel ? (
+            <Button type="button" variant="ghost" size="md" onClick={onSkip} disabled={loading}>
+              {skipLabel}
+            </Button>
+          ) : (
+            <span aria-hidden="true" />
+          )}
+        </div>
       </div>
+      <div className="register-step-nav-spacer" aria-hidden="true" />
     </div>
   );
 }

@@ -1,0 +1,1207 @@
+<!doctype html>
+<html lang="fa" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1010">
+  <title>ARA — نقشه‌ی حرکت محصول</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --page: #0b1010;
+      --panel: #101818;
+      --panel-2: #152121;
+      --panel-3: #1c2b2a;
+      --paper: #f4f1e9;
+      --paper-soft: #e9e5db;
+      --text: #f4f1e9;
+      --muted: #9eb0aa;
+      --muted-2: #70817c;
+      --ink: #0b1010;
+      --teal: #0d7f6f;
+      --mint: #33d6b5;
+      --coral: #e76f51;
+      --violet: #6c63ff;
+      --blue: #85a9ff;
+      --amber: #d8a550;
+      --line: rgba(244, 241, 233, .14);
+      --line-strong: rgba(244, 241, 233, .24);
+      --shadow: 0 24px 70px rgba(0, 0, 0, .22);
+      --role-accent: var(--mint);
+      --radius: 18px;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    [data-theme="light"] {
+      color-scheme: light;
+      --page: #e8e4dc;
+      --panel: #f4f1e9;
+      --panel-2: #ffffff;
+      --panel-3: #dfe9e5;
+      --paper: #111919;
+      --paper-soft: #293735;
+      --text: #111919;
+      --muted: #52635e;
+      --muted-2: #70817c;
+      --ink: #f4f1e9;
+      --line: rgba(11, 16, 16, .14);
+      --line-strong: rgba(11, 16, 16, .25);
+      --shadow: 0 24px 70px rgba(17, 25, 25, .12);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: auto; }
+    body {
+      margin: 0;
+      min-width: 0;
+      overflow-x: hidden;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 6%, rgba(13, 127, 111, .17), transparent 26rem),
+        radial-gradient(circle at 92% 28%, rgba(108, 99, 255, .13), transparent 30rem),
+        var(--page);
+      font-family: "Vazirmatn", "Noto Sans Arabic", Tahoma, "Segoe UI", sans-serif;
+      line-height: 1.7;
+      transition: background-color .25s ease, color .25s ease;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      z-index: 0;
+      inset: 0;
+      pointer-events: none;
+      opacity: .28;
+      background-image:
+        linear-gradient(rgba(244, 241, 233, .035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(244, 241, 233, .035) 1px, transparent 1px);
+      background-size: 46px 46px;
+      mask-image: linear-gradient(to bottom, black, transparent 78%);
+    }
+
+    [data-theme="light"] body::before {
+      opacity: .4;
+      background-image:
+        linear-gradient(rgba(11, 16, 16, .04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(11, 16, 16, .04) 1px, transparent 1px);
+    }
+
+    ::selection { color: var(--ink); background: var(--mint); }
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, a:focus-visible, summary:focus-visible {
+      outline: 3px solid var(--mint);
+      outline-offset: 4px;
+    }
+    .page-wrap, .topbar, footer { position: relative; z-index: 1; }
+    .wrap { width: min(1440px, calc(100% - 48px)); margin-inline: auto; }
+    .mono { font-family: var(--mono); letter-spacing: .035em; }
+    .muted { color: var(--muted); }
+
+    .skip-link {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      z-index: 50;
+      padding: .55rem .9rem;
+      color: var(--ink);
+      background: var(--mint);
+      transform: translateY(-160%);
+      transition: transform .2s ease;
+    }
+    .skip-link:focus { transform: translateY(0); }
+
+    .topbar {
+      border-bottom: 1px solid var(--line);
+      background: rgba(11, 16, 16, .72);
+      backdrop-filter: blur(16px);
+    }
+    [data-theme="light"] .topbar { background: rgba(244, 241, 233, .82); }
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      gap: 1.15rem;
+      min-height: 78px;
+      padding-block: .65rem;
+    }
+    .brand {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      gap: .7rem;
+      min-width: 145px;
+    }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      color: var(--ink);
+      background: var(--mint);
+      border-radius: 12px 4px 12px 4px;
+      font-family: var(--mono);
+      font-size: .74rem;
+      font-weight: 800;
+      letter-spacing: -.12em;
+    }
+    .brand-copy { display: grid; gap: .05rem; line-height: 1.15; }
+    .brand-copy strong { font-size: 1.02rem; letter-spacing: .14em; }
+    .brand-copy small { color: var(--muted); font-size: .62rem; letter-spacing: .11em; text-transform: uppercase; }
+    .topbar-title {
+      display: flex;
+      align-items: center;
+      gap: .65rem;
+      flex: 1 1 auto;
+      color: var(--paper);
+      font-size: .95rem;
+      font-weight: 750;
+    }
+    .topbar-title span { color: var(--muted-2); font-family: var(--mono); font-size: .64rem; font-weight: 500; }
+    .anchor-nav {
+      display: flex;
+      align-items: center;
+      gap: .18rem;
+      color: var(--muted);
+      font-size: .76rem;
+      white-space: nowrap;
+    }
+    .anchor-nav a {
+      padding: .42rem .55rem;
+      border-bottom: 1px solid transparent;
+      transition: color .2s ease, border-color .2s ease;
+    }
+    .anchor-nav a:hover { color: var(--mint); border-color: var(--mint); }
+    .topbar-actions { display: flex; align-items: center; gap: .45rem; }
+    .live-chip, .theme-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: .45rem;
+      min-height: 34px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: transparent;
+      font-size: .72rem;
+    }
+    .live-chip { padding: .25rem .6rem; }
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--mint);
+      box-shadow: 0 0 0 4px rgba(51, 214, 181, .11);
+    }
+    .theme-toggle { padding: .3rem .65rem; cursor: pointer; }
+    .theme-toggle:hover { color: var(--text); border-color: var(--line-strong); }
+
+    .hero { padding: clamp(3.2rem, 7vw, 6.5rem) 0 3.2rem; }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.04fr) minmax(330px, .96fr);
+      gap: clamp(2rem, 6vw, 6.5rem);
+      align-items: stretch;
+    }
+    .hero-copy { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: .7rem;
+      margin-bottom: 1.3rem;
+      color: var(--mint);
+      font-family: var(--mono);
+      font-size: .68rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .eyebrow::before { content: ""; width: 42px; height: 1px; background: currentColor; }
+    .hero-title {
+      max-width: 780px;
+      margin: 0;
+      color: var(--paper);
+      font-size: clamp(3rem, 6.3vw, 6.35rem);
+      font-weight: 900;
+      letter-spacing: -.075em;
+      line-height: .99;
+      text-wrap: balance;
+    }
+    .hero-title em { color: var(--mint); font-style: normal; }
+    .hero-title .slash { color: var(--coral); font-weight: 400; }
+    .hero-deck {
+      max-width: 680px;
+      margin: 1.6rem 0 0;
+      color: var(--muted);
+      font-size: clamp(1rem, 1.6vw, 1.18rem);
+      line-height: 2;
+    }
+    .hero-deck strong { color: var(--paper); font-weight: 750; }
+    .hero-cta-row { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 1.65rem; }
+    .button-primary, .button-ghost {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: .55rem;
+      min-height: 44px;
+      padding: .55rem 1rem;
+      border: 1px solid transparent;
+      font-size: .82rem;
+      font-weight: 750;
+      cursor: pointer;
+      transition: transform .2s ease, background-color .2s ease, border-color .2s ease, color .2s ease;
+    }
+    .button-primary { color: var(--ink); background: var(--mint); }
+    .button-primary:hover { background: #75ead2; transform: translateY(-2px); }
+    .button-ghost { color: var(--paper); background: transparent; border-color: var(--line-strong); }
+    .button-ghost:hover { color: var(--mint); border-color: var(--mint); transform: translateY(-2px); }
+    .hero-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: .6rem;
+      max-width: 690px;
+      margin-top: 2.5rem;
+    }
+    .metric {
+      padding: .8rem .85rem .7rem;
+      border-top: 1px solid var(--line-strong);
+      border-bottom: 1px solid var(--line);
+    }
+    .metric strong { display: block; color: var(--paper); font-family: var(--mono); font-size: 1.5rem; letter-spacing: -.08em; line-height: 1.2; }
+    .metric span { display: block; margin-top: .2rem; color: var(--muted); font-size: .7rem; }
+
+    .hub-panel {
+      position: relative;
+      min-height: 470px;
+      overflow: hidden;
+      padding: 1.25rem 1.25rem 1.1rem;
+      border: 1px solid var(--line-strong);
+      background:
+        linear-gradient(135deg, rgba(51, 214, 181, .1), transparent 44%),
+        var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .hub-panel::before {
+      content: "";
+      position: absolute;
+      width: 250px;
+      height: 250px;
+      top: -92px;
+      left: -56px;
+      border: 1px solid rgba(51, 214, 181, .18);
+      border-radius: 50%;
+      box-shadow: 0 0 0 25px rgba(51, 214, 181, .025), 0 0 0 50px rgba(51, 214, 181, .018);
+      pointer-events: none;
+    }
+    .hub-topline { display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; z-index: 1; }
+    .hub-label { color: var(--paper); font-size: .82rem; font-weight: 800; }
+    .hub-code { color: var(--muted-2); font-family: var(--mono); font-size: .62rem; }
+    .hub-visual { position: relative; height: 315px; max-width: 530px; margin: .7rem auto 0; }
+    .hub-orbit {
+      position: absolute;
+      inset: 28px 55px 25px;
+      border: 1px dashed rgba(51, 214, 181, .26);
+      border-radius: 50%;
+      transform: rotate(-11deg);
+      pointer-events: none;
+    }
+    .hub-orbit::before, .hub-orbit::after {
+      content: "";
+      position: absolute;
+      inset: 18px 32px;
+      border: 1px solid rgba(108, 99, 255, .18);
+      border-radius: 50%;
+      transform: rotate(30deg);
+    }
+    .hub-orbit::after { inset: 42px -4px; border-color: rgba(231, 111, 81, .16); transform: rotate(-42deg); }
+    .hub-connectors { position: absolute; inset: 22px 28px 22px; width: calc(100% - 56px); height: calc(100% - 44px); overflow: visible; pointer-events: none; }
+    .hub-connectors line { stroke: rgba(51, 214, 181, .26); stroke-width: 1; stroke-dasharray: 4 5; }
+    .hub-connectors circle { fill: var(--panel); stroke: rgba(244, 241, 233, .18); stroke-width: 1; }
+    .hub-core {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      display: grid;
+      place-items: center;
+      width: 142px;
+      height: 142px;
+      padding: 1rem;
+      color: var(--ink);
+      text-align: center;
+      background: var(--mint);
+      border: 10px solid rgba(11, 16, 16, .78);
+      border-radius: 50%;
+      box-shadow: 0 0 0 1px var(--mint), 0 0 44px rgba(51, 214, 181, .22);
+      transform: translate(-50%, -50%);
+      z-index: 2;
+      pointer-events: none;
+    }
+    .hub-core strong { display: block; font-family: var(--mono); font-size: 1rem; letter-spacing: .14em; line-height: 1.2; }
+    .hub-core span { display: block; margin-top: .25rem; font-size: .64rem; font-weight: 800; line-height: 1.4; }
+    .hub-node {
+      position: absolute;
+      z-index: 3;
+      display: grid;
+      gap: .08rem;
+      width: 135px;
+      min-height: 54px;
+      padding: .55rem .68rem;
+      color: var(--text);
+      text-align: right;
+      background: rgba(21, 33, 33, .92);
+      border: 1px solid var(--line);
+      border-right: 3px solid var(--node-accent, var(--mint));
+      cursor: pointer;
+      transition: transform .2s ease, border-color .2s ease, background-color .2s ease;
+    }
+    [data-theme="light"] .hub-node { background: rgba(255, 255, 255, .88); }
+    .hub-node:hover, .hub-node.is-active { border-color: var(--node-accent, var(--mint)); background: var(--panel-3); transform: translateY(-3px); }
+    .hub-node strong { font-size: .74rem; line-height: 1.25; }
+    .hub-node small { color: var(--muted); font-family: var(--mono); font-size: .55rem; line-height: 1.3; }
+    .hub-node.owner { top: 0; right: 12%; --node-accent: var(--mint); }
+    .hub-node.admin { top: 105px; right: 0; --node-accent: #7de1ca; }
+    .hub-node.stylist { bottom: 3px; right: 16%; --node-accent: var(--blue); }
+    .hub-node.customer { bottom: 3px; left: 16%; --node-accent: var(--coral); }
+    .hub-node.platform { top: 105px; left: 0; --node-accent: var(--violet); }
+    .hub-footnote { position: relative; z-index: 1; display: flex; justify-content: space-between; gap: 1rem; padding-top: .8rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .71rem; }
+    .hub-footnote strong { color: var(--paper); font-weight: 750; }
+
+    .start-panel {
+      margin-top: 2.5rem;
+      padding: 1.05rem 1.15rem 1.15rem;
+      border: 1px solid var(--line);
+      background: rgba(16, 24, 24, .72);
+    }
+    [data-theme="light"] .start-panel { background: rgba(244, 241, 233, .72); }
+    .start-top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: .9rem; }
+    .start-top strong { color: var(--paper); font-size: .82rem; }
+    .start-top span { color: var(--muted-2); font-family: var(--mono); font-size: .61rem; }
+    .start-flow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; gap: .35rem; }
+    .start-step { position: relative; display: flex; align-items: center; gap: .55rem; min-width: 0; }
+    .start-step:not(:last-child)::after { content: "←"; flex: 0 0 auto; color: var(--mint); font-family: var(--mono); font-size: .88rem; pointer-events: none; }
+    .start-step b { display: grid; flex: 0 0 26px; place-items: center; width: 26px; height: 26px; color: var(--ink); background: var(--mint); border-radius: 50%; font-family: var(--mono); font-size: .65rem; }
+    .start-step span { min-width: 0; color: var(--paper); font-size: .71rem; font-weight: 750; line-height: 1.25; }
+
+    .section { padding: clamp(3.4rem, 7vw, 6.5rem) 0; }
+    .section--compact { padding-top: 2.3rem; }
+    .section-head { display: flex; align-items: end; justify-content: space-between; gap: 2rem; margin-bottom: 1.65rem; }
+    .section-index { display: block; margin-bottom: .35rem; color: var(--mint); font-family: var(--mono); font-size: .66rem; letter-spacing: .08em; }
+    .section-title { margin: 0; color: var(--paper); font-size: clamp(2rem, 4vw, 3.35rem); font-weight: 900; letter-spacing: -.055em; line-height: 1.05; }
+    .section-intro { max-width: 465px; margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.9; }
+    .section-rule { height: 1px; margin-top: 1.65rem; background: linear-gradient(to left, var(--mint), transparent 70%); opacity: .55; }
+
+    .role-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .75rem; }
+    .role-card {
+      position: relative;
+      display: flex;
+      min-width: 0;
+      min-height: 236px;
+      flex-direction: column;
+      align-items: stretch;
+      padding: 1rem;
+      color: var(--text);
+      text-align: right;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-top: 3px solid var(--card-accent);
+      cursor: pointer;
+      overflow: hidden;
+      transition: transform .22s ease, border-color .22s ease, background-color .22s ease, box-shadow .22s ease;
+    }
+    .role-card::after { content: ""; position: absolute; width: 150px; height: 150px; bottom: -84px; left: -48px; border: 1px solid color-mix(in srgb, var(--card-accent) 30%, transparent); border-radius: 50%; pointer-events: none; }
+    .role-card:hover, .role-card.is-active { background: var(--panel-2); border-color: var(--card-accent); box-shadow: 0 18px 40px rgba(0, 0, 0, .18); transform: translateY(-5px); }
+    .role-card.is-active { box-shadow: inset 0 0 0 1px var(--card-accent), 0 18px 40px rgba(0, 0, 0, .2); }
+    .role-card__top, .role-card__bottom { display: flex; align-items: center; justify-content: space-between; gap: .6rem; }
+    .role-card__number { color: var(--card-accent); font-family: var(--mono); font-size: .66rem; }
+    .role-card__access { padding: .18rem .42rem; color: var(--card-accent); border: 1px solid color-mix(in srgb, var(--card-accent) 40%, transparent); font-family: var(--mono); font-size: .56rem; white-space: nowrap; }
+    .role-card h3 { margin: 2rem 0 .25rem; color: var(--paper); font-size: 1.28rem; font-weight: 900; letter-spacing: -.04em; }
+    .role-card__english { color: var(--muted-2); font-family: var(--mono); font-size: .61rem; letter-spacing: .09em; }
+    .role-card__desc { min-height: 3.45rem; margin: 1rem 0 1.2rem; color: var(--muted); font-size: .78rem; line-height: 1.8; }
+    .role-card__bottom { margin-top: auto; padding-top: .75rem; border-top: 1px solid var(--line); }
+    .role-card__bottom span { color: var(--muted); font-size: .66rem; }
+    .role-card__arrow { color: var(--card-accent) !important; font-family: var(--mono); font-size: .85rem !important; }
+    .role-owner { --card-accent: var(--mint); }
+    .role-admin { --card-accent: #77e2cb; }
+    .role-stylist { --card-accent: var(--blue); }
+    .role-customer { --card-accent: var(--coral); }
+    .role-platform { --card-accent: var(--violet); }
+
+    .flow-shell {
+      position: relative;
+      overflow: hidden;
+      padding: clamp(1rem, 3vw, 1.65rem);
+      border: 1px solid var(--line-strong);
+      background: linear-gradient(140deg, rgba(13, 127, 111, .08), transparent 38%), var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .flow-shell::before { content: "FLOW / ROLE LENS"; position: absolute; top: 1.2rem; left: 1.35rem; color: var(--muted-2); font-family: var(--mono); font-size: .56rem; letter-spacing: .12em; opacity: .8; pointer-events: none; }
+    .flow-top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .2rem 0 1.15rem; border-bottom: 1px solid var(--line); }
+    .flow-active-label { display: flex; align-items: center; gap: .65rem; }
+    .flow-active-dot { width: 11px; height: 11px; flex: 0 0 auto; background: var(--role-accent); border-radius: 50%; box-shadow: 0 0 0 6px color-mix(in srgb, var(--role-accent) 13%, transparent); }
+    .flow-active-label strong { color: var(--paper); font-size: .95rem; }
+    .flow-active-label small { display: block; color: var(--muted); font-size: .68rem; }
+    .flow-controls { display: flex; align-items: center; gap: .55rem; }
+    .compact-control { display: inline-flex; align-items: center; gap: .4rem; min-height: 34px; padding: .35rem .65rem; color: var(--muted); background: transparent; border: 1px solid var(--line); cursor: pointer; font-size: .68rem; }
+    .compact-control:hover, .compact-control[aria-pressed="true"] { color: var(--paper); border-color: var(--role-accent); background: color-mix(in srgb, var(--role-accent) 10%, transparent); }
+    .flow-layout { display: grid; grid-template-columns: minmax(0, 1.38fr) minmax(300px, .62fr); gap: 1.5rem; padding-top: 1.35rem; }
+    .flow-track { position: relative; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .7rem; align-items: start; padding: 2rem 0 .7rem; }
+    .flow-track::before { content: ""; position: absolute; z-index: 0; top: 4.45rem; right: 8%; left: 8%; height: 2px; background: linear-gradient(to left, var(--role-accent), rgba(244, 241, 233, .12), var(--role-accent)); opacity: .7; pointer-events: none; }
+    .flow-stage { position: relative; z-index: 1; min-width: 0; }
+    .stage-node { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; align-items: center; gap: .25rem .55rem; width: 100%; min-height: 123px; padding: .75rem; color: var(--text); text-align: right; background: var(--panel-2); border: 1px solid var(--line); border-bottom: 3px solid transparent; cursor: pointer; transition: transform .22s ease, border-color .22s ease, background-color .22s ease, box-shadow .22s ease; }
+    .stage-node:hover, .flow-stage.is-active .stage-node { background: var(--panel-3); border-color: var(--role-accent); border-bottom-color: var(--role-accent); transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0, 0, 0, .16); }
+    .stage-node__orb { display: grid; grid-row: 1 / span 2; place-items: center; width: 34px; height: 34px; color: var(--ink); background: var(--role-accent); border-radius: 50%; font-family: var(--mono); font-size: .7rem; font-weight: 800; }
+    .stage-node__label { color: var(--muted-2); font-family: var(--mono); font-size: .56rem; }
+    .stage-node strong { color: var(--paper); font-size: .78rem; line-height: 1.45; }
+    .stage-node__meta { display: block; min-height: 2rem; margin-top: .65rem; color: var(--muted); font-size: .65rem; line-height: 1.55; }
+    .stage-rail { display: flex; align-items: center; gap: .4rem; margin-top: .65rem; color: var(--muted-2); font-family: var(--mono); font-size: .54rem; }
+    .stage-rail i { display: block; width: 7px; height: 7px; border: 1px solid var(--role-accent); border-radius: 50%; }
+    .flow-detail { min-height: 266px; padding: 1.2rem; border: 1px solid var(--line); background: var(--panel-2); }
+    .detail-kicker { display: flex; align-items: center; justify-content: space-between; gap: 1rem; color: var(--role-accent); font-family: var(--mono); font-size: .61rem; }
+    .detail-kicker span:last-child { color: var(--muted-2); }
+    .flow-detail h3 { margin: .75rem 0 .35rem; color: var(--paper); font-size: 1.45rem; font-weight: 900; letter-spacing: -.045em; line-height: 1.25; }
+    .flow-detail p { margin: 0; color: var(--muted); font-size: .79rem; line-height: 1.9; }
+    .detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; margin-top: 1.1rem; }
+    .detail-box { padding: .65rem .7rem; border-top: 1px solid var(--line-strong); }
+    .detail-box small { display: block; margin-bottom: .25rem; color: var(--muted-2); font-size: .61rem; }
+    .detail-box strong { display: block; color: var(--paper); font-size: .74rem; line-height: 1.55; }
+    .handoff { display: flex; align-items: center; gap: .55rem; margin-top: .9rem; padding-top: .75rem; border-top: 1px dashed var(--line); color: var(--paper); font-size: .72rem; font-weight: 750; }
+    .handoff b { color: var(--role-accent); font-family: var(--mono); font-size: .58rem; letter-spacing: .08em; }
+    .all-paths { display: none; grid-column: 1 / -1; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .5rem; padding-top: .9rem; border-top: 1px solid var(--line); }
+    .show-all .all-paths { display: grid; }
+    .all-path-row { display: grid; gap: .25rem; min-width: 0; padding: .7rem; color: var(--text); text-align: right; background: transparent; border: 1px solid var(--line); border-top: 2px solid var(--path-accent); cursor: pointer; }
+    .all-path-row:hover { background: var(--panel-3); }
+    .all-path-row strong { color: var(--paper); font-size: .72rem; }
+    .all-path-row span { color: var(--muted); font-size: .62rem; line-height: 1.55; }
+    .all-path-row .path-code { color: var(--path-accent); font-family: var(--mono); font-size: .55rem; }
+
+    .filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem 1rem; padding: .8rem .9rem; border: 1px solid var(--line); background: var(--panel); }
+    .filter-group { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; }
+    .filter-label { margin-left: .2rem; color: var(--muted-2); font-size: .66rem; }
+    .filter-button { min-height: 30px; padding: .3rem .55rem; color: var(--muted); background: transparent; border: 1px solid transparent; cursor: pointer; font-size: .68rem; }
+    .filter-button:hover { color: var(--paper); border-color: var(--line-strong); }
+    .filter-button.is-active { color: var(--ink); background: var(--mint); border-color: var(--mint); font-weight: 800; }
+    .filter-divider { width: 1px; height: 21px; background: var(--line); }
+    .scenario-toolbar-note { margin-right: auto; color: var(--muted-2); font-family: var(--mono); font-size: .61rem; }
+    .scenario-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-top: 1rem; }
+    .scenario-card { position: relative; min-width: 0; padding: 1.05rem; overflow: hidden; background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--scenario-accent); transition: transform .22s ease, border-color .22s ease, background-color .22s ease; }
+    .scenario-card:nth-child(3n + 2) { transform: translateY(12px); }
+    .scenario-card:hover { background: var(--panel-2); border-color: var(--scenario-accent); transform: translateY(-3px); }
+    .scenario-card:nth-child(3n + 2):hover { transform: translateY(7px); }
+    .scenario-card[hidden] { display: none; }
+    .scenario-card::after { content: ""; position: absolute; top: -46px; left: -38px; width: 120px; height: 120px; border: 1px solid color-mix(in srgb, var(--scenario-accent) 20%, transparent); border-radius: 50%; pointer-events: none; }
+    .scenario-owner { --scenario-accent: var(--mint); }
+    .scenario-admin { --scenario-accent: #77e2cb; }
+    .scenario-stylist { --scenario-accent: var(--blue); }
+    .scenario-customer { --scenario-accent: var(--coral); }
+    .scenario-platform { --scenario-accent: var(--violet); }
+    .scenario-cross { --scenario-accent: var(--amber); }
+    .scenario-head { position: relative; z-index: 1; display: flex; align-items: start; justify-content: space-between; gap: .7rem; }
+    .scenario-number { color: var(--scenario-accent); font-family: var(--mono); font-size: .68rem; }
+    .scenario-tags { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .3rem; }
+    .scenario-tag { padding: .18rem .4rem; color: var(--muted); border: 1px solid var(--line); font-size: .58rem; }
+    .scenario-tag.accent { color: var(--scenario-accent); border-color: color-mix(in srgb, var(--scenario-accent) 40%, transparent); }
+    .scenario-card h3 { position: relative; z-index: 1; margin: .85rem 0 .75rem; color: var(--paper); font-size: 1.12rem; font-weight: 900; letter-spacing: -.035em; line-height: 1.45; }
+    .scenario-field { position: relative; z-index: 1; display: grid; grid-template-columns: 60px 1fr; gap: .7rem; padding-top: .6rem; border-top: 1px solid var(--line); }
+    .scenario-field + .scenario-field { margin-top: .55rem; }
+    .scenario-field label { color: var(--muted-2); font-size: .63rem; }
+    .scenario-field p { margin: 0; color: var(--text); font-size: .71rem; line-height: 1.7; }
+    .scenario-field p strong { color: var(--paper); }
+    .scenario-card details { position: relative; z-index: 1; margin-top: .85rem; border-top: 1px dashed var(--line); }
+    .scenario-card summary { padding-top: .75rem; color: var(--scenario-accent); cursor: pointer; font-size: .68rem; font-weight: 800; }
+    .scenario-card summary::marker { color: var(--scenario-accent); }
+    .scenario-details { display: grid; grid-template-columns: 1.1fr .9fr; gap: .8rem; padding-top: .8rem; }
+    .scenario-steps { grid-column: 1 / -1; margin: 0; padding: 0; list-style: none; }
+    .scenario-steps li { display: grid; grid-template-columns: 24px 1fr; gap: .45rem; align-items: start; padding: .3rem 0; color: var(--muted); font-size: .67rem; line-height: 1.65; }
+    .scenario-steps li b { display: grid; place-items: center; width: 22px; height: 22px; color: var(--ink); background: var(--scenario-accent); border-radius: 50%; font-family: var(--mono); font-size: .56rem; }
+    .micro-list { margin: 0; padding: 0; list-style: none; }
+    .micro-list li { position: relative; padding: .2rem 1rem .2rem 0; color: var(--muted); font-size: .64rem; line-height: 1.65; }
+    .micro-list li::before { content: ""; position: absolute; top: .78rem; right: 0; width: 5px; height: 5px; background: var(--scenario-accent); border-radius: 50%; }
+    .micro-list.blocked li::before { background: var(--coral); }
+    .micro-heading { margin-bottom: .25rem; color: var(--paper); font-size: .65rem; font-weight: 800; }
+    .empty-state { display: none; padding: 2rem; color: var(--muted); text-align: center; border: 1px dashed var(--line-strong); }
+    .empty-state.is-visible { display: block; }
+
+    .matrix-layout { display: grid; grid-template-columns: minmax(240px, .6fr) minmax(0, 1.4fr); gap: 1rem; align-items: start; min-width: 0; }
+    .matrix-layout > * { min-width: 0; }
+    .matrix-focus { min-width: 0; min-height: 260px; padding: 1.15rem; border: 1px solid var(--line); border-top: 3px solid var(--role-accent); background: var(--panel); overflow-wrap: anywhere; }
+    .matrix-focus-kicker { color: var(--role-accent); font-family: var(--mono); font-size: .61rem; }
+    .matrix-focus h3 { margin: .7rem 0 .25rem; color: var(--paper); font-size: 1.35rem; font-weight: 900; }
+    .matrix-focus p { margin: 0; color: var(--muted); font-size: .76rem; line-height: 1.8; }
+    .matrix-focus .scope-note { margin-top: 1rem; padding-top: .8rem; border-top: 1px dashed var(--line); color: var(--paper); font-size: .69rem; line-height: 1.7; }
+    .matrix-tabs { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: 1.1rem; }
+    .matrix-tab { min-height: 32px; padding: .35rem .52rem; color: var(--muted); background: transparent; border: 1px solid var(--line); cursor: pointer; font-size: .63rem; }
+    .matrix-tab:hover, .matrix-tab.is-active { color: var(--ink); background: var(--role-accent); border-color: var(--role-accent); }
+    .matrix-wrap { min-width: 0; overflow-x: auto; border: 1px solid var(--line); background: var(--panel); -webkit-overflow-scrolling: touch; }
+    .matrix-table { width: 100%; min-width: 760px; border-collapse: collapse; table-layout: fixed; }
+    .matrix-table th, .matrix-table td { padding: .75rem .65rem; border-bottom: 1px solid var(--line); border-left: 1px solid var(--line); text-align: right; vertical-align: top; }
+    .matrix-table tr:last-child th, .matrix-table tr:last-child td { border-bottom: 0; }
+    .matrix-table th:last-child, .matrix-table td:last-child { border-left: 0; }
+    .matrix-table thead th { color: var(--muted-2); font-size: .63rem; font-weight: 700; white-space: nowrap; }
+    .matrix-table thead th:not(:first-child) { color: var(--role-col); }
+    .matrix-table thead th.is-focused, .matrix-table td.is-focused { background: color-mix(in srgb, var(--role-col) 8%, transparent); }
+    .matrix-table tbody th { width: 175px; color: var(--paper); font-size: .75rem; font-weight: 800; }
+    .permission-name { display: block; margin-bottom: .25rem; }
+    .permission-key { color: var(--muted-2); font-family: var(--mono); font-size: .56rem; font-weight: 500; direction: ltr; text-align: right; }
+    .matrix-badge { display: inline-flex; align-items: center; gap: .3rem; padding: .22rem .38rem; font-size: .6rem; font-weight: 800; }
+    .matrix-badge::before { content: ""; display: block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .matrix-cell.allow .matrix-badge { color: var(--mint); background: rgba(51, 214, 181, .1); }
+    .matrix-cell.conditional .matrix-badge { color: var(--amber); background: rgba(216, 165, 80, .1); }
+    .matrix-cell.deny .matrix-badge { color: var(--coral); background: rgba(231, 111, 81, .1); }
+    .matrix-cell small { display: block; margin-top: .35rem; color: var(--muted); font-size: .59rem; line-height: 1.55; }
+    .matrix-legend { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: .75rem; color: var(--muted); font-size: .64rem; }
+    .matrix-legend span { display: inline-flex; align-items: center; gap: .28rem; }
+    .legend-dot { width: 7px; height: 7px; border-radius: 50%; }
+    .legend-dot.allow { background: var(--mint); }
+    .legend-dot.conditional { background: var(--amber); }
+    .legend-dot.deny { background: var(--coral); }
+
+    .playbook-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .75rem; }
+    .playbook-card { min-width: 0; padding: .95rem; border: 1px solid var(--line); border-top: 3px solid var(--playbook-accent); background: var(--panel); }
+    .playbook-card.is-active { background: var(--panel-2); border-color: var(--playbook-accent); }
+    .playbook-head { display: flex; align-items: start; justify-content: space-between; gap: .5rem; padding-bottom: .75rem; border-bottom: 1px solid var(--line); }
+    .playbook-head strong { color: var(--paper); font-size: .9rem; }
+    .playbook-head small { display: block; margin-top: .2rem; color: var(--muted-2); font-family: var(--mono); font-size: .56rem; }
+    .playbook-number { color: var(--playbook-accent); font-family: var(--mono); font-size: .62rem; }
+    .playbook-points { display: grid; gap: .75rem; margin-top: .8rem; }
+    .playbook-point { padding-right: .7rem; border-right: 2px solid var(--playbook-accent); }
+    .playbook-point label { display: block; margin-bottom: .12rem; color: var(--muted-2); font-size: .59rem; }
+    .playbook-point p { margin: 0; color: var(--muted); font-size: .65rem; line-height: 1.7; }
+    .playbook-point.do p { color: var(--paper); }
+    .playbook-scope { display: inline-block; margin-top: 1rem; color: var(--playbook-accent); font-family: var(--mono); font-size: .56rem; }
+
+    .edge-rail { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .65rem; }
+    .edge-card { min-width: 0; padding: .85rem; color: var(--text); text-align: right; background: var(--panel); border: 1px solid var(--line); border-right: 3px solid var(--edge-accent); cursor: pointer; transition: background-color .2s ease, border-color .2s ease, transform .2s ease; }
+    .edge-card:hover, .edge-card.is-active { background: var(--panel-2); border-color: var(--edge-accent); transform: translateY(-3px); }
+    .edge-card__top { display: flex; justify-content: space-between; gap: .5rem; }
+    .edge-card__code { color: var(--edge-accent); font-family: var(--mono); font-size: .56rem; direction: ltr; }
+    .edge-card__signal { width: 8px; height: 8px; background: var(--edge-accent); border-radius: 50%; }
+    .edge-card h3 { margin: .65rem 0 .18rem; color: var(--paper); font-size: .85rem; }
+    .edge-card p { min-height: 2.7rem; margin: 0; color: var(--muted); font-size: .64rem; line-height: 1.65; }
+    .edge-detail { display: grid; grid-template-columns: auto 1fr auto; gap: 1rem; align-items: center; margin-top: 1rem; padding: .9rem 1rem; border: 1px solid var(--line); background: var(--panel); }
+    .edge-detail__index { color: var(--edge-accent, var(--amber)); font-family: var(--mono); font-size: .65rem; }
+    .edge-detail h3 { margin: 0 0 .15rem; color: var(--paper); font-size: .9rem; }
+    .edge-detail p { margin: 0; color: var(--muted); font-size: .7rem; line-height: 1.7; }
+    .edge-detail__action { color: var(--edge-accent, var(--amber)); font-size: .68rem; font-weight: 800; }
+
+    footer { margin-top: 2rem; padding: 2rem 0 2.6rem; border-top: 1px solid var(--line); }
+    .footer-grid { display: grid; grid-template-columns: 1fr auto auto; gap: 2rem; align-items: start; }
+    .footer-brand { color: var(--paper); font-family: var(--mono); font-size: .8rem; font-weight: 800; letter-spacing: .15em; }
+    .footer-note { max-width: 360px; margin-top: .35rem; color: var(--muted); font-size: .67rem; line-height: 1.8; }
+    .footer-note strong { color: var(--mint); }
+    .footer-legend { display: grid; gap: .35rem; color: var(--muted); font-size: .63rem; }
+    .footer-legend span { display: flex; align-items: center; gap: .35rem; }
+    .footer-links { display: flex; flex-wrap: wrap; gap: .45rem .8rem; color: var(--muted); font-size: .65rem; }
+    .footer-links a:hover { color: var(--mint); }
+    .reviewed { margin-top: 1.5rem; padding-top: .75rem; border-top: 1px solid var(--line); color: var(--muted-2); font-family: var(--mono); font-size: .58rem; }
+
+    @media (max-width: 1180px) {
+      .wrap { width: min(100% - 34px, 1040px); }
+      .topbar-title { display: none; }
+      .anchor-nav { margin-right: auto; }
+      .role-grid, .playbook-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .role-card:nth-child(4), .role-card:nth-child(5) { margin-top: .35rem; }
+      .playbook-card:nth-child(4), .playbook-card:nth-child(5) { margin-top: .35rem; }
+      .scenario-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .scenario-card:nth-child(3n + 2) { transform: none; }
+      .scenario-card:nth-child(2n) { transform: translateY(10px); }
+      .scenario-card:nth-child(2n):hover { transform: translateY(5px); }
+      .edge-rail { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 840px) {
+      .hero-grid, .flow-layout, .matrix-layout { grid-template-columns: 1fr; }
+      .hero-copy { order: 1; }
+      .hub-panel { order: 2; min-height: 430px; }
+      .flow-detail { min-height: 0; }
+      .all-paths { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .playbook-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .playbook-card:nth-child(4), .playbook-card:nth-child(5) { margin-top: 0; }
+      .edge-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+      .footer-links { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 620px) {
+      .wrap { width: min(100% - 24px, 520px); }
+      .topbar-inner { min-height: 70px; flex-wrap: wrap; }
+      .brand { min-width: 0; }
+      .anchor-nav { order: 3; width: 100%; overflow-x: auto; padding-bottom: .15rem; }
+      .anchor-nav a { flex: 0 0 auto; }
+      .topbar-actions { margin-right: auto; }
+      .hero { padding-top: 2.6rem; }
+      .hero-title { font-size: clamp(2.8rem, 14vw, 4.55rem); }
+      .hero-deck { font-size: .95rem; line-height: 1.9; }
+      .hero-metrics { gap: .35rem; margin-top: 1.8rem; }
+      .metric { padding-inline: .35rem; }
+      .metric strong { font-size: 1.1rem; }
+      .metric span { font-size: .6rem; }
+      .hub-panel { min-height: 425px; padding-inline: .75rem; }
+      .hub-visual { height: 292px; }
+      .hub-orbit { inset-inline: 38px; }
+      .hub-node { width: 110px; padding: .45rem .5rem; }
+      .hub-node.owner { right: 4%; }
+      .hub-node.admin { right: -3%; top: 97px; }
+      .hub-node.stylist { right: 4%; }
+      .hub-node.customer { left: 4%; }
+      .hub-node.platform { left: -3%; top: 97px; }
+      .hub-node strong { font-size: .66rem; }
+      .hub-node small { font-size: .5rem; }
+      .hub-core { width: 122px; height: 122px; }
+      .hub-footnote { align-items: start; flex-direction: column; gap: .25rem; }
+      .start-panel { padding-inline: .7rem; }
+      .start-flow { grid-template-columns: 1fr; gap: .35rem; }
+      .start-step:not(:last-child)::after { content: "↓"; position: absolute; right: 12px; bottom: -11px; z-index: 1; font-size: .72rem; }
+      .start-step { min-height: 31px; }
+      .section-head { display: block; }
+      .section-intro { margin-top: .85rem; }
+      .role-grid, .scenario-grid, .playbook-grid { grid-template-columns: 1fr; }
+      .role-card, .role-card:nth-child(4), .role-card:nth-child(5) { min-height: 0; margin-top: 0; }
+      .role-card__desc { min-height: 0; }
+      .flow-shell::before { display: none; }
+      .flow-top { align-items: start; flex-direction: column; }
+      .flow-controls { width: 100%; }
+      .compact-control { flex: 1; }
+      .flow-layout { gap: .9rem; }
+      .flow-track { grid-template-columns: 1fr; gap: .55rem; padding: .65rem 0 .3rem; }
+      .flow-track::before { top: 1.8rem; right: 17px; left: auto; width: 2px; height: calc(100% - 3.5rem); background: linear-gradient(var(--role-accent), rgba(244, 241, 233, .12), var(--role-accent)); }
+      .stage-node { grid-template-columns: auto 1fr auto; grid-template-rows: auto auto; min-height: 82px; padding: .65rem; }
+      .stage-node__orb { grid-row: 1 / span 2; }
+      .stage-node__meta { grid-column: 2 / -1; min-height: 0; margin-top: .2rem; }
+      .stage-rail { display: none; }
+      .all-paths { grid-template-columns: 1fr; }
+      .scenario-card:nth-child(2n), .scenario-card:nth-child(2n):hover { transform: none; }
+      .scenario-field { grid-template-columns: 52px 1fr; }
+      .scenario-field label { font-size: .68rem; }
+      .scenario-field p { font-size: .78rem; }
+      .scenario-card summary { font-size: .74rem; }
+      .scenario-steps li { font-size: .72rem; }
+      .micro-list li { font-size: .69rem; }
+      .scenario-details { grid-template-columns: 1fr; }
+      .scenario-steps { grid-column: auto; }
+      .matrix-focus { min-height: 0; }
+      .matrix-table { min-width: 700px; }
+      .matrix-table thead th { font-size: .69rem; }
+      .matrix-table tbody th { font-size: .8rem; }
+      .permission-key { font-size: .6rem; }
+      .matrix-badge { font-size: .64rem; }
+      .matrix-cell small { font-size: .67rem; }
+      .edge-rail { grid-template-columns: 1fr; }
+      .edge-detail { grid-template-columns: auto 1fr; }
+      .edge-detail__action { grid-column: 2; }
+      .footer-grid { grid-template-columns: 1fr; gap: 1rem; }
+      .footer-links { grid-column: auto; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">رفتن به محتوای اصلی</a>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="#overview" aria-label="ARA، نقشه‌ی حرکت محصول">
+        <span class="brand-mark" aria-hidden="true">AR</span>
+        <span class="brand-copy"><strong>ARA</strong><small>salon scheduler</small></span>
+      </a>
+      <div class="topbar-title">نقشه‌ی حرکت محصول <span>ROLE / FLOW / HANDOFF</span></div>
+      <nav class="anchor-nav" aria-label="ناوبری بخش‌ها">
+        <a href="#roles">نقش‌ها</a>
+        <a href="#flow">مسیر</a>
+        <a href="#scenarios">سناریوها</a>
+        <a href="#matrix">مجوزها</a>
+        <a href="#states">لبه‌ها</a>
+      </nav>
+      <div class="topbar-actions">
+        <span class="live-chip"><i class="live-dot" aria-hidden="true"></i>زنده</span>
+        <button class="theme-toggle" id="themeToggle" type="button" aria-pressed="false">حالت روشن</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="page-wrap">
+    <main id="main">
+      <section class="hero wrap" id="overview" aria-labelledby="hero-title">
+        <div class="hero-grid">
+          <div class="hero-copy">
+            <div class="eyebrow">ARA / PRODUCT OPERATIONS MAP / ۰۵ نقش</div>
+            <h1 class="hero-title" id="hero-title">چه کسی<br><em>کجا</em> حرکت می‌کند<span class="slash">؟</span></h1>
+            <p class="hero-deck"><strong>نقشه‌ی حرکت محصول</strong>، مرز بین نقش‌ها و لحظه‌ی تحویل را روشن می‌کند: از اولین ورود مالک تا رزرو مشتری، و از یک نوبت در تقویم تا تصمیم پلتفرم.</p>
+            <div class="hero-cta-row">
+              <a class="button-primary" href="#roles">شروع از انتخاب نقش <span aria-hidden="true">←</span></a>
+              <a class="button-ghost" href="#matrix">دیدن ماتریس دسترسی</a>
+            </div>
+            <div class="hero-metrics" aria-label="آمار نقشه">
+              <div class="metric"><strong>۵</strong><span>نقش اصلی</span></div>
+              <div class="metric"><strong>۱۰+</strong><span>سناریوی عملیاتی</span></div>
+              <div class="metric"><strong>۵</strong><span>مجوز کلیدی RBAC</span></div>
+            </div>
+            <div class="start-panel" aria-label="مسیر شروع محصول">
+              <div class="start-top"><strong>از اینجا شروع کن</strong><span>ENTRY → OUTCOME</span></div>
+              <div class="start-flow">
+                <div class="start-step"><b>۰۱</b><span>ورود</span></div>
+                <div class="start-step"><b>۰۲</b><span>تشخیص نقش</span></div>
+                <div class="start-step"><b>۰۳</b><span>فضای کاری</span></div>
+                <div class="start-step"><b>۰۴</b><span>اقدام</span></div>
+                <div class="start-step"><b>۰۵</b><span>نتیجه و تحویل</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="hub-panel" aria-label="نمودار محور سالن">
+            <div class="hub-topline"><span class="hub-label">محور سالن / salon hub</span><span class="hub-code">SYSTEM OF HANDOFFS</span></div>
+            <div class="hub-visual">
+              <div class="hub-orbit" aria-hidden="true"></div>
+              <svg class="hub-connectors" viewBox="0 0 500 300" aria-hidden="true">
+                <line x1="250" y1="150" x2="85" y2="35"></line>
+                <line x1="250" y1="150" x2="420" y2="90"></line>
+                <line x1="250" y1="150" x2="105" y2="255"></line>
+                <line x1="250" y1="150" x2="395" y2="255"></line>
+                <line x1="250" y1="150" x2="250" y2="20"></line>
+                <circle cx="250" cy="150" r="4"></circle>
+              </svg>
+              <div class="hub-core"><div><strong>ARA</strong><span>منبع حقیقت سالن</span></div></div>
+              <button class="hub-node owner is-active" data-role="owner" type="button"><strong>مالک سالن</strong><small>STRUCTURE / CONTROL</small></button>
+              <button class="hub-node admin" data-role="admin" type="button"><strong>مدیر سالن</strong><small>OPERATIONS / DAY</small></button>
+              <button class="hub-node stylist" data-role="stylist" type="button"><strong>آرایشگر</strong><small>OWN SCOPE</small></button>
+              <button class="hub-node customer" data-role="customer" type="button"><strong>مشتری</strong><small>BOOK / RETURN</small></button>
+              <button class="hub-node platform" data-role="platform" type="button"><strong>ادمین پلتفرم</strong><small>GLOBAL OVERSIGHT</small></button>
+            </div>
+            <div class="hub-footnote"><span>هر اقدام، یک <strong>محدوده</strong> و یک تحویل بعدی دارد.</span><span class="mono">01—05 / ROLE LENS</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section wrap" id="roles" aria-labelledby="roles-title">
+        <div class="section-head">
+          <div><span class="section-index">۰۱ / WHO ENTERS</span><h2 class="section-title" id="roles-title">پنج لنز، یک سالن</h2></div>
+          <p class="section-intro">یک نقش انتخاب کن تا مسیر اصلی، محدوده‌ی اختیار، و تحویل بعدی همان نقش در کل نقشه روشن شود.</p>
+        </div>
+        <div class="role-grid" id="roleGrid"></div>
+      </section>
+
+      <section class="section section--compact wrap" id="flow" aria-labelledby="flow-title">
+        <div class="section-head">
+          <div><span class="section-index">۰۲ / THE SPINE</span><h2 class="section-title" id="flow-title">ستون فقرات جریان</h2></div>
+          <p class="section-intro">پنج مرحله، از ورود تا نتیجه. روی هر گره بزن تا بازیگر بعدی و خروجی دقیق آن را ببینی.</p>
+        </div>
+        <div class="flow-shell" id="flowShell">
+          <div class="flow-top">
+            <div class="flow-active-label"><i class="flow-active-dot" aria-hidden="true"></i><div><strong id="flowRoleLabel">لنز مالک سالن</strong><small id="flowRoleScope">مسیر فعال / ساخت و کنترل کامل</small></div></div>
+            <div class="flow-controls"><button class="compact-control" id="showAllPaths" type="button" aria-pressed="false"><span aria-hidden="true">⊞</span> نمایش همه مسیرها</button></div>
+          </div>
+          <div class="flow-layout">
+            <div class="flow-track" id="flowTrack" aria-label="مراحل مسیر نقش فعال"></div>
+            <aside class="flow-detail" id="flowDetail" aria-live="polite"></aside>
+            <div class="all-paths" id="allPaths" aria-label="خلاصه مسیر همه نقش‌ها"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section wrap" id="scenarios" aria-labelledby="scenarios-title">
+        <div class="section-head">
+          <div><span class="section-index">۰۳ / SCENARIO LIBRARY</span><h2 class="section-title" id="scenarios-title">کتابخانه‌ی سناریو</h2></div>
+          <p class="section-intro">از محرک تا استثنا: مسیرهایی که تیم محصول، طراحی و مهندسی باید بدون حدس‌زدن بتوانند ردیابی کنند.</p>
+        </div>
+        <div class="filter-bar" aria-label="فیلتر سناریوها">
+          <div class="filter-group" id="roleFilters"><span class="filter-label">نقش</span><button class="filter-button is-active" type="button" data-role-filter="all" aria-pressed="true">همه نقش‌ها</button><button class="filter-button" type="button" data-role-filter="owner" aria-pressed="false">مالک</button><button class="filter-button" type="button" data-role-filter="admin" aria-pressed="false">مدیر</button><button class="filter-button" type="button" data-role-filter="stylist" aria-pressed="false">آرایشگر</button><button class="filter-button" type="button" data-role-filter="customer" aria-pressed="false">مشتری</button><button class="filter-button" type="button" data-role-filter="platform" aria-pressed="false">پلتفرم</button></div>
+          <span class="filter-divider" aria-hidden="true"></span>
+          <div class="filter-group" id="stateFilters"><span class="filter-label">حالت</span><button class="filter-button is-active" type="button" data-state-filter="all" aria-pressed="true">همه</button><button class="filter-button" type="button" data-state-filter="setup" aria-pressed="false">راه‌اندازی</button><button class="filter-button" type="button" data-state-filter="daily" aria-pressed="false">روزمره</button><button class="filter-button" type="button" data-state-filter="exception" aria-pressed="false">استثنا</button></div>
+          <span class="scenario-toolbar-note" id="scenarioCount" aria-live="polite">۱۱ سناریو</span>
+        </div>
+        <div class="scenario-grid" id="scenarioGrid"></div>
+        <div class="empty-state" id="scenarioEmpty">برای این ترکیب فیلتر، سناریویی ثبت نشده است.</div>
+      </section>
+
+      <section class="section section--compact wrap" id="matrix" aria-labelledby="matrix-title">
+        <div class="section-head">
+          <div><span class="section-index">۰۴ / RBAC TRUTH</span><h2 class="section-title" id="matrix-title">ماتریس اجازه</h2></div>
+          <p class="section-intro">«فعال» یعنی مجوز نقش در محدوده‌ی خودش. «مشروط» یعنی scope یا سیاست باید قبل از اجرا بررسی شود.</p>
+        </div>
+        <div class="matrix-layout">
+          <aside class="matrix-focus" id="matrixFocus" aria-live="polite"></aside>
+          <div>
+            <div class="matrix-wrap" tabindex="0" aria-label="جدول ماتریس مجوزها؛ برای دیدن ستون‌های بیشتر افقی حرکت کنید">
+              <table class="matrix-table">
+                <thead id="matrixHead"></thead>
+                <tbody id="matrixBody"></tbody>
+              </table>
+            </div>
+            <div class="matrix-legend" aria-label="راهنمای وضعیت مجوز"><span><i class="legend-dot allow"></i> فعال</span><span><i class="legend-dot conditional"></i> مشروط / scoped</span><span><i class="legend-dot deny"></i> مسدود</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--compact wrap" id="playbooks" aria-labelledby="playbooks-title">
+        <div class="section-head">
+          <div><span class="section-index">۰۵ / ROLE PLAYBOOKS</span><h2 class="section-title" id="playbooks-title">هر نقش چه می‌بیند؟</h2></div>
+          <p class="section-intro">خلاصه‌ای برای طراحی صفحه، route guard، API policy و پیام خطا؛ تحویل بعدی همیشه بخشی از تجربه است.</p>
+        </div>
+        <div class="playbook-grid" id="playbookGrid"></div>
+      </section>
+
+      <section class="section wrap" id="states" aria-labelledby="states-title">
+        <div class="section-head">
+          <div><span class="section-index">۰۶ / EDGE STATES</span><h2 class="section-title" id="states-title">ریلِ لبه‌ها</h2></div>
+          <p class="section-intro">وقتی مسیر ایده‌آل نیست، سیستم باید مقصد درست، پیام درست و محدوده‌ی درست را نگه دارد.</p>
+        </div>
+        <div class="edge-rail" id="edgeRail"></div>
+        <div class="edge-detail" id="edgeDetail" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap footer-grid">
+        <div><div class="footer-brand">ARA / SALON SCHEDULER</div><p class="footer-note"><strong>هم‌راستا با RBAC فعلی پروژه</strong>؛ این نقشه، قرارداد بصری نقش‌ها، اقدام‌ها و handoffهاست.</p></div>
+        <div class="footer-legend"><span><i class="legend-dot allow"></i> اقدام مجاز</span><span><i class="legend-dot conditional"></i> بررسی scope / policy</span><span><i class="legend-dot deny"></i> دسترسی رد می‌شود</span></div>
+        <nav class="footer-links" aria-label="لینک‌های پایین صفحه"><a href="#overview">بالا</a><a href="#roles">نقش‌ها</a><a href="#flow">مسیر</a><a href="#scenarios">سناریوها</a><a href="#matrix">مجوزها</a></nav>
+      </div>
+      <div class="wrap reviewed">LAST REVIEWED / ۱۴۰۵/۰۵/۲۵ <span aria-hidden="true">·</span> ARA ROLE &amp; FLOW MAP <span aria-hidden="true">·</span> STATIC DESIGN ARTIFACT</div>
+    </footer>
+  </div>
+
+  <script>
+    (() => {
+      const faDigits = '۰۱۲۳۴۵۶۷۸۹';
+      const faNum = (value) => String(value).replace(/\d/g, (digit) => faDigits[digit]);
+      const roles = {
+        owner: {
+          id: 'owner', number: '۰۱', label: 'مالک سالن', english: 'OWNER', accent: '#33d6b5', access: '۵ / ۵', entry: 'ورود / ساخت سالن', scope: 'ساختار + عملیات + رشد', short: 'کنترل کامل سالن از ساخت تا تراکنش.',
+          sees: 'تمام سالن، تیم، تقویم، مشتری، گزارش و تنظیمات.',
+          does: 'سالن می‌سازد، سرویس و صندلی تعریف می‌کند، تیم را می‌چیند و نوبت را مدیریت می‌کند.',
+          cannot: 'محدودیت محصولی در سالن خودش ندارد؛ اقدام‌های حساس همچنان policy و audit دارند.',
+          handoff: 'انتشار QR و نتیجه‌ی نوبت را به مشتری، آرایشگر یا مدیر تحویل می‌دهد.',
+          permissionNote: 'مالک تنها نقش با اختیار ساختاری کامل است؛ همه‌ی اقدام‌ها در salon scope خودش انجام می‌شوند.',
+          stages: [
+            { label: 'ورود و تشخیص نقش', title: 'ورود، انتخاب «مالک سالن»', description: 'کاربر پس از ورود به مسیر onboarding می‌رسد و نقش مالک/مدیر را انتخاب می‌کند؛ همین انتخاب مقصد route را تعیین می‌کند.', output: 'فضای مالک سالن', handoff: 'کاربر → مالک سالن' },
+            { label: 'ساخت سالن', title: 'هویت سالن شکل می‌گیرد', description: 'نام، آدرس، تصویر، اطلاعات تماس و پایه‌ی سالن ثبت می‌شود تا منبع اصلی تنظیمات ساخته شود.', output: 'salon_id فعال', handoff: 'مالک → پیکربندی سالن' },
+            { label: 'پیکربندی پایه', title: 'خدمت، صندلی و ساعت', description: 'مالک duration و price خدمات، صندلی‌ها، ساعت کاری و سیاست تأیید/لغو را تنظیم می‌کند.', output: 'availability قابل محاسبه', handoff: 'تنظیمات → موتور رزرو' },
+            { label: 'تیم و انتشار', title: 'تیم، سیاست، QR', description: 'دعوت و تخصیص آرایشگرها کامل می‌شود؛ سپس مالک سیاست approval را می‌بندد و لینک یا QR را منتشر می‌کند.', output: 'ورودی عمومی سالن', handoff: 'مالک → مشتری / تیم' },
+            { label: 'اولین رزرو', title: 'رزرو وارد مدار می‌شود', description: 'مشتری از QR یا پروفایل سالن خدمت و زمان را انتخاب می‌کند؛ رزرو تأیید یا pending می‌شود و اعلان تحویل داده می‌شود.', output: 'نوبت + handoff بعدی', handoff: 'مشتری → آرایشگر / مدیر' }
+          ]
+        },
+        admin: {
+          id: 'admin', number: '۰۲', label: 'مدیر سالن', english: 'MANAGER', accent: '#77e2cb', access: '۴ / ۵', entry: 'ورود / تقویم', scope: 'عملیات روزانه', short: 'روز سالن را می‌چرخاند؛ ساختار را تغییر نمی‌دهد.',
+          sees: 'تقویم سالن، مشتری‌ها، waitlist، بازاریابی، تحلیل و تراکنش.',
+          does: 'نوبت را ایجاد/ویرایش/تأیید/لغو می‌کند و customer update می‌فرستد.',
+          cannot: 'configure_salon، ساخت سرویس/صندلی و مدیریت اعضای تیم.',
+          handoff: 'وضعیت نوبت، اعلان مشتری و گزارش روز را به مشتری و مالک تحویل می‌دهد.',
+          permissionNote: 'مدیر، اپراتور global تقویم است؛ اختیار او عملیاتی است، نه structural.',
+          stages: [
+            { label: 'ورود عملیاتی', title: 'ورود به فضای مدیر', description: 'مدیر سالن پس از login مستقیم به workspace عملیاتی می‌رسد؛ routeهای onboarding و structural از دسترس او خارج‌اند.', output: 'داشبورد عملیات', handoff: 'مدیر → تقویم سالن' },
+            { label: 'تقویم و فیلتر', title: 'دیدن روز بر اساس تیم', description: 'تقویم با فیلتر آرایشگر، خدمت، صندلی و وضعیت خوانده می‌شود تا گلوگاه‌های روز مشخص شوند.', output: 'صف کار روزانه', handoff: 'تقویم → تصمیم نوبت' },
+            { label: 'تصمیم روی نوبت', title: 'ایجاد، تأیید یا تغییر', description: 'مدیر نوبت را می‌سازد یا ویرایش می‌کند و بر اساس policy آن را approve، reschedule، cancel یا no-show می‌کند.', output: 'وضعیت تازه نوبت', handoff: 'مدیر → مشتری / آرایشگر' },
+            { label: 'اعلان و کنترل روز', title: 'تحویل وضعیت به مشتری', description: 'پس از هر تغییر، اعلان ارسال می‌شود؛ مدیر هم‌زمان waitlist، مشتری و تراکنش‌های مرتبط را مرور می‌کند.', output: 'اعلان + audit trail', handoff: 'مدیر → گزارش روز' },
+            { label: 'گزارش و تسویه', title: 'بستن حلقه‌ی عملیات', description: 'تحلیل عملکرد، تراکنش‌ها و استثناهای روز بررسی می‌شود؛ اقدام structural مسدود و به مالک ارجاع می‌شود.', output: 'گزارش / escalation', handoff: 'مدیر → مالک سالن' }
+          ]
+        },
+        stylist: {
+          id: 'stylist', number: '۰۳', label: 'آرایشگر', english: 'STYLIST', accent: '#85a9ff', access: '۳ / ۵', entry: 'ورود / تقویم من', scope: 'فقط نوبت‌های خود', short: 'عضو تیم با workspace محدود به نوبت‌های خودش.',
+          sees: 'تقویم شخصی، مشتری‌های مرتبط، یادداشت‌های مجاز و اعلان‌ها.',
+          does: 'نوبت متعلق به خودش را می‌بیند، به‌روزرسانی می‌کند و progress/status می‌زند.',
+          cannot: 'پیکربندی سالن، مدیریت تیم، تغییر تقویم دیگران یا کنترل global نوبت‌ها.',
+          handoff: 'پیشرفت و وضعیت نوبت خود را به مشتری و مدیر تحویل می‌دهد.',
+          permissionNote: 'scope آرایشگر همیشه به salon_id و staff_id و appointment ownership محدود است؛ این boundary باید در API هم enforce شود.',
+          stages: [
+            { label: 'ورود scoped', title: 'ورود به workspace خود', description: 'پس از login، آرایشگر فقط workspace فعال سالن خودش را می‌بیند؛ staff غیرفعال نباید به مسیر ادامه دهد.', output: 'تقویم شخصی', handoff: 'آرایشگر → نوبت‌های من' },
+            { label: 'تقویم من', title: 'نوبت‌های تخصیص‌یافته', description: 'تقویم فقط appointmentهایی را نشان می‌دهد که به staff_id او مربوط‌اند؛ فیلتر global و ساختار حذف می‌شود.', output: 'own appointment scope', handoff: 'تقویم → مشتری' },
+            { label: 'مشتری و یادداشت', title: 'دیدن context مجاز', description: 'اطلاعات مشتری و customer notes فقط در محدوده‌ی نوبت مرتبط خوانده می‌شود؛ یادداشت خارج از scope رد می‌شود.', output: 'context امن', handoff: 'آرایشگر → اقدام نوبت' },
+            { label: 'وضعیت نوبت خود', title: 'progress / status', description: 'آرایشگر بسته به policy می‌تواند نوبت خودش را مدیریت یا برای approval درخواست کند؛ نوبت دیگری قابل تغییر نیست.', output: 'status تازه', handoff: 'آرایشگر → اعلان مشتری' },
+            { label: 'تحویل وضعیت', title: 'مشتری در جریان می‌ماند', description: 'شروع، تکمیل، تأخیر یا نیاز به بررسی به مشتری و در صورت نیاز مدیر اعلان می‌شود؛ audit حفظ می‌شود.', output: 'notification + audit', handoff: 'آرایشگر → مشتری / مدیر' }
+          ]
+        },
+        customer: {
+          id: 'customer', number: '۰۴', label: 'مشتری', english: 'CLIENT', accent: '#e76f51', access: '۲ / ۵', entry: 'پروفایل / QR عمومی', scope: 'حساب و نوبت‌های من', short: 'از کشف سالن تا رزرو، تغییر و بازگشت.',
+          sees: 'پروفایل عمومی سالن، خدمات، زمان‌های available و نوبت‌های خودش.',
+          does: 'خدمت/آرایشگر/زمان را انتخاب می‌کند، رزرو را تأیید می‌کند و در policy تغییر می‌دهد.',
+          cannot: 'دیدن notes داخلی، تنظیمات سالن، تقویم تیم یا نوبت مشتری دیگر.',
+          handoff: 'جزئیات و وضعیت رزرو را به سالن تحویل می‌دهد؛ بعد از visit امکان rebook دارد.',
+          permissionNote: 'مشتری در public discovery آزاد است اما account scope او فقط به resourceهای خودش محدود می‌ماند.',
+          stages: [
+            { label: 'کشف سالن', title: 'پروفایل عمومی یا QR', description: 'مشتری از لینک عمومی، QR سالن یا پیام وارد می‌شود؛ unauthenticated flow باید به پروفایل/حساب مشتری هدایت شود.', output: 'پروفایل سالن', handoff: 'مشتری → انتخاب خدمت' },
+            { label: 'انتخاب', title: 'خدمت، آرایشگر، زمان', description: 'خدمت فعال و ظرفیت واقعی بر اساس duration، chair، stylist و policy نمایش داده می‌شود.', output: 'slot پیشنهادی', handoff: 'مشتری → جزئیات رزرو' },
+            { label: 'تأیید جزئیات', title: 'ثبت درخواست نوبت', description: 'اطلاعات تماس، خدمت، زمان و سیاست لغو بررسی می‌شود؛ collision در همین مرز دوباره چک می‌شود.', output: 'appointment draft', handoff: 'مشتری → موتور رزرو' },
+            { label: 'تأیید یا انتظار', title: 'confirmed یا pending', description: 'اگر approval لازم باشد، مشتری وضعیت pending و راه بعدی را می‌بیند؛ در غیر این صورت confirmation و reminder ساخته می‌شود.', output: 'رزرو + اعلان', handoff: 'موتور → مدیر / آرایشگر' },
+            { label: 'ویزیت و بازگشت', title: 'visit، تکمیل، rebook', description: 'پس از حضور و completion، مشتری status را می‌گیرد و در صورت پشتیبانی می‌تواند دوباره رزرو یا پیام بدهد.', output: 'چرخه‌ی بعدی', handoff: 'سالن → مشتری' }
+          ]
+        },
+        platform: {
+          id: 'platform', number: '۰۵', label: 'ادمین پلتفرم', english: 'PLATFORM ADMIN', accent: '#6c63ff', access: 'سراسری', entry: 'ورود / کنسول پلتفرم', scope: 'global oversight', short: 'پشتیبانی و سلامت کل شبکه؛ عضو هیچ سالن نیست.',
+          sees: 'سالن‌ها، کاربران، نوبت‌ها، اشتراک، پرداخت، QR scan و audit log.',
+          does: 'موجودیت را بررسی، مشکل را support/resolve یا escalate می‌کند.',
+          cannot: 'ورود به‌جای تیم سالن و impersonate کردن permissionهای آن‌ها.',
+          handoff: 'نتیجه‌ی بررسی را به پشتیبانی، مالک یا تیم فنی تحویل می‌دهد.',
+          permissionNote: 'ادمین پلتفرم global است؛ دسترسی او برای oversight و support است، نه تبدیل‌شدن به owner یک سالن.',
+          stages: [
+            { label: 'کنسول پلتفرم', title: 'ورود به مقصد global', description: 'ادمین پلتفرم به console سراسری می‌رود؛ routeهای salon workspace مقصد او نیستند.', output: 'platform console', handoff: 'پلتفرم → موجودیت مشکل‌دار' },
+            { label: 'باز کردن موجودیت', title: 'سالن، مشتری، نوبت یا پرداخت', description: 'موجودیت با شناسه و audit context باز می‌شود تا مشکل بدون حدس و بدون تغییر scope بررسی شود.', output: 'entity context', handoff: 'موجودیت → بررسی سلامت' },
+            { label: 'بررسی سلامت', title: 'audit / subscription / payment', description: 'لاگ، اشتراک، پرداخت، QR scan و وضعیت اعلان‌ها کنار هم خوانده می‌شوند تا علت پیدا شود.', output: 'root cause', handoff: 'پلتفرم → اقدام پشتیبانی' },
+            { label: 'اقدام پشتیبانی', title: 'حل یا ارجاع', description: 'اقدام مجاز پلتفرمی انجام می‌شود؛ هرجا نیاز به permission سالن باشد، به owner/admin ارجاع می‌شود.', output: 'support action', handoff: 'پلتفرم → مالک / تیم فنی' },
+            { label: 'حل و ثبت', title: 'بستن یا escalate کردن', description: 'نتیجه، محدودیت و قدم بعدی در audit ثبت می‌شود؛ حل مشکل نباید به impersonation ختم شود.', output: 'resolution / escalation', handoff: 'پلتفرم → شبکه' }
+          ]
+        }
+      };
+
+      const stateLabels = { setup: 'راه‌اندازی', daily: 'روزمره', exception: 'استثنا' };
+      const roleLabels = { owner: 'مالک سالن', admin: 'مدیر سالن', stylist: 'آرایشگر', customer: 'مشتری', platform: 'ادمین پلتفرم', cross: 'چند نقش' };
+      const scenarios = [
+        { id: 'owner-onboarding', role: 'owner', state: 'setup', title: 'onboarding مالک', trigger: 'کاربر ثبت‌نام می‌کند و «مالک / مدیر» را انتخاب می‌کند.', steps: ['ساخت salon و ثبت هویت پایه', 'افزودن خدمت، صندلی و ساعت کاری', 'دعوت یا افزودن staff و تخصیص خدمت/صندلی', 'بستن approval و policy لغو', 'انتشار پروفایل و QR برای رزرو'], next: 'مشتری از QR وارد انتخاب خدمت و اولین booking می‌شود.', handoff: 'مالک → موتور رزرو → مشتری', allowed: ['configure_salon', 'ساخت و تخصیص staff', 'manage_appointments'], blocked: ['دسترسی public قبل از publish', 'رزرو بدون service یا availability'], exception: 'تنظیم ناقص باید قبل از publish با پیام دقیق متوقف شود.' },
+        { id: 'owner-add-stylist', role: 'owner', state: 'setup', title: 'افزودن آرایشگر', trigger: 'مالک برای یک خدمت یا صندلی جدید، عضو تیم اضافه می‌کند.', steps: ['ساخت یا دعوت staff', 'تعیین نقش، خدمت و chair', 'تنظیم active، availability و approval', 'ورود آرایشگر به workspace scoped', 'قبول یا به‌روزرسانی نوبت خود'], next: 'مشتری status تازه را می‌گیرد و مالک audit تغییر را می‌بیند.', handoff: 'مالک → آرایشگر → مشتری', allowed: ['تخصیص staff به salon', 'تنظیم availability', 'فعال/غیرفعال‌کردن عضو'], blocked: ['تغییر نوبت آرایشگر دیگر', 'ورود staff غیرفعال'], exception: 'staff غیرفعال از route کاری خارج و نوبت‌هایش نیازمند reassignment می‌شوند.' },
+        { id: 'admin-operational-day', role: 'admin', state: 'daily', title: 'روز عملیاتی مدیر', trigger: 'مدیر login می‌کند و باید صف امروز را کنترل کند.', steps: ['بازکردن calendar و فیلتر staff', 'ایجاد یا ویرایش appointment', 'approve، reschedule، cancel یا no-show', 'ارسال اعلان و مرور waitlist', 'مرور analytics و transactions'], next: 'مشتری پیام وضعیت می‌گیرد؛ کار structural به مالک ارجاع می‌شود.', handoff: 'مدیر → مشتری / آرایشگر → گزارش', allowed: ['manage_appointments', 'view_customer_notes', 'مدیریت waitlist و اعلان'], blocked: ['configure_salon', 'ساخت خدمت، صندلی یا staff'], exception: 'کنترل‌های structural باید disabled + توضیح route مالک باشند.' },
+        { id: 'stylist-day', role: 'stylist', state: 'daily', title: 'روز آرایشگر', trigger: 'آرایشگر وارد می‌شود و تقویم شخصی خود را می‌خواهد.', steps: ['بازکردن own calendar', 'دیدن مشتری و note مجاز', 'manage یا request approval برای نوبت خود', 'ثبت progress / status', 'تحویل وضعیت به مشتری و مدیر'], next: 'فقط appointment متعلق به همان stylist تغییر می‌کند؛ global calendar دست‌نخورده می‌ماند.', handoff: 'آرایشگر → مشتری / مدیر', allowed: ['manage_own_appointments', 'view_own_appointments', 'view_customer_notes در scope'], blocked: ['manage_appointments سراسری', 'تغییر تیم و تنظیمات سالن'], exception: 'wrong-salon یا appointment غیرخودی با permission denied پاسخ می‌گیرد.' },
+        { id: 'customer-booking', role: 'customer', state: 'daily', title: 'رزرو مشتری', trigger: 'مشتری از پروفایل سالن یا QR عمومی وارد می‌شود.', steps: ['انتخاب service فعال', 'انتخاب stylist و time مناسب', 'تأیید تماس و policy', 'ساخت appointment یا approval pending', 'reminder، visit و rebook'], next: 'سالن یک نوبت confirmed یا pending دارد و مشتری status update می‌گیرد.', handoff: 'مشتری → سیستم → مدیر / آرایشگر', allowed: ['manage_own_appointments', 'view_own_appointments', 'لغو/تغییر در policy'], blocked: ['دیدن customer notes داخلی', 'رزرو slot unavailable یا نوبت دیگران'], exception: 'collision باید پیش از ثبت نهایی re-check شود.' },
+        { id: 'walkin-manual', role: 'owner', state: 'daily', title: 'رزرو حضوری / دستی', trigger: 'مشتری walk-in است یا مدیر باید نوبت را از داخل سالن بسازد.', steps: ['owner/admin مشتری یا appointment را می‌سازد', 'staff، service و chair تخصیص می‌گیرد', 'collision و policy چک می‌شود', 'تأیید یا ورود به queue', 'اعلان برای مشتری ارسال می‌شود'], next: 'appointment در تقویم هم‌زمان با audit و notification ثبت می‌شود.', handoff: 'مالک / مدیر → تقویم → مشتری', allowed: ['ساخت customer و appointment', 'manage_appointments', 'تخصیص منابع'], blocked: ['تخصیص staff غیرفعال', 'ثبت روی slot متداخل'], exception: 'اگر slot قابل استفاده نیست، queue و دلیل جایگزین نمایش داده می‌شود.' },
+        { id: 'waitlist', role: 'customer', state: 'exception', title: 'صف انتظار', trigger: 'هیچ slot مناسبی برای خدمت و بازه‌ی انتخابی وجود ندارد.', steps: ['مشتری waitlist را انتخاب می‌کند', 'ترجیحات خدمت، stylist و زمان ذخیره می‌شود', 'با آزادشدن slot، مشتری eligible اعلان می‌گیرد', 'مشتری claim می‌کند یا مهلت منقضی می‌شود', 'در صورت انقضا queue جلو می‌رود'], next: 'claim موفق booking می‌سازد؛ انقضا نفر بعدی را فعال می‌کند.', handoff: 'تقویم → waitlist → مشتری', allowed: ['پیوستن به waitlist', 'claim و manage نوبت خود'], blocked: ['claim slot خارج از preference', 'نگه‌داشتن slot پس از expiry'], exception: 'notification failure نباید جایگاه queue را بی‌صدا حذف کند.' },
+        { id: 'change-policy', role: 'customer', state: 'exception', title: 'تغییر، لغو، no-show', trigger: 'یک actor درخواست reschedule، cancel یا ثبت no-show دارد.', steps: ['ثبت درخواست actor', 'چک policy و approval', 'به‌روزرسانی calendar و ظرفیت', 'محاسبه refund / fee در صورت نیاز', 'اعلان و ثبت audit trail'], next: 'slot آزاد می‌شود یا fee/status به‌صورت شفاف در حساب می‌ماند.', handoff: 'actor → policy → calendar / payment', allowed: ['customer: تغییر نوبت خودش در policy', 'admin/owner: تصمیم عملیاتی', 'platform: بررسی تراکنش'], blocked: ['لغو خارج از policy بدون approval', 'تغییر نوبت غیرخودی توسط stylist'], exception: 'در اختلاف policy، وضعیت pending و مسیر escalation قابل مشاهده است.' },
+        { id: 'service-config', role: 'owner', state: 'setup', title: 'پیکربندی service و staff', trigger: 'مالک duration، price یا active state یک خدمت را ویرایش می‌کند.', steps: ['ویرایش service و staff assignment', 'recalculate availability', 'حذف یا حفظ slotهای قبلی طبق policy', 'به‌روزرسانی گزینه‌های public booking', 'ثبت تغییر در audit'], next: 'مشتری فقط گزینه‌های فعال و ظرفیت دوباره‌محاسبه‌شده را می‌بیند.', handoff: 'مالک → availability → مشتری', allowed: ['configure_salon', 'ویرایش duration/price/active', 'تخصیص staff/chair'], blocked: ['ویرایش ساختاری توسط admin/stylist', 'نمایش service غیرفعال به مشتری'], exception: 'تغییر duration باید collision و نوبت‌های موجود را قبل از commit هشدار دهد.' },
+        { id: 'platform-operations', role: 'platform', state: 'exception', title: 'عملیات پلتفرم', trigger: 'ادمین پلتفرم یک مشکل در سالن، مشتری، نوبت یا پرداخت می‌بیند.', steps: ['بازکردن entity و audit log', 'بررسی subscription، payment و QR scan', 'اجرای support action مجاز', 'ارجاع به owner/admin یا تیم فنی', 'ثبت resolution و بستن/escalate'], next: 'مشکل حل یا با context کامل ارجاع می‌شود؛ impersonation رخ نمی‌دهد.', handoff: 'پلتفرم → owner/admin / engineering', allowed: ['global oversight', 'بررسی audit و subscription', 'support روی resource'], blocked: ['ورود به‌جای team سالن', 'اعمال permission ساختاری بدون owner'], exception: 'هر اقدام support باید actor و دلیل قابل ردیابی داشته باشد.' },
+        { id: 'access-failure', role: 'cross', state: 'exception', title: 'دسترسی و شکست مسیر', trigger: 'ورودی، resource یا اعلان با وضعیت مورد انتظار هم‌خوان نیست.', steps: ['unauthenticated → redirect مناسب', 'customer → account و owner/admin → workspace درست', 'platform admin → platform console', 'inactive staff / wrong-salon → توقف امن', 'permission denied / unavailable slot / pending / notification failure → پیام و راه بعدی'], next: 'کاربر مقصد درست و دلیل قابل فهم می‌گیرد؛ data leak یا تغییر ناخواسته رخ نمی‌دهد.', handoff: 'guard → role destination → recovery', allowed: ['نمایش state، retry یا route بعدی', 'حفظ draft امن'], blocked: ['نمایش resource سالن دیگر', 'ادامه‌ی action بدون permission'], exception: 'پیام خطا باید action بعدی داشته باشد، نه فقط کد خطا.' }
+      ];
+
+      const matrixRows = [
+        { key: 'configure_salon', label: 'پیکربندی سالن', note: 'خدمت، صندلی، ساعت، policy', cells: { owner: ['allow', 'فعال', 'کامل در سالن خود'], admin: ['deny', 'مسدود', 'فقط به مالک ارجاع می‌دهد'], stylist: ['deny', 'مسدود', 'خارج از scope تیمی'], customer: ['deny', 'مسدود', 'public فقط می‌خواند'], platform: ['conditional', 'پشتیبانی', 'بدون impersonation'] } },
+        { key: 'manage_appointments', label: 'مدیریت نوبت‌ها', note: 'ایجاد، ویرایش، تأیید، لغو', cells: { owner: ['allow', 'فعال', 'کنترل کامل سالن'], admin: ['allow', 'فعال', 'تقویم سراسری سالن'], stylist: ['deny', 'مسدود', 'فقط مسیر own scope'], customer: ['deny', 'مسدود', 'تنها نوبت خود'], platform: ['allow', 'سراسری', 'oversight و support'] } },
+        { key: 'manage_own_appointments', label: 'مدیریت نوبت‌های خود', note: 'تغییر در محدوده‌ی مالکیت', cells: { owner: ['allow', 'فعال', 'در سالن خود'], admin: ['conditional', 'مشروط', 'از مسیر policy عملیاتی'], stylist: ['conditional', 'scoped', 'فقط نوبت تخصیص‌یافته'], customer: ['allow', 'فعال', 'فقط حساب خودش'], platform: ['conditional', 'پشتیبانی', 'برای رسیدگی ثبت‌شده'] } },
+        { key: 'view_own_appointments', label: 'دیدن نوبت‌های خود', note: 'خواندن calendar شخصی', cells: { owner: ['allow', 'فعال', 'workspace مالک'], admin: ['allow', 'فعال', 'workspace مدیر'], stylist: ['allow', 'فعال', 'staff_id خودش'], customer: ['allow', 'فعال', 'account خودش'], platform: ['conditional', 'پشتیبانی', 'با context support'] } },
+        { key: 'view_customer_notes', label: 'دیدن یادداشت مشتری', note: 'اطلاعات داخلی با محدودیت', cells: { owner: ['allow', 'فعال', 'محدوده‌ی سالن'], admin: ['allow', 'فعال', 'برای عملیات سالن'], stylist: ['conditional', 'scoped', 'فقط مشتری مرتبط'], customer: ['deny', 'مسدود', 'یادداشت داخلی نیست'], platform: ['conditional', 'پشتیبانی', 'با audit و دلیل'] } }
+      ];
+
+      const edgeStates = [
+        { id: 'approval_pending', accent: 'var(--amber)', title: 'تأیید در انتظار', copy: 'رزرو ساخته شده اما policy نیازمند تصمیم مدیر یا مالک است.', action: 'نمایش وضعیت + زمان بررسی', detail: 'مشتری confirmation قطعی نمی‌گیرد؛ pending state، actor مسئول و قدم بعدی باید قابل مشاهده باشد.' },
+        { id: 'waitlist', accent: 'var(--coral)', title: 'صف انتظار', copy: 'slot موجود نیست؛ مشتری eligible شدن را دنبال می‌کند.', action: 'ثبت preference و claim', detail: 'با آزادشدن ظرفیت، اعلان claim می‌رود. expiry باید queue را جلو ببرد و جایگاه را بی‌صدا حذف نکند.' },
+        { id: 'no_show', accent: 'var(--coral)', title: 'عدم حضور', copy: 'قرار بدون حضور بسته می‌شود؛ fee یا refund ممکن است.', action: 'ثبت status + audit', detail: 'no-show از تغییر دستی بی‌ردپا جداست؛ policy، تراکنش و اعلان باید هم‌زمان به‌روزرسانی شوند.' },
+        { id: 'inactive_staff', accent: 'var(--amber)', title: 'staff غیرفعال', copy: 'عضو تیم دیگر نباید وارد workspace کاری شود.', action: 'توقف امن + reassignment', detail: 'ورود staff غیرفعال مسدود می‌شود؛ نوبت‌های آینده بدون از دست‌دادن context به owner/admin برمی‌گردند.' },
+        { id: 'collision', accent: 'var(--coral)', title: 'تداخل ظرفیت', copy: 'service، chair یا stylist با slot دیگری برخورد دارد.', action: 're-check و پیشنهاد جایگزین', detail: 'قبل از commit دوباره بررسی کن؛ unavailable slot نباید به نوبت confirmed تبدیل شود.' },
+        { id: 'wrong_scope', accent: 'var(--violet)', title: 'محدوده‌ی اشتباه', copy: 'resource به salon یا staff دیگری تعلق دارد.', action: 'permission denied + مسیر درست', detail: 'شناسه‌ی موجودیت نباید اطلاعات سالن دیگر را لو بدهد؛ پاسخ امن، audit و route مقصد لازم است.' },
+        { id: 'notification_failure', accent: 'var(--blue)', title: 'شکست اعلان', copy: 'status تغییر کرده اما پیام به مشتری نرسیده است.', action: 'retry + ثبت delivery state', detail: 'وضعیت appointment نباید rollback بی‌دلیل شود؛ retry، کانال جایگزین و visibility برای تیم لازم است.' },
+        { id: 'unauthenticated', accent: 'var(--mint)', title: 'بدون احراز هویت', copy: 'ورودی به صفحه‌ی محافظت‌شده بدون session است.', action: 'redirect با حفظ مقصد', detail: 'customer به account، owner/admin به workspace و platform admin به platform console می‌رود؛ بعد از login مقصد حفظ می‌شود.' }
+      ];
+
+      const $ = (selector, parent = document) => parent.querySelector(selector);
+      const $$ = (selector, parent = document) => [...parent.querySelectorAll(selector)];
+      function bindDirectButtons(root, selector, handler) {
+        $$(selector, root).forEach((button) => button.addEventListener('click', (event) => {
+          event.__araDirectHandled = true;
+          handler(button, event);
+        }));
+      }
+      let activeRole = 'owner';
+      let activeStage = 0;
+      let showAll = false;
+      let scenarioRoleFilter = 'all';
+      let scenarioStateFilter = 'all';
+      let activeEdge = 'approval_pending';
+
+      function renderRoles() {
+        $('#roleGrid').innerHTML = Object.values(roles).map((role) => `
+          <button class="role-card role-${role.id} ${role.id === activeRole ? 'is-active' : ''}" data-role="${role.id}" type="button" aria-pressed="${role.id === activeRole}">
+            <span class="role-card__top"><span class="role-card__number">${role.number}</span><span class="role-card__access">${role.access} مجوز</span></span>
+            <h3>${role.label}</h3>
+            <span class="role-card__english">${role.english}</span>
+            <p class="role-card__desc">${role.short}</p>
+            <span class="role-card__bottom"><span>${role.entry}</span><span class="role-card__arrow" aria-hidden="true">←</span></span>
+          </button>`).join('');
+        bindDirectButtons($('#roleGrid'), 'button[data-role]', (button) => setActiveRole(button.dataset.role, true));
+      }
+
+      function renderFlow() {
+        const role = roles[activeRole];
+        $('#flowRoleLabel').textContent = `لنز ${role.label}`;
+        $('#flowRoleScope').textContent = `${role.scope} / مسیر فعال`;
+        $('#flowTrack').innerHTML = role.stages.map((stage, index) => `
+          <div class="flow-stage ${index === activeStage ? 'is-active' : ''} ${index < activeStage ? 'is-past' : ''}">
+            <button class="stage-node" data-stage="${index}" type="button" aria-pressed="${index === activeStage}" aria-label="مرحله ${faNum(index + 1)}: ${stage.title}">
+              <span class="stage-node__orb">${faNum(index + 1)}</span><span class="stage-node__label">۰${faNum(index + 1)} / ${stage.label}</span><strong>${stage.title}</strong><span class="stage-node__meta">${stage.output}</span>
+            </button>
+            <div class="stage-rail"><i></i><span>${index === 0 ? 'ENTRY' : index === role.stages.length - 1 ? 'OUTCOME' : 'HANDOFF'}</span></div>
+          </div>`).join('');
+        bindDirectButtons($('#flowTrack'), 'button[data-stage]', (button) => { activeStage = Number(button.dataset.stage); renderFlow(); });
+        const stage = role.stages[activeStage];
+        $('#flowDetail').innerHTML = `
+          <div class="detail-kicker"><span>${role.number} / ${role.english}</span><span>STAGE ${faNum(activeStage + 1)} OF ۰۵</span></div>
+          <h3>${stage.title}</h3><p>${stage.description}</p>
+          <div class="detail-grid"><div class="detail-box"><small>خروجی مرحله</small><strong>${stage.output}</strong></div><div class="detail-box"><small>مقصد بعدی</small><strong>${stage.handoff}</strong></div></div>
+          <div class="handoff"><b>HANDOFF</b><span>${stage.handoff}</span></div>`;
+        $('#allPaths').innerHTML = Object.values(roles).map((item) => `<button class="all-path-row" data-role="${item.id}" type="button" style="--path-accent:${item.accent}"><span class="path-code">${item.number} / ${item.english}</span><strong>${item.label}</strong><span>${item.stages.map((itemStage) => itemStage.label).join(' ← ')}</span></button>`).join('');
+        bindDirectButtons($('#allPaths'), 'button[data-role]', (button) => setActiveRole(button.dataset.role, true));
+        $('#flowShell').classList.toggle('show-all', showAll);
+        $('#showAllPaths').setAttribute('aria-pressed', String(showAll));
+        $('#showAllPaths').innerHTML = `<span aria-hidden="true">${showAll ? '⊟' : '⊞'}</span> ${showAll ? 'جمع‌کردن مسیرها' : 'نمایش همه مسیرها'}`;
+        $$('.hub-node').forEach((node) => node.classList.toggle('is-active', node.dataset.role === activeRole));
+      }
+
+      function renderPlaybooks() {
+        $('#playbookGrid').innerHTML = Object.values(roles).map((role) => `
+          <article class="playbook-card ${role.id === activeRole ? 'is-active' : ''} role-${role.id}" style="--playbook-accent:${role.accent}">
+            <div class="playbook-head"><div><strong>${role.label}</strong><small>${role.english} / ${role.scope}</small></div><span class="playbook-number">${role.number}</span></div>
+            <div class="playbook-points"><div class="playbook-point"><label>می‌بیند</label><p>${role.sees}</p></div><div class="playbook-point do"><label>انجام می‌دهد</label><p>${role.does}</p></div><div class="playbook-point"><label>نمی‌تواند</label><p>${role.cannot}</p></div><div class="playbook-point"><label>تحویل می‌دهد</label><p>${role.handoff}</p></div></div>
+            <span class="playbook-scope">SCOPE / ${role.scope}</span>
+          </article>`).join('');
+      }
+
+      function renderScenarios() {
+        $('#scenarioGrid').innerHTML = scenarios.map((scenario, index) => {
+          const accentClass = scenario.role === 'cross' ? 'scenario-cross' : `scenario-${scenario.role}`;
+          return `<article class="scenario-card ${accentClass}" data-role="${scenario.role}" data-state="${scenario.state}">
+            <div class="scenario-head"><span class="scenario-number">${faNum(String(index + 1).padStart(2, '0'))}</span><div class="scenario-tags"><span class="scenario-tag accent">${roleLabels[scenario.role]}</span><span class="scenario-tag">${stateLabels[scenario.state]}</span></div></div>
+            <h3>${scenario.title}</h3>
+            <div class="scenario-field"><label>محرک</label><p>${scenario.trigger}</p></div>
+            <div class="scenario-field"><label>بعدش</label><p>${scenario.next}</p></div>
+            <div class="scenario-field"><label>تحویل</label><p><strong>${scenario.handoff}</strong></p></div>
+            <details><summary>جزئیات اقدام و محدودیت</summary><div class="scenario-details"><ol class="scenario-steps">${scenario.steps.map((step, stepIndex) => `<li><b>${faNum(stepIndex + 1)}</b><span>${step}</span></li>`).join('')}</ol><div><div class="micro-heading">مجاز</div><ul class="micro-list">${scenario.allowed.map((item) => `<li>${item}</li>`).join('')}</ul></div><div><div class="micro-heading">مسدود / حساس</div><ul class="micro-list blocked">${scenario.blocked.map((item) => `<li>${item}</li>`).join('')}</ul></div><div class="scenario-field"><label>استثنا</label><p>${scenario.exception}</p></div></div></details>
+          </article>`;
+        }).join('');
+        updateScenarioFilters();
+      }
+
+      function updateScenarioFilters() {
+        let visible = 0;
+        $$('#scenarioGrid .scenario-card').forEach((card) => {
+          const roleMatch = scenarioRoleFilter === 'all' || card.dataset.role === scenarioRoleFilter;
+          const stateMatch = scenarioStateFilter === 'all' || card.dataset.state === scenarioStateFilter;
+          const show = roleMatch && stateMatch;
+          card.hidden = !show;
+          if (show) visible += 1;
+        });
+        $('#scenarioCount').textContent = `${faNum(visible)} سناریو`;
+        $('#scenarioEmpty').classList.toggle('is-visible', visible === 0);
+        $$('[data-role-filter]').forEach((button) => { const active = button.dataset.roleFilter === scenarioRoleFilter; button.classList.toggle('is-active', active); button.setAttribute('aria-pressed', String(active)); });
+        $$('[data-state-filter]').forEach((button) => { const active = button.dataset.stateFilter === scenarioStateFilter; button.classList.toggle('is-active', active); button.setAttribute('aria-pressed', String(active)); });
+      }
+
+      function renderMatrix() {
+        const roleValues = Object.values(roles);
+        $('#matrixHead').innerHTML = `<tr><th scope="col">مجوز / permission</th>${roleValues.map((role) => `<th scope="col" data-role-col="${role.id}" style="--role-col:${role.accent}">${role.label}</th>`).join('')}</tr>`;
+        $('#matrixBody').innerHTML = matrixRows.map((row) => `<tr><th scope="row"><span class="permission-name">${row.label}</span><code class="permission-key">${row.key}</code><small class="muted">${row.note}</small></th>${roleValues.map((role) => { const cell = row.cells[role.id]; return `<td class="matrix-cell ${cell[0]}" data-role-col="${role.id}" style="--role-col:${role.accent}"><span class="matrix-badge">${cell[1]}</span><small>${cell[2]}</small></td>`; }).join('')}</tr>`).join('');
+        updateMatrixFocus();
+      }
+
+      function updateMatrixFocus() {
+        const role = roles[activeRole];
+        $('#matrixFocus').innerHTML = `<div class="matrix-focus-kicker">ACTIVE LENS / ${role.number}</div><h3>${role.label}</h3><p>${role.permissionNote}</p><div class="scope-note"><strong>محدوده‌ی تصمیم:</strong><br>${role.scope}<br><br><strong>تحویل بعدی:</strong><br>${role.handoff}</div><div class="matrix-tabs" role="tablist" aria-label="انتخاب نقش در ماتریس">${Object.values(roles).map((item) => `<button class="matrix-tab ${item.id === activeRole ? 'is-active' : ''}" data-matrix-role="${item.id}" type="button" role="tab" aria-selected="${item.id === activeRole}" style="--role-accent:${item.accent}">${item.label}</button>`).join('')}</div>`;
+        $$('[data-role-col]').forEach((cell) => cell.classList.toggle('is-focused', cell.dataset.roleCol === activeRole));
+        bindDirectButtons($('#matrixFocus'), 'button[data-matrix-role]', (button) => setActiveRole(button.dataset.matrixRole, false));
+      }
+
+      function renderEdges() {
+        $('#edgeRail').innerHTML = edgeStates.map((state, index) => `<button class="edge-card ${state.id === activeEdge ? 'is-active' : ''}" data-edge="${state.id}" type="button" style="--edge-accent:${state.accent}" aria-pressed="${state.id === activeEdge}"><span class="edge-card__top"><span class="edge-card__code">${state.id}</span><i class="edge-card__signal" aria-hidden="true"></i></span><h3>${state.title}</h3><p>${state.copy}</p></button>`).join('');
+        bindDirectButtons($('#edgeRail'), 'button[data-edge]', (button) => { activeEdge = button.dataset.edge; renderEdges(); });
+        const state = edgeStates.find((item) => item.id === activeEdge) || edgeStates[0];
+        $('#edgeDetail').style.setProperty('--edge-accent', state.accent);
+        $('#edgeDetail').innerHTML = `<span class="edge-detail__index">${state.id}</span><div><h3>${state.title}</h3><p>${state.detail}</p></div><span class="edge-detail__action">${state.action} ←</span>`;
+      }
+
+      function setActiveRole(roleId, syncScenario) {
+        if (!roles[roleId]) return;
+        activeRole = roleId;
+        activeStage = 0;
+        document.documentElement.style.setProperty('--role-accent', roles[roleId].accent);
+        $$('#roleGrid [data-role]').forEach((button) => { const active = button.dataset.role === roleId; button.classList.toggle('is-active', active); button.setAttribute('aria-pressed', String(active)); });
+        renderFlow();
+        renderPlaybooks();
+        updateMatrixFocus();
+        if (syncScenario) { scenarioRoleFilter = roleId; scenarioStateFilter = 'all'; updateScenarioFilters(); }
+      }
+
+      function selectScenarioRole(roleId) {
+        scenarioRoleFilter = roleId;
+        scenarioStateFilter = 'all';
+        if (roles[roleId]) setActiveRole(roleId, false);
+        updateScenarioFilters();
+      }
+
+      const closestAction = (event, selector, root) => {
+        const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+        const candidates = [event.target, ...path];
+        for (const node of candidates) {
+          const element = node instanceof Element ? node : node && node.parentElement;
+          if (!element || typeof element.closest !== 'function') continue;
+          const target = element.closest(selector);
+          if (target && root.contains(target)) return target;
+        }
+        return null;
+      };
+      const roleGrid = $('#roleGrid');
+      const hubPanel = $('.hub-panel');
+      const flowShell = $('#flowShell');
+      const matrixSection = $('#matrix');
+      const edgeRail = $('#edgeRail');
+      const roleFilters = $('#roleFilters');
+      const stateFilters = $('#stateFilters');
+
+      roleGrid.addEventListener('click', (event) => {
+        if (event.__araDirectHandled) return;
+        const card = closestAction(event, 'button[data-role]', roleGrid);
+        if (card) setActiveRole(card.dataset.role, true);
+      });
+      hubPanel.addEventListener('click', (event) => {
+        if (event.__araDirectHandled) return;
+        const node = closestAction(event, 'button.hub-node[data-role]', hubPanel);
+        if (node) setActiveRole(node.dataset.role, true);
+      });
+      flowShell.addEventListener('click', (event) => {
+        if (event.__araDirectHandled) return;
+        const stage = closestAction(event, '#flowTrack [data-stage]', flowShell);
+        if (stage) {
+          activeStage = Number(stage.dataset.stage);
+          renderFlow();
+          return;
+        }
+        const path = closestAction(event, '#allPaths [data-role]', flowShell);
+        if (path) {
+          setActiveRole(path.dataset.role, true);
+          return;
+        }
+        const allPathsButton = closestAction(event, '#showAllPaths', flowShell);
+        if (allPathsButton) {
+          showAll = !showAll;
+          renderFlow();
+        }
+      });
+      matrixSection.addEventListener('click', (event) => {
+        if (event.__araDirectHandled) return;
+        const tab = closestAction(event, 'button[data-matrix-role]', matrixSection);
+        if (tab) setActiveRole(tab.dataset.matrixRole, false);
+      });
+      edgeRail.addEventListener('click', (event) => {
+        if (event.__araDirectHandled) return;
+        const card = closestAction(event, 'button[data-edge]', edgeRail);
+        if (card) {
+          activeEdge = card.dataset.edge;
+          renderEdges();
+        }
+      });
+      roleFilters.addEventListener('click', (event) => {
+        if (event.__araDirectHandled) return;
+        const button = closestAction(event, 'button[data-role-filter]', roleFilters);
+        if (button) selectScenarioRole(button.dataset.roleFilter);
+      });
+      stateFilters.addEventListener('click', (event) => {
+        if (event.__araDirectHandled) return;
+        const button = closestAction(event, 'button[data-state-filter]', stateFilters);
+        if (button) {
+          scenarioStateFilter = button.dataset.stateFilter;
+          updateScenarioFilters();
+        }
+      });
+
+      const themeToggle = $('#themeToggle');
+      const savedTheme = (() => { try { return localStorage.getItem('ara-theme'); } catch (error) { return null; } })();
+      if (savedTheme === 'light') document.documentElement.dataset.theme = 'light';
+      function updateThemeButton() { const light = document.documentElement.dataset.theme === 'light'; themeToggle.textContent = light ? 'حالت تاریک' : 'حالت روشن'; themeToggle.setAttribute('aria-pressed', String(light)); }
+      bindDirectButtons($('.topbar-actions'), '#themeToggle', () => { const light = document.documentElement.dataset.theme !== 'light'; document.documentElement.dataset.theme = light ? 'light' : 'dark'; try { localStorage.setItem('ara-theme', light ? 'light' : 'dark'); } catch (error) {} updateThemeButton(); });
+      bindDirectButtons(hubPanel, 'button.hub-node[data-role]', (button) => setActiveRole(button.dataset.role, true));
+      bindDirectButtons(flowShell, '#showAllPaths', () => { showAll = !showAll; renderFlow(); });
+      bindDirectButtons(roleFilters, 'button[data-role-filter]', (button) => selectScenarioRole(button.dataset.roleFilter));
+      bindDirectButtons(stateFilters, 'button[data-state-filter]', (button) => { scenarioStateFilter = button.dataset.stateFilter; updateScenarioFilters(); });
+
+      renderRoles();
+      renderFlow();
+      renderScenarios();
+      renderMatrix();
+      renderPlaybooks();
+      renderEdges();
+      updateThemeButton();
+    })();
+  </script>
+</body>
+</html>

@@ -1,18 +1,16 @@
 .register-form-content {
-  padding-bottom: calc(7rem + env(safe-area-inset-bottom));
+  padding-bottom: 2rem;
 }
 
 .register-step-nav {
   position: relative;
 }
 
-@media (max-width: 47.9375rem) {
-  /* AppShell keeps theme toggle at the inline end; leave room so it cannot
-     intercept the registration header's back button on narrow screens. */
-  .register-page-header > div {
-    padding-inline-end: 4rem;
-  }
+.register-step-nav-spacer {
+  display: none;
+}
 
+@media (max-width: 47.9375rem) {
   .register-step-nav {
     position: fixed;
     inset-inline: 0;
@@ -25,6 +23,13 @@
     box-shadow: 0 -0.75rem 2rem color-mix(in srgb, var(--color-text) 10%, transparent);
     -webkit-backdrop-filter: blur(1rem) saturate(1.1);
     backdrop-filter: blur(1rem) saturate(1.1);
+  }
+
+  /* The fixed thumb-zone bar is removed from layout flow. Keep an exact
+     mobile reserve after each step so its final content remains scrollable. */
+  .register-step-nav-spacer {
+    display: block;
+    height: calc(8rem + env(safe-area-inset-bottom));
   }
 
   .register-step-nav > * {
@@ -47,10 +52,6 @@
 }
 
 @media (min-width: 48rem) {
-  .register-form-content {
-    padding-bottom: 2rem;
-  }
-
   .register-step-nav {
     margin-block-start: 0.75rem;
   }

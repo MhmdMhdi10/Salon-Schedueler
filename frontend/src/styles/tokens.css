@@ -502,6 +502,13 @@ html {
   scrollbar-width: thin;
 }
 
+/* Radix RemoveScroll adds a physical 10px body margin while a popover is
+   open. The stable gutter above already reserves that space, so applying both
+   would narrow the RTL layout and shift every section a few pixels sideways. */
+html body[data-scroll-locked] {
+  margin-right: 0 !important;
+}
+
 *::-webkit-scrollbar {
   width: 10px;
   height: 10px;

@@ -125,10 +125,10 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(function Select
               'z-dialog overflow-hidden rounded-md bg-elevated text-text shadow-2',
               'border border-border',
               'min-w-[var(--radix-select-trigger-width)]',
-              // Scale-fade from the trigger edge; motion-safe gated. The
-              // transform-origin follows Radix's computed popper origin.
-              'origin-[var(--radix-select-content-transform-origin)]',
-              'motion-safe:data-[state=open]:animate-scale-in',
+              // Fade only: Radix owns the popper transform for positioning, so
+              // adding a second scale transform makes nearby mobile content
+              // appear to jump while the menu opens.
+              'motion-safe:data-[state=open]:animate-fade-in',
               'motion-safe:data-[state=closed]:animate-fade-out',
             )}
           >
