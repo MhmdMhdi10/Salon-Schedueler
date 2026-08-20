@@ -98,9 +98,34 @@ describe('AppShell', () => {
     expect(links.length).toBeGreaterThan(0);
     for (const link of links) {
       const href = link.getAttribute('href') ?? '';
+      if (href.startsWith('https://trustseal.enamad.ir/')) {
+        expect(link).toHaveAttribute('target', '_blank');
+        expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+        continue;
+      }
       // Every footer destination is an internal route — never a hash stub.
       expect(href.startsWith('/'), `dead footer link: ${href}`).toBe(true);
     }
+  });
+
+  it('renders the eNamad trust seal with its signed provider URLs', () => {
+    renderShell();
+
+    const seal = screen.getByRole('link', {
+      name: 'مشاهده نماد اعتماد الکترونیکی آرا در اینماد',
+    });
+    expect(seal).toHaveAttribute(
+      'href',
+      'https://trustseal.enamad.ir/?id=7396256&Code=9VvZMqffMTky88WMBv1WJpNzNafnVCyo',
+    );
+    expect(seal).toHaveAttribute('referrerpolicy', 'origin');
+
+    const logo = within(seal).getByRole('img', { name: 'نماد اعتماد الکترونیکی' });
+    expect(logo).toHaveAttribute(
+      'src',
+      'https://trustseal.enamad.ir/logo.aspx?id=7396256&Code=9VvZMqffMTky88WMBv1WJpNzNafnVCyo',
+    );
+    expect(logo).toHaveAttribute('code', '9VvZMqffMTky88WMBv1WJpNzNafnVCyo');
   });
 
   it('home uses the business header with sign-in and registration actions', () => {

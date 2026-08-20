@@ -11,6 +11,21 @@ import { PwaInstallPrompt } from '../../pwa/PwaInstallPrompt';
 /** Stable id the skip link targets and the `<main>` exposes. */
 export const MAIN_CONTENT_ID = 'main-content';
 
+const ENAMAD_CODE = '9VvZMqffMTky88WMBv1WJpNzNafnVCyo';
+const ENAMAD_LINK = `https://trustseal.enamad.ir/?id=7396256&Code=${ENAMAD_CODE}`;
+const ENAMAD_LOGO = `https://trustseal.enamad.ir/logo.aspx?id=7396256&Code=${ENAMAD_CODE}`;
+
+// Keep the provider's `code` attribute alongside the signed logo URL. The
+// latter is what identifies this site's seal; the attribute is retained for
+// compatibility with eNamad's supplied embed snippet.
+const enamadSealImageProps = {
+  referrerPolicy: 'origin' as const,
+  src: ENAMAD_LOGO,
+  alt: 'نماد اعتماد الکترونیکی',
+  style: { cursor: 'pointer' },
+  code: ENAMAD_CODE,
+};
+
 /**
  * Header presentation variants (Booksy directive §a):
  *
@@ -306,9 +321,26 @@ export function PublicFooter() {
             ورود به پنل آرا
           </Link>
         </div>
-        <div className="flex flex-col gap-4 py-8 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-5 py-8 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-4">
             <BrandLogo inverse className="h-9" />
+            <a
+              referrerPolicy="origin"
+              target="_blank"
+              rel="noopener noreferrer"
+              href={ENAMAD_LINK}
+              aria-label="مشاهده نماد اعتماد الکترونیکی آرا در اینماد"
+              className={cn(
+                'inline-flex min-h-20 items-center rounded-md bg-white p-1',
+                'outline-none focus-visible:outline focus-visible:outline-2',
+                'focus-visible:outline-offset-2 focus-visible:outline-focus',
+              )}
+            >
+              <img
+                {...enamadSealImageProps}
+                className="block h-20 w-auto max-w-[8rem] object-contain"
+              />
+            </a>
           </div>
           <span className="text-sm text-ink-muted">© {year} آرا — همه حقوق محفوظ است.</span>
         </div>
