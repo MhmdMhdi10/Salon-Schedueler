@@ -5,6 +5,28 @@ import { EmptyPaymentBodyDto, InitiatePaymentDto, PaymentCallbackDto } from './p
 const route = controllerRouteDto.bind(null, 'PaymentController');
 
 export const PAYMENT_CONTROLLER_DTO_DEFINITIONS = [
-  route('payment.initiate', 'POST', '/api/payments/initiate', EmptyDto, AnyQueryDto, InitiatePaymentDto),
-  route('payment.callback', 'POST', '/api/payments/callback', EmptyDto, AnyQueryDto, PaymentCallbackDto),
+  route(
+    'payment.initiate',
+    'POST',
+    '/api/payments/initiate',
+    EmptyDto,
+    AnyQueryDto,
+    InitiatePaymentDto,
+  ),
+  route(
+    'payment.callback.get',
+    'GET',
+    '/api/payments/callback',
+    EmptyDto,
+    AnyQueryDto,
+    EmptyPaymentBodyDto,
+  ),
+  route(
+    'payment.callback',
+    'POST',
+    '/api/payments/callback',
+    EmptyDto,
+    AnyQueryDto,
+    PaymentCallbackDto,
+  ),
 ] as const satisfies readonly ControllerDtoDefinition[];

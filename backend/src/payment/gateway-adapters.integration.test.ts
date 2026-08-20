@@ -1,5 +1,6 @@
 import { ZarinpalAdapter } from './zarinpal.adapter';
 import { IdPayAdapter } from './idpay.adapter';
+import { ZibalAdapter } from './zibal.adapter';
 
 /**
  * Integration tests for payment gateway adapters using recorded HTTP fixtures.
@@ -299,5 +300,76 @@ describe('IdPayAdapter integration', () => {
         adapter.request(100, 'https://salon.app/cb', {}),
       ).rejects.toThrow('IDPay request failed');
     });
+  });
+});
+
+describe('ZibalAdapter integration', () => {
+  const adapter = new ZibalAdapter({
+    merchant: 'test-zibal-merchant',
+    baseUrl: 'https://gateway.zibal.ir',
+  });
+
+  it('uses Zibal request and verify endpoints with Rial amounts', async () => {
+    const callOrder: string[] = [];
+
+    mockFetch(async (url: string, init?: RequestInit) => {
+      const body = JSON.parse(init?.body as string);
+      if (url.endsWith('/v1/request')) {
+        callOrder.push('request');
+        expect(body).toEqual({
+          merchant: 'test-zibal-merchant',
+          amount: 250000,
+          callbackUrl: 'https://salon.app/api/payments/callback',
+          description: 'Haircut deposit',
+          orderId: 'appt-1',
+        });
+        return jsonResponse({ trackId: 15966442233311, result: 100, message: 'success' });
+      }
+      if (url.endsWith('/v1/verify')) {
+        callOrder.push('verify');
+        expect(body).toEqual({ merchant: 'test-zibal-merchant', trackId: 15966442233311 });
+        return jsonResponse({ result: 100, amount: 250000, refNumber: 98765 });
+      }
+      return jsonResponse({}, 404);
+    });
+
+    const requestResult = await adapter.request(250000, 'https://salon.app/api/payments/callback', {
+      description: 'Haircut deposit',
+      orderId: 'appt-1',
+    });
+    expect(requestResult).toEqual({
+      authority: '15966442233311',
+      redirectUrl: 'https://gateway.zibal.ir/start/15966442233311',
+    });
+
+    await expect(adapter.verify(requestResult.authority, 250000)).resolves.toEqual({
+      ok: true,
+      refId: '98765',
+    });
+    expect(callOrder).toEqual(['request', 'verify']);
+  });
+
+  it('rejects failed or amount-mismatched verification', async () => {
+    mockFetch(async (url: string) => {
+      if (url.endsWith('/v1/verify')) {
+        return jsonResponse({ result: 100, amount: 100000, refNumber: 1 });
+      }
+      return jsonResponse({ result: 202, message: 'not paid' });
+    });
+
+    await expect(adapter.verify('15966442233311', 250000)).resolves.toEqual({ ok: false });
+    await expect(adapter.verify('not-a-track-id', 250000)).resolves.toEqual({ ok: false });
+  });
+
+  it('fails request when Zibal returns a non-success result', async () => {
+    mockFetch(async () => jsonResponse({ result: 103, message: 'merchant disabled' }));
+
+    await expect(
+      adapter.request(250000, 'https://salon.app/api/payments/callback', {}),
+    ).rejects.toThrow('Zibal request failed: 103: merchant disabled');
+  });
+
+  it('fails closed for refunds because the documented IPG API has no refund endpoint', async () => {
+    await expect(adapter.refund('98765', 250000)).resolves.toEqual({ ok: false });
   });
 });

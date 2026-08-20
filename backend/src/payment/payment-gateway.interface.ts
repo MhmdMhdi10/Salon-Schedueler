@@ -1,6 +1,6 @@
 /**
  * PaymentGateway port — abstracts the request → redirect → verify → refund flow
- * for Iranian payment gateways (Zarinpal, IDPay).
+ * for Iranian payment gateways (Zarinpal, IDPay, Zibal).
  *
  * All amounts are in integer Iranian Rial (R10.5).
  *
@@ -14,7 +14,7 @@ export interface PaymentGateway {
   request(
     amountRial: number,
     callbackUrl: string,
-    meta: { description?: string; email?: string; mobile?: string },
+    meta: { description?: string; email?: string; mobile?: string; orderId?: string },
   ): Promise<{ authority: string; redirectUrl: string }>;
 
   /**

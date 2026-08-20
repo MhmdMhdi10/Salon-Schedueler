@@ -20,7 +20,7 @@ export class MockGateway implements PaymentGateway {
   async request(
     amountRial: number,
     callbackUrl: string,
-    _meta: { description?: string; email?: string; mobile?: string },
+    _meta: { description?: string; email?: string; mobile?: string; orderId?: string },
   ): Promise<{ authority: string; redirectUrl: string }> {
     const authority = `mock-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     MockGateway.pendingAuthorities.add(authority);

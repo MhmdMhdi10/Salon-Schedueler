@@ -8,7 +8,7 @@
  */
 
 /** Which payment gateway adapter to use. */
-export type PaymentGatewayName = 'zarinpal' | 'idpay';
+export type PaymentGatewayName = 'zarinpal' | 'idpay' | 'zibal';
 
 /**
  * Fully-resolved application configuration consumed by the Composition_Root.
@@ -26,6 +26,8 @@ export interface AppConfig {
   zarinpalMerchantId?: string;
   /** IDPay API key (optional in dev). */
   idpayApiKey?: string;
+  /** Zibal merchant/API key (optional in dev). */
+  zibalMerchant?: string;
   /** Base URL the payment gateway calls back to. */
   paymentCallbackBaseUrl: string;
   /** Kavenegar SMS API key (optional — dev/log adapter used when absent). */
@@ -141,7 +143,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   }
 
   const paymentGateway: PaymentGatewayName =
-    env.PAYMENT_GATEWAY === 'idpay' ? 'idpay' : 'zarinpal';
+    env.PAYMENT_GATEWAY === 'idpay'
+      ? 'idpay'
+      : env.PAYMENT_GATEWAY === 'zibal'
+        ? 'zibal'
+        : 'zarinpal';
 
   return {
     databaseUrl: env.DATABASE_URL ?? DEV_DEFAULTS.databaseUrl,
@@ -150,6 +156,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     paymentGateway,
     zarinpalMerchantId: env.ZARINPAL_MERCHANT_ID,
     idpayApiKey: env.IDPAY_API_KEY,
+    zibalMerchant: env.ZIBAL_MERCHANT ?? env.ZIBAL_API_KEY,
     paymentCallbackBaseUrl:
       env.PAYMENT_CALLBACK_BASE_URL ?? DEV_DEFAULTS.paymentCallbackBaseUrl,
     kavenegarApiKey: env.KAVENEGAR_API_KEY,

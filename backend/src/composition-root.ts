@@ -12,6 +12,7 @@ import {
   PaymentService,
   ZarinpalAdapter,
   IdPayAdapter,
+  ZibalAdapter,
   MockGateway,
   type PaymentGateway,
 } from './payment/services/index.js';
@@ -84,13 +85,22 @@ export interface CreatedApp extends Container {
 /**
  * Select the payment gateway adapter from configuration.
  *
- * In development (no real credentials set), uses a MockGateway that always
- * succeeds and redirects to the payment callback immediately. This allows the
- * full booking + subscription flow to work without Zarinpal/IDPay connectivity.
+ * In development (no credential for the selected gateway), uses a MockGateway
+ * that always succeeds and redirects to the payment callback immediately. In
+ * production, missing credentials fail closed so fake payments cannot be used.
  */
 function selectGateway(config: AppConfig): PaymentGateway {
-  // Use mock when no real credentials are configured (dev mode)
-  if (!config.zarinpalMerchantId && !config.idpayApiKey) {
+  const hasSelectedGatewayCredential =
+    config.paymentGateway === 'zibal'
+      ? Boolean(config.zibalMerchant)
+      : config.paymentGateway === 'idpay'
+        ? Boolean(config.idpayApiKey)
+        : Boolean(config.zarinpalMerchantId);
+
+  if (!hasSelectedGatewayCredential) {
+    if (config.nodeEnv === 'production') {
+      throw new Error(`Missing credential for selected payment gateway: ${config.paymentGateway}`);
+    }
     if (!isE2EQuietLogs()) {
       console.log('[payment] No gateway credentials configured — using MockGateway (dev mode)');
     }
@@ -99,6 +109,9 @@ function selectGateway(config: AppConfig): PaymentGateway {
 
   if (config.paymentGateway === 'idpay') {
     return new IdPayAdapter({ apiKey: config.idpayApiKey });
+  }
+  if (config.paymentGateway === 'zibal') {
+    return new ZibalAdapter({ merchant: config.zibalMerchant });
   }
   return new ZarinpalAdapter({ merchantId: config.zarinpalMerchantId });
 }

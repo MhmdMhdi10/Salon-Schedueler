@@ -20,9 +20,7 @@ export function paymentInitiateRouter(services: Services): Router {
         return;
       }
       const principal = req.principal;
-      const appointment = await services.calendarService.getAppointmentById(
-        req.body.appointmentId,
-      );
+      const appointment = await services.calendarService.getAppointmentById(req.body.appointmentId);
       if (!appointment) {
         res.status(404).json({ code: 'NOT_FOUND' });
         return;
@@ -34,9 +32,7 @@ export function paymentInitiateRouter(services: Services): Router {
         res.status(403).json({ code: 'FORBIDDEN' });
         return;
       }
-      const { redirectUrl } = await services.paymentService.initiateDeposit(
-        req.body.appointmentId,
-      );
+      const { redirectUrl } = await services.paymentService.initiateDeposit(req.body.appointmentId);
       res.status(200).json({ redirectUrl });
     }),
   );
@@ -48,6 +44,7 @@ export function paymentInitiateRouter(services: Services): Router {
  * Public payment-callback route (Requirement 2.2 / original R10.3, R12.1). The
  * gateway calls this, so it is unauthenticated.
  *
+ * - GET /payments/callback (Zibal: trackId + success via query) -> 200 { confirmed }
  * - POST /payments/callback (authority + status via body/query) -> 200 { confirmed }
  *
  * `handleCallback` confirms the held appointment internally via
@@ -66,41 +63,50 @@ export function paymentCallbackRouter(services: Services): Router {
     windowMs: 60_000,
   });
 
-  router.post(
-    '/payments/callback',
-    callbackLimit,
-    asyncRoute(async (req, res) => {
-      const params = { ...(req.query as Record<string, unknown>), ...(req.body ?? {}) };
-      const authority = (params.authority ?? params.Authority) as string | undefined;
-      const status = (params.status ?? params.Status) as string | undefined;
-
-      if (authority === undefined || authority === '') {
-        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'authority' });
-        return;
+  const handleGatewayCallback = asyncRoute(async (req, res) => {
+    const params = { ...(req.query as Record<string, unknown>), ...(req.body ?? {}) };
+    const firstParam = (...names: string[]): string | undefined => {
+      for (const name of names) {
+        const value = params[name];
+        if (typeof value === 'string' && value !== '') return value;
+        if (typeof value === 'number') return String(value);
       }
+      return undefined;
+    };
 
-      const result = await services.paymentService.handleCallback({
-        authority,
-        status: status ?? '',
-      });
+    const authority = firstParam('authority', 'Authority', 'trackId', 'TrackId');
+    const success = firstParam('success', 'Success');
+    const status = firstParam('status', 'Status');
+    const isSuccessful =
+      success !== undefined
+        ? success === '1' || success.toLowerCase() === 'true'
+        : ['OK', '100', '101', '201'].includes((status ?? '').toUpperCase());
 
-      if (result.confirmed) {
-        const appointmentId = (params.appointmentId ?? params.appointmentID) as
-          | string
-          | undefined;
-        if (appointmentId) {
-          await safelyNotify(() =>
-            services.notificationService.sendConfirmation(appointmentId),
-          );
-          await safelyNotify(() =>
-            services.notificationService.sendSalonBookingNotice(appointmentId, 'confirmed'),
-          );
-        }
+    if (authority === undefined) {
+      res.status(400).json({ code: 'VALIDATION_ERROR', field: 'authority' });
+      return;
+    }
+
+    const result = await services.paymentService.handleCallback({
+      authority,
+      status: isSuccessful ? '100' : '0',
+    });
+
+    if (result.confirmed) {
+      const appointmentId = firstParam('appointmentId', 'appointmentID', 'orderId', 'OrderId');
+      if (appointmentId) {
+        await safelyNotify(() => services.notificationService.sendConfirmation(appointmentId));
+        await safelyNotify(() =>
+          services.notificationService.sendSalonBookingNotice(appointmentId, 'confirmed'),
+        );
       }
+    }
 
-      res.status(200).json({ confirmed: result.confirmed });
-    }),
-  );
+    res.status(200).json({ confirmed: result.confirmed });
+  });
+
+  router.get('/payments/callback', callbackLimit, handleGatewayCallback);
+  router.post('/payments/callback', callbackLimit, handleGatewayCallback);
 
   return router;
 }

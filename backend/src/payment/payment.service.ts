@@ -88,6 +88,7 @@ export class PaymentService {
     // Call gateway to get authority and redirect URL
     const { authority, redirectUrl } = await this.gateway.request(amountRial, callbackUrl, {
       description: `Deposit for appointment ${appointmentId}`,
+      orderId: appointmentId,
     });
 
     // Update payment record with authority
@@ -342,6 +343,7 @@ export class PaymentService {
     const name = this.gateway.constructor.name;
     if (name.toLowerCase().includes('zarinpal')) return 'zarinpal';
     if (name.toLowerCase().includes('idpay')) return 'idpay';
+    if (name.toLowerCase().includes('zibal')) return 'zibal';
     return 'unknown';
   }
 }

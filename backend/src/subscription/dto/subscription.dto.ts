@@ -11,6 +11,10 @@ export const SubscriptionCallbackQueryDto = z
     authority: z.string().optional(),
     Status: z.string().optional(),
     status: z.string().optional(),
+    Success: z.string().optional(),
+    success: z.string().optional(),
+    trackId: z.string().optional(),
+    TrackId: z.string().optional(),
   })
   .passthrough();
 export const EmptySubscriptionBodyDto = EmptyDto;

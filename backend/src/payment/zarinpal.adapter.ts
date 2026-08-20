@@ -27,7 +27,7 @@ export class ZarinpalAdapter implements PaymentGateway {
   async request(
     amountRial: number,
     callbackUrl: string,
-    meta: { description?: string; email?: string; mobile?: string },
+    meta: { description?: string; email?: string; mobile?: string; orderId?: string },
   ): Promise<{ authority: string; redirectUrl: string }> {
     const url = `${this.baseUrl}/pg/v4/payment/request.json`;
 

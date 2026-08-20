@@ -51,10 +51,16 @@ else
   fail_check "real SMS provider key missing (KAVENEGAR_API_KEY or SMSIR_API_KEY)"
 fi
 
-if [[ -n "$(env_value ZARINPAL_MERCHANT_ID)" || -n "$(env_value IDPAY_API_KEY)" ]]; then
+gateway="$(env_value PAYMENT_GATEWAY)"
+case "$gateway" in
+  zibal) payment_credential="$(env_value ZIBAL_MERCHANT)"; payment_label="ZIBAL_MERCHANT" ;;
+  idpay) payment_credential="$(env_value IDPAY_API_KEY)"; payment_label="IDPAY_API_KEY" ;;
+  *) payment_credential="$(env_value ZARINPAL_MERCHANT_ID)"; payment_label="ZARINPAL_MERCHANT_ID" ;;
+esac
+if [[ -n "$payment_credential" ]]; then
   pass_check "real payment gateway configured"
 else
-  fail_check "real payment gateway credential missing (ZARINPAL_MERCHANT_ID or IDPAY_API_KEY)"
+  fail_check "real payment gateway credential missing for $gateway ($payment_label)"
 fi
 
 docker compose -f docker-compose.yml -f docker-compose.server.yml config --quiet \

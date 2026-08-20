@@ -112,7 +112,7 @@ export class SubscriptionController {
  * here after payment. Finds the pending payment by authority, activates the
  * subscription, then redirects the browser back to the owner panel.
  *
- * GET /subscriptions/callback?Authority=xxx&Status=OK → 302 → /owner/subscription
+ * GET /subscriptions/callback?trackId=xxx&success=1 → 302 → /owner/subscription
  */
 export function subscriptionCallbackRouter(services: Services): Router {
   const router = Router();
@@ -126,10 +126,18 @@ export function subscriptionCallbackRouter(services: Services): Router {
     '/subscriptions/callback',
     callbackLimit,
     asyncRoute(async (req, res) => {
-      const authority = (req.query.Authority ?? req.query.authority) as string | undefined;
+      const authority = (req.query.Authority ??
+        req.query.authority ??
+        req.query.trackId ??
+        req.query.TrackId) as string | undefined;
+      const success = (req.query.Success ?? req.query.success) as string | undefined;
       const status = (req.query.Status ?? req.query.status) as string | undefined;
+      const isSuccessful =
+        success !== undefined
+          ? success === '1' || success.toLowerCase() === 'true'
+          : ['OK', '100', '101', '201'].includes((status ?? '').toUpperCase());
 
-      if (!authority || (status !== 'OK' && status !== 'ok')) {
+      if (!authority || !isSuccessful) {
         res.redirect('/owner/subscription?payment=error');
         return;
       }

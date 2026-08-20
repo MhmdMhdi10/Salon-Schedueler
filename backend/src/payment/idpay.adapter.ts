@@ -28,7 +28,7 @@ export class IdPayAdapter implements PaymentGateway {
   async request(
     amountRial: number,
     callbackUrl: string,
-    meta: { description?: string; email?: string; mobile?: string },
+    meta: { description?: string; email?: string; mobile?: string; orderId?: string },
   ): Promise<{ authority: string; redirectUrl: string }> {
     const url = `${this.baseUrl}/v1.1/payment`;
 
