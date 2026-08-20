@@ -56,12 +56,12 @@ const PLANS = [
   { kind: 'quarterly', durationDays: 90, priceRial: 16000000 },
 ];
 
-function renderPage() {
+function renderPage(path = '/owner/subscription') {
   return render(
     <HelmetProvider>
       <ThemeProvider defaultTheme="light">
         <div dir="rtl" lang="fa" className="app-root">
-          <MemoryRouter initialEntries={['/owner/subscription']}>
+          <MemoryRouter initialEntries={[path]}>
             <OwnerSubscriptionPage />
           </MemoryRouter>
         </div>
@@ -127,6 +127,32 @@ describe('OwnerSubscriptionPage — load + status (R3.4, R3.5)', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'تلاش مجدد' }));
     expect(await screen.findByTestId('subscription-status')).toBeInTheDocument();
+  });
+
+  it('shows a success notice after returning from subscription payment', async () => {
+    getStatus.mockResolvedValue({
+      status: 'active',
+      planKind: 'monthly',
+      expiresAt: '2025-05-07T00:00:00.000Z',
+    });
+    renderPage('/owner/subscription?payment=success');
+
+    expect(await screen.findByTestId('subscription-payment-success')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'پرداخت اشتراک با موفقیت انجام شد' }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows an error notice after a failed subscription payment', async () => {
+    getStatus.mockResolvedValue({
+      status: 'expired',
+      planKind: 'monthly',
+      expiresAt: '2024-05-07T00:00:00.000Z',
+    });
+    renderPage('/owner/subscription?payment=error');
+
+    expect(await screen.findByTestId('subscription-payment-error')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'پرداخت اشتراک ناموفق بود' })).toBeInTheDocument();
   });
 });
 

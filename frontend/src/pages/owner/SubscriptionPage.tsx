@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle,
   CalendarClock,
@@ -116,8 +116,13 @@ function SubscriptionSkeleton() {
 export function OwnerSubscriptionPage() {
   const { t } = useTranslation();
   const params = useParams<{ salonId?: string }>();
+  const [searchParams] = useSearchParams();
   const sessionSalonId = useSalonId();
   const salonId = params.salonId ?? sessionSalonId;
+
+  const paymentResult = searchParams.get('payment');
+  const paymentNotice =
+    paymentResult === 'success' || paymentResult === 'error' ? paymentResult : null;
 
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [error, setError] = useState('');
@@ -184,6 +189,47 @@ export function OwnerSubscriptionPage() {
         <h1 className="text-xl text-display text-text">{t('owner.subscription.title')}</h1>
         <p className="max-w-[60ch] text-sm text-muted">{t('owner.subscription.subtitle')}</p>
       </header>
+
+      {paymentNotice && (
+        <Card
+          as="section"
+          data-testid={`subscription-payment-${paymentNotice}`}
+          role={paymentNotice === 'error' ? 'alert' : 'status'}
+          className={
+            paymentNotice === 'success'
+              ? 'flex flex-col gap-2 border-success/30 bg-success/10'
+              : 'flex flex-col gap-2 border-danger/30 bg-danger/10'
+          }
+        >
+          <div
+            className={
+              paymentNotice === 'success'
+                ? 'flex items-center gap-2 text-success'
+                : 'flex items-center gap-2 text-danger'
+            }
+          >
+            {paymentNotice === 'success' ? (
+              <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden="true" />
+            ) : (
+              <XCircle className="h-5 w-5 shrink-0" aria-hidden="true" />
+            )}
+            <CardTitle as="h2" className="text-md font-medium">
+              {t(
+                paymentNotice === 'success'
+                  ? 'owner.subscription.paymentSuccessTitle'
+                  : 'owner.subscription.paymentErrorTitle',
+              )}
+            </CardTitle>
+          </div>
+          <CardContent className="text-sm text-text">
+            {t(
+              paymentNotice === 'success'
+                ? 'owner.subscription.paymentSuccessBody'
+                : 'owner.subscription.paymentErrorBody',
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {status === 'loading' && <SubscriptionSkeleton />}
 
