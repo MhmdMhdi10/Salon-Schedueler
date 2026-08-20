@@ -40,6 +40,19 @@ function renderPage(state: unknown = undefined) {
   );
 }
 
+function renderPaymentResult(payment: 'success' | 'failed') {
+  return render(
+    <HelmetProvider>
+      <MemoryRouter initialEntries={[`/booking/success?payment=${payment}`]}>
+        <Routes>
+          <Route path="/booking/success" element={<BookingSuccessPage />} />
+          <Route path="/" element={<HomeProbe />} />
+        </Routes>
+      </MemoryRouter>
+    </HelmetProvider>,
+  );
+}
+
 afterEach(() => {
   sessionStorage.clear();
   cleanup();
@@ -78,6 +91,20 @@ describe('BookingSuccessPage — success moment', () => {
     // still show CONFIRMED — never the amber pending downgrade.
     renderPage();
     expect(screen.getByRole('heading', { name: 'رزرو شما با موفقیت ثبت شد' })).toBeInTheDocument();
+  });
+
+  it('shows a post-payment success result from the gateway redirect', () => {
+    renderPaymentResult('success');
+    expect(screen.getByTestId('payment-result')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'پرداخت با موفقیت انجام شد' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'پرداخت موفق' })).toBeInTheDocument();
+  });
+
+  it('shows a post-payment failure result from the gateway redirect', () => {
+    renderPaymentResult('failed');
+    expect(screen.getByTestId('payment-result')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'پرداخت ناموفق بود' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'پرداخت ناموفق' })).toBeInTheDocument();
   });
 });
 

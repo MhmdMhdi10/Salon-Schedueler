@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Response } from 'express';
 import type { Services } from '../../http/app.js';
 import { safelyNotify } from '../../app/safely-notify.js';
 import { asyncRoute, validateRequired } from '../../common/http/route-helpers.js';
@@ -44,8 +44,8 @@ export function paymentInitiateRouter(services: Services): Router {
  * Public payment-callback route (Requirement 2.2 / original R10.3, R12.1). The
  * gateway calls this, so it is unauthenticated.
  *
- * - GET /payments/callback (Zibal: trackId + success via query) -> 200 { confirmed }
- * - POST /payments/callback (authority + status via body/query) -> 200 { confirmed }
+ * - GET /payments/callback (Zibal: trackId + success via query) -> browser redirect
+ * - POST /payments/callback (authority + status via body/query) -> browser redirect
  *
  * `handleCallback` confirms the held appointment internally via
  * `SchedulingEngine.confirmHeld`. To also dispatch the confirmation notification
@@ -62,6 +62,10 @@ export function paymentCallbackRouter(services: Services): Router {
     max: 30,
     windowMs: 60_000,
   });
+
+  const redirectToPaymentResult = (res: Response, result: 'success' | 'failed') => {
+    res.redirect(`/booking/success?payment=${result}`);
+  };
 
   const handleGatewayCallback = asyncRoute(async (req, res) => {
     const params = { ...(req.query as Record<string, unknown>), ...(req.body ?? {}) };
@@ -83,26 +87,31 @@ export function paymentCallbackRouter(services: Services): Router {
         : ['OK', '100', '101', '201'].includes((status ?? '').toUpperCase());
 
     if (authority === undefined) {
-      res.status(400).json({ code: 'VALIDATION_ERROR', field: 'authority' });
+      redirectToPaymentResult(res, 'failed');
       return;
     }
 
-    const result = await services.paymentService.handleCallback({
-      authority,
-      status: isSuccessful ? '100' : '0',
-    });
+    try {
+      const result = await services.paymentService.handleCallback({
+        authority,
+        status: isSuccessful ? '100' : '0',
+      });
 
-    if (result.confirmed) {
-      const appointmentId = firstParam('appointmentId', 'appointmentID', 'orderId', 'OrderId');
-      if (appointmentId) {
-        await safelyNotify(() => services.notificationService.sendConfirmation(appointmentId));
-        await safelyNotify(() =>
-          services.notificationService.sendSalonBookingNotice(appointmentId, 'confirmed'),
-        );
+      if (result.confirmed) {
+        const appointmentId = firstParam('appointmentId', 'appointmentID', 'orderId', 'OrderId');
+        if (appointmentId) {
+          await safelyNotify(() => services.notificationService.sendConfirmation(appointmentId));
+          await safelyNotify(() =>
+            services.notificationService.sendSalonBookingNotice(appointmentId, 'confirmed'),
+          );
+        }
       }
-    }
 
-    res.status(200).json({ confirmed: result.confirmed });
+      redirectToPaymentResult(res, result.confirmed ? 'success' : 'failed');
+    } catch {
+      // Never expose gateway/database errors in the browser callback response.
+      redirectToPaymentResult(res, 'failed');
+    }
   });
 
   router.get('/payments/callback', callbackLimit, handleGatewayCallback);

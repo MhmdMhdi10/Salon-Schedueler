@@ -27,8 +27,8 @@ describe('payment callback route', () => {
       '/payments/callback?trackId=15966442233311&success=1&status=2&orderId=appt-1',
     );
 
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual({ confirmed: true });
+    expect(response.status).toBe(302);
+    expect(response.headers.location).toBe('/booking/success?payment=success');
     expect(services.paymentService.handleCallback).toHaveBeenCalledWith({
       authority: '15966442233311',
       status: '100',
@@ -44,8 +44,8 @@ describe('payment callback route', () => {
       '/payments/callback?trackId=15966442233311&success=0&status=3',
     );
 
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual({ confirmed: false });
+    expect(response.status).toBe(302);
+    expect(response.headers.location).toBe('/booking/success?payment=failed');
     expect(services.paymentService.handleCallback).toHaveBeenCalledWith({
       authority: '15966442233311',
       status: '0',
@@ -60,7 +60,8 @@ describe('payment callback route', () => {
       .post('/payments/callback')
       .send({ Authority: 'legacy-authority', Status: 'OK' });
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(302);
+    expect(response.headers.location).toBe('/booking/success?payment=success');
     expect(services.paymentService.handleCallback).toHaveBeenCalledWith({
       authority: 'legacy-authority',
       status: '100',

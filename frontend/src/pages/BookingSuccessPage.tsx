@@ -1,6 +1,15 @@
 import { useTranslation } from 'react-i18next';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { CalendarClock, CalendarPlus, CheckCircle2, Clock, MapPin, Scissors, Store } from 'lucide-react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  CalendarClock,
+  CalendarPlus,
+  CheckCircle2,
+  Clock,
+  MapPin,
+  Scissors,
+  Store,
+  XCircle,
+} from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { SeoHead } from '../components/seo';
 import {
@@ -91,7 +100,75 @@ export function BookingSuccessPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const prefersReduced = useReducedMotion();
+
+  const paymentResult = searchParams.get('payment');
+  if (paymentResult === 'success' || paymentResult === 'failed') {
+    const isPaymentSuccess = paymentResult === 'success';
+
+    return (
+      <div
+        data-testid="payment-result"
+        data-shell="funnel-payment-result"
+        className="flex min-h-screen min-h-[100dvh] flex-col overflow-x-hidden bg-bg text-text"
+      >
+        <SeoHead title={t('seo.titles.success')} />
+
+        <main
+          id="funnel-content"
+          tabIndex={-1}
+          className="mx-auto flex w-full max-w-funnel flex-1 flex-col items-center justify-center gap-6 px-4 py-8 text-center"
+        >
+          <div className="relative flex flex-col items-center gap-3">
+            <motion.span
+              className={`relative inline-flex h-20 w-20 items-center justify-center rounded-pill motion-safe:animate-success-pop ${
+                isPaymentSuccess ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
+              }`}
+              role="img"
+              aria-label={
+                isPaymentSuccess
+                  ? t('booking.paymentSuccessIconLabel')
+                  : t('booking.paymentFailedIconLabel')
+              }
+              initial={prefersReduced ? false : { scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.4, ease: easings.emphasized, delay: 0.15 }}
+            >
+              {isPaymentSuccess ? (
+                <CheckCircle2 className="h-11 w-11" aria-hidden="true" />
+              ) : (
+                <XCircle className="h-11 w-11" aria-hidden="true" />
+              )}
+            </motion.span>
+
+            <h1 className="text-xl font-bold text-text">
+              {isPaymentSuccess
+                ? t('booking.paymentSuccessTitle')
+                : t('booking.paymentFailedTitle')}
+            </h1>
+            <p className="max-w-[38ch] text-sm leading-7 text-muted">
+              {isPaymentSuccess ? t('booking.paymentSuccessBody') : t('booking.paymentFailedBody')}
+            </p>
+          </div>
+
+          {!isPaymentSuccess && (
+            <Card as="section" className="w-full text-start">
+              <p className="text-sm leading-7 text-muted">{t('booking.paymentFailedHint')}</p>
+            </Card>
+          )}
+        </main>
+
+        <div className="sticky bottom-0 z-sticky border-t border-border bg-bg pb-[env(safe-area-inset-bottom)]">
+          <div className="mx-auto w-full max-w-funnel px-4 py-4">
+            <Button size="lg" fullWidth onClick={() => navigate('/')}>
+              {t('booking.successCta')}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Hydrate from router state (the real handoff from the confirm step) or,
   // on refresh, from the persisted copy. A fresh handoff refreshes the copy.
@@ -215,7 +292,9 @@ export function BookingSuccessPage() {
                       <Scissors className="h-4 w-4" aria-hidden="true" />
                       {t('booking.serviceLabel')}
                     </dt>
-                    <dd className="max-w-full break-words text-sm font-medium text-text sm:text-end">{serviceName}</dd>
+                    <dd className="max-w-full break-words text-sm font-medium text-text sm:text-end">
+                      {serviceName}
+                    </dd>
                   </div>
                 )}
 
@@ -261,7 +340,9 @@ export function BookingSuccessPage() {
                       <Store className="h-4 w-4" aria-hidden="true" />
                       {t('booking.whereLabel')}
                     </dt>
-                    <dd className="max-w-full break-words text-sm font-medium text-text sm:text-end">{salonName}</dd>
+                    <dd className="max-w-full break-words text-sm font-medium text-text sm:text-end">
+                      {salonName}
+                    </dd>
                   </div>
                 )}
               </dl>
