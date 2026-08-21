@@ -40,7 +40,9 @@ services:
       PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is required in production}"
       CORS_ALLOW_ORIGIN: "${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is required in production}"
       OTP_WINDOW_SECONDS: "120"
-      DEV_OTP_AUTO_FILL: "false"
+      # Temporary test mode is opt-in through the server .env; keep production
+      # default disabled so an omitted variable never exposes OTPs.
+      DEV_OTP_AUTO_FILL: "${DEV_OTP_AUTO_FILL:-false}"
       DEV_SMS_INBOX_URL: ""
       NOTIFICATION_CRON_EXTERNAL: "true"
       TRUST_PROXY: "true"
