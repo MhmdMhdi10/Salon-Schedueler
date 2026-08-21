@@ -100,7 +100,7 @@ describe('AppShell', () => {
       const href = link.getAttribute('href') ?? '';
       if (href.startsWith('https://trustseal.enamad.ir/')) {
         expect(link).toHaveAttribute('target', '_blank');
-        expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+        expect(link).not.toHaveAttribute('rel');
         continue;
       }
       // Every footer destination is an internal route — never a hash stub.

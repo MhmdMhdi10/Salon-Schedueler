@@ -327,7 +327,6 @@ export function PublicFooter() {
             <a
               referrerPolicy="origin"
               target="_blank"
-              rel="noopener noreferrer"
               href={ENAMAD_LINK}
               aria-label="مشاهده نماد اعتماد الکترونیکی آرا در اینماد"
               className={cn(
