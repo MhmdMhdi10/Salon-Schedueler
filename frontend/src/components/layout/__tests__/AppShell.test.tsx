@@ -111,20 +111,26 @@ describe('AppShell', () => {
   it('renders the eNamad trust seal with its signed provider URLs', () => {
     renderShell();
 
-    const seal = screen.getByRole('link', {
-      name: 'مشاهده نماد اعتماد الکترونیکی آرا در اینماد',
-    });
+    const seal = document.querySelector<HTMLAnchorElement>(
+      'a[href="https://trustseal.enamad.ir/?id=7396256&Code=9VvZMqffMTky88WMBv1WJpNzNafnVCyo"]',
+    );
+    expect(seal).toBeInTheDocument();
     expect(seal).toHaveAttribute(
       'href',
       'https://trustseal.enamad.ir/?id=7396256&Code=9VvZMqffMTky88WMBv1WJpNzNafnVCyo',
     );
     expect(seal).toHaveAttribute('referrerpolicy', 'origin');
+    expect(seal).toHaveAttribute('target', '_blank');
+    expect(seal).not.toHaveAttribute('rel');
 
-    const logo = within(seal).getByRole('img', { name: 'نماد اعتماد الکترونیکی' });
+    const logo = seal?.querySelector<HTMLImageElement>('img');
+    expect(logo).toBeInTheDocument();
     expect(logo).toHaveAttribute(
       'src',
       'https://trustseal.enamad.ir/logo.aspx?id=7396256&Code=9VvZMqffMTky88WMBv1WJpNzNafnVCyo',
     );
+    expect(logo).toHaveAttribute('alt', '');
+    expect(logo?.style.cursor).toBe('pointer');
     expect(logo).toHaveAttribute('code', '9VvZMqffMTky88WMBv1WJpNzNafnVCyo');
   });
 
