@@ -46,7 +46,12 @@ import {
   type OwnerWaitlistEntry,
   type WeeklyWorkingHour,
 } from '../../api/client';
-import { AppointmentDetailsSheet, MoveAppointmentDialog, type CalendarAppointmentLike } from './OwnerAppointmentPanels';
+import {
+  AppointmentDetailsSheet,
+  getRescheduleErrorMessage,
+  MoveAppointmentDialog,
+  type CalendarAppointmentLike,
+} from './OwnerAppointmentPanels';
 import { useAuth } from '../../auth/AuthContext';
 import { useSalonId } from '../../auth/useSalonId';
 import { usePagination } from '../../hooks/usePagination';
@@ -3988,8 +3993,9 @@ export function OwnerCalendarPage() {
       const nextStart = new Date(date);
       const [hour, minute] = time.split(':').map(Number);
       nextStart.setHours(hour, minute, 0, 0);
-      void applyMove(appointment, nextStart.toISOString()).catch(() => {
-        setMoveError('این زمان قابل رزرو نیست؛ نوبت قبلی بدون تغییر باقی ماند.');
+      void applyMove(appointment, nextStart.toISOString()).catch((error) => {
+        setMoveError(getRescheduleErrorMessage(error));
+        setMoveAppointment(appointment);
       });
     },
     [applyMove],
@@ -4509,11 +4515,6 @@ export function OwnerCalendarPage() {
         )}
       </div>
 
-      {moveError && (
-        <p role="alert" className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
-          {moveError}
-        </p>
-      )}
       <AvailabilityDialog
         salonId={salonId}
         date={availabilityDate}
@@ -4558,9 +4559,13 @@ export function OwnerCalendarPage() {
         open={Boolean(moveAppointment)}
         appointment={moveAppointment}
         onOpenChange={(next) => {
-          if (!next) setMoveAppointment(null);
+          if (!next) {
+            setMoveAppointment(null);
+            setMoveError('');
+          }
         }}
         onMoved={applyMove}
+        initialError={moveError}
       />
       <Dialog
         open={Boolean(cancelAppointment)}

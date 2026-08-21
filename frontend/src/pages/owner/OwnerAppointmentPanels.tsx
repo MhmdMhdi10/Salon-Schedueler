@@ -7,9 +7,11 @@ import {
   Move,
   Phone,
   Send,
+  TriangleAlert,
   UserRound,
 } from 'lucide-react';
 import {
+  ApiError,
   adminApi,
   type AppointmentCustomerOverview,
 } from '../../api/client';
@@ -95,6 +97,33 @@ function localDateTimeValue(iso?: string): string {
     ':' +
     pad(safeDate.getMinutes())
   );
+}
+
+export function getRescheduleErrorMessage(error: unknown): string {
+  const code =
+    error instanceof ApiError
+      ? error.code
+      : error && typeof error === 'object' && 'code' in error && typeof error.code === 'string'
+        ? error.code
+        : undefined;
+
+  switch (code) {
+    case 'BOOKING_SLOT_UNAVAILABLE':
+    case 'RESCHEDULE_CONFLICT':
+      return 'علت: برای این بازه ظرفیت قابل رزرو پیدا نشد؛ ممکن است با نوبت فعال تداخل داشته باشد یا آرایشگر/صندلی آزاد نباشد.';
+    case 'RESCHEDULE_OUTSIDE_HOURS':
+      return 'علت: زمان انتخاب‌شده خارج از ساعت کاری آرایشگر یا صندلی است.';
+    case 'RESCHEDULE_CLOSED':
+      return 'علت: زمان انتخاب‌شده در تعطیلی سالن یا بازه بسته‌شده قرار دارد.';
+    case 'RESCHEDULE_INVALID_START':
+      return 'علت: زمان انتخاب‌شده معتبر نیست.';
+    case 'APPOINTMENT_NOT_MOVABLE':
+      return 'علت: این نوبت دیگر قابل جابجایی نیست.';
+    case 'APPOINTMENT_NOT_FOUND':
+      return 'علت: این نوبت پیدا نشد؛ تقویم را تازه‌سازی کن.';
+    default:
+      return 'علت: تغییر زمان انجام نشد؛ نوبت قبلی بدون تغییر باقی ماند.';
+  }
 }
 
 const actionLinkClass =
@@ -437,11 +466,13 @@ export function MoveAppointmentDialog({
   appointment,
   onOpenChange,
   onMoved,
+  initialError = '',
 }: {
   open: boolean;
   appointment: CalendarAppointmentLike | null;
   onOpenChange: (open: boolean) => void;
   onMoved: (appointment: CalendarAppointmentLike, startAt: string) => Promise<void>;
+  initialError?: string;
 }) {
   const [startAt, setStartAt] = useState('');
   const [error, setError] = useState('');
@@ -450,8 +481,12 @@ export function MoveAppointmentDialog({
   useEffect(() => {
     if (!open || !appointment) return;
     setStartAt(localDateTimeValue(appointment.startAt));
-    setError('');
   }, [open, appointment]);
+
+  useEffect(() => {
+    if (!open || !appointment) return;
+    setError(initialError);
+  }, [open, appointment, initialError]);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -466,8 +501,8 @@ export function MoveAppointmentDialog({
     try {
       await onMoved(appointment, nextStart.toISOString());
       onOpenChange(false);
-    } catch {
-      setError('این زمان قابل رزرو نیست یا تغییر انجام نشد.');
+    } catch (caught) {
+      setError(getRescheduleErrorMessage(caught));
     } finally {
       setSaving(false);
     }
@@ -498,7 +533,19 @@ export function MoveAppointmentDialog({
               آرایشگر فعلی: {appointment.staffName}
             </p>
           )}
-          {error && <p role="alert" className="m-0 text-sm text-danger">{error}</p>}
+          {error && (
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/5 p-3 text-sm text-danger"
+            >
+              <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <div className="flex flex-col gap-1">
+                <strong className="font-semibold">انتقال انجام نشد</strong>
+                <span>{error}</span>
+                <span className="text-xs">نوبت قبلی بدون تغییر باقی ماند.</span>
+              </div>
+            </div>
+          )}
           <div className="mt-2 flex justify-end gap-2">
             <DialogClose asChild>
               <Button type="button" variant="ghost" disabled={saving}>انصراف</Button>
