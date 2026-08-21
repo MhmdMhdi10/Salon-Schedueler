@@ -45,7 +45,9 @@ vi.mock('../../../api/client', () => {
       getAnalytics: vi.fn().mockResolvedValue({ utilization: {}, revenue: 0, busiestWindows: [] }),
       getStaff: vi.fn().mockResolvedValue({ staff: [] }),
       getChairs: vi.fn().mockResolvedValue({ chairs: [] }),
-      createChair: vi.fn().mockResolvedValue({ chair: { id: 'c1', name: 'صندلی ۱', active: true } }),
+      createChair: vi
+        .fn()
+        .mockResolvedValue({ chair: { id: 'c1', name: 'صندلی ۱', active: true } }),
     },
     salonApi: {
       getServices: vi.fn().mockResolvedValue({ services: [] }),
@@ -63,6 +65,11 @@ vi.mock('../../../api/client', () => {
     bookingPolicyApi: {
       get: vi.fn().mockResolvedValue({ bookingWindowDays: 14 }),
     },
+    subscriptionApi: {
+      getStatus: vi.fn(),
+      getPlans: vi.fn(),
+      initiatePurchase: vi.fn(),
+    },
     staffAvailabilityApi: {
       list: vi.fn().mockResolvedValue({ blocks: [] }),
     },
@@ -72,7 +79,12 @@ vi.mock('../../../api/client', () => {
 import { OwnerLayout } from '../OwnerLayout';
 import { AuthProvider } from '../../../auth/AuthContext';
 import { HeaderAuthNav } from '../../../components/layout/HeaderAuthNav';
-import { OwnerCalendarPage, OwnerConfigurationPage, OwnerProfilePage } from '..';
+import {
+  OwnerCalendarPage,
+  OwnerConfigurationPage,
+  OwnerProfilePage,
+  OwnerSubscriptionPage,
+} from '..';
 
 function renderOwnerApp(initialPath = '/owner/calendar') {
   return render(
@@ -84,6 +96,7 @@ function renderOwnerApp(initialPath = '/owner/calendar') {
               <Route path="calendar" element={<OwnerCalendarPage />} />
               <Route path="config" element={<OwnerConfigurationPage />} />
               <Route path="profile" element={<OwnerProfilePage />} />
+              <Route path="subscription" element={<OwnerSubscriptionPage />} />
             </Route>
             <Route path="/auth" element={<div data-testid="auth-surface">ورود</div>} />
             <Route path="/account" element={<div data-testid="account-surface">حساب</div>} />
@@ -183,6 +196,17 @@ describe('OwnerLayout — RBAC (R2.3)', () => {
 
     await screen.findByTestId('owner-calendar-page');
     expect(screen.queryByRole('link', { name: 'تنظیمات سالن' })).not.toBeInTheDocument();
+  });
+
+  it('renders subscription payment results without owner shell chrome', async () => {
+    getAccessToken.mockReturnValue('t');
+    getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Owner' } });
+
+    renderOwnerApp('/owner/subscription?payment=success');
+
+    expect(await screen.findByTestId('subscription-payment-result')).toBeInTheDocument();
+    expect(document.querySelector('[data-shell="funnel-payment-result"]')).toBeInTheDocument();
+    expect(document.querySelector('[data-shell="owner"]')).not.toBeInTheDocument();
   });
 });
 

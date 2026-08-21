@@ -129,7 +129,7 @@ describe('OwnerSubscriptionPage — load + status (R3.4, R3.5)', () => {
     expect(await screen.findByTestId('subscription-status')).toBeInTheDocument();
   });
 
-  it('shows a success notice after returning from subscription payment', async () => {
+  it('shows a full-screen success result after returning from subscription payment', async () => {
     getStatus.mockResolvedValue({
       status: 'active',
       planKind: 'monthly',
@@ -137,13 +137,17 @@ describe('OwnerSubscriptionPage — load + status (R3.4, R3.5)', () => {
     });
     renderPage('/owner/subscription?payment=success');
 
-    expect(await screen.findByTestId('subscription-payment-success')).toBeInTheDocument();
+    const result = await screen.findByTestId('subscription-payment-result');
+    expect(result).toHaveAttribute('data-shell', 'funnel-payment-result');
+    expect(result).toHaveAttribute('data-payment-result', 'success');
     expect(
       screen.getByRole('heading', { name: 'پرداخت اشتراک با موفقیت انجام شد' }),
     ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'بازگشت به اشتراک من' })).toBeInTheDocument();
+    expect(screen.queryByTestId('owner-subscription-page')).not.toBeInTheDocument();
   });
 
-  it('shows an error notice after a failed subscription payment', async () => {
+  it('shows a full-screen error result after a failed subscription payment', async () => {
     getStatus.mockResolvedValue({
       status: 'expired',
       planKind: 'monthly',
@@ -151,8 +155,11 @@ describe('OwnerSubscriptionPage — load + status (R3.4, R3.5)', () => {
     });
     renderPage('/owner/subscription?payment=error');
 
-    expect(await screen.findByTestId('subscription-payment-error')).toBeInTheDocument();
+    const result = await screen.findByTestId('subscription-payment-result');
+    expect(result).toHaveAttribute('data-shell', 'funnel-payment-result');
+    expect(result).toHaveAttribute('data-payment-result', 'error');
     expect(screen.getByRole('heading', { name: 'پرداخت اشتراک ناموفق بود' })).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('اگر مبلغ از حساب شما کسر شده است');
   });
 });
 

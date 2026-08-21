@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Navigate, Outlet, useNavigate } from 'react-router-dom';
+import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { OwnerShell } from '../../components/layout';
 import { RouteLoader } from '../../components/layout/RouteLoader';
 import { SeoHead } from '../../components/seo';
@@ -47,6 +47,7 @@ type OwnerAuthState =
  */
 export function OwnerLayout() {
   const { t } = useTranslation();
+  const location = useLocation();
   const navigate = useNavigate();
   const { signOut: signOutSession } = useAuth();
   const [state, setState] = useState<OwnerAuthState>({ phase: 'loading' });
@@ -131,18 +132,28 @@ export function OwnerLayout() {
     return <Navigate to="/platform-admin" replace />;
   }
 
+  const outletContext = {
+    role: state.role,
+    salonId: state.salonId,
+    staffMemberId: state.staffMemberId,
+    onSignOut: handleSignOut,
+  };
+  const paymentResult = new URLSearchParams(location.search).get('payment');
+  const isSubscriptionPaymentResult =
+    location.pathname === '/owner/subscription' &&
+    (paymentResult === 'success' || paymentResult === 'error');
+
+  // Payment callbacks are a chrome-free result surface, like the booking
+  // funnel. Keep auth/RBAC protection, but do not wrap the result in OwnerShell.
+  if (isSubscriptionPaymentResult) {
+    return <Outlet context={outletContext} />;
+  }
+
   return (
     <TooltipProvider>
       <OwnerShell role={state.role} salonId={state.salonId} onSignOut={handleSignOut}>
         <SeoHead title={t('owner.title')} />
-        <Outlet
-          context={{
-            role: state.role,
-            salonId: state.salonId,
-            staffMemberId: state.staffMemberId,
-            onSignOut: handleSignOut,
-          }}
-        />
+        <Outlet context={outletContext} />
       </OwnerShell>
     </TooltipProvider>
   );

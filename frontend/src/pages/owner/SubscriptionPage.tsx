@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   AlertTriangle,
   CalendarClock,
@@ -36,6 +37,7 @@ import {
   RadioGroup,
   Skeleton,
 } from '../../components/ui';
+import { easings } from '../../lib/motion-variants';
 
 /**
  * Owner-panel subscription management — «اشتراک من» (task 5.3; R3.8, R3.9, R2.1;
@@ -113,16 +115,91 @@ function SubscriptionSkeleton() {
   );
 }
 
-export function OwnerSubscriptionPage() {
+type SubscriptionPaymentResult = 'success' | 'error';
+
+/** Chrome-free callback result, matching the booking payment result surface. */
+function SubscriptionPaymentResultPage({ result }: { result: SubscriptionPaymentResult }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const prefersReduced = useReducedMotion();
+  const isSuccess = result === 'success';
+  const title = t(
+    isSuccess ? 'owner.subscription.paymentSuccessTitle' : 'owner.subscription.paymentErrorTitle',
+  );
+
+  return (
+    <div
+      dir="rtl"
+      lang="fa"
+      data-testid="subscription-payment-result"
+      data-payment-result={result}
+      data-shell="funnel-payment-result"
+      className="flex min-h-screen min-h-[100dvh] flex-col overflow-x-hidden bg-bg text-text"
+    >
+      <SeoHead title={title} />
+
+      <main
+        id="funnel-content"
+        tabIndex={-1}
+        className="mx-auto flex w-full max-w-funnel flex-1 flex-col items-center justify-center gap-6 px-4 py-8 text-center"
+      >
+        <div className="relative flex flex-col items-center gap-3">
+          <motion.span
+            className={`relative inline-flex h-20 w-20 items-center justify-center rounded-pill motion-safe:animate-success-pop ${
+              isSuccess ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
+            }`}
+            role="img"
+            aria-label={title}
+            initial={prefersReduced ? false : { scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.4, ease: easings.emphasized, delay: 0.15 }}
+          >
+            {isSuccess ? (
+              <CheckCircle2 className="h-11 w-11" aria-hidden="true" />
+            ) : (
+              <XCircle className="h-11 w-11" aria-hidden="true" />
+            )}
+          </motion.span>
+
+          <h1 className="text-xl font-bold text-text">{title}</h1>
+          <p className="max-w-[38ch] text-sm leading-7 text-muted">
+            {t(
+              isSuccess
+                ? 'owner.subscription.paymentSuccessBody'
+                : 'owner.subscription.paymentErrorBody',
+            )}
+          </p>
+        </div>
+
+        {!isSuccess && (
+          <Card as="section" className="w-full text-start" role="alert">
+            <p className="text-sm leading-7 text-muted">
+              {t('owner.subscription.paymentErrorHint')}
+            </p>
+          </Card>
+        )}
+      </main>
+
+      <div className="sticky bottom-0 z-sticky border-t border-border bg-bg pb-[env(safe-area-inset-bottom)]">
+        <div className="mx-auto w-full max-w-funnel px-4 py-4">
+          <Button
+            size="lg"
+            fullWidth
+            onClick={() => navigate('/owner/subscription', { replace: true })}
+          >
+            {t('owner.subscription.paymentResultCta')}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SubscriptionManagementPage() {
   const { t } = useTranslation();
   const params = useParams<{ salonId?: string }>();
-  const [searchParams] = useSearchParams();
   const sessionSalonId = useSalonId();
   const salonId = params.salonId ?? sessionSalonId;
-
-  const paymentResult = searchParams.get('payment');
-  const paymentNotice =
-    paymentResult === 'success' || paymentResult === 'error' ? paymentResult : null;
 
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [error, setError] = useState('');
@@ -189,47 +266,6 @@ export function OwnerSubscriptionPage() {
         <h1 className="text-xl text-display text-text">{t('owner.subscription.title')}</h1>
         <p className="max-w-[60ch] text-sm text-muted">{t('owner.subscription.subtitle')}</p>
       </header>
-
-      {paymentNotice && (
-        <Card
-          as="section"
-          data-testid={`subscription-payment-${paymentNotice}`}
-          role={paymentNotice === 'error' ? 'alert' : 'status'}
-          className={
-            paymentNotice === 'success'
-              ? 'flex flex-col gap-2 border-success/30 bg-success/10'
-              : 'flex flex-col gap-2 border-danger/30 bg-danger/10'
-          }
-        >
-          <div
-            className={
-              paymentNotice === 'success'
-                ? 'flex items-center gap-2 text-success'
-                : 'flex items-center gap-2 text-danger'
-            }
-          >
-            {paymentNotice === 'success' ? (
-              <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden="true" />
-            ) : (
-              <XCircle className="h-5 w-5 shrink-0" aria-hidden="true" />
-            )}
-            <CardTitle as="h2" className="text-md font-medium">
-              {t(
-                paymentNotice === 'success'
-                  ? 'owner.subscription.paymentSuccessTitle'
-                  : 'owner.subscription.paymentErrorTitle',
-              )}
-            </CardTitle>
-          </div>
-          <CardContent className="text-sm text-text">
-            {t(
-              paymentNotice === 'success'
-                ? 'owner.subscription.paymentSuccessBody'
-                : 'owner.subscription.paymentErrorBody',
-            )}
-          </CardContent>
-        </Card>
-      )}
 
       {status === 'loading' && <SubscriptionSkeleton />}
 
@@ -393,6 +429,17 @@ export function OwnerSubscriptionPage() {
       )}
     </section>
   );
+}
+
+export function OwnerSubscriptionPage() {
+  const [searchParams] = useSearchParams();
+  const paymentResult = searchParams.get('payment');
+
+  if (paymentResult === 'success' || paymentResult === 'error') {
+    return <SubscriptionPaymentResultPage result={paymentResult} />;
+  }
+
+  return <SubscriptionManagementPage />;
 }
 
 export default OwnerSubscriptionPage;
