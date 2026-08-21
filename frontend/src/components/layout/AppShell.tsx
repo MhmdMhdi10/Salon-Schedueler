@@ -15,6 +15,15 @@ const ENAMAD_CODE = '9VvZMqffMTky88WMBv1WJpNzNafnVCyo';
 const ENAMAD_LINK = `https://trustseal.enamad.ir/?id=7396256&Code=${ENAMAD_CODE}`;
 const ENAMAD_LOGO = `https://trustseal.enamad.ir/logo.aspx?id=7396256&Code=${ENAMAD_CODE}`;
 
+// Preserve eNamad's provider-supplied custom `code` attribute in rendered HTML.
+const enamadSealImageProps = {
+  referrerPolicy: 'origin' as const,
+  src: ENAMAD_LOGO,
+  alt: '',
+  style: { cursor: 'pointer' },
+  code: ENAMAD_CODE,
+};
+
 /**
  * Header presentation variants (Booksy directive §a):
  *
@@ -319,13 +328,7 @@ export function PublicFooter() {
               href={ENAMAD_LINK}
               aria-label="نماد اعتماد الکترونیکی آرا"
             >
-              <img
-                referrerPolicy="origin"
-                src={ENAMAD_LOGO}
-                alt=""
-                style={{ cursor: 'pointer' }}
-                code={ENAMAD_CODE}
-              />
+              <img {...enamadSealImageProps} />
             </a>
           </div>
           <span className="text-sm text-ink-muted">© {year} آرا — همه حقوق محفوظ است.</span>
