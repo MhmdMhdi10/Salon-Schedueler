@@ -619,15 +619,31 @@ export function CustomerDashboardPage() {
   );
 
   const salonSummaries = useMemo(() => {
-    return savedSalons
+    const summaries: SalonSummary[] = savedSalons
       .map((saved) => ({
         id: saved.id,
         name: saved.name,
         staffId: saved.staffId,
         staffName: saved.staffName,
       }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'fa'));
-  }, [savedSalons]);
+    for (const appointment of appointments) {
+      if (!appointment.salonId || !appointment.salonName) continue;
+      const visitAt = parseDate(appointment.startAt)?.toISOString();
+      const existingIndex = summaries.findIndex((salon) => salon.id === appointment.salonId);
+      if (existingIndex >= 0) {
+        const existing = summaries[existingIndex];
+        if (
+          visitAt &&
+          (!existing.lastVisitAt || new Date(visitAt).getTime() > new Date(existing.lastVisitAt).getTime())
+        ) {
+          summaries[existingIndex] = { ...existing, lastVisitAt: visitAt };
+        }
+        continue;
+      }
+      summaries.push({ id: appointment.salonId, name: appointment.salonName, lastVisitAt: visitAt });
+    }
+    return summaries.sort((a, b) => a.name.localeCompare(b.name, 'fa'));
+  }, [appointments, savedSalons]);
 
   const selectedPagination = usePagination(selectedAppointments, 6);
   const upcomingPagination = usePagination(upcomingAppointments, 4);
@@ -932,7 +948,7 @@ export function CustomerDashboardPage() {
             <div>
               <h2 className="text-lg font-bold text-text">سالن‌های من</h2>
               <p className="mt-1 text-xs leading-6 text-muted">
-                فقط سالن‌هایی که با اسکن QR ذخیره کرده‌ای.
+                سالن‌هایی که با اسکن QR ذخیره کرده‌ای یا قبلاً از آن‌ها نوبت داشته‌ای.
               </p>
             </div>
             <Store className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
@@ -968,7 +984,7 @@ export function CustomerDashboardPage() {
               className="px-1 py-8"
               icon={<QrCode className="h-10 w-10" />}
               title="هنوز سالنی به حسابت اضافه نشده"
-              description="کد QR سالن موردنظرت را اسکن کن تا برای رزروهای بعدی اینجا بماند."
+              description="کد QR سالن موردنظرت را اسکن کن یا اولین نوبتت را ثبت کن تا اینجا نمایش داده شود."
             />
           )}
         </Card>
