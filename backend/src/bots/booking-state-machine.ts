@@ -3,6 +3,7 @@ import { formatJalaliWithDay } from '@salon/shared';
 import type {
   BookingRequest,
   BookingResult,
+  BookingPayment,
   TimeSlot,
 } from '../scheduling/scheduling-engine.js';
 import type {
@@ -54,6 +55,11 @@ export interface BotBookingPort {
   book(req: BookingRequest): Promise<BookingResult>;
 }
 
+/** Payment capability used when a bot booking creates a held appointment. */
+export interface BotPaymentPort {
+  initiateDeposit(appointmentId: string): Promise<BookingPayment>;
+}
+
 /** The OTP/identity capability the bot needs. `AuthService` satisfies it. */
 export interface BotAuthPort {
   requestOtp(phone: string): Promise<void>;
@@ -101,6 +107,8 @@ export interface BotBookingStateMachineDeps {
   adapters: BotAdapter[];
   scheduling: BotSchedulingPort;
   booking: BotBookingPort;
+  /** Optional for backwards-compatible fakes; production wiring provides it. */
+  payment?: BotPaymentPort;
   auth: BotAuthPort;
   /** Real `PrismaClient`; `BotSession`/`BotChat`/lookups via narrow-cast. */
   prisma: PrismaClient;
@@ -211,6 +219,7 @@ export class BotBookingStateMachine implements BotUpdateHandler {
   private readonly adapters: Map<BotPlatform, BotAdapter>;
   private readonly scheduling: BotSchedulingPort;
   private readonly booking: BotBookingPort;
+  private readonly payment?: BotPaymentPort;
   private readonly auth: BotAuthPort;
   private readonly prisma: PrismaClient;
   private readonly outcome: BookingOutcomePresenter;
@@ -222,6 +231,7 @@ export class BotBookingStateMachine implements BotUpdateHandler {
     this.adapters = new Map(deps.adapters.map((a) => [a.platform, a]));
     this.scheduling = deps.scheduling;
     this.booking = deps.booking;
+    this.payment = deps.payment;
     this.auth = deps.auth;
     this.prisma = deps.prisma;
     this.outcome = deps.outcome ?? NOOP_PRESENTER;
@@ -482,13 +492,27 @@ export class BotBookingStateMachine implements BotUpdateHandler {
     }
 
     // Single source of truth: book through BookingFlow with source 'bot'.
-    const result = await this.booking.book({
+    let result = await this.booking.book({
       salonId: draft.salonId,
       serviceId: draft.serviceId,
       startAt: draft.startAt,
       customerId,
       source: 'bot',
     });
+
+    // The HTTP booking route starts payment after BookingFlow returns. Bots call
+    // BookingFlow directly, so they must create the same payment session before
+    // presenting a held result; otherwise gateway links are placeholders and
+    // card-transfer instructions are missing entirely.
+    if (result.status === 'held' && this.payment) {
+      try {
+        result = { ...result, payment: await this.payment.initiateDeposit(result.appointment.id) };
+      } catch {
+        await this.clearSession(session.id);
+        await this.send(platform, chatId, 'رزرو موقت ایجاد شد اما آماده‌سازی پرداخت انجام نشد. لطفاً از سایت دوباره تلاش کنید.');
+        return;
+      }
+    }
 
     // Conversation is finished; clear server-side state before handing the
     // result to the (task 7.3) presenter seam.

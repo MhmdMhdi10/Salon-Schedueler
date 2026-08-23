@@ -178,9 +178,10 @@ export function buildApp(opts: BuildAppOptions): Express {
     });
   }
 
-  // Booking and onboarding payloads are small. A hard body limit prevents a
-  // public endpoint from becoming an accidental memory-amplification target.
-  app.use(express.json({ limit: '64kb' }));
+  // Most payloads are small. Receipt uploads are authenticated, rate-limited
+  // JSON envelopes containing a base64 image (max 5 MiB decoded), so the
+  // transport limit must also cover their ~33% encoding overhead.
+  app.use(express.json({ limit: '8mb' }));
 
   // V-House-style controller boundary: every controller method has an explicit
   // params/query/body DTO. Keep parsed values on `req.controllerDto` so legacy

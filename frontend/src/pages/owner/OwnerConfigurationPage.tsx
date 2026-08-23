@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Clock,
+  CreditCard,
   Plus,
   Scissors,
   Trash2,
@@ -23,6 +24,7 @@ import {
   staffAvailabilityApi,
   ApiError,
   type SalonStaff,
+  type DepositSettings,
   type SmsSettings,
   type StaffRole,
   type StaffUpdateInput,
@@ -71,6 +73,13 @@ import {
 type LoadStatus = 'loading' | 'success' | 'error';
 
 type ConfigurationView = 'all' | 'team';
+
+const DEFAULT_DEPOSIT_SETTINGS: DepositSettings = {
+  depositMethod: 'gateway',
+  depositCardNumber: null,
+  depositCardHolder: null,
+  depositBankName: null,
+};
 
 interface ServiceItem {
   id: string;
@@ -1132,6 +1141,107 @@ function SmsSettingsSection({
   );
 }
 
+function DepositSettingsSection({
+  salonId,
+  settings,
+  onChange,
+}: {
+  salonId: string;
+  settings: DepositSettings;
+  onChange: React.Dispatch<React.SetStateAction<DepositSettings>>;
+}) {
+  const { success, error: toastError } = useToast();
+  const [method, setMethod] = useState<DepositSettings['depositMethod']>(settings.depositMethod);
+  const [cardNumber, setCardNumber] = useState(settings.depositCardNumber ?? '');
+  const [cardHolder, setCardHolder] = useState(settings.depositCardHolder ?? '');
+  const [bankName, setBankName] = useState(settings.depositBankName ?? '');
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
+
+  useEffect(() => {
+    setMethod(settings.depositMethod);
+    setCardNumber(settings.depositCardNumber ?? '');
+    setCardHolder(settings.depositCardHolder ?? '');
+    setBankName(settings.depositBankName ?? '');
+  }, [settings]);
+
+  const save = async () => {
+    const normalizedCard = normalizeDigits(cardNumber).replace(/[\s-]/g, '');
+    if (method === 'card_transfer' && !/^\d{16}$/.test(normalizedCard)) {
+      setFormError('شماره کارت باید ۱۶ رقم باشد.');
+      return;
+    }
+    if (method === 'card_transfer' && cardHolder.trim().length < 2) {
+      setFormError('نام صاحب کارت را وارد کن.');
+      return;
+    }
+    setFormError('');
+    setSaving(true);
+    try {
+      const saved = await adminApi.updateDepositSettings(salonId, {
+        depositMethod: method,
+        depositCardNumber: method === 'card_transfer' ? normalizedCard : null,
+        depositCardHolder: method === 'card_transfer' ? cardHolder.trim() : null,
+        depositBankName: method === 'card_transfer' ? bankName.trim() || null : null,
+      });
+      onChange(saved);
+      success({ title: 'تنظیمات بیعانه ذخیره شد' });
+    } catch (reason) {
+      toastError({ title: reason instanceof ApiError ? reason.message : 'ذخیره تنظیمات بیعانه انجام نشد' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <CollapsibleSection id="deposit-settings" icon={CreditCard} title="روش دریافت بیعانه">
+      <p className="m-0 text-sm leading-7 text-muted">
+        مبلغ بیعانه برای هر خدمت جداگانه فعال می‌شود. این بخش فقط روش دریافت و اطلاعات کارت را تعیین می‌کند.
+      </p>
+      <Select
+        label="روش پرداخت بیعانه"
+        value={method}
+        onValueChange={(value) => {
+          setMethod(value as DepositSettings['depositMethod']);
+          setFormError('');
+        }}
+        options={[
+          { value: 'gateway', label: 'پرداخت آنلاین از درگاه' },
+          { value: 'card_transfer', label: 'کارت‌به‌کارت و ارسال رسید' },
+        ]}
+      />
+      {method === 'card_transfer' && (
+        <div className="grid gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3 sm:grid-cols-2">
+          <TextField
+            label="شماره کارت"
+            value={cardNumber}
+            onChange={(event) => setCardNumber(event.target.value)}
+            inputMode="numeric"
+            dir="ltr"
+            placeholder="6037 0000 0000 0000"
+          />
+          <TextField
+            label="نام صاحب کارت"
+            value={cardHolder}
+            onChange={(event) => setCardHolder(event.target.value)}
+            placeholder="نام و نام خانوادگی"
+          />
+          <TextField
+            label="نام بانک (اختیاری)"
+            value={bankName}
+            onChange={(event) => setBankName(event.target.value)}
+            containerClassName="sm:col-span-2"
+          />
+        </div>
+      )}
+      {formError && <p role="alert" className="m-0 text-sm text-danger">{formError}</p>}
+      <Button type="button" loading={saving} disabled={saving} onClick={() => void save()} className="self-start">
+        ذخیره روش بیعانه
+      </Button>
+    </CollapsibleSection>
+  );
+}
+
 // ─── Chairs Section ──────────────────────────────────────────────────────────
 
 function ChairsSection({
@@ -1285,6 +1395,7 @@ function OwnerConfigPageContent({
   const [chairs, setChairs] = useState<Entry[]>([]);
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [smsSettings, setSmsSettings] = useState<SmsSettings>(DEFAULT_SMS_SETTINGS);
+  const [depositSettings, setDepositSettings] = useState<DepositSettings>(DEFAULT_DEPOSIT_SETTINGS);
   const [pendingDelete, setPendingDelete] = useState<DeleteState | null>(null);
 
   const load = useCallback(() => {
@@ -1296,18 +1407,24 @@ function OwnerConfigPageContent({
       typeof adminApi.getSmsSettings === 'function'
         ? adminApi.getSmsSettings(salonId).catch(() => DEFAULT_SMS_SETTINGS)
         : Promise.resolve(DEFAULT_SMS_SETTINGS);
+    const depositSettingsRequest =
+      typeof adminApi.getDepositSettings === 'function'
+        ? adminApi.getDepositSettings(salonId).catch(() => DEFAULT_DEPOSIT_SETTINGS)
+        : Promise.resolve(DEFAULT_DEPOSIT_SETTINGS);
     Promise.all([
       adminApi.getStaff(salonId),
       adminApi.getChairs(salonId),
       salonApi.getServices(salonId),
       smsSettingsRequest,
+      depositSettingsRequest,
     ])
-      .then(([staffRes, chairsRes, servicesRes, smsSettingsRes]) => {
+      .then(([staffRes, chairsRes, servicesRes, smsSettingsRes, depositSettingsRes]) => {
         if (!active) return;
         setStaff(staffRes.staff);
         setChairs(chairsRes.chairs.map((c, i) => toEntry(c, `chair-${i + 1}`)));
         setServices(servicesRes.services);
         setSmsSettings(smsSettingsRes);
+        setDepositSettings(depositSettingsRes);
         setStatus('success');
       })
       .catch((err: unknown) => {
@@ -1400,6 +1517,14 @@ function OwnerConfigPageContent({
             settings={smsSettings}
             onChange={setSmsSettings}
           />
+          )}
+
+          {view !== 'team' && (
+            <DepositSettingsSection
+              salonId={salonId}
+              settings={depositSettings}
+              onChange={setDepositSettings}
+            />
           )}
 
           <ServicesSection

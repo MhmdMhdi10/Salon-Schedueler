@@ -101,6 +101,9 @@ const BookingSuccessPage = lazy(() =>
     default: m.BookingSuccessPage,
   })),
 );
+const DepositReceiptPage = lazy(() =>
+  import('./pages/DepositReceiptPage').then((m) => ({ default: m.DepositReceiptPage })),
+);
 const WaitlistPage = lazy(() =>
   import('./pages/WaitlistPage').then((m) => ({ default: m.WaitlistPage })),
 );
@@ -304,6 +307,7 @@ export function App() {
                       <Route path="confirm" element={<BookingConfirmPage />} />
                     </Route>
                     <Route path="/booking/success" element={<BookingSuccessPage />} />
+                    <Route path="/booking/deposit/:appointmentId" element={<DepositReceiptPage />} />
 
                     {/* Ara MVP landing owns its full viewport and therefore
                      * intentionally renders outside AppShell chrome. */}

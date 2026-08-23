@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   CalendarDays,
   CalendarPlus,
+  CheckCircle2,
+  CreditCard,
   History,
   MessageCircle,
   Move,
@@ -26,6 +28,7 @@ import {
   SheetContent,
   SheetDescription,
   SheetTitle,
+  Money,
   TextField,
   cn,
   Num,
@@ -43,6 +46,8 @@ export interface CalendarAppointmentLike {
   customerPhone?: string;
   customerId?: string;
   staffMemberId?: string;
+  depositReceiptStatus?: string | null;
+  depositPaymentStatus?: string | null;
 }
 
 function timeLabel(iso?: string): string {
@@ -151,6 +156,16 @@ export function AppointmentDetailsSheet({
   const [noteDraft, setNoteDraft] = useState('');
   const [noteSaving, setNoteSaving] = useState(false);
   const [noteError, setNoteError] = useState('');
+  const [receipt, setReceipt] = useState<{
+    mimeType: string;
+    dataBase64: string;
+    fileName: string;
+    status: string;
+  } | null>(null);
+  const [receiptLoading, setReceiptLoading] = useState(false);
+  const [receiptError, setReceiptError] = useState('');
+  const [receiptReviewing, setReceiptReviewing] = useState(false);
+  const [reviewNote, setReviewNote] = useState('');
 
   useEffect(() => {
     if (!open || !appointment) return;
@@ -161,6 +176,9 @@ export function AppointmentDetailsSheet({
     setMessageState('idle');
     setNoteDraft('');
     setNoteError('');
+    setReceipt(null);
+    setReceiptError('');
+    setReviewNote('');
     setLoading(true);
     adminApi
       .getAppointmentCustomer(appointment.id)
@@ -177,6 +195,27 @@ export function AppointmentDetailsSheet({
       active = false;
     };
   }, [open, appointment]);
+
+  useEffect(() => {
+    if (!open || !appointment || !overview?.deposit?.receiptId) return;
+    let active = true;
+    setReceiptLoading(true);
+    setReceiptError('');
+    adminApi
+      .getDepositReceipt(appointment.id)
+      .then((response) => {
+        if (active) setReceipt(response.receipt);
+      })
+      .catch(() => {
+        if (active) setReceiptError('تصویر رسید بارگذاری نشد.');
+      })
+      .finally(() => {
+        if (active) setReceiptLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [open, appointment, overview?.deposit?.receiptId]);
 
   const customer = overview?.customer;
   const phone = customer?.phone || appointment?.customerPhone || '';
@@ -224,6 +263,37 @@ export function AppointmentDetailsSheet({
       setNoteError('ثبت یادداشت انجام نشد؛ دوباره تلاش کن.');
     } finally {
       setNoteSaving(false);
+    }
+  };
+
+  const reviewReceipt = async (decision: 'approved' | 'rejected') => {
+    if (!appointment || receiptReviewing) return;
+    setReceiptReviewing(true);
+    setReceiptError('');
+    try {
+      const result = await adminApi.reviewDepositReceipt(
+        appointment.id,
+        decision,
+        reviewNote.trim() || undefined,
+      );
+      setOverview((current) =>
+        current?.deposit
+          ? {
+              ...current,
+              deposit: {
+                ...current.deposit,
+                receiptStatus: result.receiptStatus,
+                paymentStatus: decision === 'approved' ? 'paid' : 'failed',
+                appointmentStatus: result.appointmentStatus,
+              },
+            }
+          : current,
+      );
+      setReceipt((current) => (current ? { ...current, status: result.receiptStatus } : current));
+    } catch {
+      setReceiptError('ثبت نتیجه رسید انجام نشد؛ دوباره تلاش کن.');
+    } finally {
+      setReceiptReviewing(false);
     }
   };
 
@@ -366,6 +436,95 @@ export function AppointmentDetailsSheet({
         {loadError && <p role="alert" className="mt-4 text-sm text-danger">{loadError}</p>}
         {overview && (
           <>
+            {overview.deposit?.required && (
+              <section className="mt-4 rounded-xl border border-primary/25 bg-primary/5 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="m-0 flex items-center gap-2 text-sm font-bold text-text">
+                      <CreditCard className="h-4 w-4 text-primary" aria-hidden="true" />
+                      بیعانه رزرو
+                    </h3>
+                    <p className="mt-1 text-xs text-muted">
+                      مبلغ: <Money amountRial={overview.deposit.amountRial ?? 0} />
+                    </p>
+                  </div>
+                  <span
+                    className={cn(
+                      'rounded-full px-2 py-1 text-[0.68rem] font-bold',
+                      overview.deposit.receiptStatus === 'approved'
+                        ? 'bg-success/10 text-success'
+                        : overview.deposit.receiptStatus === 'rejected' || overview.deposit.receiptStatus === 'expired'
+                          ? 'bg-danger/10 text-danger'
+                          : 'bg-warning/15 text-warning',
+                    )}
+                  >
+                    {overview.deposit.receiptStatus === 'approved'
+                      ? 'تأیید شده'
+                      : overview.deposit.receiptStatus === 'rejected'
+                        ? 'رد شده'
+                        : overview.deposit.receiptStatus === 'expired'
+                          ? 'منقضی شده'
+                          : overview.deposit.receiptStatus === 'pending'
+                            ? 'در انتظار بررسی'
+                            : overview.deposit.method === 'gateway'
+                              ? 'پرداخت درگاه'
+                              : 'رسید ارسال نشده'}
+                  </span>
+                </div>
+
+                {overview.deposit.method === 'card_transfer' && (
+                  <p className="m-0 mt-2 text-xs text-muted">روش: کارت‌به‌کارت</p>
+                )}
+                {receiptLoading && <p className="m-0 mt-3 text-xs text-muted">در حال دریافت تصویر رسید…</p>}
+                {receipt && (
+                  <div className="mt-3 overflow-hidden rounded-lg border border-border bg-bg">
+                    <img
+                      src={`data:${receipt.mimeType};base64,${receipt.dataBase64}`}
+                      alt="رسید واریز بیعانه مشتری"
+                      className="max-h-72 w-full object-contain"
+                    />
+                    <p className="m-0 border-t border-border px-2.5 py-2 text-xs text-muted">{receipt.fileName}</p>
+                  </div>
+                )}
+                {overview.deposit.receiptStatus === 'pending' && (
+                  <>
+                    <TextField
+                      label="یادداشت بررسی (اختیاری)"
+                      value={reviewNote}
+                      onChange={(event) => setReviewNote(event.target.value)}
+                      maxLength={500}
+                      containerClassName="mt-3"
+                    />
+                    <div className="mt-3 flex gap-2">
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="md"
+                        loading={receiptReviewing}
+                        disabled={receiptReviewing}
+                        startIcon={<CheckCircle2 className="h-4 w-4" />}
+                        onClick={() => void reviewReceipt('approved')}
+                        className="flex-1"
+                      >
+                        تأیید رسید
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="danger"
+                        size="md"
+                        loading={receiptReviewing}
+                        disabled={receiptReviewing}
+                        onClick={() => void reviewReceipt('rejected')}
+                        className="flex-1"
+                      >
+                        رد رسید
+                      </Button>
+                    </div>
+                  </>
+                )}
+                {receiptError && <p role="alert" className="m-0 mt-2 text-xs text-danger">{receiptError}</p>}
+              </section>
+            )}
             <section className="mt-4 grid grid-cols-2 gap-2">
               <div className="rounded-xl border border-border bg-surface p-3">
                 <span className="block text-xs text-muted">عدم حضور</span>

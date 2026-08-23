@@ -91,6 +91,13 @@ enum PaymentStatus {
   failed
 }
 
+enum DepositReceiptStatus {
+  pending
+  approved
+  rejected
+  expired
+}
+
 // ─── Salon ─────────────────────────────────────────────────────────────────────
 
 model Salon {
@@ -116,6 +123,13 @@ model Salon {
   // Additive + nullable: null = use the signature default palette. The value is an
   // opaque accent key (e.g. "rose") resolved client-side against the curated ACCENTS.
   brandAccent       String?       @map("brand_accent")
+  // Deposit checkout method for services that have `requiresDeposit=true`.
+  // `gateway` preserves the existing online payment flow; `card_transfer` asks
+  // the customer to transfer manually and upload a receipt for review.
+  depositMethod     String        @default("gateway") @map("deposit_method")
+  depositCardNumber String?       @map("deposit_card_number")
+  depositCardHolder String?       @map("deposit_card_holder")
+  depositBankName   String?       @map("deposit_bank_name")
   // Where this business normally delivers services. `mobile` uses a per-staff
   // mobile lane instead of a physical chair; `hybrid` exposes both choices.
   workMode          SalonWorkMode @default(not_decided) @map("work_mode")
@@ -134,6 +148,7 @@ model Salon {
   smsSettings        SalonSmsSettings?
   salonClients       SalonClient[]
   referrals          SalonReferral[]
+  depositReceipts    DepositReceipt[]
 
   @@map("salon")
 }
@@ -417,6 +432,7 @@ model Appointment {
   chair            Chair             @relation(fields: [chairId], references: [id])
   service          Service           @relation(fields: [serviceId], references: [id])
   payments         Payment[]
+  depositReceipt   DepositReceipt?
   notificationLogs NotificationLog[]
 
   @@map("appointment")
@@ -435,8 +451,35 @@ model Payment {
   createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz
 
   appointment Appointment @relation(fields: [appointmentId], references: [id])
+  depositReceipt DepositReceipt?
 
   @@map("payment")
+}
+
+// A manually transferred deposit receipt. The binary is kept private in the
+// database; controllers expose it only after checking appointment ownership.
+model DepositReceipt {
+  id            String               @id @default(uuid()) @db.Uuid
+  appointmentId String               @unique @map("appointment_id") @db.Uuid
+  paymentId     String?              @unique @map("payment_id") @db.Uuid
+  salonId       String               @map("salon_id") @db.Uuid
+  amountRial    BigInt               @map("amount_rial")
+  status        DepositReceiptStatus @default(pending)
+  fileName      String               @map("file_name")
+  mimeType      String               @map("mime_type")
+  sizeBytes     Int                  @map("size_bytes")
+  data          Bytes
+  note          String?
+  uploadedAt    DateTime             @default(now()) @map("uploaded_at") @db.Timestamptz
+  reviewedAt    DateTime?            @map("reviewed_at") @db.Timestamptz
+  reviewedBy    String?              @map("reviewed_by") @db.Uuid
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  payment     Payment?    @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  salon       Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
+
+  @@index([salonId, status])
+  @@map("deposit_receipt")
 }
 
 // ─── Waitlist Entry ────────────────────────────────────────────────────────────

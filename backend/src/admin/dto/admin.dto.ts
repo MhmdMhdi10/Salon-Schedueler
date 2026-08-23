@@ -43,6 +43,14 @@ export const AdminApprovalPolicyDto = z.object({ autoApprove: z.union([bool, z.l
 export const AdminOwnApprovalDto = z.object({ allowed: z.union([bool, z.literal('true'), z.literal('false')]).optional(), autoApprove: z.union([bool, z.literal('true'), z.literal('false'), z.null()]).optional() }).passthrough();
 export const AdminBookingPolicyDto = z.object({ bookingWindowDays: z.coerce.number().int().min(0).optional(), workMode: z.string().trim().min(1).optional() }).passthrough();
 export const AdminBrandAccentDto = z.object({ brandAccent: z.string().trim().max(40).nullable().optional() }).passthrough();
+export const AdminDepositSettingsDto = z
+  .object({
+    depositMethod: z.enum(['gateway', 'card_transfer']),
+    depositCardNumber: z.string().trim().max(32).optional(),
+    depositCardHolder: z.string().trim().max(120).optional(),
+    depositBankName: z.string().trim().max(80).optional(),
+  })
+  .passthrough();
 export const AdminHolidayDto = z.object({ onDate: z.string().trim().min(1), toDate: z.string().optional(), startTime: z.string().optional(), endTime: z.string().optional(), cancelAppointments: bool.optional() }).passthrough();
 export const AdminEmergencyCloseDto = z.object({ onDate: z.string().trim().min(1), cancelAppointments: bool.optional() }).passthrough();
 export const AdminWorkingHoursDto = loose;

@@ -31,6 +31,11 @@ export interface AppointmentRecord {
   salonName?: string;
   serviceName?: string;
   staffName?: string;
+  depositRequired?: boolean;
+  depositMethod?: 'gateway' | 'card_transfer' | null;
+  depositAmountRial?: number | null;
+  paymentStatus?: string | null;
+  depositReceiptStatus?: string | null;
 }
 
 /**

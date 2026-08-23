@@ -34,6 +34,26 @@ export interface MappedError {
  * | Anything else            | 500    | INTERNAL              |
  */
 export function mapDomainError(err: unknown): MappedError {
+  const domainCode = err instanceof Error ? err.message : '';
+  if (typeof domainCode === 'string' && domainCode.startsWith('DEPOSIT_')) {
+    if (domainCode === 'DEPOSIT_RECEIPT_NOT_FOUND') {
+      return { status: 404, code: domainCode };
+    }
+    const conflictCodes = new Set([
+      'DEPOSIT_HOLD_EXPIRED',
+      'DEPOSIT_RECEIPT_ALREADY_REVIEWED',
+      'DEPOSIT_CARD_NOT_CONFIGURED',
+      'MANUAL_DEPOSIT_NOT_ENABLED',
+    ]);
+    return { status: conflictCodes.has(domainCode) ? 409 : 400, code: domainCode };
+  }
+  if (domainCode === 'MANUAL_DEPOSIT_NOT_ENABLED') {
+    return { status: 409, code: domainCode };
+  }
+  if (domainCode === 'APPOINTMENT_NOT_FOUND' || domainCode === 'SALON_NOT_FOUND') {
+    return { status: 404, code: domainCode };
+  }
+
   if (err instanceof ReferralConflictError) {
     return { status: 409, code: 'REFERRAL_EXISTS' };
   }

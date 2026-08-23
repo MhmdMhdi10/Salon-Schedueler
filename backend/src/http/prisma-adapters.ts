@@ -471,9 +471,11 @@ export class PrismaCustomerRepository implements CustomerRepository {
     const appts = await this.prisma.appointment.findMany({
       where: { customerId },
       include: {
-        salon: { select: { name: true } },
-        service: { select: { name: true } },
+        service: { select: { name: true, requiresDeposit: true, depositRial: true } },
+        salon: { select: { name: true, depositMethod: true } },
         staffMember: { select: { fullName: true } },
+        depositReceipt: { select: { status: true } },
+        payments: { orderBy: { createdAt: 'desc' }, take: 1, select: { status: true } },
       },
       orderBy: { startAt: 'desc' },
     });
@@ -493,6 +495,13 @@ export class PrismaCustomerRepository implements CustomerRepository {
       salonName: appt.salon.name,
       serviceName: appt.service.name,
       staffName: appt.staffMember.fullName,
+      depositRequired: appt.service.requiresDeposit,
+      depositMethod: appt.service.requiresDeposit
+        ? (appt.salon.depositMethod === 'card_transfer' ? 'card_transfer' : 'gateway')
+        : null,
+      depositAmountRial: appt.service.depositRial == null ? null : Number(appt.service.depositRial),
+      paymentStatus: appt.payments[0]?.status ?? null,
+      depositReceiptStatus: appt.depositReceipt?.status ?? null,
     }));
   }
 

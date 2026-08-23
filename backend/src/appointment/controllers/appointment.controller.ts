@@ -3,6 +3,7 @@ import type { Services } from '../../http/app.js';
 import type { RequireRole } from '../../common/http/require-role.js';
 import type { StaffRole } from '@salon/shared';
 import { asyncRoute, validateRequired } from '../../common/http/route-helpers.js';
+import { safelyNotify } from '../../app/safely-notify.js';
 import {
   createRateLimit,
   principalOrIpRateLimitKey,
@@ -57,6 +58,12 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
     name: 'appointment-mutation',
     max: devLimit('E2E_APPOINTMENT_MUTATION_LIMIT', 60),
     windowMs: 60_000,
+    keyGenerator: principalOrIpRateLimitKey,
+  });
+  const depositReceiptLimit = createRateLimit({
+    name: 'deposit-receipt-upload',
+    max: 6,
+    windowMs: 15 * 60_000,
     keyGenerator: principalOrIpRateLimitKey,
   });
 
@@ -124,6 +131,88 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
   const requireCanApproveOwnAppointment: RequestHandler = (req, res, next) => {
     void authorizeAppointment(req, res, next, true);
   };
+
+  const requireCustomerAppointment: RequestHandler = (req, res, next) => {
+    const principal = req.principal;
+    if (!principal || principal.role) {
+      res.status(principal ? 403 : 401).json({ code: principal ? 'FORBIDDEN' : 'UNAUTHORIZED' });
+      return;
+    }
+    services.calendarService
+      .getAppointmentById(req.params.id)
+      .then((appointment) => {
+        if (!appointment) {
+          res.status(404).json({ code: 'NOT_FOUND' });
+          return;
+        }
+        if (appointment.customerId !== principal.id) {
+          res.status(403).json({ code: 'FORBIDDEN' });
+          return;
+        }
+        next();
+      })
+      .catch(next);
+  };
+
+  const requireReceiptViewer: RequestHandler = (req, res, next) => {
+    const principal = req.principal;
+    if (!principal) {
+      res.status(401).json({ code: 'UNAUTHORIZED' });
+      return;
+    }
+    services.calendarService
+      .getAppointmentById(req.params.id)
+      .then((appointment) => {
+        if (!appointment) {
+          res.status(404).json({ code: 'NOT_FOUND' });
+          return;
+        }
+        if (!principal.role && appointment.customerId === principal.id) {
+          next();
+          return;
+        }
+        const allowed = principal.role
+          ? services.authorizer.can(
+              {
+                id: principal.id,
+                role: principal.role as StaffRole,
+                staffMemberId: principal.staffMemberId,
+                salonId: principal.salonId,
+              },
+              'manage_own_appointments',
+              { salonId: appointment.salonId, staffMemberId: appointment.staffMemberId },
+            )
+          : false;
+        if (allowed) {
+          next();
+          return;
+        }
+        res.status(403).json({ code: 'FORBIDDEN' });
+      })
+      .catch(next);
+  };
+
+  const depositPayload = (payment: {
+    method?: string;
+    redirectUrl?: string;
+    amountRial?: number;
+    cardNumber?: string;
+    cardHolder?: string;
+    bankName?: string;
+  }) => ({
+    ...(payment.redirectUrl ? { paymentRedirectUrl: payment.redirectUrl } : {}),
+    ...(payment.method === 'card_transfer'
+      ? {
+          deposit: {
+            method: 'card_transfer',
+            amountRial: payment.amountRial,
+            cardNumber: payment.cardNumber,
+            cardHolder: payment.cardHolder,
+            bankName: payment.bankName ?? null,
+          },
+        }
+      : {}),
+  });
 
   // Authorize cancellation. Unlike approve/reject (staff-only), a booking can be
   // cancelled by EITHER the owning customer (self-service cancel from the
@@ -244,7 +333,7 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
         res.status(200).json({
           status: 'held',
           appointment: result.appointment,
-          paymentRedirectUrl: payment.redirectUrl,
+          ...depositPayload(payment),
         });
         return;
       }
@@ -327,7 +416,7 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
         res.status(200).json({
           status: result.status,
           appointment: result.appointment,
-          paymentRedirectUrl: payment.redirectUrl,
+          ...depositPayload(payment),
         });
         return;
       }
@@ -362,7 +451,7 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
           status: result.booking.status,
           appointment: result.booking.appointment,
           previousAppointmentId: result.previousAppointment.id,
-          paymentRedirectUrl: payment.redirectUrl,
+          ...depositPayload(payment),
         });
         return;
       }
@@ -385,6 +474,86 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
     asyncRoute(async (req, res) => {
       const appointment = await services.cancellationService.markNoShow(req.params.id);
       res.status(200).json({ status: 'no_show', appointment });
+    }),
+  );
+
+  router.get(
+    '/appointments/:id/deposit',
+    requireCustomerAppointment,
+    asyncRoute(async (req, res) => {
+      const deposit = await services.paymentService.getDepositOverview(req.params.id);
+      res.status(200).json({ deposit });
+    }),
+  );
+
+  router.post(
+    '/appointments/:id/deposit-receipt',
+    requireCustomerAppointment,
+    depositReceiptLimit,
+    asyncRoute(async (req, res) => {
+      const body = req.body as Record<string, unknown>;
+      if (
+        typeof body.fileName !== 'string' ||
+        typeof body.mimeType !== 'string' ||
+        typeof body.dataBase64 !== 'string'
+      ) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'receipt' });
+        return;
+      }
+      const result = await services.paymentService.uploadManualReceipt(req.params.id, {
+        fileName: body.fileName,
+        mimeType: body.mimeType,
+        dataBase64: body.dataBase64,
+      });
+      res.status(201).json({ receipt: result });
+    }),
+  );
+
+  router.get(
+    '/appointments/:id/deposit-receipt',
+    requireReceiptViewer,
+    asyncRoute(async (req, res) => {
+      const receipt = await services.paymentService.getManualReceiptFile(req.params.id);
+      if (!receipt) {
+        res.status(404).json({ code: 'DEPOSIT_RECEIPT_NOT_FOUND' });
+        return;
+      }
+      res.status(200).json({
+        receipt: {
+          id: receipt.id,
+          fileName: receipt.fileName,
+          mimeType: receipt.mimeType,
+          sizeBytes: receipt.sizeBytes,
+          uploadedAt: receipt.uploadedAt,
+          status: receipt.status,
+          dataBase64: receipt.data.toString('base64'),
+        },
+      });
+    }),
+  );
+
+  router.post(
+    '/appointments/:id/deposit-receipt/review',
+    requireCanApproveOwnAppointment,
+    asyncRoute(async (req, res) => {
+      const decision = req.body?.decision;
+      if (decision !== 'approved' && decision !== 'rejected') {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'decision' });
+        return;
+      }
+      const result = await services.paymentService.reviewManualReceipt(
+        req.params.id,
+        decision,
+        req.principal!.staffMemberId ?? req.principal!.id,
+        typeof req.body?.note === 'string' ? req.body.note : undefined,
+      );
+      if (result.status === 'approved') {
+        await safelyNotify(() => services.notificationService.sendConfirmation(req.params.id));
+        await safelyNotify(() =>
+          services.notificationService.sendSalonBookingNotice(req.params.id, 'confirmed'),
+        );
+      }
+      res.status(200).json({ receiptStatus: result.status, appointmentStatus: result.appointmentStatus });
     }),
   );
 

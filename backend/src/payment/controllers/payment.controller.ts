@@ -32,8 +32,20 @@ export function paymentInitiateRouter(services: Services): Router {
         res.status(403).json({ code: 'FORBIDDEN' });
         return;
       }
-      const { redirectUrl } = await services.paymentService.initiateDeposit(req.body.appointmentId);
-      res.status(200).json({ redirectUrl });
+      const payment = await services.paymentService.initiateDeposit(req.body.appointmentId);
+      if (payment.method === 'card_transfer') {
+        res.status(200).json({
+          deposit: {
+            method: payment.method,
+            amountRial: payment.amountRial,
+            cardNumber: payment.cardNumber,
+            cardHolder: payment.cardHolder,
+            bankName: payment.bankName ?? null,
+          },
+        });
+        return;
+      }
+      res.status(200).json({ redirectUrl: payment.redirectUrl });
     }),
   );
 

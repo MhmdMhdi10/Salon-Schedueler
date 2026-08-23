@@ -76,6 +76,23 @@ export function formatOutcomeText(
       return [OUTCOME_MSG.confirmedHeading, ...detailLines(draft)].join('\n');
 
     case 'held': {
+      if (result.payment.method === 'card_transfer') {
+        const cardNumber = result.payment.cardNumber
+          ? formatCardNumber(result.payment.cardNumber)
+          : '—';
+        const amount = result.payment.amountRial == null
+          ? '—'
+          : toPersianDigits(result.payment.amountRial.toLocaleString('fa-IR'));
+        return [
+          OUTCOME_MSG.heldHeading,
+          ...detailLines(draft),
+          `مبلغ بیعانه: ${amount} ریال`,
+          `شماره کارت: ${cardNumber}`,
+          result.payment.cardHolder ? `به نام: ${result.payment.cardHolder}` : '',
+          result.payment.bankName ? `بانک: ${result.payment.bankName}` : '',
+          'پس از واریز، تصویر رسید را از بخش «رزروهای من» در سایت ارسال کنید.',
+        ].filter((line) => line.length > 0).join('\n');
+      }
       const url = result.payment.redirectUrl;
       if (!url) {
         return OUTCOME_MSG.heldNoLink;
@@ -92,6 +109,10 @@ export function formatOutcomeText(
         ? OUTCOME_MSG.rejectedNoAvailability
         : OUTCOME_MSG.rejectedSlotUnavailable;
   }
+}
+
+function formatCardNumber(value: string): string {
+  return toPersianDigits(value.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim());
 }
 
 /** Service/date/time detail lines from the draft, omitting any missing field. */

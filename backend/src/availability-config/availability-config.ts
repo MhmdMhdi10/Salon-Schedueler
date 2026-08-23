@@ -9,6 +9,13 @@ export interface WorkingHoursInput {
   endTime: string; // HH:mm format
 }
 
+export interface SalonDepositSettings {
+  depositMethod: 'gateway' | 'card_transfer';
+  depositCardNumber: string | null;
+  depositCardHolder: string | null;
+  depositBankName: string | null;
+}
+
 /**
  * AvailabilityConfig manages schedule configuration for staff members,
  * chairs, and salon-level holidays.
@@ -26,6 +33,52 @@ export class AvailabilityConfig {
 
   constructor(prisma: PrismaClient) {
     this.prisma = prisma;
+  }
+
+  async getSalonDepositSettings(salonId: string): Promise<SalonDepositSettings> {
+    const salon = await this.prisma.salon.findUnique({
+      where: { id: salonId },
+      select: {
+        depositMethod: true,
+        depositCardNumber: true,
+        depositCardHolder: true,
+        depositBankName: true,
+      },
+    });
+    if (!salon) throw new Error('SALON_NOT_FOUND');
+    return {
+      depositMethod: salon.depositMethod === 'card_transfer' ? 'card_transfer' : 'gateway',
+      depositCardNumber: salon.depositCardNumber,
+      depositCardHolder: salon.depositCardHolder,
+      depositBankName: salon.depositBankName,
+    };
+  }
+
+  async setSalonDepositSettings(
+    salonId: string,
+    settings: SalonDepositSettings,
+  ): Promise<SalonDepositSettings> {
+    const salon = await this.prisma.salon.update({
+      where: { id: salonId },
+      data: {
+        depositMethod: settings.depositMethod,
+        depositCardNumber: settings.depositCardNumber,
+        depositCardHolder: settings.depositCardHolder,
+        depositBankName: settings.depositBankName,
+      },
+      select: {
+        depositMethod: true,
+        depositCardNumber: true,
+        depositCardHolder: true,
+        depositBankName: true,
+      },
+    });
+    return {
+      depositMethod: salon.depositMethod === 'card_transfer' ? 'card_transfer' : 'gateway',
+      depositCardNumber: salon.depositCardNumber,
+      depositCardHolder: salon.depositCardHolder,
+      depositBankName: salon.depositBankName,
+    };
   }
 
   /**

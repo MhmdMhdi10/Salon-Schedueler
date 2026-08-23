@@ -347,6 +347,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     adapters: botAdapters,
     scheduling: schedulingEngine,
     booking: bookingFlow,
+    payment: paymentService,
     auth: authService,
     prisma,
     // Task 7.3: present the booking result back in chat — held → gateway link,

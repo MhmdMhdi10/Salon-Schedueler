@@ -13,6 +13,7 @@ import {
   CalendarOff,
   Coffee,
   ContactRound,
+  CreditCard,
   ChevronLeft,
   ListChecks,
   MessageCircle,
@@ -120,6 +121,8 @@ interface Appointment {
   staffMemberId?: string;
   locationType?: 'salon' | 'customer';
   locationAddress?: string;
+  depositReceiptStatus?: string | null;
+  depositPaymentStatus?: string | null;
 }
 
 type SalonWorkMode =
@@ -403,6 +406,8 @@ function toAppointment(appt: unknown, fallbackId: string): Appointment {
           ? rec.locationType
           : undefined,
       locationAddress: str(rec.locationAddress),
+      depositReceiptStatus: str(rec.depositReceiptStatus) ?? null,
+      depositPaymentStatus: str(rec.depositPaymentStatus) ?? null,
     };
   }
   return { id: fallbackId };
@@ -684,6 +689,26 @@ function AppointmentBlock({
             {statusIcon} {statusLabel}
           </span>
           <span className="flex items-center gap-1">
+            {appt.depositReceiptStatus && (
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[0.6rem] font-medium leading-tight',
+                  appt.depositReceiptStatus === 'pending'
+                    ? 'bg-warning/15 text-warning'
+                    : appt.depositReceiptStatus === 'approved'
+                      ? 'bg-success/10 text-success'
+                      : 'bg-danger/10 text-danger',
+                )}
+                title="وضعیت رسید بیعانه"
+              >
+                <CreditCard className="h-3 w-3" aria-hidden="true" />
+                {appt.depositReceiptStatus === 'pending'
+                  ? 'رسید بیعانه'
+                  : appt.depositReceiptStatus === 'approved'
+                    ? 'بیعانه تأیید شد'
+                    : 'رسید نیازمند بررسی'}
+              </span>
+            )}
             {canNoShow && onNoShow && (
               <button
                 type="button"

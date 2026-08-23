@@ -256,7 +256,17 @@ export function BookingConfirmPage() {
           : {}),
       });
 
-      if (result.status === 'held' && result.paymentRedirectUrl) {
+      if (result.status === 'held' && result.deposit?.method === 'card_transfer') {
+        const appointmentId =
+          result.appointment && typeof result.appointment === 'object' && 'id' in result.appointment
+            ? String((result.appointment as { id: string }).id)
+            : '';
+        if (!appointmentId) {
+          setConfirmStatus('error');
+          return;
+        }
+        navigate(`/booking/deposit/${appointmentId}`);
+      } else if (result.status === 'held' && result.paymentRedirectUrl) {
         // Let the gateway navigation through the beforeunload guard, then
         // arm a fallback: if the browser never actually leaves (blocked
         // popup policy, bad URL, ...), surface the error state instead of

@@ -253,6 +253,27 @@ function AppointmentRow({
             : 'مراجعه در محل سالن / محل کار'}
         </span>
       </p>
+      {appointment.status === 'held' &&
+        appointment.depositRequired &&
+        appointment.depositMethod === 'card_transfer' && (
+          <div className="flex flex-col gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs">
+            <strong className="text-warning">
+              {appointment.depositReceiptStatus === 'rejected'
+                ? 'رسید بیعانه نیاز به اصلاح دارد.'
+                : appointment.depositReceiptStatus === 'pending'
+                  ? 'رسید بیعانه در انتظار بررسی سالن است.'
+                  : 'برای نهایی‌شدن رزرو، رسید بیعانه را ارسال کن.'}
+            </strong>
+            {appointment.depositReceiptStatus !== 'pending' && (
+              <Link
+                to={`/booking/deposit/${appointment.id}`}
+                className="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-3 font-bold text-primary-contrast focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+              >
+                {appointment.depositReceiptStatus === 'rejected' ? 'ارسال رسید جدید' : 'ارسال رسید بیعانه'}
+              </Link>
+            )}
+          </div>
+        )}
       {canManage && onCancel && onStartReschedule && (
         <div className="flex w-full flex-wrap items-center justify-end gap-2 border-t border-border/50 pt-3">
           {rescheduleValue !== undefined ? (

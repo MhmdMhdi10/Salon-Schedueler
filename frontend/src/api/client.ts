@@ -166,6 +166,11 @@ export interface CustomerAppointment {
   createdAt: string;
   locationType?: 'salon' | 'customer';
   locationAddress?: string | null;
+  depositRequired?: boolean;
+  depositMethod?: 'gateway' | 'card_transfer' | null;
+  depositAmountRial?: number | null;
+  paymentStatus?: string | null;
+  depositReceiptStatus?: string | null;
 }
 
 export interface CustomerWaitlistEntry {
@@ -210,11 +215,36 @@ export const customerApi = {
         body: { startAt, ...(preferredStaffId ? { preferredStaffId } : {}) },
       },
     ),
+  getDeposit: (appointmentId: string) =>
+    request<{ deposit: DepositOverview }>(`/appointments/${appointmentId}/deposit`),
+  uploadDepositReceipt: (
+    appointmentId: string,
+    input: { fileName: string; mimeType: 'image/jpeg' | 'image/png' | 'image/webp'; dataBase64: string },
+  ) =>
+    request<{ receipt: { receiptId: string; status: string } }>(
+      `/appointments/${appointmentId}/deposit-receipt`,
+      { method: 'POST', body: input },
+    ),
   cancelWaitlist: (entryId: string) =>
     request<{ waitlist: CustomerWaitlistEntry }>(`/waitlist/${entryId}`, {
       method: 'DELETE',
     }),
 };
+
+export interface DepositOverview {
+  required: boolean;
+  method: 'gateway' | 'card_transfer' | null;
+  amountRial: number | null;
+  appointmentStatus: string;
+  holdExpiresAt: string | null;
+  cardNumber: string | null;
+  cardHolder: string | null;
+  bankName: string | null;
+  paymentStatus: string | null;
+  receiptStatus: string | null;
+  receiptId: string | null;
+  receiptUploadedAt: string | null;
+}
 
 // ─── Customer referral program ───────────────────────────────────────────────
 export interface SalonReferral {
@@ -413,7 +443,12 @@ export const bookingApi = {
     locationType?: 'salon' | 'customer';
     locationAddress?: string;
   }) =>
-    request<{ status: string; appointment?: unknown; paymentRedirectUrl?: string }>(
+    request<{
+      status: string;
+      appointment?: { id?: string } | unknown;
+      paymentRedirectUrl?: string;
+      deposit?: DepositInitiation;
+    }>(
       '/appointments',
       {
         method: 'POST',
@@ -642,6 +677,7 @@ export interface AppointmentCustomerOverview {
     createdAt: string;
   }>;
   preferredStaff: { id: string; fullName: string; role: string } | null;
+  deposit?: DepositOverview;
 }
 
 export interface OwnerWaitlistEntry {
@@ -691,6 +727,13 @@ export const adminApi = {
     request<SmsSettings>(`/salons/${salonId}/sms-settings`),
   updateSmsSettings: (salonId: string, patch: Partial<SmsSettings>) =>
     request<SmsSettings>(`/salons/${salonId}/sms-settings`, { method: 'PATCH', body: patch }),
+  getDepositSettings: (salonId: string) =>
+    request<DepositSettings>(`/salons/${salonId}/deposit-settings`),
+  updateDepositSettings: (salonId: string, settings: DepositSettings) =>
+    request<DepositSettings>(`/salons/${salonId}/deposit-settings`, {
+      method: 'PATCH',
+      body: settings,
+    }),
   getChairs: (salonId: string) => request<{ chairs: unknown[] }>(`/salons/${salonId}/chairs`),
   createManualAppointment: (
     salonId: string,
@@ -704,7 +747,7 @@ export const adminApi = {
       locationAddress?: string;
     },
   ) =>
-    request<{ status: string; appointment: unknown; paymentRedirectUrl?: string }>(
+    request<{ status: string; appointment: unknown; paymentRedirectUrl?: string; deposit?: DepositInitiation }>(
       `/salons/${salonId}/appointments/manual`,
       { method: 'POST', body },
     ),
@@ -755,12 +798,30 @@ export const adminApi = {
       } | null;
       previousAppointmentId: string;
       paymentRedirectUrl?: string;
+      deposit?: DepositInitiation;
     }>('/appointments/' + appointmentId + '/reschedule-managed', {
       method: 'POST',
       body: { startAt, ...(preferredStaffId ? { preferredStaffId } : {}) },
     }),
   getAppointmentCustomer: (appointmentId: string) =>
     request<AppointmentCustomerOverview>('/appointments/' + appointmentId + '/customer'),
+  getDepositReceipt: (appointmentId: string) =>
+    request<{
+      receipt: {
+        id: string;
+        fileName: string;
+        mimeType: string;
+        sizeBytes: number;
+        uploadedAt: string;
+        status: string;
+        dataBase64: string;
+      };
+    }>(`/appointments/${appointmentId}/deposit-receipt`),
+  reviewDepositReceipt: (appointmentId: string, decision: 'approved' | 'rejected', note?: string) =>
+    request<{ receiptStatus: string; appointmentStatus: string }>(
+      `/appointments/${appointmentId}/deposit-receipt/review`,
+      { method: 'POST', body: { decision, ...(note ? { note } : {}) } },
+    ),
   addCustomerNote: (appointmentId: string, body: string) =>
     request<{ note: AppointmentCustomerOverview['notes'][number] }>(
       '/appointments/' + appointmentId + '/customer-notes',
@@ -850,6 +911,21 @@ export const adminApi = {
       { method: 'PATCH', body: { active } },
     ),
 };
+
+export interface DepositSettings {
+  depositMethod: 'gateway' | 'card_transfer';
+  depositCardNumber: string | null;
+  depositCardHolder: string | null;
+  depositBankName: string | null;
+}
+
+export interface DepositInitiation {
+  method: 'card_transfer';
+  amountRial: number;
+  cardNumber?: string;
+  cardHolder?: string;
+  bankName?: string | null;
+}
 
 // ─── Salon client book ─────────────────────────────────────────────────────
 

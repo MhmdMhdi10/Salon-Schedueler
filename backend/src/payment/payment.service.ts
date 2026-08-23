@@ -26,6 +26,46 @@ export interface PaymentServiceOptions {
   callbackBaseUrl: string;
 }
 
+export type DepositMethod = 'gateway' | 'card_transfer';
+
+export interface DepositInitiation {
+  paymentId: string;
+  method: DepositMethod;
+  amountRial: number;
+  redirectUrl?: string;
+  cardNumber?: string;
+  cardHolder?: string;
+  bankName?: string;
+}
+
+export interface DepositOverview {
+  required: boolean;
+  method: DepositMethod | null;
+  amountRial: number | null;
+  appointmentStatus: string;
+  holdExpiresAt: Date | null;
+  cardNumber: string | null;
+  cardHolder: string | null;
+  bankName: string | null;
+  paymentStatus: string | null;
+  receiptStatus: string | null;
+  receiptId: string | null;
+  receiptUploadedAt: Date | null;
+}
+
+export interface ManualReceiptFile {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedAt: Date;
+  status: string;
+  data: Buffer;
+}
+
+const MAX_RECEIPT_BYTES = 5 * 1024 * 1024;
+const RECEIPT_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
 export class PaymentService {
   private readonly prisma: PrismaClient;
   private readonly gateway: PaymentGateway;
@@ -50,11 +90,21 @@ export class PaymentService {
    *
    * Requirements: R10.2, R10.5
    */
-  async initiateDeposit(appointmentId: string): Promise<{ paymentId: string; redirectUrl: string }> {
+  async initiateDeposit(appointmentId: string): Promise<DepositInitiation> {
     // Fetch the appointment and service
     const appointment = await this.prisma.appointment.findUnique({
       where: { id: appointmentId },
-      include: { service: true },
+      include: {
+        service: true,
+        salon: {
+          select: {
+            depositMethod: true,
+            depositCardNumber: true,
+            depositCardHolder: true,
+            depositBankName: true,
+          },
+        },
+      },
     });
 
     if (!appointment) {
@@ -73,6 +123,42 @@ export class PaymentService {
     }
 
     const amountRial = Number(depositRial);
+    const salonSettings = appointment.salon ?? {
+      depositMethod: 'gateway',
+      depositCardNumber: null,
+      depositCardHolder: null,
+      depositBankName: null,
+    };
+    const method: DepositMethod = salonSettings.depositMethod === 'card_transfer'
+      ? 'card_transfer'
+      : 'gateway';
+
+    if (method === 'card_transfer') {
+      if (!salonSettings.depositCardNumber || !salonSettings.depositCardHolder) {
+        throw new Error('DEPOSIT_CARD_NOT_CONFIGURED');
+      }
+      const existing = await this.prisma.payment.findFirst({
+        where: { appointmentId, gateway: 'card_transfer', status: 'pending' },
+        orderBy: { createdAt: 'desc' },
+      });
+      const payment = existing ?? await this.prisma.payment.create({
+        data: {
+          appointmentId,
+          amountRial: BigInt(amountRial),
+          status: 'pending',
+          gateway: 'card_transfer',
+        },
+      });
+      return {
+        paymentId: payment.id,
+        method,
+        amountRial,
+        cardNumber: salonSettings.depositCardNumber,
+        cardHolder: salonSettings.depositCardHolder,
+        bankName: salonSettings.depositBankName ?? undefined,
+      };
+    }
+
     const callbackUrl = `${this.callbackBaseUrl}/payments/callback`;
 
     // Create payment record
@@ -97,7 +183,229 @@ export class PaymentService {
       data: { authority },
     });
 
-    return { paymentId: payment.id, redirectUrl };
+    return { paymentId: payment.id, method, amountRial, redirectUrl };
+  }
+
+  /** Read deposit state without exposing receipt bytes. */
+  async getDepositOverview(appointmentId: string): Promise<DepositOverview> {
+    const appointment = await this.prisma.appointment.findUnique({
+      where: { id: appointmentId },
+      include: {
+        service: { select: { requiresDeposit: true, depositRial: true } },
+        salon: {
+          select: {
+            depositMethod: true,
+            depositCardNumber: true,
+            depositCardHolder: true,
+            depositBankName: true,
+          },
+        },
+        payments: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { status: true },
+        },
+        depositReceipt: {
+          select: { id: true, status: true, uploadedAt: true },
+        },
+      },
+    });
+    if (!appointment) throw new Error('APPOINTMENT_NOT_FOUND');
+    return {
+      required: appointment.service.requiresDeposit === true,
+      method: appointment.service.requiresDeposit
+        ? (appointment.salon.depositMethod === 'card_transfer' ? 'card_transfer' : 'gateway')
+        : null,
+      amountRial: appointment.service.depositRial == null ? null : Number(appointment.service.depositRial),
+      appointmentStatus: appointment.status,
+      holdExpiresAt: appointment.holdExpiresAt,
+      cardNumber: appointment.salon.depositCardNumber,
+      cardHolder: appointment.salon.depositCardHolder,
+      bankName: appointment.salon.depositBankName,
+      paymentStatus: appointment.payments[0]?.status ?? null,
+      receiptStatus: appointment.depositReceipt?.status ?? null,
+      receiptId: appointment.depositReceipt?.id ?? null,
+      receiptUploadedAt: appointment.depositReceipt?.uploadedAt ?? null,
+    };
+  }
+
+  /** Store or replace a customer's manual-transfer receipt. */
+  async uploadManualReceipt(
+    appointmentId: string,
+    input: { fileName: string; mimeType: string; dataBase64: string },
+  ): Promise<{ receiptId: string; status: string }> {
+    const appointment = await this.prisma.appointment.findUnique({
+      where: { id: appointmentId },
+      include: {
+        service: { select: { requiresDeposit: true, depositRial: true } },
+        salon: { select: { depositMethod: true } },
+      },
+    });
+    if (!appointment) throw new Error('APPOINTMENT_NOT_FOUND');
+    if (appointment.status !== 'held') throw new Error('DEPOSIT_HOLD_EXPIRED');
+    if (!appointment.service.requiresDeposit || appointment.salon.depositMethod !== 'card_transfer') {
+      throw new Error('MANUAL_DEPOSIT_NOT_ENABLED');
+    }
+    if (!RECEIPT_MIME_TYPES.has(input.mimeType)) throw new Error('DEPOSIT_RECEIPT_TYPE_INVALID');
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(input.dataBase64) || input.dataBase64.length > 7_200_000) {
+      throw new Error('DEPOSIT_RECEIPT_INVALID');
+    }
+    const data = Buffer.from(input.dataBase64, 'base64');
+    if (data.length === 0 || data.length > MAX_RECEIPT_BYTES || !this.hasImageSignature(data, input.mimeType)) {
+      throw new Error('DEPOSIT_RECEIPT_INVALID');
+    }
+    const fileName = input.fileName.trim().replace(/[^\w.\- ]/g, '').slice(0, 120) || 'receipt';
+    const payment = await this.ensureManualPayment(appointmentId, Number(appointment.service.depositRial));
+    const existing = await this.prisma.depositReceipt.findUnique({ where: { appointmentId } });
+    const receipt = existing
+      ? await this.prisma.depositReceipt.update({
+          where: { appointmentId },
+          data: {
+            paymentId: payment.id,
+            amountRial: payment.amountRial,
+            status: 'pending',
+            fileName,
+            mimeType: input.mimeType,
+            sizeBytes: data.length,
+            data,
+            note: null,
+            uploadedAt: new Date(),
+            reviewedAt: null,
+            reviewedBy: null,
+          },
+        })
+      : await this.prisma.depositReceipt.create({
+          data: {
+            appointmentId,
+            paymentId: payment.id,
+            salonId: appointment.salonId,
+            amountRial: payment.amountRial,
+            status: 'pending',
+            fileName,
+            mimeType: input.mimeType,
+            sizeBytes: data.length,
+            data,
+          },
+        });
+    return { receiptId: receipt.id, status: receipt.status };
+  }
+
+  /** Return receipt metadata + bytes after the caller has passed route RBAC. */
+  async getManualReceiptFile(appointmentId: string): Promise<ManualReceiptFile | null> {
+    const receipt = await this.prisma.depositReceipt.findUnique({ where: { appointmentId } });
+    if (!receipt) return null;
+    return {
+      id: receipt.id,
+      fileName: receipt.fileName,
+      mimeType: receipt.mimeType,
+      sizeBytes: receipt.sizeBytes,
+      uploadedAt: receipt.uploadedAt,
+      status: receipt.status,
+      data: Buffer.from(receipt.data),
+    };
+  }
+
+  /** Approve or reject a pending manual receipt. */
+  async reviewManualReceipt(
+    appointmentId: string,
+    decision: 'approved' | 'rejected',
+    reviewerId: string,
+    note?: string,
+  ): Promise<{ status: string; appointmentStatus: string }> {
+    const receipt = await this.prisma.depositReceipt.findUnique({
+      where: { appointmentId },
+      include: { appointment: true, payment: true },
+    });
+    if (!receipt) throw new Error('DEPOSIT_RECEIPT_NOT_FOUND');
+    if (receipt.status !== 'pending') throw new Error('DEPOSIT_RECEIPT_ALREADY_REVIEWED');
+    if (decision === 'rejected') {
+      const reviewed = await this.prisma.$transaction(async (tx) => {
+        const result = await tx.depositReceipt.updateMany({
+          where: { id: receipt.id, status: 'pending' },
+          data: {
+            status: 'rejected',
+            note: note?.trim() || null,
+            reviewedAt: new Date(),
+            reviewedBy: reviewerId,
+          },
+        });
+        if (result.count !== 1) return false;
+        if (receipt.paymentId) {
+          await tx.payment.update({ where: { id: receipt.paymentId }, data: { status: 'failed' } });
+        }
+        return true;
+      });
+      if (!reviewed) throw new Error('DEPOSIT_RECEIPT_ALREADY_REVIEWED');
+      return { status: 'rejected', appointmentStatus: receipt.appointment.status };
+    }
+
+    const now = new Date();
+    try {
+      const reviewResult = await this.prisma.$transaction(async (tx) => {
+        const claimed = await tx.depositReceipt.updateMany({
+          where: { id: receipt.id, status: 'pending' },
+          data: {
+            status: 'approved',
+            note: note?.trim() || null,
+            reviewedAt: now,
+            reviewedBy: reviewerId,
+          },
+        });
+        if (claimed.count !== 1) return 'already_reviewed' as const;
+
+        const result = await tx.appointment.updateMany({
+          where: {
+            id: appointmentId,
+            status: 'held',
+            holdExpiresAt: { gt: now },
+          },
+          data: { status: 'confirmed', holdExpiresAt: null },
+        });
+        if (result.count !== 1) throw new Error('MANUAL_DEPOSIT_HOLD_EXPIRED');
+        if (receipt.paymentId) {
+          await tx.payment.update({
+            where: { id: receipt.paymentId },
+            data: { status: 'paid', refId: `card-transfer:${receipt.id}` },
+          });
+        }
+        return 'approved' as const;
+      });
+      if (reviewResult === 'already_reviewed') {
+        throw new Error('DEPOSIT_RECEIPT_ALREADY_REVIEWED');
+      }
+      return { status: 'approved', appointmentStatus: 'confirmed' };
+    } catch (error) {
+      if (!(error instanceof Error) || error.message !== 'MANUAL_DEPOSIT_HOLD_EXPIRED') throw error;
+      const expired = await this.prisma.$transaction(async (tx) => {
+        const result = await tx.depositReceipt.updateMany({
+          where: { id: receipt.id, status: 'pending' },
+          data: { status: 'expired', note: 'مهلت پرداخت به پایان رسیده است.', reviewedAt: now, reviewedBy: reviewerId },
+        });
+        if (result.count !== 1) return false;
+        if (receipt.paymentId) {
+          await tx.payment.update({ where: { id: receipt.paymentId }, data: { status: 'failed' } });
+        }
+        return true;
+      });
+      if (!expired) throw new Error('DEPOSIT_RECEIPT_ALREADY_REVIEWED');
+      return { status: 'expired', appointmentStatus: 'expired' };
+    }
+  }
+
+  private async ensureManualPayment(appointmentId: string, amountRial: number) {
+    const existing = await this.prisma.payment.findFirst({
+      where: { appointmentId, gateway: 'card_transfer', status: 'pending' },
+      orderBy: { createdAt: 'desc' },
+    });
+    return existing ?? this.prisma.payment.create({
+      data: { appointmentId, amountRial: BigInt(amountRial), status: 'pending', gateway: 'card_transfer' },
+    });
+  }
+
+  private hasImageSignature(data: Buffer, mimeType: string): boolean {
+    if (mimeType === 'image/jpeg') return data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff;
+    if (mimeType === 'image/png') return data.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+    return data.subarray(0, 4).toString('ascii') === 'RIFF' && data.subarray(8, 12).toString('ascii') === 'WEBP';
   }
 
   /**
@@ -261,6 +569,16 @@ export class PaymentService {
 
     if (!payment) {
       throw new Error(`No paid payment found for appointment ${appointmentId}`);
+    }
+
+    // Card transfers cannot be refunded through the online gateway. Keep the
+    // financial record explicit; the salon handles the actual bank transfer.
+    if (payment.gateway === 'card_transfer') {
+      await this.prisma.payment.update({
+        where: { id: payment.id },
+        data: { status: 'refunded' },
+      });
+      return;
     }
 
     if (!payment.refId) {

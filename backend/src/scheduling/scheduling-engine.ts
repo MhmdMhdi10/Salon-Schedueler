@@ -65,6 +65,17 @@ export interface RescheduleRequest {
   chairId?: string;
 }
 
+/** Payment details attached to a held booking across web and bot channels. */
+export interface BookingPayment {
+  paymentId: string;
+  method?: 'gateway' | 'card_transfer';
+  redirectUrl?: string;
+  amountRial?: number;
+  cardNumber?: string;
+  cardHolder?: string;
+  bankName?: string;
+}
+
 export type RescheduleErrorCode =
   | 'APPOINTMENT_NOT_FOUND'
   | 'APPOINTMENT_NOT_MOVABLE'
@@ -93,7 +104,7 @@ export type BookingResult =
   | {
       status: 'held';
       appointment: Appointment;
-      payment: { paymentId: string; redirectUrl: string };
+      payment: BookingPayment;
     } // R10.1, R10.2
   | { status: 'rejected'; reason: 'no_availability' | 'slot_unavailable' }; // R9.2, R9.6
 
@@ -121,6 +132,7 @@ const MAX_BOOKING_RETRIES = 3;
 
 /** Default hold period: 15 minutes (900 seconds) */
 const DEFAULT_HOLD_PERIOD_SECONDS = 900;
+const MANUAL_DEPOSIT_HOLD_PERIOD_SECONDS = 1800;
 
 function dateInTimeZone(now: Date, timeZone: string): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -592,7 +604,7 @@ export class SchedulingEngine {
         serviceStaff: true,
         serviceEquipment: true,
         // The salon's default approval policy (auto-confirm vs manual).
-        salon: { select: { autoApprove: true, active: true, workMode: true } },
+        salon: { select: { autoApprove: true, active: true, workMode: true, depositMethod: true } },
       },
     });
 
@@ -910,8 +922,11 @@ export class SchedulingEngine {
         // reserve the slot via the no-overlap exclusion constraints.
         const requiresDeposit = service.requiresDeposit === true;
         const now = new Date();
+        const holdPeriodSeconds = service.salon?.depositMethod === 'card_transfer'
+          ? Math.max(this.holdPeriodSeconds, MANUAL_DEPOSIT_HOLD_PERIOD_SECONDS)
+          : this.holdPeriodSeconds;
         const holdExpiresAt = requiresDeposit
-          ? new Date(now.getTime() + this.holdPeriodSeconds * 1000)
+          ? new Date(now.getTime() + holdPeriodSeconds * 1000)
           : null;
         // Approval policy: a per-stylist override (if set) wins over the salon
         // default. Auto-approve confirms the booking immediately; otherwise it is
@@ -1217,6 +1232,30 @@ export class SchedulingEngine {
         status: 'expired',
       },
     });
+
+    // A manual-transfer receipt cannot remain actionable after its hold is
+    // released. Keep its review state and the pending ledger payment aligned
+    // with the expired appointment. Optional guards preserve old unit fakes.
+    const prismaWithDeposits = this.prisma as PrismaClient & {
+      depositReceipt?: {
+        updateMany: (args: unknown) => Promise<unknown>;
+      };
+      payment?: {
+        updateMany: (args: unknown) => Promise<unknown>;
+      };
+    };
+    if (prismaWithDeposits.depositReceipt?.updateMany) {
+      await prismaWithDeposits.depositReceipt.updateMany({
+        where: { status: 'pending', appointment: { status: 'expired' } },
+        data: { status: 'expired' },
+      });
+    }
+    if (prismaWithDeposits.payment?.updateMany) {
+      await prismaWithDeposits.payment.updateMany({
+        where: { status: 'pending', gateway: 'card_transfer', appointment: { status: 'expired' } },
+        data: { status: 'failed' },
+      });
+    }
 
     return result.count;
   }

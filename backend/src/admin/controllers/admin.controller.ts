@@ -3,7 +3,7 @@ import type { Services } from '../../http/app.js';
 import type { RequireRole } from '../../common/http/require-role.js';
 import { asyncRoute, validateRequired } from '../../common/http/route-helpers.js';
 import type { ServiceCatalog } from '../../catalog/service-catalog.js';
-import type { StaffRole } from '@salon/shared';
+import { normalizeDigits, type StaffRole } from '@salon/shared';
 
 /**
  * Parse an ISO date string from a query param; respond 400 VALIDATION_ERROR and
@@ -39,6 +39,30 @@ const toCalendarDto = (a: any) => ({
   staffName: a.staffMember?.fullName ?? null,
   locationType: a.locationType ?? 'salon',
   locationAddress: a.locationAddress ?? null,
+  depositReceiptStatus: a.depositReceipt?.status ?? null,
+  depositPaymentStatus: a.payments?.[0]?.status ?? null,
+});
+
+const toDepositPayload = (payment: {
+  method?: string;
+  redirectUrl?: string;
+  amountRial?: number;
+  cardNumber?: string;
+  cardHolder?: string;
+  bankName?: string;
+}) => ({
+  ...(payment.redirectUrl ? { paymentRedirectUrl: payment.redirectUrl } : {}),
+  ...(payment.method === 'card_transfer'
+    ? {
+        deposit: {
+          method: 'card_transfer',
+          amountRial: payment.amountRial,
+          cardNumber: payment.cardNumber,
+          cardHolder: payment.cardHolder,
+          bankName: payment.bankName ?? null,
+        },
+      }
+    : {}),
 });
 
 /**
@@ -473,7 +497,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
           status: result.booking.status,
           appointment: result.booking.appointment,
           previousAppointmentId: result.previousAppointment.id,
-          paymentRedirectUrl: payment.redirectUrl,
+          ...toDepositPayload(payment),
         });
         return;
       }
@@ -508,7 +532,11 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         res.status(404).json({ code: 'NOT_FOUND' });
         return;
       }
-      res.status(200).json({ customer, appointments, notes, preferredStaff });
+      const response: Record<string, unknown> = { customer, appointments, notes, preferredStaff };
+      if (typeof services.paymentService.getDepositOverview === 'function') {
+        response.deposit = await services.paymentService.getDepositOverview(req.params.id);
+      }
+      res.status(200).json(response);
     }),
   );
 
@@ -973,6 +1001,54 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         ),
       ]);
       res.status(200).json({ ok: true, hours });
+    }),
+  );
+
+  router.get(
+    '/salons/:id/deposit-settings',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const settings = await services.availabilityConfig.getSalonDepositSettings(req.params.id);
+      res.status(200).json(settings);
+    }),
+  );
+
+  router.patch(
+    '/salons/:id/deposit-settings',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const rawMethod = req.body?.depositMethod;
+      if (rawMethod !== 'gateway' && rawMethod !== 'card_transfer') {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'depositMethod' });
+        return;
+      }
+      const cardNumber = normalizeDigits(String(req.body?.depositCardNumber ?? ''))
+        .replace(/[\s-]/g, '');
+      const cardHolder = typeof req.body?.depositCardHolder === 'string'
+        ? req.body.depositCardHolder.trim()
+        : '';
+      const bankName = typeof req.body?.depositBankName === 'string'
+        ? req.body.depositBankName.trim()
+        : '';
+      if (rawMethod === 'card_transfer' && !/^\d{16}$/.test(cardNumber)) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'depositCardNumber' });
+        return;
+      }
+      if (rawMethod === 'card_transfer' && (cardHolder.length < 2 || cardHolder.length > 120)) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'depositCardHolder' });
+        return;
+      }
+      if (bankName.length > 80) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'depositBankName' });
+        return;
+      }
+      const settings = await services.availabilityConfig.setSalonDepositSettings(req.params.id, {
+        depositMethod: rawMethod,
+        depositCardNumber: rawMethod === 'card_transfer' ? cardNumber : null,
+        depositCardHolder: rawMethod === 'card_transfer' ? cardHolder : null,
+        depositBankName: rawMethod === 'card_transfer' ? bankName || null : null,
+      });
+      res.status(200).json(settings);
     }),
   );
 
