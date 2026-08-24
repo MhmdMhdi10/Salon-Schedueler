@@ -21,6 +21,8 @@ import { NotificationSettingsService } from './notifications/notification-settin
 import {
   KavenegarSmsAdapter,
   SmsIrAdapter,
+  MelliPayamakOtpAdapter,
+  MelliPayamakSharedOtpAdapter,
   PusheAdapter,
   NajvaAdapter,
   BotChannel,
@@ -54,6 +56,7 @@ import { ReferralService } from './referral/services/index.js';
 
 // Provider ports + adapters.
 import type { SmsProvider } from './auth/sms-provider.interface.js';
+import type { OtpProvider } from './auth/otp-provider.interface.js';
 import type { PushProvider } from './notifications/push-provider.interface.js';
 import { DevLogSmsProvider, DevLogPushProvider } from './http/dev-providers.js';
 import { RabbitMqSmsPublisher } from './messaging/sms-queue.js';
@@ -139,6 +142,24 @@ function selectSmsProvider(config: AppConfig): SmsProvider {
     });
   }
   return new DevLogSmsProvider();
+}
+
+/**
+ * Select the provider for OTP delivery. The shared-template endpoint mirrors
+ * send_melipayamak.py and receives the locally generated code in `args`.
+ * The old generated-code endpoint remains a compatibility fallback.
+ */
+function selectOtpProvider(config: AppConfig): OtpProvider | undefined {
+  if (config.melliPayamakUrl) {
+    return new MelliPayamakSharedOtpAdapter({
+      endpointUrl: config.melliPayamakUrl,
+      bodyId: config.melliPayamakBodyId,
+    });
+  }
+  if (config.melliPayamakOtpUrl) {
+    return new MelliPayamakOtpAdapter({ endpointUrl: config.melliPayamakOtpUrl });
+  }
+  return undefined;
 }
 
 /**
@@ -228,6 +249,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
 
   // External providers / gateways.
   const smsProvider = selectApiSmsProvider(config);
+  const otpProvider = selectOtpProvider(config);
   const pushProvider = selectPushProvider(config);
   const botAdapters = selectBotAdapters(config);
   const gateway = selectGateway(config);
@@ -245,7 +267,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     jwtRefreshSecret: config.jwtRefreshSecret,
     otpWindowSeconds: config.otpWindowSeconds,
     devOtpAutoFill: config.devOtpAutoFill,
-  });
+  }, otpProvider);
 
   // Port-based services with Prisma-backed adapters.
   const notificationService = new NotificationService(

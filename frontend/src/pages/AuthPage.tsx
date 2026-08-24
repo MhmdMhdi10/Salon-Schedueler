@@ -66,7 +66,7 @@ const fadeStepVariants: Variants = {
  *  - **Phone step** — one labelled LTR tel field (`09xxxxxxxxx`, pasted
  *    `+98`/Persian digits normalized) + full-width primary «دریافت کد» and the
  *    terms/privacy consent line.
- *  - **OTP step** — the shared {@link OtpInput} six-box entry (survives fast
+ *  - **OTP step** — the shared {@link OtpInput} provider-sized entry (survives fast
  *    typing, OS one-time-code autofill, and paste), resend cooldown with a
  *    draining progress bar, and expiry-aware error copy.
  *
@@ -89,6 +89,7 @@ export function AuthPage() {
   const prefersReduced = useReducedMotion();
 
   const [phone, setPhone] = useState('');
+  const [otpLength, setOtpLength] = useState(OTP_LENGTH);
   const [code, setCode] = useState<string[]>(() => Array(OTP_LENGTH).fill(''));
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [direction, setDirection] = useState(1);
@@ -104,7 +105,20 @@ export function AuthPage() {
   const normalizedPhone = useMemo(() => normalizePhone(phone), [phone]);
   const phoneIsValid = PHONE_PATTERN.test(normalizedPhone);
   const codeValue = code.join('');
-  const codeIsComplete = codeValue.length === OTP_LENGTH;
+  const codeIsComplete = codeValue.length === otpLength;
+
+  const applyOtpResponse = (response?: { devOtp?: string; otpLength?: number }) => {
+    const candidate = response?.otpLength ?? response?.devOtp?.length ?? OTP_LENGTH;
+    const nextLength = Number.isInteger(candidate) && candidate >= 4 && candidate <= 10
+      ? candidate
+      : OTP_LENGTH;
+    setOtpLength(nextLength);
+    setCode(
+      response?.devOtp
+        ? response.devOtp.split('').slice(0, nextLength)
+        : Array(nextLength).fill(''),
+    );
+  };
 
   // Where to land after auth. `returnTo` means we arrived mid-booking
   // (BookingConfirmPage bounced an anonymous customer to log in) — it drives
@@ -162,8 +176,7 @@ export function AuthPage() {
     setError('');
     try {
       const response = await authApi.requestOtp(normalizedPhone);
-      const devOtp = response?.devOtp;
-      setCode(devOtp ? devOtp.split('') : Array(OTP_LENGTH).fill(''));
+      applyOtpResponse(response);
       setDirection(1);
       setStep('otp');
       setSecondsLeft(RESEND_SECONDS);
@@ -186,7 +199,7 @@ export function AuthPage() {
 
   const handleResend = () => {
     if (secondsLeft > 0 || loading) return;
-    setCode(Array(OTP_LENGTH).fill(''));
+    setCode(Array(otpLength).fill(''));
     otpRef.current?.focus();
     void sendOtp();
   };
@@ -231,7 +244,7 @@ export function AuthPage() {
     setDirection(-1);
     setStep('phone');
     setError('');
-    setCode(Array(OTP_LENGTH).fill(''));
+    setCode(Array(otpLength).fill(''));
   };
 
   const variants = prefersReduced ? fadeStepVariants : stepVariants;
@@ -359,6 +372,7 @@ export function AuthPage() {
                   </legend>
                   <OtpInput
                     ref={otpRef}
+                    length={otpLength}
                     value={code}
                     onChange={(next) => {
                       setError('');

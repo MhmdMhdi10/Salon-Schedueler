@@ -29,7 +29,7 @@ import type { RnTheme } from '../theme';
  *  - **Phone step** — a themed `TextInput` (`keyboardType=phone-pad`, LTR digit
  *    entry) with a visible label, and a primary button with an in-button
  *    loading state and a «دریافت کد» CTA.
- *  - **OTP step** — six single-digit boxes (`keyboardType=number-pad`) with
+ *  - **OTP step** — provider-sized single-digit boxes (`keyboardType=number-pad`) with
  *    auto-advance, backspace-to-previous, a primary «تایید» button, and a
  *    **resend timer** («ارسال مجدد تا ۰:۴۵») rendered in Persian digits that
  *    disables resend until it elapses.
@@ -72,6 +72,7 @@ export function AuthScreen({ onAuthenticated, persistTokens }: AuthScreenProps) 
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [phone, setPhone] = useState('');
+  const [otpLength, setOtpLength] = useState(OTP_LENGTH);
   const [code, setCode] = useState<string[]>(() => Array(OTP_LENGTH).fill(''));
   const [step, setStep] = useState<AuthStep>('phone');
   const [loading, setLoading] = useState(false);
@@ -80,7 +81,7 @@ export function AuthScreen({ onAuthenticated, persistTokens }: AuthScreenProps) 
 
   const otpRefs = useRef<Array<TextInputInstance | null>>([]);
   const codeValue = code.join('');
-  const codeIsComplete = codeValue.length === OTP_LENGTH;
+  const codeIsComplete = codeValue.length === otpLength;
 
   // Resend countdown: ticks once per second while the cooldown is active.
   useEffect(() => {
@@ -97,6 +98,12 @@ export function AuthScreen({ onAuthenticated, persistTokens }: AuthScreenProps) 
     const result = await requestOtp(phone);
     setLoading(false);
     if (result.ok) {
+      const candidate = result.otpLength ?? OTP_LENGTH;
+      const nextLength = Number.isInteger(candidate) && candidate >= 4 && candidate <= 10
+        ? candidate
+        : OTP_LENGTH;
+      setOtpLength(nextLength);
+      setCode(Array(nextLength).fill(''));
       setStep('otp');
       setSecondsLeft(RESEND_SECONDS);
     } else {
@@ -111,7 +118,7 @@ export function AuthScreen({ onAuthenticated, persistTokens }: AuthScreenProps) 
 
   const handleResend = () => {
     if (secondsLeft > 0 || loading) return;
-    setCode(Array(OTP_LENGTH).fill(''));
+    setCode(Array(otpLength).fill(''));
     sendOtp();
   };
 
@@ -150,7 +157,7 @@ export function AuthScreen({ onAuthenticated, persistTokens }: AuthScreenProps) 
       next[index] = digit;
       return next;
     });
-    if (digit && index < OTP_LENGTH - 1) {
+    if (digit && index < otpLength - 1) {
       otpRefs.current[index + 1]?.focus();
     }
   };
@@ -163,7 +170,7 @@ export function AuthScreen({ onAuthenticated, persistTokens }: AuthScreenProps) 
     }
     // Full-paste support: distribute multiple digits across the boxes.
     if (raw.length > 1) {
-      const slice = raw.slice(0, OTP_LENGTH - index);
+      const slice = raw.slice(0, otpLength - index);
       setError('');
       setCode((prev) => {
         const next = [...prev];
@@ -172,7 +179,7 @@ export function AuthScreen({ onAuthenticated, persistTokens }: AuthScreenProps) 
         }
         return next;
       });
-      const lastFilled = Math.min(index + slice.length, OTP_LENGTH - 1);
+      const lastFilled = Math.min(index + slice.length, otpLength - 1);
       otpRefs.current[lastFilled]?.focus();
       return;
     }
@@ -189,7 +196,7 @@ export function AuthScreen({ onAuthenticated, persistTokens }: AuthScreenProps) 
   const backToPhone = () => {
     setStep('phone');
     setError('');
-    setCode(Array(OTP_LENGTH).fill(''));
+    setCode(Array(otpLength).fill(''));
   };
 
   const phoneStepValid = phone.length > 0;
@@ -244,8 +251,13 @@ export function AuthScreen({ onAuthenticated, persistTokens }: AuthScreenProps) 
                   keyboardType="number-pad"
                   autoComplete={index === 0 ? 'sms-otp' : 'off'}
                   textContentType="oneTimeCode"
-                  maxLength={index === 0 ? OTP_LENGTH : 1}
-                  style={[styles.input, styles.otpBox, error ? styles.inputError : null]}
+                  maxLength={index === 0 ? otpLength : 1}
+                  style={[
+                    styles.input,
+                    styles.otpBox,
+                    otpLength > 6 ? styles.otpBoxCompact : null,
+                    error ? styles.inputError : null,
+                  ]}
                 />
               ))}
             </View>
@@ -399,6 +411,9 @@ function createStyles(theme: RnTheme) {
       writingDirection: 'ltr',
       fontSize: typography.variants.lg.fontSize,
       fontWeight: '700',
+    },
+    otpBoxCompact: {
+      width: 36,
     },
     primaryButton: {
       backgroundColor: colors.primary,

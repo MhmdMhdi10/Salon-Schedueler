@@ -15,7 +15,7 @@ export interface AuthTokens {
 }
 
 export type RequestOtpResult =
-  | { ok: true }
+  | { ok: true; otpLength?: number }
   | { ok: false; error: string; code?: string };
 export type VerifyOtpResult =
   | { ok: true; tokens: AuthTokens }
@@ -48,8 +48,8 @@ function errorCode(err: unknown): string | undefined {
 /** Step 1: request an OTP for the given phone number. Never throws. */
 export async function requestOtp(phone: string): Promise<RequestOtpResult> {
   try {
-    await authApi.requestOtp(phone);
-    return { ok: true };
+    const response = await authApi.requestOtp(phone);
+    return response.otpLength ? { ok: true, otpLength: response.otpLength } : { ok: true };
   } catch (err) {
     return { ok: false, error: errorMessage(err), code: errorCode(err) };
   }

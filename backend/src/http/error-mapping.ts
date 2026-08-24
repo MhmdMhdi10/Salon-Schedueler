@@ -96,6 +96,8 @@ export function mapDomainError(err: unknown): MappedError {
       case 'OTP_MISMATCH':
       case 'NO_OTP':
         return { status: 401, code: 'OTP_INVALID' };
+      case 'OTP_DELIVERY_FAILED':
+        return { status: 502, code: 'OTP_DELIVERY_FAILED' };
       case 'INVALID_TOKEN':
         return { status: 401, code: 'INVALID_TOKEN' };
       default:

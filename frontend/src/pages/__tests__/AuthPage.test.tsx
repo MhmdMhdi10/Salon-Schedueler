@@ -8,8 +8,8 @@ import { expectNoSeriousA11yViolations } from '../../test/a11y';
 /**
  * Tests for the redesigned phone + OTP auth page (task 6.1; R4.1, R4.2, R7.6;
  * ui-ux §7, §10, §11). They cover: the phone step with Iranian-pattern
- * validation + digit normalization, the «کد ارسال شد» send toast, the six-box
- * OTP step with auto-advance / paste / backspace, the resend timer in Persian
+ * validation + digit normalization, the «کد ارسال شد» send toast, the
+ * provider-sized OTP step with auto-advance / paste / backspace, the resend timer in Persian
  * digits, the inline `role="alert"` error that preserves entered data, and the
  * preserved `auth-page` testID.
  */
@@ -129,6 +129,20 @@ describe('AuthPage — OTP step', () => {
     for (const d of persianDigits) {
       expect(screen.getByLabelText(`رقم ${d} کد تایید`)).toBeInTheDocument();
     }
+  });
+
+  it('renders the provider-reported ten-digit OTP length', async () => {
+    requestOtp.mockResolvedValueOnce({ otpLength: 10 });
+    await advanceToOtp();
+
+    expect(screen.getByLabelText('رقم ۱۰ کد تایید')).toBeInTheDocument();
+    const first = screen.getByLabelText('رقم ۱ کد تایید');
+    fireEvent.paste(first, {
+      clipboardData: { getData: () => '3741437414' },
+    });
+    await waitFor(() => expect(screen.getByLabelText('رقم ۱۰ کد تایید')).toHaveValue('4'));
+    fireEvent.click(screen.getByRole('button', { name: 'تایید و ورود' }));
+    await waitFor(() => expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '3741437414'));
   });
 
   it('fills a temporary development OTP returned by the API', async () => {

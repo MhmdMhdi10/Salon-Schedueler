@@ -22,6 +22,7 @@ function makeServices() {
   return {
     authService: {
       requestOtp: jest.fn().mockResolvedValue(undefined),
+      requestOtpWithDetails: jest.fn().mockResolvedValue({ otpLength: 6 }),
       verifyOtp: jest.fn(),
       refresh: jest.fn(),
     },
@@ -154,6 +155,23 @@ describe('HTTP routes', () => {
   });
 
   // ── Auth (public) ──────────────────────────────────────────────────────────
+  describe('POST /api/auth/otp/request', () => {
+    it('returns the provider-reported OTP length without exposing the code', async () => {
+      fake.authService.requestOtpWithDetails.mockResolvedValue({ otpLength: 10 });
+
+      const res = await request(app)
+        .post('/api/auth/otp/request')
+        .send({ phone: '+989120000000' });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ ok: true, otpLength: 10 });
+      expect(fake.authService.requestOtpWithDetails).toHaveBeenCalledWith(
+        '+989120000000',
+        { exposeCode: true },
+      );
+    });
+  });
+
   describe('POST /api/auth/otp/verify', () => {
     it('returns 200 with tokens on success', async () => {
       fake.authService.verifyOtp.mockResolvedValue({

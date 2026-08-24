@@ -14,7 +14,7 @@ export interface OtpInputHandle {
 }
 
 export interface OtpInputProps {
-  /** The current per-box digits (length {@link OTP_LENGTH}, '' = empty). */
+  /** The current per-box digits (one entry per OTP digit, '' = empty). */
   value: string[];
   /** Called with the full next digits array on any entry/paste/clear. */
   onChange: (next: string[]) => void;
@@ -25,6 +25,8 @@ export interface OtpInputProps {
   /** Focus the first box when the component mounts. */
   autoFocus?: boolean;
   disabled?: boolean;
+  /** Provider-reported code length; defaults to the local six-digit flow. */
+  length?: number;
 }
 
 /**
@@ -53,17 +55,18 @@ export interface OtpInputProps {
  * under `prefers-reduced-motion`, where the danger border alone signals it).
  */
 export const OtpInput = forwardRef<OtpInputHandle, OtpInputProps>(function OtpInput(
-  { value, onChange, invalid, describedBy, autoFocus, disabled },
+  { value, onChange, invalid, describedBy, autoFocus, disabled, length: lengthProp },
   ref,
 ) {
   const { t } = useTranslation();
+  const length = lengthProp ?? OTP_LENGTH;
   const boxRefs = useRef<Array<HTMLInputElement | null>>([]);
   const prefersReduced = useReducedMotion();
   const shakeControls = useAnimationControls();
   const wasInvalid = useRef(false);
 
   const focusBox = (index: number) => {
-    const el = boxRefs.current[Math.max(0, Math.min(index, OTP_LENGTH - 1))];
+    const el = boxRefs.current[Math.max(0, Math.min(index, length - 1))];
     el?.focus();
     el?.select?.();
   };
@@ -71,7 +74,7 @@ export const OtpInput = forwardRef<OtpInputHandle, OtpInputProps>(function OtpIn
   useImperativeHandle(ref, () => ({
     focus: () => {
       const firstEmpty = value.findIndex((d) => !d);
-      focusBox(firstEmpty === -1 ? OTP_LENGTH - 1 : firstEmpty);
+      focusBox(firstEmpty === -1 ? length - 1 : firstEmpty);
     },
   }));
 
@@ -112,7 +115,7 @@ export const OtpInput = forwardRef<OtpInputHandle, OtpInputProps>(function OtpIn
       if (digits.startsWith(prev)) digits = digits.slice(prev.length);
       else if (digits.endsWith(prev)) digits = digits.slice(0, -prev.length);
     }
-    digits = digits.slice(0, OTP_LENGTH - index);
+    digits = digits.slice(0, length - index);
     const next = [...value];
     for (let i = 0; i < digits.length; i += 1) next[index + i] = digits[i];
     onChange(next);
@@ -132,7 +135,7 @@ export const OtpInput = forwardRef<OtpInputHandle, OtpInputProps>(function OtpIn
     if (e.key === 'ArrowLeft' && index > 0) {
       e.preventDefault();
       focusBox(index - 1);
-    } else if (e.key === 'ArrowRight' && index < OTP_LENGTH - 1) {
+    } else if (e.key === 'ArrowRight' && index < length - 1) {
       e.preventDefault();
       focusBox(index + 1);
     }
@@ -174,8 +177,8 @@ export const OtpInput = forwardRef<OtpInputHandle, OtpInputProps>(function OtpIn
           onFocus={(e) => e.target.select()}
           onKeyDown={(e) => handleKeyDown(index, e)}
           className={cn(
-            'h-11 w-9 rounded-md border bg-bg text-center text-lg font-bold text-text',
-            'sm:h-12 sm:w-11',
+            'rounded-md border bg-bg text-center text-lg font-bold text-text',
+            length > 6 ? 'h-10 w-7 sm:h-11 sm:w-9' : 'h-11 w-9 sm:h-12 sm:w-11',
             'transition-colors duration-fast ease-standard',
             'outline-none focus-visible:outline focus-visible:outline-2',
             'focus-visible:outline-offset-2 focus-visible:outline-focus',

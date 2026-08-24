@@ -111,6 +111,12 @@ services:
       # testing (read code from logs → type it) isn't rushed by the 2-minute
       # production default. Do NOT carry this into production.
       OTP_WINDOW_SECONDS: "600"
+      # Optional: Melli Payamak shared template receives AuthService's generated
+      # OTP as args[0]. Keep token in .env only.
+      MELIPAYAMAK_URL: "${MELIPAYAMAK_URL-}"
+      MELIPAYAMAK_BODY_ID: "${MELIPAYAMAK_BODY_ID:-524}"
+      # Legacy generated-code endpoint fallback.
+      MELIPAYAMAK_OTP_URL: "${MELIPAYAMAK_OTP_URL-}"
       # Consumed by pg_isready + psql in the dev entrypoint.
       PGHOST: postgres
       PGPORT: "5432"

@@ -22,5 +22,7 @@ export type {
 } from './bot-channel';
 export { KavenegarSmsAdapter } from './kavenegar.adapter';
 export { SmsIrAdapter } from './smsir.adapter';
+export { MelliPayamakOtpAdapter } from './melipayamak-otp.adapter';
+export { MelliPayamakSharedOtpAdapter } from './melipayamak-shared-otp.adapter';
 export { PusheAdapter } from './pushe.adapter';
 export { NajvaAdapter } from './najva.adapter';

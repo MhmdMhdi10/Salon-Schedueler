@@ -42,6 +42,12 @@ export interface AppConfig {
   smsirBaseUrl?: string;
   /** SMS.ir sender line number (optional). */
   smsirLineNumber?: string;
+  /** Full Melli Payamak shared-template URL (optional). */
+  melliPayamakUrl?: string;
+  /** Shared-template body id used for OTP args. Defaults to 524. */
+  melliPayamakBodyId: number;
+  /** Legacy Melli Payamak generated-OTP endpoint URL (optional). */
+  melliPayamakOtpUrl?: string;
   /** Pushe push API key (optional). */
   pusheApiKey?: string;
   /** Pushe API base URL override (optional). */
@@ -165,6 +171,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     smsirApiKey: env.SMSIR_API_KEY,
     smsirBaseUrl: env.SMSIR_BASE_URL,
     smsirLineNumber: env.SMSIR_LINE_NUMBER,
+    melliPayamakUrl: env.MELIPAYAMAK_URL,
+    melliPayamakBodyId: env.MELIPAYAMAK_BODY_ID
+      ? Number(env.MELIPAYAMAK_BODY_ID)
+      : 524,
+    melliPayamakOtpUrl: env.MELIPAYAMAK_OTP_URL,
     pusheApiKey: env.PUSHE_API_KEY,
     pusheBaseUrl: env.PUSHE_BASE_URL,
     pusheAppId: env.PUSHE_APP_ID,

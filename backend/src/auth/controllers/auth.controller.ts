@@ -24,7 +24,7 @@ function isMobileClient(req: { get(name: string): string | undefined }): boolean
  * Auth routes (public — no token required). Maps to `AuthService` and reuses the
  * stable error codes via `mapDomainError` (Requirement 2.2, 2.5 / original R1).
  *
- * - POST /auth/otp/request  { phone }            -> 200 { ok: true, devOtp? }
+ * - POST /auth/otp/request  { phone }            -> 200 { ok: true, otpLength, devOtp? }
  * - POST /auth/otp/verify   { phone, code }      -> 200 cookie/body tokens
  * - POST /auth/refresh      cookie/body         -> 200 access token(s)
  * - POST /auth/logout                            -> 204
@@ -88,8 +88,14 @@ export function authRouter(services: Services): Router {
       if (!validateRequired(res, req.body, ['phone'])) {
         return;
       }
-      const devOtp = await services.authService.requestOtp(req.body.phone, { exposeCode: true });
-      res.status(200).json(devOtp ? { ok: true, devOtp } : { ok: true });
+      const result = await services.authService.requestOtpWithDetails(req.body.phone, {
+        exposeCode: true,
+      });
+      res.status(200).json({
+        ok: true,
+        otpLength: result.otpLength,
+        ...(result.devOtp ? { devOtp: result.devOtp } : {}),
+      });
     }),
   );
 

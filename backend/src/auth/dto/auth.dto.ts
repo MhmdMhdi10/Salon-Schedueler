@@ -1,14 +1,16 @@
 import { z } from 'zod';
 // Auth service accepts the normalized Iranian `09...` form and the `+98...`
 // form used by existing clients/tests. Normalization/phone policy remains in
-// AuthService; transport DTO only guarantees presence and OTP shape.
+// AuthService; transport DTO only guarantees presence and numeric OTP shape.
 export const AuthRequestDto = z
   .object({ phone: z.string().trim().min(1) })
   .passthrough();
 export const AuthVerifyDto = z
   .object({
     phone: z.string().trim().min(1),
-    code: z.string().length(6).regex(/^\d{6}$/),
+    // Local OTPs are six digits; provider-generated OTPs may be up to ten
+    // digits (Melli Payamak's endpoint returns the exact code it sent).
+    code: z.string().min(4).max(10).regex(/^\d+$/),
   })
   .passthrough();
 // Browser refresh uses the HttpOnly cookie; native clients send the token body.

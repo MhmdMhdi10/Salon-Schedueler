@@ -219,6 +219,44 @@ describe('AuthService', () => {
       expect(code).toMatch(/^\d{6}$/);
       expect(smsProvider.calls[0].message).toContain(code);
     });
+
+    it('stores the code returned by a provider-generated OTP service', async () => {
+      const providerCode = '3741437414';
+      const otpProvider = {
+        sendOtp: jest.fn().mockResolvedValue({
+          ok: true,
+          providerId: 'melipayamak-otp',
+          code: providerCode,
+        }),
+      };
+      const providerService = new AuthService(
+        prisma,
+        smsProvider,
+        { ...config, devOtpAutoFill: true },
+        otpProvider,
+      );
+
+      const details = await providerService.requestOtpWithDetails('09123456789', {
+        exposeCode: true,
+      });
+
+      expect(details).toEqual({ otpLength: 10, devOtp: providerCode });
+      expect(otpProvider.sendOtp).toHaveBeenCalledWith(
+        '09123456789',
+        expect.stringMatching(/^\d{6}$/),
+      );
+      expect(smsProvider.send).not.toHaveBeenCalled();
+      expect(prisma.otp.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          phone: '09123456789',
+          codeHash: providerService.hashCode(providerCode),
+        }),
+      });
+
+      await expect(providerService.verifyOtp('09123456789', providerCode)).resolves.toEqual(
+        expect.objectContaining({ accessToken: expect.any(String) }),
+      );
+    });
   });
 
   describe('verifyOtp', () => {

@@ -211,6 +211,7 @@ function RegisterSalonContent() {
   // Submit + OTP.
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [otpLength, setOtpLength] = useState(OTP_LENGTH);
   const [code, setCode] = useState<string[]>(() => Array(OTP_LENGTH).fill(''));
   const [otpError, setOtpError] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
@@ -223,10 +224,23 @@ function RegisterSalonContent() {
     [category],
   );
   const codeValue = code.join('');
-  const codeIsComplete = codeValue.length === OTP_LENGTH;
+  const codeIsComplete = codeValue.length === otpLength;
   const stepIndex = STEP_ORDER.indexOf(step);
   const isMobileWorkspace = workspace === 'mobile';
   const prefersReducedMotion = useReducedMotion();
+
+  const applyOtpResponse = (response?: { devOtp?: string; otpLength?: number }) => {
+    const candidate = response?.otpLength ?? response?.devOtp?.length ?? OTP_LENGTH;
+    const nextLength = Number.isInteger(candidate) && candidate >= 4 && candidate <= 10
+      ? candidate
+      : OTP_LENGTH;
+    setOtpLength(nextLength);
+    setCode(
+      response?.devOtp
+        ? response.devOtp.split('').slice(0, nextLength)
+        : Array(nextLength).fill(''),
+    );
+  };
 
   // Resend countdown for the OTP step.
   useEffect(() => {
@@ -408,8 +422,7 @@ function RegisterSalonContent() {
       });
       // Salon created — send the OTP so the owner can sign straight in.
       const response = await authApi.requestOtp(normalizedPhone);
-      const devOtp = response?.devOtp;
-      setCode(devOtp ? devOtp.split('') : Array(OTP_LENGTH).fill(''));
+      applyOtpResponse(response);
       setStep('otp');
       setSecondsLeft(RESEND_SECONDS);
       success({ title: t('auth.otpSent') });
@@ -434,7 +447,7 @@ function RegisterSalonContent() {
     try {
       const response = await authApi.requestOtp(normalizedPhone);
       setSecondsLeft(RESEND_SECONDS);
-      setCode(response?.devOtp ? response.devOtp.split('') : Array(OTP_LENGTH).fill(''));
+      applyOtpResponse(response);
       success({ title: t('auth.otpSent') });
       window.setTimeout(() => otpRefs.current[0]?.focus(), 0);
     } catch {
@@ -466,7 +479,7 @@ function RegisterSalonContent() {
       next[index] = digit;
       return next;
     });
-    if (digit && index < OTP_LENGTH - 1) otpRefs.current[index + 1]?.focus();
+    if (digit && index < otpLength - 1) otpRefs.current[index + 1]?.focus();
   };
 
   const handleOtpChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -477,7 +490,7 @@ function RegisterSalonContent() {
   const handleOtpPaste = (index: number, e: React.ClipboardEvent<HTMLInputElement>) => {
     const pasted = normalizeDigits(e.clipboardData.getData('text'))
       .replace(/\D/g, '')
-      .slice(0, OTP_LENGTH - index);
+      .slice(0, otpLength - index);
     if (!pasted) return;
     e.preventDefault();
     setOtpError('');
@@ -486,7 +499,7 @@ function RegisterSalonContent() {
       for (let i = 0; i < pasted.length; i += 1) next[index + i] = pasted[i];
       return next;
     });
-    otpRefs.current[Math.min(index + pasted.length, OTP_LENGTH - 1)]?.focus();
+    otpRefs.current[Math.min(index + pasted.length, otpLength - 1)]?.focus();
   };
 
   const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -1252,7 +1265,8 @@ function RegisterSalonContent() {
                         onPaste={(e) => handleOtpPaste(index, e)}
                         onKeyDown={(e) => handleOtpKeyDown(index, e)}
                         className={cn(
-                          'h-12 w-11 rounded-md border bg-bg text-center text-lg font-bold text-text',
+                          'h-12 rounded-md border bg-bg text-center text-lg font-bold text-text',
+                          otpLength > 6 ? 'w-9' : 'w-11',
                           'transition-colors duration-fast ease-standard',
                           'outline-none focus-visible:outline focus-visible:outline-2',
                           'focus-visible:outline-offset-2 focus-visible:outline-focus',

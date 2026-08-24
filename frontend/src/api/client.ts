@@ -109,7 +109,7 @@ export class ApiError extends Error {
 // Auth endpoints
 export const authApi = {
   requestOtp: (phone: string) =>
-    request<{ ok: boolean; devOtp?: string }>('/auth/otp/request', {
+    request<{ ok: boolean; otpLength?: number; devOtp?: string }>('/auth/otp/request', {
       method: 'POST',
       body: { phone },
     }),
