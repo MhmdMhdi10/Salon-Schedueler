@@ -67,7 +67,7 @@ const fadeStepVariants: Variants = {
  *    `+98`/Persian digits normalized) + full-width primary «دریافت کد» and the
  *    terms/privacy consent line.
  *  - **OTP step** — the shared {@link OtpInput} provider-sized entry (survives fast
- *    typing, OS one-time-code autofill, and paste), resend cooldown with a
+ *    typing and paste), resend cooldown with a
  *    draining progress bar, and expiry-aware error copy.
  *
  * Already-authenticated visitors are redirected away (`/owner` for staff, `/account`

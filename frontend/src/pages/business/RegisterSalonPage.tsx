@@ -1256,7 +1256,7 @@ function RegisterSalonContent() {
                         }}
                         type="text"
                         inputMode="numeric"
-                        autoComplete={index === 0 ? 'one-time-code' : 'off'}
+                        autoComplete="off"
                         dir="ltr"
                         maxLength={1}
                         aria-label={t('auth.otpDigitLabel', { index: toPersianDigits(index + 1) })}

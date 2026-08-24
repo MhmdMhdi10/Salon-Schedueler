@@ -68,7 +68,7 @@ applies (their SEO is "correctly noindexed" — see §D).
 | Structure & hierarchy | ✅ | Single `<h1>` (`auth.title`); one primary CTA («دریافت کد» / «تایید»); secondary actions (resend/change-phone) are `ghost`. |
 | Tokens & theming (light+dark) | ✅ | Tokens only; OTP boxes/border/focus use `border-border`/`outline-focus`. |
 | States | ✅ | Button `loading`; inline `role="alert"` error that **keeps** typed input; resend timer countdown. |
-| Forms | ✅ | Visible labels; phone `type=tel inputMode=tel dir=ltr autoComplete=tel` + `^09\d{9}$` with digit normalization; OTP `inputMode=numeric autoComplete=one-time-code` paste/auto-advance/backspace + resend timer. |
+| Forms | ✅ | Visible labels; phone `type=tel inputMode=tel dir=ltr autoComplete=tel` + `^09\d{9}$` with digit normalization; OTP `inputMode=numeric autoComplete=off` paste/auto-advance/backspace + resend timer. |
 | RTL & i18n | ✅ | Logical layout; LTR-isolated phone/OTP inside RTL; back chevron mirrored (`rtl:-scale-x-100`); Persian digits; all copy from `auth.*`. |
 | Accessibility | ✅ | Keyboard operable; visible focus ring; OTP boxes ≥44px tall; `aria-live` on resend; `role="alert"` error. |
 | Performance | ✅ | Route is `React.lazy`-split; no images; above-the-fold font preloaded in `index.html`. |
@@ -288,7 +288,7 @@ Native screens; web-only checklist items (canonical/JSON-LD/sitemap, fonts
 | --- | --- | --- |
 | Tokens & theming | ✅ | Token-driven `StyleSheet` (no raw hex); light/dark via `ThemeProvider`. |
 | States | ✅ | Primary button `ActivityIndicator` loading + `accessibilityState.busy`; inline error. |
-| Forms | ✅ | Phone `keyboardType=phone-pad` LTR + `autoComplete=tel`; 6 OTP boxes `number-pad` + `oneTimeCode`, auto-advance/backspace; resend timer in Persian digits. |
+| Forms | ✅ | Phone `keyboardType=phone-pad` LTR + `autoComplete=tel`; 6 OTP boxes `number-pad` with autofill disabled, auto-advance/backspace; resend timer in Persian digits. |
 | RTL & i18n | ✅ | `row-reverse` OTP; LTR digit entry inside RTL; copy from `auth.*`. |
 | Accessibility | ✅ | `accessibilityRole="button"`/`"alert"`; targets ≥44–48px. |
 | **Preserved hooks** | ✅ | `auth-error` testID (+ `auth-screen`, inputs, `primary-button`). |

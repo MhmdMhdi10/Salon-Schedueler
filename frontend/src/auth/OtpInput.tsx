@@ -33,14 +33,13 @@ export interface OtpInputProps {
  * Six-box one-time-code entry shared by the OTP login page and the salon
  * registration wizard.
  *
- * Robust against every real entry mode (the previous per-box `maxLength={1}`
- * pattern silently swallowed digits typed faster than React could move focus,
- * and truncated OS one-time-code autofill to a single digit):
+ * Robust against manual entry and pasted codes (the previous per-box
+ * `maxLength={1}` pattern silently swallowed digits typed faster than React
+ * could move focus):
  *
- *  - **Fast typing / autofill**: no `maxLength` — any multi-character change is
- *    normalized (Persian digits → Latin) and distributed forward across the
- *    boxes exactly like a paste, so a whole 6-digit autofill into box 1 fills
- *    all six boxes.
+ *  - **Fast typing**: no `maxLength` — any multi-character change is normalized
+ *    (Persian digits → Latin) and distributed forward across the boxes exactly
+ *    like a paste.
  *  - **Paste**: distributed from the pasted-into box, focus lands on the next
  *    empty box.
  *  - **Backspace** in an empty box clears + focuses the previous box; physical
@@ -160,7 +159,7 @@ export const OtpInput = forwardRef<OtpInputHandle, OtpInputProps>(function OtpIn
           }}
           type="text"
           inputMode="numeric"
-          autoComplete={index === 0 ? 'one-time-code' : 'off'}
+          autoComplete="off"
           dir="ltr"
           disabled={disabled}
           aria-label={t('auth.otpDigitLabel', { index: toPersianDigits(index + 1) })}

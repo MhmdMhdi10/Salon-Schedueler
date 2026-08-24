@@ -249,8 +249,8 @@ export function AuthScreen({ onAuthenticated, persistTokens }: AuthScreenProps) 
                     handleOtpKeyPress(index, e.nativeEvent.key)
                   }
                   keyboardType="number-pad"
-                  autoComplete={index === 0 ? 'sms-otp' : 'off'}
-                  textContentType="oneTimeCode"
+                  autoComplete="off"
+                  textContentType="none"
                   maxLength={index === 0 ? otpLength : 1}
                   style={[
                     styles.input,
