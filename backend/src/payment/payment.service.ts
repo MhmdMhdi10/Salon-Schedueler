@@ -28,6 +28,21 @@ export interface PaymentServiceOptions {
 
 export type DepositMethod = 'gateway' | 'card_transfer';
 
+export interface PendingManualReceipt {
+  appointmentId: string;
+  receiptId: string;
+  amountRial: number;
+  uploadedAt: Date;
+  appointmentStatus: string;
+  startAt: Date;
+  endAt: Date;
+  serviceName: string;
+  customerName: string | null;
+  customerPhone: string;
+  staffName: string;
+  depositReceiptStatus: 'pending';
+}
+
 export interface DepositInitiation {
   paymentId: string;
   method: DepositMethod;
@@ -124,14 +139,13 @@ export class PaymentService {
 
     const amountRial = Number(depositRial);
     const salonSettings = appointment.salon ?? {
-      depositMethod: 'gateway',
+      depositMethod: 'card_transfer',
       depositCardNumber: null,
       depositCardHolder: null,
       depositBankName: null,
     };
-    const method: DepositMethod = salonSettings.depositMethod === 'card_transfer'
-      ? 'card_transfer'
-      : 'gateway';
+    // Online gateway checkout is disabled for deposits until the next release.
+    const method: DepositMethod = 'card_transfer';
 
     if (method === 'card_transfer') {
       if (!salonSettings.depositCardNumber || !salonSettings.depositCardHolder) {
@@ -214,7 +228,7 @@ export class PaymentService {
     return {
       required: appointment.service.requiresDeposit === true,
       method: appointment.service.requiresDeposit
-        ? (appointment.salon.depositMethod === 'card_transfer' ? 'card_transfer' : 'gateway')
+        ? 'card_transfer'
         : null,
       amountRial: appointment.service.depositRial == null ? null : Number(appointment.service.depositRial),
       appointmentStatus: appointment.status,
@@ -303,6 +317,41 @@ export class PaymentService {
       status: receipt.status,
       data: Buffer.from(receipt.data),
     };
+  }
+
+  /** List receipt metadata that still needs an owner/admin decision. */
+  async listPendingManualReceipts(salonId: string): Promise<PendingManualReceipt[]> {
+    const receipts = await this.prisma.depositReceipt.findMany({
+      where: { salonId, status: 'pending' },
+      include: {
+        appointment: {
+          select: {
+            id: true,
+            startAt: true,
+            endAt: true,
+            status: true,
+            service: { select: { name: true } },
+            customer: { select: { fullName: true, phone: true } },
+            staffMember: { select: { fullName: true } },
+          },
+        },
+      },
+      orderBy: { uploadedAt: 'asc' },
+    });
+    return receipts.map((receipt) => ({
+      appointmentId: receipt.appointment.id,
+      receiptId: receipt.id,
+      amountRial: Number(receipt.amountRial),
+      uploadedAt: receipt.uploadedAt,
+      appointmentStatus: receipt.appointment.status,
+      startAt: receipt.appointment.startAt,
+      endAt: receipt.appointment.endAt,
+      serviceName: receipt.appointment.service.name,
+      customerName: receipt.appointment.customer.fullName,
+      customerPhone: receipt.appointment.customer.phone,
+      staffName: receipt.appointment.staffMember.fullName,
+      depositReceiptStatus: 'pending',
+    }));
   }
 
   /** Approve or reject a pending manual receipt. */

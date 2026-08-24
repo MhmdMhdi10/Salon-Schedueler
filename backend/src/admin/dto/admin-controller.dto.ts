@@ -36,6 +36,7 @@ const route = controllerRouteDto.bind(null, 'AdminController');
 export const ADMIN_CONTROLLER_DTO_DEFINITIONS = [
   route('admin.calendar.read', 'GET', '/api/salons/:id/calendar', IdParamDto, AdminCalendarQueryDto),
   route('admin.waitlist.read', 'GET', '/api/salons/:id/waitlist', IdParamDto, AdminWaitlistQueryDto),
+  route('admin.deposit-receipts.pending.read', 'GET', '/api/salons/:id/deposit-receipts/pending', IdParamDto),
   route('admin.customer.read', 'GET', '/api/salons/:id/customers/:customerId', controllerPathParams('id', 'customerId')),
   route('admin.appointment.reschedule-managed', 'POST', '/api/appointments/:id/reschedule-managed', AppointmentIdDto, AnyQueryDto, ManagedRescheduleDto),
   route('admin.appointment.customer.read', 'GET', '/api/appointments/:id/customer', AppointmentIdDto),

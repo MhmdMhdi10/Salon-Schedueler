@@ -45,7 +45,7 @@ export const AdminBookingPolicyDto = z.object({ bookingWindowDays: z.coerce.numb
 export const AdminBrandAccentDto = z.object({ brandAccent: z.string().trim().max(40).nullable().optional() }).passthrough();
 export const AdminDepositSettingsDto = z
   .object({
-    depositMethod: z.enum(['gateway', 'card_transfer']),
+    depositMethod: z.literal('card_transfer'),
     depositCardNumber: z.string().trim().max(32).optional(),
     depositCardHolder: z.string().trim().max(120).optional(),
     depositBankName: z.string().trim().max(80).optional(),

@@ -449,6 +449,17 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     }),
   );
 
+  // Card-transfer receipts are actionable regardless of the selected calendar
+  // date, so expose a salon-scoped queue for the owner/admin panel.
+  router.get(
+    '/salons/:id/deposit-receipts/pending',
+    requireRole('manage_appointments', (req) => ({ salonId: req.params.id })),
+    asyncRoute(async (req, res) => {
+      const receipts = await services.paymentService.listPendingManualReceipts(req.params.id);
+      res.status(200).json({ receipts });
+    }),
+  );
+
   /**
    * Return recent customer history visible from this salon's front desk.
    * CalendarService enforces the salon and optional stylist history scope;
@@ -1018,7 +1029,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     requireRole('configure_salon'),
     asyncRoute(async (req, res) => {
       const rawMethod = req.body?.depositMethod;
-      if (rawMethod !== 'gateway' && rawMethod !== 'card_transfer') {
+      if (rawMethod !== 'card_transfer') {
         res.status(400).json({ code: 'VALIDATION_ERROR', field: 'depositMethod' });
         return;
       }

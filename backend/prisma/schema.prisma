@@ -124,9 +124,9 @@ model Salon {
   // opaque accent key (e.g. "rose") resolved client-side against the curated ACCENTS.
   brandAccent       String?       @map("brand_accent")
   // Deposit checkout method for services that have `requiresDeposit=true`.
-  // `gateway` preserves the existing online payment flow; `card_transfer` asks
-  // the customer to transfer manually and upload a receipt for review.
-  depositMethod     String        @default("gateway") @map("deposit_method")
+  // Card transfer is currently the only available method; online gateway
+  // checkout remains reserved for a future release.
+  depositMethod     String        @default("card_transfer") @map("deposit_method")
   depositCardNumber String?       @map("deposit_card_number")
   depositCardHolder String?       @map("deposit_card_holder")
   depositBankName   String?       @map("deposit_bank_name")

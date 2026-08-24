@@ -65,7 +65,7 @@ const CALLBACK_BASE_URL = 'https://api.salon.app';
 
 describe('PaymentService', () => {
   describe('initiateDeposit (R10.2, R10.5)', () => {
-    it('creates a payment record and returns redirect URL', async () => {
+    it('creates a pending card-transfer payment with salon instructions', async () => {
       const gateway = createMockGateway();
       const prisma = createMockPrisma();
       const schedulingEngine = createMockSchedulingEngine();
@@ -78,6 +78,12 @@ describe('PaymentService', () => {
           id: 'svc-1',
           depositRial: BigInt(200000),
         },
+        salon: {
+          depositMethod: 'card_transfer',
+          depositCardNumber: '6037991234567890',
+          depositCardHolder: 'صاحب سالن',
+          depositBankName: 'بانک تست',
+        },
       });
 
       const service = new PaymentService(prisma, gateway, schedulingEngine, {
@@ -87,7 +93,11 @@ describe('PaymentService', () => {
       const result = await service.initiateDeposit('appt-1');
 
       expect(result.paymentId).toBe('pay-1');
-      expect(result.redirectUrl).toBe('https://sandbox.zarinpal.com/pg/StartPay/auth-123');
+      expect(result.method).toBe('card_transfer');
+      expect(result.cardNumber).toBe('6037991234567890');
+      expect(result.cardHolder).toBe('صاحب سالن');
+      expect(result.bankName).toBe('بانک تست');
+      expect(result.redirectUrl).toBeUndefined();
 
       // Payment record created with correct amount in Rial (R10.5)
       expect(prisma.payment.create).toHaveBeenCalledWith({
@@ -98,18 +108,8 @@ describe('PaymentService', () => {
         }),
       });
 
-      // Gateway request called with amount in Rial
-      expect(gateway.request).toHaveBeenCalledWith(
-        200000,
-        `${CALLBACK_BASE_URL}/payments/callback`,
-        expect.objectContaining({ description: expect.any(String) }),
-      );
-
-      // Authority stored on payment
-      expect(prisma.payment.update).toHaveBeenCalledWith({
-        where: { id: 'pay-1' },
-        data: { authority: 'auth-123' },
-      });
+      expect(gateway.request).not.toHaveBeenCalled();
+      expect(prisma.payment.update).not.toHaveBeenCalled();
     });
 
     it('throws if appointment not found', async () => {

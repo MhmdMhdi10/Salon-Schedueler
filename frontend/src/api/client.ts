@@ -694,6 +694,21 @@ export interface OwnerWaitlistEntry {
   serviceName?: string | null;
 }
 
+export interface PendingDepositReceipt {
+  appointmentId: string;
+  receiptId: string;
+  amountRial: number;
+  uploadedAt: string;
+  appointmentStatus: string;
+  startAt: string;
+  endAt: string;
+  serviceName: string;
+  customerName: string | null;
+  customerPhone: string;
+  staffName: string;
+  depositReceiptStatus: 'pending';
+}
+
 export const adminApi = {
   getCalendar: (
     salonId: string,
@@ -841,6 +856,10 @@ export const adminApi = {
       '/salons/' + salonId + '/waitlist' + (query ? '?' + query : ''),
     );
   },
+  getPendingDepositReceipts: (salonId: string) =>
+    request<{ receipts: PendingDepositReceipt[] }>(
+      `/salons/${salonId}/deposit-receipts/pending`,
+    ),
 
   /** The salon's money transactions (appointment + subscription payments), newest-first. */
   getTransactions: (salonId: string) =>
@@ -913,7 +932,7 @@ export const adminApi = {
 };
 
 export interface DepositSettings {
-  depositMethod: 'gateway' | 'card_transfer';
+  depositMethod: 'card_transfer';
   depositCardNumber: string | null;
   depositCardHolder: string | null;
   depositBankName: string | null;

@@ -66,6 +66,7 @@ import {
   DialogTitle,
   ErrorState,
   Num,
+  Money,
   Pagination,
   Skeleton,
   Select,
@@ -123,6 +124,9 @@ interface Appointment {
   locationAddress?: string;
   depositReceiptStatus?: string | null;
   depositPaymentStatus?: string | null;
+  depositAmountRial?: number | null;
+  depositReceiptUploadedAt?: string | null;
+  depositReceiptId?: string | null;
 }
 
 type SalonWorkMode =
@@ -408,6 +412,13 @@ function toAppointment(appt: unknown, fallbackId: string): Appointment {
       locationAddress: str(rec.locationAddress),
       depositReceiptStatus: str(rec.depositReceiptStatus) ?? null,
       depositPaymentStatus: str(rec.depositPaymentStatus) ?? null,
+      depositAmountRial: typeof rec.amountRial === 'number'
+        ? rec.amountRial
+        : typeof rec.depositAmountRial === 'number'
+          ? rec.depositAmountRial
+          : null,
+      depositReceiptUploadedAt: str(rec.uploadedAt) ?? str(rec.depositReceiptUploadedAt) ?? null,
+      depositReceiptId: str(rec.receiptId) ?? str(rec.depositReceiptId) ?? null,
     };
   }
   return { id: fallbackId };
@@ -3484,6 +3495,192 @@ function ApprovalQueue({
   );
 }
 
+// ─── Deposit Receipt Queue ───────────────────────────────────────────────────
+
+/**
+ * Card-transfer bookings stay `held` until their receipt is reviewed. They
+ * therefore cannot use the regular pending-booking queue; this queue keeps
+ * every uploaded receipt visible from the salon landing surface.
+ */
+function PendingDepositReceiptQueue({
+  salonId,
+  refreshKey,
+  onOpen,
+  className,
+}: {
+  salonId: string;
+  refreshKey?: number;
+  onOpen: (appointment: Appointment) => void;
+  className?: string;
+}) {
+  const { t } = useTranslation();
+  const [receipts, setReceipts] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const pagination = usePagination(receipts, 4);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setLoadError('');
+    // Keep embedded/test hosts that predate the receipt queue compatible.
+    if (typeof adminApi.getPendingDepositReceipts !== 'function') {
+      setReceipts([]);
+      setLoading(false);
+      return () => {
+        active = false;
+      };
+    }
+    adminApi
+      .getPendingDepositReceipts(salonId)
+      .then((response) => {
+        if (!active) return;
+        setReceipts((response.receipts ?? []).map((receipt, index) => toAppointment(receipt, `receipt-${index}`)));
+      })
+      .catch(() => {
+        if (!active) return;
+        setReceipts([]);
+        setLoadError('صف رسیدهای بیعانه بارگذاری نشد.');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [salonId, refreshKey]);
+
+  if (loading && receipts.length === 0 && !loadError) return null;
+  if (receipts.length === 0 && !loadError) return null;
+
+  const renderReceiptRow = (appointment: Appointment) => {
+    const start = clockTime(appointment.startAt);
+    const dateKey = appointment.startAt ? localDateKey(appointment.startAt) : null;
+    const dateText = dateKey
+      ? (() => {
+          const date = new Date(dateKey + 'T00:00:00');
+          const jalali = jalaliDayDisplay(date);
+          return `${getJalaliMonthName(jalali.jm)} ${jalali.jd} ${jalali.jy}`;
+        })()
+      : 'زمان نامشخص';
+    return (
+      <li
+        key={appointment.id}
+        className="grid gap-2 rounded-lg border border-border bg-surface p-2.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+      >
+        <div className="min-w-0">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+            <span className="inline-flex min-w-0 items-center gap-1.5 font-semibold text-text">
+              <CreditCard className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+              <span className="truncate">{appointment.serviceName ?? 'خدمت'}</span>
+            </span>
+            {appointment.customerName && (
+              <span className="inline-flex min-w-0 items-center gap-1 text-xs text-muted">
+                <User className="h-3 w-3 shrink-0" aria-hidden="true" />
+                <span className="truncate">{appointment.customerName}</span>
+              </span>
+            )}
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+            <span><Num value={dateText} /> · <Num value={start ?? '—'} /></span>
+            {appointment.staffName && <span>با {appointment.staffName}</span>}
+            {appointment.depositAmountRial != null && (
+              <Money amountRial={appointment.depositAmountRial} className="font-semibold text-primary" />
+            )}
+          </div>
+        </div>
+        <Button
+          type="button"
+          size="md"
+          variant="primary"
+          startIcon={<CreditCard className="h-4 w-4" />}
+          onClick={() => onOpen(appointment)}
+          className="min-h-10 w-full text-xs sm:w-auto"
+        >
+          بررسی رسید
+        </Button>
+      </li>
+    );
+  };
+
+  return (
+    <div className={cn('flex flex-col gap-3', className)}>
+      {loadError && (
+        <p role="alert" className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
+          {loadError}
+        </p>
+      )}
+      {receipts.length > 0 && (
+        <section
+          data-testid="owner-deposit-receipt-queue"
+          aria-label="رسیدهای بیعانه در انتظار بررسی"
+          className="rounded-xl border border-primary/40 bg-primary/5 p-3 sm:p-4"
+        >
+          <header className="flex items-center gap-2">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+              <CreditCard className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-sm font-bold text-text">رسیدهای بیعانه در انتظار بررسی</h2>
+                <span aria-live="polite" className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-bold text-primary tabular-nums">
+                  <Num value={receipts.length} />
+                </span>
+              </div>
+              <p className="mt-0.5 text-xs text-muted">رسید را ببین و بعد نوبت را تأیید یا رد کن.</p>
+            </div>
+          </header>
+          <ul role="list" className="mt-3 flex flex-col gap-1.5">
+            {receipts.slice(0, 2).map(renderReceiptRow)}
+          </ul>
+          {receipts.length > 2 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="md"
+              onClick={() => {
+                pagination.resetPage();
+                setDialogOpen(true);
+              }}
+              className="mt-3 w-full text-xs"
+            >
+              مشاهده همه رسیدها (<Num value={receipts.length} />)
+            </Button>
+          )}
+        </section>
+      )}
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="!max-w-xl !p-3 sm:!p-5">
+          <div className="pe-10">
+            <DialogTitle className="text-base sm:text-lg">رسیدهای بیعانه</DialogTitle>
+            <DialogDescription>رسید هر مشتری را بررسی و نتیجه را ثبت کن.</DialogDescription>
+          </div>
+          <ul role="list" className="mt-4 flex flex-col gap-1.5">
+            {pagination.pageItems.map(renderReceiptRow)}
+          </ul>
+          <Pagination
+            page={pagination.page}
+            pageSize={pagination.pageSize}
+            total={pagination.total}
+            onPageChange={pagination.goToPage}
+            ariaLabel={t('owner.calendar.depositReceiptPagination', { defaultValue: 'صفحه‌بندی رسیدهای بیعانه' })}
+            testId="owner-deposit-receipt-pagination"
+            compact
+            className="mt-3"
+          />
+          <div className="mt-3 flex justify-end border-t border-border pt-3">
+            <DialogClose asChild>
+              <Button variant="ghost" className="w-full sm:w-auto">بستن</Button>
+            </DialogClose>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 /**
@@ -4429,6 +4626,15 @@ export function OwnerCalendarPage() {
       />
 
       {role !== 'Stylist' && (
+        <PendingDepositReceiptQueue
+          salonId={salonId}
+          refreshKey={reloadToken}
+          onOpen={openAppointment}
+          className="owner-calendar-approval"
+        />
+      )}
+
+      {role !== 'Stylist' && (
         <OwnerWaitlistCard
           salonId={salonId}
           refreshKey={reloadToken}
@@ -4579,6 +4785,12 @@ export function OwnerCalendarPage() {
         }}
         onMove={openMoveDialog}
         onRebook={openRebookAppointment}
+        onDepositReviewed={(status) => {
+          if (status === 'approved' || status === 'rejected' || status === 'expired') {
+            setSelectedAppointment(null);
+            setReloadToken((value) => value + 1);
+          }
+        }}
       />
       <MoveAppointmentDialog
         open={Boolean(moveAppointment)}

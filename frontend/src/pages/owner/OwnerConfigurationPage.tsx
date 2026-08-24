@@ -75,7 +75,7 @@ type LoadStatus = 'loading' | 'success' | 'error';
 type ConfigurationView = 'all' | 'team';
 
 const DEFAULT_DEPOSIT_SETTINGS: DepositSettings = {
-  depositMethod: 'gateway',
+  depositMethod: 'card_transfer',
   depositCardNumber: null,
   depositCardHolder: null,
   depositBankName: null,
@@ -1206,8 +1206,8 @@ function DepositSettingsSection({
           setFormError('');
         }}
         options={[
-          { value: 'gateway', label: 'پرداخت آنلاین از درگاه' },
           { value: 'card_transfer', label: 'کارت‌به‌کارت و ارسال رسید' },
+          { value: 'gateway', label: 'پرداخت آنلاین از درگاه (به‌زودی)', disabled: true },
         ]}
       />
       {method === 'card_transfer' && (

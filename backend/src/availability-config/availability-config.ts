@@ -10,7 +10,7 @@ export interface WorkingHoursInput {
 }
 
 export interface SalonDepositSettings {
-  depositMethod: 'gateway' | 'card_transfer';
+  depositMethod: 'card_transfer';
   depositCardNumber: string | null;
   depositCardHolder: string | null;
   depositBankName: string | null;
@@ -47,7 +47,9 @@ export class AvailabilityConfig {
     });
     if (!salon) throw new Error('SALON_NOT_FOUND');
     return {
-      depositMethod: salon.depositMethod === 'card_transfer' ? 'card_transfer' : 'gateway',
+      // Gateway checkout is temporarily disabled for deposits. Keep any
+      // legacy database value from re-enabling it through the owner UI.
+      depositMethod: 'card_transfer',
       depositCardNumber: salon.depositCardNumber,
       depositCardHolder: salon.depositCardHolder,
       depositBankName: salon.depositBankName,
@@ -74,7 +76,7 @@ export class AvailabilityConfig {
       },
     });
     return {
-      depositMethod: salon.depositMethod === 'card_transfer' ? 'card_transfer' : 'gateway',
+      depositMethod: 'card_transfer',
       depositCardNumber: salon.depositCardNumber,
       depositCardHolder: salon.depositCardHolder,
       depositBankName: salon.depositBankName,

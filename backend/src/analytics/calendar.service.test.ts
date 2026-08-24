@@ -159,6 +159,12 @@ describe('CalendarService', () => {
           service: { select: { name: true } },
           customer: { select: { fullName: true, phone: true } },
           staffMember: { select: { fullName: true } },
+          depositReceipt: { select: { status: true } },
+          payments: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: { status: true },
+          },
         },
         orderBy: { startAt: 'asc' },
       });

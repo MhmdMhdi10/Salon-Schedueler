@@ -140,12 +140,14 @@ export function AppointmentDetailsSheet({
   onOpenChange,
   onMove,
   onRebook,
+  onDepositReviewed,
 }: {
   open: boolean;
   appointment: CalendarAppointmentLike | null;
   onOpenChange: (open: boolean) => void;
   onMove: (appointment: CalendarAppointmentLike) => void;
   onRebook: (appointment: CalendarAppointmentLike) => void;
+  onDepositReviewed?: (status: string) => void;
 }) {
   const [overview, setOverview] = useState<AppointmentCustomerOverview | null>(null);
   const [loading, setLoading] = useState(false);
@@ -290,6 +292,7 @@ export function AppointmentDetailsSheet({
           : current,
       );
       setReceipt((current) => (current ? { ...current, status: result.receiptStatus } : current));
+      onDepositReviewed?.(result.receiptStatus);
     } catch {
       setReceiptError('ثبت نتیجه رسید انجام نشد؛ دوباره تلاش کن.');
     } finally {
