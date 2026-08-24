@@ -3536,7 +3536,9 @@ function PendingDepositReceiptQueue({
       .getPendingDepositReceipts(salonId)
       .then((response) => {
         if (!active) return;
-        setReceipts((response.receipts ?? []).map((receipt, index) => toAppointment(receipt, `receipt-${index}`)));
+        setReceipts((response.receipts ?? []).map((receipt, index) =>
+          toAppointment(receipt, receipt.appointmentId || receipt.receiptId || `receipt-${index}`),
+        ));
       })
       .catch(() => {
         if (!active) return;
