@@ -1,70 +1,56 @@
 import { useEffect, useState } from 'react';
 import { Download, Smartphone } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import {
-  Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from '../components/ui';
-import { usePwaInstall } from './usePwaInstall';
+import { Button, Dialog, DialogContent, DialogDescription, DialogTitle } from '../components/ui';
+import { usePwaInstall, type PwaInstallPlatform } from './usePwaInstall';
 
-const DISMISS_KEY = 'ara-pwa-install-prompt-dismissed-v1';
-const DISMISS_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
-
-function wasDismissedRecently(): boolean {
-  try {
-    const value = Number(window.localStorage.getItem(DISMISS_KEY));
-    return Number.isFinite(value) && Date.now() - value < DISMISS_COOLDOWN_MS;
-  } catch {
-    return false;
-  }
-}
-
-function rememberDismissal(): void {
-  try {
-    window.localStorage.setItem(DISMISS_KEY, String(Date.now()));
-  } catch {
-    // Private browsing or blocked storage should never break the install CTA.
-  }
-}
-
-function isIosDevice(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  return (
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-  );
-}
+const instructionKeys: Record<PwaInstallPlatform, string> = {
+  ios: 'ios',
+  android: 'android',
+  'android-samsung': 'androidSamsung',
+  'android-firefox': 'androidFirefox',
+  'desktop-chromium': 'desktopChromium',
+  'desktop-safari': 'desktopSafari',
+  other: 'other',
+};
 
 /**
- * First-visit PWA invitation for public app-shell pages.
+ * App-level PWA invitation for every route, including the landing page,
+ * booking funnel, and owner panel.
  *
  * Browsers do not allow `beforeinstallprompt.prompt()` without a user gesture,
- * so the dialog opens automatically and the primary button triggers the native
- * browser install sheet. Safari/iOS falls back to concise manual instructions.
+ * so the floating CTA triggers the native browser install sheet directly when
+ * available. Browsers without that event get device-specific manual instructions
+ * after the user opens the CTA.
  */
 export function PwaInstallPrompt() {
   const { t } = useTranslation();
-  const { installed, canPrompt, promptInstall } = usePwaInstall();
+  const { installed, canPrompt, secureContext, platform, promptInstall } = usePwaInstall();
   const [open, setOpen] = useState(false);
   const [showManualHelp, setShowManualHelp] = useState(false);
-  const [ios] = useState(isIosDevice);
 
-  useEffect(() => {
-    if (installed || wasDismissedRecently()) return;
-    const timer = window.setTimeout(() => setOpen(true), 350);
-    return () => window.clearTimeout(timer);
-  }, [installed]);
+  const instructions = t(`app.pwaInstall.instructions.${instructionKeys[platform]}`, {
+    returnObjects: true,
+  }) as unknown as { title: string; steps: string[] };
 
   useEffect(() => {
     if (installed) setOpen(false);
   }, [installed]);
 
-  const dismiss = () => {
-    rememberDismissal();
-    setOpen(false);
+  const dismiss = () => setOpen(false);
+
+  const handleInstallButtonClick = async () => {
+    if (canPrompt) {
+      const outcome = await promptInstall();
+      if (outcome === 'unavailable') {
+        setShowManualHelp(true);
+        setOpen(true);
+      }
+      return;
+    }
+
+    setShowManualHelp(true);
+    setOpen(true);
   };
 
   const handleInstall = async () => {
@@ -79,55 +65,112 @@ export function PwaInstallPrompt() {
   };
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (nextOpen) setOpen(true);
-        else dismiss();
-      }}
-    >
-      <DialogContent className="p-5 sm:p-6">
-        <div className="flex items-start gap-3 pe-8">
-          <div
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-pill bg-primary/10 text-primary"
-            aria-hidden="true"
+    <>
+      {!installed && (
+        <div className="pointer-events-none fixed inset-x-3 bottom-3 z-nav flex justify-end pb-[env(safe-area-inset-bottom)] sm:end-5 sm:bottom-5 sm:inset-x-auto">
+          <Button
+            className="pointer-events-auto shadow-2"
+            onClick={() => void handleInstallButtonClick()}
+            startIcon={<Download className="h-4 w-4" />}
+            aria-haspopup={canPrompt ? undefined : 'dialog'}
           >
-            <Smartphone className="h-6 w-6" />
-          </div>
-          <div>
-            <DialogTitle>{t('app.pwaInstall.title')}</DialogTitle>
-            <DialogDescription>{t('app.pwaInstall.description')}</DialogDescription>
-          </div>
+            {t('app.pwaInstall.openButton')}
+          </Button>
         </div>
+      )}
 
-        <ul className="mt-5 grid gap-2 text-sm text-muted">
-          <li className="flex items-center gap-2 rounded-md bg-surface px-3 py-2">
-            <span className="text-primary" aria-hidden="true">✓</span>
-            {t('app.pwaInstall.benefitFast')}
-          </li>
-          <li className="flex items-center gap-2 rounded-md bg-surface px-3 py-2">
-            <span className="text-primary" aria-hidden="true">✓</span>
-            {t('app.pwaInstall.benefitApp')}
-          </li>
-        </ul>
+      <Dialog
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (nextOpen) setOpen(true);
+          else dismiss();
+        }}
+      >
+        <DialogContent className="p-5 sm:p-6">
+          <div className="flex items-start gap-3 pe-8">
+            <div
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-pill bg-primary/10 text-primary"
+              aria-hidden="true"
+            >
+              <Smartphone className="h-6 w-6" />
+            </div>
+            <div>
+              <DialogTitle>{t('app.pwaInstall.title')}</DialogTitle>
+              <DialogDescription>{t('app.pwaInstall.description')}</DialogDescription>
+            </div>
+          </div>
 
-        {showManualHelp && (
-          <p role="note" className="mt-4 rounded-md border border-border bg-surface px-3 py-2 text-xs leading-6 text-muted">
-            <span className="font-semibold text-text">{t('app.pwaInstall.manualTitle')}: </span>
-            {ios ? t('app.pwaInstall.iosInstructions') : t('app.pwaInstall.manualInstructions')}
+          <ul className="mt-5 grid gap-2 text-sm text-muted">
+            <li className="flex items-center gap-2 rounded-md bg-surface px-3 py-2">
+              <span className="text-primary" aria-hidden="true">
+                ✓
+              </span>
+              {t('app.pwaInstall.benefitFast')}
+            </li>
+            <li className="flex items-center gap-2 rounded-md bg-surface px-3 py-2">
+              <span className="text-primary" aria-hidden="true">
+                ✓
+              </span>
+              {t('app.pwaInstall.benefitApp')}
+            </li>
+          </ul>
+
+          <p
+            role="note"
+            className="mt-4 rounded-md border border-border bg-surface px-3 py-2 text-xs leading-6 text-muted"
+          >
+            {secureContext
+              ? canPrompt
+                ? t('app.pwaInstall.nativeHint')
+                : t('app.pwaInstall.manualHint')
+              : t('app.pwaInstall.secureContextRequired')}
           </p>
-        )}
 
-        <div className="mt-5 grid gap-2">
-          <Button size="lg" fullWidth onClick={() => void handleInstall()} startIcon={<Download className="h-4 w-4" />}>
-            {canPrompt ? t('app.pwaInstall.install') : t('app.pwaInstall.showInstructions')}
-          </Button>
-          <Button variant="ghost" fullWidth onClick={dismiss}>
-            {t('app.pwaInstall.later')}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+          {secureContext && !canPrompt && platform === 'android' && (
+            <p role="note" className="mt-3 text-xs leading-6 text-muted">
+              {t('app.pwaInstall.androidPromptHint')}
+            </p>
+          )}
+
+          {secureContext && (!canPrompt || showManualHelp) && (
+            <div className="mt-4 rounded-md border border-border bg-surface px-3 py-3 text-sm text-muted">
+              <p className="font-semibold text-text">{instructions.title}</p>
+              <ol className="mt-2 grid list-decimal gap-1.5 ps-5 leading-6">
+                {instructions.steps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {secureContext && canPrompt && !showManualHelp && (
+            <button
+              type="button"
+              className="mt-3 text-start text-xs font-medium text-primary underline-offset-2 hover:underline"
+              onClick={() => setShowManualHelp(true)}
+            >
+              {t('app.pwaInstall.showManualHelp')}
+            </button>
+          )}
+
+          <div className="mt-5 grid gap-2">
+            {canPrompt && (
+              <Button
+                size="lg"
+                fullWidth
+                onClick={() => void handleInstall()}
+                startIcon={<Download className="h-4 w-4" />}
+              >
+                {t('app.pwaInstall.install')}
+              </Button>
+            )}
+            <Button variant="ghost" fullWidth onClick={dismiss}>
+              {t('app.pwaInstall.later')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

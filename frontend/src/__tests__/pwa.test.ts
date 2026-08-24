@@ -17,6 +17,7 @@ describe('PWA Configuration', () => {
       // `/account` is role-aware: customers open their dashboard, staff open
       // the owner panel, and signed-out users are sent to authentication.
       expect(manifest.start_url).toBe('/account');
+      expect(manifest.id).toBe('/');
       expect(manifest.display).toBe('standalone');
     });
 
@@ -70,6 +71,12 @@ describe('PWA Configuration', () => {
 
     it('includes theme-color meta', () => {
       expect(htmlContent).toContain('name="theme-color"');
+    });
+
+    it('includes iOS home-screen metadata and icon', () => {
+      expect(htmlContent).toContain('name="apple-mobile-web-app-capable"');
+      expect(htmlContent).toContain('name="apple-mobile-web-app-title"');
+      expect(htmlContent).toContain('rel="apple-touch-icon"');
     });
 
     it('sets RTL direction and Persian lang', () => {

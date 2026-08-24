@@ -74,9 +74,9 @@ describe('ThemeProvider', () => {
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
   });
 
-  it('defaults to dark even when the OS prefers dark (no auto-follow)', () => {
-    // The Ara storefront intentionally starts in its dark brand surface
-    // regardless of the visitor's OS scheme; users can opt in to light with
+  it('defaults to light even when the OS prefers dark (no auto-follow)', () => {
+    // The Ara storefront intentionally starts in its light brand surface
+    // regardless of the visitor's OS scheme; users can opt in to dark with
     // the explicit toggle (the choice then persists).
     mockMatchMedia(true); // OS prefers dark, nothing stored.
 
@@ -86,12 +86,12 @@ describe('ThemeProvider', () => {
       </ThemeProvider>,
     );
 
-    expect(screen.getByTestId('theme')).toHaveTextContent('dark');
+    expect(screen.getByTestId('theme')).toHaveTextContent('light');
     expect(screen.getByTestId('explicit')).toHaveTextContent('false');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
   });
 
-  it('defaults to dark when nothing is stored and the OS prefers light', () => {
+  it('defaults to light when nothing is stored and the OS prefers light', () => {
     mockMatchMedia(false);
 
     render(
@@ -100,8 +100,8 @@ describe('ThemeProvider', () => {
       </ThemeProvider>,
     );
 
-    expect(screen.getByTestId('theme')).toHaveTextContent('dark');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    expect(screen.getByTestId('theme')).toHaveTextContent('light');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
   });
 
   it('sets and updates the theme-color meta to match the active theme', () => {
@@ -120,9 +120,8 @@ describe('ThemeProvider', () => {
   });
 
   it('does NOT auto-follow OS scheme changes (visitor must opt in)', () => {
-    // The OS-follow listener was intentionally removed so a dark-OS visitor
-    // never sees a stark night-mode brand on first paint and a system flip
-    // can never silently override the warm porcelain default.
+    // The OS-follow listener was intentionally removed so a light-first visitor
+    // never gets a silent theme change when the system scheme flips.
     const media = mockMatchMedia(false);
 
     render(
@@ -130,11 +129,11 @@ describe('ThemeProvider', () => {
         <ThemeReadout />
       </ThemeProvider>,
     );
-    expect(screen.getByTestId('theme')).toHaveTextContent('dark');
+    expect(screen.getByTestId('theme')).toHaveTextContent('light');
 
     act(() => media.emit(true));
-    expect(screen.getByTestId('theme')).toHaveTextContent('dark');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    expect(screen.getByTestId('theme')).toHaveTextContent('light');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
   });
 
   it('stops following the OS once a choice is persisted', () => {
@@ -192,16 +191,16 @@ describe('ThemeToggle', () => {
       </ThemeProvider>,
     );
 
-    expect(screen.getByTestId('theme')).toHaveTextContent('dark');
+    expect(screen.getByTestId('theme')).toHaveTextContent('light');
     const toggle = screen.getByRole('button');
-    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
 
     fireEvent.click(toggle);
 
-    expect(screen.getByTestId('theme')).toHaveTextContent('light');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
-    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('light');
-    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByTestId('theme')).toHaveTextContent('dark');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('exposes an accessible action label that reflects the next state', () => {
@@ -213,13 +212,13 @@ describe('ThemeToggle', () => {
       </ThemeProvider>,
     );
 
-    // Dark active → offers switching to light.
-    expect(screen.getByRole('button', { name: 'تغییر به حالت روشن' })).toBeInTheDocument();
+    // Light active → offers switching to dark.
+    expect(screen.getByRole('button', { name: 'تغییر به حالت تاریک' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button'));
 
-    // Light active → offers switching to dark.
-    expect(screen.getByRole('button', { name: 'تغییر به حالت تاریک' })).toBeInTheDocument();
+    // Dark active → offers switching to light.
+    expect(screen.getByRole('button', { name: 'تغییر به حالت روشن' })).toBeInTheDocument();
   });
 
   it('has no serious/critical a11y violations', async () => {

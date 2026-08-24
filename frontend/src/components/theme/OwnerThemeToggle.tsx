@@ -15,11 +15,9 @@ export interface OwnerThemeToggleProps {
 /**
  * Owner-panel scoped theme toggle (Task 7.7; Req 8.1).
  *
- * Unlike the global `ThemeToggle` which consumes the app-wide ThemeContext, this
- * component operates on the owner-specific theme state managed by `OwnerShell`.
- * The owner panel defaults to dark (NYC SaaS aesthetic) and persists its choice
- * to a separate localStorage key (`owner-theme`) so it doesn't affect the
- * customer-facing light-first theme.
+ * Unlike the global `ThemeToggle`, this component is rendered by the owner shell
+ * with the shared app-wide ThemeContext. The owner panel therefore starts in the
+ * same light-first theme and persists its choice through the shared theme key.
  *
  * Built on `IconButton` — keeps ≥44×44 target, focus-visible ring, and variant
  * styling. Sun and moon are universal icons — not mirrored in RTL.

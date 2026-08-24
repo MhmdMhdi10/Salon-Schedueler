@@ -8,6 +8,7 @@ import { RouteProgress } from './components/layout/RouteProgress';
 import { PageTransition } from './components/ui/Motion';
 import { ToastProvider } from './components/ui/Toast';
 import { AuthProvider, useAuth } from './auth/AuthContext';
+import { PwaInstallPrompt } from './pwa/PwaInstallPrompt';
 
 /**
  * Root component for the Salon Booking PWA.
@@ -387,6 +388,7 @@ export function App() {
                     </Route>
                   </Routes>
                 </Suspense>
+                <PwaInstallPrompt />
               </div>
             </ToastProvider>
           </AuthProvider>

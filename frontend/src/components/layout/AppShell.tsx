@@ -6,7 +6,6 @@ import { ThemeToggle } from '../theme/ThemeToggle';
 import { HeaderAuthNav } from './HeaderAuthNav';
 import { toPersianDigits } from '../ui/Num';
 import { cn } from '../ui/cn';
-import { PwaInstallPrompt } from '../../pwa/PwaInstallPrompt';
 
 /** Stable id the skip link targets and the `<main>` exposes. */
 export const MAIN_CONTENT_ID = 'main-content';
@@ -76,7 +75,6 @@ export function AppShell({ children, className, headerVariant }: AppShellProps) 
         : 'default';
   const variant = headerVariant ?? derived;
   const isBare = variant === 'bare';
-  const isOwnerLanding = pathname === '/';
   const hideFooter = pathname === '/account';
 
   return (
@@ -116,9 +114,6 @@ export function AppShell({ children, className, headerVariant }: AppShellProps) 
         {children}
       </main>
 
-      {/* Keep the owner-acquisition hero focused; install can be offered after
-          the user enters the product instead of obscuring the first CTA. */}
-      {isBare || isOwnerLanding ? null : <PwaInstallPrompt />}
       {isBare || hideFooter ? null : <PublicFooter />}
     </div>
   );
