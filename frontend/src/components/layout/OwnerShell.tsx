@@ -13,6 +13,7 @@ import { OwnerInboxBell } from '../owner/OwnerInboxBell';
 import { OwnerSetupAlert } from '../owner/OwnerSetupAlert';
 import { OWNER_NAV, ownerNavForRole, type OwnerNavItem } from '../owner/ownerNav';
 import { OwnerBottomTabs } from './OwnerBottomTabs';
+import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import type { OwnerRole } from '../../api/client';
 
@@ -198,6 +199,7 @@ export function OwnerShell({
             <BrandLogo className="h-5 w-auto sm:h-6" />
           </Link>
           <div className="flex shrink-0 items-center gap-0 sm:gap-2">
+            <WorkspaceSwitcher surface="owner" />
             <OwnerInboxBell />
             <OwnerThemeToggle theme={theme} onToggle={toggleTheme} />
             <Button

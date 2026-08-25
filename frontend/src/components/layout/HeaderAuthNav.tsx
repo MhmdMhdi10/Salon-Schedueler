@@ -41,6 +41,8 @@ export type HeaderAuthNavTone = 'default' | 'inverse';
 
 export interface HeaderAuthNavProps {
   tone?: HeaderAuthNavTone;
+  /** The surrounding shell owns the customer account link when false. */
+  showCustomerNav?: boolean;
 }
 
 const linkClass =
@@ -70,7 +72,10 @@ const linkClass =
  * the app shell. Outside an `AuthProvider` (isolated tests) the context's
  * default anonymous value is used, so it renders the signed-out state safely.
  */
-export function HeaderAuthNav({ tone = 'default' }: HeaderAuthNavProps = {}) {
+export function HeaderAuthNav({
+  tone = 'default',
+  showCustomerNav = true,
+}: HeaderAuthNavProps = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { status, role, isStaff, isPlatformAdmin, signOut } = useAuth();
@@ -109,7 +114,9 @@ export function HeaderAuthNav({ tone = 'default' }: HeaderAuthNavProps = {}) {
             to,
           }),
         )
-      : [...CUSTOMER_NAV];
+      : showCustomerNav
+        ? [...CUSTOMER_NAV]
+        : [];
 
   const roleLabel = t(`app.role.${role ?? 'Customer'}`);
 

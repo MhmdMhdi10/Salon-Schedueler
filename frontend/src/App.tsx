@@ -223,7 +223,7 @@ function AdminEntryPage() {
   return <Navigate to={isStaff ? '/owner' : '/account'} replace />;
 }
 
-/** Customer-only app surface. Staff and platform operators stay in their own panel. */
+/** Customer-facing self-service surface. Staff can use it for personal bookings too. */
 function CustomerOnlyRoute() {
   const { status, isCustomer, isStaff, isPlatformAdmin } = useAuth();
   const location = useLocation();

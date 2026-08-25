@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Building2,
   CalendarDays,
   CalendarPlus,
   ChevronLeft,
@@ -20,6 +21,7 @@ import {
 } from '../api/client';
 import { usePagination } from '../hooks/usePagination';
 import { SeoHead } from '../components/seo';
+import { WorkspaceSwitcher } from '../components/layout/WorkspaceSwitcher';
 import {
   Badge,
   Button,
@@ -716,6 +718,36 @@ export function CustomerDashboardPage() {
             نوبت‌های آینده‌ات را ببین و از سالن‌های موردعلاقه‌ات دوباره رزرو کن.
           </p>
         </header>
+
+        <Card
+          as="section"
+          data-testid="customer-workspace-card"
+          className="border-primary/20 bg-primary/[0.04]"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-start gap-3">
+              <span
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                aria-hidden="true"
+              >
+                {isStaff ? <Building2 className="h-5 w-5" /> : <Store className="h-5 w-5" />}
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-base font-bold text-text">
+                  {isStaff
+                    ? 'رزرو شخصی و پنل سالن، هر دو در دسترس توست'
+                    : 'سالن داری؟ از همین‌جا ثبتش کن'}
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-muted">
+                  {isStaff
+                    ? 'برای رزرو نوبت از این حساب استفاده کن؛ برای مدیریت سالن به پنل سالن برو.'
+                    : 'با ثبت سالن، پنل مدیریت و لینک رزرو اختصاصی خودت را بساز.'}
+                </p>
+              </div>
+            </div>
+            <WorkspaceSwitcher variant="card" />
+          </div>
+        </Card>
 
         {actionError && (
           <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">

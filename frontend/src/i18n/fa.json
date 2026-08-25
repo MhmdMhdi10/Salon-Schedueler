@@ -14,6 +14,12 @@
       "business": "برای کسب‌وکارها",
       "account": "حساب من"
     },
+    "workspace": {
+      "navigation": "جابه‌جایی پنل",
+      "userPanel": "پنل کاربری",
+      "salonPanel": "پنل سالن",
+      "registerSalon": "ثبت سالن"
+    },
     "role": {
       "Owner": "صاحب سالن",
       "Admin": "ادمین",

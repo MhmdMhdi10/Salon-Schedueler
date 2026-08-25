@@ -4,8 +4,10 @@ import { LogIn } from 'lucide-react';
 import { BrandLogo } from '../brand';
 import { ThemeToggle } from '../theme/ThemeToggle';
 import { HeaderAuthNav } from './HeaderAuthNav';
+import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import { toPersianDigits } from '../ui/Num';
 import { cn } from '../ui/cn';
+import { useAuth } from '../../auth/AuthContext';
 
 /** Stable id the skip link targets and the `<main>` exposes. */
 export const MAIN_CONTENT_ID = 'main-content';
@@ -145,6 +147,7 @@ function BrandMark({ inverse = false }: { inverse?: boolean }) {
  */
 function DefaultHeader() {
   const { t } = useTranslation();
+  const { status, isPlatformAdmin } = useAuth();
   return (
     <header className="sticky top-0 z-nav w-full border-b border-border bg-elevated text-text">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-4 sm:py-3">
@@ -152,24 +155,30 @@ function DefaultHeader() {
           <BrandMark />
         </nav>
         <div className="flex min-w-0 items-center gap-0.5 sm:gap-2">
-          <Link
-            to="/account"
-            className="flex min-h-10 shrink-0 items-center rounded-md px-2 py-2 text-xs font-semibold text-text no-underline transition-colors duration-fast ease-standard hover:bg-surface sm:px-3 sm:text-sm"
-          >
-            سالن‌های من
-          </Link>
-          <HeaderAuthNav />
-          <Link
-            to="/business/register"
-            className={cn(
-              'hidden rounded-md px-3 py-2 text-sm font-semibold text-text no-underline sm:inline-flex',
-              'transition-colors duration-fast ease-standard hover:bg-surface',
-              'outline-none focus-visible:outline focus-visible:outline-2',
-              'focus-visible:outline-offset-2 focus-visible:outline-focus',
-            )}
-          >
-            ثبت سالن
-          </Link>
+          {!isPlatformAdmin && (
+            <Link
+              to="/account"
+              className="flex min-h-10 shrink-0 items-center rounded-md px-2 py-2 text-xs font-semibold text-text no-underline transition-colors duration-fast ease-standard hover:bg-surface sm:px-3 sm:text-sm"
+            >
+              {t('app.account')}
+            </Link>
+          )}
+          {status === 'authenticated' && !isPlatformAdmin ? (
+            <WorkspaceSwitcher />
+          ) : (
+            <Link
+              to="/business/register"
+              className={cn(
+                'hidden rounded-md px-3 py-2 text-sm font-semibold text-text no-underline sm:inline-flex',
+                'transition-colors duration-fast ease-standard hover:bg-surface',
+                'outline-none focus-visible:outline focus-visible:outline-2',
+                'focus-visible:outline-offset-2 focus-visible:outline-focus',
+              )}
+            >
+              ثبت سالن
+            </Link>
+          )}
+          <HeaderAuthNav showCustomerNav={false} />
           <ThemeToggle />
         </div>
       </div>

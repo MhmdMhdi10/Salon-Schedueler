@@ -19,7 +19,8 @@ import {
  * The authenticated identity as the app sees it. Mirrors the backend
  * `Principal`, but `role` is optional: a plain customer token carries no role
  * (they are not subject to the staff RBAC matrix), while a staff token carries
- * the staff `role` and `staffMemberId`.
+ * the staff `role`, `staffMemberId`, and the same customer subject id used by
+ * customer self-service routes.
  */
 export interface AuthPrincipal {
   id: string;
@@ -38,7 +39,7 @@ export interface AuthContextValue {
   principal: AuthPrincipal | null;
   /** Staff role when the principal is a staff member, else undefined. */
   role: PrincipalRole | undefined;
-  /** True when the session is an authenticated customer (no staff role). */
+  /** True when the session can use customer self-service (customer or staff). */
   isCustomer: boolean;
   /** True when the session is an authenticated staff member (has a role). */
   isStaff: boolean;
@@ -77,8 +78,10 @@ const AuthContext = createContext<AuthContextValue>(DEFAULT_VALUE);
  * App-wide authentication provider (R2.2). On mount it restores the in-memory
  * access token from the HttpOnly refresh cookie and derives the principal from
  * `GET /me`, so every surface — not just the owner panel — knows who is signed
- * in and with which role. This is what lets the header render role-aware
- * navigation (customer pages for customers; the management panel for staff).
+ * in and with which role. Staff sessions remain customer-capable because the
+ * backend issues their token from the matching customer subject as well. This
+ * is what lets the header render role-aware navigation (customer pages for
+ * customers; the management panel for staff).
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
@@ -132,9 +135,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       principal,
       role,
       isStaff:
-        status === 'authenticated' &&
-        (role === 'Owner' || role === 'Admin' || role === 'Stylist'),
-      isCustomer: status === 'authenticated' && role == null,
+        status === 'authenticated' && (role === 'Owner' || role === 'Admin' || role === 'Stylist'),
+      isCustomer: status === 'authenticated' && role !== 'PlatformAdmin',
       isPlatformAdmin,
       refresh,
       signOut,

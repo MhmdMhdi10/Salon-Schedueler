@@ -36,6 +36,13 @@ export { RouteLoader, ROUTE_LOADER_TESTID } from './RouteLoader';
 export type { RouteLoaderProps } from './RouteLoader';
 export { RouteProgress } from './RouteProgress';
 
+export { WorkspaceSwitcher } from './WorkspaceSwitcher';
+export type {
+  WorkspaceSwitcherProps,
+  WorkspaceSwitcherVariant,
+  WorkspaceSurface,
+} from './WorkspaceSwitcher';
+
 /**
  * Editorial layout primitives (design §3; R1.4, R2.2, R3.4) — thin CSS-grid
  * wrappers (logical properties + tokens only) that let surfaces escape the
