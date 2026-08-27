@@ -14,7 +14,11 @@ import type {
   BotChatRef,
   BotRecipient,
 } from '../notifications/bot-channel.js';
-import type { SmsProvider } from '../auth/sms-provider.interface.js';
+import type {
+  SmsProvider,
+  SmsTemplateProvider,
+} from '../auth/sms-provider.interface.js';
+import { MELLI_PAYAMAK_TEMPLATE_BODY_IDS } from '../notifications/melipayamak-template-body-ids.js';
 import type {
   WaitlistRepository,
   WaitlistNotifier,
@@ -425,13 +429,22 @@ export class PrismaWaitlistRepository implements WaitlistRepository {
  * configured SMS provider.
  */
 export class PrismaWaitlistNotifier implements WaitlistNotifier {
-  constructor(private readonly smsProvider: SmsProvider) {}
+  constructor(
+    private readonly smsProvider: SmsProvider,
+    private readonly templateProvider?: SmsTemplateProvider,
+  ) {}
 
   async notifyWaitlistCustomer(phone: string, serviceName: string): Promise<void> {
-    await this.smsProvider.send(
-      phone,
-      `یک نوبت برای ${serviceName} آزاد شد. برای رزرو اقدام کنید.`,
-    );
+    const message = `یک نوبت برای ${serviceName} آزاد شد. برای رزرو اقدام کنید.`;
+    if (this.templateProvider) {
+      await this.templateProvider.sendTemplate(
+        phone,
+        MELLI_PAYAMAK_TEMPLATE_BODY_IDS.waitlist,
+        [serviceName],
+      );
+      return;
+    }
+    await this.smsProvider.send(phone, message);
   }
 }
 

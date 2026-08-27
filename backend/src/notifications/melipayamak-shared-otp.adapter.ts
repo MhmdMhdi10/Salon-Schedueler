@@ -1,19 +1,24 @@
 import * as crypto from 'crypto';
 import type { OtpDeliveryResult, OtpProvider } from '../auth/otp-provider.interface';
+import type {
+  SmsDeliveryResult,
+  SmsTemplateProvider,
+} from '../auth/sms-provider.interface';
 import {
   DEFAULT_PROVIDER_TIMEOUT_MS,
   fetchWithTimeout,
   logDeliveryOutcome,
   toErrorMessage,
 } from './provider-http';
+import { MELLI_PAYAMAK_TEMPLATE_BODY_IDS } from './melipayamak-template-body-ids';
 
-const DEFAULT_BODY_ID = 524;
+const DEFAULT_BODY_ID = MELLI_PAYAMAK_TEMPLATE_BODY_IDS.otp;
 
 /** Configuration for Melli Payamak's shared-template endpoint. */
 export interface MelliPayamakSharedOtpConfig {
   /** Full `/api/send/shared/<token>` URL, normally supplied by MELIPAYAMAK_URL. */
   endpointUrl?: string;
-  /** Shared template id. Defaults to the template used by the reference script. */
+  /** Shared OTP template id. Defaults to the approved Ara OTP template. */
   bodyId?: number;
   /** Per-request timeout in milliseconds. */
   timeoutMs?: number;
@@ -29,12 +34,11 @@ interface MelliPayamakResponse {
 }
 
 /**
- * Sends locally generated Ara OTPs through a Melli Payamak shared template.
- *
- * Request shape mirrors send_melipayamak.py:
- * `{ bodyId, to, args: [code] }`.
+ * Sends Ara OTPs and fixed notification messages through Melli Payamak shared
+ * templates. Request shape mirrors send_melipayamak.py:
+ * `{ bodyId, to, args: [value0, value1, ...] }`.
  */
-export class MelliPayamakSharedOtpAdapter implements OtpProvider {
+export class MelliPayamakSharedOtpAdapter implements OtpProvider, SmsTemplateProvider {
   private readonly endpointUrl: string;
   private readonly bodyId: number;
   private readonly timeoutMs: number;
@@ -47,13 +51,34 @@ export class MelliPayamakSharedOtpAdapter implements OtpProvider {
   }
 
   async sendOtp(phone: string, requestedCode?: string): Promise<OtpDeliveryResult> {
+    const code = requestedCode?.trim() || this.generateOtpCode();
+    if (!/^\d{4,10}$/.test(code)) {
+      return this.fail(phone, 'OTP code must contain 4 to 10 digits');
+    }
+
+    const delivery = await this.sendTemplate(phone, this.bodyId, [code]);
+    if (!delivery.ok) {
+      return delivery;
+    }
+
+    return { ok: true, providerId: delivery.providerId, code };
+  }
+
+  async sendTemplate(
+    phone: string,
+    bodyId: number,
+    args: string[],
+  ): Promise<SmsDeliveryResult> {
     if (!this.endpointUrl) {
       return this.fail(phone, 'Melli Payamak shared endpoint is not configured');
     }
 
-    const code = requestedCode?.trim() || this.generateOtpCode();
-    if (!/^\d{4,10}$/.test(code)) {
-      return this.fail(phone, 'OTP code must contain 4 to 10 digits');
+    if (!Number.isInteger(bodyId) || bodyId <= 0) {
+      return this.fail(phone, 'Melli Payamak template bodyId must be a positive integer');
+    }
+
+    if (!Array.isArray(args) || args.some((arg) => typeof arg !== 'string')) {
+      return this.fail(phone, 'Melli Payamak template args must be strings');
     }
 
     try {
@@ -66,9 +91,9 @@ export class MelliPayamakSharedOtpAdapter implements OtpProvider {
             Accept: 'application/json',
           },
           body: JSON.stringify({
-            bodyId: this.bodyId,
+            bodyId,
             to: phone,
-            args: [code],
+            args,
           }),
         },
         this.timeoutMs,
@@ -85,7 +110,7 @@ export class MelliPayamakSharedOtpAdapter implements OtpProvider {
 
       const providerId = data?.recId ?? data?.recID ?? data?.messageId ?? data?.messageID;
       if (providerId !== undefined && providerId !== null) {
-        return this.ok(phone, String(providerId), code);
+        return this.ok(phone, String(providerId));
       }
 
       const providerStatus = typeof data.status === 'string' ? data.status.trim() : '';
@@ -93,7 +118,7 @@ export class MelliPayamakSharedOtpAdapter implements OtpProvider {
         return this.fail(phone, providerStatus);
       }
 
-      return this.ok(phone, 'melipayamak-shared', code);
+      return this.ok(phone, 'melipayamak-shared');
     } catch (err) {
       return this.fail(phone, toErrorMessage(err));
     }
@@ -120,18 +145,18 @@ export class MelliPayamakSharedOtpAdapter implements OtpProvider {
       : `Melli Payamak HTTP ${status}`;
   }
 
-  private ok(target: string, providerId: string, code: string): OtpDeliveryResult {
-    // Never log the OTP. Only the provider-assigned id is logged.
+  private ok(target: string, providerId: string): SmsDeliveryResult {
+    // Never log template args (which may contain the OTP). Only provider id is logged.
     logDeliveryOutcome({
       provider: 'melipayamak-shared',
       target,
       ok: true,
       providerId,
     });
-    return { ok: true, providerId, code };
+    return { ok: true, providerId };
   }
 
-  private fail(target: string, error: string): OtpDeliveryResult {
+  private fail(target: string, error: string): { ok: false; error: string } {
     logDeliveryOutcome({ provider: 'melipayamak-shared', target, ok: false, error });
     return { ok: false, error };
   }

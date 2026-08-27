@@ -149,7 +149,13 @@ function selectSmsProvider(config: AppConfig): SmsProvider {
  * send_melipayamak.py and receives the locally generated code in `args`.
  * The old generated-code endpoint remains a compatibility fallback.
  */
-function selectOtpProvider(config: AppConfig): OtpProvider | undefined {
+function selectOtpProvider(
+  config: AppConfig,
+  sharedTemplateProvider?: MelliPayamakSharedOtpAdapter,
+): OtpProvider | undefined {
+  if (sharedTemplateProvider) {
+    return sharedTemplateProvider;
+  }
   if (config.melliPayamakUrl) {
     return new MelliPayamakSharedOtpAdapter({
       endpointUrl: config.melliPayamakUrl,
@@ -249,7 +255,13 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
 
   // External providers / gateways.
   const smsProvider = selectApiSmsProvider(config);
-  const otpProvider = selectOtpProvider(config);
+  const sharedTemplateProvider = config.melliPayamakUrl
+    ? new MelliPayamakSharedOtpAdapter({
+        endpointUrl: config.melliPayamakUrl,
+        bodyId: config.melliPayamakBodyId,
+      })
+    : undefined;
+  const otpProvider = selectOtpProvider(config, sharedTemplateProvider);
   const pushProvider = selectPushProvider(config);
   const botAdapters = selectBotAdapters(config);
   const gateway = selectGateway(config);
@@ -274,7 +286,10 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     smsProvider,
     pushProvider,
     new PrismaNotificationRepository(prisma),
-    { defaultReminderLeadTimeMinutes: config.reminderLeadTimeMinutes },
+    {
+      defaultReminderLeadTimeMinutes: config.reminderLeadTimeMinutes,
+      templateProvider: sharedTemplateProvider,
+    },
   );
   const notificationSettings = new NotificationSettingsService(prisma);
   // Bot-based notification channel: routes OTP/reminders/owner notices through a
@@ -291,7 +306,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
   // handler is constructed below once `bookingFlow` exists, then injected.
   const waitlistService = new WaitlistService(
     new PrismaWaitlistRepository(prisma),
-    new PrismaWaitlistNotifier(smsProvider),
+    new PrismaWaitlistNotifier(smsProvider, sharedTemplateProvider),
   );
   const customerService = new CustomerService(new PrismaCustomerRepository(prisma));
   const clientService = new SalonClientService(prisma);

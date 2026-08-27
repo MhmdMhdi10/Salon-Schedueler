@@ -56,6 +56,27 @@ describe('MelliPayamakSharedOtpAdapter', () => {
     });
   });
 
+  it('sends non-OTP shared templates with positional args unchanged', async () => {
+    let seenInit: RequestInit | undefined;
+    (global.fetch as jest.Mock).mockImplementation(async (_url: string, init: RequestInit) => {
+      seenInit = init;
+      return jsonResponse({ recId: 'template-message-id', status: '' });
+    });
+
+    const result = await new MelliPayamakSharedOtpAdapter({ endpointUrl }).sendTemplate(
+      '09120000000',
+      525115,
+      ['سالن آرا', 'علی محمدی', 'منتظر تأیید', 'حسین', '۱۴۰۵/۰۶/۰۴', '۱۰:۳۰'],
+    );
+
+    expect(JSON.parse(seenInit?.body as string)).toEqual({
+      bodyId: 525115,
+      to: '09120000000',
+      args: ['سالن آرا', 'علی محمدی', 'منتظر تأیید', 'حسین', '۱۴۰۵/۰۶/۰۴', '۱۰:۳۰'],
+    });
+    expect(result).toEqual({ ok: true, providerId: 'template-message-id' });
+  });
+
   it('generates a six-digit code when called without one', async () => {
     let sentCode = '';
     (global.fetch as jest.Mock).mockImplementation(async (_url: string, init: RequestInit) => {
@@ -66,6 +87,7 @@ describe('MelliPayamakSharedOtpAdapter', () => {
     const result = await new MelliPayamakSharedOtpAdapter({ endpointUrl }).sendOtp('09304116941');
 
     expect(sentCode).toMatch(/^\d{6}$/);
+    expect(JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body as string).bodyId).toBe(523232);
     expect(result).toEqual({ ok: true, providerId: 'message-id', code: sentCode });
   });
 

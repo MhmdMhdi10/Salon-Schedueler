@@ -1,6 +1,14 @@
-import type { SmsProvider, SmsDeliveryResult } from '../auth/sms-provider.interface';
+import type {
+  SmsProvider,
+  SmsTemplateProvider,
+  SmsDeliveryResult,
+} from '../auth/sms-provider.interface';
 import type { PushProvider, PushPayload, PushDeliveryResult } from './push-provider.interface';
 import type { SmsNotificationEvent } from './notification-settings.service.js';
+import {
+  MELLI_PAYAMAK_TEMPLATE_BODY_IDS,
+  type MelliPayamakNotificationTemplate,
+} from './melipayamak-template-body-ids.js';
 
 /**
  * Represents a stored appointment with the fields needed for notifications.
@@ -98,6 +106,10 @@ export interface NotificationRepository {
 export interface NotificationServiceOptions {
   /** Default reminder lead time in minutes. Default: 60 */
   defaultReminderLeadTimeMinutes?: number;
+  /** Shared-template SMS provider used for fixed notification messages. */
+  templateProvider?: SmsTemplateProvider;
+  /** Optional overrides for approved shared-template body ids. */
+  templateBodyIds?: Partial<Record<MelliPayamakNotificationTemplate, number>>;
 }
 
 /**
@@ -115,6 +127,8 @@ export class NotificationService {
   private readonly pushProvider: PushProvider;
   private readonly repository: NotificationRepository;
   private readonly defaultReminderLeadTimeMinutes: number;
+  private readonly templateProvider?: SmsTemplateProvider;
+  private readonly templateBodyIds: Record<MelliPayamakNotificationTemplate, number>;
   private readonly remindersInFlight = new Set<string>();
 
   constructor(
@@ -128,6 +142,17 @@ export class NotificationService {
     this.repository = repository;
     this.defaultReminderLeadTimeMinutes =
       options?.defaultReminderLeadTimeMinutes ?? 60;
+    this.templateProvider = options?.templateProvider;
+    this.templateBodyIds = {
+      confirmation: MELLI_PAYAMAK_TEMPLATE_BODY_IDS.confirmation,
+      rejection: MELLI_PAYAMAK_TEMPLATE_BODY_IDS.rejection,
+      customerCancellation: MELLI_PAYAMAK_TEMPLATE_BODY_IDS.customerCancellation,
+      customerReminder: MELLI_PAYAMAK_TEMPLATE_BODY_IDS.customerReminder,
+      bookingNotice: MELLI_PAYAMAK_TEMPLATE_BODY_IDS.bookingNotice,
+      staffCancellation: MELLI_PAYAMAK_TEMPLATE_BODY_IDS.staffCancellation,
+      staffReminder: MELLI_PAYAMAK_TEMPLATE_BODY_IDS.staffReminder,
+      ...options?.templateBodyIds,
+    };
   }
 
   /**
@@ -143,7 +168,13 @@ export class NotificationService {
     }
 
     const message = this.buildConfirmationMessage(appointment);
-    const result = await this.smsProvider.send(appointment.customerPhone, message);
+    const { dateStr, timeStr } = this.getAppointmentDateTime(appointment);
+    const result = await this.sendFixedSms(
+      appointment.customerPhone,
+      'confirmation',
+      message,
+      [appointment.salonName, timeStr, dateStr],
+    );
 
     await this.repository.logNotification({
       appointmentId,
@@ -168,8 +199,17 @@ export class NotificationService {
 
     const recipients = [...new Set(await this.findStaffRecipients(appointment, 'booking'))];
     const message = this.buildSalonBookingMessage(appointment, status);
+    const { dateStr, timeStr } = this.getAppointmentDateTime(appointment);
+    const customer = appointment.customerName?.trim() || appointment.customerPhone;
+    const staff = appointment.staffName?.trim() || 'بدون آرایشگر';
+    const state = status === 'pending' ? 'منتظر تأیید شما در پنل است.' : 'به‌صورت خودکار تأیید شد.';
     for (const phone of recipients) {
-      const result = await this.smsProvider.send(phone, message);
+      const result = await this.sendFixedSms(
+        phone,
+        'bookingNotice',
+        message,
+        [appointment.salonName, customer, state, staff, dateStr, timeStr],
+      );
       await this.repository.logNotification({
         appointmentId,
         channel: 'sms',
@@ -215,7 +255,13 @@ export class NotificationService {
     }
 
     const message = this.buildRejectionMessage(appointment);
-    const result = await this.smsProvider.send(appointment.customerPhone, message);
+    const { dateStr, timeStr } = this.getAppointmentDateTime(appointment);
+    const result = await this.sendFixedSms(
+      appointment.customerPhone,
+      'rejection',
+      message,
+      [appointment.salonName, timeStr, dateStr],
+    );
 
     await this.repository.logNotification({
       appointmentId,
@@ -225,7 +271,11 @@ export class NotificationService {
       error: result.ok ? null : result.error,
     });
 
-    await this.sendStaffNotice(appointment, 'cancellation', this.buildStaffCancellationMessage(appointment));
+    await this.sendStaffNotice(
+      appointment,
+      'cancellation',
+      this.buildStaffCancellationMessage(appointment),
+    );
   }
 
   /**
@@ -242,7 +292,13 @@ export class NotificationService {
     }
 
     const message = this.buildCancellationMessage(appointment);
-    const result = await this.smsProvider.send(appointment.customerPhone, message);
+    const { dateStr, timeStr } = this.getAppointmentDateTime(appointment);
+    const result = await this.sendFixedSms(
+      appointment.customerPhone,
+      'customerCancellation',
+      message,
+      [appointment.salonName, timeStr, dateStr],
+    );
 
     await this.repository.logNotification({
       appointmentId,
@@ -252,7 +308,11 @@ export class NotificationService {
       error: result.ok ? null : result.error,
     });
 
-    await this.sendStaffNotice(appointment, 'cancellation', this.buildStaffCancellationMessage(appointment));
+    await this.sendStaffNotice(
+      appointment,
+      'cancellation',
+      this.buildStaffCancellationMessage(appointment),
+    );
   }
 
   /**
@@ -280,7 +340,13 @@ export class NotificationService {
 
       // R12.2: Always send SMS reminder
       const smsMessage = this.buildReminderMessage(appointment);
-      const smsResult = await this.smsProvider.send(appointment.customerPhone, smsMessage);
+      const { timeStr } = this.getAppointmentDateTime(appointment);
+      const smsResult = await this.sendFixedSms(
+        appointment.customerPhone,
+        'customerReminder',
+        smsMessage,
+        [appointment.salonName, timeStr],
+      );
 
       await this.repository.logNotification({
         appointmentId,
@@ -316,7 +382,11 @@ export class NotificationService {
         }
       }
 
-      await this.sendStaffNotice(appointment, 'reminder', this.buildStaffReminderMessage(appointment));
+      await this.sendStaffNotice(
+        appointment,
+        'reminder',
+        this.buildStaffReminderMessage(appointment),
+      );
     } finally {
       this.remindersInFlight.delete(appointmentId);
     }
@@ -360,37 +430,22 @@ export class NotificationService {
   }
 
   private buildConfirmationMessage(appointment: AppointmentInfo): string {
-    const dateStr = appointment.startAt.toLocaleDateString('fa-IR');
-    const timeStr = appointment.startAt.toLocaleTimeString('fa-IR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const { dateStr, timeStr } = this.getAppointmentDateTime(appointment);
     return `نوبت شما در ${appointment.salonName} برای ${appointment.serviceName} در تاریخ ${dateStr} ساعت ${timeStr} تأیید شد.`;
   }
 
   private buildRejectionMessage(appointment: AppointmentInfo): string {
-    const dateStr = appointment.startAt.toLocaleDateString('fa-IR');
-    const timeStr = appointment.startAt.toLocaleTimeString('fa-IR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const { dateStr, timeStr } = this.getAppointmentDateTime(appointment);
     return `متأسفانه درخواست نوبت شما در ${appointment.salonName} برای ${appointment.serviceName} در تاریخ ${dateStr} ساعت ${timeStr} تأیید نشد. لطفاً زمان دیگری را انتخاب کنید.`;
   }
 
   private buildCancellationMessage(appointment: AppointmentInfo): string {
-    const dateStr = appointment.startAt.toLocaleDateString('fa-IR');
-    const timeStr = appointment.startAt.toLocaleTimeString('fa-IR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const { dateStr, timeStr } = this.getAppointmentDateTime(appointment);
     return `نوبت شما در ${appointment.salonName} برای ${appointment.serviceName} در تاریخ ${dateStr} ساعت ${timeStr} لغو شد. برای رزرو زمانی دیگر می‌توانید دوباره اقدام کنید.`;
   }
 
   private buildReminderMessage(appointment: AppointmentInfo): string {
-    const timeStr = appointment.startAt.toLocaleTimeString('fa-IR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const { timeStr } = this.getAppointmentDateTime(appointment);
     return `یادآوری ${appointment.salonName}: نوبت ${appointment.serviceName} ساعت ${timeStr} نزدیک است.`;
   }
 
@@ -398,11 +453,7 @@ export class NotificationService {
     appointment: AppointmentInfo,
     status: 'pending' | 'confirmed',
   ): string {
-    const dateStr = appointment.startAt.toLocaleDateString('fa-IR');
-    const timeStr = appointment.startAt.toLocaleTimeString('fa-IR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const { dateStr, timeStr } = this.getAppointmentDateTime(appointment);
     const customer = appointment.customerName?.trim() || appointment.customerPhone;
     const staff = appointment.staffName ? ` با ${appointment.staffName}` : '';
     const state = status === 'pending' ? 'منتظر تأیید شما در پنل است.' : 'به‌صورت خودکار تأیید شد.';
@@ -426,16 +477,22 @@ export class NotificationService {
 
   private async sendStaffNotice(
     appointment: AppointmentInfo,
-    event: SmsNotificationEvent,
+    event: 'reminder' | 'cancellation',
     message: string,
   ): Promise<void> {
     const recipients = [...new Set(await this.findStaffRecipients(appointment, event))];
+    const customer = appointment.customerName?.trim() || appointment.customerPhone;
+    const { timeStr } = this.getAppointmentDateTime(appointment);
+    const template = event === 'reminder' ? 'staffReminder' : 'staffCancellation';
+    const args = event === 'reminder'
+      ? [appointment.salonName, customer, timeStr]
+      : [appointment.salonName, customer];
     for (const phone of recipients) {
-      const result = await this.smsProvider.send(phone, message);
+      const result = await this.sendFixedSms(phone, template, message, args);
       await this.repository.logNotification({
         appointmentId: appointment.id,
         channel: 'sms',
-        type: event === 'booking' ? 'booking_notice' : event,
+        type: event,
         status: result.ok ? 'sent' : 'failed',
         error: result.ok ? null : result.error,
       });
@@ -449,10 +506,33 @@ export class NotificationService {
 
   private buildStaffReminderMessage(appointment: AppointmentInfo): string {
     const customer = appointment.customerName?.trim() || appointment.customerPhone;
-    const timeStr = appointment.startAt.toLocaleTimeString('fa-IR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const { timeStr } = this.getAppointmentDateTime(appointment);
     return `یادآوری ${appointment.salonName}: نوبت ${customer} برای ${appointment.serviceName} ساعت ${timeStr} نزدیک است.`;
+  }
+
+  private getAppointmentDateTime(appointment: AppointmentInfo): {
+    dateStr: string;
+    timeStr: string;
+  } {
+    return {
+      dateStr: appointment.startAt.toLocaleDateString('fa-IR'),
+      timeStr: appointment.startAt.toLocaleTimeString('fa-IR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    };
+  }
+
+  private sendFixedSms(
+    phone: string,
+    template: MelliPayamakNotificationTemplate,
+    fallbackMessage: string,
+    args: string[],
+  ): Promise<SmsDeliveryResult> {
+    const bodyId = this.templateBodyIds[template];
+    if (this.templateProvider && Number.isInteger(bodyId) && bodyId > 0) {
+      return this.templateProvider.sendTemplate(phone, bodyId, args);
+    }
+    return this.smsProvider.send(phone, fallbackMessage);
   }
 }

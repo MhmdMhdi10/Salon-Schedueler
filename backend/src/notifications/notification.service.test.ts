@@ -5,7 +5,11 @@ import type {
   DeviceTokenInfo,
   NotificationLogEntry,
 } from './notification.service';
-import type { SmsProvider, SmsDeliveryResult } from '../auth/sms-provider.interface';
+import type {
+  SmsProvider,
+  SmsTemplateProvider,
+  SmsDeliveryResult,
+} from '../auth/sms-provider.interface';
 import type { PushProvider, PushPayload, PushDeliveryResult } from './push-provider.interface';
 
 // ─── Test Helpers ──────────────────────────────────────────────────────────────
@@ -17,6 +21,19 @@ function createMockSmsProvider(result?: SmsDeliveryResult): SmsProvider & { call
     async send(phone: string, message: string): Promise<SmsDeliveryResult> {
       calls.push({ phone, message });
       return result ?? { ok: true, providerId: 'sms-123' };
+    },
+  };
+}
+
+function createMockTemplateProvider(result?: SmsDeliveryResult): SmsTemplateProvider & {
+  calls: { phone: string; bodyId: number; args: string[] }[];
+} {
+  const calls: { phone: string; bodyId: number; args: string[] }[] = [];
+  return {
+    calls,
+    async sendTemplate(phone: string, bodyId: number, args: string[]): Promise<SmsDeliveryResult> {
+      calls.push({ phone, bodyId, args });
+      return result ?? { ok: true, providerId: 'template-123' };
     },
   };
 }
@@ -40,6 +57,9 @@ function createMockRepository(overrides?: Partial<NotificationRepository>): Noti
     logs,
     findAppointment: overrides?.findAppointment ?? (async () => null),
     findSalonSmsRecipients: overrides?.findSalonSmsRecipients ?? (async () => []),
+    ...(overrides?.findSmsRecipientsForAppointment
+      ? { findSmsRecipientsForAppointment: overrides.findSmsRecipientsForAppointment }
+      : {}),
     findDeviceTokens: overrides?.findDeviceTokens ?? (async () => []),
     findAppointmentsInReminderWindow: overrides?.findAppointmentsInReminderWindow ?? (async () => []),
     registerDeviceToken: overrides?.registerDeviceToken ?? (async () => {}),
@@ -124,6 +144,154 @@ describe('NotificationService', () => {
       expect(sms.calls[0].phone).toBe('09120000000');
       expect(sms.calls[0].message).toContain('رزرو جدید سالن آرا');
       expect(sms.calls[0].message).toContain('منتظر تأیید شما');
+    });
+  });
+
+  describe('Melli Payamak shared templates', () => {
+    const dateStr = sampleAppointment.startAt.toLocaleDateString('fa-IR');
+    const timeStr = sampleAppointment.startAt.toLocaleTimeString('fa-IR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    it('sends confirmation using approved bodyId and positional args', async () => {
+      const sms = createMockSmsProvider();
+      const templates = createMockTemplateProvider();
+      const repo = createMockRepository({
+        findAppointment: async () => sampleAppointment,
+      });
+      const service = new NotificationService(sms, createMockPushProvider(), repo, {
+        templateProvider: templates,
+      });
+
+      await service.sendConfirmation('appt-1');
+
+      expect(sms.calls).toHaveLength(0);
+      expect(templates.calls).toEqual([
+        {
+          phone: '+989121234567',
+          bodyId: 525111,
+          args: ['سالن آرا', timeStr, dateStr],
+        },
+      ]);
+    });
+
+    it('uses registered salon-booking placeholder order', async () => {
+      const sms = createMockSmsProvider();
+      const templates = createMockTemplateProvider();
+      const repo = createMockRepository({
+        findAppointment: async () => sampleAppointment,
+        findSalonSmsRecipients: async () => ['09120000000'],
+      });
+      const service = new NotificationService(sms, createMockPushProvider(), repo, {
+        templateProvider: templates,
+      });
+
+      await service.sendSalonBookingNotice('appt-1', 'pending');
+
+      expect(templates.calls).toEqual([
+        {
+          phone: '09120000000',
+          bodyId: 525115,
+          args: [
+            'سالن آرا',
+            'علی محمدی',
+            'منتظر تأیید شما در پنل است.',
+            'حسین',
+            dateStr,
+            timeStr,
+          ],
+        },
+      ]);
+    });
+
+    it('uses customer reminder template and does not send plain SMS', async () => {
+      const sms = createMockSmsProvider();
+      const templates = createMockTemplateProvider();
+      const repo = createMockRepository({
+        findAppointment: async () => sampleAppointment,
+        findDeviceTokens: async () => [],
+      });
+      const service = new NotificationService(sms, createMockPushProvider(), repo, {
+        templateProvider: templates,
+      });
+
+      await service.sendReminder('appt-1');
+
+      expect(sms.calls).toHaveLength(0);
+      expect(templates.calls).toEqual([
+        {
+          phone: '+989121234567',
+          bodyId: 525114,
+          args: ['سالن آرا', timeStr],
+        },
+      ]);
+    });
+
+    it('uses cancellation and rejection template argument order', async () => {
+      const sms = createMockSmsProvider();
+      const templates = createMockTemplateProvider();
+      const repo = createMockRepository({
+        findAppointment: async () => sampleAppointment,
+      });
+      const service = new NotificationService(sms, createMockPushProvider(), repo, {
+        templateProvider: templates,
+      });
+
+      await service.sendCancellation('appt-1');
+      await service.sendRejection('appt-1');
+
+      expect(templates.calls).toEqual([
+        {
+          phone: '+989121234567',
+          bodyId: 525113,
+          args: ['سالن آرا', timeStr, dateStr],
+        },
+        {
+          phone: '+989121234567',
+          bodyId: 525112,
+          args: ['سالن آرا', timeStr, dateStr],
+        },
+      ]);
+    });
+
+    it('uses approved staff cancellation and reminder templates', async () => {
+      const sms = createMockSmsProvider();
+      const templates = createMockTemplateProvider();
+      const repo = createMockRepository({
+        findAppointment: async () => sampleAppointment,
+        findSmsRecipientsForAppointment: async (_appointmentId, event) =>
+          event === 'cancellation' ? ['09120000000'] : ['09121111111'],
+      });
+      const service = new NotificationService(sms, createMockPushProvider(), repo, {
+        templateProvider: templates,
+      });
+
+      await service.sendCancellation('appt-1');
+      await service.sendReminder('appt-1');
+
+      expect(templates.calls).toEqual([
+        {
+          phone: '+989121234567',
+          bodyId: 525113,
+          args: ['سالن آرا', timeStr, dateStr],
+        },
+        {
+          phone: '09120000000',
+          bodyId: 525117,
+          args: ['سالن آرا', 'علی محمدی'],
+        },
+        {
+          phone: '+989121234567',
+          bodyId: 525114,
+          args: ['سالن آرا', timeStr],
+        },
+        {
+          phone: '09121111111',
+          bodyId: 525118,
+          args: ['سالن آرا', 'علی محمدی', timeStr],
+        },
+      ]);
     });
   });
 
