@@ -4,7 +4,7 @@
  */
 export interface WaitlistNotifier {
   /** Notify a customer that a waitlisted slot has become available. */
-  notifyWaitlistCustomer(phone: string, serviceName: string): Promise<void>;
+  notifyWaitlistCustomer(phone: string, salonName: string): Promise<void>;
 }
 
 /**
@@ -58,8 +58,8 @@ export interface WaitlistRepository {
   /** Find the customer phone by customer ID (for notifications). */
   findCustomerPhone(customerId: string): Promise<string | null>;
 
-  /** Find the service name by service ID (for notification messages). */
-  findServiceName(serviceId: string): Promise<string | null>;
+  /** Find the salon name by salon ID (for notification messages). */
+  findSalonName(salonId: string): Promise<string | null>;
 }
 
 /**
@@ -175,9 +175,9 @@ export class WaitlistService {
 
     // Send notification to the customer via the notifier
     const phone = await this.repository.findCustomerPhone(earliest.customerId);
-    const serviceName = await this.repository.findServiceName(earliest.serviceId);
+    const salonName = await this.repository.findSalonName(salonId);
     if (phone) {
-      await this.notifier.notifyWaitlistCustomer(phone, serviceName ?? 'خدمت');
+      await this.notifier.notifyWaitlistCustomer(phone, salonName ?? 'آرا');
     }
 
     return notifiedEntry;

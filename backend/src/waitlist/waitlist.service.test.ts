@@ -56,7 +56,7 @@ function createMockRepository(
       Promise.resolve({ ...makeEntry({ id }), status } as WaitlistEntry),
     ),
     findCustomerPhone: jest.fn().mockResolvedValue('09123456789'),
-    findServiceName: jest.fn().mockResolvedValue('کوتاهی مو'),
+    findSalonName: jest.fn().mockResolvedValue('آرا'),
     ...overrides,
   };
 }
@@ -185,7 +185,7 @@ describe('WaitlistService', () => {
           Promise.resolve({ ...entries.find((e) => e.id === id)!, status } as WaitlistEntry),
         ),
         findCustomerPhone: jest.fn().mockResolvedValue('09123456789'),
-        findServiceName: jest.fn().mockResolvedValue('کوتاهی مو'),
+        findSalonName: jest.fn().mockResolvedValue('آرا'),
       });
       const notifier = createMockNotifier();
       const service = new WaitlistService(repo, notifier);
@@ -201,7 +201,7 @@ describe('WaitlistService', () => {
       expect(repo.updateStatus).toHaveBeenCalledWith('entry-1', 'notified');
       expect(notifier.notifyWaitlistCustomer).toHaveBeenCalledWith(
         '09123456789',
-        'کوتاهی مو',
+        'آرا',
       );
     });
 
@@ -246,7 +246,7 @@ describe('WaitlistService', () => {
       expect(notifier.notifyWaitlistCustomer).not.toHaveBeenCalled();
     });
 
-    it('uses default service name when service name not found', async () => {
+    it('uses default salon name when salon name not found', async () => {
       const entries: WaitlistEntry[] = [
         makeEntry({ id: 'entry-1', customerId: CUSTOMER_1 }),
       ];
@@ -254,7 +254,7 @@ describe('WaitlistService', () => {
       const repo = createMockRepository({
         findWaiting: jest.fn().mockResolvedValue(entries),
         findCustomerPhone: jest.fn().mockResolvedValue('09123456789'),
-        findServiceName: jest.fn().mockResolvedValue(null),
+        findSalonName: jest.fn().mockResolvedValue(null),
       });
       const notifier = createMockNotifier();
       const service = new WaitlistService(repo, notifier);
@@ -267,7 +267,7 @@ describe('WaitlistService', () => {
 
       expect(notifier.notifyWaitlistCustomer).toHaveBeenCalledWith(
         '09123456789',
-        'خدمت',
+        'آرا',
       );
     });
   });

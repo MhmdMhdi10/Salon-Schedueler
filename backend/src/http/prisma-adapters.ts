@@ -413,12 +413,12 @@ export class PrismaWaitlistRepository implements WaitlistRepository {
     return customer?.phone ?? null;
   }
 
-  async findServiceName(serviceId: string): Promise<string | null> {
-    const service = await this.prisma.service.findUnique({
-      where: { id: serviceId },
+  async findSalonName(salonId: string): Promise<string | null> {
+    const salon = await this.prisma.salon.findUnique({
+      where: { id: salonId },
       select: { name: true },
     });
-    return service?.name ?? null;
+    return salon?.name ?? null;
   }
 }
 
@@ -434,13 +434,13 @@ export class PrismaWaitlistNotifier implements WaitlistNotifier {
     private readonly templateProvider?: SmsTemplateProvider,
   ) {}
 
-  async notifyWaitlistCustomer(phone: string, serviceName: string): Promise<void> {
-    const message = `یک نوبت برای ${serviceName} آزاد شد. برای رزرو اقدام کنید.`;
+  async notifyWaitlistCustomer(phone: string, salonName: string): Promise<void> {
+    const message = `نوبت شما در سالن ${salonName} آزاد شد. برای رزرو اقدام کنید.`;
     if (this.templateProvider) {
       await this.templateProvider.sendTemplate(
         phone,
         MELLI_PAYAMAK_TEMPLATE_BODY_IDS.waitlist,
-        [serviceName],
+        [salonName],
       );
       return;
     }

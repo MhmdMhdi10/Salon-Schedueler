@@ -68,8 +68,8 @@ class InMemoryWaitlistRepository implements WaitlistRepository {
     return '09123456789';
   }
 
-  async findServiceName(_serviceId: string): Promise<string | null> {
-    return 'کوتاهی مو';
+  async findSalonName(_salonId: string): Promise<string | null> {
+    return 'آرا';
   }
 
   /** Expose entries for assertions */
@@ -79,10 +79,10 @@ class InMemoryWaitlistRepository implements WaitlistRepository {
 }
 
 class MockNotifier implements WaitlistNotifier {
-  notifications: { phone: string; serviceName: string }[] = [];
+  notifications: { phone: string; salonName: string }[] = [];
 
-  async notifyWaitlistCustomer(phone: string, serviceName: string): Promise<void> {
-    this.notifications.push({ phone, serviceName });
+  async notifyWaitlistCustomer(phone: string, salonName: string): Promise<void> {
+    this.notifications.push({ phone, salonName });
   }
 }
 

@@ -26,20 +26,20 @@ function createTemplateProvider(): SmsTemplateProvider & {
 }
 
 describe('PrismaWaitlistNotifier', () => {
-  it('uses the approved waitlist template and positional service arg', async () => {
+  it('uses the approved waitlist template and positional salon arg', async () => {
     const sms = createSmsProvider();
     const templates = createTemplateProvider();
 
     await new PrismaWaitlistNotifier(sms, templates).notifyWaitlistCustomer(
       '09120000000',
-      'کوتاهی مو',
+      'آرا',
     );
 
     expect(templates.calls).toEqual([
       {
         phone: '09120000000',
         bodyId: 525119,
-        args: ['کوتاهی مو'],
+        args: ['آرا'],
       },
     ]);
     expect(sms.calls).toHaveLength(0);
@@ -50,13 +50,13 @@ describe('PrismaWaitlistNotifier', () => {
 
     await new PrismaWaitlistNotifier(sms).notifyWaitlistCustomer(
       '09120000000',
-      'کوتاهی مو',
+      'آرا',
     );
 
     expect(sms.calls).toEqual([
       {
         phone: '09120000000',
-        message: 'یک نوبت برای کوتاهی مو آزاد شد. برای رزرو اقدام کنید.',
+        message: 'نوبت شما در سالن آرا آزاد شد. برای رزرو اقدام کنید.',
       },
     ]);
   });
