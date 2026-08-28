@@ -54,7 +54,12 @@ export interface CreateInboxNotificationInput {
  * Redis pub/sub instead. Both implement the same port.
  */
 export interface InboxHub {
-  broadcast(salonId: string, audience: InboxAudience, staffMemberId: string | null, event: InboxEvent): void;
+  broadcast(
+    salonId: string,
+    audience: InboxAudience,
+    staffMemberId: string | null,
+    event: InboxEvent,
+  ): void;
 }
 
 export class NullInboxHub implements InboxHub {
@@ -87,7 +92,8 @@ export class SalonInboxService {
       salonId,
       ...(opts.onlyUnread ? { readAt: null } : {}),
     };
-    if (opts.role === 'Owner' || opts.role === 'Admin') return base;
+    if (opts.role === 'Owner' || opts.role === 'Admin' || opts.role === 'PlatformAdmin')
+      return base;
 
     return {
       ...base,
@@ -185,7 +191,7 @@ export class SalonInboxService {
       if (!row || !opts.salonId || row.salonId !== opts.salonId) return null;
 
       const visible =
-        opts.role === 'Owner' || opts.role === 'Admin'
+        opts.role === 'Owner' || opts.role === 'Admin' || opts.role === 'PlatformAdmin'
           ? true
           : opts.role === 'Stylist' &&
             (row.audience === 'all-staff' || row.staffMemberId === opts.staffMemberId);
@@ -209,7 +215,7 @@ export class SalonInboxService {
     opts: { staffMemberId?: string; role: string },
   ): Promise<number> {
     const where =
-      opts.role === 'Owner' || opts.role === 'Admin'
+      opts.role === 'Owner' || opts.role === 'Admin' || opts.role === 'PlatformAdmin'
         ? { salonId, readAt: null }
         : {
             salonId,

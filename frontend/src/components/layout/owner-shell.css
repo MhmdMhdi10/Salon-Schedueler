@@ -1,4 +1,15 @@
-/* Keep the transformed page surface from creating a horizontal scrollbar. */
+/* Keep owner content inside its app frame instead of leaking a second page
+ * scrollbar to the document. The RTL main pane owns vertical scrolling. */
+[data-shell='owner'] {
+  contain: paint;
+}
+
+/* OwnerShell owns scrolling, so the document does not need a reserved gutter
+ * on the far edge once its page overflow is contained. */
+html:has([data-shell='owner']) {
+  scrollbar-gutter: auto;
+}
+
 [data-shell='owner'] #owner-content > div {
   max-inline-size: 100%;
 }

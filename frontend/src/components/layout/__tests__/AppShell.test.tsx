@@ -1,10 +1,20 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AppShell, MAIN_CONTENT_ID } from '..';
 import { ThemeProvider } from '../../theme';
+import { AuthProvider } from '../../../auth/AuthContext';
 import '../../../i18n';
 import { renderRtl, expectNoSeriousA11yViolations } from '../../../test/a11y';
+
+const mockGetMe = vi.hoisted(() => vi.fn());
+
+vi.mock('../../../api/client', () => ({
+  bootstrapAuth: vi.fn().mockResolvedValue(true),
+  getAccessToken: vi.fn().mockReturnValue('access-token'),
+  meApi: { getMe: mockGetMe },
+  signOut: vi.fn(),
+}));
 
 /**
  * Tests for the application shell: header / single `<main>` / footer landmarks,
@@ -49,6 +59,70 @@ describe('AppShell', () => {
     );
 
     expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument();
+  });
+
+  it('shows only the salon-panel switcher in an owner account header', async () => {
+    mockGetMe.mockResolvedValue({
+      principal: { id: 'owner-1', role: 'Owner', salonId: 'salon-1' },
+    });
+
+    render(
+      <ThemeProvider defaultTheme="light">
+        <MemoryRouter initialEntries={['/account']}>
+          <AuthProvider>
+            <div dir="rtl" lang="fa">
+              <AppShell>
+                <p>حساب من</p>
+              </AppShell>
+            </div>
+          </AuthProvider>
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
+
+    const banner = screen.getByRole('banner');
+    const salonPanel = await within(banner).findByRole('link', { name: 'پنل سالن' });
+    expect(salonPanel).toHaveAttribute('href', '/owner');
+    expect(within(banner).getByRole('button', { name: 'اعلان‌ها' })).toBeInTheDocument();
+    expect(within(banner).queryByRole('link', { name: 'حساب کاربری' })).not.toBeInTheDocument();
+    expect(within(banner).queryByRole('link', { name: 'تقویم' })).not.toBeInTheDocument();
+    expect(within(banner).queryByRole('link', { name: 'آمار' })).not.toBeInTheDocument();
+    expect(within(banner).queryByRole('link', { name: 'تنظیمات سالن' })).not.toBeInTheDocument();
+    expect(within(banner).queryByRole('link', { name: 'QR و استند' })).not.toBeInTheDocument();
+  });
+
+  it('shows all three panel destinations for a platform administrator', async () => {
+    mockGetMe.mockResolvedValue({
+      principal: { id: 'platform-admin-1', role: 'PlatformAdmin' },
+    });
+
+    render(
+      <ThemeProvider defaultTheme="light">
+        <MemoryRouter initialEntries={['/account']}>
+          <AuthProvider>
+            <div dir="rtl" lang="fa">
+              <AppShell>
+                <p>پنل ادمین</p>
+              </AppShell>
+            </div>
+          </AuthProvider>
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
+
+    const banner = screen.getByRole('banner');
+    expect(await within(banner).findByRole('link', { name: 'پنل سالن' })).toHaveAttribute(
+      'href',
+      '/owner',
+    );
+    expect(within(banner).getByRole('link', { name: 'پنل کاربری' })).toHaveAttribute(
+      'href',
+      '/account',
+    );
+    expect(within(banner).getByRole('link', { name: 'پنل ادمین' })).toHaveAttribute(
+      'href',
+      '/platform-admin',
+    );
   });
 
   it('exposes a single <main> with the skip-link target id', () => {

@@ -1,5 +1,7 @@
 import type { StaffRole } from '@salon/shared';
 
+export type AuthorizedRole = StaffRole | 'PlatformAdmin';
+
 /**
  * Actions that can be authorized in the booking system.
  *
@@ -25,7 +27,7 @@ export interface Principal {
   /** Unique account/user identifier */
   id: string;
   /** The staff member's role */
-  role: StaffRole;
+  role: AuthorizedRole;
   /** The staff member's ID (used for "own only" checks) */
   staffMemberId?: string;
   /** The staff member's tenant/salon scope. */
@@ -50,12 +52,14 @@ export interface ResourceRef {
  *
  * | Action                      | Owner        | Admin | Stylist          |
  * |-----------------------------|--------------|-------|------------------|
- * | configure_salon (R2.2,R2.6) | allow always | deny  | deny (R2.4)      |
+ * | configure_salon (R2.2,R2.6) | allow always | allow | deny (R2.4)      |
  * | manage_appointments (R2.3)  | allow        | allow | deny             |
  * | manage_own_appointments     | allow        | allow | allow (own only) |
  * | view_own_appointments(R2.5) | allow        | allow | allow (own only) |
  * | view_customer_notes (R14.4) | allow        | allow | allow            |
+ * | PlatformAdmin (global)      | allow       | allow | allow            |
  *
+ * PlatformAdmin is a verified global operator and bypasses tenant scope.
  * Owner config access is guaranteed regardless of system state (R2.6).
  * Stylist "own only" checks compare principal.staffMemberId with resource.staffMemberId.
  */
@@ -69,6 +73,10 @@ export class Authorizer {
    * @returns true if the action is permitted, false otherwise
    */
   can(principal: Principal, action: Action, resource: ResourceRef = {}): boolean {
+    // A verified platform admin is global by design and may inspect/manage any
+    // salon from the shared panel switcher.
+    if (principal.role === 'PlatformAdmin') return true;
+
     // Staff tokens are tenant-scoped. Keep legacy/unit-test principals without
     // salonId permissive, but never allow a real scoped token to cross salons.
     if (principal.salonId && resource.salonId && principal.salonId !== resource.salonId) {
@@ -99,16 +107,10 @@ export class Authorizer {
   }
 
   /**
-   * Admin authorization:
-   * - deny configure_salon
-   * - allow manage_appointments (R2.3)
-   * - allow view_own_appointments
-   * - allow view_customer_notes (R14.4)
+   * Admin authorization: full salon-panel access, same as Owner.
+   * Stylist remains the restricted role.
    */
-  private canAdmin(action: Action): boolean {
-    if (action === 'configure_salon') {
-      return false;
-    }
+  private canAdmin(_action: Action): boolean {
     return true;
   }
 

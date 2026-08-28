@@ -13,10 +13,7 @@ import * as jwt from 'jsonwebtoken';
  * support both for ergonomics. The verify uses the same JWT access secret as
  * the HTTP middlewares: an invalid/expired token aborts the upgrade (401).
  */
-export function verifyWsToken(
-  token: string,
-  secret: string,
-): HttpPrincipal | null {
+export function verifyWsToken(token: string, secret: string): HttpPrincipal | null {
   try {
     const decoded = jwt.verify(token, secret, { algorithms: ['HS256'] });
     if (typeof decoded === 'string' || decoded.type !== 'access') return null;
@@ -24,13 +21,15 @@ export function verifyWsToken(
     if (!payload.sub || typeof payload.sub !== 'string') return null;
     const role =
       typeof payload.role === 'string' &&
-      ['Owner', 'Admin', 'Stylist'].includes(payload.role)
-        ? (payload.role as 'Owner' | 'Admin' | 'Stylist')
+      ['Owner', 'Admin', 'Stylist', 'PlatformAdmin'].includes(payload.role)
+        ? (payload.role as HttpPrincipal['role'])
         : undefined;
     const staffMemberId =
       typeof payload.staffMemberId === 'string' ? payload.staffMemberId : undefined;
     const salonId = typeof payload.salonId === 'string' ? payload.salonId : undefined;
-    return { id: payload.sub, role, staffMemberId, salonId };
+    const platformAdminId =
+      typeof payload.platformAdminId === 'string' ? payload.platformAdminId : undefined;
+    return { id: payload.sub, role, staffMemberId, salonId, platformAdminId };
   } catch {
     return null;
   }
@@ -92,10 +91,7 @@ export function makeWsInboxHandle(services: Services, jwtAccessSecret: string) {
  * Inbox router: exposes a single GET endpoint the client uses to fetch unread
  * count + recent list eagerly before relying solely on the WS push.
  */
-export function inboxRouter(
-  services: Services,
-  requireRole: RequireRole,
-): Router {
+export function inboxRouter(services: Services, requireRole: RequireRole): Router {
   const router = Router();
 
   /**

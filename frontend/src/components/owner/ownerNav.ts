@@ -34,9 +34,9 @@ export interface OwnerNavItem {
  * my-qr unreachable from desktop, transactions/notifications stranded on
  * mobile).
  *
- * Role rules mirror the route guards in `pages/owner/index.tsx`: Owner sees
- * everything; Admin everything except configuration; Stylist sees their
- * calendar, client book, notifications, and personal QR.
+ * Role rules mirror the route guards in `pages/owner/index.tsx`: Owner/Admin
+ * see everything; Stylist sees their calendar, client book, notifications, and
+ * personal QR.
  */
 export const OWNER_NAV: readonly OwnerNavItem[] = [
   {
@@ -46,11 +46,11 @@ export const OWNER_NAV: readonly OwnerNavItem[] = [
     roles: ['Owner', 'Admin', 'Stylist'],
   },
   {
-    // Team management is Owner-only, like the configuration route it uses.
+    // Team management is available to every salon manager.
     labelKey: 'owner.nav.team',
     to: '/owner/team',
     icon: UsersRound,
-    roles: ['Owner'],
+    roles: ['Owner', 'Admin'],
   },
   {
     labelKey: 'owner.nav.clients',
@@ -77,12 +77,11 @@ export const OWNER_NAV: readonly OwnerNavItem[] = [
     roles: ['Owner', 'Admin'],
   },
   {
-    // Owner-only: matches the OwnerRoleGuard on the /owner/config route — an
-    // Admin must not see a nav item that silently bounces back to the calendar.
+    // Salon managers can configure the salon and manage staff.
     labelKey: 'owner.nav.configuration',
     to: '/owner/config',
     icon: Settings,
-    roles: ['Owner'],
+    roles: ['Owner', 'Admin'],
   },
   {
     labelKey: 'owner.nav.transactions',

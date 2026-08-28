@@ -29,8 +29,8 @@ export function useOwnerContext(): OwnerOutletContext {
  * Route-level RBAC guard (task 5.2; R2.1, R2.3–R2.7).
  *
  * The {@link OwnerShell} navigation only *shows* the destinations a role may
- * reach (Owner = everything; Admin = no configuration; Stylist = calendar,
- * client book, notifications, and personal QR). This guard makes the
+ * reach (Owner/Admin = everything; Stylist = calendar, client book,
+ * notifications, and personal QR). This guard makes the
  * **routes themselves** consistent with that nav:
  * a principal who deep-links or otherwise lands on a section their role can't
  * see is redirected back to the always-available calendar rather than rendering
@@ -114,12 +114,12 @@ export function OwnerAnalyticsPage() {
  * error+retry, Persian text, and prefers-reduced-motion handling. Working
  * hours, holidays, booking limits, and approval policy live in Calendar.
  *
- * Owner-only to mirror the shell nav (Admin and Stylist are redirected to the
+ * Owner/Admin access to mirror the shell nav (Stylist is redirected to the
  * calendar). Preserves `admin-configuration` / `config-*` / `*-list` testIDs.
  */
 export function OwnerConfigurationPage() {
   return (
-    <OwnerRoleGuard allow={['Owner']}>
+    <OwnerRoleGuard allow={['Owner', 'Admin']}>
       <section data-testid="owner-config-page">
         <OwnerConfigPage />
       </section>
@@ -134,7 +134,7 @@ export function OwnerConfigurationPage() {
  */
 export function OwnerTeamPage() {
   return (
-    <OwnerRoleGuard allow={['Owner']}>
+    <OwnerRoleGuard allow={['Owner', 'Admin']}>
       <section data-testid="owner-team-page">
         <OwnerConfigPage view="team" />
       </section>

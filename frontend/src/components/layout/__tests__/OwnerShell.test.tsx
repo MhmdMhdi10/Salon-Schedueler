@@ -109,6 +109,11 @@ describe('OwnerShell', () => {
     const { container } = renderOwner();
     expect(container.querySelector('[data-shell="owner"]')).toBeInTheDocument();
   });
+
+  it('keeps the single scrollbar in the RTL content pane', () => {
+    renderOwner();
+    expect(screen.getByRole('main')).toHaveAttribute('dir', 'rtl');
+  });
 });
 
 // ─── Mobile View Tests (default — useMediaQuery returns false) ────────────────
@@ -250,11 +255,13 @@ describe('ownerNavForRole (RBAC matrix)', () => {
     ]);
   });
 
-  it('denies Admin the configuration destination but allows analytics', () => {
+  it('grants Admin the full salon navigation', () => {
     const nav = ownerNavForRole('Admin');
     const paths = nav.map((i) => i.to);
     expect(paths).toContain('/owner/analytics');
-    expect(paths).not.toContain('/owner/config');
+    expect(paths).toContain('/owner/config');
+    expect(paths).toContain('/owner/team');
+    expect(paths).toHaveLength(ownerNavForRole('Owner').length);
   });
 
   it('limits Stylist to calendar, client book, notifications, and personal QR', () => {

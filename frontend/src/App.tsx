@@ -235,7 +235,7 @@ function CustomerOnlyRoute() {
     return <Navigate to="/auth" state={{ returnTo }} replace />;
   }
 
-  if (!isCustomer) {
+  if (!isCustomer && !isPlatformAdmin) {
     return <Navigate to={isPlatformAdmin ? '/platform-admin' : isStaff ? '/owner' : '/account'} replace />;
   }
 

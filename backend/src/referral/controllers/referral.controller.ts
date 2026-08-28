@@ -37,7 +37,7 @@ export function referralPublicRouter(services: Services): Router {
 }
 
 function isCustomer(req: Parameters<RequestHandler>[0]): boolean {
-  return Boolean(req.principal && !req.principal.role);
+  return Boolean(req.principal && (!req.principal.role || req.principal.role === 'PlatformAdmin'));
 }
 
 export function referralRouter(services: Services, requireRole: RequireRole): Router {
@@ -77,7 +77,9 @@ export function referralRouter(services: Services, requireRole: RequireRole): Ro
         res.status(403).json({ code: 'FORBIDDEN' });
         return;
       }
-      res.status(200).json({ referrals: await services.referralService.listForCustomer(req.principal!.id) });
+      res
+        .status(200)
+        .json({ referrals: await services.referralService.listForCustomer(req.principal!.id) });
     }),
   );
 
@@ -89,7 +91,9 @@ export function referralRouter(services: Services, requireRole: RequireRole): Ro
         unavailable(res);
         return;
       }
-      res.status(200).json({ referrals: await services.referralService.listForSalon(req.params.id) });
+      res
+        .status(200)
+        .json({ referrals: await services.referralService.listForSalon(req.params.id) });
     }),
   );
 
@@ -111,7 +115,8 @@ export function referralRouter(services: Services, requireRole: RequireRole): Ro
         res.status(200).json({ referral });
       } catch (error) {
         if (error instanceof ReferralStateError) {
-          const status = error.code === 'NOT_FOUND' ? 404 : error.code === 'WRONG_SALON' ? 403 : 409;
+          const status =
+            error.code === 'NOT_FOUND' ? 404 : error.code === 'WRONG_SALON' ? 403 : 409;
           res.status(status).json({ code: error.code });
           return;
         }

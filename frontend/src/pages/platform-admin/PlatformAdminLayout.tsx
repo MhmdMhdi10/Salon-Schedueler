@@ -49,6 +49,7 @@ import { BrandLogo } from '../../components/brand';
 import { ThemeScope, useTheme, OwnerThemeToggle } from '../../components/theme';
 import { SeoHead } from '../../components/seo';
 import { getPlatformAdminTheme } from './PlatformAdminTheme';
+import { PanelAccessNav } from '../../components/layout/PanelAccessNav';
 import './platform-admin.css';
 import 'antd/dist/reset.css';
 
@@ -215,6 +216,7 @@ function PlatformHeader({ collapsed, mobile, onToggleCollapsed, onSignOut }: { c
           </span>
         </div>
         <div className="platform-admin-header__tools">
+          <PanelAccessNav tone="platform" />
           <Button type="text" className="platform-admin-header__search" icon={<SearchOutlined />} onClick={() => setCommandOpen(true)}>
             <span>جستجو</span><kbd>⌘ K</kbd>
           </Button>

@@ -1,19 +1,15 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type UIEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { LogOut } from 'lucide-react';
-import { BrandLogo } from '../brand';
 import { OwnerThemeToggle } from '../theme/OwnerThemeToggle';
 import { THEME_STORAGE_KEY, ThemeScope, useTheme } from '../theme';
-import { Button } from '../ui/Button';
 import { cn } from '../ui/cn';
 import { OwnerSidebar } from '../owner/OwnerSidebar';
-import { OwnerInboxBell } from '../owner/OwnerInboxBell';
 import { OwnerSetupAlert } from '../owner/OwnerSetupAlert';
 import { OWNER_NAV, ownerNavForRole, type OwnerNavItem } from '../owner/ownerNav';
 import { OwnerBottomTabs } from './OwnerBottomTabs';
-import { WorkspaceSwitcher } from './WorkspaceSwitcher';
+import { PanelHeader } from './PanelHeader';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import type { OwnerRole } from '../../api/client';
 
@@ -188,34 +184,12 @@ export function OwnerShell({
         {t('app.skipToContent')}
       </a>
 
-      {/* Header */}
-      <header className="shrink-0 border-b border-border bg-surface">
-        <div className="flex w-full items-center justify-between gap-0 px-3 py-0 sm:gap-3 sm:px-4 sm:py-1.5">
-          <Link
-            to="/owner"
-            aria-label={salonName || t('owner.title')}
-            className="flex min-h-11 shrink-0 items-center rounded-md text-sm font-bold text-text no-underline sm:text-md"
-          >
-            <BrandLogo className="h-5 w-auto sm:h-6" />
-          </Link>
-          <div className="flex shrink-0 items-center gap-0 sm:gap-2">
-            <WorkspaceSwitcher surface="owner" />
-            <OwnerInboxBell />
-            <OwnerThemeToggle theme={theme} onToggle={toggleTheme} />
-            <Button
-              variant="ghost"
-              size="md"
-              startIcon={<LogOut className="h-4 w-4 rtl:-scale-x-100" />}
-              onClick={onSignOut}
-              data-testid="owner-sign-out"
-              aria-label={t('owner.signOut')}
-              className="!px-1 sm:!px-5"
-            >
-              <span className="hidden sm:inline">{t('owner.signOut')}</span>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <PanelHeader
+        surface="owner"
+        brandLabel={salonName || t('owner.title')}
+        themeControl={<OwnerThemeToggle theme={theme} onToggle={toggleTheme} />}
+        onSignOut={onSignOut}
+      />
 
       {/* Content area: sidebar (desktop) + main — panes scroll internally */}
       <div className="flex min-h-0 flex-1">
@@ -233,6 +207,7 @@ export function OwnerShell({
         <main
           ref={contentRef}
           id={OWNER_CONTENT_ID}
+          dir="rtl"
           tabIndex={0}
           onScroll={handleContentScroll}
           className={cn(
@@ -256,7 +231,7 @@ export function OwnerShell({
               }
               className="min-w-0 w-full"
             >
-              {role === 'Owner' && salonId && (
+              {(role === 'Owner' || role === 'Admin') && salonId && (
                 <OwnerSetupAlert salonId={salonId} refreshKey={pathname} />
               )}
               {children}

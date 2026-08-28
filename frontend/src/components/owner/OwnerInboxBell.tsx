@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Bell, Check, CheckCheck, X } from 'lucide-react';
 import { inboxApi, type SalonNotification } from '../../api/client';
 import { useSalonId } from '../../auth/useSalonId';
@@ -9,6 +9,7 @@ import { Button, Spinner } from '../ui';
 import { cn } from '../ui/cn';
 import { JalaliDate } from '../ui/JalaliDate';
 import { Num } from '../ui/Num';
+import { getNotificationDestination } from './notificationDestination';
 
 /** Persian label + iconography for a known notification type. */
 function typeIcon(type: string): string {
@@ -198,34 +199,47 @@ export function OwnerInboxBell() {
             className={cn('flex flex-col gap-1 px-3 py-2.5', !n.readAt && 'bg-primary/5')}
           >
             <div className="flex items-start gap-2">
-              <span className="mt-0.5 text-base leading-none">{typeIcon(n.type)}</span>
-              <div className="flex min-w-0 flex-1 flex-col">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="truncate text-sm font-semibold text-text">{n.title}</span>
-                  {!n.readAt && (
-                    <button
-                      type="button"
-                      onClick={() => markOne(n.id)}
-                      disabled={busy}
-                      aria-label={t('owner.inbox.markRead', {
-                        defaultValue: 'علامت‌گذاری به خوانده‌شده',
-                      })}
-                      className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded p-1 text-muted hover:bg-elevated hover:text-text"
-                    >
-                      <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                    </button>
-                  )}
+              <Link
+                to={getNotificationDestination(n)}
+                onClick={() => {
+                  if (!n.readAt) void markOne(n.id);
+                  setOpen(false);
+                }}
+                className={cn(
+                  'flex min-w-0 flex-1 items-start gap-2 rounded-md text-start no-underline',
+                  'transition-colors hover:bg-elevated/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus',
+                )}
+                aria-label={n.title}
+              >
+                <span className="mt-0.5 text-base leading-none">{typeIcon(n.type)}</span>
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-sm font-semibold text-text">{n.title}</span>
+                  </div>
+                  <p className="mt-0.5 line-clamp-2 text-xs text-muted">{n.body}</p>
+                  <div className="mt-1 flex items-center justify-between gap-2 text-[0.65rem] text-muted/70">
+                    <Num value={relativeTime(n.createdAt, t)} />
+                    {n.payload?.date && (
+                      <span className="tabular-nums">
+                        <JalaliDate value={n.payload.date} />
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <p className="mt-0.5 line-clamp-2 text-xs text-muted">{n.body}</p>
-                <div className="mt-1 flex items-center justify-between gap-2 text-[0.65rem] text-muted/70">
-                  <Num value={relativeTime(n.createdAt, t)} />
-                  {n.payload?.date && (
-                    <span className="tabular-nums">
-                      <JalaliDate value={n.payload.date} />
-                    </span>
-                  )}
-                </div>
-              </div>
+              </Link>
+              {!n.readAt && (
+                <button
+                  type="button"
+                  onClick={() => void markOne(n.id)}
+                  disabled={busy}
+                  aria-label={t('owner.inbox.markRead', {
+                    defaultValue: 'علامت‌گذاری به خوانده‌شده',
+                  })}
+                  className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded p-1 text-muted hover:bg-elevated hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+                >
+                  <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              )}
             </div>
           </li>
         ))}
@@ -250,10 +264,19 @@ export function OwnerInboxBell() {
           <span className="mt-0.5 text-lg leading-none" aria-hidden="true">
             {typeIcon(liveAlert.type)}
           </span>
-          <div className="min-w-0 flex-1">
+          <Link
+            to={getNotificationDestination(liveAlert)}
+            onClick={() => {
+              if (!liveAlert.readAt) void markOne(liveAlert.id);
+              setLiveAlert(null);
+              setOpen(false);
+            }}
+            className="min-w-0 flex-1 rounded-md text-start no-underline hover:bg-elevated/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+            aria-label={liveAlert.title}
+          >
             <strong className="block truncate text-sm text-text">{liveAlert.title}</strong>
             <p className="mt-1 line-clamp-2 text-xs text-muted">{liveAlert.body}</p>
-          </div>
+          </Link>
           <button
             type="button"
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted hover:bg-elevated hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"

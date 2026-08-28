@@ -394,7 +394,7 @@ export class AvailabilityConfig {
 
   /**
    * Grant or revoke a stylist's permission to manage their OWN availability
-   * (block their own day or hours). Salon-controlled; Owner-only at the API
+   * (block their own day or hours). Salon-controlled; Owner/Admin at the API
    * layer (`POST /staff/:id/manage-availability`, configure_salon).
    */
   async setStaffManageOwnAvailability(staffMemberId: string, allowed: boolean): Promise<void> {

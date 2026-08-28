@@ -3,7 +3,7 @@
  *
  * For any staff account role and any action, authorization matches the defined matrix:
  * an Owner is always permitted to configure the salon and to manage appointments;
- * an Admin is permitted to manage appointments but not to change salon configuration;
+ * an Admin is permitted to manage appointments and change salon configuration;
  * a Stylist is permitted to view only their own assigned appointments and customer notes
  * and is denied configuration changes (leaving configuration unchanged).
  *
@@ -84,11 +84,11 @@ describe('Property 15: Role-based authorization matrix', () => {
     });
   });
 
-  describe('Admin: deny configure_salon, allow rest regardless of resource (R2.3)', () => {
-    it('Admin is denied configure_salon', () => {
+  describe('Admin: allow every salon action regardless of resource', () => {
+    it('Admin is permitted configure_salon', () => {
       fc.assert(
         fc.property(adminPrincipalArb, resourceRefArb, (principal, resource) => {
-          return authorizer.can(principal, 'configure_salon', resource) === false;
+          return authorizer.can(principal, 'configure_salon', resource) === true;
         }),
         { numRuns: 100 },
       );

@@ -864,7 +864,7 @@ export const adminApi = {
   /** The salon's money transactions (appointment + subscription payments), newest-first. */
   getTransactions: (salonId: string) =>
     request<{ transactions: Transaction[] }>(`/salons/${salonId}/transactions`),
-  /** Create a service (Owner only). Deposit fields are optional. */
+  /** Create a service (Owner/Admin). Deposit fields are optional. */
   createService: (
     salonId: string,
     body: {
@@ -888,7 +888,7 @@ export const adminApi = {
         staffIds?: string[];
       };
     }>(`/salons/${salonId}/services`, { method: 'POST', body }),
-  /** Delete a service (Owner only). */
+  /** Delete a service (Owner/Admin). */
   deleteService: (salonId: string, serviceId: string) =>
     request<{ ok: boolean }>(`/salons/${salonId}/services/${serviceId}`, {
       method: 'DELETE',
@@ -914,7 +914,7 @@ export const adminApi = {
       method: 'PUT',
       body: { staffIds },
     }),
-  /** Create a chair (Owner only). */
+  /** Create a chair (Owner/Admin). */
   createChair: (salonId: string, body: { name: string }) =>
     request<{ chair: { id: string; name: string; active: boolean } }>(`/salons/${salonId}/chairs`, {
       method: 'POST',
@@ -1267,7 +1267,7 @@ export const brandAccentApi = {
   get: (salonId: string) => request<BrandAccentResponse>(`/salons/${salonId}/brand`),
   /**
    * Set (a curated accent key) or clear (`null` = signature default) the
-   * salon's storefront Brand_Accent. Owner-only (`configure_salon`).
+   * salon's storefront Brand_Accent. Owner/Admin (`configure_salon`).
    */
   set: (salonId: string, brandAccent: string | null) =>
     request<{ ok: boolean; brandAccent: string | null }>(`/salons/${salonId}/brand-accent`, {
@@ -1384,7 +1384,7 @@ export const emergencyScheduleApi = {
 //   GET    /staff/:staffId/availability-blocks            → { blocks }
 //   POST   /staff/:staffId/availability-blocks            (body { onDate, startTime?, endTime? })
 //   DELETE /staff/:staffId/availability-blocks/:blockId   → { ok }
-//   POST   /staff/:staffId/manage-availability            (body { allowed })  — Owner-only grant
+//   POST   /staff/:staffId/manage-availability            (body { allowed })  — Owner/Admin grant
 
 export const staffAvailabilityApi = {
   /**
@@ -1417,7 +1417,7 @@ export const staffAvailabilityApi = {
 };
 
 // ─── Staff / user management (add a stylist, admin, or owner) ────────────────
-// Owner-only staff CRUD. A staff member has a role (RBAC access) and an optional
+// Owner/Admin staff CRUD. A staff member has a role (RBAC access) and an optional
 // unique login phone: setting the phone lets that person sign in via OTP and
 // receive a staff JWT with this role (auth.service findStaffClaimsByPhone). The
 // granular permission flags (autoApprove, manageOwnAvailability) are managed by
@@ -1465,13 +1465,13 @@ export interface StaffUpdateInput {
 }
 
 export const staffApi = {
-  /** Add a staff member (Owner only). Returns the created record. */
+  /** Add a staff member (Owner/Admin). Returns the created record. */
   create: (salonId: string, input: StaffCreateInput) =>
     request<{ staff: SalonStaff }>(`/salons/${salonId}/staff`, {
       method: 'POST',
       body: input,
     }),
-  /** Update a staff member's identity / role / login / active flag (Owner only). */
+  /** Update a staff member's identity / role / login / active flag (Owner/Admin). */
   update: (staffId: string, patch: StaffUpdateInput) =>
     request<{ staff: SalonStaff }>(`/staff/${staffId}`, {
       method: 'PATCH',

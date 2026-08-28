@@ -65,9 +65,8 @@ function createMockPrisma() {
     customer: {
       findUnique: jest.fn(async ({ where }: any) => {
         return (
-          customerStore.find((c) =>
-            where.id ? c.id === where.id : c.phone === where.phone,
-          ) || null
+          customerStore.find((c) => (where.id ? c.id === where.id : c.phone === where.phone)) ||
+          null
         );
       }),
       create: jest.fn(async ({ data }: any) => {
@@ -84,8 +83,7 @@ function createMockPrisma() {
         return (
           staffStore.find(
             (s) =>
-              s.phone === where.phone &&
-              (where.active === undefined || s.active === where.active),
+              s.phone === where.phone && (where.active === undefined || s.active === where.active),
           ) || null
         );
       }),
@@ -110,7 +108,9 @@ function createMockPrisma() {
 
 // --- Mock SMS Provider ---
 
-function createMockSmsProvider(): SmsProvider & { calls: Array<{ phone: string; message: string }> } {
+function createMockSmsProvider(): SmsProvider & {
+  calls: Array<{ phone: string; message: string }>;
+} {
   const calls: Array<{ phone: string; message: string }> = [];
   return {
     calls,
@@ -359,6 +359,33 @@ describe('AuthService', () => {
       // Should NOT have created a new customer
       expect(prisma.customer.create).not.toHaveBeenCalled();
     });
+
+    it('should issue a platform token with customer and salon context', async () => {
+      const phone = '09123456789';
+      prisma._customerStore.push({ id: 'customer-1', phone, noShowCount: 0 });
+      prisma._staffStore.push({
+        id: 'staff-1',
+        phone,
+        role: 'Admin',
+        salonId: 'salon-1',
+        active: true,
+      });
+      prisma._platformAdminStore.push({
+        id: 'platform-admin-1',
+        phone,
+        active: true,
+      });
+
+      await authService.requestOtp(phone);
+      const tokens = await authService.verifyOtp(phone, extractCode(smsProvider.calls[0].message));
+      const claims = jwt.verify(tokens.accessToken, config.jwtAccessSecret) as jwt.JwtPayload;
+
+      expect(claims.sub).toBe('customer-1');
+      expect(claims.role).toBe('PlatformAdmin');
+      expect(claims.platformAdminId).toBe('platform-admin-1');
+      expect(claims.staffMemberId).toBe('staff-1');
+      expect(claims.salonId).toBe('salon-1');
+    });
   });
 
   describe('refresh', () => {
@@ -382,7 +409,10 @@ describe('AuthService', () => {
       expect(decoded.sub).toBeDefined();
       expect(decoded.type).toBe('access');
 
-      const decodedRefresh = jwt.verify(newTokens.refreshToken, config.jwtRefreshSecret) as jwt.JwtPayload;
+      const decodedRefresh = jwt.verify(
+        newTokens.refreshToken,
+        config.jwtRefreshSecret,
+      ) as jwt.JwtPayload;
       expect(decodedRefresh.sub).toBe(decoded.sub);
       expect(decodedRefresh.type).toBe('refresh');
     });
@@ -434,10 +464,7 @@ describe('AuthService', () => {
     });
 
     it('should reject a refresh token for a missing customer', async () => {
-      const token = jwt.sign(
-        { sub: 'missing-customer', type: 'refresh' },
-        config.jwtRefreshSecret,
-      );
+      const token = jwt.sign({ sub: 'missing-customer', type: 'refresh' }, config.jwtRefreshSecret);
       await expect(authService.refresh(token)).rejects.toMatchObject({
         code: 'INVALID_TOKEN',
       });

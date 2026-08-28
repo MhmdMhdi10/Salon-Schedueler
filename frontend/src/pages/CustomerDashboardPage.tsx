@@ -464,7 +464,7 @@ function SalonCard({ salon, onRemove }: { salon: SalonSummary; onRemove?: () => 
 
 /** Customer home at `/account`: upcoming bookings, a Jalali month calendar, and saved salons. */
 export function CustomerDashboardPage() {
-  const { status: authStatus, isCustomer, isStaff } = useAuth();
+  const { status: authStatus, isCustomer, isPlatformAdmin, isStaff } = useAuth();
   const [appointments, setAppointments] = useState<CustomerAppointment[]>([]);
   const [waitlistEntries, setWaitlistEntries] = useState<CustomerWaitlistEntry[]>([]);
   const [loadStatus, setLoadStatus] = useState<LoadStatus>('loading');
@@ -687,7 +687,7 @@ export function CustomerDashboardPage() {
   }, [selectedDate, selectedPagination.resetPage]);
 
   if (authStatus === 'loading') return <DashboardSkeleton />;
-  if (!isCustomer) {
+  if (!isCustomer && !isPlatformAdmin) {
     return (
       <Navigate
         to={isStaff ? '/owner' : '/auth'}

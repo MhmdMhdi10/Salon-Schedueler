@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { ApiError, cardOrderApi, qrApi, salonApi, type SalonQrResponse } from '../../api/client';
 import { useSalonId } from '../../auth/useSalonId';
+import { useHashScroll } from '../../hooks/useHashScroll';
 import { SeoHead } from '../../components/seo';
 import {
   Button,
@@ -225,6 +226,7 @@ function QrSkeleton() {
 }
 
 export function OwnerQrPage() {
+  useHashScroll();
   const { t } = useTranslation();
   const params = useParams<{ salonId?: string }>();
   const sessionSalonId = useSalonId();
@@ -782,8 +784,9 @@ export function OwnerQrPage() {
       {status !== 'loading' && status !== 'error' && (
         <Card
           as="section"
+          id="qr-order-card"
           data-testid="qr-order-card"
-          className="owner-qr-screen-only flex flex-col gap-4"
+          className="owner-qr-screen-only scroll-mt-24 flex flex-col gap-4"
         >
           <div className="flex items-center gap-2">
             <Package className="h-5 w-5 text-primary" aria-hidden="true" />

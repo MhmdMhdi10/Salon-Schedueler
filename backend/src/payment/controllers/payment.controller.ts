@@ -28,7 +28,10 @@ export function paymentInitiateRouter(services: Services): Router {
       // A payment session is customer-owned. Do not let a logged-in staff
       // member, or another customer with a guessed appointment id, create a
       // gateway session for somebody else's booking.
-      if (principal?.role || appointment.customerId !== principal?.id) {
+      if (
+        (principal?.role && principal.role !== 'PlatformAdmin') ||
+        appointment.customerId !== principal?.id
+      ) {
         res.status(403).json({ code: 'FORBIDDEN' });
         return;
       }

@@ -1,10 +1,5 @@
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
-import type {
-  Action,
-  Authorizer,
-  Principal,
-  ResourceRef,
-} from '../../auth/authorizer.js';
+import type { Action, Authorizer, Principal, ResourceRef } from '../../auth/authorizer.js';
 
 /**
  * Derives the resource reference for an authorization check from the request
@@ -15,20 +10,18 @@ export type ResourceResolver = (req: Request) => ResourceRef;
 /**
  * Build RBAC middleware bound to an Authorizer.
  *
- * `requireRole(action)` enforces the original authorization matrix: Owner always
- * configures, Admin manages appointments, Stylist views only own appointments and
- * notes. A denied request yields 403 `{ code: 'FORBIDDEN' }` and the handler is
- * never reached, so no state change occurs (Requirement 2.4).
+ * `requireRole(action)` enforces the tenant authorization matrix: Owner/Admin
+ * have full salon-panel access, while Stylist views only own appointments and
+ * notes. A verified PlatformAdmin is allowed through as a global operator. A
+ * denied request yields 403 `{ code: 'FORBIDDEN' }` and the handler is never
+ * reached, so no state change occurs (Requirement 2.4).
  *
  * Must run after `requireAuth` so `req.principal` is populated.
  */
 export function makeRbac(authorizer: Authorizer): {
   requireRole: (action: Action, resolveResource?: ResourceResolver) => RequestHandler;
 } {
-  const requireRole = (
-    action: Action,
-    resolveResource?: ResourceResolver,
-  ): RequestHandler => {
+  const requireRole = (action: Action, resolveResource?: ResourceResolver): RequestHandler => {
     return (req: Request, res: Response, next: NextFunction) => {
       const principal = req.principal;
       if (!principal) {
@@ -36,8 +29,8 @@ export function makeRbac(authorizer: Authorizer): {
         res.status(401).json({ code: 'UNAUTHORIZED' });
         return;
       }
-      if (!principal.role || principal.role === 'PlatformAdmin') {
-        // Customers and global operators cannot enter tenant-scoped staff RBAC.
+      if (!principal.role) {
+        // Customers cannot enter tenant-scoped staff RBAC.
         res.status(403).json({ code: 'FORBIDDEN' });
         return;
       }
@@ -49,8 +42,7 @@ export function makeRbac(authorizer: Authorizer): {
           : routePath.includes('/salons/:salonId') && typeof req.params.salonId === 'string'
             ? req.params.salonId
             : undefined;
-      const bodySalonId =
-        typeof req.body?.salonId === 'string' ? req.body.salonId : undefined;
+      const bodySalonId = typeof req.body?.salonId === 'string' ? req.body.salonId : undefined;
       const resource: ResourceRef = {
         ...explicitResource,
         salonId: explicitResource.salonId ?? routeSalonId ?? bodySalonId,

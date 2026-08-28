@@ -4,10 +4,7 @@ import type { RequireRole } from '../../common/http/require-role.js';
 import type { StaffRole } from '@salon/shared';
 import { asyncRoute, validateRequired } from '../../common/http/route-helpers.js';
 import { safelyNotify } from '../../app/safely-notify.js';
-import {
-  createRateLimit,
-  principalOrIpRateLimitKey,
-} from '../../http/middleware/rate-limit.js';
+import { createRateLimit, principalOrIpRateLimitKey } from '../../http/middleware/rate-limit.js';
 
 /**
  * Factory type for the RBAC guard, supplied by `buildApp` (bound to the
@@ -36,9 +33,7 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
 
   const devLimit = (name: string, fallback: number): number => {
     const configured = Number(process.env[name]);
-    return process.env.NODE_ENV === 'development' &&
-      Number.isInteger(configured) &&
-      configured > 0
+    return process.env.NODE_ENV === 'development' && Number.isInteger(configured) && configured > 0
       ? configured
       : fallback;
   };
@@ -83,8 +78,8 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
       res.status(401).json({ code: 'UNAUTHORIZED' });
       return;
     }
-    if (!principal.role || principal.role === 'PlatformAdmin') {
-      // Customers and global operators cannot approve/reject in a tenant panel.
+    if (!principal.role) {
+      // Customers cannot approve/reject in a tenant panel.
       res.status(403).json({ code: 'FORBIDDEN' });
       return;
     }
@@ -100,19 +95,21 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
           principal.role !== 'Stylist' ||
           Boolean(
             principal.staffMemberId &&
-              (await services.resourceRegistration.getStaffMember(principal.staffMemberId))
-                ?.canApproveOwnAppointments === true,
+            (await services.resourceRegistration.getStaffMember(principal.staffMemberId))
+              ?.canApproveOwnAppointments === true,
           );
-        const allowed = approvalPermission && services.authorizer.can(
-          {
-            id: principal.id,
-            role: principal.role as StaffRole,
-            staffMemberId: principal.staffMemberId,
-            salonId: principal.salonId,
-          },
-          'manage_own_appointments',
-          { salonId: appt.salonId, staffMemberId: appt.staffMemberId },
-        );
+        const allowed =
+          approvalPermission &&
+          services.authorizer.can(
+            {
+              id: principal.id,
+              role: principal.role as StaffRole,
+              staffMemberId: principal.staffMemberId,
+              salonId: principal.salonId,
+            },
+            'manage_own_appointments',
+            { salonId: appt.salonId, staffMemberId: appt.staffMemberId },
+          );
         if (!allowed) {
           res.status(403).json({ code: 'FORBIDDEN' });
           return;
@@ -134,7 +131,7 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
 
   const requireCustomerAppointment: RequestHandler = (req, res, next) => {
     const principal = req.principal;
-    if (!principal || principal.role) {
+    if (!principal || (principal.role && principal.role !== 'PlatformAdmin')) {
       res.status(principal ? 403 : 401).json({ code: principal ? 'FORBIDDEN' : 'UNAUTHORIZED' });
       return;
     }
@@ -239,7 +236,7 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
           return;
         }
         // Otherwise the caller must be staff who can manage this appointment.
-        if (!principal.role || principal.role === 'PlatformAdmin') {
+        if (!principal.role) {
           res.status(403).json({ code: 'FORBIDDEN' });
           return;
         }
@@ -327,9 +324,7 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
         // A held appointment must immediately create its deposit payment. The
         // scheduling engine only reserves the slot; its placeholder URL is not
         // a gateway session and would leave the customer on a dead route.
-        const payment = await services.paymentService.initiateDeposit(
-          result.appointment.id,
-        );
+        const payment = await services.paymentService.initiateDeposit(result.appointment.id);
         res.status(200).json({
           status: 'held',
           appointment: result.appointment,
@@ -393,12 +388,9 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
         serviceId: String(req.body.serviceId),
         startAt: String(req.body.startAt),
         customerPhone: phone,
-        customerName:
-          typeof req.body.fullName === 'string' ? req.body.fullName.trim() : undefined,
+        customerName: typeof req.body.fullName === 'string' ? req.body.fullName.trim() : undefined,
         preferredStaffId:
-          typeof req.body.preferredStaffId === 'string'
-            ? req.body.preferredStaffId
-            : undefined,
+          typeof req.body.preferredStaffId === 'string' ? req.body.preferredStaffId : undefined,
         ...(rawLocationType ? { locationType: rawLocationType as 'salon' | 'customer' } : {}),
         ...(rawLocationType === 'customer' ? { locationAddress } : {}),
       });
@@ -439,9 +431,7 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
         customerId: req.principal!.id,
         startAt: String(req.body.startAt),
         preferredStaffId:
-          typeof req.body.preferredStaffId === 'string'
-            ? req.body.preferredStaffId
-            : undefined,
+          typeof req.body.preferredStaffId === 'string' ? req.body.preferredStaffId : undefined,
       });
       if (result.booking.status === 'held') {
         const payment = await services.paymentService.initiateDeposit(
@@ -553,7 +543,9 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
           services.notificationService.sendSalonBookingNotice(req.params.id, 'confirmed'),
         );
       }
-      res.status(200).json({ receiptStatus: result.status, appointmentStatus: result.appointmentStatus });
+      res
+        .status(200)
+        .json({ receiptStatus: result.status, appointmentStatus: result.appointmentStatus });
     }),
   );
 
@@ -591,7 +583,10 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
       if (!validateRequired(res, req.body, ['startAt'])) {
         return;
       }
-      if (typeof req.body.startAt !== 'string' || Number.isNaN(new Date(req.body.startAt).getTime())) {
+      if (
+        typeof req.body.startAt !== 'string' ||
+        Number.isNaN(new Date(req.body.startAt).getTime())
+      ) {
         res.status(400).json({ code: 'RESCHEDULE_INVALID_START', field: 'startAt' });
         return;
       }

@@ -43,14 +43,10 @@ describe('HTTP bootstrap (createApp)', () => {
     });
 
     it('attaches the principal for a valid access token', async () => {
-      const token = jwt.sign(
-        { sub: 'customer-123', type: 'access' },
-        TEST_ACCESS_SECRET,
-        { expiresIn: 60 },
-      );
-      const res = await request(created.app)
-        .get('/api/me')
-        .set('Authorization', `Bearer ${token}`);
+      const token = jwt.sign({ sub: 'customer-123', type: 'access' }, TEST_ACCESS_SECRET, {
+        expiresIn: 60,
+      });
+      const res = await request(created.app).get('/api/me').set('Authorization', `Bearer ${token}`);
       expect(res.status).toBe(200);
       expect(res.body.principal.id).toBe('customer-123');
       // Customer tokens carry no staff role.
@@ -58,10 +54,7 @@ describe('HTTP bootstrap (createApp)', () => {
     });
 
     it('rejects refresh tokens and non-HS256 access tokens at the API boundary', async () => {
-      const refreshToken = jwt.sign(
-        { sub: 'customer-123', type: 'refresh' },
-        TEST_ACCESS_SECRET,
-      );
+      const refreshToken = jwt.sign({ sub: 'customer-123', type: 'refresh' }, TEST_ACCESS_SECRET);
       const refreshRes = await request(created.app)
         .get('/api/me')
         .set('Authorization', `Bearer ${refreshToken}`);
@@ -103,6 +96,28 @@ describe('HTTP bootstrap (createApp)', () => {
 
     it('allows an Owner to configure', async () => {
       const token = signStaff({ sub: 'owner-1', role: 'Owner' });
+      const res = await request(created.app)
+        .get('/api/admin/ping')
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ ok: true });
+    });
+
+    it('allows an Admin to configure', async () => {
+      const token = signStaff({ sub: 'admin-1', role: 'Admin' });
+      const res = await request(created.app)
+        .get('/api/admin/ping')
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ ok: true });
+    });
+
+    it('allows a PlatformAdmin to use shared tenant panels', async () => {
+      const token = signStaff({
+        sub: 'customer-1',
+        role: 'PlatformAdmin',
+        platformAdminId: 'platform-admin-1',
+      });
       const res = await request(created.app)
         .get('/api/admin/ping')
         .set('Authorization', `Bearer ${token}`);

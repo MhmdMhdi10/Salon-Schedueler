@@ -24,10 +24,16 @@ interface StaffClaims {
   salonId: string;
 }
 
-/** Global operator claims. Platform admins are not tenant-scoped staff. */
+/**
+ * Global operator claims. A platform admin may also enter the customer and
+ * salon panels, so the token carries the matching customer/staff context while
+ * keeping `platformAdminId` for the global operations center.
+ */
 interface PlatformAdminClaims {
   role: 'PlatformAdmin';
   platformAdminId: string;
+  staffMemberId?: string;
+  salonId?: string;
 }
 
 type TokenClaims = StaffClaims | PlatformAdminClaims;
@@ -61,8 +67,8 @@ export interface OtpRequestDetails {
 const DEFAULT_CONFIG: AuthServiceConfig = {
   jwtAccessSecret: process.env['JWT_ACCESS_SECRET'] || 'dev-access-secret',
   jwtRefreshSecret: process.env['JWT_REFRESH_SECRET'] || 'dev-refresh-secret',
-  accessExpirySeconds: 900,       // 15 minutes
-  refreshExpirySeconds: 604800,   // 7 days
+  accessExpirySeconds: 900, // 15 minutes
+  refreshExpirySeconds: 604800, // 7 days
   otpWindowSeconds: 120,
   devOtpAutoFill: false,
 };
@@ -76,8 +82,8 @@ const DEFAULT_CONFIG: AuthServiceConfig = {
  *
  * - verifyOtp: finds the latest non-invalidated OTP for the phone,
  *   checks expiry (120s window), verifies the code hash, marks it consumed,
-   *   resolves a platform admin or creates/finds the customer, and issues JWT
-   *   access + refresh tokens.
+ *   resolves a platform admin or creates/finds the customer, and issues JWT
+ *   access + refresh tokens.
  *
  * - refresh: verifies a refresh token and issues a new token pair.
  */
@@ -167,10 +173,7 @@ export class AuthService {
       }
       code = delivery.code;
     } else {
-      const delivery = await this.smsProvider.send(
-        phone,
-        `Your verification code is: ${code}`,
-      );
+      const delivery = await this.smsProvider.send(phone, `Your verification code is: ${code}`);
       if (!delivery.ok) {
         throw new AuthError('OTP_DELIVERY_FAILED', delivery.error);
       }
@@ -242,15 +245,19 @@ export class AuthService {
       data: { consumedAt: now },
     });
 
-    // Platform admin identities live outside the customer/staff tenant model.
-    // Check them before creating a customer row so an operator phone never
-    // pollutes customer analytics or receives customer-scoped behavior.
+    // Platform admin identities are global, but the shared header can also
+    // open the customer and salon panels. Resolve the same customer/staff
+    // context for the phone so those panels use the correct subject and salon.
     const platformAdmin = await this.findPlatformAdminByPhone(phone);
     if (platformAdmin) {
       await this.updatePlatformAdminLogin(platformAdmin.id);
-      return this.issueTokens(platformAdmin.id, {
+      const customer = await this.findOrCreateCustomer(phone);
+      const staff = await this.findStaffClaimsByPhone(phone);
+      return this.issueTokens(customer.id, {
         role: 'PlatformAdmin',
         platformAdminId: platformAdmin.id,
+        staffMemberId: staff?.staffMemberId,
+        salonId: staff?.salonId,
       });
     }
 
@@ -302,16 +309,20 @@ export class AuthService {
     // identity from the database so deactivated operators lose access without
     // waiting for an old refresh token to expire.
     if (rawRole === 'PlatformAdmin' || platformAdminId) {
-      if (!platformAdminId || platformAdminId !== subjectId) {
+      if (!platformAdminId) {
         throw new AuthError('INVALID_TOKEN', 'Invalid refresh token');
       }
       const admin = await this.findPlatformAdminById(platformAdminId);
       if (!admin) {
         throw new AuthError('INVALID_TOKEN', 'Invalid or inactive refresh identity');
       }
-      return this.issueTokens(admin.id, {
+      const customer = await this.findOrCreateCustomer(admin.phone);
+      const staff = await this.findStaffClaimsByPhone(admin.phone);
+      return this.issueTokens(customer.id, {
         role: 'PlatformAdmin',
         platformAdminId: admin.id,
+        staffMemberId: staff?.staffMemberId,
+        salonId: staff?.salonId,
       });
     }
 
@@ -342,9 +353,7 @@ export class AuthService {
     return customer;
   }
 
-  private async findCustomerById(
-    id: string,
-  ): Promise<{ id: string; phone: string } | null> {
+  private async findCustomerById(id: string): Promise<{ id: string; phone: string } | null> {
     return this.prisma.customer.findUnique({
       where: { id },
       select: { id: true, phone: true },
@@ -356,9 +365,7 @@ export class AuthService {
    * belong to an active staff member. These claims (role + staffMemberId) are
    * embedded in the issued JWTs so the RBAC layer can authorize staff actions.
    */
-  private async findStaffClaimsByPhone(
-    phone: string,
-  ): Promise<StaffClaims | undefined> {
+  private async findStaffClaimsByPhone(phone: string): Promise<StaffClaims | undefined> {
     const staff = await this.prisma.staffMember.findFirst({
       where: { phone, active: true },
       select: { id: true, role: true, salonId: true },
@@ -371,9 +378,7 @@ export class AuthService {
 
   /** Resolve an active global operator. Optional delegate keeps older unit-test
    * Prisma fakes compatible while the generated client always provides it. */
-  private async findPlatformAdminByPhone(
-    phone: string,
-  ): Promise<{ id: string } | undefined> {
+  private async findPlatformAdminByPhone(phone: string): Promise<{ id: string } | undefined> {
     const delegate = (
       this.prisma as unknown as {
         platformAdmin?: {
@@ -392,20 +397,22 @@ export class AuthService {
   /** Resolve an active global operator for refresh-token rehydration. */
   private async findPlatformAdminById(
     id: string,
-  ): Promise<{ id: string } | undefined> {
+  ): Promise<{ id: string; phone: string } | undefined> {
     const delegate = (
       this.prisma as unknown as {
         platformAdmin?: {
-          findUnique?: (args: unknown) => Promise<{ id: string; active: boolean } | null>;
+          findUnique?: (
+            args: unknown,
+          ) => Promise<{ id: string; phone: string; active: boolean } | null>;
         };
       }
     ).platformAdmin;
     if (!delegate?.findUnique) return undefined;
     const admin = await delegate.findUnique({
       where: { id },
-      select: { id: true, active: true },
+      select: { id: true, phone: true, active: true },
     });
-    return admin?.active ? { id: admin.id } : undefined;
+    return admin?.active ? { id: admin.id, phone: admin.phone } : undefined;
   }
 
   /** Update last-login telemetry without making authentication depend on an

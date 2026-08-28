@@ -41,7 +41,9 @@ describe('Authorizer', () => {
     });
 
     it('should allow view_own_appointments (R2.5)', () => {
-      expect(authorizer.can(owner(), 'view_own_appointments', resource('staff-owner-1'))).toBe(true);
+      expect(authorizer.can(owner(), 'view_own_appointments', resource('staff-owner-1'))).toBe(
+        true,
+      );
     });
 
     it('should allow view_own_appointments even for other staff (owner has full access)', () => {
@@ -60,9 +62,9 @@ describe('Authorizer', () => {
     });
   });
 
-  describe('Admin role (R2.3, R2.4 by omission)', () => {
-    it('should deny configure_salon', () => {
-      expect(authorizer.can(admin(), 'configure_salon')).toBe(false);
+  describe('Admin role (full salon-panel access)', () => {
+    it('should allow configure_salon', () => {
+      expect(authorizer.can(admin(), 'configure_salon')).toBe(true);
     });
 
     it('should allow manage_appointments (R2.3)', () => {
@@ -70,7 +72,9 @@ describe('Authorizer', () => {
     });
 
     it('should allow view_own_appointments', () => {
-      expect(authorizer.can(admin(), 'view_own_appointments', resource('staff-admin-1'))).toBe(true);
+      expect(authorizer.can(admin(), 'view_own_appointments', resource('staff-admin-1'))).toBe(
+        true,
+      );
     });
 
     it('should allow view_own_appointments for any staff (admin has broad view)', () => {
@@ -93,13 +97,21 @@ describe('Authorizer', () => {
 
     it('should allow view_own_appointments for own staff member (R2.5)', () => {
       expect(
-        authorizer.can(stylist('staff-stylist-1'), 'view_own_appointments', resource('staff-stylist-1')),
+        authorizer.can(
+          stylist('staff-stylist-1'),
+          'view_own_appointments',
+          resource('staff-stylist-1'),
+        ),
       ).toBe(true);
     });
 
     it('should deny view_own_appointments for other staff member (R2.5 own only)', () => {
       expect(
-        authorizer.can(stylist('staff-stylist-1'), 'view_own_appointments', resource('staff-other')),
+        authorizer.can(
+          stylist('staff-stylist-1'),
+          'view_own_appointments',
+          resource('staff-other'),
+        ),
       ).toBe(false);
     });
 
@@ -123,10 +135,33 @@ describe('Authorizer', () => {
     });
   });
 
+  describe('PlatformAdmin role (shared panel access)', () => {
+    it('allows every tenant action across salon boundaries', () => {
+      const platformAdmin: Principal = {
+        id: 'customer-1',
+        role: 'PlatformAdmin',
+        salonId: 'salon-1',
+      };
+
+      expect(authorizer.can(platformAdmin, 'configure_salon', { salonId: 'salon-2' })).toBe(true);
+      expect(authorizer.can(platformAdmin, 'manage_appointments', { salonId: 'salon-2' })).toBe(
+        true,
+      );
+      expect(authorizer.can(platformAdmin, 'view_own_appointments', { salonId: 'salon-2' })).toBe(
+        true,
+      );
+      expect(authorizer.can(platformAdmin, 'view_customer_notes', { salonId: 'salon-2' })).toBe(
+        true,
+      );
+    });
+  });
+
   describe('Edge cases', () => {
     it('denies a scoped staff principal from crossing salon boundaries', () => {
       const scopedOwner: Principal = { ...owner(), salonId: 'salon-1' };
-      expect(authorizer.can(scopedOwner, 'manage_appointments', { salonId: 'salon-2' })).toBe(false);
+      expect(authorizer.can(scopedOwner, 'manage_appointments', { salonId: 'salon-2' })).toBe(
+        false,
+      );
       expect(authorizer.can(scopedOwner, 'manage_appointments', { salonId: 'salon-1' })).toBe(true);
     });
 
@@ -150,8 +185,8 @@ describe('Authorizer', () => {
         expect(authorizer.can(owner(), action, resource('staff-owner-1'))).toBe(true);
       }
 
-      // Admin: configure_salon denied, rest allowed
-      expect(authorizer.can(admin(), 'configure_salon')).toBe(false);
+      // Admin: all salon-panel actions allowed
+      expect(authorizer.can(admin(), 'configure_salon')).toBe(true);
       expect(authorizer.can(admin(), 'manage_appointments')).toBe(true);
       expect(authorizer.can(admin(), 'view_own_appointments', resource('any'))).toBe(true);
       expect(authorizer.can(admin(), 'view_customer_notes')).toBe(true);

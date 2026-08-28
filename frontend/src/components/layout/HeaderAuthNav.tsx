@@ -23,10 +23,16 @@ const CUSTOMER_NAV: readonly HeaderNavItem[] = [
   { labelKey: 'app.nav.account', to: '/account', end: true },
 ];
 
+const PLATFORM_ADMIN_NAV: readonly HeaderNavItem[] = [
+  { labelKey: 'app.workspace.salonPanel', to: '/owner' },
+  { labelKey: 'app.workspace.userPanel', to: '/account' },
+  { labelKey: 'app.workspace.adminPanel', to: '/platform-admin', end: true },
+];
+
 const STAFF_NAV = [
   { labelKey: 'owner.nav.calendar', to: '/owner/calendar', roles: ['Owner', 'Admin', 'Stylist'] },
   { labelKey: 'owner.nav.analytics', to: '/owner/analytics', roles: ['Owner', 'Admin'] },
-  { labelKey: 'owner.nav.configuration', to: '/owner/config', roles: ['Owner'] },
+  { labelKey: 'owner.nav.configuration', to: '/owner/config', roles: ['Owner', 'Admin'] },
   { labelKey: 'owner.nav.subscription', to: '/owner/subscription', roles: ['Owner', 'Admin'] },
   { labelKey: 'owner.nav.qr', to: '/owner/qr', roles: ['Owner', 'Admin'] },
   { labelKey: 'owner.nav.myQr', to: '/owner/my-qr', roles: ['Owner', 'Admin', 'Stylist'] },
@@ -43,6 +49,8 @@ export interface HeaderAuthNavProps {
   tone?: HeaderAuthNavTone;
   /** The surrounding shell owns the customer account link when false. */
   showCustomerNav?: boolean;
+  /** Hide staff-panel destinations when the surrounding surface owns them. */
+  showStaffNav?: boolean;
 }
 
 const linkClass =
@@ -75,6 +83,7 @@ const linkClass =
 export function HeaderAuthNav({
   tone = 'default',
   showCustomerNav = true,
+  showStaffNav = true,
 }: HeaderAuthNavProps = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -106,8 +115,8 @@ export function HeaderAuthNav({
   }
 
   const items: HeaderNavItem[] = isPlatformAdmin
-    ? [{ labelKey: 'platform.nav.dashboard', to: '/platform-admin', end: true }]
-    : isStaff && role
+    ? [...PLATFORM_ADMIN_NAV]
+    : isStaff && role && showStaffNav
       ? STAFF_NAV.filter((item) => item.roles.some((allowedRole) => allowedRole === role)).map(
           ({ labelKey, to }) => ({
             labelKey,

@@ -33,14 +33,19 @@ export class WsInboxHub implements InboxHub {
   /** Match a conn against an event's audience scope. */
   private matches(conn: Conn, audience: InboxAudience, staffMemberId: string | null): boolean {
     if (audience === 'owner' || audience === 'admin') {
-      return conn.role === 'Owner' || conn.role === 'Admin';
+      return conn.role === 'Owner' || conn.role === 'Admin' || conn.role === 'PlatformAdmin';
     }
     if (audience === 'all-staff') return true;
     // 'stylist' — target staff member only
     return conn.staffMemberId === staffMemberId && !!conn.staffMemberId;
   }
 
-  broadcast(salonId: string, audience: InboxAudience, staffMemberId: string | null, event: InboxEvent) {
+  broadcast(
+    salonId: string,
+    audience: InboxAudience,
+    staffMemberId: string | null,
+    event: InboxEvent,
+  ) {
     const data = JSON.stringify({ type: 'notification', payload: event });
     for (const conn of this.conns.values()) {
       if (conn.salonId !== salonId) continue;

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { Check, CheckCheck, Bell } from 'lucide-react';
 import { inboxApi, type SalonNotification } from '../../api/client';
 import { useSalonId } from '../../auth/useSalonId';
@@ -8,6 +9,7 @@ import { SeoHead } from '../../components/seo';
 import { Button, ErrorState, Pagination, Skeleton, Spinner, cn } from '../../components/ui';
 import { JalaliDate } from '../../components/ui/JalaliDate';
 import { Num } from '../../components/ui/Num';
+import { getNotificationDestination } from '../../components/owner/notificationDestination';
 
 type Filter = 'all' | 'unread';
 type Status = 'loading' | 'success' | 'error';
@@ -323,38 +325,47 @@ export function OwnerNotificationsPage() {
                   isUnread ? 'border-primary/40 bg-primary/5' : 'border-border bg-surface',
                 )}
               >
-                <span className="mt-0.5 text-base">{typeIcon(n.type)}</span>
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-sm font-semibold text-text">{n.title}</span>
-                    <span className="shrink-0 text-[0.65rem] tabular-nums text-muted">
-                      <Num value={relativeTime(n.createdAt, t)} />
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted">{n.body}</p>
-                  <div className="flex items-center gap-3 text-[0.65rem] text-muted">
-                    <span className="tabular-nums">
-                      <JalaliDate value={new Date(n.createdAt).toISOString().slice(0, 10)} />
-                    </span>
-                    {n.payload?.date && (
+                <Link
+                  to={getNotificationDestination(n)}
+                  onClick={() => {
+                    if (isUnread) void markOne(n.id);
+                  }}
+                  className="flex min-w-0 flex-1 items-start gap-3 rounded-md text-start no-underline transition-colors hover:bg-elevated/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+                  aria-label={n.title}
+                >
+                  <span className="mt-0.5 text-base">{typeIcon(n.type)}</span>
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-sm font-semibold text-text">{n.title}</span>
+                      <span className="shrink-0 text-[0.65rem] tabular-nums text-muted">
+                        <Num value={relativeTime(n.createdAt, t)} />
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted">{n.body}</p>
+                    <div className="flex items-center gap-3 text-[0.65rem] text-muted">
                       <span className="tabular-nums">
-                        <JalaliDate value={n.payload.date} />
+                        <JalaliDate value={new Date(n.createdAt).toISOString().slice(0, 10)} />
                       </span>
-                    )}
-                    {n.payload?.appointmentId && (
-                      <span className="truncate">
-                        {t('owner.inbox.refAppointment', { defaultValue: 'نوبت' })}:{' '}
-                        <span className="select-all" dir="ltr">
-                          {n.payload.appointmentId.slice(0, 8)}
+                      {n.payload?.date && (
+                        <span className="tabular-nums">
+                          <JalaliDate value={n.payload.date} />
                         </span>
-                      </span>
-                    )}
+                      )}
+                      {n.payload?.appointmentId && (
+                        <span className="truncate">
+                          {t('owner.inbox.refAppointment', { defaultValue: 'نوبت' })}:{' '}
+                          <span className="select-all" dir="ltr">
+                            {n.payload.appointmentId.slice(0, 8)}
+                          </span>
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
+                </Link>
                 {isUnread && (
                   <button
                     type="button"
-                    onClick={() => markOne(n.id)}
+                    onClick={() => void markOne(n.id)}
                     disabled={busy}
                     aria-label={t('owner.inbox.markRead', {
                       defaultValue: 'علامت‌گذاری به خوانده‌شده',

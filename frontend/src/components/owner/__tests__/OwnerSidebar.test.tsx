@@ -58,12 +58,12 @@ describe('OwnerSidebar', () => {
       expect(screen.getByText('تنظیمات سالن')).toBeInTheDocument();
     });
 
-    it('renders calendar and analytics but NOT configuration for Admin role', () => {
-      // Configuration is Owner-only (matches the OwnerRoleGuard on /owner/config)
+    it('renders full salon navigation for Admin role', () => {
       renderSidebar({ role: 'Admin' });
       expect(screen.getByText('تقویم')).toBeInTheDocument();
       expect(screen.getByText('آمار')).toBeInTheDocument();
-      expect(screen.queryByText('تنظیمات سالن')).not.toBeInTheDocument();
+      expect(screen.getByText('تنظیمات سالن')).toBeInTheDocument();
+      expect(screen.getByText('تیم')).toBeInTheDocument();
     });
   });
 

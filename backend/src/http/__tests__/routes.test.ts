@@ -437,8 +437,8 @@ describe('HTTP routes', () => {
     });
   });
 
-  // ── Brand_Accent write (protected, RBAC configure_salon — Owner only) ─────────
-  // signature-ui-system R4.1: configure_salon succeeds; other roles 403 with no
+  // ── Brand_Accent write (protected, RBAC configure_salon — Owner/Admin) ────────
+  // signature-ui-system R4.1: configure_salon succeeds; unauthorized roles 403 with no
   // state change; null clears the accent to the signature default.
   describe('POST /api/salons/:id/brand-accent', () => {
     it('allows an Owner (configure_salon) and persists the accent', async () => {
@@ -451,14 +451,14 @@ describe('HTTP routes', () => {
       expect(fake.availabilityConfig.setSalonBrandAccent).toHaveBeenCalledWith('salon-1', 'rose');
     });
 
-    it('returns 403 FORBIDDEN for an Admin with no state change', async () => {
+    it('allows an Admin to configure the salon', async () => {
       const res = await request(app)
         .post('/api/salons/salon-1/brand-accent')
         .set('Authorization', `Bearer ${staffToken('Admin')}`)
         .send({ brandAccent: 'rose' });
-      expect(res.status).toBe(403);
-      expect(res.body).toEqual({ code: 'FORBIDDEN' });
-      expect(fake.availabilityConfig.setSalonBrandAccent).not.toHaveBeenCalled();
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ ok: true, brandAccent: 'rose' });
+      expect(fake.availabilityConfig.setSalonBrandAccent).toHaveBeenCalledWith('salon-1', 'rose');
     });
 
     it('returns 403 FORBIDDEN for a Stylist with no state change', async () => {
@@ -855,12 +855,12 @@ describe('HTTP routes', () => {
       expect(fake.availabilityConfig.addHoliday).toHaveBeenCalledWith('salon-1', '2026-07-15');
     });
 
-    it('forbids an Admin from changing recurring hours', async () => {
+    it('allows an Admin to change recurring hours', async () => {
       const res = await request(app)
         .put('/api/salons/salon-1/working-hours')
         .set('Authorization', `Bearer ${staffToken('Admin')}`)
         .send({ hours: [] });
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(200);
     });
   });
 
@@ -945,13 +945,16 @@ describe('HTTP routes', () => {
       );
     });
 
-    it('forbids an Admin (configure_salon is Owner-only) (403)', async () => {
+    it('allows an Admin to manage staff availability', async () => {
       const res = await request(app)
         .post('/api/staff/staff-x/manage-availability')
         .set('Authorization', `Bearer ${staffToken('Admin')}`)
         .send({ allowed: true });
-      expect(res.status).toBe(403);
-      expect(fake.availabilityConfig.setStaffManageOwnAvailability).not.toHaveBeenCalled();
+      expect(res.status).toBe(200);
+      expect(fake.availabilityConfig.setStaffManageOwnAvailability).toHaveBeenCalledWith(
+        'staff-x',
+        true,
+      );
     });
   });
 

@@ -19,7 +19,7 @@ import '../../../i18n';
  *  2. The `dir="rtl"`/`lang="fa"` document contract (R2.9, R8.4) is preserved
  *     around the reused pages.
  *  3. The section routes stay consistent with the shell's role-aware nav
- *     (Owner = everything; Admin = no configuration; Stylist = calendar only):
+ *     (Owner/Admin = everything; Stylist = calendar only):
  *     a role that can't see a section is redirected back to the calendar.
  *
  * The admin pages' own behavioural suites already cover their internals; here we
@@ -316,12 +316,11 @@ describe('Owner panel — section routes mirror role-aware nav (R2.3)', () => {
     expect(screen.queryByTestId('owner-analytics-page')).not.toBeInTheDocument();
   });
 
-  it('redirects an Admin away from configuration to the calendar', async () => {
+  it('lets an Admin reach configuration', async () => {
     renderOwnerApp('Admin', '/owner/config');
 
-    // Configuration is Owner-only — an Admin is redirected to the calendar.
-    expect(await screen.findByTestId('owner-calendar-page')).toBeInTheDocument();
-    expect(screen.queryByTestId('owner-config-page')).not.toBeInTheDocument();
+    expect(await screen.findByTestId('owner-config-page')).toBeInTheDocument();
+    expect(await screen.findByTestId('admin-configuration')).toBeInTheDocument();
   });
 
   it('lets an Admin reach analytics', async () => {

@@ -168,9 +168,7 @@ function parseWorkingHours(body: unknown) {
  * same window applies to every day in it. Shared by the salon closure and the
  * per-stylist availability-block routes.
  */
-function parseDateWindow(
-  body: Record<string, unknown>,
-):
+function parseDateWindow(body: Record<string, unknown>):
   | {
       ok: true;
       onDate: string;
@@ -325,7 +323,11 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
           res.status(404).json({ code: 'NOT_FOUND' });
           return;
         }
-        if (principal.salonId && principal.salonId !== staff.salonId) {
+        if (
+          principal.role !== 'PlatformAdmin' &&
+          principal.salonId &&
+          principal.salonId !== staff.salonId
+        ) {
           res.status(403).json({ code: 'FORBIDDEN' });
           return;
         }
@@ -346,7 +348,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
       res.status(401).json({ code: 'UNAUTHORIZED' });
       return;
     }
-    if (!principal.role || principal.role === 'PlatformAdmin') {
+    if (!principal.role) {
       res.status(403).json({ code: 'FORBIDDEN' });
       return;
     }
@@ -496,9 +498,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         appointmentId: req.params.id,
         startAt: String(req.body.startAt),
         preferredStaffId:
-          typeof req.body.preferredStaffId === 'string'
-            ? req.body.preferredStaffId
-            : undefined,
+          typeof req.body.preferredStaffId === 'string' ? req.body.preferredStaffId : undefined,
       });
       if (result.booking.status === 'held') {
         const payment = await services.paymentService.initiateDeposit(
@@ -590,11 +590,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         res.status(503).json({ code: 'FEATURE_UNAVAILABLE' });
         return;
       }
-      const result = await sender.call(
-        services.notificationService,
-        req.params.id,
-        message,
-      );
+      const result = await sender.call(services.notificationService, req.params.id, message);
       if (!result) {
         res.status(404).json({ code: 'NOT_FOUND' });
         return;
@@ -629,8 +625,8 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
           ? true
           : Boolean(
               principal.staffMemberId &&
-                (await services.resourceRegistration.getStaffMember(principal.staffMemberId))
-                  ?.canApproveOwnAppointments === true,
+              (await services.resourceRegistration.getStaffMember(principal.staffMemberId))
+                ?.canApproveOwnAppointments === true,
             );
       res.status(200).json({
         appointments: appointments.map(toCalendarDto),
@@ -775,13 +771,13 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         }
         patch[field] = body[field];
       }
-      res.status(200).json(
-        await services.notificationSettings.updateSmsSettings(req.params.id, patch),
-      );
+      res
+        .status(200)
+        .json(await services.notificationSettings.updateSmsSettings(req.params.id, patch));
     }),
   );
 
-  // Add a staff member to the salon (Owner only). Body: { fullName, role,
+  // Add a staff member to the salon (Owner/Admin). Body: { fullName, role,
   // phone? }. `role` sets their RBAC access (Owner/Admin/Stylist); an optional
   // unique `phone` is their OTP login (matched in auth.service → staff JWT).
   router.post(
@@ -861,9 +857,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
           if (typeof catalog.addServiceStaff === 'function') {
             const servicesForSalon = await catalog.listServices(req.params.id);
             await Promise.all(
-              servicesForSalon.map((service) =>
-                catalog.addServiceStaff!(service.id, [created.id]),
-              ),
+              servicesForSalon.map((service) => catalog.addServiceStaff!(service.id, [created.id])),
             );
           }
         }
@@ -879,7 +873,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     }),
   );
 
-  // Update a staff member's identity / role / login / active flag (Owner only).
+  // Update a staff member's identity / role / login / active flag (Owner/Admin).
   // Body: any subset of { fullName, role, phone, active }. `phone: ""`/null
   // clears the login; a non-empty value (must be unique) sets it.
   router.patch(
@@ -949,11 +943,13 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         if (isUniqueViolation(err)) {
           const targets = uniqueViolationTargets(err as { meta?: { target?: unknown } });
           const assignmentTaken = targets.some((target) => target.includes('assigned_chair'));
-          res.status(409).json(
-            assignmentTaken
-              ? { code: 'ASSIGNED_CHAIR_TAKEN', field: 'assignedChairId' }
-              : { code: 'PHONE_TAKEN', field: 'phone' },
-          );
+          res
+            .status(409)
+            .json(
+              assignmentTaken
+                ? { code: 'ASSIGNED_CHAIR_TAKEN', field: 'assignedChairId' }
+                : { code: 'PHONE_TAKEN', field: 'phone' },
+            );
           return;
         }
         throw err;
@@ -1033,14 +1029,14 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         res.status(400).json({ code: 'VALIDATION_ERROR', field: 'depositMethod' });
         return;
       }
-      const cardNumber = normalizeDigits(String(req.body?.depositCardNumber ?? ''))
-        .replace(/[\s-]/g, '');
-      const cardHolder = typeof req.body?.depositCardHolder === 'string'
-        ? req.body.depositCardHolder.trim()
-        : '';
-      const bankName = typeof req.body?.depositBankName === 'string'
-        ? req.body.depositBankName.trim()
-        : '';
+      const cardNumber = normalizeDigits(String(req.body?.depositCardNumber ?? '')).replace(
+        /[\s-]/g,
+        '',
+      );
+      const cardHolder =
+        typeof req.body?.depositCardHolder === 'string' ? req.body.depositCardHolder.trim() : '';
+      const bankName =
+        typeof req.body?.depositBankName === 'string' ? req.body.depositBankName.trim() : '';
       if (rawMethod === 'card_transfer' && !/^\d{16}$/.test(cardNumber)) {
         res.status(400).json({ code: 'VALIDATION_ERROR', field: 'depositCardNumber' });
         return;
@@ -1067,7 +1063,9 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     '/salons/:id/booking-policy',
     requireRole('configure_salon'),
     asyncRoute(async (req, res) => {
-      const bookingWindowDays = await services.availabilityConfig.getBookingWindowDays(req.params.id);
+      const bookingWindowDays = await services.availabilityConfig.getBookingWindowDays(
+        req.params.id,
+      );
       const workMode =
         typeof services.availabilityConfig.getSalonWorkMode === 'function'
           ? await services.availabilityConfig.getSalonWorkMode(req.params.id)
@@ -1156,7 +1154,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     }),
   );
 
-  // Add a chair to the salon (Owner only). Body: { name }.
+  // Add a chair to the salon (Owner/Admin). Body: { name }.
   router.post(
     '/salons/:id/chairs',
     requireRole('configure_salon'),
@@ -1219,7 +1217,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     }),
   );
 
-  // Add a service to the salon (Owner only). Body: { name, durationMinutes,
+  // Add a service to the salon (Owner/Admin). Body: { name, durationMinutes,
   // priceRial, requiresDeposit?, depositRial? }. Duration/price are optional
   // (default 30 min / 0 Rial). Deposit amount is required when deposits are
   // enabled so a held booking can always create a real payment session.
@@ -1244,9 +1242,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
           ? req.body.bufferMinutes
           : 0;
       const priceRial =
-        typeof req.body?.priceRial === 'number' && req.body.priceRial >= 0
-          ? req.body.priceRial
-          : 0;
+        typeof req.body?.priceRial === 'number' && req.body.priceRial >= 0 ? req.body.priceRial : 0;
       const requiresDeposit =
         req.body?.requiresDeposit === true || req.body?.requiresDeposit === 'true';
       const rawDepositRial = req.body?.depositRial;
@@ -1285,9 +1281,10 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
           priceRial: Number(service.priceRial),
           requiresDeposit: service.requiresDeposit,
           depositRial: service.depositRial == null ? null : Number(service.depositRial),
-          staffIds: (await services.serviceCatalog.listServices(req.params.id))
-            .find((item) => item.id === service.id)
-            ?.serviceStaff.map((mapping) => mapping.staffMemberId) ?? [],
+          staffIds:
+            (await services.serviceCatalog.listServices(req.params.id))
+              .find((item) => item.id === service.id)
+              ?.serviceStaff.map((mapping) => mapping.staffMemberId) ?? [],
         },
       });
     }),
@@ -1386,7 +1383,9 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
       }
       const staff = await services.resourceRegistration.listStaff(req.params.id);
       const allowed = new Set(
-        staff.filter((member) => member.active && member.role !== 'Admin').map((member) => member.id),
+        staff
+          .filter((member) => member.active && member.role !== 'Admin')
+          .map((member) => member.id),
       );
       if (staffIds.some((id) => !allowed.has(id))) {
         res.status(400).json({ code: 'INVALID_STAFF_ASSIGNMENT', field: 'staffIds' });
@@ -1397,7 +1396,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     }),
   );
 
-  // Delete a service (Owner only).
+  // Delete a service (Owner/Admin).
   router.delete(
     '/salons/:id/services/:serviceId',
     requireRole('configure_salon'),
@@ -1413,7 +1412,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
   );
 
   // Read the salon's approval policy (salon default + per-stylist overrides) for
-  // the owner configuration UI (Owner only).
+  // the owner configuration UI (Owner/Admin).
   router.get(
     '/salons/:id/approval-policy',
     requireRole('configure_salon'),
@@ -1423,7 +1422,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     }),
   );
 
-  // Set the salon's default approval policy (Owner only). Body: { autoApprove }.
+  // Set the salon's default approval policy (Owner/Admin). Body: { autoApprove }.
   router.post(
     '/salons/:id/auto-approve',
     requireRole('configure_salon'),
@@ -1434,7 +1433,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     }),
   );
 
-  // Set/clear a stylist's approval-policy override (Owner only). Body:
+  // Set/clear a stylist's approval-policy override (Owner/Admin). Body:
   // { autoApprove: true | false | null } — null inherits the salon default.
   router.post(
     '/staff/:id/auto-approve',
@@ -1448,7 +1447,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     }),
   );
 
-  // Set a stylist's own-appointment approval permission (Owner only).
+  // Set a stylist's own-appointment approval permission (Owner/Admin).
   // Body: { allowed: boolean }. Owner/Admin retain global override regardless
   // of this flag; the flag only affects Stylist tokens and own appointments.
   router.post(
@@ -1477,7 +1476,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     }),
   );
 
-  // Set/clear the salon's storefront Brand_Accent (Owner only). Body:
+  // Set/clear the salon's storefront Brand_Accent (Owner/Admin). Body:
   // { brandAccent: string | null } — null (or empty/missing) clears the accent so
   // the storefront falls back to the signature default palette. A non-null value
   // is stored as an opaque accent key (resolved client-side). Mirrors the
@@ -1497,7 +1496,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
   // The salon's "closed" calendar: a closure with no time window blocks the
   // whole day; one with a [startTime,endTime) window blocks only that part of
   // the day. The scheduling engine enforces both (no availability + booking
-  // rejected). Owner-only (configure_salon). Read/add/remove.
+  // rejected). Owner/Admin (configure_salon). Read/add/remove.
   router.get(
     '/salons/:id/holidays',
     requireRole('configure_salon'),
@@ -1570,7 +1569,9 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
       }
       const existing = await services.availabilityConfig.getHolidays(req.params.id);
       const alreadyClosed = existing.some(
-        (item) => toClosureDto(item).onDate === onDate && formatClosureTime((item as any).startTime) === null,
+        (item) =>
+          toClosureDto(item).onDate === onDate &&
+          formatClosureTime((item as any).startTime) === null,
       );
       if (!alreadyClosed) {
         await services.availabilityConfig.addHoliday(req.params.id, onDate);
@@ -1581,8 +1582,10 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         return;
       }
 
-      const { cancelledCount, failedCount } =
-        await cancelAppointmentsForFullDayClosure(req.params.id, onDate);
+      const { cancelledCount, failedCount } = await cancelAppointmentsForFullDayClosure(
+        req.params.id,
+        onDate,
+      );
       res.status(200).json({
         ok: true,
         cancelledCount,
@@ -1603,7 +1606,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
       res.status(401).json({ code: 'UNAUTHORIZED' });
       return;
     }
-    if (!principal.role || principal.role === 'PlatformAdmin') {
+    if (!principal.role) {
       res.status(403).json({ code: 'FORBIDDEN' });
       return;
     }
@@ -1615,7 +1618,11 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
           res.status(404).json({ code: 'NOT_FOUND' });
           return;
         }
-        if (principal.salonId && principal.salonId !== scope.salonId) {
+        if (
+          principal.role !== 'PlatformAdmin' &&
+          principal.salonId &&
+          principal.salonId !== scope.salonId
+        ) {
           res.status(403).json({ code: 'FORBIDDEN' });
           return;
         }
@@ -1710,7 +1717,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
   );
 
   // Grant or revoke a stylist's permission to manage their OWN availability
-  // (Owner only). Body: { allowed: boolean }.
+  // (Owner/Admin). Body: { allowed: boolean }.
   router.post(
     '/staff/:id/manage-availability',
     requireRole('configure_salon'),

@@ -176,6 +176,15 @@ describe('OwnerLayout — RBAC (R2.3)', () => {
     expect(screen.queryByTestId('owner-calendar-page')).not.toBeInTheDocument();
   });
 
+  it('lets a platform admin enter the salon surface from the panel switcher', async () => {
+    getAccessToken.mockReturnValue('platform-token');
+    getMe.mockResolvedValue({ principal: { id: 'p1', role: 'PlatformAdmin' } });
+
+    renderOwnerApp();
+
+    expect(await screen.findByTestId('owner-calendar-page')).toBeInTheDocument();
+  });
+
   it('gives an Owner the full panel navigation', async () => {
     getAccessToken.mockReturnValue('t');
     getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Owner' } });

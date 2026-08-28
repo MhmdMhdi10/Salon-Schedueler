@@ -39,7 +39,7 @@ export interface AuthContextValue {
   principal: AuthPrincipal | null;
   /** Staff role when the principal is a staff member, else undefined. */
   role: PrincipalRole | undefined;
-  /** True when the session can use customer self-service (customer or staff). */
+  /** True when the session can use customer self-service. */
   isCustomer: boolean;
   /** True when the session is an authenticated staff member (has a role). */
   isStaff: boolean;
@@ -136,7 +136,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role,
       isStaff:
         status === 'authenticated' && (role === 'Owner' || role === 'Admin' || role === 'Stylist'),
-      isCustomer: status === 'authenticated' && role !== 'PlatformAdmin',
+      // Platform admins use the same phone/customer subject when they switch
+      // into the customer panel, so their customer self-service APIs are valid
+      // too. Staff sessions already share this customer capability.
+      isCustomer: status === 'authenticated',
       isPlatformAdmin,
       refresh,
       signOut,

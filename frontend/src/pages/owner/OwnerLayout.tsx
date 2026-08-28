@@ -21,7 +21,7 @@ type OwnerAuthState =
   | { phase: 'authenticated'; role: OwnerRole; salonId: string; staffMemberId?: string }
   | { phase: 'unauthenticated' }
   | { phase: 'customer' }
-  | { phase: 'platform-admin' };
+  | { phase: 'platform-admin'; salonId: string };
 
 /**
  * Owner panel layout + auth guard (task 5.1; R2.1, R2.2, R2.3).
@@ -71,7 +71,14 @@ export function OwnerLayout() {
         // session. Keep the customer signed in and return them to their own
         // surface instead of mounting an empty owner shell on a deep link.
         if (principal.role === 'PlatformAdmin') {
-          setState({ phase: 'platform-admin' });
+          // Platform admins may inspect the salon surface from the shared
+          // panel switcher. Their token carries the staff salon claim when the
+          // same phone is linked to a salon; keep the dev fallback for older
+          // sessions/tokens.
+          setState({
+            phase: 'platform-admin',
+            salonId: principal.salonId ?? DEFAULT_SALON_ID,
+          });
           return;
         }
         if (!principal.role) {
@@ -128,14 +135,11 @@ export function OwnerLayout() {
     return <Navigate to="/account" replace />;
   }
 
-  if (state.phase === 'platform-admin') {
-    return <Navigate to="/platform-admin" replace />;
-  }
-
+  const role: OwnerRole = state.phase === 'platform-admin' ? 'Admin' : state.role;
   const outletContext = {
-    role: state.role,
+    role,
     salonId: state.salonId,
-    staffMemberId: state.staffMemberId,
+    staffMemberId: state.phase === 'authenticated' ? state.staffMemberId : undefined,
     onSignOut: handleSignOut,
   };
   const paymentResult = new URLSearchParams(location.search).get('payment');
@@ -151,7 +155,7 @@ export function OwnerLayout() {
 
   return (
     <TooltipProvider>
-      <OwnerShell role={state.role} salonId={state.salonId} onSignOut={handleSignOut}>
+      <OwnerShell role={role} salonId={state.salonId} onSignOut={handleSignOut}>
         <SeoHead title={t('owner.title')} />
         <Outlet context={outletContext} />
       </OwnerShell>

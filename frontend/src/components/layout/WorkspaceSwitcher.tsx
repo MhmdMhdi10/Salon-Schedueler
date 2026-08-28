@@ -57,7 +57,7 @@ export function WorkspaceSwitcher({
         )
       : cn(
           'inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-md border border-border',
-          'bg-surface px-2 py-2 text-xs font-semibold text-text no-underline sm:px-3 sm:text-sm',
+          'bg-surface px-3 py-2 text-xs font-semibold text-text no-underline sm:text-sm',
           'transition-colors duration-fast ease-standard hover:bg-elevated',
           'outline-none focus-visible:outline focus-visible:outline-2',
           'focus-visible:outline-offset-2 focus-visible:outline-focus',

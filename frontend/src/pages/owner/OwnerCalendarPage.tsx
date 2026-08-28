@@ -56,6 +56,7 @@ import {
 import { useAuth } from '../../auth/AuthContext';
 import { useSalonId } from '../../auth/useSalonId';
 import { usePagination } from '../../hooks/usePagination';
+import { useHashScroll } from '../../hooks/useHashScroll';
 import { gregorianToJalali, getJalaliMonthName } from '@salon/shared';
 import {
   Button,
@@ -3397,7 +3398,7 @@ function ApprovalQueue({
           aria-label={t('owner.calendar.approvalQueue', {
             defaultValue: 'نوبت‌های در انتظار تأیید',
           })}
-          className="rounded-xl border border-warning/40 bg-warning/5 p-3 sm:p-4"
+          className="scroll-mt-24 rounded-xl border border-warning/40 bg-warning/5 p-3 sm:p-4"
         >
       <header className="flex items-center gap-2">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning">
@@ -3616,8 +3617,9 @@ function PendingDepositReceiptQueue({
       {receipts.length > 0 && (
         <section
           data-testid="owner-deposit-receipt-queue"
+          id="owner-deposit-receipt-queue"
           aria-label="رسیدهای بیعانه در انتظار بررسی"
-          className="rounded-xl border border-primary/40 bg-primary/5 p-3 sm:p-4"
+          className="scroll-mt-24 rounded-xl border border-primary/40 bg-primary/5 p-3 sm:p-4"
         >
           <header className="flex items-center gap-2">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
@@ -3770,8 +3772,9 @@ function OwnerWaitlistCard({
   return (
     <section
       data-testid="owner-waitlist"
+      id="owner-waitlist"
       aria-label="صف انتظار"
-      className="owner-calendar-approval rounded-2xl border border-warning/30 bg-warning/5 p-3 shadow-1 sm:p-4"
+      className="owner-calendar-approval scroll-mt-24 rounded-2xl border border-warning/30 bg-warning/5 p-3 shadow-1 sm:p-4"
     >
       <header className="flex items-start gap-2">
         <ListChecks className="mt-0.5 h-5 w-5 shrink-0 text-warning" aria-hidden="true" />
@@ -4065,6 +4068,7 @@ export function OwnerCalendarPage() {
   const { t } = useTranslation();
   const { role } = useAuth();
   const salonId = useSalonId();
+  useHashScroll();
   const navigate = useNavigate();
 
   const [view, setView] = useState<CalendarView>(() => initialCalendarView());
@@ -4660,11 +4664,11 @@ export function OwnerCalendarPage() {
           setManageActionsOpen(false);
           openEmergencyClose();
         }}
-        showApprovalPolicy={role === 'Owner'}
+        showApprovalPolicy={role === 'Owner' || role === 'Admin' || role === 'PlatformAdmin'}
       />
 
       {/* Calendar content with animated transitions */}
-      <div className="owner-calendar-content relative min-h-[20rem]">
+      <div id="owner-calendar-content" className="owner-calendar-content relative min-h-[20rem] scroll-mt-24">
         {status === 'loading' && <CalendarSkeleton view={view} />}
 
         {status === 'error' && (
