@@ -43,6 +43,11 @@ export function formatRial(amountRial: bigint | number | string): string {
   return negative ? `\u200E-${localized}` : localized;
 }
 
+/** Formats a machine Rial amount as a Toman display value without the unit. */
+export function formatToman(amountRial: bigint | number | string): string {
+  return formatRial(toTomanRial(amountRial));
+}
+
 export interface MoneyProps extends React.HTMLAttributes<HTMLElement> {
   /**
    * The **machine value** in Iranian Rial. Kept separate from the display string

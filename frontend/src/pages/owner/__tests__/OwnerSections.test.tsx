@@ -152,6 +152,8 @@ function renderOwnerApp(role: OwnerRole, initialPath: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // This suite exercises routed sections, not the first-visit panel guide.
+  localStorage.setItem('ara:owner-guide:v1:Owner:11111111-1111-1111-1111-111111111111', 'done');
   getSalonWorkingHours.mockResolvedValue({
     hours: [{ weekday: 6, startTime: '09:00', endTime: '20:00' }],
   });

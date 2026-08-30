@@ -80,7 +80,8 @@ export function AppShell({ children, className, headerVariant }: AppShellProps) 
   return (
     <div
       className={cn(
-        'flex min-h-screen min-h-[100dvh] flex-col overflow-x-hidden text-text',
+        'flex min-h-screen min-h-[100dvh] flex-col text-text',
+        'overflow-x-clip',
         isBare ? 'bg-surface' : 'bg-bg',
         className,
       )}

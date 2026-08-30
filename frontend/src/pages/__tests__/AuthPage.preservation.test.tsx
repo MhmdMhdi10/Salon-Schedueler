@@ -117,7 +117,6 @@ describe('AuthPage — Preservation: Phone normalization (Req 3.1)', () => {
     const first = screen.getByLabelText('رقم ۱ کد تایید') as HTMLInputElement;
     fireEvent.paste(first, { clipboardData: { getData: () => '123456' } });
     await waitFor(() => expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('6'));
-    fireEvent.click(screen.getByRole('button', { name: 'تایید و ورود' }));
 
     await waitFor(() => {
       expect(verifyOtp).toHaveBeenCalledWith('09123456789', '123456');
@@ -141,8 +140,6 @@ describe('AuthPage — Preservation: Paste fill order (Req 3.2)', () => {
       expect(screen.getByLabelText('رقم ۵ کد تایید')).toHaveValue('5');
       expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('6');
     });
-
-    fireEvent.click(screen.getByRole('button', { name: 'تایید و ورود' }));
 
     await waitFor(() => {
       expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '123456');
@@ -216,8 +213,6 @@ describe('AuthPage — Preservation: Persian digit normalization in OTP (Req 3.4
       fireEvent.change(input, { target: { value: persianDigits[i] } });
     }
 
-    fireEvent.click(screen.getByRole('button', { name: 'تایید و ورود' }));
-
     await waitFor(() => {
       expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '133389');
     });
@@ -240,8 +235,6 @@ describe('AuthPage — Preservation: Persian digit normalization in OTP (Req 3.4
       const input = screen.getByLabelText(labels[i]);
       fireEvent.change(input, { target: { value: persianDigits[i] } });
     }
-
-    fireEvent.click(screen.getByRole('button', { name: 'تایید و ورود' }));
 
     await waitFor(() => {
       expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '123456');
@@ -269,7 +262,6 @@ describe('AuthPage — Preservation: RTL layout and chrome (Req 3.5)', () => {
     const first = screen.getByLabelText('رقم ۱ کد تایید') as HTMLInputElement;
     fireEvent.paste(first, { clipboardData: { getData: () => '999999' } });
     await waitFor(() => expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('9'));
-    fireEvent.click(screen.getByRole('button', { name: 'تایید و ورود' }));
 
     // Error alert appears
     expect(await screen.findByRole('alert')).toBeInTheDocument();

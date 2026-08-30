@@ -244,6 +244,18 @@ async function createControllerFixture(
       where: { id: world.vars.serviceId },
       data: { requiresDeposit: true, depositRial: 100000 },
     });
+    // The development deposit flow uses card transfer by default. Configure
+    // the fixture's destination card so creating the held appointment and
+    // exercising /payments/initiate represent a valid payable booking.
+    await app.prisma.salon.update({
+      where: { id: world.vars.salonId },
+      data: {
+        depositMethod: 'card_transfer',
+        depositCardNumber: '6037991234567890',
+        depositCardHolder: 'کنترل تست',
+        depositBankName: 'بانک تست',
+      },
+    });
   }
 
   const me = await world.rawRequest('GET', '/api/me', undefined, 'customer');

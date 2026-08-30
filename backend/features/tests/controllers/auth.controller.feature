@@ -5,4 +5,6 @@ Feature: Auth controller HTTP contracts
     When I exercise controller endpoint "POST /auth/otp/verify"
     When I exercise controller endpoint "POST /auth/refresh"
     When I exercise controller endpoint "POST /auth/logout"
+    When I exercise controller endpoint "GET /auth/contexts"
+    When I exercise controller endpoint "POST /auth/context"
     Then this controller feature should have completed

@@ -39,6 +39,8 @@ vi.mock('../../../api/client', () => {
     }
   }
   return {
+    getApiErrorMessage: (error: unknown, fallback: string) =>
+      error instanceof Error && error.message ? error.message : fallback,
     ApiError,
     subscriptionApi: {
       getStatus: (...args: unknown[]) => getStatus(...args),
@@ -172,12 +174,12 @@ describe('OwnerSubscriptionPage — plan selection (R3.1, R3.2)', () => {
     });
   });
 
-  it('renders the paid plans with Rial/Persian-digit prices', async () => {
+  it('renders the paid plans with Toman/Persian-digit prices', async () => {
     renderPage();
     const plans = await screen.findByTestId('subscription-plans');
-    // Monthly price 6,000,000 → grouped Persian digits.
-    expect(plans).toHaveTextContent('۶٬۰۰۰٬۰۰۰');
-    expect(plans).toHaveTextContent('ریال');
+    // Monthly price 600,000 Toman → grouped Persian digits.
+    expect(plans).toHaveTextContent('۶۰۰٬۰۰۰');
+    expect(plans).toHaveTextContent('تومان');
     // All three paid plans are present (trial is excluded).
     expect(plans).toHaveTextContent('ماهانه');
     expect(plans).toHaveTextContent('سه‌ماهه');

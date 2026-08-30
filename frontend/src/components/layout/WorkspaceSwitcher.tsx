@@ -1,4 +1,5 @@
 import { Building2, Store, UserRound } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
@@ -30,7 +31,8 @@ export function WorkspaceSwitcher({
 }: WorkspaceSwitcherProps) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
-  const { status, isStaff, isPlatformAdmin } = useAuth();
+  const { status, isStaff, isPlatformAdmin, principal, staffContexts, selectStaffContext } = useAuth();
+  const [switching, setSwitching] = useState(false);
 
   const isOwnerSurface =
     surface === 'owner' || pathname === '/owner' || pathname.startsWith('/owner/');
@@ -73,6 +75,26 @@ export function WorkspaceSwitcher({
         <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
         <span>{destination.label}</span>
       </Link>
+      {isStaffSurface && staffContexts.length > 1 && (
+        <select
+          aria-label="انتخاب سالن"
+          value={principal?.staffMemberId ?? ''}
+          disabled={switching}
+          onChange={(event) => {
+            const staffMemberId = event.target.value;
+            if (!staffMemberId || staffMemberId === principal?.staffMemberId) return;
+            setSwitching(true);
+            void selectStaffContext(staffMemberId).finally(() => setSwitching(false));
+          }}
+          className="min-h-10 max-w-36 rounded-md border border-border bg-surface px-2 text-xs text-text"
+        >
+          {staffContexts.map((context) => (
+            <option key={context.staffMemberId} value={context.staffMemberId}>
+              {context.salonName || 'سالن'}
+            </option>
+          ))}
+        </select>
+      )}
     </nav>
   );
 }

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LogIn, LogOut } from 'lucide-react';
+import { CircleHelp, LogIn, LogOut } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { BrandLogo } from '../brand';
 import { OwnerInboxBell } from '../owner/OwnerInboxBell';
@@ -21,6 +21,8 @@ export interface PanelHeaderProps {
   themeControl?: React.ReactNode;
   /** Owner shell supplies its auth-aware sign-out/navigation handler. */
   onSignOut?: () => void;
+  /** Replays the first-entry panel walkthrough. */
+  onHelp?: () => void;
 }
 
 /**
@@ -30,7 +32,7 @@ export interface PanelHeaderProps {
  * notifications, theme, then authentication. Only the workspace destination
  * and surface-specific sign-out handler differ.
  */
-export function PanelHeader({ surface, brandLabel, themeControl, onSignOut }: PanelHeaderProps) {
+export function PanelHeader({ surface, brandLabel, themeControl, onSignOut, onHelp }: PanelHeaderProps) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -95,6 +97,18 @@ export function PanelHeader({ surface, brandLabel, themeControl, onSignOut }: Pa
         </nav>
 
         <div className="flex shrink-0 items-center gap-2">
+          {isOwnerSurface && onHelp && (
+            <Button
+              variant="ghost"
+              size="md"
+              startIcon={<CircleHelp className="h-4 w-4" aria-hidden="true" />}
+              onClick={onHelp}
+              aria-label="راهنمای پنل"
+              className="shrink-0 !px-1 sm:!px-3"
+            >
+              <span className="hidden sm:inline">راهنما</span>
+            </Button>
+          )}
           {isPlatformAdmin ? (
             <PanelAccessNav />
           ) : (

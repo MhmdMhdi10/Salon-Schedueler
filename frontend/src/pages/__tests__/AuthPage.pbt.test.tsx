@@ -107,10 +107,7 @@ describe('AuthPage — Property-Based Tests', () => {
               fireEvent.change(input, { target: { value: code[i] } });
             }
 
-            // Submit
-            fireEvent.click(screen.getByRole('button', { name: 'تایید و ورود' }));
-
-            // Assert verifyOtp is called with the exact code entered in reading order
+            // The final digit auto-submits the completed OTP.
             await waitFor(() => {
               expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, code);
             });
@@ -159,10 +156,7 @@ describe('AuthPage — Property-Based Tests', () => {
               expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue(code[5]);
             });
 
-            // Submit
-            fireEvent.click(screen.getByRole('button', { name: 'تایید و ورود' }));
-
-            // Assert verifyOtp is called with the exact pasted string
+            // A complete paste auto-submits the OTP.
             await waitFor(() => {
               expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, code);
             });

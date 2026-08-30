@@ -118,7 +118,16 @@ describe('private routes emit noindex,follow (R8.7)', () => {
   });
 
   it('`/qr/:payload` is noindex', async () => {
-    renderAt('/qr/abc123', <QrLandingPage />, '/qr/:payload');
+    render(
+      <HelmetProvider>
+        <MemoryRouter initialEntries={['/qr/abc123']}>
+          <Routes>
+            <Route path="/qr/:payload" element={<QrLandingPage />} />
+            <Route path="/salon/:salonId/book" element={<AvailabilityPage />} />
+          </Routes>
+        </MemoryRouter>
+      </HelmetProvider>,
+    );
     await waitFor(() => expect(robotsContent()).toBe('noindex,follow'));
   });
 

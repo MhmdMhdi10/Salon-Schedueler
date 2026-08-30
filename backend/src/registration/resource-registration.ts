@@ -35,7 +35,7 @@ export class ResourceRegistration {
         salonId,
         fullName,
         role,
-        // A login phone is optional: when set (and unique) it lets that person
+        // A login phone is optional: when set it lets that person
         // sign in via OTP and receive a staff JWT with this role (auth.service
         // findStaffClaimsByPhone). Omit to create a non-login staff record.
         ...(phone ? { phone } : {}),
@@ -48,8 +48,8 @@ export class ResourceRegistration {
   /**
    * Update a staff member's identity / role / login / active flag (owner-guarded
    * at the route layer). Only provided fields are changed. Passing `phone: null`
-   * clears the login; a non-empty `phone` sets it (must be unique — a duplicate
-   * surfaces as a Prisma P2002 the route maps to 409). Changing `role` is how an
+   * clears the login; a non-empty `phone` sets it. A person may share this phone
+   * across salons. Changing `role` is how an
    * owner promotes/demotes a person (e.g. Stylist → Admin).
    */
   async updateStaffMember(
@@ -68,7 +68,9 @@ export class ResourceRegistration {
         ...(patch.fullName !== undefined ? { fullName: patch.fullName } : {}),
         ...(patch.role !== undefined ? { role: patch.role } : {}),
         ...(patch.phone !== undefined ? { phone: patch.phone } : {}),
-        ...(patch.active !== undefined ? { active: patch.active } : {}),
+        ...(patch.active !== undefined
+          ? { active: patch.active, deletedAt: patch.active ? null : new Date() }
+          : {}),
         ...(patch.assignedChairId !== undefined
           ? { assignedChairId: patch.assignedChairId }
           : {}),
@@ -173,7 +175,7 @@ export class ResourceRegistration {
       const chair = await this.prisma.chair.create({
         data: {
           salonId,
-          name: `مسیر سیار ${member.fullName || 'آرایشگر'}`,
+          name: `مسیر سیار ${member.fullName || 'عضو تیم'}`,
           kind: 'mobile',
           mobileStaff: { connect: { id: member.id } },
         },
@@ -200,7 +202,73 @@ export class ResourceRegistration {
    * An inactive chair is ignored by availability and can later be restored.
    */
   async setChairActive(id: string, active: boolean): Promise<Chair> {
-    return this.prisma.chair.update({ where: { id }, data: { active } });
+    return this.prisma.chair.update({
+      where: { id },
+      data: { active, deletedAt: active ? null : new Date() },
+    });
+  }
+
+  /** Update a chair label and/or active state without losing its history. */
+  async updateChair(
+    id: string,
+    patch: { name?: string; active?: boolean },
+  ): Promise<Chair> {
+    return this.prisma.chair.update({
+      where: { id },
+      data: {
+        ...(patch.name !== undefined ? { name: patch.name } : {}),
+        ...(patch.active !== undefined
+          ? { active: patch.active, deletedAt: patch.active ? null : new Date() }
+          : {}),
+      },
+    });
+  }
+
+  /** Soft-delete a staff member while preserving appointments and notes. */
+  async deleteStaffMember(id: string): Promise<StaffMember> {
+    return this.prisma.staffMember.update({
+      where: { id },
+      data: { active: false, deletedAt: new Date() },
+    });
+  }
+
+  /** Soft-delete a chair while preserving historical appointments. */
+  async deleteChair(id: string): Promise<Chair> {
+    return this.setChairActive(id, false);
+  }
+
+  /** Soft-delete equipment while preserving service history. */
+  async deleteEquipment(id: string): Promise<Equipment> {
+    return this.setEquipmentActive(id, false);
+  }
+
+  /** Read one equipment record, including soft-deleted rows for restoration. */
+  async getEquipment(id: string): Promise<Equipment | null> {
+    return this.prisma.equipment.findUnique({ where: { id } });
+  }
+
+  /** Activate/deactivate equipment without changing its identity or mappings. */
+  async setEquipmentActive(id: string, active: boolean): Promise<Equipment> {
+    return this.prisma.equipment.update({
+      where: { id },
+      data: { deletedAt: active ? null : new Date() },
+    });
+  }
+
+  /** Rename and/or activate equipment while preserving its mappings/history. */
+  async updateEquipment(
+    id: string,
+    patch: { name?: string; active?: boolean },
+  ): Promise<Equipment> {
+    return this.prisma.equipment.update({
+      where: { id },
+      data: {
+        ...(patch.name !== undefined ? { name: patch.name } : {}),
+        ...(patch.active !== undefined
+          ? { deletedAt: patch.active ? null : new Date() }
+          : {}),
+      },
+    });
   }
 
   /**
@@ -240,7 +308,7 @@ export class ResourceRegistration {
    */
   async listBookableStaff(salonId: string): Promise<StaffMember[]> {
     return this.prisma.staffMember.findMany({
-      where: { salonId, active: true, role: { in: ['Owner', 'Stylist'] } },
+      where: { salonId, active: true, deletedAt: null, role: { in: ['Owner', 'Stylist'] } },
       orderBy: { fullName: 'asc' },
     });
   }
@@ -252,6 +320,14 @@ export class ResourceRegistration {
   async listChairs(salonId: string): Promise<Chair[]> {
     return this.prisma.chair.findMany({
       where: { salonId },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  /** List active equipment for an owner/admin resource-management screen. */
+  async listEquipment(salonId: string): Promise<Equipment[]> {
+    return this.prisma.equipment.findMany({
+      where: { salonId, deletedAt: null },
       orderBy: { name: 'asc' },
     });
   }

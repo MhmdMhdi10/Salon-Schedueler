@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type UIEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { OwnerThemeToggle } from '../theme/OwnerThemeToggle';
 import { THEME_STORAGE_KEY, ThemeScope, useTheme } from '../theme';
@@ -93,6 +93,8 @@ export function OwnerShell({
   const routeKey = `${location.pathname}${location.search}`;
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const prefersReducedMotion = useReducedMotion();
+  const guideKey = `ara:owner-guide:v1:${role}:${salonId || 'default'}`;
+  const [guideOpen, setGuideOpen] = useState(false);
   const contentRef = useRef<HTMLElement | null>(null);
   const profileScrollPositionRef = useRef<{ top: number; left: number } | null>(null);
 
@@ -161,6 +163,23 @@ export function OwnerShell({
     };
   }, [pathname, routeKey]);
 
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(guideKey) !== 'done') setGuideOpen(true);
+    } catch {
+      setGuideOpen(true);
+    }
+  }, [guideKey]);
+
+  const closeGuide = useCallback(() => {
+    setGuideOpen(false);
+    try {
+      localStorage.setItem(guideKey, 'done');
+    } catch {
+      // Private browsing can disable storage; the guide still closes for this visit.
+    }
+  }, [guideKey]);
+
   return (
     <ThemeScope
       theme={theme}
@@ -189,6 +208,7 @@ export function OwnerShell({
         brandLabel={salonName || t('owner.title')}
         themeControl={<OwnerThemeToggle theme={theme} onToggle={toggleTheme} />}
         onSignOut={onSignOut}
+        onHelp={() => setGuideOpen(true)}
       />
 
       {/* Content area: sidebar (desktop) + main — panes scroll internally */}
@@ -211,7 +231,7 @@ export function OwnerShell({
           tabIndex={0}
           onScroll={handleContentScroll}
           className={cn(
-            'min-w-0 flex-1 overscroll-contain overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-4 sm:py-5',
+            'min-w-0 flex-1 overscroll-contain overflow-x-clip overflow-y-auto px-3 py-4 sm:px-4 sm:py-5',
             isDesktop && 'w-full',
             // On mobile, reserve the compact rendered tab bar (~65px) plus breathing
             // room so the last card can scroll completely above fixed nav.
@@ -242,7 +262,111 @@ export function OwnerShell({
 
       {/* Mobile bottom tabs — visible only below lg */}
       {!isDesktop && <OwnerBottomTabs role={role} />}
+      <OwnerOnboardingGuide open={guideOpen} onClose={closeGuide} />
     </ThemeScope>
+  );
+}
+
+const OWNER_GUIDE_STEPS = [
+  {
+    title: 'تقویم روزانه',
+    body: 'نوبت‌های آنلاین و دستی را یک‌جا ببینید؛ نوبت‌های در انتظار تأیید هم از همین مسیر در دسترس‌اند.',
+    to: '/owner/calendar',
+  },
+  {
+    title: 'خدمات',
+    body: 'خدمت، مدت، قیمت و اعضای تیم ارائه‌دهنده را مدیریت کنید تا صفحهٔ رزرو همیشه دقیق بماند.',
+    to: '/owner/config',
+  },
+  {
+    title: 'تیم',
+    body: 'عضو تیم اضافه کنید، نقش و دسترسی او را تعیین کنید و برای هر نفر برنامهٔ کاری بسازید.',
+    to: '/owner/team',
+  },
+  {
+    title: 'اشتراک و تنظیمات',
+    body: 'وضعیت اشتراک، پیامک‌ها، بیعانه و لینک رزرو سالن از منوی پنل قابل تغییر است.',
+    to: '/owner/subscription',
+  },
+] as const;
+
+function OwnerOnboardingGuide({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const navigate = useNavigate();
+  const [index, setIndex] = useState(0);
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose, open]);
+
+  if (!open) return null;
+  const current = OWNER_GUIDE_STEPS[index];
+  const isLast = index === OWNER_GUIDE_STEPS.length - 1;
+
+  return (
+    <div className="fixed inset-0 z-dialog flex items-end justify-center bg-black/45 p-3 sm:items-center">
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="owner-guide-title"
+        className="w-full max-w-md rounded-2xl border border-border bg-elevated p-5 shadow-3"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-semibold text-primary">راهنمای شروع پنل</p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="min-h-10 rounded-md px-3 text-sm text-muted hover:bg-surface"
+          >
+            بستن
+          </button>
+        </div>
+        <div className="mt-4 flex items-center gap-1" aria-hidden="true">
+          {OWNER_GUIDE_STEPS.map((step, stepIndex) => (
+            <span
+              key={step.title}
+              className={cn('h-1 flex-1 rounded-pill', stepIndex <= index ? 'bg-primary' : 'bg-border')}
+            />
+          ))}
+        </div>
+        <h2 id="owner-guide-title" className="mt-5 text-xl font-bold text-text">
+          {current.title}
+        </h2>
+        <p className="mt-2 text-sm leading-7 text-muted">{current.body}</p>
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
+          <button
+            type="button"
+            className="min-h-11 rounded-md px-3 text-sm text-muted hover:bg-surface disabled:opacity-50"
+            disabled={index === 0}
+            onClick={() => setIndex((value) => Math.max(0, value - 1))}
+          >
+            قبلی
+          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="min-h-11 rounded-md border border-border px-3 text-sm font-semibold text-text hover:bg-surface"
+              onClick={() => {
+                onClose();
+                navigate(current.to);
+              }}
+            >
+              مشاهده بخش
+            </button>
+            <button
+              type="button"
+              className="min-h-11 rounded-pill bg-primary px-4 text-sm font-semibold text-primary-contrast hover:opacity-90"
+              onClick={() => (isLast ? onClose() : setIndex((value) => value + 1))}
+            >
+              {isLast ? 'شروع کار' : 'بعدی'}
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }
 

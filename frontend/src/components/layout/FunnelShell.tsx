@@ -89,15 +89,15 @@ export function FunnelShell({
     <div
       data-shell="funnel"
       className={cn(
-        'flex min-h-screen min-h-[100dvh] flex-col overflow-x-hidden bg-bg text-text',
+        'funnel-shell flex min-h-screen min-h-[100dvh] flex-col overflow-x-clip bg-bg text-text',
         className,
       )}
     >
       {/* Minimal top bar: back affordance (inline-start) + salon name. */}
-      <header className="border-b border-border bg-elevated">
-        <div className="mx-auto flex h-14 w-full max-w-2xl items-center gap-2 px-3 sm:gap-5 sm:px-4">
+      <header className="border-b border-border bg-elevated" dir="rtl">
+        <div className="relative mx-auto flex h-14 w-full max-w-2xl items-center justify-between gap-2 px-3 sm:gap-5 sm:px-4">
           {brandMark ? (
-            <div className="flex min-w-0 flex-1 items-center gap-2">
+            <div className="flex min-w-0 max-w-[38%] items-center gap-2 sm:max-w-[32%]">
               {logoUrl ? <Avatar src={logoUrl} name={brandMark} size="sm" decorative /> : null}
               <span className="flex min-w-0 flex-col leading-tight">
                 <span data-funnel-brand-mark className="truncate text-md font-bold text-text">
@@ -108,25 +108,27 @@ export function FunnelShell({
               </span>
             </div>
           ) : (
-            <span className="min-w-0 flex-1 truncate text-md font-bold text-text">
+            <span className="min-w-0 max-w-[38%] truncate text-md font-bold text-text sm:max-w-[32%]">
               {t('app.title')}
             </span>
           )}
-          <div className="flex basis-16 flex-1 gap-1" aria-hidden="true">
-            {FUNNEL_STEPS.map((step, index) => (
-              <span
-                key={step}
-                className={cn(
-                  'h-1 flex-1 rounded-pill',
-                  index <= currentIndex ? 'bg-primary' : 'bg-border',
-                )}
-              />
-            ))}
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
+            <div className="flex w-[min(64%,18rem)] gap-1">
+              {FUNNEL_STEPS.map((step, index) => (
+                <span
+                  key={step}
+                  className={cn(
+                    'h-1 flex-1 rounded-pill',
+                    index <= currentIndex ? 'bg-primary' : 'bg-border',
+                  )}
+                />
+              ))}
+            </div>
           </div>
           {onBack ? (
             <IconButton aria-label={t('funnel.back')} onClick={onBack} className="shrink-0">
-              {/* Directional icon: mirrors automatically under dir="rtl". */}
-              <ChevronRight className="h-5 w-5 rtl:-scale-x-100" />
+              {/* RTL-native: back affordance points visually to the right. */}
+              <ChevronRight className="h-5 w-5" />
             </IconButton>
           ) : (
             <span className="size-10" aria-hidden="true" />
@@ -178,6 +180,7 @@ export function FunnelShell({
       <main
         id={FUNNEL_CONTENT_ID}
         tabIndex={-1}
+        dir="rtl"
         className={cn(
           'mx-auto w-full max-w-2xl flex-1 px-3 py-6 sm:px-4 sm:py-10',
           // Reserve room so the sticky CTA never covers the card's tail.

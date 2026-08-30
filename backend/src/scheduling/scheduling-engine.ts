@@ -17,6 +17,8 @@ export interface AvailabilityQuery {
   staffId?: string;
   /** Requested service location. Mobile/hybrid salons may accept customer visits. */
   locationType?: BookingLocation;
+  /** Requested duration for a variable-duration service. */
+  durationMinutes?: number;
 }
 
 export type BookingLocation = 'salon' | 'customer';
@@ -44,6 +46,10 @@ export interface BookingRequest {
   locationType?: BookingLocation;
   /** Required when `locationType` is `customer`; never exposed to salon-only modes. */
   locationAddress?: string;
+  /** Optional customer instruction shown to salon staff (max 1000 chars at HTTP edge). */
+  customerNote?: string;
+  /** Requested duration for a variable-duration service. */
+  durationMinutes?: number;
   /** Client retry key; validated and deduplicated at the HTTP/application edge. */
   idempotencyKey?: string;
 }
@@ -63,12 +69,16 @@ export interface RescheduleRequest {
   staffMemberId?: string;
   /** Optional future extension for a chair-lane drag; current owner UI preserves both resources. */
   chairId?: string;
+  /** Injectable clock for deterministic deadline checks. */
+  now?: Date;
+  /** Internal acceptance path may consume the pending proposal on this row. */
+  allowPendingProposal?: boolean;
 }
 
 /** Payment details attached to a held booking across web and bot channels. */
 export interface BookingPayment {
   paymentId: string;
-  method?: 'gateway' | 'card_transfer';
+  method?: 'gateway' | 'card_transfer' | 'cash';
   redirectUrl?: string;
   amountRial?: number;
   cardNumber?: string;
@@ -82,7 +92,11 @@ export type RescheduleErrorCode =
   | 'RESCHEDULE_INVALID_START'
   | 'RESCHEDULE_CLOSED'
   | 'RESCHEDULE_OUTSIDE_HOURS'
-  | 'RESCHEDULE_CONFLICT';
+  | 'RESCHEDULE_CONFLICT'
+  | 'RESCHEDULE_DEADLINE_PASSED'
+  | 'RESCHEDULE_PROPOSAL_PENDING'
+  | 'RESCHEDULE_PROPOSAL_NOT_FOUND'
+  | 'RESCHEDULE_SAME_START';
 
 /** Stable, client-facing scheduling error used by the owner calendar move flow. */
 export class RescheduleError extends Error {
@@ -199,6 +213,7 @@ export class SchedulingEngine {
       granularityMinutes = 15,
       staffId,
       locationType: requestedLocation,
+      durationMinutes: requestedDuration,
     } = query;
 
     const salonDelegate = (this.prisma as unknown as {
@@ -225,7 +240,7 @@ export class SchedulingEngine {
       },
     });
 
-    if (!service || service.salonId !== salonId) {
+    if (!service || service.salonId !== salonId || service.deletedAt) {
       return [];
     }
 
@@ -235,7 +250,23 @@ export class SchedulingEngine {
     );
     if (!locationType) return [];
 
-    const durationMin = service.durationMin;
+    const defaultDurationMin =
+      service.durationMode === 'variable'
+        ? service.minDurationMin ?? service.durationMin
+        : service.durationMin;
+    const maxDurationMin =
+      service.durationMode === 'variable'
+        ? service.maxDurationMin ?? defaultDurationMin
+        : service.durationMin;
+    if (
+      requestedDuration !== undefined &&
+      (!Number.isInteger(requestedDuration) ||
+        requestedDuration < defaultDurationMin ||
+        requestedDuration > maxDurationMin)
+    ) {
+      return [];
+    }
+    const durationMin = requestedDuration ?? defaultDurationMin;
     const bufferMin = service.bufferMin;
     const requiredEquipmentIds =
       locationType === 'customer'
@@ -595,6 +626,8 @@ export class SchedulingEngine {
       preferredStaffId,
       source,
       locationType: requestedLocation,
+      customerNote: rawCustomerNote,
+      durationMinutes: requestedDuration,
     } = req;
 
     // 1. Fetch service details
@@ -608,7 +641,7 @@ export class SchedulingEngine {
       },
     });
 
-    if (!service || service.salonId !== salonId || service.salon?.active === false) {
+    if (!service || service.salonId !== salonId || service.salon?.active === false || service.deletedAt) {
       return { status: 'rejected', reason: 'no_availability' };
     }
 
@@ -647,7 +680,22 @@ export class SchedulingEngine {
 
     // 2. Compute the occupancy interval
     const startAt = new Date(startAtISO);
-    const endAt = computeOccupancyEnd(startAt, service.durationMin, service.bufferMin);
+    const durationMin = service.durationMode === 'variable'
+      ? service.minDurationMin ?? service.durationMin
+      : service.durationMin;
+    const maxDurationMin = service.durationMode === 'variable'
+      ? service.maxDurationMin ?? durationMin
+      : service.durationMin;
+    const selectedDurationMin = requestedDuration ?? durationMin;
+    if (
+      !Number.isInteger(selectedDurationMin) ||
+      selectedDurationMin < durationMin ||
+      selectedDurationMin > maxDurationMin
+    ) {
+      return { status: 'rejected', reason: 'no_availability' };
+    }
+    const endAt = computeOccupancyEnd(startAt, selectedDurationMin, service.bufferMin);
+    const customerNote = typeof rawCustomerNote === 'string' ? rawCustomerNote.trim() : '';
     const date = startAtISO.slice(0, 10); // Extract ISO date portion
 
     // 3. Check salon closures on this date. A full-day closure (no time window)
@@ -925,7 +973,8 @@ export class SchedulingEngine {
         const holdPeriodSeconds = service.salon?.depositMethod === 'card_transfer'
           ? Math.max(this.holdPeriodSeconds, MANUAL_DEPOSIT_HOLD_PERIOD_SECONDS)
           : this.holdPeriodSeconds;
-        const holdExpiresAt = requiresDeposit
+        const cashDeposit = requiresDeposit && service.salon?.depositMethod === 'cash';
+        const holdExpiresAt = requiresDeposit && !cashDeposit
           ? new Date(now.getTime() + holdPeriodSeconds * 1000)
           : null;
         // Approval policy: a per-stylist override (if set) wins over the salon
@@ -935,11 +984,13 @@ export class SchedulingEngine {
         const chosenStaff = availableStaff.find((s) => s.id === staffId);
         const effectiveAutoApprove =
           chosenStaff?.autoApprove ?? service.salon?.autoApprove ?? false;
-        const appointmentStatus = requiresDeposit
-          ? 'held'
-          : effectiveAutoApprove
-            ? 'confirmed'
-            : 'pending';
+        const appointmentStatus = cashDeposit
+          ? 'pending'
+          : requiresDeposit
+            ? 'held'
+            : effectiveAutoApprove
+              ? 'confirmed'
+              : 'pending';
 
         const appointment = await this.prisma.appointment.create({
           data: {
@@ -958,6 +1009,10 @@ export class SchedulingEngine {
             // persisting the real runtime value (e.g. 'bot').
             source: source as unknown as 'web',
             holdExpiresAt,
+            ...(customerNote ? { customerNote } : {}),
+            ...(service.durationMode === 'variable' || selectedDurationMin !== service.durationMin
+              ? { durationMinOverride: selectedDurationMin }
+              : {}),
             ...(locationType === 'customer'
               ? {
                   locationType: 'customer' as const,
@@ -967,7 +1022,7 @@ export class SchedulingEngine {
           },
         });
 
-        if (requiresDeposit) {
+        if (requiresDeposit && !cashDeposit) {
           // R10.1, R10.2: Return held appointment with payment placeholder
           return {
             status: 'held',
@@ -1026,6 +1081,18 @@ export class SchedulingEngine {
       throw new RescheduleError('RESCHEDULE_INVALID_START');
     }
 
+    if (appointment.pendingRescheduleStartAt && !req.allowPendingProposal) {
+      throw new RescheduleError('RESCHEDULE_PROPOSAL_PENDING');
+    }
+
+    const now = req.now ?? new Date();
+    if (appointment.startAt.getTime() <= now.getTime() || startAt.getTime() <= now.getTime()) {
+      throw new RescheduleError('RESCHEDULE_DEADLINE_PASSED');
+    }
+    if (appointment.startAt.getTime() === startAt.getTime()) {
+      throw new RescheduleError('RESCHEDULE_SAME_START');
+    }
+
     const [service, salon] = await Promise.all([
       this.prisma.service.findUnique({
         where: { id: appointment.serviceId },
@@ -1041,7 +1108,8 @@ export class SchedulingEngine {
       throw new RescheduleError('APPOINTMENT_NOT_MOVABLE');
     }
 
-    const endAt = computeOccupancyEnd(startAt, service.durationMin, service.bufferMin);
+    const durationMinutes = appointment.durationMinOverride ?? service.durationMin;
+    const endAt = computeOccupancyEnd(startAt, durationMinutes, service.bufferMin);
     // The scheduling engine represents time-only availability windows on the
     // nominal salon date in UTC. Keep the same date contract as booking slots.
     const date = req.startAt.slice(0, 10);
@@ -1202,6 +1270,14 @@ export class SchedulingEngine {
           endAt,
           staffMemberId,
           chairId,
+          ...(req.allowPendingProposal
+            ? {
+                pendingRescheduleStartAt: null,
+                pendingRescheduleEndAt: null,
+                pendingRescheduleRequestedAt: null,
+                pendingRescheduleRequestedBy: null,
+              }
+            : {}),
         },
       });
     } catch (error) {

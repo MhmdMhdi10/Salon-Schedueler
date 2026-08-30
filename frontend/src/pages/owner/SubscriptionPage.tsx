@@ -13,7 +13,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import {
-  ApiError,
+  getApiErrorMessage,
   subscriptionApi,
   type SubscriptionPlan,
   type SubscriptionPlanKind,
@@ -98,6 +98,13 @@ function redirectToGateway(url: string): void {
   window.location.href = url;
 }
 
+function daysRemaining(expiresAt: string, status: SubscriptionStatus): string {
+  if (status === 'expired') return 'منقضی شده';
+  const remaining = Math.ceil((Date.parse(expiresAt) - Date.now()) / 86_400_000);
+  if (!Number.isFinite(remaining) || remaining <= 0) return 'تا پایان امروز';
+  return status === 'grace' ? `${remaining.toLocaleString('fa-IR')} روز مهلت تمدید` : `${remaining.toLocaleString('fa-IR')} روز تا پایان`;
+}
+
 /** Layout-matched skeleton shown while the subscription data loads (§6/§12). */
 function SubscriptionSkeleton() {
   const { t } = useTranslation();
@@ -134,7 +141,7 @@ function SubscriptionPaymentResultPage({ result }: { result: SubscriptionPayment
       data-testid="subscription-payment-result"
       data-payment-result={result}
       data-shell="funnel-payment-result"
-      className="flex min-h-screen min-h-[100dvh] flex-col overflow-x-hidden bg-bg text-text"
+      className="flex min-h-screen min-h-[100dvh] flex-col overflow-x-clip bg-bg text-text"
     >
       <SeoHead title={title} />
 
@@ -145,14 +152,14 @@ function SubscriptionPaymentResultPage({ result }: { result: SubscriptionPayment
       >
         <div className="relative flex flex-col items-center gap-3">
           <motion.span
-            className={`relative inline-flex h-20 w-20 items-center justify-center rounded-pill motion-safe:animate-success-pop ${
+            className={`relative inline-flex h-20 w-20 items-center justify-center rounded-pill motion-safe:animate-scale-in ${
               isSuccess ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
             }`}
             role="img"
             aria-label={title}
             initial={prefersReduced ? false : { scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.4, ease: easings.emphasized, delay: 0.15 }}
+            transition={{ duration: 0.4, ease: easings.standard, delay: 0.15 }}
           >
             {isSuccess ? (
               <CheckCircle2 className="h-11 w-11" aria-hidden="true" />
@@ -228,7 +235,7 @@ function SubscriptionManagementPage() {
       })
       .catch((err: unknown) => {
         if (!active) return;
-        setError(err instanceof ApiError ? err.message : t('owner.subscription.errorTitle'));
+        setError(getApiErrorMessage(err, t('owner.subscription.errorTitle')));
         setStatus('error');
       });
 
@@ -253,7 +260,8 @@ function SubscriptionManagementPage() {
       // explicit redirect surface and hand off to the gateway (§12).
       setPurchaseStatus('redirecting');
       redirectToGateway(redirectUrl);
-    } catch {
+    } catch (error) {
+      setError(getApiErrorMessage(error, t('owner.subscription.purchaseError')));
       setPurchaseStatus('error');
     }
   };
@@ -307,6 +315,13 @@ function SubscriptionManagementPage() {
                   withWeekday
                   className="text-text"
                 />
+              </p>
+              <p
+                data-testid="subscription-days"
+                className="flex items-center gap-2 text-sm font-medium text-text"
+              >
+                <Hourglass className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {daysRemaining(subscription.expiresAt, subscription.status)}
               </p>
             </CardContent>
           </Card>
@@ -376,7 +391,7 @@ function SubscriptionManagementPage() {
                         <span className="font-medium text-text">
                           {t(`owner.subscription.plan.${plan.kind}`)}
                         </span>
-                        <Money amountRial={plan.priceRial} className="text-text" />
+                        <Money amountRial={plan.priceRial} unit="toman" className="text-text" />
                       </span>
                     ),
                     helperText: (
@@ -406,7 +421,7 @@ function SubscriptionManagementPage() {
                         className="flex items-center gap-2 text-sm text-danger"
                       >
                         <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
-                        {t('owner.subscription.purchaseError')}
+                        {error || t('owner.subscription.purchaseError')}
                       </p>
                     )}
                     <Button

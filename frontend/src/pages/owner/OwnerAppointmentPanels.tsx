@@ -24,6 +24,7 @@ import {
   DialogContent,
   DialogDescription,
   DialogTitle,
+  MobileDatePicker,
   Sheet,
   SheetContent,
   SheetDescription,
@@ -46,6 +47,13 @@ export interface CalendarAppointmentLike {
   customerPhone?: string;
   customerId?: string;
   staffMemberId?: string;
+  customerNote?: string | null;
+  durationMinOverride?: number | null;
+  pendingReschedule?: {
+    startAt: string;
+    endAt?: string | null;
+    requestedAt?: string | null;
+  } | null;
   depositReceiptStatus?: string | null;
   depositPaymentStatus?: string | null;
 }
@@ -115,13 +123,19 @@ export function getRescheduleErrorMessage(error: unknown): string {
   switch (code) {
     case 'BOOKING_SLOT_UNAVAILABLE':
     case 'RESCHEDULE_CONFLICT':
-      return 'علت: برای این بازه ظرفیت قابل رزرو پیدا نشد؛ ممکن است با نوبت فعال تداخل داشته باشد یا آرایشگر/صندلی آزاد نباشد.';
+      return 'علت: برای این بازه ظرفیت قابل رزرو پیدا نشد؛ ممکن است با نوبت فعال تداخل داشته باشد یا عضو تیم/صندلی آزاد نباشد.';
     case 'RESCHEDULE_OUTSIDE_HOURS':
-      return 'علت: زمان انتخاب‌شده خارج از ساعت کاری آرایشگر یا صندلی است.';
+      return 'علت: زمان انتخاب‌شده خارج از ساعت کاری عضو تیم یا صندلی است.';
     case 'RESCHEDULE_CLOSED':
       return 'علت: زمان انتخاب‌شده در تعطیلی سالن یا بازه بسته‌شده قرار دارد.';
     case 'RESCHEDULE_INVALID_START':
       return 'علت: زمان انتخاب‌شده معتبر نیست.';
+    case 'RESCHEDULE_DEADLINE_PASSED':
+      return 'علت: مهلت تغییر گذشته است؛ وقتی زمان نوبت برسد، دیگر امکان جابه‌جایی وجود ندارد.';
+    case 'RESCHEDULE_PROPOSAL_PENDING':
+      return 'علت: برای این نوبت یک پیشنهاد تغییر زمان در انتظار پاسخ مشتری است.';
+    case 'RESCHEDULE_SAME_START':
+      return 'علت: زمان جدید با زمان فعلی نوبت یکسان است.';
     case 'APPOINTMENT_NOT_MOVABLE':
       return 'علت: این نوبت دیگر قابل جابجایی نیست.';
     case 'APPOINTMENT_NOT_FOUND':
@@ -221,6 +235,11 @@ export function AppointmentDetailsSheet({
 
   const customer = overview?.customer;
   const phone = customer?.phone || appointment?.customerPhone || '';
+  const appointmentStart = appointment?.startAt ? new Date(appointment.startAt).getTime() : NaN;
+  const canMoveAppointment =
+    Number.isFinite(appointmentStart) &&
+    appointmentStart > Date.now() &&
+    !appointment?.pendingReschedule?.startAt;
   const history = useMemo(
     () => (overview?.appointments ?? []).slice(0, 5),
     [overview?.appointments],
@@ -330,7 +349,12 @@ export function AppointmentDetailsSheet({
               </span>
             </div>
             {appointment.staffName && (
-              <p className="m-0 mt-2 text-xs text-muted">آرایشگر: {appointment.staffName}</p>
+              <p className="m-0 mt-2 text-xs text-muted">عضو تیم: {appointment.staffName}</p>
+            )}
+            {appointment.customerNote && (
+              <p className="m-0 mt-2 rounded-lg border border-border bg-bg p-2 text-xs leading-6 text-muted">
+                یادداشت مشتری: {appointment.customerNote}
+              </p>
             )}
             <Button
               type="button"
@@ -339,9 +363,14 @@ export function AppointmentDetailsSheet({
               className="mt-3 w-full"
               startIcon={<Move className="h-4 w-4" />}
               onClick={() => onMove(appointment)}
-              disabled={['cancelled', 'rejected', 'no_show', 'completed'].includes(appointment.status ?? '')}
+              disabled={
+                !canMoveAppointment ||
+                ['cancelled', 'rejected', 'no_show', 'completed'].includes(appointment.status ?? '')
+              }
             >
-              انتقال به زمان دیگر
+              {appointment.pendingReschedule?.startAt
+                ? 'در انتظار پاسخ مشتری'
+                : 'انتقال به زمان دیگر'}
             </Button>
             <Button
               type="button"
@@ -448,7 +477,7 @@ export function AppointmentDetailsSheet({
                       بیعانه رزرو
                     </h3>
                     <p className="mt-1 text-xs text-muted">
-                      مبلغ: <Money amountRial={overview.deposit.amountRial ?? 0} />
+                      مبلغ: <Money amountRial={overview.deposit.amountRial ?? 0} unit="toman" />
                     </p>
                   </div>
                   <span
@@ -629,21 +658,25 @@ export function MoveAppointmentDialog({
   onOpenChange,
   onMoved,
   initialError = '',
+  initialStartAt,
 }: {
   open: boolean;
   appointment: CalendarAppointmentLike | null;
   onOpenChange: (open: boolean) => void;
   onMoved: (appointment: CalendarAppointmentLike, startAt: string) => Promise<void>;
   initialError?: string;
+  initialStartAt?: string;
 }) {
   const [startAt, setStartAt] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
 
   useEffect(() => {
     if (!open || !appointment) return;
-    setStartAt(localDateTimeValue(appointment.startAt));
-  }, [open, appointment]);
+    setStartAt(localDateTimeValue(initialStartAt || appointment.startAt));
+    setReviewing(false);
+  }, [open, appointment, initialStartAt]);
 
   useEffect(() => {
     if (!open || !appointment) return;
@@ -658,6 +691,26 @@ export function MoveAppointmentDialog({
       setError('زمان انتخاب‌شده معتبر نیست.');
       return;
     }
+    const currentStart = appointment.startAt ? new Date(appointment.startAt) : null;
+    if (
+      (currentStart && !Number.isNaN(currentStart.getTime()) && currentStart.getTime() <= Date.now()) ||
+      nextStart.getTime() <= Date.now()
+    ) {
+      setError('مهلت تغییر زمان گذشته است؛ نوبت‌های رسیده قابل جابه‌جایی نیستند.');
+      return;
+    }
+    setError('');
+    setReviewing(true);
+  };
+
+  const confirmMove = async () => {
+    if (!appointment || !startAt || saving) return;
+    const nextStart = new Date(startAt);
+    if (Number.isNaN(nextStart.getTime())) {
+      setError('زمان انتخاب‌شده معتبر نیست.');
+      setReviewing(false);
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -670,6 +723,8 @@ export function MoveAppointmentDialog({
     }
   };
 
+  const [startDate, startTime] = startAt.split('T');
+
   return (
     <Dialog open={open && Boolean(appointment)} onOpenChange={(next) => !saving && onOpenChange(next)}>
       <DialogContent>
@@ -678,44 +733,98 @@ export function MoveAppointmentDialog({
           انتقال نوبت
         </DialogTitle>
         <DialogDescription>
-          زمان جدید انتخاب کن؛ ظرفیت آرایشگر و صندلی دوباره بررسی می‌شود.
+          زمان جدید انتخاب کن؛ ظرفیت عضو تیم و صندلی دوباره بررسی می‌شود.
         </DialogDescription>
         <form onSubmit={(event) => void submit(event)} className="mt-4 flex flex-col gap-3">
-          <TextField
-            label="زمان شروع جدید"
-            type="datetime-local"
-            value={startAt}
-            onChange={(event) => setStartAt(event.target.value)}
-            disabled={saving}
-            dir="ltr"
-            step={900}
-          />
-          {appointment?.staffName && (
-            <p className="m-0 rounded-lg bg-bg p-2.5 text-xs text-muted">
-              آرایشگر فعلی: {appointment.staffName}
-            </p>
-          )}
-          {error && (
-            <div
-              role="alert"
-              className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/5 p-3 text-sm text-danger"
-            >
-              <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-              <div className="flex flex-col gap-1">
-                <strong className="font-semibold">انتقال انجام نشد</strong>
-                <span>{error}</span>
-                <span className="text-xs">نوبت قبلی بدون تغییر باقی ماند.</span>
+          {reviewing ? (
+            <div className="flex flex-col gap-3" data-testid="reschedule-review">
+              <div className="rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm text-text">
+                <strong className="block">تأیید نهایی تغییر زمان</strong>
+                <p className="m-0 mt-2 leading-6">
+                  {appointment?.customerName || 'این مشتری'}
+                  {appointment?.serviceName ? ` · ${appointment.serviceName}` : ''}
+                </p>
+                <dl className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+                  <div className="rounded-lg bg-surface p-2">
+                    <dt className="text-muted">زمان فعلی</dt>
+                    <dd className="m-0 mt-1 font-bold text-text">
+                      {dateLabel(appointment?.startAt)} · <Num value={timeLabel(appointment?.startAt)} />
+                    </dd>
+                  </div>
+                  <div className="rounded-lg bg-surface p-2">
+                    <dt className="text-muted">زمان پیشنهادی</dt>
+                    <dd className="m-0 mt-1 font-bold text-text">
+                      {dateLabel(new Date(startAt).toISOString())} · <Num value={timeLabel(new Date(startAt).toISOString())} />
+                    </dd>
+                  </div>
+                </dl>
+                <p className="m-0 mt-3 text-xs leading-6 text-muted">
+                  پس از تأیید، پیامک برای مشتری ارسال می‌شود و زمان فعلی تا پاسخ او حفظ خواهد شد.
+                </p>
+              </div>
+              {error && (
+                <div role="alert" className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/5 p-3 text-sm text-danger">
+                  <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <div className="flex flex-col gap-1">
+                    <strong className="font-semibold">انتقال انجام نشد</strong>
+                    <span>{error}</span>
+                    <span className="text-xs">نوبت قبلی بدون تغییر باقی ماند.</span>
+                  </div>
+                </div>
+              )}
+              <div className="mt-2 flex justify-end gap-2">
+                <Button type="button" variant="ghost" disabled={saving} onClick={() => setReviewing(false)}>
+                  بازگشت
+                </Button>
+                <Button type="button" variant="primary" loading={saving} disabled={saving} onClick={() => void confirmMove()}>
+                  تأیید نهایی تغییر زمان
+                </Button>
               </div>
             </div>
+          ) : (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <MobileDatePicker
+                  label="تاریخ شروع جدید"
+                  value={startDate || null}
+                  onChange={(nextDate) => setStartAt(`${nextDate}T${startTime || '09:00'}`)}
+                  disabled={saving}
+                />
+                <TextField
+                  label="ساعت شروع جدید"
+                  type="time"
+                  value={startTime || ''}
+                  onChange={(event) => setStartAt(`${startDate}T${event.target.value}`)}
+                  disabled={saving}
+                  dir="ltr"
+                  step={900}
+                />
+              </div>
+              {appointment?.staffName && (
+                <p className="m-0 rounded-lg bg-bg p-2.5 text-xs text-muted">
+                  عضو تیم فعلی: {appointment.staffName}
+                </p>
+              )}
+              {error && (
+                <div role="alert" className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/5 p-3 text-sm text-danger">
+                  <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <div className="flex flex-col gap-1">
+                    <strong className="font-semibold">انتقال انجام نشد</strong>
+                    <span>{error}</span>
+                    <span className="text-xs">نوبت قبلی بدون تغییر باقی ماند.</span>
+                  </div>
+                </div>
+              )}
+              <div className="mt-2 flex justify-end gap-2">
+                <DialogClose asChild>
+                  <Button type="button" variant="ghost" disabled={saving}>انصراف</Button>
+                </DialogClose>
+                <Button type="submit" variant="primary" loading={saving} disabled={saving || !startAt}>
+                  بررسی تغییر زمان
+                </Button>
+              </div>
+            </>
           )}
-          <div className="mt-2 flex justify-end gap-2">
-            <DialogClose asChild>
-              <Button type="button" variant="ghost" disabled={saving}>انصراف</Button>
-            </DialogClose>
-            <Button type="submit" variant="primary" loading={saving} disabled={saving || !startAt}>
-              ذخیره زمان جدید
-            </Button>
-          </div>
         </form>
       </DialogContent>
     </Dialog>

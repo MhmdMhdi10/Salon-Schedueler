@@ -5,7 +5,7 @@ import { MapPin, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from './cn';
 import { Num, toPersianDigits } from './Num';
-import { Money, formatRial } from './Money';
+import { Money, formatToman } from './Money';
 import { Rating } from './Rating';
 import { SalonPlaceholder } from './SalonPlaceholder';
 import type { SalonProfile } from '../../data/salons';
@@ -31,7 +31,7 @@ export interface SalonCardProps extends Omit<React.HTMLAttributes<HTMLElement>, 
   reviewCount?: number;
   /** Neighborhood / district line shown under the name. */
   location?: string;
-  /** Starting price in Rial (shown as "از X ریال"). */
+  /** Starting price in Rial (shown as "از X تومان"). */
   startingPriceRial?: bigint | number | string;
   /** Short list of service labels previewed on the card (max ~3 shown). */
   services?: string[];
@@ -217,11 +217,11 @@ export const SalonCard = forwardRef<HTMLElement, SalonCardProps>(function SalonC
             </p>
           )}
 
-          {/* Starting price in Rial with Persian numerals */}
+          {/* Starting price in Toman with Persian numerals */}
           {data.startingPriceRial != null && (
             <p className="text-xs font-medium text-text">
               <span className="text-muted">از </span>
-              <Money amountRial={data.startingPriceRial} />
+              <Money amountRial={data.startingPriceRial} unit="toman" />
             </p>
           )}
         </div>
@@ -346,9 +346,9 @@ export function SalonListCard({
               <span className="rounded-pill bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
                 {t('discovery.card.fromPrice', {
                   price: toPersianDigits(
-                    formatRial(Math.min(...salon.services.map((s) => s.priceRial))),
+                    formatToman(Math.min(...salon.services.map((s) => s.priceRial))),
                   ),
-                  defaultValue: 'از {{price}} ریال',
+                  defaultValue: 'از {{price}} تومان',
                 })}
               </span>
             )}
@@ -372,8 +372,8 @@ export function SalonListCard({
               </div>
               <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:shrink-0 sm:justify-start">
                 <bdi className="whitespace-nowrap text-sm font-semibold text-text">
-                  {formatRial(service.priceRial)}{' '}
-                  <span className="text-xs font-normal text-muted">ریال</span>
+                  {formatToman(service.priceRial)}{' '}
+                  <span className="text-xs font-normal text-muted">تومان</span>
                 </bdi>
                 <Link
                   to={`${bookHref}?service=${encodeURIComponent(service.id)}`}

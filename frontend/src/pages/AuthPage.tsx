@@ -6,7 +6,7 @@ import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer
 import { authApi, setAccessToken } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { OtpInput, OTP_LENGTH, type OtpInputHandle } from '../auth/OtpInput';
-import { normalizePhone, PHONE_PATTERN } from '../auth/phone';
+import { filterPhoneInput, normalizePhone, PHONE_PATTERN } from '../auth/phone';
 import { SeoHead } from '../components/seo';
 import { BrandLogo } from '../components/brand';
 import { Button, TextField, cn, toPersianDigits, useToast } from '../components/ui';
@@ -98,10 +98,14 @@ export function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [verified, setVerified] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
+  const [audience, setAudience] = useState<'customer' | 'salon'>(() =>
+    new URLSearchParams(window.location.search).get('intent') === 'salon' ? 'salon' : 'customer',
+  );
 
   const otpRef = useRef<OtpInputHandle | null>(null);
   const redirectTimer = useRef<number | undefined>(undefined);
   const lastAccessToken = useRef('');
+  const autoSubmittedCode = useRef('');
   const normalizedPhone = useMemo(() => normalizePhone(phone), [phone]);
   const phoneIsValid = PHONE_PATTERN.test(normalizedPhone);
   const codeValue = code.join('');
@@ -200,6 +204,7 @@ export function AuthPage() {
   const handleResend = () => {
     if (secondsLeft > 0 || loading) return;
     setCode(Array(otpLength).fill(''));
+    autoSubmittedCode.current = '';
     otpRef.current?.focus();
     void sendOtp();
   };
@@ -240,11 +245,28 @@ export function AuthPage() {
     }
   };
 
+  // The code is submitted as soon as its final digit arrives. The visible
+  // button remains as an accessible fallback for keyboard and assistive-tech
+  // users, but a correct OTP never needs a second tap.
+  useEffect(() => {
+    if (
+      step === 'otp' &&
+      codeIsComplete &&
+      !loading &&
+      !verified &&
+      autoSubmittedCode.current !== codeValue
+    ) {
+      autoSubmittedCode.current = codeValue;
+      void handleVerifyOtp();
+    }
+  }, [codeIsComplete, codeValue, loading, step, verified]);
+
   const backToPhone = () => {
     setDirection(-1);
     setStep('phone');
     setError('');
     setCode(Array(otpLength).fill(''));
+    autoSubmittedCode.current = '';
   };
 
   const variants = prefersReduced ? fadeStepVariants : stepVariants;
@@ -288,10 +310,42 @@ export function AuthPage() {
             >
               <div className="mb-5 text-start">
                 <h1 className="text-lg font-bold leading-display text-text">{t('auth.title')}</h1>
+                <div className="mt-4 grid grid-cols-2 gap-2" role="tablist" aria-label="نوع ورود">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={audience === 'customer'}
+                    onClick={() => setAudience('customer')}
+                    className={cn(
+                      'min-h-11 rounded-md border px-3 py-2 text-sm font-semibold transition-colors',
+                      audience === 'customer'
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border text-muted hover:bg-bg',
+                    )}
+                  >
+                    رزرو نوبت
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={audience === 'salon'}
+                    onClick={() => setAudience('salon')}
+                    className={cn(
+                      'min-h-11 rounded-md border px-3 py-2 text-sm font-semibold transition-colors',
+                      audience === 'salon'
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border text-muted hover:bg-bg',
+                    )}
+                  >
+                    ورود سالن و تیم
+                  </button>
+                </div>
                 <p className="mt-1 text-sm leading-5 text-muted">
                   {hasBookingReturnIntent
                     ? t('auth.bookingIntentSubtitle')
-                    : t('auth.phoneStepSubtitle')}
+                    : audience === 'salon'
+                      ? 'برای ورود به پنل سالن یا انتخاب سالن، شماره موبایل خود را وارد کنید.'
+                      : 'برای رزرو و دیدن نوبت‌ها، شماره موبایل خود را وارد کنید.'}
                 </p>
               </div>
               <form
@@ -310,12 +364,12 @@ export function AuthPage() {
                   inputMode="tel"
                   dir="ltr"
                   autoComplete="tel"
-                  maxLength={20}
+                  maxLength={14}
                   placeholder={t('auth.phonePlaceholder')}
                   value={phone}
                   style={{ unicodeBidi: 'isolate' }}
                   onChange={(e) => {
-                    setPhone(e.target.value);
+                    setPhone(filterPhoneInput(e.target.value));
                     if (phoneError) setPhoneError('');
                   }}
                 />

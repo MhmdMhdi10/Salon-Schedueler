@@ -86,7 +86,7 @@ const SCROLL_FEATURES: ScrollFeature[] = [
     bullets: [
       'ساخت منوی خدمات در چند دقیقه',
       'زمان و قیمت جدا برای هر خدمت',
-      'انتخاب آرایشگر برای هر خدمت',
+      'انتخاب عضو تیم برای هر خدمت',
     ],
     cta: 'منوی خدماتم را آماده می‌کنم',
     accent: 'blue',
@@ -151,6 +151,9 @@ function AraScrollBrandRail() {
         />
       </Link>
       <div className="ara-scroll-brand-actions">
+        <Link to="/search" className="ara-scroll-login">
+          رزرو نوبت
+        </Link>
         <Link to="/business/register" className="ara-scroll-header-start">
           شروع رایگان <ArrowUpLeft aria-hidden="true" />
         </Link>
@@ -315,6 +318,7 @@ function CalendarFeatureObject() {
                 <span>فهرست</span>
               </div>
               <div className="ara-scroll-real-calendar-date-nav">
+                {/* RTL-native: calendar chevrons follow the Persian inline direction. */}
                 <ChevronRight aria-hidden="true" />
                 <strong>مرداد ۱۴۰۵</strong>
                 <ChevronLeft aria-hidden="true" />
@@ -326,7 +330,8 @@ function CalendarFeatureObject() {
                 <Search aria-hidden="true" /> جست‌وجوی نوبت
               </span>
               <span>
-                همه آرایشگرها <ChevronLeft aria-hidden="true" />
+                {/* RTL-native: filter chevrons point toward the inline end. */}
+                همه اعضای تیم <ChevronLeft aria-hidden="true" />
               </span>
               <span>
                 همه وضعیت‌ها <ChevronLeft aria-hidden="true" />
@@ -452,7 +457,7 @@ function BookingFeatureObject() {
                   <Clock3 aria-hidden="true" /> ۶۰ دقیقه
                 </small>
               </span>
-              <b>۴۵۰٬۰۰۰ ریال</b>
+              <b>۴۵۰٬۰۰۰ تومان</b>
               <Check aria-hidden="true" />
             </div>
             <div className="ara-scroll-real-booking-service-card">
@@ -462,7 +467,7 @@ function BookingFeatureObject() {
                   <Clock3 aria-hidden="true" /> ۹۰ دقیقه
                 </small>
               </span>
-              <b>۸۵۰٬۰۰۰ ریال</b>
+              <b>۸۵۰٬۰۰۰ تومان</b>
             </div>
             <div className="ara-scroll-real-booking-section-title is-muted">
               <CalendarDays aria-hidden="true" />
@@ -498,7 +503,7 @@ function BookingFeatureObject() {
           <Scissors aria-hidden="true" /> خدمت انتخاب شد
         </span>
         <strong>کوتاهی و براشینگ</strong>
-        <span>۶۰ دقیقه · ۴۵۰٬۰۰۰ ریال</span>
+        <span>۶۰ دقیقه · ۴۵۰٬۰۰۰ تومان</span>
         <Check aria-hidden="true" />
       </div>
       <div className="ara-scroll-real-booking-confirmed">
@@ -543,7 +548,7 @@ function ServicesFeatureObject() {
                 <UsersRound aria-hidden="true" />
               </span>
               <span>
-                <strong>هر خدمت را به آرایشگرهایش وصل کن</strong>
+                <strong>هر خدمت را به اعضای تیمش وصل کن</strong>
                 <small>هنگام رزرو فقط افراد مرتبط نمایش داده می‌شوند.</small>
               </span>
             </div>
@@ -555,13 +560,13 @@ function ServicesFeatureObject() {
                 <span className="ara-scroll-real-service-content">
                   <strong>کوتاهی و براشینگ</strong>
                   <small>
-                    <Clock3 aria-hidden="true" /> ۶۰ دقیقه <b>۴۵۰٬۰۰۰ ریال</b>
+                    <Clock3 aria-hidden="true" /> ۶۰ دقیقه <b>۴۵۰٬۰۰۰ تومان</b>
                   </small>
                   <em>
-                    <UsersRound aria-hidden="true" /> ۲ آرایشگر متصل
+                    <UsersRound aria-hidden="true" /> ۲ عضو تیم متصل
                   </em>
                 </span>
-                <span className="ara-scroll-real-service-action">انتخاب آرایشگر</span>
+                    <span className="ara-scroll-real-service-action">انتخاب عضو تیم</span>
               </div>
               <div className="ara-scroll-real-service-row">
                 <span className="ara-scroll-real-service-symbol is-violet">
@@ -570,13 +575,13 @@ function ServicesFeatureObject() {
                 <span className="ara-scroll-real-service-content">
                   <strong>فیشال پوست</strong>
                   <small>
-                    <Clock3 aria-hidden="true" /> ۷۵ دقیقه <b>۶۵۰٬۰۰۰ ریال</b>
+                    <Clock3 aria-hidden="true" /> ۷۵ دقیقه <b>۶۵۰٬۰۰۰ تومان</b>
                   </small>
                   <em>
-                    <UsersRound aria-hidden="true" /> ۱ آرایشگر متصل
+                    <UsersRound aria-hidden="true" /> ۱ عضو تیم متصل
                   </em>
                 </span>
-                <span className="ara-scroll-real-service-action">انتخاب آرایشگر</span>
+                    <span className="ara-scroll-real-service-action">انتخاب عضو تیم</span>
               </div>
               <div className="ara-scroll-real-service-row">
                 <span className="ara-scroll-real-service-symbol is-rose">
@@ -585,13 +590,13 @@ function ServicesFeatureObject() {
                 <span className="ara-scroll-real-service-content">
                   <strong>رنگ و مش</strong>
                   <small>
-                    <Clock3 aria-hidden="true" /> ۹۰ دقیقه <b>۸۵۰٬۰۰۰ ریال</b>
+                    <Clock3 aria-hidden="true" /> ۹۰ دقیقه <b>۸۵۰٬۰۰۰ تومان</b>
                   </small>
                   <em>
-                    <UsersRound aria-hidden="true" /> ۲ آرایشگر متصل
+                    <UsersRound aria-hidden="true" /> ۲ عضو تیم متصل
                   </em>
                 </span>
-                <span className="ara-scroll-real-service-action">انتخاب آرایشگر</span>
+                    <span className="ara-scroll-real-service-action">انتخاب عضو تیم</span>
               </div>
             </div>
             <div className="ara-scroll-real-services-add-row">
@@ -607,13 +612,13 @@ function ServicesFeatureObject() {
         </span>
         <span>
           <strong>کوتاهی و براشینگ</strong>
-          <small>۶۰ دقیقه · ۴۵۰٬۰۰۰ ریال</small>
+          <small>۶۰ دقیقه · ۴۵۰٬۰۰۰ تومان</small>
         </span>
         <Check aria-hidden="true" />
       </div>
       <div className="ara-scroll-real-services-float ara-scroll-real-services-float-two">
         <UsersRound aria-hidden="true" />
-        <span>۲ آرایشگر متصل</span>
+        <span>۲ عضو تیم متصل</span>
       </div>
       <div className="ara-scroll-real-services-add">
         <span>+</span>

@@ -370,6 +370,9 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     prisma,
     bookingFlow,
     cancellationService,
+    schedulingEngine,
+    notificationService,
+    salonInboxService,
   );
   const bookingAbuseGuard = new BookingAbuseGuard(prisma);
   const platformAdminService = new PlatformAdminService(prisma);

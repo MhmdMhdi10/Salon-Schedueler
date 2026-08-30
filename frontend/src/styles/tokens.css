@@ -356,14 +356,18 @@
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
-    overflow-x: hidden;
+    /* Keep the document scrollbar on the physical right while app content
+       remains Persian/RTL through the app root and page surfaces. */
+    direction: ltr;
+    overflow-x: clip;
   }
 
   body {
     min-height: 100vh;
     min-height: 100dvh;
     margin: 0;
-    overflow-x: hidden;
+    direction: rtl;
+    overflow-x: clip;
     /* Persian-first font stack + taller line height for Farsi runs */
     font-family: var(--font-family-sans);
     font-size: var(--font-sm);
@@ -377,6 +381,21 @@
     font-optical-sizing: auto;
     font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
     text-rendering: optimizeLegibility;
+  }
+
+  /* Scrollbars belong to the page frame, while every child surface keeps its
+     explicit Persian direction. This prevents browser-dependent left gutters
+     on onboarding, funnel, admin, and platform shells. */
+  [data-shell='funnel'],
+  [data-shell='admin'],
+  [data-shell='platform-admin'] {
+    direction: ltr;
+  }
+
+  [data-shell='funnel'] > *,
+  [data-shell='admin'] > *,
+  [data-shell='platform-admin'] > * {
+    direction: rtl;
   }
 
   /* Headings inherit the body font; weight-driven hierarchy */

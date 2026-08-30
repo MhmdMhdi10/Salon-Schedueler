@@ -29,6 +29,7 @@ import {
   type StaffUpdateInput,
 } from '../../api/client';
 import { useSalonId } from '../../auth/useSalonId';
+import { filterPhoneInput, normalizePhone } from '../../auth/phone';
 import { SeoHead } from '../../components/seo';
 import { TenantTheme } from '../../components/theme';
 import { ACCENTS } from '../owner/marketing-assets';
@@ -347,7 +348,7 @@ function ServicesSection({
                     <Clock className="h-3.5 w-3.5" aria-hidden="true" />
                     {t('booking.durationMinutes', { count: service.durationMinutes })}
                   </span>
-                  <Money amountRial={service.priceRial} className="font-medium text-text" />
+                  <Money amountRial={service.priceRial} unit="toman" className="font-medium text-text" />
                 </span>
               </div>
               <IconButton
@@ -1170,7 +1171,7 @@ function StaffSection({
       setFormError(t('admin.config.staff.nameRequired'));
       return;
     }
-    const trimmedPhone = phone.trim();
+    const trimmedPhone = normalizePhone(phone);
     if (trimmedPhone && !STAFF_PHONE_RE.test(trimmedPhone)) {
       setFormError(t('admin.config.staff.invalidPhone'));
       return;
@@ -1299,8 +1300,9 @@ function StaffSection({
           inputMode="tel"
           dir="ltr"
           autoComplete="off"
+          maxLength={14}
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={(e) => setPhone(filterPhoneInput(e.target.value))}
         />
         {formError && (
           <p role="alert" className="text-sm text-danger">

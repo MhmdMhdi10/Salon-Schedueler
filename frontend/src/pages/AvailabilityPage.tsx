@@ -18,9 +18,10 @@ import {
   type SlotState,
   ServiceCardList,
   Button,
+  TextField,
   type ServiceCardItem,
 } from '../components/ui';
-import { gregorianToJalali, getJalaliMonthName } from '@salon/shared';
+import { gregorianToJalali, getJalaliMonthName, normalizeDigits } from '@salon/shared';
 import { readSalonName } from '../utils/salonName';
 
 /** A bookable service as returned by the salon services endpoint (unchanged contract). */
@@ -29,6 +30,9 @@ interface Service {
   name: string;
   durationMinutes: number;
   priceRial: number;
+  durationMode?: 'fixed' | 'variable';
+  minDurationMinutes?: number | null;
+  maxDurationMinutes?: number | null;
 }
 
 /** A bookable stylist as returned by the public stylists endpoint. */
@@ -67,6 +71,7 @@ interface PersistedSelection {
   /** Preferred stylist id; '' (or absent) means "any stylist". */
   staffId?: string;
   locationType?: 'salon' | 'customer';
+  durationMinutes?: number;
 }
 
 function selectionKey(salonId: string): string {
@@ -89,6 +94,10 @@ function readSelection(salonId: string | undefined): PersistedSelection | null {
       locationType:
         parsed.locationType === 'salon' || parsed.locationType === 'customer'
           ? parsed.locationType
+          : undefined,
+      durationMinutes:
+        typeof parsed.durationMinutes === 'number' && Number.isInteger(parsed.durationMinutes)
+          ? parsed.durationMinutes
           : undefined,
     };
   } catch {
@@ -258,7 +267,31 @@ export function AvailabilityPage() {
   const [locationType, setLocationType] = useState<'salon' | 'customer'>(
     restored?.locationType ?? 'salon',
   );
+  const [durationMinutes, setDurationMinutes] = useState(
+    restored?.durationMinutes ? String(restored.durationMinutes) : '',
+  );
+  const [durationError, setDurationError] = useState('');
   const [workMode, setWorkMode] = useState<BookingWorkMode>('not_decided');
+
+  const selectedServiceDetails = useMemo(
+    () => services.find((service) => service.id === selectedService),
+    [services, selectedService],
+  );
+
+  useEffect(() => {
+    if (selectedServiceDetails?.durationMode !== 'variable') {
+      setDurationMinutes('');
+      setDurationError('');
+      return;
+    }
+    const min = selectedServiceDetails.minDurationMinutes ?? selectedServiceDetails.durationMinutes;
+    const max = selectedServiceDetails.maxDurationMinutes ?? min;
+    setDurationMinutes((current) => {
+      const parsed = Number(current);
+      return Number.isInteger(parsed) && parsed >= min && parsed <= max ? current : String(min);
+    });
+    setDurationError('');
+  }, [selectedServiceDetails]);
 
   // Load the salon's services (with loading + error states).
   const loadServices = useCallback(() => {
@@ -328,6 +361,23 @@ export function AvailabilityPage() {
       setSlots([]);
       return;
     }
+    const requestedDuration =
+      selectedServiceDetails?.durationMode === 'variable' && durationMinutes
+        ? Number(durationMinutes)
+        : undefined;
+    if (
+      selectedServiceDetails?.durationMode === 'variable' &&
+      (requestedDuration === undefined ||
+        !Number.isInteger(requestedDuration) ||
+        requestedDuration <
+          (selectedServiceDetails.minDurationMinutes ?? selectedServiceDetails.durationMinutes) ||
+        requestedDuration >
+          (selectedServiceDetails.maxDurationMinutes ?? selectedServiceDetails.durationMinutes))
+    ) {
+      setSlots([]);
+      setSlotsStatus('idle');
+      return;
+    }
     setSlotsStatus('loading');
     salonApi
       .getAvailability(
@@ -336,13 +386,22 @@ export function AvailabilityPage() {
         date,
         selectedStaff || undefined,
         locationType,
+        requestedDuration,
       )
       .then((res) => {
         setSlots(res.slots);
         setSlotsStatus('ready');
       })
       .catch(() => setSlotsStatus('error'));
-  }, [salonId, selectedService, date, selectedStaff, locationType]);
+  }, [
+    salonId,
+    selectedService,
+    selectedServiceDetails,
+    date,
+    selectedStaff,
+    locationType,
+    durationMinutes,
+  ]);
 
   useEffect(() => {
     loadSlots();
@@ -350,20 +409,20 @@ export function AvailabilityPage() {
 
   const serviceLocationLabel =
     workMode === 'rented_chair'
-      ? t('booking.locationRentedChair', { defaultValue: 'در محل کار آرایشگر' })
+      ? t('booking.locationRentedChair', { defaultValue: 'در محل کار عضو تیم' })
       : workMode === 'home'
-        ? t('booking.locationHome', { defaultValue: 'در محل کار آرایشگر' })
+        ? t('booking.locationHome', { defaultValue: 'در محل کار عضو تیم' })
         : workMode === 'fixed_salon'
           ? t('booking.locationSalon', { defaultValue: 'در سالن' })
           : t('booking.locationServicePlace', { defaultValue: 'در محل ارائه خدمت' });
   const serviceLocationHint =
     workMode === 'rented_chair'
       ? t('booking.locationRentedChairHint', {
-          defaultValue: 'رزرو در جایگاه ثابت آرایشگر انجام می‌شود.',
+          defaultValue: 'رزرو در جایگاه ثابت عضو تیم انجام می‌شود.',
         })
       : workMode === 'home'
         ? t('booking.locationHomeHint', {
-            defaultValue: 'خدمات در محل کار آرایشگر انجام می‌شود.',
+            defaultValue: 'خدمات در محل کار عضو تیم انجام می‌شود.',
           })
         : t('booking.locationSalonHint', {
             defaultValue: 'خدمات در محل ثابت سالن انجام می‌شود.',
@@ -371,8 +430,24 @@ export function AvailabilityPage() {
 
   const handleServiceChange = (value: string) => {
     setSelectedService(value);
+    const nextService = services.find((service) => service.id === value);
+    setDurationMinutes(
+      nextService?.durationMode === 'variable'
+        ? String(nextService.minDurationMinutes ?? nextService.durationMinutes)
+        : '',
+    );
+    setDurationError('');
     if (salonId && date) {
-      writeSelection(salonId, { serviceId: value, date, staffId: selectedStaff, locationType });
+      writeSelection(salonId, {
+        serviceId: value,
+        date,
+        staffId: selectedStaff,
+        locationType,
+        durationMinutes:
+          nextService?.durationMode === 'variable'
+            ? nextService.minDurationMinutes ?? nextService.durationMinutes
+            : undefined,
+      });
     }
   };
 
@@ -384,6 +459,7 @@ export function AvailabilityPage() {
         date: value,
         staffId: selectedStaff,
         locationType,
+        durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
       });
     }
   };
@@ -396,6 +472,7 @@ export function AvailabilityPage() {
         date,
         staffId: value,
         locationType,
+        durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
       });
     }
   };
@@ -409,6 +486,7 @@ export function AvailabilityPage() {
         date,
         staffId: selectedStaff,
         locationType: value,
+        durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
       });
     }
   };
@@ -420,6 +498,7 @@ export function AvailabilityPage() {
         date,
         staffId: selectedStaff,
         locationType,
+        durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
       });
     }
     navigate(`/salon/${salonId}/book/confirm`, {
@@ -430,6 +509,7 @@ export function AvailabilityPage() {
         // "any" so the scheduler is free to assign).
         preferredStaffId: selectedStaff || undefined,
         locationType,
+        durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
       },
     });
   };
@@ -538,6 +618,40 @@ export function AvailabilityPage() {
           )}
         </section>
 
+        {selectedServiceDetails?.durationMode === 'variable' && (
+          <section
+            aria-labelledby="duration-section-title"
+            className="flex flex-col gap-3 rounded-lg border border-border bg-elevated p-4 shadow-2 sm:p-5"
+          >
+            <h2 id="duration-section-title" className="text-base font-bold text-text">
+              مدت موردنیاز
+            </h2>
+            <p className="m-0 text-sm text-muted">
+              برای نمایش زمان‌های واقعی، مدت این نوبت را انتخاب کن.
+            </p>
+            <TextField
+              label="مدت نوبت (دقیقه)"
+              value={durationMinutes}
+              onChange={(event) => {
+                const next = normalizeDigits(event.target.value).replace(/\D/g, '');
+                setDurationMinutes(next);
+                const min = selectedServiceDetails.minDurationMinutes ?? selectedServiceDetails.durationMinutes;
+                const max = selectedServiceDetails.maxDurationMinutes ?? min;
+                const parsed = Number(next);
+                setDurationError(
+                  !Number.isInteger(parsed) || parsed < min || parsed > max
+                    ? `مدت باید بین ${min} تا ${max} دقیقه باشد.`
+                    : '',
+                );
+              }}
+              inputMode="numeric"
+              dir="ltr"
+              error={durationError}
+              helperText={!durationError ? `بین ${selectedServiceDetails.minDurationMinutes ?? selectedServiceDetails.durationMinutes} تا ${selectedServiceDetails.maxDurationMinutes ?? selectedServiceDetails.durationMinutes} دقیقه` : undefined}
+            />
+          </section>
+        )}
+
         {/* Stylist picker — appears after a salon QR scan so the customer can
           choose their stylist (or "any"). A stylist-scoped QR pre-selects one.
           Best-effort: hidden while loading fails or no stylists exist. */}
@@ -599,7 +713,7 @@ export function AvailabilityPage() {
                   value: 'customer',
                   label: t('booking.locationCustomer', { defaultValue: 'در محل شما' }),
                   helperText: t('booking.locationCustomerHint', {
-                    defaultValue: 'آرایشگر به آدرس شما مراجعه می‌کند.',
+                    defaultValue: 'عضو تیم به آدرس شما مراجعه می‌کند.',
                   }),
                 },
               ]}
@@ -611,7 +725,7 @@ export function AvailabilityPage() {
           <p className="flex items-center gap-2 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-sm text-text">
             <MapPin className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
             {t('booking.locationCustomerHint', {
-              defaultValue: 'آرایشگر به آدرس شما مراجعه می‌کند.',
+              defaultValue: 'عضو تیم به آدرس شما مراجعه می‌کند.',
             })}
           </p>
         )}

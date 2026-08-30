@@ -63,7 +63,7 @@ export function OwnerSetupAlert({ salonId, refreshKey }: { salonId: string; refr
         next.push({
           key: 'staff',
           title: 'نیروی قابل رزرو وجود ندارد',
-          description: 'یک آرایشگر فعال لازم است تا نوبت به او اختصاص پیدا کند.',
+          description: 'یک عضو تیم فعال لازم است تا نوبت به او اختصاص پیدا کند.',
           to: '/owner/team',
         });
       }

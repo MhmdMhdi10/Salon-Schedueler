@@ -76,7 +76,7 @@ const NAV_GROUPS: NavGroup[] = [
     icon: <TeamOutlined />,
     children: [
       { key: '/platform-admin/customers', label: 'مشتری‌ها', icon: <UserOutlined /> },
-      { key: '/platform-admin/staff', label: 'پرسنل سالن‌ها', icon: <UserSwitchOutlined /> },
+      { key: '/platform-admin/staff', label: 'تیم سالن‌ها', icon: <UserSwitchOutlined /> },
     ],
   },
   {

@@ -223,6 +223,7 @@ export function buildApp(opts: BuildAppOptions): Express {
   // add RBAC guards where the authorization matrix requires them (Requirement 2.4).
   const protectedRouter = Router();
   protectedRouter.use(requireAuth);
+  protectedRouter.use(new AuthController(services).protectedRouter());
   protectedRouter.use(
     createRateLimit({
       name: 'authenticated-api',

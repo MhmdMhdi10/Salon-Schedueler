@@ -68,6 +68,7 @@ export class PrismaNotificationRepository implements NotificationRepository {
       customerName: appt.customer.fullName ?? undefined,
       serviceName: appt.service.name,
       startAt: appt.startAt,
+      timezone: appt.salon.timezone,
       staffName: appt.staffMember.fullName,
       staffMemberId: appt.staffMemberId,
     };
@@ -92,9 +93,31 @@ export class PrismaNotificationRepository implements NotificationRepository {
   ): Promise<string[]> {
     const appointment = await this.prisma.appointment.findUnique({
       where: { id: appointmentId },
-      select: { salonId: true, staffMemberId: true },
+      select: {
+        salonId: true,
+        staffMemberId: true,
+        service: { select: { approvalStaffId: true } },
+      },
     });
     if (!appointment) return [];
+
+    // A service may nominate one approval-capable team member. For booking
+    // alerts this explicit choice is authoritative, independent of broad
+    // salon SMS toggles; reminders/cancellations keep their normal audience.
+    if (event === 'booking' && appointment.service?.approvalStaffId) {
+      const approver = await this.prisma.staffMember.findFirst({
+        where: {
+          id: appointment.service.approvalStaffId,
+          salonId: appointment.salonId,
+          active: true,
+          phone: { not: null },
+        },
+        select: { phone: true },
+      });
+      // If the explicitly selected approver has no usable phone, keep the
+      // booking visible to an owner instead of silently dropping the alert.
+      return approver?.phone ? [approver.phone] : this.findSalonSmsRecipients(appointment.salonId);
+    }
 
     const settingsRow = await this.prisma.salonSmsSettings.findUnique({
       where: { salonId: appointment.salonId },
@@ -166,6 +189,7 @@ export class PrismaNotificationRepository implements NotificationRepository {
       customerName: appt.customer.fullName ?? undefined,
       serviceName: appt.service.name,
       startAt: appt.startAt,
+      timezone: appt.salon.timezone,
       staffName: appt.staffMember.fullName,
       staffMemberId: appt.staffMemberId,
     }));
@@ -505,16 +529,29 @@ export class PrismaCustomerRepository implements CustomerRepository {
       createdAt: appt.createdAt,
       locationType: appt.locationType,
       locationAddress: appt.locationAddress,
+      customerNote: appt.customerNote,
+      durationMinOverride: appt.durationMinOverride,
       salonName: appt.salon.name,
       serviceName: appt.service.name,
       staffName: appt.staffMember.fullName,
       depositRequired: appt.service.requiresDeposit,
       depositMethod: appt.service.requiresDeposit
-        ? (appt.salon.depositMethod === 'card_transfer' ? 'card_transfer' : 'gateway')
+        ? (appt.salon.depositMethod === 'cash'
+            ? 'cash'
+            : appt.salon.depositMethod === 'card_transfer'
+              ? 'card_transfer'
+              : 'gateway')
         : null,
       depositAmountRial: appt.service.depositRial == null ? null : Number(appt.service.depositRial),
       paymentStatus: appt.payments[0]?.status ?? null,
       depositReceiptStatus: appt.depositReceipt?.status ?? null,
+      pendingReschedule: appt.pendingRescheduleStartAt
+        ? {
+            startAt: appt.pendingRescheduleStartAt,
+            endAt: appt.pendingRescheduleEndAt,
+            requestedAt: appt.pendingRescheduleRequestedAt,
+          }
+        : null,
     }));
   }
 

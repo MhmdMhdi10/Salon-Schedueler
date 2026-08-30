@@ -22,6 +22,8 @@ export interface AppointmentInfo {
   customerName?: string;
   serviceName: string;
   startAt: Date;
+  /** IANA timezone used when presenting appointment dates to people. */
+  timezone?: string;
   staffName?: string;
   staffMemberId?: string;
 }
@@ -201,7 +203,7 @@ export class NotificationService {
     const message = this.buildSalonBookingMessage(appointment, status);
     const { dateStr, timeStr } = this.getAppointmentDateTime(appointment);
     const customer = appointment.customerName?.trim() || appointment.customerPhone;
-    const staff = appointment.staffName?.trim() || 'بدون آرایشگر';
+    const staff = appointment.staffName?.trim() || 'بدون عضو تیم';
     const state = status === 'pending' ? 'منتظر تأیید شما در پنل است.' : 'به‌صورت خودکار تأیید شد.';
     for (const phone of recipients) {
       const result = await this.sendFixedSms(
@@ -241,6 +243,47 @@ export class NotificationService {
       error: result.ok ? null : result.error,
     });
     return result;
+  }
+
+  /** Notify a newly invited team member when the salon has a login phone. */
+  async sendTeamInvitation(
+    phone: string,
+    salonName: string,
+    fullName: string,
+    roleLabel = 'عضو تیم',
+  ): Promise<SmsDeliveryResult> {
+    const message =
+      `سلام ${fullName}، شما به‌عنوان ${roleLabel} به تیم ${salonName} اضافه شدید. ` +
+      'برای ورود به پنل، با همین شماره کد ورود دریافت کنید.';
+    return this.smsProvider.send(phone, message);
+  }
+
+  /**
+   * Tell a customer that the salon proposed a new time. The current booking
+   * remains active until the customer responds in their panel.
+   */
+  async sendRescheduleProposal(
+    appointmentId: string,
+    previousStartAt: Date,
+    proposedStartAt: Date,
+  ): Promise<void> {
+    const appointment = await this.repository.findAppointment(appointmentId);
+    if (!appointment) return;
+
+    const previous = this.getAppointmentDateTime(appointment, previousStartAt);
+    const proposed = this.getAppointmentDateTime(appointment, proposedStartAt);
+    const message =
+      `سالن ${appointment.salonName} پیشنهاد داده زمان نوبت ${appointment.serviceName} ` +
+      `از ${previous.dateStr} ساعت ${previous.timeStr} به ${proposed.dateStr} ساعت ${proposed.timeStr} تغییر کند. ` +
+      'برای تأیید یا رد این تغییر وارد پنل خود شوید؛ تا پاسخ شما زمان قبلی برقرار است.';
+    const result = await this.smsProvider.send(appointment.customerPhone, message);
+    await this.repository.logNotification({
+      appointmentId,
+      channel: 'sms',
+      type: 'generic',
+      status: result.ok ? 'sent' : 'failed',
+      error: result.ok ? null : result.error,
+    });
   }
 
   /**
@@ -510,17 +553,32 @@ export class NotificationService {
     return `یادآوری ${appointment.salonName}: نوبت ${customer} برای ${appointment.serviceName} ساعت ${timeStr} نزدیک است.`;
   }
 
-  private getAppointmentDateTime(appointment: AppointmentInfo): {
+  private getAppointmentDateTime(appointment: AppointmentInfo, startAt = appointment.startAt): {
     dateStr: string;
     timeStr: string;
   } {
-    return {
-      dateStr: appointment.startAt.toLocaleDateString('fa-IR'),
-      timeStr: appointment.startAt.toLocaleTimeString('fa-IR', {
+    const formatInTimeZone = (timeZone: string) => ({
+      dateStr: new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+        timeZone,
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+      }).format(startAt),
+      timeStr: new Intl.DateTimeFormat('fa-IR', {
+        timeZone,
         hour: '2-digit',
         minute: '2-digit',
-      }),
-    };
+        hourCycle: 'h23',
+      }).format(startAt),
+    });
+
+    try {
+      return formatInTimeZone(appointment.timezone || 'Asia/Tehran');
+    } catch {
+      // Keep notification delivery working if a legacy or invalid timezone is
+      // present in the database.
+      return formatInTimeZone('Asia/Tehran');
+    }
   }
 
   private sendFixedSms(

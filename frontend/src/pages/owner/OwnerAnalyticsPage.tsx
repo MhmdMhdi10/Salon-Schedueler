@@ -455,7 +455,7 @@ function MetricCard({
             <p className="text-xl font-bold text-muted">{t('admin.analyticsPage.noData')}</p>
           ) : isRial ? (
             <div className="max-w-full break-words text-[clamp(1.15rem,2vw,1.75rem)] font-bold tabular-nums [font-feature-settings:'tnum'] text-text">
-              <Money amountRial={value} />
+              <Money amountRial={value} unit="toman" />
             </div>
           ) : (
             <AnimatedCounter
@@ -496,7 +496,7 @@ function CompactStat({
       <div className="min-w-0">
         <p className="truncate text-xs text-muted">{label}</p>
         <p className="mt-1 break-words text-lg font-bold text-text">
-          {isRial ? <Money amountRial={value} /> : <Num value={value} />}
+          {isRial ? <Money amountRial={value} unit="toman" /> : <Num value={value} />}
         </p>
         {detail && <p className="mt-1 text-xs text-muted">{detail}</p>}
       </div>
@@ -660,7 +660,7 @@ function ServicePerformance({ rows }: { rows: ServiceRow[] }) {
                 </div>
                 <div>
                   <p className="text-muted">درآمد</p>
-                  <p className="mt-1 font-bold text-text"><Money amountRial={row.revenueRial} /></p>
+                  <p className="mt-1 font-bold text-text"><Money amountRial={row.revenueRial} unit="toman" /></p>
                 </div>
                 <div>
                   <p className="text-muted">مدت میانگین</p>
@@ -698,7 +698,7 @@ function StaffPerformance({ rows }: { rows: StaffRow[] }) {
       <div className="mb-4 flex items-center gap-2">
         <Users className="h-5 w-5 text-primary" aria-hidden="true" />
         <CardTitle as="h2" className="text-base font-bold">
-          {t('owner.analytics.staffTitle', { defaultValue: 'عملکرد آرایشگرها' })}
+          {t('owner.analytics.staffTitle', { defaultValue: 'عملکرد اعضای تیم' })}
         </CardTitle>
       </div>
       {rows.length === 0 ? (
@@ -706,7 +706,7 @@ function StaffPerformance({ rows }: { rows: StaffRow[] }) {
           data-testid="analytics-staff-empty"
           icon={<Users className="h-8 w-8" />}
           title={t('admin.analyticsPage.noData')}
-          description={t('owner.analytics.staffEmpty', { defaultValue: 'برای آرایشگرها هنوز داده‌ای وجود ندارد.' })}
+          description={t('owner.analytics.staffEmpty', { defaultValue: 'برای اعضای تیم هنوز داده‌ای وجود ندارد.' })}
           className="py-6"
         />
       ) : (
@@ -724,7 +724,7 @@ function StaffPerformance({ rows }: { rows: StaffRow[] }) {
                 </div>
                 <div>
                   <p className="text-muted">درآمد</p>
-                  <p className="mt-1 font-bold text-text"><Money amountRial={row.revenueRial} /></p>
+                  <p className="mt-1 font-bold text-text"><Money amountRial={row.revenueRial} unit="toman" /></p>
                 </div>
                 <div>
                   <p className="text-muted">زمان رزروشده</p>
@@ -743,7 +743,7 @@ function StaffPerformance({ rows }: { rows: StaffRow[] }) {
         compact
         className="mt-3"
         testId="analytics-staff-pagination"
-        ariaLabel={t('owner.analytics.staffPagination', { defaultValue: 'صفحه‌بندی آرایشگرها' })}
+        ariaLabel={t('owner.analytics.staffPagination', { defaultValue: 'صفحه‌بندی اعضای تیم' })}
       />
     </Card>
   );
@@ -824,7 +824,7 @@ function CustomerPerformance({
                 </div>
                 <div className="min-w-0">
                   <p className="text-muted">{t('owner.analytics.customerRevenue', { defaultValue: 'پرداختی' })}</p>
-                  <p className="mt-1 break-words font-bold text-text"><Money amountRial={row.revenueRial} /></p>
+                  <p className="mt-1 break-words font-bold text-text"><Money amountRial={row.revenueRial} unit="toman" /></p>
                 </div>
               </div>
               <p className="mt-3 text-xs text-muted">
@@ -1047,7 +1047,7 @@ export function OwnerAnalyticsPageContent({ salonId: salonIdProp }: { salonId?: 
                 trend={percentChange(model.summary.collectedRial, model.comparison.collectedRial)}
                 detail={
                   <span>
-                    ارزش خدمات: <Money amountRial={model.summary.serviceValueRial} />
+                    ارزش خدمات: <Money amountRial={model.summary.serviceValueRial} unit="toman" />
                   </span>
                 }
               />
@@ -1193,15 +1193,15 @@ export function OwnerAnalyticsPageContent({ salonId: salonIdProp }: { salonId?: 
               <div className="flex min-w-0 flex-col gap-2 text-sm">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-muted">{t('owner.analytics.collectedLabel', { defaultValue: 'دریافت خالص' })}</span>
-                  <Money amountRial={model.summary.collectedRial} />
+                  <Money amountRial={model.summary.collectedRial} unit="toman" />
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-muted">{t('owner.analytics.refundedLabel', { defaultValue: 'برگشتی' })}</span>
-                  <Money amountRial={model.summary.refundedRial} />
+                  <Money amountRial={model.summary.refundedRial} unit="toman" />
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-muted">{t('owner.analytics.pendingPaymentLabel', { defaultValue: 'در انتظار پرداخت' })}</span>
-                  <Money amountRial={model.summary.pendingPaymentRial} />
+                  <Money amountRial={model.summary.pendingPaymentRial} unit="toman" />
                 </div>
               </div>
             </Card>

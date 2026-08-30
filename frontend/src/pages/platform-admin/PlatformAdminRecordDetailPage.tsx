@@ -13,7 +13,7 @@ import {
   WalletOutlined,
 } from '@ant-design/icons';
 import { platformAdminApi } from '../../api/client';
-import { formatRial } from '../../components/ui/Money';
+import { formatToman } from '../../components/ui/Money';
 import { platformDetailSnapshotKey } from './PlatformAdminPages';
 import './platform-admin.css';
 
@@ -21,7 +21,7 @@ type DetailRecord = Record<string, unknown> & { id?: string };
 type Entry = [string, unknown];
 
 const RESOURCE_LABEL: Record<string, string> = {
-  salons: 'سالن‌ها', customers: 'مشتری‌ها', staff: 'پرسنل', appointments: 'نوبت‌ها', subscriptions: 'اشتراک‌ها',
+  salons: 'سالن‌ها', customers: 'مشتری‌ها', staff: 'تیم', appointments: 'نوبت‌ها', subscriptions: 'اشتراک‌ها',
   payments: 'پرداخت‌ها', waitlist: 'صف انتظار', 'qr-scans': 'اسکن‌های QR', 'audit-logs': 'گزارش تغییرات',
 };
 
@@ -29,7 +29,7 @@ const STATUS_LABEL: Record<string, string> = {
   active: 'فعال', trial: 'آزمایشی', grace: 'مهلت تمدید', expired: 'منقضی', suspended: 'تعلیق‌شده', inactive: 'غیرفعال',
   pending: 'در انتظار', held: 'موقت', confirmed: 'تأییدشده', completed: 'انجام‌شده', cancelled: 'لغوشده', no_show: 'عدم مراجعه',
   paid: 'پرداخت‌شده', refunded: 'مستردشده', retained: 'نگه‌داشته‌شده', failed: 'ناموفق', waiting: 'در صف', notified: 'اطلاع داده‌شده', fulfilled: 'تکمیل‌شده',
-  Owner: 'مالک', Admin: 'ادمین', Stylist: 'آرایشگر',
+  Owner: 'مالک', Admin: 'ادمین', Stylist: 'عضو تیم',
 };
 
 const faNumber = new Intl.NumberFormat('fa-IR');
@@ -40,11 +40,11 @@ function fieldLabel(field: string): string {
     id: 'شناسه', name: 'نام', fullName: 'نام کامل', phone: 'تلفن', qrToken: 'توکن QR', timezone: 'منطقه زمانی', active: 'فعال',
     status: 'وضعیت', role: 'نقش', source: 'منبع', createdAt: 'تاریخ ایجاد', updatedAt: 'آخرین تغییر', lastLoginAt: 'آخرین ورود',
     startAt: 'شروع', endAt: 'پایان', windowStart: 'شروع بازه', windowEnd: 'پایان بازه', startedAt: 'شروع اشتراک', expiresAt: 'انقضا', graceUntil: 'مهلت تمدید',
-    amountRial: 'مبلغ (ریال)', priceRial: 'قیمت (ریال)', depositRial: 'ودیعه (ریال)', gateway: 'درگاه', refId: 'شناسه مرجع',
+    amountRial: 'مبلغ (تومان)', priceRial: 'قیمت (تومان)', depositRial: 'ودیعه (تومان)', gateway: 'درگاه', refId: 'شناسه مرجع',
     planKind: 'نوع پلن', autoApprove: 'تأیید خودکار', bookingWindowDays: 'افق رزرو (روز)', brandAccent: 'رنگ برند', noShowCount: 'عدم مراجعه',
     durationMin: 'مدت (دقیقه)', bufferMin: 'فاصله (دقیقه)', requiresDeposit: 'نیازمند ودیعه', entityType: 'نوع رکورد', entityId: 'شناسه رکورد',
-    action: 'عملیات', metadata: 'جزئیات ساختاری', salon: 'سالن', customer: 'مشتری', staffMember: 'پرسنل', service: 'خدمت', payments: 'پرداخت‌ها',
-    appointments: 'نوبت‌ها', waitlistEntries: 'صف انتظار', customerNotes: 'یادداشت‌ها', preferredStaff: 'پرسنل منتخب', subscription: 'اشتراک', admin: 'مدیر',
+    action: 'عملیات', metadata: 'جزئیات ساختاری', salon: 'سالن', customer: 'مشتری', staffMember: 'عضو تیم', service: 'خدمت', payments: 'پرداخت‌ها',
+    appointments: 'نوبت‌ها', waitlistEntries: 'صف انتظار', customerNotes: 'یادداشت‌ها', preferredStaff: 'عضو تیم منتخب', subscription: 'اشتراک', admin: 'مدیر',
   };
   return labels[field] ?? field.replaceAll(/([a-z])([A-Z])/g, '$1 $2').replaceAll('_', ' ');
 }
@@ -90,8 +90,10 @@ function ScalarValue({ field, value }: { field: string; value: unknown }): React
     const date = new Date(value);
     return <time dateTime={value}>{Number.isNaN(date.getTime()) ? value : dateTimeFormatter.format(date)}</time>;
   }
+  if (/Rial$/i.test(field) && (typeof value === 'number' || typeof value === 'string')) {
+    return <span>{formatToman(value)} تومان</span>;
+  }
   if (typeof value === 'number') return <span>{faNumber.format(value)}</span>;
-  if (typeof value === 'string' && /Rial$/i.test(field)) return <span>{formatRial(value)} ریال</span>;
   if (typeof value === 'string' && isIdField(field)) return <Typography.Text code copyable={{ text: value }} dir="ltr">{value}</Typography.Text>;
   return <Typography.Text className="platform-admin-detail-scalar">{String(value)}</Typography.Text>;
 }

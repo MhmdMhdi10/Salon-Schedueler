@@ -2,6 +2,20 @@
   padding-bottom: 2rem;
 }
 
+/* Keep outer page scrollbar on physical right; restore Persian direction in
+ * each page surface so layout/order remain RTL. */
+.register-page-shell {
+  direction: ltr;
+}
+
+.register-page-shell > * {
+  direction: rtl;
+}
+
+.register-specialties-panel {
+  scroll-margin-block: 1rem 8rem;
+}
+
 .register-step-nav {
   position: relative;
 }

@@ -4,6 +4,12 @@
   contain: paint;
 }
 
+/* Keep owner pane scrollbar on the physical right while preserving RTL in
+ * every rendered page surface. */
+[data-shell='owner'] #owner-content {
+  direction: ltr;
+}
+
 /* OwnerShell owns scrolling, so the document does not need a reserved gutter
  * on the far edge once its page overflow is contained. */
 html:has([data-shell='owner']) {
@@ -12,6 +18,7 @@ html:has([data-shell='owner']) {
 
 [data-shell='owner'] #owner-content > div {
   max-inline-size: 100%;
+  direction: rtl;
 }
 
 @media (prefers-reduced-motion: reduce) {

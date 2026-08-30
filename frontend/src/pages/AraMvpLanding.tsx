@@ -33,6 +33,9 @@ function AraCalendarBrandRail() {
         />
       </Link>
       <div className="ara-calendar-brand-actions">
+        <Link to="/search" className="ara-calendar-login">
+          رزرو نوبت
+        </Link>
         <Link to="/auth" className="ara-calendar-login">
           ورود
         </Link>

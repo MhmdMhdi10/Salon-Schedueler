@@ -27,14 +27,24 @@ export const AdminStaffDto = z
 export const AdminStaffPatchDto = z.object({ fullName: z.string().trim().min(1).optional(), role: staffRole.optional(), phone: z.string().optional(), active: bool.optional() }).passthrough();
 export const AdminChairDto = z.object({ name: z.string().trim().min(1).max(120) }).passthrough();
 export const AdminChairPatchDto = z.object({ name: z.string().trim().min(1).optional(), active: bool.optional() }).passthrough();
+export const AdminEquipmentDto = z.object({ name: z.string().trim().min(1).max(120) }).passthrough();
+export const AdminEquipmentPatchDto = z
+  .object({ name: z.string().trim().min(1).max(120).optional(), active: bool.optional() })
+  .passthrough();
 export const AdminServiceDto = z
   .object({
     name: z.string().trim().min(1).max(120),
     durationMinutes: z.coerce.number().int().positive().optional(),
+    durationMode: z.enum(['fixed', 'variable']).optional(),
+    minDurationMinutes: z.coerce.number().int().min(5).max(480).optional(),
+    maxDurationMinutes: z.coerce.number().int().min(5).max(480).optional(),
     bufferMinutes: z.coerce.number().int().min(0).max(120).optional(),
     priceRial: z.coerce.number().int().min(0).optional(),
     requiresDeposit: bool.optional(),
     depositRial: z.coerce.number().int().min(0).optional(),
+    depositType: z.enum(['fixed', 'percentage']).optional(),
+    depositPercent: z.coerce.number().int().min(1).max(100).optional(),
+    approvalStaffId: z.string().uuid().nullable().optional(),
   })
   .passthrough();
 export const AdminServicePatchDto = AdminServiceDto.partial().passthrough();
@@ -45,7 +55,7 @@ export const AdminBookingPolicyDto = z.object({ bookingWindowDays: z.coerce.numb
 export const AdminBrandAccentDto = z.object({ brandAccent: z.string().trim().max(40).nullable().optional() }).passthrough();
 export const AdminDepositSettingsDto = z
   .object({
-    depositMethod: z.literal('card_transfer'),
+    depositMethod: z.enum(['gateway', 'card_transfer', 'cash']),
     depositCardNumber: z.string().trim().max(32).optional(),
     depositCardHolder: z.string().trim().max(120).optional(),
     depositBankName: z.string().trim().max(80).optional(),

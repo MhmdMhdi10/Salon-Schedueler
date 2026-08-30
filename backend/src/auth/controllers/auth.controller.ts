@@ -113,7 +113,10 @@ export function authRouter(services: Services): Router {
         return;
       }
       setRefreshCookie(res, tokens.refreshToken);
-      res.status(200).json({ accessToken: tokens.accessToken });
+      res.status(200).json({
+        accessToken: tokens.accessToken,
+        ...(tokens.staffContexts ? { staffContexts: tokens.staffContexts } : {}),
+      });
     }),
   );
 
@@ -134,7 +137,10 @@ export function authRouter(services: Services): Router {
         return;
       }
       setRefreshCookie(res, tokens.refreshToken);
-      res.status(200).json({ accessToken: tokens.accessToken });
+      res.status(200).json({
+        accessToken: tokens.accessToken,
+        ...(tokens.staffContexts ? { staffContexts: tokens.staffContexts } : {}),
+      });
     }),
   );
 
@@ -146,10 +152,54 @@ export function authRouter(services: Services): Router {
   return router;
 }
 
+/** Protected salon-membership switch used when one phone belongs to several salons. */
+export function authContextRouter(services: Services): Router {
+  const router = Router();
+  router.get(
+    '/auth/contexts',
+    asyncRoute(async (req, res) => {
+      if (!req.principal) {
+        res.status(401).json({ code: 'UNAUTHORIZED' });
+        return;
+      }
+      const staffContexts = await services.authService.getStaffContexts(req.principal.id);
+      res.status(200).json({ staffContexts });
+    }),
+  );
+  router.post(
+    '/auth/context',
+    asyncRoute(async (req, res) => {
+      if (!req.principal) {
+        res.status(401).json({ code: 'UNAUTHORIZED' });
+        return;
+      }
+      if (!validateRequired(res, req.body, ['staffMemberId'])) return;
+      const tokens = await services.authService.selectStaffContext(
+        req.principal.id,
+        req.body.staffMemberId,
+      );
+      if (isMobileClient(req)) {
+        res.status(200).json(tokens);
+        return;
+      }
+      setRefreshCookie(res, tokens.refreshToken);
+      res.status(200).json({
+        accessToken: tokens.accessToken,
+        staffContexts: tokens.staffContexts ?? [],
+      });
+    }),
+  );
+  return router;
+}
+
 export class AuthController {
   public constructor(private readonly services: Services) {}
 
   public router(): Router {
     return authRouter(this.services);
+  }
+
+  public protectedRouter(): Router {
+    return authContextRouter(this.services);
   }
 }

@@ -1,0 +1,2 @@
+ALTER TABLE "salon"
+  ADD COLUMN IF NOT EXISTS "business_types" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

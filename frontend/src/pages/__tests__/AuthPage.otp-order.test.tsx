@@ -65,8 +65,8 @@ async function advanceToOtp() {
 
 /**
  * Enters digits by reading-order position (leftmost box `رقم ۱` first →
- * rightmost box `رقم ۶`), firing a `change` event per box, then clicks the
- * submit button «تایید و ورود».
+ * rightmost box `رقم ۶`), firing a `change` event per box. The final digit
+ * auto-submits the OTP.
  */
 async function enterDigitsInReadingOrderAndSubmit(digits: string[]) {
   const persianLabels = [
@@ -83,7 +83,6 @@ async function enterDigitsInReadingOrderAndSubmit(digits: string[]) {
     fireEvent.change(input, { target: { value: digits[i] } });
   }
 
-  fireEvent.click(screen.getByRole('button', { name: 'تایید و ورود' }));
 }
 
 beforeEach(() => {

@@ -50,10 +50,22 @@ export class ServiceCatalog {
         salonId: validated.salonId,
         name: validated.name,
         durationMin: validated.durationMinutes,
+        durationMode: validated.durationMode ?? 'fixed',
+        minDurationMin:
+          validated.durationMode === 'variable'
+            ? validated.minDurationMinutes ?? validated.durationMinutes
+            : null,
+        maxDurationMin:
+          validated.durationMode === 'variable'
+            ? validated.maxDurationMinutes ?? validated.minDurationMinutes ?? validated.durationMinutes
+            : null,
         bufferMin: validated.bufferMinutes,
         priceRial: BigInt(validated.priceRial),
         requiresDeposit: validated.requiresDeposit,
         depositRial: validated.depositRial != null ? BigInt(validated.depositRial) : null,
+        depositType: validated.depositType ?? 'fixed',
+        depositPercent: validated.depositType === 'percentage' ? validated.depositPercent ?? null : null,
+        approvalStaffId: validated.approvalStaffId ?? null,
       },
     });
 
@@ -67,7 +79,7 @@ export class ServiceCatalog {
    */
   async listServices(salonId: string): Promise<ServiceWithStaff[]> {
     return this.prisma.service.findMany({
-      where: { salonId },
+      where: { salonId, deletedAt: null },
       include: { serviceStaff: { select: { serviceId: true, staffMemberId: true } } },
       orderBy: { name: 'asc' },
     });
@@ -82,6 +94,12 @@ export class ServiceCatalog {
       priceRial?: number;
       requiresDeposit?: boolean;
       depositRial?: number | null;
+      durationMode?: 'fixed' | 'variable';
+      minDurationMinutes?: number | null;
+      maxDurationMinutes?: number | null;
+      depositType?: 'fixed' | 'percentage';
+      depositPercent?: number | null;
+      approvalStaffId?: string | null;
     },
   ): Promise<ServiceWithStaff> {
     return this.prisma.service.update({
@@ -99,6 +117,20 @@ export class ServiceCatalog {
           : {}),
         ...(patch.depositRial !== undefined
           ? { depositRial: patch.depositRial == null ? null : BigInt(patch.depositRial) }
+          : {}),
+        ...(patch.durationMode !== undefined ? { durationMode: patch.durationMode } : {}),
+        ...(patch.minDurationMinutes !== undefined
+          ? { minDurationMin: patch.minDurationMinutes }
+          : {}),
+        ...(patch.maxDurationMinutes !== undefined
+          ? { maxDurationMin: patch.maxDurationMinutes }
+          : {}),
+        ...(patch.depositType !== undefined ? { depositType: patch.depositType } : {}),
+        ...(patch.depositPercent !== undefined
+          ? { depositPercent: patch.depositPercent }
+          : {}),
+        ...(patch.approvalStaffId !== undefined
+          ? { approvalStaffId: patch.approvalStaffId }
           : {}),
       },
     });
@@ -174,7 +206,13 @@ export class ServiceCatalog {
     await this.prisma.$transaction(async (tx) => {
       await tx.serviceStaff.deleteMany({ where: { serviceId } });
       await tx.serviceEquipment.deleteMany({ where: { serviceId } });
-      await tx.service.delete({ where: { id: serviceId } });
+      // Keep historical appointments and audit trails intact. The fallback is
+      // only for old lightweight test doubles that predate soft delete.
+      if (typeof (tx.service as any).update === 'function') {
+        await tx.service.update({ where: { id: serviceId }, data: { deletedAt: new Date() } });
+      } else {
+        await tx.service.delete({ where: { id: serviceId } });
+      }
     });
   }
 }

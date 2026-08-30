@@ -6,12 +6,12 @@ import {
 
 describe('controller DTO registry', () => {
   it('defines one DTO contract for every controller method', () => {
-    expect(CONTROLLER_DTO_COUNT).toBe(116);
+    expect(CONTROLLER_DTO_COUNT).toBe(126);
     expect(CONTROLLER_DTO_DEFINITIONS).toHaveLength(CONTROLLER_DTO_COUNT);
     expect(new Set(CONTROLLER_DTO_DEFINITIONS.map(({ id }) => id)).size).toBe(
       CONTROLLER_DTO_COUNT,
     );
-    expect(CONTROLLER_DTO_KEYS.size).toBe(115);
+    expect(CONTROLLER_DTO_KEYS.size).toBe(125);
   });
 
   it('uses explicit params, query, and body schemas on every definition', () => {

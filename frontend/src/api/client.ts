@@ -14,6 +14,44 @@ interface RequestOptions {
 let accessToken: string | null = null;
 let refreshInFlight: Promise<boolean> | null = null;
 
+/** User-facing explanations for stable backend error codes. */
+const API_ERROR_MESSAGES: Record<string, string> = {
+  VALIDATION_ERROR: 'اطلاعات واردشده معتبر نیست؛ موارد مشخص‌شده را بررسی کن.',
+  PHONE_TAKEN: 'این شماره قبلاً برای عضو دیگری در همین سالن ثبت شده است.',
+  INVALID_STAFF_ASSIGNMENT: 'عضو انتخاب‌شده در این سالن فعال نیست یا این خدمت را انجام نمی‌دهد.',
+  INVALID_APPROVAL_STAFF: 'مسئول انتخاب‌شده دسترسی تأیید رزرو ندارد یا به این سالن تعلق ندارد.',
+  LAST_OWNER_REQUIRED: 'برای سالن باید حداقل یک مالک فعال باقی بماند.',
+  BOOKING_SLOT_UNAVAILABLE: 'این زمان در همین لحظه توسط رزرو دیگری گرفته شد؛ زمان دیگری انتخاب کن.',
+  BOOKING_NO_AVAILABILITY: 'برای این خدمت در تاریخ انتخاب‌شده زمان خالی وجود ندارد.',
+  RESCHEDULE_CONFLICT: 'زمان جدید دیگر خالی نیست؛ یک زمان تازه انتخاب کن.',
+  RESCHEDULE_DEADLINE_PASSED: 'چون زمان نوبت رسیده یا گذشته، تغییر آن امکان‌پذیر نیست.',
+  RESCHEDULE_PROPOSAL_PENDING: 'یک پیشنهاد تغییر زمان در انتظار پاسخ است.',
+  ASSIGNED_CHAIR_TAKEN: 'این صندلی قبلاً به عضو دیگری اختصاص داده شده است.',
+  SUBSCRIPTION_REQUIRED: 'اشتراک سالن منقضی شده است؛ ابتدا اشتراک را تمدید کن.',
+  RATE_LIMITED: 'تعداد درخواست‌ها زیاد است؛ کمی بعد دوباره تلاش کن.',
+  OTP_INVALID: 'کد ورود نادرست است.',
+  OTP_EXPIRED: 'کد ورود منقضی شده است؛ کد تازه بگیر.',
+  FORBIDDEN: 'برای این کار دسترسی نداری.',
+  UNAUTHORIZED: 'نشست شما تمام شده است؛ دوباره وارد شو.',
+  NOT_FOUND: 'مورد درخواستی پیدا نشد یا دیگر فعال نیست.',
+  INTERNAL: 'خطای موقت رخ داد؛ دوباره تلاش کن.',
+};
+
+export function getApiErrorMessage(error: unknown, fallback = 'عملیات انجام نشد. دوباره تلاش کن.'): string {
+  if (error instanceof ApiError) {
+    return error.message || API_ERROR_MESSAGES[error.code] || fallback;
+  }
+  if (error && typeof error === 'object') {
+    const value = error as { code?: unknown; message?: unknown };
+    if (typeof value.code === 'string' && API_ERROR_MESSAGES[value.code]) {
+      return API_ERROR_MESSAGES[value.code];
+    }
+    if (typeof value.message === 'string' && value.message.trim()) return value.message;
+  }
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+}
+
 export function setAccessToken(token: string | null): void {
   accessToken = token;
 }
@@ -88,7 +126,8 @@ async function request<T>(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Request failed' }));
-    throw new ApiError(response.status, error.code || 'UNKNOWN', error.message);
+    const code = typeof error.code === 'string' ? error.code : 'UNKNOWN';
+    throw new ApiError(response.status, code, error.message || API_ERROR_MESSAGES[code]);
   }
 
   if (response.status === 204) return undefined as T;
@@ -99,9 +138,9 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     public code: string,
-    message: string,
+    message?: string,
   ) {
-    super(message);
+    super(message || API_ERROR_MESSAGES[code] || 'عملیات انجام نشد. دوباره تلاش کن.');
     this.name = 'ApiError';
   }
 }
@@ -114,16 +153,30 @@ export const authApi = {
       body: { phone },
     }),
   verifyOtp: (phone: string, code: string) =>
-    request<{ accessToken: string }>('/auth/otp/verify', {
+    request<{ accessToken: string; staffContexts?: StaffContext[] }>('/auth/otp/verify', {
       method: 'POST',
       body: { phone, code },
     }),
+  selectContext: (staffMemberId: string) =>
+    request<{ accessToken: string; staffContexts?: StaffContext[] }>('/auth/context', {
+      method: 'POST',
+      body: { staffMemberId },
+    }),
+  getContexts: () => request<{ staffContexts: StaffContext[] }>('/auth/contexts'),
   refresh: () =>
     request<{ accessToken: string }>('/auth/refresh', {
       method: 'POST',
     }),
   logout: () => request<void>('/auth/logout', { method: 'POST' }),
 };
+
+export interface StaffContext {
+  staffMemberId: string;
+  salonId: string;
+  salonName?: string | null;
+  fullName?: string | null;
+  role: OwnerRole;
+}
 
 /** The authenticated principal as returned by `GET /me` (mirrors the backend `Principal`). */
 export type OwnerRole = 'Owner' | 'Admin' | 'Stylist';
@@ -166,11 +219,18 @@ export interface CustomerAppointment {
   createdAt: string;
   locationType?: 'salon' | 'customer';
   locationAddress?: string | null;
+  customerNote?: string | null;
+  durationMinOverride?: number | null;
   depositRequired?: boolean;
-  depositMethod?: 'gateway' | 'card_transfer' | null;
+  depositMethod?: 'gateway' | 'card_transfer' | 'cash' | null;
   depositAmountRial?: number | null;
   paymentStatus?: string | null;
   depositReceiptStatus?: string | null;
+  pendingReschedule?: {
+    startAt: string;
+    endAt?: string | null;
+    requestedAt?: string | null;
+  } | null;
 }
 
 export interface CustomerWaitlistEntry {
@@ -215,6 +275,16 @@ export const customerApi = {
         body: { startAt, ...(preferredStaffId ? { preferredStaffId } : {}) },
       },
     ),
+  acceptReschedule: (appointmentId: string) =>
+    request<{ status: string; decision: 'accepted'; appointment: unknown }>(
+      `/appointments/${appointmentId}/reschedule/accept`,
+      { method: 'POST' },
+    ),
+  rejectReschedule: (appointmentId: string) =>
+    request<{ status: string; decision: 'rejected'; appointment: unknown }>(
+      `/appointments/${appointmentId}/reschedule/reject`,
+      { method: 'POST' },
+    ),
   getDeposit: (appointmentId: string) =>
     request<{ deposit: DepositOverview }>(`/appointments/${appointmentId}/deposit`),
   uploadDepositReceipt: (
@@ -233,7 +303,7 @@ export const customerApi = {
 
 export interface DepositOverview {
   required: boolean;
-  method: 'gateway' | 'card_transfer' | null;
+  method: 'gateway' | 'card_transfer' | 'cash' | null;
   amountRial: number | null;
   appointmentStatus: string;
   holdExpiresAt: string | null;
@@ -320,6 +390,8 @@ export interface RegisterSalonInput {
   phone: string;
   /** Business category selected at the start of onboarding. */
   businessType?: string;
+  /** Multiple business categories selected during onboarding. */
+  businessTypes?: string[];
   /** Skills selected during the first onboarding step. */
   specialties?: string[];
   timezone?: string;
@@ -391,11 +463,13 @@ export const salonApi = {
     date: string,
     staffId?: string,
     locationType?: 'salon' | 'customer',
+    durationMinutes?: number,
   ) =>
     request<{ slots: Array<{ startAt: string; endAt: string }> }>(
       `/salons/${salonId}/availability?serviceId=${serviceId}&date=${date}${
         staffId ? `&staffId=${encodeURIComponent(staffId)}` : ''
-      }${locationType ? `&locationType=${locationType}` : ''}`,
+      }${locationType ? `&locationType=${locationType}` : ''}${
+        durationMinutes !== undefined ? `&durationMinutes=${durationMinutes}` : ''}`,
     ),
   getServices: (salonId: string) =>
     request<{
@@ -403,12 +477,19 @@ export const salonApi = {
         id: string;
         name: string;
         durationMinutes: number;
+        durationMode?: 'fixed' | 'variable';
+        minDurationMinutes?: number | null;
+        maxDurationMinutes?: number | null;
         bufferMinutes?: number;
         priceRial: number;
         /** True when booking requires an upfront deposit via the gateway. */
         requiresDeposit?: boolean;
+        depositMethod?: 'gateway' | 'card_transfer' | 'cash' | null;
         /** Deposit amount in Rial (present when `requiresDeposit`). */
         depositRial?: number | null;
+        depositType?: 'fixed' | 'percentage';
+        depositPercent?: number | null;
+        approvalStaffId?: string | null;
         /** Owner/Stylist ids qualified to perform this service. */
         staffIds?: string[];
       }>;
@@ -442,6 +523,8 @@ export const bookingApi = {
     preferredStaffId?: string;
     locationType?: 'salon' | 'customer';
     locationAddress?: string;
+    customerNote?: string;
+    durationMinutes?: number;
   }) =>
     request<{
       status: string;
@@ -654,11 +737,18 @@ export interface CustomerAppointmentRecord {
   status: string;
   source: string;
   createdAt: string;
+  customerNote?: string | null;
+  durationMinOverride?: number | null;
   locationType?: 'salon' | 'customer';
   locationAddress?: string | null;
   salonName?: string;
   serviceName?: string;
   staffName?: string;
+  pendingReschedule?: {
+    startAt: string;
+    endAt?: string | null;
+    requestedAt?: string | null;
+  } | null;
 }
 
 export interface AppointmentCustomerOverview {
@@ -709,6 +799,13 @@ export interface PendingDepositReceipt {
   depositReceiptStatus: 'pending';
 }
 
+export interface SalonEquipment {
+  id: string;
+  salonId?: string;
+  name: string;
+  deletedAt?: string | null;
+}
+
 export const adminApi = {
   getCalendar: (
     salonId: string,
@@ -738,6 +835,10 @@ export const adminApi = {
       `/salons/${salonId}/analytics?from=${from}&to=${to}`,
     ),
   getStaff: (salonId: string) => request<{ staff: SalonStaff[] }>(`/salons/${salonId}/staff`),
+  getStaffMember: (staffId: string) =>
+    request<{ staff: SalonStaff }>(`/staff/${staffId}`),
+  deleteStaffMember: (staffId: string) =>
+    request<{ ok: boolean }>(`/staff/${staffId}`, { method: 'DELETE' }),
   getSmsSettings: (salonId: string) =>
     request<SmsSettings>(`/salons/${salonId}/sms-settings`),
   updateSmsSettings: (salonId: string, patch: Partial<SmsSettings>) =>
@@ -750,6 +851,27 @@ export const adminApi = {
       body: settings,
     }),
   getChairs: (salonId: string) => request<{ chairs: unknown[] }>(`/salons/${salonId}/chairs`),
+  getEquipment: (salonId: string) =>
+    request<{ equipment: SalonEquipment[] }>(`/salons/${salonId}/equipment`),
+  createEquipment: (salonId: string, body: { name: string }) =>
+    request<{ equipment: SalonEquipment }>(`/salons/${salonId}/equipment`, {
+      method: 'POST',
+      body,
+    }),
+  setEquipmentActive: (salonId: string, equipmentId: string, active: boolean) =>
+    request<{ equipment: SalonEquipment }>(
+      `/salons/${salonId}/equipment/${equipmentId}`,
+      { method: 'PATCH', body: { active } },
+    ),
+  updateEquipment: (salonId: string, equipmentId: string, name: string) =>
+    request<{ equipment: SalonEquipment }>(
+      `/salons/${salonId}/equipment/${equipmentId}`,
+      { method: 'PATCH', body: { name } },
+    ),
+  deleteEquipment: (salonId: string, equipmentId: string) =>
+    request<{ ok: boolean }>(`/salons/${salonId}/equipment/${equipmentId}`, {
+      method: 'DELETE',
+    }),
   createManualAppointment: (
     salonId: string,
     body: {
@@ -760,6 +882,8 @@ export const adminApi = {
       preferredStaffId?: string;
       locationType?: 'salon' | 'customer';
       locationAddress?: string;
+      customerNote?: string;
+      durationMinutes?: number;
     },
   ) =>
     request<{ status: string; appointment: unknown; paymentRedirectUrl?: string; deposit?: DepositInitiation }>(
@@ -810,8 +934,17 @@ export const adminApi = {
         endAt?: string;
         status?: string;
         staffMemberId?: string;
+        pendingRescheduleStartAt?: string | null;
+        pendingRescheduleEndAt?: string | null;
+        pendingRescheduleRequestedAt?: string | null;
       } | null;
-      previousAppointmentId: string;
+      previousAppointmentId?: string;
+      pendingReschedule?: {
+        startAt: string;
+        endAt: string;
+        requestedAt: string;
+        requestedBy: string | null;
+      };
       paymentRedirectUrl?: string;
       deposit?: DepositInitiation;
     }>('/appointments/' + appointmentId + '/reschedule-managed', {
@@ -870,10 +1003,16 @@ export const adminApi = {
     body: {
       name: string;
       durationMinutes?: number;
+      durationMode?: 'fixed' | 'variable';
+      minDurationMinutes?: number | null;
+      maxDurationMinutes?: number | null;
       bufferMinutes?: number;
       priceRial?: number;
       requiresDeposit?: boolean;
       depositRial?: number | null;
+      depositType?: 'fixed' | 'percentage';
+      depositPercent?: number | null;
+      approvalStaffId?: string | null;
     },
   ) =>
     request<{
@@ -881,10 +1020,16 @@ export const adminApi = {
         id: string;
         name: string;
         durationMinutes: number;
+        durationMode?: 'fixed' | 'variable';
+        minDurationMinutes?: number | null;
+        maxDurationMinutes?: number | null;
         bufferMinutes?: number;
         priceRial: number;
         requiresDeposit: boolean;
         depositRial: number | null;
+        depositType?: 'fixed' | 'percentage';
+        depositPercent?: number | null;
+        approvalStaffId?: string | null;
         staffIds?: string[];
       };
     }>(`/salons/${salonId}/services`, { method: 'POST', body }),
@@ -899,10 +1044,16 @@ export const adminApi = {
     body: {
       name?: string;
       durationMinutes?: number;
+      durationMode?: 'fixed' | 'variable';
+      minDurationMinutes?: number | null;
+      maxDurationMinutes?: number | null;
       bufferMinutes?: number;
       priceRial?: number;
       requiresDeposit?: boolean;
       depositRial?: number | null;
+      depositType?: 'fixed' | 'percentage';
+      depositPercent?: number | null;
+      approvalStaffId?: string | null;
     },
   ) =>
     request<{ service: Record<string, unknown> }>(
@@ -929,17 +1080,23 @@ export const adminApi = {
       `/salons/${salonId}/chairs/${chairId}`,
       { method: 'PATCH', body: { active } },
     ),
+  /** Rename an existing chair without affecting appointment history. */
+  updateChair: (salonId: string, chairId: string, name: string) =>
+    request<{ chair: { id: string; name: string; active: boolean; kind?: string } }>(
+      `/salons/${salonId}/chairs/${chairId}`,
+      { method: 'PATCH', body: { name } },
+    ),
 };
 
 export interface DepositSettings {
-  depositMethod: 'card_transfer';
+  depositMethod: 'gateway' | 'card_transfer' | 'cash';
   depositCardNumber: string | null;
   depositCardHolder: string | null;
   depositBankName: string | null;
 }
 
 export interface DepositInitiation {
-  method: 'card_transfer';
+  method: 'gateway' | 'card_transfer' | 'cash';
   amountRial: number;
   cardNumber?: string;
   cardHolder?: string;
@@ -1450,14 +1607,14 @@ export interface SalonStaff {
 export interface StaffCreateInput {
   fullName: string;
   role: StaffRole;
-  /** Optional unique login phone (`09xxxxxxxxx`); omit for a non-login record. */
+  /** Optional Iranian login phone; omit for a non-login record. */
   phone?: string | null;
 }
 
 export interface StaffUpdateInput {
   fullName?: string;
   role?: StaffRole;
-  /** `null`/empty clears the login; a non-empty value sets it (must be unique). */
+  /** `null`/empty clears the login; a non-empty value sets it. */
   phone?: string | null;
   active?: boolean;
   /** Physical chair assignment; null clears a rented-chair assignment. */
@@ -1465,6 +1622,9 @@ export interface StaffUpdateInput {
 }
 
 export const staffApi = {
+  /** Read one staff member (Owner/Admin). */
+  get: (staffId: string) =>
+    request<{ staff: SalonStaff }>(`/staff/${staffId}`),
   /** Add a staff member (Owner/Admin). Returns the created record. */
   create: (salonId: string, input: StaffCreateInput) =>
     request<{ staff: SalonStaff }>(`/salons/${salonId}/staff`, {

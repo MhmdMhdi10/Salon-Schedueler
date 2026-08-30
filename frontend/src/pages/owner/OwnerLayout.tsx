@@ -49,7 +49,7 @@ export function OwnerLayout() {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut: signOutSession } = useAuth();
+  const { signOut: signOutSession, principal } = useAuth();
   const [state, setState] = useState<OwnerAuthState>({ phase: 'loading' });
 
   useEffect(() => {
@@ -104,6 +104,23 @@ export function OwnerLayout() {
       cancelled = true;
     };
   }, []);
+
+  // AuthContext updates immediately after the salon switcher mints a scoped
+  // token. Mirror that selection into this guard so the owner shell changes
+  // salon without a hard reload or a stale tenant id.
+  useEffect(() => {
+    if (!principal?.role || principal.role === 'PlatformAdmin' || !principal.salonId) return;
+    setState((current) =>
+      current.phase === 'authenticated'
+        ? {
+            ...current,
+            role: principal.role as OwnerRole,
+            salonId: principal.salonId!,
+            staffMemberId: principal.staffMemberId,
+          }
+        : current,
+    );
+  }, [principal?.role, principal?.salonId, principal?.staffMemberId]);
 
   const handleSignOut = () => {
     // Clear the *app-wide* session through AuthContext (it drops the access

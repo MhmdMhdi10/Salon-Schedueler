@@ -112,6 +112,7 @@ model Salon {
   // Captured in first-step owner onboarding so the panel can personalize
   // service suggestions without turning setup into a long questionnaire.
   businessType      String?       @map("business_type")
+  businessTypes     String[]      @default([]) @map("business_types")
   specialties       String[]      @default([])
   // Default booking-approval policy for the salon. false (default) => new
   // bookings are created 'pending' and need manual admin approval; true => they
@@ -161,6 +162,7 @@ model StaffMember {
   fullName                  String    @map("full_name")
   role                      StaffRole
   active                    Boolean   @default(true)
+  deletedAt                 DateTime? @map("deleted_at") @db.Timestamptz
   // Per-stylist override of the salon's approval policy. null => inherit the
   // salon default; true => this stylist's bookings auto-confirm; false => this
   // stylist's bookings always need manual approval.
@@ -181,14 +183,15 @@ model StaffMember {
   mobileChairId             String?   @unique @map("mobile_chair_id") @db.Uuid
   // Optional login phone. When a staff member's phone matches the phone used in
   // OTP login, the issued JWT carries their role + staffMemberId so the RBAC
-  // matrix (Authorizer) applies. Nullable + unique: most staff rows may have no
-  // login yet, and a phone identifies at most one staff member.
-  phone                     String?   @unique
+  // matrix (Authorizer) applies. A person may belong to several salons, so this
+  // is intentionally not globally unique; the salon remains the tenant scope.
+  phone                     String?
 
   salon               Salon               @relation(fields: [salonId], references: [id])
   assignedChair       Chair?              @relation("AssignedStaffChair", fields: [assignedChairId], references: [id], onDelete: SetNull)
   mobileChair         Chair?              @relation("MobileStaffChair", fields: [mobileChairId], references: [id], onDelete: SetNull)
   serviceStaff        ServiceStaff[]
+  approvalServices     Service[]          @relation("ServiceApprovalStaff")
   daysOff             DayOff[]
   appointments        Appointment[]
   customerNotes       CustomerNote[]      @relation("NoteAuthor")
@@ -197,6 +200,7 @@ model StaffMember {
   salonNotifications  SalonNotification[]
 
   @@map("staff_member")
+  @@index([phone, active])
 }
 
 // ─── Chair ─────────────────────────────────────────────────────────────────────
@@ -206,6 +210,7 @@ model Chair {
   salonId String    @map("salon_id") @db.Uuid
   name    String
   active  Boolean   @default(true)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
   kind    ChairKind @default(physical)
 
   salon              Salon              @relation(fields: [salonId], references: [id])
@@ -224,6 +229,7 @@ model Equipment {
   id      String @id @default(uuid()) @db.Uuid
   salonId String @map("salon_id") @db.Uuid
   name    String
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
 
   salon            Salon              @relation(fields: [salonId], references: [id])
   chairEquipment   ChairEquipment[]
@@ -252,18 +258,32 @@ model Service {
   salonId         String  @map("salon_id") @db.Uuid
   name            String
   durationMin     Int     @map("duration_min")
+  // `fixed` uses duration_min. `variable` lets a customer choose a value
+  // between min_duration_min and max_duration_min for this booking.
+  durationMode    String  @default("fixed") @map("duration_mode")
+  minDurationMin  Int?    @map("min_duration_min")
+  maxDurationMin  Int?    @map("max_duration_min")
   bufferMin       Int     @map("buffer_min")
   priceRial       BigInt  @map("price_rial")
   requiresDeposit Boolean @default(false) @map("requires_deposit")
   depositRial     BigInt? @map("deposit_rial")
+  // `fixed` reads deposit_rial; `percentage` calculates from price_rial.
+  depositType     String  @default("fixed") @map("deposit_type")
+  depositPercent  Int?    @map("deposit_percent")
+  // Optional staff member who receives this service's booking alert and may
+  // approve/reject it when the salon uses manual approval.
+  approvalStaffId  String? @map("approval_staff_id") @db.Uuid
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz
 
   salon            Salon              @relation(fields: [salonId], references: [id])
+  approvalStaff    StaffMember?        @relation("ServiceApprovalStaff", fields: [approvalStaffId], references: [id], onDelete: SetNull)
   serviceStaff     ServiceStaff[]
   serviceEquipment ServiceEquipment[]
   appointments     Appointment[]
   waitlistEntries  WaitlistEntry[]
 
   @@map("service")
+  @@index([approvalStaffId])
 }
 
 // ─── Service ↔ Staff (many-to-many) ────────────────────────────────────────────
@@ -423,7 +443,15 @@ model Appointment {
   source          ApptSource
   locationType    AppointmentLocation @default(salon) @map("location_type")
   locationAddress String?             @map("location_address")
+  customerNote    String?             @map("customer_note")
+  durationMinOverride Int?            @map("duration_min_override")
   holdExpiresAt   DateTime?           @map("hold_expires_at") @db.Timestamptz
+  // A staff-initiated move is a proposal until the customer accepts it. The
+  // live start/end remain authoritative while these nullable fields are set.
+  pendingRescheduleStartAt     DateTime? @map("pending_reschedule_start_at") @db.Timestamptz
+  pendingRescheduleEndAt       DateTime? @map("pending_reschedule_end_at") @db.Timestamptz
+  pendingRescheduleRequestedAt DateTime? @map("pending_reschedule_requested_at") @db.Timestamptz
+  pendingRescheduleRequestedBy String?   @map("pending_reschedule_requested_by") @db.Uuid
   createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz
 
   salon            Salon             @relation(fields: [salonId], references: [id])

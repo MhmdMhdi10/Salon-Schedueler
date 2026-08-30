@@ -26,6 +26,8 @@ vi.mock('../../api/client', () => {
     }
   }
   return {
+    getApiErrorMessage: (error: unknown, fallback: string) =>
+      error instanceof Error && error.message ? error.message : fallback,
     ApiError,
     adminApi: {
       getStaff: vi.fn(),
@@ -181,7 +183,7 @@ describe('ConfigurationPage', () => {
     await waitFor(() => expect(screen.getByTestId('staff-list')).toBeTruthy());
 
     // Empty-state copy from the catalog is shown for each section.
-    expect(screen.getByText('هنوز کارمندی ثبت نشده')).toBeTruthy();
+    expect(screen.getAllByText('هنوز عضوی از تیم ثبت نشده')).toHaveLength(2);
     expect(screen.getByText('هنوز صندلی‌ای ثبت نشده')).toBeTruthy();
 
     // Inline add: typing a staff name and submitting appends a list item.
@@ -196,9 +198,9 @@ describe('ConfigurationPage', () => {
         manageOwnAvailability: false,
       },
     });
-    const nameInput = screen.getByLabelText('نام کارمند');
+    const nameInput = screen.getByLabelText('نام عضو تیم');
     fireEvent.change(nameInput, { target: { value: 'سارا' } });
-    fireEvent.click(screen.getByRole('button', { name: 'افزودن کارمند' }));
+    fireEvent.click(screen.getByRole('button', { name: 'افزودن عضو تیم' }));
 
     await waitFor(() =>
       expect(within(screen.getByTestId('staff-list')).getByText('سارا')).toBeTruthy(),
@@ -228,8 +230,8 @@ describe('ConfigurationPage', () => {
     );
 
     await waitFor(() => expect(screen.getByTestId('services-list')).toBeTruthy());
-    // ۵۰۰٬۰۰۰ ریال — Persian digits + grouping + unit.
-    expect(screen.getByText(/۵۰۰٬۰۰۰/)).toBeTruthy();
+    // ۵۰٬۰۰۰ تومان — Persian digits + grouping + unit.
+    expect(screen.getByText(/۵۰٬۰۰۰/)).toBeTruthy();
   });
 
   it('confirms a destructive delete and offers an undo toast', async () => {

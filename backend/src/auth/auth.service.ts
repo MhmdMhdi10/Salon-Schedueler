@@ -10,6 +10,17 @@ import type { SmsProvider } from './sms-provider.interface.js';
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
+  /** Staff memberships available to this phone, used by the panel switcher. */
+  staffContexts?: StaffContext[];
+}
+
+/** A salon membership resolved after OTP verification. */
+export interface StaffContext {
+  staffMemberId: string;
+  salonId: string;
+  salonName?: string | null;
+  fullName?: string | null;
+  role: string;
 }
 
 /**
@@ -252,13 +263,15 @@ export class AuthService {
     if (platformAdmin) {
       await this.updatePlatformAdminLogin(platformAdmin.id);
       const customer = await this.findOrCreateCustomer(phone);
-      const staff = await this.findStaffClaimsByPhone(phone);
-      return this.issueTokens(customer.id, {
+      const staffContexts = await this.findStaffContextsByPhone(phone);
+      const staff = staffContexts[0];
+      const tokens = this.issueTokens(customer.id, {
         role: 'PlatformAdmin',
         platformAdminId: platformAdmin.id,
         staffMemberId: staff?.staffMemberId,
         salonId: staff?.salonId,
       });
+      return staffContexts.length ? { ...tokens, staffContexts } : tokens;
     }
 
     // Find or create customer
@@ -267,10 +280,61 @@ export class AuthService {
     // If this phone also belongs to an active staff member, mint a staff token
     // carrying their role + staffMemberId so the RBAC matrix applies; otherwise
     // a plain customer token (no role) is issued.
-    const staff = await this.findStaffClaimsByPhone(phone);
+    const staffContexts = await this.findStaffContextsByPhone(phone);
+    const staff = staffContexts[0];
 
     // Issue tokens
-    return this.issueTokens(customer.id, staff);
+    const tokens = this.issueTokens(customer.id, staff);
+    return staffContexts.length ? { ...tokens, staffContexts } : tokens;
+  }
+
+  /**
+   * Mint a new session scoped to one of the salons linked to the current
+   * customer's phone. The membership is checked against the same phone before
+   * any role claim is issued, so a client cannot select another user's salon.
+   */
+  async selectStaffContext(subjectId: string, staffMemberId: string): Promise<AuthTokens> {
+    const customer = await this.findCustomerById(subjectId);
+    if (!customer) throw new AuthError('INVALID_TOKEN', 'Invalid customer context');
+
+    const delegate = (
+      this.prisma as unknown as {
+        staffMember?: {
+          findUnique?: (args: unknown) => Promise<{
+            id: string;
+            phone: string | null;
+            active: boolean;
+            role: string;
+            salonId: string;
+          } | null>;
+        };
+      }
+    ).staffMember;
+    if (!delegate?.findUnique) throw new AuthError('INVALID_TOKEN', 'Staff context unavailable');
+
+    const staff = await delegate.findUnique({
+      where: { id: staffMemberId },
+      select: { id: true, phone: true, active: true, role: true, salonId: true },
+    });
+    if (!staff || !staff.active || staff.phone !== customer.phone) {
+      throw new AuthError('INVALID_TOKEN', 'Staff context is not available for this account');
+    }
+
+    const staffContexts = await this.findStaffContextsByPhone(customer.phone);
+    return {
+      ...this.issueTokens(customer.id, {
+        role: staff.role,
+        staffMemberId: staff.id,
+        salonId: staff.salonId,
+      }),
+      staffContexts,
+    };
+  }
+
+  /** Return all active salon memberships for the authenticated subject. */
+  async getStaffContexts(subjectId: string): Promise<StaffContext[]> {
+    const customer = await this.findCustomerById(subjectId);
+    return customer ? this.findStaffContextsByPhone(customer.phone) : [];
   }
 
   /**
@@ -317,13 +381,15 @@ export class AuthService {
         throw new AuthError('INVALID_TOKEN', 'Invalid or inactive refresh identity');
       }
       const customer = await this.findOrCreateCustomer(admin.phone);
-      const staff = await this.findStaffClaimsByPhone(admin.phone);
-      return this.issueTokens(customer.id, {
+      const staffContexts = await this.findStaffContextsByPhone(admin.phone);
+      const staff = staffContexts[0];
+      const tokens = this.issueTokens(customer.id, {
         role: 'PlatformAdmin',
         platformAdminId: admin.id,
         staffMemberId: staff?.staffMemberId,
         salonId: staff?.salonId,
       });
+      return staffContexts.length ? { ...tokens, staffContexts } : tokens;
     }
 
     // Rehydrate customer + staff state on every refresh. Role, salon and staff
@@ -332,8 +398,10 @@ export class AuthService {
     if (!customer) {
       throw new AuthError('INVALID_TOKEN', 'Invalid or inactive refresh identity');
     }
-    const staff = await this.findStaffClaimsByPhone(customer.phone);
-    return this.issueTokens(customer.id, staff);
+    const staffContexts = await this.findStaffContextsByPhone(customer.phone);
+    const staff = staffContexts[0];
+    const tokens = this.issueTokens(customer.id, staff);
+    return staffContexts.length ? { ...tokens, staffContexts } : tokens;
   }
 
   /**
@@ -366,14 +434,71 @@ export class AuthService {
    * embedded in the issued JWTs so the RBAC layer can authorize staff actions.
    */
   private async findStaffClaimsByPhone(phone: string): Promise<StaffClaims | undefined> {
-    const staff = await this.prisma.staffMember.findFirst({
-      where: { phone, active: true },
-      select: { id: true, role: true, salonId: true },
-    });
-    if (!staff) {
-      return undefined;
+    const context = (await this.findStaffContextsByPhone(phone))[0];
+    return context
+      ? { role: context.role, staffMemberId: context.staffMemberId, salonId: context.salonId }
+      : undefined;
+  }
+
+  /** Resolve every active salon membership for a phone. */
+  private async findStaffContextsByPhone(phone: string): Promise<StaffContext[]> {
+    const delegate = (
+      this.prisma as unknown as {
+        staffMember?: {
+          findMany?: (args: unknown) => Promise<
+            Array<{
+              id: string;
+              fullName?: string | null;
+              role: string;
+              salonId: string;
+              salon?: { name?: string | null } | null;
+            }
+          >>;
+          findFirst?: (args: unknown) => Promise<{
+            id: string;
+            fullName?: string | null;
+            role: string;
+            salonId: string;
+          } | null>;
+        };
+      }
+    ).staffMember;
+    if (!delegate) return [];
+
+    if (delegate.findMany) {
+      const rows = await delegate.findMany({
+        where: { phone, active: true },
+        orderBy: { salonId: 'asc' },
+        select: {
+          id: true,
+          fullName: true,
+          role: true,
+          salonId: true,
+          salon: { select: { name: true } },
+        },
+      });
+      return rows.map((row) => ({
+        staffMemberId: row.id,
+        salonId: row.salonId,
+        salonName: row.salon?.name,
+        fullName: row.fullName,
+        role: row.role,
+      }));
     }
-    return { role: staff.role, staffMemberId: staff.id, salonId: staff.salonId };
+
+    if (!delegate.findFirst) return [];
+    const row = await delegate.findFirst({
+      where: { phone, active: true },
+      select: { id: true, fullName: true, role: true, salonId: true },
+    });
+    return row
+      ? [{
+          staffMemberId: row.id,
+          salonId: row.salonId,
+          fullName: row.fullName,
+          role: row.role,
+        }]
+      : [];
   }
 
   /** Resolve an active global operator. Optional delegate keeps older unit-test

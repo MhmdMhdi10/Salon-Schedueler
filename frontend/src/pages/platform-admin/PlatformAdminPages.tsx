@@ -45,7 +45,7 @@ import {
   type PlatformSubscriptionRow,
   type PlatformWaitlistRow,
 } from '../../api/client';
-import { formatRial } from '../../components/ui/Money';
+import { formatToman } from '../../components/ui/Money';
 import { ErrorState } from '../../components/ui';
 import './platform-admin.css';
 
@@ -59,7 +59,7 @@ const STATUS_LABEL: Record<string, string> = {
   active: 'فعال', trial: 'آزمایشی', grace: 'مهلت تمدید', expired: 'منقضی', suspended: 'تعلیق‌شده', inactive: 'غیرفعال',
   pending: 'در انتظار', held: 'موقت', confirmed: 'تأییدشده', completed: 'انجام‌شده', cancelled: 'لغوشده', no_show: 'عدم مراجعه',
   paid: 'پرداخت‌شده', refunded: 'مستردشده', retained: 'نگه‌داشته‌شده', failed: 'ناموفق', waiting: 'در صف', notified: 'اطلاع داده‌شده', fulfilled: 'تکمیل‌شده',
-  web: 'وب', mobile: 'موبایل', walkin: 'حضوری', bot: 'ربات', monthly: 'ماهانه', quarterly: 'سه‌ماهه', annual: 'سالانه', Owner: 'مالک', Admin: 'ادمین', Stylist: 'آرایشگر',
+  web: 'وب', mobile: 'موبایل', walkin: 'حضوری', bot: 'ربات', monthly: 'ماهانه', quarterly: 'سه‌ماهه', annual: 'سالانه', Owner: 'مالک', Admin: 'ادمین', Stylist: 'عضو تیم',
 };
 
 function label(value: string | null | undefined): string {
@@ -271,9 +271,9 @@ export function PlatformDashboardPage() {
       <PageHeader title="مرکز عملیات" subtitle="وضعیت لحظه‌ای سالن‌ها، رزروها، درآمد و نقاط نیازمند پیگیری در کل آرا." onRefresh={load} loading={status === 'loading'} />
       <div className="platform-admin-dashboard-grid">
         <StatCard title="سالن‌های فعال" value={faNumber.format(metrics.activeSalons)} detail={`${faNumber.format(metrics.suspendedSalons)} تعلیق‌شده`} icon={<ShopOutlined />} />
-        <StatCard title="مشتری‌ها" value={faNumber.format(metrics.totalCustomers)} detail={`${faNumber.format(metrics.totalStaff)} پرسنل فعال`} icon={<TeamOutlined />} color="#4168c5" />
+        <StatCard title="مشتری‌ها" value={faNumber.format(metrics.totalCustomers)} detail={`${faNumber.format(metrics.totalStaff)} عضو تیم فعال`} icon={<TeamOutlined />} color="#4168c5" />
         <StatCard title="نوبت‌های امروز" value={faNumber.format(metrics.todayAppointments)} detail={`${faNumber.format(metrics.pendingAppointments)} در انتظار تأیید`} icon={<CalendarOutlined />} color="#257052" />
-        <StatCard title="درآمد ۳۰ روز اخیر" value={formatRial(metrics.revenue30dRial)} detail={`${faNumber.format(metrics.pendingPayments)} پرداخت در انتظار`} icon={<WalletOutlined />} color="#946000" />
+        <StatCard title="درآمد ۳۰ روز اخیر" value={`${formatToman(metrics.revenue30dRial)} تومان`} detail={`${faNumber.format(metrics.pendingPayments)} پرداخت در انتظار`} icon={<WalletOutlined />} color="#946000" />
       </div>
       <div className="platform-admin-dashboard-columns">
         <Card title={<span><strong>روند فعالیت</strong><Typography.Text type="secondary" className="block text-xs">۱۴ روز اخیر — نوبت و اسکن QR</Typography.Text></span>} extra={<FireOutlined />}>
@@ -315,7 +315,7 @@ export function PlatformSalonsPage() {
     { key: 'name', title: 'سالن', render: (row: PlatformSalonRow) => <div className="platform-admin-table-name"><strong>{row.name}</strong><span>{row.timezone} · {row.qrToken}</span></div> },
     { key: 'owner', title: 'مالک', render: (row) => <div className="platform-admin-table-name"><strong>{personName(row.owner?.fullName, row.owner?.phone)}</strong><span dir="ltr">{row.owner?.phone ?? 'بدون تلفن'}</span></div> },
     { key: 'subscription', title: 'اشتراک', render: (row) => row.subscription ? <div><StatusTag value={row.subscription.status} /><span className="block text-xs text-gray-500">{label(row.subscription.planKind)} تا {dateLabel(row.subscription.expiresAt)}</span></div> : '—' },
-    { key: 'counts', title: 'مصرف', render: (row) => `${faNumber.format(row.counts.staffMembers)} پرسنل · ${faNumber.format(row.counts.appointments)} نوبت` },
+    { key: 'counts', title: 'مصرف', render: (row) => `${faNumber.format(row.counts.staffMembers)} عضو تیم · ${faNumber.format(row.counts.appointments)} نوبت` },
     { key: 'created', title: 'تاریخ ثبت', render: (row) => dateLabel(row.createdAt) },
   ]} action={(row, run, busy) => <Button danger={row.active} type={row.active ? 'primary' : 'default'} size="small" loading={busy === `salon-${row.id}`} onClick={() => { if (row.active && !window.confirm(`تعلیق سالن «${row.name}»؟`)) return; void run(`salon-${row.id}`, () => platformAdminApi.setSalonActive(row.id, !row.active).then(() => undefined)); }}>{row.active ? 'تعلیق' : 'فعال‌سازی'}</Button>} />;
 }
@@ -333,8 +333,8 @@ export function PlatformCustomersPage() {
 
 export function PlatformStaffPage() {
   const loader = useCallback((options: PlatformListOptions) => platformAdminApi.listStaff(options), []);
-  return <ResourceListPage resource="staff" title="پرسنل سالن‌ها" subtitle="دسترسی staff در سراسر tenantها؛ غیرفعال‌سازی ورود پرسنل از همین‌جا audit می‌شود." loader={loader} statusOptions={[{ value: 'active', label: 'فعال' }, { value: 'inactive', label: 'غیرفعال' }, { value: 'Owner', label: 'مالک' }, { value: 'Admin', label: 'ادمین' }, { value: 'Stylist', label: 'آرایشگر' }]} columns={[
-    { key: 'staff', title: 'پرسنل', render: (row: PlatformStaffRow) => <div className="platform-admin-table-name"><strong>{row.fullName}</strong><span dir="ltr">{row.phone ?? 'بدون ورود OTP'}</span></div> },
+  return <ResourceListPage resource="staff" title="تیم سالن‌ها" subtitle="دسترسی اعضای تیم در سراسر tenantها؛ غیرفعال‌سازی ورود اعضای تیم از همین‌جا audit می‌شود." loader={loader} statusOptions={[{ value: 'active', label: 'فعال' }, { value: 'inactive', label: 'غیرفعال' }, { value: 'Owner', label: 'مالک' }, { value: 'Admin', label: 'ادمین' }, { value: 'Stylist', label: 'عضو تیم' }]} columns={[
+    { key: 'staff', title: 'عضو تیم', render: (row: PlatformStaffRow) => <div className="platform-admin-table-name"><strong>{row.fullName}</strong><span dir="ltr">{row.phone ?? 'بدون ورود OTP'}</span></div> },
     { key: 'salon', title: 'سالن', render: (row) => row.salon.name },
     { key: 'role', title: 'نقش', render: (row) => <StatusTag value={row.role}>{label(row.role)}</StatusTag> },
     { key: 'status', title: 'وضعیت', render: (row) => <StatusTag value={row.active ? 'active' : 'inactive'} /> },
@@ -355,7 +355,7 @@ export function PlatformAppointmentsPage() {
   return <ResourceListPage resource="appointments" title="نوبت‌ها" subtitle="عملیات cross-tenant روی نوبت‌ها با همان state machine موجود انجام می‌شود؛ تغییر مستقیم status نداریم." loader={loader} statusOptions={['pending', 'held', 'confirmed', 'completed', 'cancelled', 'no_show'].map((value) => ({ value, label: label(value) }))} columns={[
     { key: 'time', title: 'زمان', render: (row: PlatformAppointmentRow) => <div className="platform-admin-table-name"><strong>{dateLabel(row.startAt, true)}</strong><span>تا {dateLabel(row.endAt, true)}</span></div> },
     { key: 'customer', title: 'مشتری', render: (row) => <div className="platform-admin-table-name"><strong>{personName(row.customer.fullName, row.customer.phone)}</strong><span dir="ltr">{row.customer.phone}</span></div> },
-    { key: 'salon', title: 'سالن / خدمت', render: (row) => <div className="platform-admin-table-name"><strong>{row.salon.name}</strong><span>{row.service.name} · {formatRial(row.service.priceRial)}</span></div> },
+    { key: 'salon', title: 'سالن / خدمت', render: (row) => <div className="platform-admin-table-name"><strong>{row.salon.name}</strong><span>{row.service.name} · {formatToman(row.service.priceRial)} تومان</span></div> },
     { key: 'status', title: 'وضعیت', render: (row) => <StatusTag value={row.status} /> },
     { key: 'source', title: 'منبع', render: (row) => <StatusTag value={row.source} /> },
   ]} action={(row, run, busy) => <AppointmentActions row={row} run={run} busyKey={busy} />} />;
@@ -379,7 +379,7 @@ export function PlatformPaymentsPage() {
     { key: 'kind', title: 'نوع', render: (row: PlatformPaymentRow) => <StatusTag value="web">{row.kind === 'appointment' ? 'رزرو' : 'اشتراک'}</StatusTag> },
     { key: 'salon', title: 'سالن', render: (row) => row.salon.name },
     { key: 'subject', title: 'شرح', render: (row) => <div className="platform-admin-table-name"><strong>{label(row.subject)}</strong><span>{row.customer ? personName(row.customer.fullName, row.customer.phone) : '—'}</span></div> },
-    { key: 'amount', title: 'مبلغ', render: (row) => formatRial(row.amountRial) },
+    { key: 'amount', title: 'مبلغ', render: (row) => `${formatToman(row.amountRial)} تومان` },
     { key: 'status', title: 'وضعیت', render: (row) => <StatusTag value={row.status} /> },
     { key: 'date', title: 'تاریخ', render: (row) => dateLabel(row.createdAt, true) },
   ]} />;

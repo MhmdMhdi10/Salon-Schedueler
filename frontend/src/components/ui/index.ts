@@ -106,7 +106,7 @@ export type { ServiceCardListProps, ServiceCardItem } from './ServiceCardList';
 // Persian formatting & bidi helpers (display-only localization, R7.2–7.5)
 export { Num, toPersianDigits } from './Num';
 export type { NumProps } from './Num';
-export { Money, formatRial } from './Money';
+export { Money, formatRial, formatToman } from './Money';
 export type { MoneyProps, MoneyUnit } from './Money';
 export { JalaliDate, formatJalaliDisplay } from './JalaliDate';
 export type { JalaliDateProps, JalaliDateStyle } from './JalaliDate';

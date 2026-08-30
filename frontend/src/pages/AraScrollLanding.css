@@ -12,7 +12,7 @@ html:has(.ara-scroll-page) {
 }
 
 html:has(.ara-scroll-page) body {
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* Android Chrome/WebView may refuse a touch gesture when a full-page story

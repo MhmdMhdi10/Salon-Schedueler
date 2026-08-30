@@ -325,7 +325,7 @@ export function AnalyticsPage({ salonId: salonIdProp }: { salonId?: string }) {
                 model.revenue.totalRial == null ? (
                   t('admin.analyticsPage.noData')
                 ) : (
-                  <Money amountRial={model.revenue.totalRial} />
+                  <Money amountRial={model.revenue.totalRial} unit="toman" />
                 )
               }
               detail={

@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Download, Smartphone } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Button, Dialog, DialogContent, DialogDescription, DialogTitle } from '../components/ui';
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  cn,
+} from '../components/ui';
 import { usePwaInstall, type PwaInstallPlatform } from './usePwaInstall';
 
 const instructionKeys: Record<PwaInstallPlatform, string> = {
@@ -25,9 +33,11 @@ const instructionKeys: Record<PwaInstallPlatform, string> = {
  */
 export function PwaInstallPrompt() {
   const { t } = useTranslation();
+  const { pathname } = useLocation();
   const { installed, canPrompt, secureContext, platform, promptInstall } = usePwaInstall();
   const [open, setOpen] = useState(false);
   const [showManualHelp, setShowManualHelp] = useState(false);
+  const isRegistrationRoute = pathname === '/business/register';
 
   const instructions = t(`app.pwaInstall.instructions.${instructionKeys[platform]}`, {
     returnObjects: true,
@@ -67,7 +77,12 @@ export function PwaInstallPrompt() {
   return (
     <>
       {!installed && (
-        <div className="pointer-events-none fixed inset-x-3 bottom-3 z-nav flex justify-end pb-[env(safe-area-inset-bottom)] sm:end-5 sm:bottom-5 sm:inset-x-auto">
+        <div
+          className={cn(
+            'pointer-events-none fixed inset-x-3 bottom-3 z-nav flex justify-end pb-[env(safe-area-inset-bottom)] sm:end-5 sm:bottom-5 sm:inset-x-auto',
+            isRegistrationRoute && 'max-sm:hidden',
+          )}
+        >
           <Button
             className="pointer-events-auto shadow-2"
             onClick={() => void handleInstallButtonClick()}

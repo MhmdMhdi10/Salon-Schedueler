@@ -768,6 +768,7 @@ describe('SchedulingEngine.reschedule', () => {
     const result = await engine.reschedule({
       appointmentId: 'appt-1',
       startAt: '2024-03-15T11:00:00.000Z',
+      now: new Date('2024-03-15T09:00:00.000Z'),
     });
 
     expect(result.startAt).toEqual(new Date('2024-03-15T11:00:00.000Z'));
@@ -788,7 +789,11 @@ describe('SchedulingEngine.reschedule', () => {
     const engine = new SchedulingEngine(prisma);
 
     await expect(
-      engine.reschedule({ appointmentId: 'appt-1', startAt: '2024-03-15T11:00:00.000Z' }),
+      engine.reschedule({
+        appointmentId: 'appt-1',
+        startAt: '2024-03-15T11:00:00.000Z',
+        now: new Date('2024-03-15T09:00:00.000Z'),
+      }),
     ).rejects.toMatchObject({ code: 'RESCHEDULE_CONFLICT' });
     expect(prisma.appointment.update).not.toHaveBeenCalled();
   });
@@ -799,8 +804,40 @@ describe('SchedulingEngine.reschedule', () => {
     const engine = new SchedulingEngine(prisma);
 
     await expect(
-      engine.reschedule({ appointmentId: 'appt-1', startAt: '2024-03-15T11:00:00.000Z' }),
+      engine.reschedule({
+        appointmentId: 'appt-1',
+        startAt: '2024-03-15T11:00:00.000Z',
+        now: new Date('2024-03-15T09:00:00.000Z'),
+      }),
     ).rejects.toMatchObject({ code: 'RESCHEDULE_CLOSED' });
+  });
+
+  it('rejects a move when the current appointment has already started', async () => {
+    const prisma = reschedulePrisma();
+    const engine = new SchedulingEngine(prisma);
+
+    await expect(
+      engine.reschedule({
+        appointmentId: 'appt-1',
+        startAt: '2024-03-15T11:00:00.000Z',
+        now: new Date('2024-03-15T10:00:00.000Z'),
+      }),
+    ).rejects.toMatchObject({ code: 'RESCHEDULE_DEADLINE_PASSED' });
+    expect(prisma.appointment.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects a target that is already in the past', async () => {
+    const prisma = reschedulePrisma();
+    const engine = new SchedulingEngine(prisma);
+
+    await expect(
+      engine.reschedule({
+        appointmentId: 'appt-1',
+        startAt: '2024-03-15T09:30:00.000Z',
+        now: new Date('2024-03-15T09:45:00.000Z'),
+      }),
+    ).rejects.toMatchObject({ code: 'RESCHEDULE_DEADLINE_PASSED' });
+    expect(prisma.appointment.update).not.toHaveBeenCalled();
   });
 });
 

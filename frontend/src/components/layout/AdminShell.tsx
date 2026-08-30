@@ -69,7 +69,7 @@ export function AdminShell({ children, breadcrumbs, className }: AdminShellProps
   return (
     <div
       data-shell="admin"
-      className={cn('flex min-h-screen min-h-[100dvh] flex-col overflow-x-hidden bg-bg text-text', className)}
+      className={cn('flex min-h-screen min-h-[100dvh] flex-col overflow-x-clip bg-bg text-text', className)}
     >
       <a
         href={`#${ADMIN_CONTENT_ID}`}

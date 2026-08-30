@@ -10,6 +10,7 @@ import {
   Share2,
   UserRound,
   UsersRound,
+  Scissors,
   Megaphone,
   type LucideIcon,
 } from 'lucide-react';
@@ -81,6 +82,12 @@ export const OWNER_NAV: readonly OwnerNavItem[] = [
     labelKey: 'owner.nav.configuration',
     to: '/owner/config',
     icon: Settings,
+    roles: ['Owner', 'Admin'],
+  },
+  {
+    labelKey: 'owner.nav.services',
+    to: '/owner/config#services',
+    icon: Scissors,
     roles: ['Owner', 'Admin'],
   },
   {

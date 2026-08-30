@@ -3,6 +3,12 @@ import { normalizeDigits } from '@salon/shared';
 /** Iranian mobile pattern: `09` followed by 9 digits (ui-ux §7). */
 export const PHONE_PATTERN = /^09\d{9}$/;
 
+/** Keep phone fields numeric (with an optional leading + for country code). */
+export function filterPhoneInput(raw: string): string {
+  const value = normalizeDigits(raw).replace(/[^\d+]/g, '');
+  return value.replace(/(?!^)\+/g, '').slice(0, 14);
+}
+
 /**
  * Normalizes a raw phone entry to the canonical `09xxxxxxxxx` form before
  * validation: localizes Persian/Arabic digits, strips spacing/punctuation, and

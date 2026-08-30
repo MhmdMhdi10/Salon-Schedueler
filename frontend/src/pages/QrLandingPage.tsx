@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Download, ScanLine, Scissors, Store } from 'lucide-react';
+import { ScanLine, Store } from 'lucide-react';
 import { salonApi } from '../api/client';
 import { SeoHead } from '../components/seo';
-import { Button, Card, ErrorState, Skeleton } from '../components/ui';
-import { Motif } from '../components/brand';
+import { Card, ErrorState, Skeleton } from '../components/ui';
 import { writeSalonName } from '../utils/salonName';
-import { usePwaInstall } from '../pwa/usePwaInstall';
 import { useSalonManifest } from '../pwa/salonManifest';
 import { ensureAaFill } from '../styles/contrast';
 import { ACCENTS, resolveAccent } from '../components/theme/accents';
@@ -31,20 +29,20 @@ type QrErrorKind = 'malformed' | 'unregistered';
  * QR-resolved salon landing page (R4.3, R2.3; ui-ux QR-landing recipe, §6).
  *
  * This is the cold entry to the booking funnel: a customer scans a physical QR
- * and lands here with the payload in the URL. The redesign gives it the three
- * data states the steering standard requires:
+ * and lands here with the payload in the URL. It resolves the salon identity,
+ * saves the scan locally, then opens service selection directly. The route keeps
+ * the data states that matter at this boundary:
  *
  *  - **resolving** — a layout-matched **skeleton of the salon header** (icon +
  *    name + reassurance lines), not a bare "loading" string, so there is no
  *    layout shift when the real identity arrives (ui-ux §6, §12);
- *  - **resolved** — the salon identity, a short reassurance line, and one
- *    prominent primary CTA «انتخاب خدمت» that begins the funnel;
+ *  - **resolved** — immediately replaced with the booking funnel's service
+ *    selector; there is no intermediate welcome screen;
  *  - **error** — two **distinct** states: a malformed payload
  *    («کد QR نامعتبر است») versus an unregistered salon («سالن یافت نشد»), each
  *    with a sensible next step (re-scan vs. go home).
  *
- * The `qr-landing` testID is preserved on the resolved view so existing tests
- * stay green. The QR resolution API call (`salonApi.resolveQr`) is unchanged.
+ * The QR resolution API call (`salonApi.resolveQr`) is unchanged.
  *
  * The QR payload is per-visit and not a stable URL, so this route must never be
  * indexed; `<SeoHead>` (noindex default) emits `noindex,follow` in every state
@@ -63,6 +61,7 @@ export function QrLandingPage() {
   const [errorKind, setErrorKind] = useState<QrErrorKind | null>(null);
   const [loading, setLoading] = useState(!routed);
   const scanRecorded = useRef(false);
+  const redirectStarted = useRef(false);
 
   useEffect(() => {
     if (!salon || scanRecorded.current || typeof salonApi.recordScan !== 'function') return;
@@ -125,8 +124,6 @@ export function QrLandingPage() {
     });
   }, [salon, staff]);
 
-  // One installed آرا app opens the device-local list of every scanned salon.
-  const stylistName = staff?.fullName?.trim() ?? '';
   const bookPath = salon
     ? `/salon/${salon.id}/book${staff ? `?staff=${encodeURIComponent(staff.id)}` : ''}`
     : '';
@@ -137,22 +134,22 @@ export function QrLandingPage() {
     accentKey && ACCENTS.some((a) => a.key === accentKey)
       ? ensureAaFill(resolveAccent(accentKey).from)
       : undefined;
-  // The installed app opens the role-aware dashboard. Customers see their
-  // appointments immediately; staff are routed to the owner panel.
+  // Keep the per-salon manifest behavior for QR entries, even though the
+  // visible route now moves straight into service selection.
   useSalonManifest('آرا — سالن‌های من', '/account', 'آرا', themeColor);
 
-  const { installed, promptInstall } = usePwaInstall();
-  const [showInstallHelp, setShowInstallHelp] = useState(false);
-  const handleInstall = async () => {
-    const outcome = await promptInstall();
-    // iOS Safari (and browsers that never fired the prompt) can't install
-    // programmatically — reveal the manual Share → "Add to Home Screen" hint.
-    if (outcome === 'unavailable') setShowInstallHelp(true);
-  };
+  // A QR scan is only an entry point. Replace it with the real booking funnel
+  // so customers land on service selection without an intermediate welcome
+  // screen or an extra browser-history step.
+  useEffect(() => {
+    if (!salon || loading || redirectStarted.current) return;
+    redirectStarted.current = true;
+    navigate(bookPath, { replace: true });
+  }, [bookPath, loading, navigate, salon]);
 
-  // Resolving: a skeleton of the salon header (icon + name + reassurance),
-  // mirroring the resolved layout so the CTA never jumps when data arrives.
-  if (loading) {
+  // Resolving/redirecting: the QR route stays transient; a resolved scan is
+  // replaced by the service-selection funnel as soon as its identity is known.
+  if (loading || salon) {
     return (
       <div className="mx-auto flex w-full max-w-funnel flex-col items-center gap-5 py-6">
         <SeoHead title={t('seo.titles.qr')} />
@@ -199,67 +196,5 @@ export function QrLandingPage() {
     );
   }
 
-  // Resolved: salon identity + reassurance + one prominent primary CTA, plus an
-  // "add to home screen" affordance saved under the salon/stylist name.
-  return (
-    <div
-      className="mx-auto flex w-full max-w-funnel flex-col items-center gap-5 py-6"
-      data-testid="qr-landing"
-    >
-      <SeoHead title={t('seo.titles.qr')} />
-      <Card as="section" className="flex w-full flex-col items-center gap-4 text-center">
-        <div
-          className="flex h-12 w-12 items-center justify-center rounded-pill bg-primary/10 text-primary"
-          aria-hidden="true"
-        >
-          {staff ? <Scissors className="h-6 w-6" /> : <Motif variant="mark" className="h-6 w-6" />}
-        </div>
-        <div>
-          <p className="text-xs font-medium text-muted">
-            {staff ? t('salon.qr.stylistWelcome') : t('salon.qr.welcome')}
-          </p>
-          <h1 className="mt-1 text-display text-xl text-text">{salon?.name}</h1>
-          {stylistName && (
-            <p className="mt-1 text-sm font-medium text-primary">
-              {t('salon.qr.withStylist', { name: stylistName })}
-            </p>
-          )}
-        </div>
-        <p className="text-sm text-muted">
-          {staff ? t('salon.qr.stylistReassurance') : t('salon.qr.reassurance')}
-        </p>
-
-        {/* Signature motif band — a token-driven brand divider. */}
-        <Motif variant="band" className="h-5 w-full max-w-xs text-primary" />
-
-        <Button size="lg" fullWidth onClick={() => navigate(bookPath)}>
-          {t('booking.selectService')}
-        </Button>
-
-        {/* Save this salon/stylist to the phone for one-tap re-booking. Hidden
-            once already installed; on iOS we reveal manual instructions. */}
-        {installed ? (
-          <p className="text-xs font-medium text-success">{t('salon.qr.install.installed')}</p>
-        ) : (
-          <div className="flex flex-col items-center gap-1.5">
-            <button
-              type="button"
-              onClick={handleInstall}
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-pill border border-border bg-surface px-4 text-sm font-medium text-text transition-colors duration-fast ease-standard hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-            >
-              <Download className="h-4 w-4" aria-hidden="true" />
-              {t('salon.qr.install.cta')}
-            </button>
-            <p className="max-w-[42ch] text-2xs text-muted">{t('salon.qr.install.body')}</p>
-            {showInstallHelp && (
-              <p role="note" className="max-w-[42ch] text-2xs text-muted">
-                <span className="font-medium text-text">{t('salon.qr.install.manualTitle')}: </span>
-                {t('salon.qr.install.manualBody')}
-              </p>
-            )}
-          </div>
-        )}
-      </Card>
-    </div>
-  );
+  return null;
 }

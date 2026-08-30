@@ -82,7 +82,7 @@ const FAQS = [
   {
     question: 'راه‌اندازی آرا چقدر زمان می‌برد؟',
     answer:
-      'پس از ثبت شماره، نام سالن و خدمات اصلی، صفحهٔ رزرو و پنل شما آماده است. جزئیات، کارکنان و ساعت کاری را می‌توانید همان موقع یا بعدتر تکمیل کنید.',
+      'پس از ثبت شماره، نام سالن و خدمات اصلی، صفحهٔ رزرو و پنل شما آماده است. جزئیات، اعضای تیم و ساعت کاری را می‌توانید همان موقع یا بعدتر تکمیل کنید.',
   },
   {
     question: 'مشتری برای رزرو باید اپ نصب کند؟',
@@ -605,7 +605,7 @@ const BUSINESS_TOUR: Record<
     icon: LayoutDashboard,
     label: 'مدیریت کن',
     title: 'روز سالن را از یک تقویم آرام اداره کنید.',
-    body: 'نوبت‌ها، کارکنان، زمان‌های آزاد و اطلاعات مشتری در یک نمای قابل فهم کنار هم قرار می‌گیرند.',
+    body: 'نوبت‌ها، اعضای تیم، زمان‌های آزاد و اطلاعات مشتری در یک نمای قابل فهم کنار هم قرار می‌گیرند.',
     bullets: ['تقویم روز و هفته', 'پرونده و یادداشت مشتری', 'یادآوری و قانون لغو'],
   },
   book: {
@@ -767,7 +767,7 @@ function BusinessInspiredVariant() {
         <div className="border-t border-border bg-elevated">
           <div className="mx-auto grid max-w-7xl divide-y divide-border px-4 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
             {[
-              { icon: CalendarDays, label: 'ادارهٔ روز سالن', body: 'تقویم و کارکنان' },
+              { icon: CalendarDays, label: 'ادارهٔ روز سالن', body: 'تقویم و تیم' },
               { icon: Link2, label: 'رزرو ۲۴ ساعته', body: 'لینک اختصاصی سالن' },
               { icon: QrCode, label: 'ورودی از همه‌جا', body: 'بیو، استوری و QR' },
               { icon: RefreshCw, label: 'مراجعهٔ بعدی', body: 'یادآوری و پیگیری' },
@@ -797,7 +797,7 @@ function BusinessInspiredVariant() {
               {
                 icon: LayoutDashboard,
                 title: 'مدیریت کن',
-                body: 'تقویم، خدمات، کارکنان و پروندهٔ مشتری را بدون پراکندگی اداره کنید.',
+                body: 'تقویم، خدمات، اعضای تیم و پروندهٔ مشتری را بدون پراکندگی اداره کنید.',
               },
               {
                 icon: MousePointer2,
@@ -1004,7 +1004,7 @@ function DayPlannerVariant() {
               {
                 icon: CalendarDays,
                 title: 'تقویم تیمی',
-                body: 'برنامهٔ کارکنان و صندلی‌ها را کنار هم ببینید.',
+                body: 'برنامهٔ تیم و صندلی‌ها را کنار هم ببینید.',
               },
               {
                 icon: MessageCircle,
@@ -1661,7 +1661,7 @@ function CommandVariant() {
           <div className="mt-10">
             <NumberedSteps
               items={[
-                'یک‌بار خدمات، کارکنان و ساعت کاری را تنظیم کنید.',
+                'یک‌بار خدمات، اعضای تیم و ساعت کاری را تنظیم کنید.',
                 'هر روز از تقویم یا اقدام سریع وارد شوید.',
                 'گزارش و سابقه را برای تصمیم بعدی نگه دارید.',
               ]}
@@ -2323,7 +2323,7 @@ function BackstageVariant() {
                   {
                     icon: CalendarDays,
                     title: 'تقویم هماهنگ',
-                    body: 'کارکنان، خدمات و زمان‌ها با هم قاطی نمی‌شوند.',
+                    body: 'اعضای تیم، خدمات و زمان‌ها با هم قاطی نمی‌شوند.',
                   },
                   {
                     icon: ShieldCheck,
@@ -2651,7 +2651,7 @@ function ChecklistVariant() {
               {
                 icon: PanelTop,
                 title: 'ادامهٔ مرحله‌ای',
-                body: 'کارکنان، قوانین و گزارش را بعداً اضافه کنید.',
+                body: 'اعضای تیم، قوانین و گزارش را بعداً اضافه کنید.',
               },
               {
                 icon: Headphones,

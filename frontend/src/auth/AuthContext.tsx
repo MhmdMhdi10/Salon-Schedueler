@@ -8,10 +8,13 @@ import {
   type ReactNode,
 } from 'react';
 import {
+  authApi,
   bootstrapAuth,
   getAccessToken,
   meApi,
+  setAccessToken,
   signOut as clearSession,
+  type StaffContext,
   type PrincipalRole,
 } from '../api/client';
 
@@ -45,6 +48,10 @@ export interface AuthContextValue {
   isStaff: boolean;
   /** True only for the global platform operator surface. */
   isPlatformAdmin: boolean;
+  /** Active salon memberships for this phone. */
+  staffContexts: StaffContext[];
+  /** Select a salon membership and refresh the scoped session. */
+  selectStaffContext: (staffMemberId: string) => Promise<AuthPrincipal | null>;
   /**
    * Re-derive the session from the current access token or HttpOnly refresh
    * cookie (call after a fresh OTP login). Resolves to the principal, or null
@@ -68,6 +75,8 @@ const DEFAULT_VALUE: AuthContextValue = {
   isCustomer: false,
   isStaff: false,
   isPlatformAdmin: false,
+  staffContexts: [],
+  selectStaffContext: async () => null,
   refresh: async () => null,
   signOut: () => {},
 };
@@ -86,6 +95,7 @@ const AuthContext = createContext<AuthContextValue>(DEFAULT_VALUE);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [principal, setPrincipal] = useState<AuthPrincipal | null>(null);
+  const [staffContexts, setStaffContexts] = useState<StaffContext[]>([]);
 
   const refresh = useCallback(async (): Promise<AuthPrincipal | null> => {
     // Reuse an access token already in memory (just-completed OTP login),
@@ -93,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const hasSession = getAccessToken() != null || (await bootstrapAuth());
     if (!hasSession) {
       setPrincipal(null);
+      setStaffContexts([]);
       setStatus('anonymous');
       return null;
     }
@@ -106,12 +117,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         platformAdminId: p.platformAdminId,
       };
       setPrincipal(next);
+      // Older test doubles and older API deployments do not expose contexts;
+      // the optional lookup must never make an otherwise valid login fail.
+      try {
+        const result = await authApi.getContexts();
+        setStaffContexts(result.staffContexts ?? []);
+      } catch {
+        setStaffContexts([]);
+      }
       setStatus('authenticated');
       return next;
     } catch {
       // A present-but-rejected token means the session is no longer valid.
       clearSession();
       setPrincipal(null);
+      setStaffContexts([]);
       setStatus('anonymous');
       return null;
     }
@@ -120,8 +140,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(() => {
     clearSession();
     setPrincipal(null);
+    setStaffContexts([]);
     setStatus('anonymous');
   }, []);
+
+  const selectStaffContext = useCallback(
+    async (staffMemberId: string): Promise<AuthPrincipal | null> => {
+      const result = await authApi.selectContext(staffMemberId);
+      setAccessToken(result.accessToken);
+      return refresh();
+    },
+    [refresh],
+  );
 
   useEffect(() => {
     void refresh();
@@ -141,10 +171,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // too. Staff sessions already share this customer capability.
       isCustomer: status === 'authenticated',
       isPlatformAdmin,
+      staffContexts,
+      selectStaffContext,
       refresh,
       signOut,
     };
-  }, [status, principal, refresh, signOut]);
+  }, [status, principal, staffContexts, selectStaffContext, refresh, signOut]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

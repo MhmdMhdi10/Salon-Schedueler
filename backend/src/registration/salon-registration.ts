@@ -58,8 +58,8 @@ export class SalonRegistration {
    * salon with no owner) is never persisted. The caller starts the free trial
    * (SubscriptionService.startTrial) after this resolves.
    *
-   * The `phone` column on staff_member is UNIQUE: a phone already registered to
-   * another staff member surfaces as a Prisma P2002 the route maps to 409.
+   * A phone may already belong to staff in another salon. Salon membership is
+   * tenant-scoped, so the same person can create or join multiple salons.
    *
    * @returns the created salon and the id of its Owner staff member.
    */
@@ -68,6 +68,7 @@ export class SalonRegistration {
     ownerName: string;
     phone: string;
     businessType?: string;
+    businessTypes?: string[];
     specialties?: string[];
     timezone?: string;
     brandAccent?: string | null;
@@ -90,6 +91,9 @@ export class SalonRegistration {
           name: input.salonName,
           qrToken,
           ...(input.businessType ? { businessType: input.businessType } : {}),
+          ...(input.businessTypes?.length
+            ? { businessTypes: input.businessTypes.slice(0, 12) }
+            : {}),
           ...(input.specialties?.length ? { specialties: input.specialties.slice(0, 12) } : {}),
           ...(input.timezone ? { timezone: input.timezone } : {}),
           ...(input.brandAccent ? { brandAccent: input.brandAccent } : {}),
@@ -335,17 +339,9 @@ export class SalonRegistration {
     };
   }
 
-  /**
-   * Reports whether a phone number is already registered to a staff member
-   * (and thus already owns a salon). Used by the registration wizard to flag a
-   * duplicate phone immediately at Step 1 — instead of bouncing the user all
-   * the way back from Submit at Step 3. Public; returns only a boolean.
-   */
+  /** Kept for older clients; phone numbers are no longer globally taken. */
   async isPhoneTaken(phone: string): Promise<boolean> {
-    const staff = await this.prisma.staffMember.findUnique({
-      where: { phone },
-      select: { id: true },
-    });
-    return staff !== null;
+    void phone;
+    return false;
   }
 }

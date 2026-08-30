@@ -1,0 +1,763 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="تحلیل سوءاستفاده از رزرو، الگوی رقبا و تصمیم پیشنهادی برای بیعانه در آرا"
+    />
+    <title>تحلیل سوءاستفاده از رزرو و بیعانه | آرا</title>
+    <style>
+      :root {
+        --bg: #f5f7fb;
+        --surface: #ffffff;
+        --surface-soft: #f8fafc;
+        --text: #172033;
+        --muted: #637089;
+        --border: #e3e8f0;
+        --brand: #9e356f;
+        --brand-dark: #762353;
+        --brand-soft: #f8e9f2;
+        --green: #087f5b;
+        --green-soft: #e5f7ef;
+        --amber: #a15c00;
+        --amber-soft: #fff3d9;
+        --red: #b42318;
+        --red-soft: #ffebe9;
+        --shadow: 0 14px 36px rgba(27, 39, 68, 0.08);
+        --radius: 18px;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Tahoma, Arial, sans-serif;
+        line-height: 1.9;
+      }
+
+      a { color: var(--brand-dark); }
+
+      .page {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 36px 0 64px;
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        padding: 42px clamp(24px, 5vw, 64px);
+        border-radius: 28px;
+        color: #fff;
+        background:
+          radial-gradient(circle at 12% 10%, rgba(255, 255, 255, 0.18), transparent 26%),
+          linear-gradient(135deg, #762353 0%, #9e356f 58%, #c15c90 100%);
+        box-shadow: var(--shadow);
+      }
+
+      .hero::after {
+        content: "";
+        position: absolute;
+        width: 280px;
+        height: 280px;
+        left: -90px;
+        bottom: -160px;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        border-radius: 50%;
+        box-shadow: 0 0 0 38px rgba(255, 255, 255, 0.06), 0 0 0 76px rgba(255, 255, 255, 0.04);
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        color: rgba(255, 255, 255, 0.78);
+        font-size: 0.86rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+      }
+
+      h1, h2, h3 { line-height: 1.35; }
+      h1 { max-width: 760px; margin: 0; font-size: clamp(1.8rem, 4vw, 3.2rem); }
+      h2 { margin: 0 0 16px; font-size: 1.45rem; }
+      h3 { margin: 0 0 8px; font-size: 1.05rem; }
+
+      .hero p {
+        position: relative;
+        z-index: 1;
+        max-width: 760px;
+        margin: 18px 0 0;
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1.05rem;
+      }
+
+      .stamp {
+        position: relative;
+        z-index: 1;
+        display: inline-flex;
+        margin-top: 22px;
+        padding: 5px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 999px;
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 0.8rem;
+      }
+
+      .section { margin-top: 28px; }
+
+      .card {
+        padding: 24px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+        box-shadow: 0 6px 20px rgba(27, 39, 68, 0.04);
+      }
+
+      .decision {
+        display: grid;
+        grid-template-columns: 1.35fr 1fr;
+        gap: 20px;
+        align-items: stretch;
+      }
+
+      .decision-main {
+        border: 1px solid #d5eadf;
+        background: linear-gradient(145deg, #fafffc, var(--green-soft));
+      }
+
+      .decision-main h2 { color: var(--green); }
+
+      .decision-main strong { color: #075b42; }
+
+      .decision-side {
+        border: 1px solid #f0d6df;
+        background: linear-gradient(145deg, #fffafd, var(--brand-soft));
+      }
+
+      .decision-side h3 { color: var(--brand-dark); }
+
+      .grid-4 {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+      }
+
+      .metric {
+        padding: 18px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--surface);
+      }
+
+      .metric .number {
+        display: block;
+        color: var(--brand);
+        font-size: 1.55rem;
+        font-weight: 800;
+        direction: ltr;
+        text-align: right;
+      }
+
+      .metric .label { display: block; color: var(--muted); font-size: 0.86rem; }
+
+      .alert {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        margin-top: 18px;
+        padding: 16px 18px;
+        border-radius: 13px;
+        background: var(--amber-soft);
+        color: #704100;
+      }
+
+      .alert strong { display: block; margin-bottom: 2px; }
+
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .flow-step {
+        position: relative;
+        min-height: 126px;
+        padding: 18px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--surface-soft);
+      }
+
+      .flow-step:not(:last-child)::after {
+        content: "←";
+        position: absolute;
+        top: 40px;
+        left: -17px;
+        color: #aab4c5;
+        font-size: 1.5rem;
+        font-weight: 700;
+      }
+
+      .flow-step b { display: block; margin-bottom: 6px; color: var(--brand-dark); }
+      .flow-step span { color: var(--muted); font-size: 0.87rem; }
+
+      .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; }
+
+      table {
+        width: 100%;
+        min-width: 720px;
+        border-collapse: collapse;
+        background: var(--surface);
+      }
+
+      th, td {
+        padding: 15px 16px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+        text-align: right;
+      }
+
+      th { color: #fff; background: var(--brand-dark); font-size: 0.9rem; }
+      tr:last-child td { border-bottom: 0; }
+      tbody tr:nth-child(even) { background: #fbfcfe; }
+      td:first-child { min-width: 150px; color: var(--brand-dark); font-weight: 800; }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+      }
+
+      .list { margin: 0; padding-right: 21px; }
+      .list li { margin: 7px 0; }
+
+      .phase {
+        display: grid;
+        grid-template-columns: 90px 1fr;
+        gap: 16px;
+        align-items: start;
+        padding: 18px 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .phase:last-child { padding-bottom: 0; border-bottom: 0; }
+
+      .phase-tag {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 34px;
+        border-radius: 10px;
+        color: var(--brand-dark);
+        background: var(--brand-soft);
+        font-size: 0.82rem;
+        font-weight: 800;
+      }
+
+      .phase p { margin: 0; color: var(--muted); }
+
+      .branch-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        margin-top: 16px;
+      }
+
+      .branch {
+        padding: 20px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--surface-soft);
+      }
+
+      .branch h3 { color: var(--brand-dark); }
+      .branch p { margin: 0; color: var(--muted); }
+
+      code {
+        padding: 2px 6px;
+        border-radius: 6px;
+        color: #5c2445;
+        background: #f4edf2;
+        font-family: Consolas, monospace;
+        direction: ltr;
+        unicode-bidi: plaintext;
+      }
+
+      .refs { margin: 0; padding-right: 20px; }
+      .refs li { margin: 7px 0; color: var(--muted); }
+
+      .footer {
+        margin-top: 30px;
+        padding-top: 18px;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      @media (max-width: 850px) {
+        .decision, .two-col, .branch-grid { grid-template-columns: 1fr; }
+        .grid-4 { grid-template-columns: repeat(2, 1fr); }
+        .flow { grid-template-columns: repeat(2, 1fr); }
+        .flow-step:not(:last-child)::after { display: none; }
+      }
+
+      @media (max-width: 520px) {
+        .page { width: min(100% - 20px, 1180px); padding-top: 10px; }
+        .hero { padding: 30px 22px; border-radius: 20px; }
+        .card { padding: 19px; }
+        .grid-4, .flow { grid-template-columns: 1fr; }
+        .phase { grid-template-columns: 1fr; gap: 8px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <p class="eyebrow">گزارش تصمیم محصول و فنی</p>
+        <h1>سوءاستفاده از رزرو، بیعانه و مسیر تسویه در آرا</h1>
+        <p>
+          بررسی فلو فعلی پروژه، الگوی محصولات رقیب و پیشنهاد کم‌ریسک برای جلوگیری از رزروهای جعلی؛
+          بدون ورود زودهنگام به ساخت کیف پول و cash-out پلتفرمی.
+        </p>
+        <span class="stamp">تاریخ گزارش: ۲۱ اوت ۲۰۲۶</span>
+      </header>
+
+      <section class="section decision">
+        <article class="card decision-main">
+          <h2>تصمیم پیشنهادی</h2>
+          <p>
+            ابتدا <strong>pending بدون انقضا</strong> را اصلاح کن، سپس بیعانه را برای سرویس‌ها و مشتریان
+            پرریسک فعال کن. برای نسخه MVP، مانده مبلغ در سالن حضوری دریافت شود و cash-out پلتفرمی ساخته نشود.
+          </p>
+        </article>
+        <article class="card decision-side">
+          <h3>پاسخ کوتاه به سؤال cash-out</h3>
+          <p>
+            اگر پول مستقیم به حساب سالن تسویه شود، فعلاً cash-out لازم نیست. اگر پول وارد حساب آرا شود،
+            تسویه، ledger، refund، مغایرت‌گیری و کنترل مالی لازم می‌شود.
+          </p>
+        </article>
+      </section>
+
+      <section class="section">
+        <div class="card">
+          <h2>یافته‌های فلو فعلی</h2>
+          <div class="grid-4">
+            <div class="metric"><span class="number">۸</span><span class="label">رزرو فعال روزانه برای هر مشتری و سالن</span></div>
+            <div class="metric"><span class="number">۱۲ / ۱۰ دقیقه</span><span class="label">محدودیت رزرو برای هر مشتری</span></div>
+            <div class="metric"><span class="number">۳۰ / ۱۰ دقیقه</span><span class="label">محدودیت رزرو بر اساس IP</span></div>
+            <div class="metric"><span class="number">۱۵ دقیقه</span><span class="label">انقضای رزرو held دارای بیعانه</span></div>
+          </div>
+
+          <div class="alert">
+            <div>⚠️</div>
+            <div>
+              <strong>ریسک اصلی: pending اسلات را می‌بندد ولی تاریخ انقضا ندارد.</strong>
+              در حالت بدون بیعانه، رزرو به <code>pending</code> تبدیل می‌شود و تا زمانی که سالن دستی تأیید یا رد نکند،
+              می‌تواند ظرفیت را اشغال کند. cron فعلی فقط <code>held</code>های منقضی‌شده را آزاد می‌کند.
+            </div>
+          </div>
+
+          <div class="flow" aria-label="فلو فعلی رزرو">
+            <div class="flow-step"><b>۱. ورود با OTP</b><span>رزرو عمومی پشت احراز هویت مشتری قرار دارد.</span></div>
+            <div class="flow-step"><b>۲. ثبت رزرو</b><span>سرور slot و منابع سالن را بررسی می‌کند.</span></div>
+            <div class="flow-step"><b>۳. بدون بیعانه</b><span><code>pending</code>؛ اسلات رزرو می‌ماند و انقضا ندارد.</span></div>
+            <div class="flow-step"><b>۴. با بیعانه</b><span><code>held</code>؛ پرداخت و سپس تأیید یا آزادسازی.</span></div>
+          </div>
+
+          <p class="footer">
+            کد مرتبط:
+            <a href="../backend/src/appointment/controllers/appointment.controller.ts#L176">Appointment Controller</a> ·
+            <a href="../backend/src/scheduling/scheduling-engine.ts#L907">Scheduling Engine</a> ·
+            <a href="../backend/src/security/booking-abuse-guard.ts#L35">Booking Abuse Guard</a>
+          </p>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="card">
+          <h2>رقبا چطور مسئله را کنترل می‌کنند؟</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>محصول</th>
+                  <th>الگوی کنترل رزرو جعلی / no-show</th>
+                  <th>نکته قابل استفاده برای آرا</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Booksy</td>
+                  <td>بیعانه یا کارت ذخیره‌شده؛ جریمه کنسلی دیرهنگام و no-show؛ امکان معافیت مشتری وفادار.</td>
+                  <td>قانون برای همه یکسان نیست؛ مشتری جدید و پرریسک سخت‌گیری بیشتری می‌بیند.</td>
+                </tr>
+                <tr>
+                  <td>Fresha</td>
+                  <td>بیعانه یا ثبت امن کارت؛ سیاست بر اساس مشتری، سرویس، رزرو یا مبلغ؛ بیعانه در تسویه نهایی لحاظ می‌شود.</td>
+                  <td>بیعانه باید از ابتدا با قانون لغو، no-show و مبلغ باقی‌مانده همراه باشد.</td>
+                </tr>
+                <tr>
+                  <td>Square Appointments</td>
+                  <td>سه حالت: بدون پرداخت، پیش‌پرداخت کامل، یا نگه‌داشتن کارت فقط برای همان رزرو.</td>
+                  <td>برای هر سالن و سرویس، سیاست قابل انتخاب باشد؛ پرداخت را به همه تحمیل نکن.</td>
+                </tr>
+                <tr>
+                  <td>Vagaro</td>
+                  <td>بیعانه یا کارت برای مشتری جدید، سرویس با حداقل مبلغ، مشتری دارای کنسلی یا no-show؛ سابقه کنسلی ثبت می‌شود.</td>
+                  <td><code>noShowCount</code> فعلی آرا می‌تواند ورودی سیاست بیعانه شود.</td>
+                </tr>
+                <tr>
+                  <td>Noxar / Planyx / Zamanoo</td>
+                  <td>پیش‌پرداخت درصدی یا مبلغ ثابت، گزارش تراکنش و اتصال رزرو به دریافت و تسویه.</td>
+                  <td>برای بازار ایران، نمایش واضح «بیعانه / مانده / تسویه» از ساخت marketplace پیچیده مهم‌تر است.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="card">
+          <h2>بررسی کامل نمونه‌های ایرانی</h2>
+          <p>
+            صفحات عمومی رقبا را از نظر چهار چیز بررسی کردم: رزرو واقعی، بیعانه یا پیش‌پرداخت، مالک درگاه و مسیر
+            تسویه. هر جا سرویس نام درگاه یا cash-out را عمومی نکرده، آن را حدس نزدم و صریحاً «اعلام نشده» نوشته‌ام.
+          </p>
+          <div class="alert">
+            <div>🔎</div>
+            <div>
+              <strong>نتیجه اصلی: در بازار ایران یک الگوی واحد وجود ندارد.</strong>
+              بیشتر محصولات یا پول را اصلاً وارد پلتفرم نمی‌کنند، یا نرم‌افزار رزرو سالن هستند که بیعانه را با روش
+              پرداخت خود سالن می‌گیرند. مدل «پول در حساب پلتفرم، سپس cash-out به سالن» در نمونه‌های زیبایی بررسی‌شده
+              به‌صورت عمومی مستند نشد؛ نمونه‌های واضح آن در بازار خدمات عمومی مثل آچاره و هوم‌سرویز دیده می‌شود.
+            </div>
+          </div>
+
+          <div class="table-wrap" style="margin-top: 18px">
+            <table>
+              <thead>
+                <tr>
+                  <th>سرویس</th>
+                  <th>نوع مدل</th>
+                  <th>آنچه علناً در فلو دیده می‌شود</th>
+                  <th>درگاه / تسویه</th>
+                  <th>درس برای آرا</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>نُکسار</td>
+                  <td>نرم‌افزار سالن</td>
+                  <td>رزرو، پرداخت آنلاین یا کارت‌به‌کارت طبق روش فعال سالن، بیعانه و ثبت مانده/رسید در دفتر مالی.</td>
+                  <td>نام درگاه عمومی نیست. شرایط خود نُکسار می‌گوید درگاه اینترنتی با دامنه، نماد و مدارک خود سالن راه‌اندازی می‌شود.</td>
+                  <td>نزدیک‌ترین الگو به «درگاه متعلق به سالن، آرا فقط مدیریت رزرو و وضعیت پرداخت».</td>
+                </tr>
+                <tr>
+                  <td>پلنیکس</td>
+                  <td>نرم‌افزار رزرو</td>
+                  <td>درگاه ایرانی داخلی، پرداخت هنگام رزرو، پیش‌پرداخت درصدی یا مبلغ ثابت و گزارش تراکنش.</td>
+                  <td>نام شرکت درگاه و مدل payout عمومی اعلام نشده.</td>
+                  <td>بیعانه را به تنظیمات سالن و سرویس تبدیل کرده؛ برای MVP لازم نیست کیف پول بسازی.</td>
+                </tr>
+                <tr>
+                  <td>زمانو</td>
+                  <td>نرم‌افزار نوبت‌دهی</td>
+                  <td>پرداخت کامل یا بیعانه، وضعیت «بیعانه دریافت شد»، اعلان بعد از پرداخت و داشبورد درآمد.</td>
+                  <td>درگاه، merchant و مسیر تسویه عمومی اعلام نشده.</td>
+                  <td>رزرو باید تا تأیید پرداخت در وضعیت میانی بماند و وضعیت مالی قابل‌ردگیری باشد.</td>
+                </tr>
+                <tr>
+                  <td>رزرو سیستم</td>
+                  <td>نرم‌افزار سالن</td>
+                  <td>ثبت و دریافت پیش‌پرداخت، مدیریت بیعانه، فاکتور و گزارش مالی؛ برای سالن لینک اختصاصی می‌سازد.</td>
+                  <td>نام درگاه و cash-out عمومی اعلام نشده.</td>
+                  <td>وجود «قانون بیعانه» کافی نیست؛ رسید، لغو و گزارش مالی هم باید کنار رزرو باشند.</td>
+                </tr>
+                <tr>
+                  <td>گیسون</td>
+                  <td>نرم‌افزار سالن</td>
+                  <td>تنظیم «دریافت بیعانه هنگام رزرو» برای جلوگیری از اتلاف وقت سالن.</td>
+                  <td>درگاه و تسویه عمومی اعلام نشده.</td>
+                  <td>بیعانه به‌صورت قابلیت اختیاری سالن ارائه می‌شود، نه الزام یکسان برای همه.</td>
+                </tr>
+                <tr>
+                  <td>خدمت از ما</td>
+                  <td>مارکت‌پلیس معرفی مستقیم</td>
+                  <td>مشتری بعد از انجام کامل و رضایت از خدمت پرداخت می‌کند؛ پرداخت مستقیماً به ارائه‌دهنده است.</td>
+                  <td>پلتفرم طبق راهنمای خود از تراکنش مالی سود نمی‌گیرد و پول را برای سالن نگه نمی‌دارد.</td>
+                  <td>مدل بدون cash-out و بدون کمیسیون برای MVP ساده است، اما بیعانه ضد no-show ندارد.</td>
+                </tr>
+                <tr>
+                  <td>پاهو</td>
+                  <td>دایرکتوری / معرفی</td>
+                  <td>صریحاً می‌گوید واسطه یا نماینده نیست؛ تماس، واتساپ یا درخواست نوبت، سپس هماهنگی مستقیم با سالن.</td>
+                  <td>پرداخت و تسویه توسط پلتفرم انجام نمی‌شود.</td>
+                  <td>کم‌ریسک‌ترین مدل حقوقی/مالی، ولی برای تضمین حضور مشتری ضعیف است.</td>
+                </tr>
+                <tr>
+                  <td>ماهشو</td>
+                  <td>معرفی + درخواست نوبت</td>
+                  <td>مشتری خدمت و زمان را می‌فرستد، اطلاعات برای سالن ارسال می‌شود و با لغو، زمان آزاد می‌شود.</td>
+                  <td>برای رزرو سالن، درگاه یا بیعانه عمومی دیده نشد. زرین‌پالِ موجود در سایت مربوط به خرید تبلیغ خود ماهشو است، نه بیعانه سالن.</td>
+                  <td>درخواست نوبت، بدون تعهد پرداخت؛ مناسب شروع کم‌اصطکاک اما نه راه‌حل قطعی ضد اسکم.</td>
+                </tr>
+                <tr>
+                  <td>نگینا</td>
+                  <td>مارکت‌پلیس انتخابی</td>
+                  <td>رزرو سریع، تأیید تلگرام و امتیازدهی؛ صریحاً «پرداخت فقط در محل سالن».</td>
+                  <td>پرداخت آنلاین یا cash-out ندارد.</td>
+                  <td>با انتخاب سالن‌های محدود و پرداخت حضوری ریسک پول را حذف کرده، نه ریسک no-show را.</td>
+                </tr>
+                <tr>
+                  <td>نوبات / سالی‌بوک</td>
+                  <td>مارکت‌پلیس رزرو</td>
+                  <td>نمایش زمان واقعی، تأیید فوری و یادآوری؛ ثبت‌نام کسب‌وکار رایگان و بدون کارت بانکی.</td>
+                  <td>در صفحات عمومی، بیعانه، درگاه و تسویه مستند نشده.</td>
+                  <td>رزرو بدون پرداخت می‌تواند سریع رشد کند، اما برای سرویس‌های پرهزینه کافی نیست.</td>
+                </tr>
+                <tr>
+                  <td>نوبتیکس</td>
+                  <td>مارکت‌پلیس رزرو</td>
+                  <td>جست‌وجو، انتخاب خدمت و متخصص، تقویم زنده، تأیید زمان و کد پیگیری؛ پرداخت در فلو عمومی دیده نشد.</td>
+                  <td>درگاه و تسویه عمومی اعلام نشده.</td>
+                  <td>رزرو فوری به‌تنهایی معادل رزرو تضمین‌شده نیست.</td>
+                </tr>
+                <tr>
+                  <td>بی‌کال / بتیشن</td>
+                  <td>مارکت‌پلیس + پنل سالن</td>
+                  <td>پنل مدیریت نوبت و مشتری دارند؛ در قوانین بی‌کال، ثبت بیعانه در پلتفرم به‌عنوان الزام رفتاری ذکر شده، اما جزئیات فلو عمومی محدود است.</td>
+                  <td>نام درگاه و cash-out عمومی اعلام نشده.</td>
+                  <td>اگر بیعانه می‌گیری، آن را خارج از سیستم رها نکن؛ ثبت وضعیت و رسید ضروری است.</td>
+                </tr>
+                <tr>
+                  <td>فرمیمه / لایان</td>
+                  <td>سایت خود سالن</td>
+                  <td>انتخاب خدمت، متخصص، زمان، ورود شماره موبایل/OTP، نمایش مبلغ بیعانه و رفتن به «تأیید و پرداخت»؛ بعد از موفقیت پیامک/تأیید رزرو.</td>
+                  <td>نام درگاه در صفحات رزرو عمومی نیست؛ نشانه‌ای از cash-out پلتفرمی دیده نشد.</td>
+                  <td>نمونه عملی خوب برای فلو آرا: پرداخت قبل از قطعی‌شدن رزرو و تأیید سمت سرور.</td>
+                </tr>
+                <tr>
+                  <td>آچاره</td>
+                  <td>مارکت‌پلیس خدمات عمومی</td>
+                  <td>اعتبار داخلی، پرداخت آنلاین یا نقدی به متخصص؛ برای خدمات طبق FAQ بیعانه عمومی ندارد.</td>
+                  <td>اعتبار فقط مصرف داخلی دارد و cash-out نیست؛ متخصص بعد از کار پول نقد/اعتبار می‌گیرد و کمیسیون دارد.</td>
+                  <td>نمونه‌ای از مدل مالی مرکزی است؛ برای آرا یعنی عملیات تسویه، مغایرت‌گیری و کمیسیون.</td>
+                </tr>
+                <tr>
+                  <td>هوم‌سرویز</td>
+                  <td>مارکت‌پلیس خدمات در محل</td>
+                  <td>پرداخت آنلاین در اپ مشتری یا نقدی مستقیم به همیار؛ حساب مالی و کمیسیون برای همیار.</td>
+                  <td>احراز هویت، شبا/کارت، مدارک مهارتی و حتی تضمین از همیار می‌خواهد؛ مدل payout/کمیسیون است.</td>
+                  <td>برای MVP بدون کمیسیون و احراز سنگین، الگوی مناسبی نیست.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="section two-col">
+        <article class="card">
+          <h2>واقعاً از چه درگاهی استفاده می‌کنند؟</h2>
+          <ul class="list">
+            <li><strong>نام درگاه اکثر رقبا عمومی نیست.</strong> از صفحات پلنیکس، زمانو، رزرو سیستم، گیسون و سایت سالن‌ها نمی‌شود با اطمینان گفت زرین‌پال، زیبال، نکست‌پی یا سرویس دیگری پشت فلو است.</li>
+            <li><strong>نُکسار استثنای مهم است:</strong> شرایط عمومی‌اش می‌گوید دامنه، نماد و درگاه با مدارک خود سالن راه‌اندازی می‌شود؛ یعنی مدلش merchant مشترک آرا و cash-out مرکزی نیست.</li>
+            <li><strong>زرین‌پالِ ماهشو را اشتباه تفسیر نکن:</strong> مدرک عمومی آن برای پرداخت خرید تبلیغ در خود ماهشو است، نه پرداخت بیعانه مشتری به سالن.</li>
+            <li>پس ادعای «همه رقبا از فلان درگاه استفاده می‌کنند» قابل دفاع نیست. باید از خود ارائه‌دهنده درگاه، مدل پرداخت به حساب سالن و الزامات پذیرنده را کتبی بگیری.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h2>سه الگوی واقعی بازار</h2>
+          <div class="branch-grid" style="margin-top: 0">
+            <div class="branch">
+              <h3>۱. پول خارج از پلتفرم</h3>
+              <p>پاهو، خدمت از ما، نگینا و بخش‌هایی از ماهشو: تماس/رزرو، سپس پرداخت مستقیم یا حضوری. راه‌اندازی ساده، ضد no-show ضعیف.</p>
+            </div>
+            <div class="branch">
+              <h3>۲. درگاه خود سالن</h3>
+              <p>نُکسار و سایت‌های مستقل سالن: سالن پذیرنده است؛ نرم‌افزار رزرو و وضعیت پرداخت را مدیریت می‌کند. مناسب MVP آرا.</p>
+            </div>
+            <div class="branch">
+              <h3>۳. پول و تسویه پلتفرم</h3>
+              <p>آچاره و هوم‌سرویز: پلتفرم جریان مالی، اعتبار، کمیسیون، احراز و تسویه دارد. قابل ساخت است، اما پروژه‌ای جدا از رزرو ساده است.</p>
+            </div>
+            <div class="branch">
+              <h3>۴. SaaS با جزئیات عمومی ناقص</h3>
+              <p>پلنیکس، زمانو، رزرو سیستم و گیسون قابلیت بیعانه را نشان می‌دهند، اما مالک merchant و payout را عمومی نکرده‌اند؛ از ظاهر محصول نمی‌شود معماری مالی را نتیجه گرفت.</p>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="section">
+        <div class="card">
+          <h2>تصمیم نهایی برای MVP آرا</h2>
+          <div class="decision">
+            <article class="card decision-main">
+              <h3>پیشنهاد عملی</h3>
+              <p>
+                <strong>برای هر سالن، پذیرنده/حساب پرداخت متعلق به همان سالن باشد.</strong> آرا سفارش پرداخت را با شناسه رزرو
+                ایجاد کند، کاربر را به درگاه ببرد، callback و verify را سمت سرور انجام دهد، سپس رزرو را قطعی کند. پول
+                مستقیم برای سالن تسویه شود؛ آرا فقط مبلغ بیعانه، وضعیت پرداخت، refund و مانده را نگه دارد.
+              </p>
+              <p>
+                برای سالن‌هایی که هنوز احراز درگاه را تمام نکرده‌اند، حالت «درخواست نوبت + تأیید سالن» فعال بماند؛ ولی آن
+                رزرو را با برچسب <code>unpaid</code> و مهلت کوتاه نگه دار، نه رزرو قطعی و بی‌انقضا.
+              </p>
+            </article>
+            <article class="card decision-side">
+              <h3>ترتیب مذاکره با سرویس پرداخت</h3>
+              <ol class="list">
+                <li>اول از نکست‌پی یا سپال درباره پذیرنده به نام سالن، لینک/API، callback، refund و تسویه به شبا سؤال کتبی بگیر.</li>
+                <li>اگر سرویس فقط merchant به نام آرا و تسویه بعدی ارائه می‌دهد، برای MVP قبول نکن.</li>
+                <li>زیبال multiplexing را برای روز اول نساز؛ این قابلیت وقتی لازم است که عمداً پول را مرکزی بگیری و بین سالن‌ها تقسیم کنی.</li>
+                <li>قبل از فعال‌سازی عمومی، با یک سالن واقعی یک تراکنش کم‌مبلغ، callback تکراری، انقضا و refund را تست کن.</li>
+              </ol>
+            </article>
+          </div>
+          <div class="alert">
+            <div>⚠️</div>
+            <div>
+              <strong>هیچ فلو پرداختی حضور مشتری را ۱۰۰٪ تضمین نمی‌کند.</strong>
+              بیعانه احتمال no-show را کم می‌کند و خسارت سالن را پوشش می‌دهد؛ تضمین فنی واقعی یعنی اسلات بدون پرداخت قطعی
+              نشود، رزروهای بی‌پاسخ منقضی شوند، و سابقه no-show روی رزرو بعدی اثر بگذارد.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section two-col">
+        <article class="card">
+          <h2>فاز صفر؛ بدون ورود به پرداخت</h2>
+          <ul class="list">
+            <li>برای <code>pending</code> زمان انقضای ۵ تا ۱۰ دقیقه بگذار.</li>
+            <li>بعد از انقضا، رزرو خودکار لغو و اسلات آزاد شود.</li>
+            <li>هر مشتری حداکثر ۱ pending و ۲ رزرو آینده برای هر سالن داشته باشد.</li>
+            <li>کلید idempotency در دیتابیس با unique constraint ذخیره شود؛ حافظه سرور برای چند replica کافی نیست.</li>
+            <li>پس از no-show، رزرو بعدی همان مشتری بیعانه بخواهد.</li>
+            <li>در صورت عبور از آستانه ریسک، CAPTCHA نامرئی یا challenge فعال شود.</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <h2>فاز یک؛ بیعانه انتخابی</h2>
+          <ul class="list">
+            <li>برای مشتری جدید، سرویس گران/طولانی، ساعت شلوغ و مشتری بدسابقه.</li>
+            <li>رزرو به <code>held</code> برود و مثلاً ۱۵ دقیقه برای پرداخت زمان داشته باشد.</li>
+            <li>بعد از callback موفق، <code>confirmed</code> شود؛ در غیر این صورت آزاد شود.</li>
+            <li>قبل از انتقال به درگاه، دقیقاً نمایش بده: مبلغ سرویس، بیعانه، مانده و قانون لغو.</li>
+            <li>برای هر appointment فقط یک payment pending فعال داشته باش.</li>
+          </ul>
+          <p class="footer">
+            زیرساخت فعلی بیعانه تا حدی آماده است:
+            <a href="../backend/src/payment/payment.service.ts#L53">Payment Service</a> ·
+            <a href="../backend/src/payment/payment-gateway.interface.ts#L9">Gateway Interface</a>
+          </p>
+        </article>
+      </section>
+
+      <section class="section">
+        <div class="card">
+          <h2>آیا checkout و cash-out کامل لازم است؟</h2>
+          <div class="branch-grid">
+            <div class="branch">
+              <h3>مدل A — تسویه مستقیم با سالن</h3>
+              <p>
+                درگاه و حساب پذیرنده متعلق به سالن است. آرا فقط وضعیت پرداخت، مبلغ بیعانه، refund و مانده را ثبت می‌کند.
+                پرداخت باقی‌مانده در سالن انجام می‌شود. در این مدل، cash-out پلتفرمی لازم نیست.
+              </p>
+            </div>
+            <div class="branch">
+              <h3>مدل B — دریافت پول توسط آرا</h3>
+              <p>
+                پول ابتدا وارد حساب آرا می‌شود و بعد باید به سالن پرداخت شود. این مدل به onboarding پذیرنده، ledger،
+                split یا payout، تسویه دوره‌ای، refund، chargeback و کنترل مالی نیاز دارد.
+              </p>
+            </div>
+          </div>
+          <div class="alert">
+            <div>💡</div>
+            <div>
+              <strong>تصمیم پیشنهادی برای MVP: مدل A.</strong>
+              در معماری فعلی یک merchant مشترک از تنظیمات درگاه استفاده می‌شود؛ بنابراین قبل از فعال‌سازی گسترده بیعانه
+              باید مالک حساب پذیرنده و نحوه تسویه با سالن‌ها مشخص شود.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="card">
+          <h2>برنامه اجرای پیشنهادی</h2>
+          <div class="phase">
+            <span class="phase-tag">P0</span>
+            <div>
+              <h3>بستن راه رزروهای بی‌هزینه</h3>
+              <p>انقضای pending، محدودیت رزرو آینده، idempotency دیتابیسی و استفاده از سابقه no-show.</p>
+            </div>
+          </div>
+          <div class="phase">
+            <span class="phase-tag">P1</span>
+            <div>
+              <h3>بیعانه برای سرویس و مشتری پرریسک</h3>
+              <p>نمایش مبلغ بیعانه و مانده، انتقال امن به درگاه، callback idempotent، refund و retain.</p>
+            </div>
+          </div>
+          <div class="phase">
+            <span class="phase-tag">P2</span>
+            <div>
+              <h3>تسویه پلتفرمی فقط بعد از تصمیم مالی</h3>
+              <p>در صورت نیاز به دریافت پول توسط آرا، onboarding سالن، ledger، payout و reconciliation جداگانه ساخته شود.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="card">
+          <h2>منابع بررسی‌شده</h2>
+          <ul class="refs">
+            <li><a href="https://support.booksy.com/hc/en-us/articles/16487431553810-What-is-the-difference-between-Deposits-and-Cancellation-Fees" target="_blank" rel="noopener">Booksy — تفاوت بیعانه و جریمه کنسلی</a></li>
+            <li><a href="https://biz.booksy.com/en-gb/features/no-show-protection" target="_blank" rel="noopener">Booksy — No-Show Protection</a></li>
+            <li><a href="https://www.fresha.com/help-center/knowledge-base/payments/613-payments-policies-overview" target="_blank" rel="noopener">Fresha — Payment Policies</a></li>
+            <li><a href="https://www.fresha.com/help-center/knowledge-base/payments/617-charge-no-show-and-cancellation-fees" target="_blank" rel="noopener">Fresha — No-show و cancellation fee</a></li>
+            <li><a href="https://squareup.com/help/us/en/article/5493-set-a-custom-cancellation-policy-with-square-appointments" target="_blank" rel="noopener">Square — Prepayment و no-show protection</a></li>
+            <li><a href="https://support.vagaro.com/hc/en-us/articles/17733255316763-Require-a-Credit-Card-on-File-to-Book" target="_blank" rel="noopener">Vagaro — کارت برای رزرو</a></li>
+            <li><a href="https://support.vagaro.com/hc/en-us/articles/17733260320539-Automatically-Charge-a-Cancellation-or-No-Show-Fee" target="_blank" rel="noopener">Vagaro — جریمه کنسلی و no-show</a></li>
+            <li><a href="https://noxar.ir/products/beauty" target="_blank" rel="noopener">Noxar Beauty — بیعانه تا تسویه</a></li>
+            <li><a href="https://noxar.ir/terms" target="_blank" rel="noopener">Noxar — شرایط دامنه، نماد و درگاه به نام سالن</a></li>
+            <li><a href="https://planyx.ir/features/%D9%BE%D8%B1%D8%AF%D8%A7%D8%AE%D8%AA-%D8%A2%D9%86%D9%84%D8%A7%DB%8C%D9%86" target="_blank" rel="noopener">Planyx — پیش‌پرداخت و گزارش تراکنش</a></li>
+            <li><a href="https://www.zamanoo.ir/" target="_blank" rel="noopener">Zamanoo — بیعانه یا پرداخت کامل</a></li>
+            <li><a href="https://gisoon.negahgroup.ir/" target="_blank" rel="noopener">گیسون — دریافت بیعانه هنگام رزرو</a></li>
+            <li><a href="https://reservesystem.ir/use-cases/beauty-salon" target="_blank" rel="noopener">رزرو سیستم — پیش‌پرداخت و مدیریت بیعانه سالن</a></li>
+            <li><a href="https://khedmatazma.com/pages/rules" target="_blank" rel="noopener">خدمت از ما — پرداخت بعد از انجام خدمت</a></li>
+            <li><a href="https://khedmatazma.com/pages/safetynotice" target="_blank" rel="noopener">خدمت از ما — پرداخت مستقیم به ارائه‌دهنده</a></li>
+            <li><a href="https://www.paho.ir/" target="_blank" rel="noopener">پاهو — معرفی مستقیم و عدم واسطه‌گری</a></li>
+            <li><a href="https://maahsho.com/nobat/" target="_blank" rel="noopener">ماهشو — درخواست نوبت و ارسال به سالن</a></li>
+            <li><a href="https://maahsho.com/prosho/personnel/" target="_blank" rel="noopener">ماهشو — زرین‌پال برای خرید تبلیغ خود پلتفرم</a></li>
+            <li><a href="https://neginaplatform.com/" target="_blank" rel="noopener">نگینا — پرداخت فقط در محل سالن</a></li>
+            <li><a href="https://salibook.com/" target="_blank" rel="noopener">نوبات / سالی‌بوک — رزرو و تأیید فوری</a></li>
+            <li><a href="https://nobatix.ir/" target="_blank" rel="noopener">نوبتیکس — رزرو فوری سالن</a></li>
+            <li><a href="https://farimaahsalon.ir/reservation/" target="_blank" rel="noopener">فرمیمه — فلو OTP، بیعانه و درگاه</a></li>
+            <li><a href="https://layanbeauty.ir/reservation/" target="_blank" rel="noopener">لایان — انتخاب زمان و تأیید/پرداخت</a></li>
+            <li><a href="https://achareh.co/terms" target="_blank" rel="noopener">آچاره — اعتبار، پرداخت نقدی/آنلاین و تسویه متخصص</a></li>
+            <li><a href="https://achareh.co/faq" target="_blank" rel="noopener">آچاره — FAQ بیعانه و پرداخت پس از خدمت</a></li>
+            <li><a href="https://homeservize.com/privacy-policy-hamyar" target="_blank" rel="noopener">هوم‌سرویز — احراز همیار، کمیسیون و پرداخت</a></li>
+            <li><a href="https://bcall.ir/terms-and-conditions" target="_blank" rel="noopener">بی‌کال — قوانین ثبت بیعانه در پلتفرم</a></li>
+            <li><a href="https://nextpay.org/faq/" target="_blank" rel="noopener">نکست‌پی — تسویه خودکار، تسویه به شبا و API تسهیم</a></li>
+            <li><a href="https://nextpay.org/nx/docs" target="_blank" rel="noopener">نکست‌پی — مستندات API درگاه و تسهیم</a></li>
+            <li><a href="https://3pal.ir/" target="_blank" rel="noopener">سپال — درگاه اختصاصی، احراز و تسویه خودکار</a></li>
+            <li><a href="https://3pal.ir/static/api-pay" target="_blank" rel="noopener">سپال — request، callback و verify</a></li>
+            <li><a href="https://help.zibal.ir/article/multiplexing-guide/" target="_blank" rel="noopener">زیبال — راهنمای رسمی Multiplexing</a></li>
+          </ul>
+          <p class="footer">این گزارش محصولی/فنی است؛ مدل حقوقی و مالی تسویه باید قبل از دریافت پول به‌حساب پلتفرم جداگانه بررسی شود.</p>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

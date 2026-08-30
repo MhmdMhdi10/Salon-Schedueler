@@ -116,6 +116,11 @@ const FunnelTenantTheme = lazy(() =>
 const NotFoundPage = lazy(() =>
   import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })),
 );
+const MarketplaceUnavailablePage = lazy(() =>
+  import('./pages/MarketplaceUnavailablePage').then((m) => ({
+    default: m.MarketplaceUnavailablePage,
+  })),
+);
 
 // Admin surfaces are served by the owner panel (see pages/owner), which adds
 // auth bootstrap + per-role route guards. The legacy `/admin/*` paths redirect
@@ -341,10 +346,11 @@ export function App() {
                       {/* Public salon profile (indexable) */}
                       <Route path="/s/:slug" element={<SalonProfilePage />} />
 
-                      {/* Marketplace is intentionally unavailable at launch. */}
-                      <Route path="/city/:city" element={<Navigate to="/" replace />} />
-                      <Route path="/services/:type" element={<Navigate to="/" replace />} />
-                      <Route path="/search" element={<Navigate to="/" replace />} />
+                      {/* Marketplace is intentionally unavailable at launch, but a
+                       * customer should still get a clear next action. */}
+                      <Route path="/city/:city" element={<MarketplaceUnavailablePage />} />
+                      <Route path="/services/:type" element={<MarketplaceUnavailablePage />} />
+                      <Route path="/search" element={<MarketplaceUnavailablePage />} />
 
                       {/* Public trust & legal pages (indexable) */}
                       <Route path="/about" element={<AboutPage />} />

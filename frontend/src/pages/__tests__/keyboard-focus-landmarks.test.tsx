@@ -161,16 +161,19 @@ describe('Heading audit — customer funnel pages (single <h1>, ordered levels)'
     expectSingleH1AndOrderedHeadings(getByTestId('auth-page'));
   });
 
-  it('QrLandingPage (resolved) has a single <h1>', async () => {
+  it('a resolved QR entry opens the service-selection page', async () => {
     const { findByTestId } = render(
       wrap(
         <Routes>
           <Route path="/qr/:payload" element={<QrLandingPage />} />
+          <Route path="/salon/:salonId/book" element={<AvailabilityPage />} />
         </Routes>,
         '/qr/abc123',
       ),
     );
-    expectSingleH1AndOrderedHeadings(await findByTestId('qr-landing'));
+    const root = await findByTestId('availability-page');
+    await screen.findByText('کوتاهی مو');
+    expectSingleH1AndOrderedHeadings(root);
   });
 
   it('AvailabilityPage has a single <h1> with ordered section <h2>s', async () => {

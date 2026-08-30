@@ -84,6 +84,7 @@ const sampleAppointment: AppointmentInfo = {
   customerName: 'علی محمدی',
   serviceName: 'کوتاهی مو',
   startAt: new Date('2024-06-15T10:00:00Z'),
+  timezone: 'Asia/Tehran',
   staffName: 'حسین',
 };
 
@@ -145,14 +146,64 @@ describe('NotificationService', () => {
       expect(sms.calls[0].message).toContain('رزرو جدید سالن آرا');
       expect(sms.calls[0].message).toContain('منتظر تأیید شما');
     });
+
+    it('uses salon timezone for date and time in booking SMS', async () => {
+      const sms = createMockSmsProvider();
+      const repo = createMockRepository({
+        findAppointment: async () => ({
+          ...sampleAppointment,
+          startAt: new Date('2026-08-29T12:45:00Z'),
+        }),
+        findSalonSmsRecipients: async () => ['09120000000'],
+      });
+      const service = new NotificationService(sms, createMockPushProvider(), repo);
+
+      await service.sendSalonBookingNotice('appt-1', 'pending');
+
+      expect(sms.calls[0].message).toContain('تاریخ ۱۴۰۵/۶/۷ ساعت ۱۶:۱۵');
+    });
+  });
+
+  describe('sendRescheduleProposal', () => {
+    it('formats both the previous and proposed time in the salon timezone', async () => {
+      const sms = createMockSmsProvider();
+      const repo = createMockRepository({
+        findAppointment: async () => sampleAppointment,
+      });
+      const service = new NotificationService(sms, createMockPushProvider(), repo);
+
+      await service.sendRescheduleProposal(
+        'appt-1',
+        new Date('2026-08-29T12:45:00Z'),
+        new Date('2026-08-30T08:00:00Z'),
+      );
+
+      expect(sms.calls).toHaveLength(1);
+      expect(sms.calls[0].message).toContain(
+        'از ۱۴۰۵/۶/۷ ساعت ۱۶:۱۵ به ۱۴۰۵/۶/۸ ساعت ۱۱:۳۰',
+      );
+      expect(repo.logs[0]).toMatchObject({
+        appointmentId: 'appt-1',
+        channel: 'sms',
+        type: 'generic',
+        status: 'sent',
+      });
+    });
   });
 
   describe('Melli Payamak shared templates', () => {
-    const dateStr = sampleAppointment.startAt.toLocaleDateString('fa-IR');
-    const timeStr = sampleAppointment.startAt.toLocaleTimeString('fa-IR', {
+    const dateStr = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+      timeZone: 'Asia/Tehran',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+    }).format(sampleAppointment.startAt);
+    const timeStr = new Intl.DateTimeFormat('fa-IR', {
+      timeZone: 'Asia/Tehran',
       hour: '2-digit',
       minute: '2-digit',
-    });
+      hourCycle: 'h23',
+    }).format(sampleAppointment.startAt);
 
     it('sends confirmation using approved bodyId and positional args', async () => {
       const sms = createMockSmsProvider();

@@ -110,10 +110,17 @@ export class CalendarService {
       where: {
         salonId,
         status: 'pending',
-        ...(staffMemberId ? { staffMemberId } : {}),
+        ...(staffMemberId
+          ? {
+              OR: [
+                { staffMemberId },
+                { service: { approvalStaffId: staffMemberId } },
+              ],
+            }
+          : {}),
       },
       include: {
-        service: { select: { name: true } },
+        service: { select: { name: true, approvalStaffId: true } },
         customer: { select: { fullName: true, phone: true } },
         staffMember: { select: { fullName: true } },
       },

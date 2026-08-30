@@ -3,7 +3,7 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { CalendarClock, Clock, CreditCard, MapPin, Scissors, Store } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { bookingApi, customerApi, getAccessToken, salonApi } from '../api/client';
+import { bookingApi, customerApi, getAccessToken, getApiErrorMessage, salonApi } from '../api/client';
 import { SeoHead } from '../components/seo';
 import { FunnelShell } from '../components/layout';
 import { readSalonName } from '../utils/salonName';
@@ -16,6 +16,7 @@ import {
   Skeleton,
   Spinner,
   TextField,
+  Textarea,
   toPersianDigits,
 } from '../components/ui';
 
@@ -27,6 +28,8 @@ interface ConfirmSelection {
   preferredStaffId?: string;
   locationType?: 'salon' | 'customer';
   locationAddress?: string;
+  customerNote?: string;
+  durationMinutes?: number;
 }
 
 /** A bookable service as returned by the salon services endpoint (unchanged contract). */
@@ -35,6 +38,13 @@ interface Service {
   name: string;
   durationMinutes: number;
   priceRial: number;
+  durationMode?: 'fixed' | 'variable';
+  minDurationMinutes?: number | null;
+  maxDurationMinutes?: number | null;
+  requiresDeposit?: boolean;
+  depositMethod?: 'gateway' | 'card_transfer' | 'cash' | null;
+  depositType?: 'fixed' | 'percentage';
+  depositPercent?: number | null;
 }
 
 /** Async status for loading the chosen service's summary details. */
@@ -103,6 +113,7 @@ export function BookingConfirmPage() {
   const [service, setService] = useState<Service | null>(null);
   const [detailsStatus, setDetailsStatus] = useState<DetailsStatus>('loading');
   const [confirmStatus, setConfirmStatus] = useState<ConfirmStatus>('idle');
+  const [confirmError, setConfirmError] = useState('');
   const [profileStatus, setProfileStatus] = useState<'idle' | 'loading' | 'ready'>('idle');
   const [customerName, setCustomerName] = useState('');
   const [nameRequired, setNameRequired] = useState(false);
@@ -110,6 +121,11 @@ export function BookingConfirmPage() {
   const [profileError, setProfileError] = useState('');
   const [locationAddress, setLocationAddress] = useState(state?.locationAddress ?? '');
   const [locationError, setLocationError] = useState('');
+  const [customerNote, setCustomerNote] = useState(state?.customerNote ?? '');
+  const [requestedDuration, setRequestedDuration] = useState(
+    state?.durationMinutes ? String(state.durationMinutes) : '',
+  );
+  const [durationError, setDurationError] = useState('');
 
   const redirectedToAuthRef = useRef(false);
   const profileCheckedRef = useRef(false);
@@ -152,6 +168,9 @@ export function BookingConfirmPage() {
           return;
         }
         setService(found);
+        if (found.durationMode === 'variable' && !requestedDuration) {
+          setRequestedDuration(String(found.minDurationMinutes ?? found.durationMinutes));
+        }
         setDetailsStatus('ready');
       })
       .catch(() => setDetailsStatus('error'));
@@ -185,7 +204,12 @@ export function BookingConfirmPage() {
         response = await customerApi.getProfile();
       } catch (error) {
         setProfileStatus('ready');
-        setProfileError(t('booking.profileError', { defaultValue: 'ذخیره اطلاعات مشتری انجام نشد؛ دوباره تلاش کنید.' }));
+        setProfileError(
+          getApiErrorMessage(
+            error,
+            t('booking.profileError', { defaultValue: 'ذخیره اطلاعات مشتری انجام نشد؛ دوباره تلاش کنید.' }),
+          ),
+        );
         throw error;
       }
       const savedName = response.customer.fullName?.trim() ?? '';
@@ -214,7 +238,12 @@ export function BookingConfirmPage() {
       response = await customerApi.updateProfile(normalizedName);
     } catch (error) {
       setProfileStatus('ready');
-      setProfileError(t('booking.profileError', { defaultValue: 'ذخیره اطلاعات مشتری انجام نشد؛ دوباره تلاش کنید.' }));
+      setProfileError(
+        getApiErrorMessage(
+          error,
+          t('booking.profileError', { defaultValue: 'ذخیره اطلاعات مشتری انجام نشد؛ دوباره تلاش کنید.' }),
+        ),
+      );
       throw error;
     }
     setCustomerName(response.customer.fullName?.trim() ?? normalizedName);
@@ -241,7 +270,30 @@ export function BookingConfirmPage() {
       );
       return;
     }
+    let durationMinutes: number | undefined;
+    if (service?.durationMode === 'variable') {
+      durationMinutes = Number(requestedDuration);
+      const min = service.minDurationMinutes ?? service.durationMinutes;
+      const max = service.maxDurationMinutes ?? min;
+      if (!Number.isInteger(durationMinutes) || durationMinutes < min || durationMinutes > max) {
+        setDurationError(
+          t('booking.durationError', {
+            defaultValue: `مدت باید بین ${min} تا ${max} دقیقه باشد.`,
+            min,
+            max,
+          }),
+        );
+        return;
+      }
+    }
+    if (customerNote.trim().length > 1000) {
+      setConfirmError('توضیحات باید حداکثر ۱۰۰۰ کاراکتر باشد.');
+      setConfirmStatus('idle');
+      return;
+    }
+    setDurationError('');
     setLocationError('');
+    setConfirmError('');
     setConfirmStatus('submitting');
     try {
       if (!(await ensureCustomerProfile())) return;
@@ -254,6 +306,8 @@ export function BookingConfirmPage() {
         ...(bookingLocation === 'customer'
           ? { locationType: 'customer' as const, locationAddress: locationAddress.trim() }
           : {}),
+        ...(customerNote.trim() ? { customerNote: customerNote.trim() } : {}),
+        ...(durationMinutes !== undefined ? { durationMinutes } : {}),
       });
 
       if (result.status === 'held' && result.deposit?.method === 'card_transfer') {
@@ -262,6 +316,7 @@ export function BookingConfirmPage() {
             ? String((result.appointment as { id: string }).id)
             : '';
         if (!appointmentId) {
+          setConfirmError('شناسهٔ رزرو از سرور دریافت نشد؛ دوباره تلاش کن.');
           setConfirmStatus('error');
           return;
         }
@@ -291,6 +346,7 @@ export function BookingConfirmPage() {
           },
         });
       } else {
+        setConfirmError('وضعیت رزرو از سرور قابل تشخیص نبود؛ دوباره تلاش کن.');
         setConfirmStatus('error');
       }
     } catch (err) {
@@ -307,11 +363,14 @@ export function BookingConfirmPage() {
               locationType: bookingLocation,
               locationAddress:
                 bookingLocation === 'customer' ? locationAddress : undefined,
+              customerNote: customerNote.trim() || undefined,
+              durationMinutes,
             },
           },
         });
         return;
       }
+      setConfirmError(getApiErrorMessage(err, t('booking.confirmErrorBody')));
       setConfirmStatus('error');
     }
   };
@@ -343,6 +402,14 @@ export function BookingConfirmPage() {
   }
 
   const time = toPersianDigits(timeLabel(state.startAt));
+  const depositNotice =
+    service?.requiresDeposit === false
+      ? t('booking.noDepositNotice', { defaultValue: 'برای این خدمت بیعانه‌ای لازم نیست.' })
+      : service?.depositMethod === 'cash'
+        ? t('booking.cashDepositNotice', { defaultValue: 'بیعانه در محل سالن دریافت می‌شود.' })
+        : service?.depositMethod === 'card_transfer'
+          ? t('booking.cardTransferDepositNotice', { defaultValue: 'روش پرداخت بیعانه پس از ثبت رزرو به شما اعلام می‌شود.' })
+          : t('booking.depositNotice');
 
   // Sticky CTA button rendered in FunnelShell's thumb-zone bar
   const ctaButton = (
@@ -463,7 +530,7 @@ export function BookingConfirmPage() {
                     {t('booking.priceLabel')}
                   </dt>
                   <dd className="text-base font-bold text-text">
-                    <Money amountRial={service.priceRial} />
+                    <Money amountRial={service.priceRial} unit="toman" />
                   </dd>
                 </div>
 
@@ -502,7 +569,7 @@ export function BookingConfirmPage() {
               {/* Deposit/payment notice */}
               <div className="border-t border-dashed border-border px-4 py-4 sm:px-6">
                 <p className="rounded-md bg-surface p-3 text-xs text-muted">
-                  {t('booking.depositNotice')}
+                  {depositNotice}
                 </p>
               </div>
             </motion.div>
@@ -522,7 +589,7 @@ export function BookingConfirmPage() {
                 </h2>
                 <p className="mt-1 text-sm text-muted">
                   {t('booking.locationAddressHint', {
-                    defaultValue: 'آدرس دقیق محل حضور شما را برای آرایشگر بنویسید.',
+                    defaultValue: 'آدرس دقیق محل حضور شما را برای عضو تیم بنویسید.',
                   })}
                 </p>
               </div>
@@ -579,6 +646,56 @@ export function BookingConfirmPage() {
           </section>
         )}
 
+        {detailsStatus === 'ready' && service?.durationMode === 'variable' && (
+          <section
+            aria-labelledby="booking-duration-title"
+            className="rounded-lg border border-border bg-elevated p-4 shadow-2 sm:p-5"
+          >
+            <h2 id="booking-duration-title" className="text-base font-bold text-text">
+              {t('booking.durationTitle', { defaultValue: 'مدت موردنیاز' })}
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              {t('booking.durationHint', {
+                defaultValue: 'برای این خدمت زمان متغیر است؛ مدت واقعی را انتخاب کنید.',
+              })}
+            </p>
+            <TextField
+              className="mt-3"
+              label={t('booking.durationLabel', { defaultValue: 'مدت (دقیقه)' })}
+              value={requestedDuration}
+              onChange={(event) => {
+                setRequestedDuration(event.target.value.replace(/\D/g, ''));
+                setDurationError('');
+              }}
+              inputMode="numeric"
+              dir="ltr"
+              error={durationError}
+              helperText={!durationError ? `${service.minDurationMinutes ?? service.durationMinutes} تا ${service.maxDurationMinutes ?? service.durationMinutes} دقیقه` : undefined}
+            />
+          </section>
+        )}
+
+        <section
+          aria-labelledby="booking-note-title"
+          className="rounded-lg border border-border bg-elevated p-4 shadow-2 sm:p-5"
+        >
+          <h2 id="booking-note-title" className="text-base font-bold text-text">
+            {t('booking.noteTitle', { defaultValue: 'توضیحات برای سالن' })}
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            {t('booking.noteHint', { defaultValue: 'اگر نکته‌ای دربارهٔ خدمت یا شرایط خود داری، اینجا بنویس.' })}
+          </p>
+          <Textarea
+            className="mt-3"
+            label={t('booking.noteLabel', { defaultValue: 'توضیحات (اختیاری)' })}
+            value={customerNote}
+            onChange={(event) => setCustomerNote(event.target.value)}
+            maxLength={1000}
+            rows={4}
+            helperText={`${customerNote.length.toLocaleString('fa-IR')} / ۱۰۰۰`}
+          />
+        </section>
+
         {/* Explicit payment-redirect surface */}
         {confirmStatus === 'redirecting' && (
           <p
@@ -595,7 +712,7 @@ export function BookingConfirmPage() {
         {confirmStatus === 'error' && (
           <ErrorState
             title={t('booking.confirmErrorTitle')}
-            description={t('booking.confirmErrorBody')}
+            description={confirmError || t('booking.confirmErrorBody')}
             retryLabel={t('common.retry')}
             onRetry={handleConfirm}
           />

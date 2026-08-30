@@ -9,6 +9,7 @@ import {
   ChevronDown,
   Clock,
   CreditCard,
+  Package,
   Plus,
   Scissors,
   Trash2,
@@ -23,13 +24,16 @@ import {
   staffApi,
   staffAvailabilityApi,
   ApiError,
+  getApiErrorMessage,
   type SalonStaff,
   type DepositSettings,
   type SmsSettings,
+  type SalonEquipment,
   type StaffRole,
   type StaffUpdateInput,
 } from '../../api/client';
 import { useSalonId } from '../../auth/useSalonId';
+import { filterPhoneInput, normalizePhone } from '../../auth/phone';
 import { usePagination } from '../../hooks/usePagination';
 import { SeoHead } from '../../components/seo';
 import {
@@ -85,29 +89,47 @@ interface ServiceItem {
   id: string;
   name: string;
   durationMinutes: number;
+  durationMode?: 'fixed' | 'variable';
+  minDurationMinutes?: number | null;
+  maxDurationMinutes?: number | null;
   bufferMinutes?: number;
   priceRial: number;
   requiresDeposit?: boolean;
   depositRial?: number | null;
+  depositType?: 'fixed' | 'percentage';
+  depositPercent?: number | null;
+  approvalStaffId?: string | null;
   staffIds?: string[];
 }
 
 interface ServiceDraft {
   name: string;
   durationMinutes: string;
+  durationMode: 'fixed' | 'variable';
+  minDurationMinutes: string;
+  maxDurationMinutes: string;
   bufferMinutes: string;
   priceRial: string;
   requiresDeposit: boolean;
   depositRial: string;
+  depositType: 'fixed' | 'percentage';
+  depositPercent: string;
+  approvalStaffId: string;
 }
 
 type ServicePatch = {
   name: string;
   durationMinutes: number;
+  durationMode: 'fixed' | 'variable';
+  minDurationMinutes: number | null;
+  maxDurationMinutes: number | null;
   bufferMinutes: number;
   priceRial: number;
   requiresDeposit: boolean;
   depositRial: number | null;
+  depositType: 'fixed' | 'percentage';
+  depositPercent: number | null;
+  approvalStaffId: string | null;
 };
 
 const DEFAULT_SMS_SETTINGS: SmsSettings = {
@@ -185,10 +207,16 @@ function serviceDraftFrom(service: ServiceItem): ServiceDraft {
   return {
     name: service.name,
     durationMinutes: String(service.durationMinutes),
+    durationMode: service.durationMode === 'variable' ? 'variable' : 'fixed',
+    minDurationMinutes: String(service.minDurationMinutes ?? service.durationMinutes),
+    maxDurationMinutes: String(service.maxDurationMinutes ?? service.durationMinutes),
     bufferMinutes: String(service.bufferMinutes ?? 0),
-    priceRial: String(service.priceRial),
+    priceRial: String(Math.floor(service.priceRial / 10)),
     requiresDeposit: service.requiresDeposit === true,
-    depositRial: service.depositRial == null ? '' : String(service.depositRial),
+    depositRial: service.depositRial == null ? '' : String(Math.floor(service.depositRial / 10)),
+    depositType: service.depositType === 'percentage' ? 'percentage' : 'fixed',
+    depositPercent: service.depositPercent == null ? '' : String(service.depositPercent),
+    approvalStaffId: service.approvalStaffId ?? 'auto',
   };
 }
 
@@ -362,7 +390,7 @@ function StaffSection({
       setFormError(t('admin.config.staff.nameRequired'));
       return;
     }
-    const trimmedPhone = phone.trim();
+    const trimmedPhone = normalizePhone(phone);
     if (trimmedPhone && !STAFF_PHONE_RE.test(trimmedPhone)) {
       setFormError(t('admin.config.staff.invalidPhone'));
       return;
@@ -641,8 +669,9 @@ function StaffSection({
           inputMode="tel"
           dir="ltr"
           autoComplete="off"
+          maxLength={14}
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={(e) => setPhone(filterPhoneInput(e.target.value))}
         />
         {formError && (
           <p role="alert" className="text-sm text-danger">
@@ -681,10 +710,16 @@ function ServicesSection({
   onAdd: (service: {
     name: string;
     durationMinutes: number;
+    durationMode: 'fixed' | 'variable';
+    minDurationMinutes: number | null;
+    maxDurationMinutes: number | null;
     bufferMinutes: number;
     priceRial: number;
     requiresDeposit: boolean;
     depositRial: number | null;
+    depositType: 'fixed' | 'percentage';
+    depositPercent: number | null;
+    approvalStaffId: string | null;
   }) => Promise<void>;
   onRemove: (id: string) => void;
   requestDelete: (state: DeleteState) => void;
@@ -692,9 +727,15 @@ function ServicesSection({
   const { t } = useTranslation();
   const [name, setName] = useState('');
   const [duration, setDuration] = useState('');
+  const [durationMode, setDurationMode] = useState<'fixed' | 'variable'>('fixed');
+  const [minDuration, setMinDuration] = useState('');
+  const [maxDuration, setMaxDuration] = useState('');
   const [price, setPrice] = useState('');
   const [requiresDeposit, setRequiresDeposit] = useState(false);
   const [deposit, setDeposit] = useState('');
+  const [depositType, setDepositType] = useState<'fixed' | 'percentage'>('fixed');
+  const [depositPercent, setDepositPercent] = useState('');
+  const [approvalStaffId, setApprovalStaffId] = useState('auto');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, ServiceDraft>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -707,13 +748,28 @@ function ServicesSection({
     goToPage,
   } = usePagination(services, 6);
   const eligibleStaff = staff.filter((member) => member.active && member.role !== 'Admin');
+  const approvalStaff = staff.filter(
+    (member) =>
+      member.active &&
+      (member.role !== 'Stylist' || member.canApproveOwnAppointments === true),
+  );
+  const approvalOptions = [
+    { value: 'auto', label: 'طبق سیاست سالن و عضو انجام‌دهنده' },
+    ...approvalStaff.map((member) => ({
+      value: member.id,
+      label: `${member.fullName ?? member.id}${member.role === 'Admin' ? ' (مدیر)' : ''}`,
+    })),
+  ];
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const trimmed = name.trim();
     const durationMinutes = wholeNumber(duration);
-    const priceRial = wholeNumber(price);
-    const depositRial = wholeNumber(deposit);
+    const priceRial = wholeNumber(price) * 10;
+    const depositRial = wholeNumber(deposit) * 10;
+    const minDurationMinutes = wholeNumber(minDuration) || durationMinutes;
+    const maxDurationMinutes = wholeNumber(maxDuration) || minDurationMinutes;
+    const percent = wholeNumber(depositPercent);
     if (!trimmed) {
       setFormError('نام خدمت را وارد کنید.');
       return;
@@ -722,8 +778,16 @@ function ServicesSection({
       setFormError('مدت خدمت باید بین ۵ تا ۴۸۰ دقیقه باشد.');
       return;
     }
-    if (requiresDeposit && depositRial <= 0) {
+    if (durationMode === 'variable' && (maxDurationMinutes < minDurationMinutes || maxDurationMinutes > 480)) {
+      setFormError('حداکثر مدت باید از حداقل مدت بیشتر و حداکثر ۴۸۰ دقیقه باشد.');
+      return;
+    }
+    if (requiresDeposit && depositType === 'fixed' && depositRial <= 0) {
       setFormError('مبلغ بیعانه را وارد کنید.');
+      return;
+    }
+    if (requiresDeposit && depositType === 'percentage' && (percent < 1 || percent > 100)) {
+      setFormError('درصد بیعانه باید بین ۱ تا ۱۰۰ باشد.');
       return;
     }
     setFormError('');
@@ -731,16 +795,28 @@ function ServicesSection({
       await onAdd({
         name: trimmed,
         durationMinutes,
+        durationMode,
+        minDurationMinutes: durationMode === 'variable' ? minDurationMinutes : null,
+        maxDurationMinutes: durationMode === 'variable' ? maxDurationMinutes : null,
         bufferMinutes: 0,
         priceRial,
         requiresDeposit,
-        depositRial: requiresDeposit ? depositRial : null,
+        depositRial: requiresDeposit && depositType === 'fixed' ? depositRial : null,
+        depositType,
+        depositPercent: requiresDeposit && depositType === 'percentage' ? percent : null,
+        approvalStaffId: approvalStaffId === 'auto' ? null : approvalStaffId,
       });
       setName('');
       setDuration('');
+      setDurationMode('fixed');
+      setMinDuration('');
+      setMaxDuration('');
       setPrice('');
       setRequiresDeposit(false);
       setDeposit('');
+      setDepositType('fixed');
+      setDepositPercent('');
+      setApprovalStaffId('auto');
     } catch {
       // Parent owns the server error toast; keep values so retry is possible.
     }
@@ -766,8 +842,11 @@ function ServicesSection({
     const nameValue = draft.name.trim();
     const durationMinutes = wholeNumber(draft.durationMinutes);
     const bufferMinutes = wholeNumber(draft.bufferMinutes);
-    const priceRial = wholeNumber(draft.priceRial);
-    const depositRial = wholeNumber(draft.depositRial);
+    const priceRial = wholeNumber(draft.priceRial) * 10;
+    const depositRial = wholeNumber(draft.depositRial) * 10;
+    const minDurationMinutes = wholeNumber(draft.minDurationMinutes) || durationMinutes;
+    const maxDurationMinutes = wholeNumber(draft.maxDurationMinutes) || minDurationMinutes;
+    const percent = wholeNumber(draft.depositPercent);
     if (!nameValue) {
       setFormError('نام خدمت را وارد کنید.');
       return;
@@ -780,8 +859,16 @@ function ServicesSection({
       setFormError('فاصله بین نوبت‌ها باید بین ۰ تا ۱۲۰ دقیقه باشد.');
       return;
     }
-    if (draft.requiresDeposit && depositRial <= 0) {
+    if (draft.durationMode === 'variable' && (maxDurationMinutes < minDurationMinutes || maxDurationMinutes > 480)) {
+      setFormError('حداکثر مدت باید از حداقل مدت بیشتر و حداکثر ۴۸۰ دقیقه باشد.');
+      return;
+    }
+    if (draft.requiresDeposit && draft.depositType === 'fixed' && depositRial <= 0) {
       setFormError('مبلغ بیعانه را وارد کنید.');
+      return;
+    }
+    if (draft.requiresDeposit && draft.depositType === 'percentage' && (percent < 1 || percent > 100)) {
+      setFormError('درصد بیعانه باید بین ۱ تا ۱۰۰ باشد.');
       return;
     }
     setFormError('');
@@ -790,10 +877,16 @@ function ServicesSection({
       await onUpdate(service.id, {
         name: nameValue,
         durationMinutes,
+        durationMode: draft.durationMode,
+        minDurationMinutes: draft.durationMode === 'variable' ? minDurationMinutes : null,
+        maxDurationMinutes: draft.durationMode === 'variable' ? maxDurationMinutes : null,
         bufferMinutes,
         priceRial,
         requiresDeposit: draft.requiresDeposit,
-        depositRial: draft.requiresDeposit ? depositRial : null,
+        depositRial: draft.requiresDeposit && draft.depositType === 'fixed' ? depositRial : null,
+        depositType: draft.depositType,
+        depositPercent: draft.requiresDeposit && draft.depositType === 'percentage' ? percent : null,
+        approvalStaffId: draft.approvalStaffId === 'auto' ? null : draft.approvalStaffId,
       });
       setEditingId(null);
     } finally {
@@ -808,9 +901,9 @@ function ServicesSection({
           <Users className="h-5 w-5" aria-hidden="true" />
         </span>
         <div className="min-w-0">
-          <p className="m-0 text-sm font-bold text-text">هر خدمت را به آرایشگرهایش وصل کن</p>
-          <p className="mt-1 text-xs leading-6 text-muted">
-            برای هر خدمت یک یا چند آرایشگر انتخاب کن تا هنگام رزرو فقط افراد مرتبط نمایش داده شوند.
+        <p className="m-0 text-sm font-bold text-text">هر خدمت را به اعضای تیمش وصل کن</p>
+        <p className="mt-1 text-xs leading-6 text-muted">
+            برای هر خدمت یک یا چند عضو تیم انتخاب کن تا هنگام رزرو فقط افراد مرتبط نمایش داده شوند.
           </p>
         </div>
       </div>
@@ -846,13 +939,12 @@ function ServicesSection({
                     <Clock className="h-3.5 w-3.5" aria-hidden="true" />
                     {t('booking.durationMinutes', { count: service.durationMinutes })}
                   </span>
-                  <Money amountRial={service.priceRial} className="font-medium text-text" />
-                  {service.requiresDeposit && service.depositRial != null && (
+                  <Money amountRial={service.priceRial} unit="toman" className="font-medium text-text" />
+                  {service.requiresDeposit && (service.depositType === 'percentage' || service.depositRial != null) && (
                     <span className="font-medium text-primary">
-                      {t('admin.config.services.depositSummary', {
-                        amount: service.depositRial.toLocaleString('fa-IR'),
-                        defaultValue: 'بیعانه {{amount}} ریال',
-                      })}
+                      {service.depositType === 'percentage'
+                        ? `بیعانه ${service.depositPercent ?? 0}٪`
+                        : `بیعانه ${Math.floor((service.depositRial ?? 0) / 10).toLocaleString('fa-IR')} تومان`}
                     </span>
                   )}
                 </span>
@@ -865,7 +957,7 @@ function ServicesSection({
                           eligibleStaff.some((member) => member.id === staffId),
                         ).length ?? 0
                       ).toLocaleString('fa-IR')}{' '}
-                      آرایشگر متصل
+                      عضو تیم متصل
                     </span>
                   </span>
                   <button
@@ -880,7 +972,7 @@ function ServicesSection({
                     )}
                   >
                     <Users className="h-4 w-4" aria-hidden="true" />
-                    {editingId === service.id ? 'بستن' : 'انتخاب آرایشگر'}
+                    {editingId === service.id ? 'بستن' : 'انتخاب عضو تیم'}
                     <ChevronDown
                       className={cn(
                         'h-4 w-4 transition-transform duration-fast',
@@ -916,32 +1008,88 @@ function ServicesSection({
                         onChange={(event) => updateDraft(service.id, { bufferMinutes: event.target.value })}
                       />
                       <TextField
-                        label="قیمت (ریال)"
+                        label="قیمت (تومان)"
                         inputMode="numeric"
                         dir="ltr"
-                        value={drafts[service.id]?.priceRial ?? String(service.priceRial)}
+                        value={drafts[service.id]?.priceRial ?? String(Math.floor(service.priceRial / 10))}
                         onChange={(event) => updateDraft(service.id, { priceRial: event.target.value })}
                       />
                     </div>
+                    <Select
+                      label="نوع زمان‌بندی"
+                      value={drafts[service.id]?.durationMode ?? service.durationMode ?? 'fixed'}
+                      onValueChange={(value) => updateDraft(service.id, { durationMode: value as ServiceDraft['durationMode'] })}
+                      options={[
+                        { value: 'fixed', label: 'زمان ثابت' },
+                        { value: 'variable', label: 'زمان متغیر' },
+                      ]}
+                    />
+                    {(drafts[service.id]?.durationMode ?? service.durationMode ?? 'fixed') === 'variable' && (
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <TextField
+                          label="حداقل زمان (دقیقه)"
+                          inputMode="numeric"
+                          dir="ltr"
+                          value={drafts[service.id]?.minDurationMinutes ?? String(service.minDurationMinutes ?? service.durationMinutes)}
+                          onChange={(event) => updateDraft(service.id, { minDurationMinutes: event.target.value })}
+                        />
+                        <TextField
+                          label="حداکثر زمان (دقیقه)"
+                          inputMode="numeric"
+                          dir="ltr"
+                          value={drafts[service.id]?.maxDurationMinutes ?? String(service.maxDurationMinutes ?? service.durationMinutes)}
+                          onChange={(event) => updateDraft(service.id, { maxDurationMinutes: event.target.value })}
+                        />
+                      </div>
+                    )}
                     <Switch
                       checked={drafts[service.id]?.requiresDeposit ?? service.requiresDeposit === true}
                       onCheckedChange={(value) => updateDraft(service.id, { requiresDeposit: value })}
                       label="دریافت بیعانه"
                     />
                     {(drafts[service.id]?.requiresDeposit ?? service.requiresDeposit === true) && (
-                      <TextField
-                        label="مبلغ بیعانه (ریال)"
-                        inputMode="numeric"
-                        dir="ltr"
-                        value={drafts[service.id]?.depositRial ?? String(service.depositRial ?? '')}
-                        onChange={(event) => updateDraft(service.id, { depositRial: event.target.value })}
-                      />
+                      <>
+                        <Select
+                          label="نوع بیعانه"
+                          value={drafts[service.id]?.depositType ?? service.depositType ?? 'fixed'}
+                          onValueChange={(value) => updateDraft(service.id, { depositType: value as ServiceDraft['depositType'] })}
+                          options={[
+                            { value: 'fixed', label: 'مبلغ ثابت (تومان)' },
+                            { value: 'percentage', label: 'درصدی از هزینه' },
+                          ]}
+                        />
+                        {(drafts[service.id]?.depositType ?? service.depositType ?? 'fixed') === 'percentage' ? (
+                          <TextField
+                            label="درصد بیعانه"
+                            inputMode="numeric"
+                            dir="ltr"
+                            value={drafts[service.id]?.depositPercent ?? String(service.depositPercent ?? '')}
+                            onChange={(event) => updateDraft(service.id, { depositPercent: event.target.value })}
+                            helperText="بین ۱ تا ۱۰۰ درصد"
+                          />
+                        ) : (
+                          <TextField
+                            label="مبلغ بیعانه (تومان)"
+                            inputMode="numeric"
+                            dir="ltr"
+                            value={drafts[service.id]?.depositRial ?? String(service.depositRial == null ? '' : Math.floor(service.depositRial / 10))}
+                            onChange={(event) => updateDraft(service.id, { depositRial: event.target.value })}
+                          />
+                        )}
+                      </>
                     )}
+                    <Select
+                      label="مسئول تأیید رزرو این خدمت"
+                      value={drafts[service.id]?.approvalStaffId ?? service.approvalStaffId ?? 'auto'}
+                      onValueChange={(value) => updateDraft(service.id, { approvalStaffId: value })}
+                      options={approvalOptions}
+                      helperText="این عضو تیم پیامک رزروهای در انتظار را می‌گیرد و در صورت داشتن دسترسی می‌تواند آن‌ها را تأیید یا رد کند."
+                    />
                     <p className="m-0 text-xs font-semibold text-text">
                       چه کسی این خدمت را انجام می‌دهد؟
                     </p>
                     {eligibleStaff.length === 0 ? (
-                      <p className="m-0 text-xs text-muted">ابتدا حداقل یک آرایشگر یا صاحب سالن اضافه کن.</p>
+                      <p className="m-0 text-xs text-muted">ابتدا حداقل یک عضو تیم یا صاحب سالن اضافه کن.</p>
                     ) : (
                       <div className="grid max-h-44 gap-1 overflow-y-auto sm:grid-cols-2">
                         {eligibleStaff.map((member) => {
@@ -1040,6 +1188,35 @@ function ServicesSection({
             containerClassName="sm:flex-1"
           />
         </div>
+        <Select
+          label="نوع زمان‌بندی"
+          value={durationMode}
+          onValueChange={(value) => setDurationMode(value as 'fixed' | 'variable')}
+          options={[
+            { value: 'fixed', label: 'زمان ثابت' },
+            { value: 'variable', label: 'زمان متغیر' },
+          ]}
+        />
+        {durationMode === 'variable' && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <TextField
+              label="حداقل زمان (دقیقه)"
+              inputMode="numeric"
+              dir="ltr"
+              value={minDuration}
+              onChange={(event) => setMinDuration(event.target.value)}
+              placeholder={duration || '۳۰'}
+            />
+            <TextField
+              label="حداکثر زمان (دقیقه)"
+              inputMode="numeric"
+              dir="ltr"
+              value={maxDuration}
+              onChange={(event) => setMaxDuration(event.target.value)}
+              placeholder="۱۲۰"
+            />
+          </div>
+        )}
         <Switch
           checked={requiresDeposit}
           onCheckedChange={setRequiresDeposit}
@@ -1051,19 +1228,44 @@ function ServicesSection({
           })}
         />
         {requiresDeposit && (
-          <TextField
-            label={t('admin.config.services.depositLabel', {
-              defaultValue: 'مبلغ بیعانه (ریال)',
-            })}
-            placeholder={t('admin.config.services.depositPlaceholder', {
-              defaultValue: '۱۰۰۰۰۰',
-            })}
-            inputMode="numeric"
-            dir="ltr"
-            value={deposit}
-            onChange={(e) => setDeposit(e.target.value)}
-          />
+          <>
+            <Select
+              label="نوع بیعانه"
+              value={depositType}
+              onValueChange={(value) => setDepositType(value as 'fixed' | 'percentage')}
+              options={[
+                { value: 'fixed', label: 'مبلغ ثابت (تومان)' },
+                { value: 'percentage', label: 'درصدی از هزینه' },
+              ]}
+            />
+            {depositType === 'percentage' ? (
+              <TextField
+                label="درصد بیعانه"
+                inputMode="numeric"
+                dir="ltr"
+                value={depositPercent}
+                onChange={(e) => setDepositPercent(e.target.value)}
+                helperText="بین ۱ تا ۱۰۰ درصد"
+              />
+            ) : (
+              <TextField
+                label="مبلغ بیعانه (تومان)"
+                placeholder="۱۰۰۰۰۰"
+                inputMode="numeric"
+                dir="ltr"
+                value={deposit}
+                onChange={(e) => setDeposit(e.target.value)}
+              />
+            )}
+          </>
         )}
+        <Select
+          label="مسئول تأیید رزرو این خدمت"
+          value={approvalStaffId}
+          onValueChange={setApprovalStaffId}
+          options={approvalOptions}
+          helperText="برای رزروهای در انتظار، پیامک به این عضو تیم می‌رسد."
+        />
         <Button type="submit" startIcon={<Plus className="h-4 w-4" />} className="self-start">
           {t('admin.config.services.addCta')}
         </Button>
@@ -1117,7 +1319,7 @@ function SmsSettingsSection({
   return (
     <CollapsibleSection id="sms-settings" icon={BellRing} title="تنظیمات پیامک">
       <p className="m-0 text-sm leading-7 text-muted">
-        برای کم‌شدن پیام‌های اضافی، به‌صورت پیش‌فرض پیامک‌های کاری فقط برای آرایشگر نوبت می‌رود.
+        برای کم‌شدن پیام‌های اضافی، به‌صورت پیش‌فرض پیامک‌های کاری فقط برای عضو تیم نوبت می‌رود.
         ارسال برای صاحب سالن را از هر بخش جداگانه فعال کن.
       </p>
       <div className="grid gap-3 md:grid-cols-3">
@@ -1127,7 +1329,7 @@ function SmsSettingsSection({
             <Switch
               checked={settings[group.stylist]}
               onCheckedChange={(value) => void toggle(group.stylist, value)}
-              label="برای آرایشگر نوبت"
+              label="برای عضو تیم نوبت"
             />
             <Switch
               checked={settings[group.owner]}
@@ -1207,7 +1409,8 @@ function DepositSettingsSection({
         }}
         options={[
           { value: 'card_transfer', label: 'کارت‌به‌کارت و ارسال رسید' },
-          { value: 'gateway', label: 'پرداخت آنلاین از درگاه (به‌زودی)', disabled: true },
+          { value: 'cash', label: 'نقدی در محل' },
+          { value: 'gateway', label: 'پرداخت آنلاین از درگاه' },
         ]}
       />
       {method === 'card_transfer' && (
@@ -1247,16 +1450,22 @@ function DepositSettingsSection({
 function ChairsSection({
   chairs,
   onAdd,
+  onUpdate,
   onRemove,
   requestDelete,
 }: {
   chairs: Entry[];
   onAdd: (label: string) => Promise<void>;
+  onUpdate: (id: string, label: string) => Promise<void>;
   onRemove: (id: string) => void;
   requestDelete: (state: DeleteState) => void;
 }) {
   const { t } = useTranslation();
   const [value, setValue] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState('');
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [formError, setFormError] = useState('');
   const visibleChairs = useMemo(
     () => chairs.filter((chair) => chair.kind !== 'mobile'),
     [chairs],
@@ -1282,6 +1491,22 @@ function ChairsSection({
     }
   };
 
+  const saveEdit = async (entry: Entry) => {
+    const name = editingValue.trim();
+    if (!name) {
+      setFormError('نام صندلی را وارد کنید.');
+      return;
+    }
+    setFormError('');
+    setSavingId(entry.id);
+    try {
+      await onUpdate(entry.id, name);
+      setEditingId(null);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   return (
     <CollapsibleSection id="chairs" icon={Armchair} title={t('admin.chairs')}>
       {visibleChairs.length === 0 ? (
@@ -1298,7 +1523,40 @@ function ChairsSection({
           <AnimatedList testId="chairs-list">
             {pageItems.map((entry) => (
             <AnimatedListItem key={entry.id} id={entry.id}>
-              <span className="min-w-0 break-words text-sm text-text">{entry.label}</span>
+              {editingId === entry.id ? (
+                <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-end">
+                  <TextField
+                    label="نام صندلی"
+                    labelHidden
+                    value={editingValue}
+                    onChange={(event) => setEditingValue(event.target.value)}
+                    containerClassName="min-w-0 flex-1"
+                  />
+                  <Button
+                    type="button"
+                    size="md"
+                    loading={savingId === entry.id}
+                    disabled={savingId !== null}
+                    onClick={() => void saveEdit(entry)}
+                    startIcon={<CheckCircle2 className="h-4 w-4" />}
+                  >
+                    ذخیره
+                  </Button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="min-h-10 min-w-0 break-words rounded px-1 text-start text-sm text-text hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+                  onClick={() => {
+                    setEditingId(entry.id);
+                    setEditingValue(entry.label);
+                    setFormError('');
+                  }}
+                  aria-label={`ویرایش ${entry.label}`}
+                >
+                  {entry.label}
+                </button>
+              )}
               <IconButton
                 variant="danger"
                 aria-label={t('admin.config.removeItem', { name: entry.label })}
@@ -1316,6 +1574,7 @@ function ChairsSection({
             </AnimatedListItem>
             ))}
           </AnimatedList>
+          {formError && <p className="m-0 text-sm text-danger" role="alert">{formError}</p>}
           <Pagination
             page={page}
             pageSize={chairsPageSize}
@@ -1340,6 +1599,160 @@ function ChairsSection({
         />
         <Button type="submit" startIcon={<Plus className="h-4 w-4" />} className="shrink-0">
           {t('admin.config.chairs.addCta')}
+        </Button>
+      </form>
+    </CollapsibleSection>
+  );
+}
+
+// ─── Equipment Section ──────────────────────────────────────────────────────
+
+function EquipmentSection({
+  equipment,
+  onAdd,
+  onUpdate,
+  onRemove,
+  requestDelete,
+}: {
+  equipment: SalonEquipment[];
+  onAdd: (name: string) => Promise<void>;
+  onUpdate: (id: string, name: string) => Promise<void>;
+  onRemove: (id: string) => void;
+  requestDelete: (state: DeleteState) => void;
+}) {
+  const { t } = useTranslation();
+  const [value, setValue] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState('');
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [formError, setFormError] = useState('');
+  const {
+    page,
+    pageItems,
+    total: equipmentTotal,
+    pageSize: equipmentPageSize,
+    goToPage,
+  } = usePagination(equipment, 6);
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    const name = value.trim();
+    if (!name) return;
+    try {
+      await onAdd(name);
+      setValue('');
+    } catch {
+      // Parent owns the error toast; keep the value so retry is possible.
+    }
+  };
+
+  const saveEdit = async (item: SalonEquipment) => {
+    const name = editingValue.trim();
+    if (!name) {
+      setFormError('نام تجهیز را وارد کنید.');
+      return;
+    }
+    setFormError('');
+    setSavingId(item.id);
+    try {
+      await onUpdate(item.id, name);
+      setEditingId(null);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  return (
+    <CollapsibleSection id="equipment" icon={Package} title={t('admin.equipment')}>
+      {equipment.length === 0 ? (
+        <>
+          <ul data-testid="equipment-list" className="sr-only" aria-hidden="true" />
+          <EmptyState
+            icon={<Package className="h-8 w-8" />}
+            title={t('admin.config.equipment.emptyTitle')}
+            description={t('admin.config.equipment.emptyBody')}
+          />
+        </>
+      ) : (
+        <>
+          <AnimatedList testId="equipment-list">
+            {pageItems.map((item) => (
+              <AnimatedListItem key={item.id} id={item.id}>
+                {editingId === item.id ? (
+                  <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-end">
+                    <TextField
+                      label="نام تجهیز"
+                      labelHidden
+                      value={editingValue}
+                      onChange={(event) => setEditingValue(event.target.value)}
+                      containerClassName="min-w-0 flex-1"
+                    />
+                    <Button
+                      type="button"
+                      size="md"
+                      loading={savingId === item.id}
+                      disabled={savingId !== null}
+                      onClick={() => void saveEdit(item)}
+                      startIcon={<CheckCircle2 className="h-4 w-4" />}
+                    >
+                      ذخیره
+                    </Button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="min-h-10 min-w-0 break-words rounded px-1 text-start text-sm text-text hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+                    onClick={() => {
+                      setEditingId(item.id);
+                      setEditingValue(item.name);
+                      setFormError('');
+                    }}
+                    aria-label={`ویرایش ${item.name}`}
+                  >
+                    {item.name}
+                  </button>
+                )}
+                <IconButton
+                  variant="danger"
+                  aria-label={t('admin.config.removeItem', { name: item.name })}
+                  onClick={() =>
+                    requestDelete({
+                      id: item.id,
+                      label: item.name,
+                      onConfirm: () => onRemove(item.id),
+                    })
+                  }
+                  className="h-9 min-h-0 w-9 min-w-0 shrink-0"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </IconButton>
+              </AnimatedListItem>
+            ))}
+          </AnimatedList>
+          {formError && <p className="m-0 text-sm text-danger" role="alert">{formError}</p>}
+          <Pagination
+            page={page}
+            pageSize={equipmentPageSize}
+            total={equipmentTotal}
+            onPageChange={goToPage}
+            testId="equipment-pagination"
+          />
+        </>
+      )}
+
+      <form
+        onSubmit={handleSubmit}
+        className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-end"
+      >
+        <TextField
+          label={t('admin.config.equipment.addLabel')}
+          placeholder={t('admin.config.equipment.addPlaceholder')}
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          containerClassName="sm:flex-1"
+        />
+        <Button type="submit" startIcon={<Plus className="h-4 w-4" />} className="shrink-0">
+          {t('admin.config.equipment.addCta')}
         </Button>
       </form>
     </CollapsibleSection>
@@ -1393,6 +1806,7 @@ function OwnerConfigPageContent({
   const [error, setError] = useState('');
   const [staff, setStaff] = useState<SalonStaff[]>([]);
   const [chairs, setChairs] = useState<Entry[]>([]);
+  const [equipment, setEquipment] = useState<SalonEquipment[]>([]);
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [smsSettings, setSmsSettings] = useState<SmsSettings>(DEFAULT_SMS_SETTINGS);
   const [depositSettings, setDepositSettings] = useState<DepositSettings>(DEFAULT_DEPOSIT_SETTINGS);
@@ -1411,25 +1825,31 @@ function OwnerConfigPageContent({
       typeof adminApi.getDepositSettings === 'function'
         ? adminApi.getDepositSettings(salonId).catch(() => DEFAULT_DEPOSIT_SETTINGS)
         : Promise.resolve(DEFAULT_DEPOSIT_SETTINGS);
+    const equipmentRequest: Promise<{ equipment: SalonEquipment[] }> =
+      typeof adminApi.getEquipment === 'function'
+        ? adminApi.getEquipment(salonId)
+        : Promise.resolve({ equipment: [] });
     Promise.all([
       adminApi.getStaff(salonId),
       adminApi.getChairs(salonId),
       salonApi.getServices(salonId),
       smsSettingsRequest,
       depositSettingsRequest,
+      equipmentRequest,
     ])
-      .then(([staffRes, chairsRes, servicesRes, smsSettingsRes, depositSettingsRes]) => {
+      .then(([staffRes, chairsRes, servicesRes, smsSettingsRes, depositSettingsRes, equipmentRes]) => {
         if (!active) return;
         setStaff(staffRes.staff);
         setChairs(chairsRes.chairs.map((c, i) => toEntry(c, `chair-${i + 1}`)));
         setServices(servicesRes.services);
         setSmsSettings(smsSettingsRes);
         setDepositSettings(depositSettingsRes);
+        setEquipment(equipmentRes.equipment);
         setStatus('success');
       })
       .catch((err: unknown) => {
         if (!active) return;
-        setError(err instanceof ApiError ? err.message : t('booking.failed'));
+        setError(getApiErrorMessage(err, t('booking.failed')));
         setStatus('error');
       });
 
@@ -1539,10 +1959,10 @@ function OwnerConfigPageContent({
               );
               try {
                 await adminApi.setServiceStaff(salonId, serviceId, staffIds);
-                success({ title: 'آرایشگرهای خدمت ذخیره شد' });
+                success({ title: 'اعضای تیم خدمت ذخیره شدند' });
               } catch {
                 setServices(previous);
-                toastError({ title: 'ذخیره آرایشگرهای خدمت انجام نشد' });
+                toastError({ title: 'ذخیره اعضای تیم خدمت انجام نشد' });
               }
             }}
             onUpdate={async (serviceId, patch) => {
@@ -1564,7 +1984,7 @@ function OwnerConfigPageContent({
               } catch (reason) {
                 setServices(previous);
                 toastError({
-                  title: reason instanceof ApiError ? reason.message : 'ذخیره خدمت انجام نشد',
+                  title: getApiErrorMessage(reason, 'ذخیره خدمت انجام نشد'),
                 });
                 throw reason;
               }
@@ -1585,7 +2005,7 @@ function OwnerConfigPageContent({
                 window.dispatchEvent(new Event('salon-config-changed'));
               }).catch((reason) => {
                 toastError({
-                  title: reason instanceof ApiError ? reason.message : 'افزودن خدمت انجام نشد',
+                  title: getApiErrorMessage(reason, 'افزودن خدمت انجام نشد'),
                 });
                 throw reason;
               });
@@ -1603,10 +2023,16 @@ function OwnerConfigPageContent({
                     .createService(salonId, {
                       name: removed.name,
                       durationMinutes: removed.durationMinutes,
+                      durationMode: removed.durationMode ?? 'fixed',
+                      minDurationMinutes: removed.minDurationMinutes ?? null,
+                      maxDurationMinutes: removed.maxDurationMinutes ?? null,
                       bufferMinutes: removed.bufferMinutes ?? 0,
                       priceRial: removed.priceRial,
                       requiresDeposit: removed.requiresDeposit === true,
                       depositRial: removed.depositRial ?? null,
+                      depositType: removed.depositType ?? 'fixed',
+                      depositPercent: removed.depositPercent ?? null,
+                      approvalStaffId: removed.approvalStaffId ?? null,
                     })
                     .then(async (res) => {
                       if (removed.staffIds !== undefined) {
@@ -1625,14 +2051,14 @@ function OwnerConfigPageContent({
                     })
                     .catch((reason) => {
                       toastError({
-                        title: reason instanceof ApiError ? reason.message : 'بازگردانی خدمت انجام نشد',
+                        title: getApiErrorMessage(reason, 'بازگردانی خدمت انجام نشد'),
                       });
                     });
                 });
               }).catch((reason) => {
                 setServices(previous);
                 toastError({
-                  title: reason instanceof ApiError ? reason.message : 'حذف خدمت انجام نشد',
+                        title: getApiErrorMessage(reason, 'حذف خدمت انجام نشد'),
                 });
               });
             }}
@@ -1648,10 +2074,30 @@ function OwnerConfigPageContent({
                 window.dispatchEvent(new Event('salon-config-changed'));
               }).catch((reason) => {
                 toastError({
-                  title: reason instanceof ApiError ? reason.message : 'افزودن صندلی انجام نشد',
+                      title: getApiErrorMessage(reason, 'افزودن صندلی انجام نشد'),
                 });
                 throw reason;
               });
+            }}
+            onUpdate={async (id, name) => {
+              const previous = chairs;
+              setChairs((current) =>
+                current.map((chair) => (chair.id === id ? { ...chair, label: name } : chair)),
+              );
+              try {
+                const result = await adminApi.updateChair(salonId, id, name);
+                setChairs((current) =>
+                  current.map((chair) => (chair.id === id ? toEntry(result.chair, id) : chair)),
+                );
+                window.dispatchEvent(new Event('salon-config-changed'));
+                success({ title: 'نام صندلی به‌روزرسانی شد' });
+              } catch (reason) {
+                setChairs(previous);
+                toastError({
+                  title: getApiErrorMessage(reason, 'به‌روزرسانی صندلی انجام نشد'),
+                });
+                throw reason;
+              }
             }}
             onRemove={(id) => {
               const removed = chairs.find((c) => c.id === id);
@@ -1671,19 +2117,86 @@ function OwnerConfigPageContent({
                     window.dispatchEvent(new Event('salon-config-changed'));
                   }).catch((reason) => {
                     toastError({
-                      title: reason instanceof ApiError ? reason.message : 'بازگردانی صندلی انجام نشد',
+                      title: getApiErrorMessage(reason, 'بازگردانی صندلی انجام نشد'),
                     });
                   });
                 });
               }).catch((reason) => {
                 setChairs(previous);
                 toastError({
-                  title: reason instanceof ApiError ? reason.message : 'حذف صندلی انجام نشد',
+                      title: getApiErrorMessage(reason, 'حذف صندلی انجام نشد'),
                 });
               });
             }}
             requestDelete={setPendingDelete}
           />
+          )}
+
+          {view !== 'team' && (
+            <EquipmentSection
+              equipment={equipment}
+              onAdd={(name) => {
+                return adminApi.createEquipment(salonId, { name }).then((res) => {
+                  setEquipment((prev) => [...prev, res.equipment]);
+                  window.dispatchEvent(new Event('salon-config-changed'));
+                }).catch((reason) => {
+                  toastError({
+                    title: getApiErrorMessage(reason, 'افزودن تجهیزات انجام نشد'),
+                  });
+                  throw reason;
+                });
+              }}
+              onUpdate={async (id, name) => {
+                const previous = equipment;
+                setEquipment((current) =>
+                  current.map((item) => (item.id === id ? { ...item, name } : item)),
+                );
+                try {
+                  const result = await adminApi.updateEquipment(salonId, id, name);
+                  setEquipment((current) =>
+                    current.map((item) => (item.id === id ? result.equipment : item)),
+                  );
+                  window.dispatchEvent(new Event('salon-config-changed'));
+                  success({ title: 'نام تجهیز به‌روزرسانی شد' });
+                } catch (reason) {
+                  setEquipment(previous);
+                  toastError({
+                    title: getApiErrorMessage(reason, 'به‌روزرسانی تجهیز انجام نشد'),
+                  });
+                  throw reason;
+                }
+              }}
+              onRemove={(id) => {
+                const removed = equipment.find((item) => item.id === id);
+                const previous = equipment;
+                const index = removed ? equipment.findIndex((item) => item.id === id) : -1;
+                setEquipment((prev) => prev.filter((item) => item.id !== id));
+                adminApi.deleteEquipment(salonId, id).then(() => {
+                  window.dispatchEvent(new Event('salon-config-changed'));
+                  if (!removed) return;
+                  undoToast(removed.name, () => {
+                    void adminApi.setEquipmentActive(salonId, id, true).then(({ equipment: restored }) => {
+                      setEquipment((prev) => {
+                        const next = prev.filter((item) => item.id !== id);
+                        next.splice(Math.min(index, next.length), 0, restored);
+                        return next;
+                      });
+                      window.dispatchEvent(new Event('salon-config-changed'));
+                    }).catch((reason) => {
+                      toastError({
+                        title: getApiErrorMessage(reason, 'بازگردانی تجهیزات انجام نشد'),
+                      });
+                    });
+                  });
+                }).catch((reason) => {
+                  setEquipment(previous);
+                  toastError({
+                    title: getApiErrorMessage(reason, 'حذف تجهیزات انجام نشد'),
+                  });
+                });
+              }}
+              requestDelete={setPendingDelete}
+            />
           )}
 
         </div>

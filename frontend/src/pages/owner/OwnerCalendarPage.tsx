@@ -46,6 +46,7 @@ import {
   type SalonStaff,
   type OwnerWaitlistEntry,
   type WeeklyWorkingHour,
+  getApiErrorMessage,
 } from '../../api/client';
 import {
   AppointmentDetailsSheet,
@@ -68,6 +69,7 @@ import {
   ErrorState,
   Num,
   Money,
+  MobileDatePicker,
   Pagination,
   Skeleton,
   Select,
@@ -123,11 +125,18 @@ interface Appointment {
   staffMemberId?: string;
   locationType?: 'salon' | 'customer';
   locationAddress?: string;
+  customerNote?: string | null;
+  durationMinOverride?: number | null;
   depositReceiptStatus?: string | null;
   depositPaymentStatus?: string | null;
   depositAmountRial?: number | null;
   depositReceiptUploadedAt?: string | null;
   depositReceiptId?: string | null;
+  pendingReschedule?: {
+    startAt: string;
+    endAt?: string | null;
+    requestedAt?: string | null;
+  } | null;
 }
 
 type SalonWorkMode =
@@ -411,6 +420,9 @@ function toAppointment(appt: unknown, fallbackId: string): Appointment {
           ? rec.locationType
           : undefined,
       locationAddress: str(rec.locationAddress),
+      customerNote: str(rec.customerNote) ?? null,
+      durationMinOverride:
+        typeof rec.durationMinOverride === 'number' ? rec.durationMinOverride : null,
       depositReceiptStatus: str(rec.depositReceiptStatus) ?? null,
       depositPaymentStatus: str(rec.depositPaymentStatus) ?? null,
       depositAmountRial: typeof rec.amountRial === 'number'
@@ -420,6 +432,14 @@ function toAppointment(appt: unknown, fallbackId: string): Appointment {
           : null,
       depositReceiptUploadedAt: str(rec.uploadedAt) ?? str(rec.depositReceiptUploadedAt) ?? null,
       depositReceiptId: str(rec.receiptId) ?? str(rec.depositReceiptId) ?? null,
+      pendingReschedule:
+        rec.pendingReschedule && typeof rec.pendingReschedule === 'object'
+          ? {
+              startAt: str((rec.pendingReschedule as Record<string, unknown>).startAt) ?? '',
+              endAt: str((rec.pendingReschedule as Record<string, unknown>).endAt) ?? null,
+              requestedAt: str((rec.pendingReschedule as Record<string, unknown>).requestedAt) ?? null,
+            }
+          : null,
     };
   }
   return { id: fallbackId };
@@ -581,6 +601,7 @@ function AppointmentBlock({
   const draggableRef = useRef<HTMLDivElement>(null);
   const dragHandleRef = useRef<HTMLSpanElement>(null);
   const isPending = appt.status === 'pending';
+  const hasPendingReschedule = Boolean(appt.pendingReschedule?.startAt);
   const isCancelled = appt.status === 'cancelled' || appt.status === 'rejected';
   const colorClass = isPending
     ? 'border-s-warning'
@@ -593,7 +614,7 @@ function AppointmentBlock({
   const customer = appt.customerName;
   const { icon: statusIcon, label: statusLabel, ariaState } = statusIndicator(appt.status);
   const compact = compactView || (positioned && (height ?? 0) < 70);
-  const canDragAppointment = Boolean(draggableId);
+  const canDragAppointment = Boolean(draggableId) && !hasPendingReschedule;
   const canCancel = ['pending', 'held', 'confirmed', 'approved'].includes(appt.status ?? '');
   const canNoShow = appt.status === 'confirmed' && Boolean(onNoShow);
   const statusClass = isPending
@@ -614,7 +635,7 @@ function AppointmentBlock({
 
   useEffect(() => {
     const element = draggableRef.current;
-    if (!element || !draggableId) return;
+    if (!element || !draggableId || hasPendingReschedule) return;
 
     return draggable({
       element,
@@ -625,7 +646,7 @@ function AppointmentBlock({
       }),
       onDrop: () => onDragEnd?.(),
     });
-  }, [draggableId, onDragEnd]);
+  }, [draggableId, hasPendingReschedule, onDragEnd]);
 
   return (
     <div
@@ -643,7 +664,7 @@ function AppointmentBlock({
       style={positionStyle}
       onClick={() => onOpen?.(appt)}
       role="article"
-      aria-label={`${service} — ${customer ?? ''} — ${statusLabel}`}
+      aria-label={`${service} — ${customer ?? ''} — ${statusLabel}${hasPendingReschedule ? ' — تغییر زمان در انتظار تأیید مشتری' : ''}`}
       data-status={ariaState}
     >
       <span className="flex min-w-0 items-center gap-1.5">
@@ -700,6 +721,11 @@ function AppointmentBlock({
           >
             {statusIcon} {statusLabel}
           </span>
+          {hasPendingReschedule && (
+            <span className="inline-flex items-center rounded-full bg-warning/15 px-1.5 py-0.5 text-[0.6rem] font-medium leading-tight text-warning">
+              تغییر زمان در انتظار تأیید مشتری
+            </span>
+          )}
           <span className="flex items-center gap-1">
             {appt.depositReceiptStatus && (
               <span
@@ -1202,7 +1228,7 @@ function WeekView({
             {dayStaffBlocks.length > 0 && (
               <span className="rounded-md bg-warning/10 px-2 py-1 text-center text-[0.68rem] font-bold text-warning">
                 {toPersianDigits(String(new Set(dayStaffBlocks.map((item) => item.staffId)).size))}{' '}
-                آرایشگر محدودیت دارد
+                عضو تیم محدودیت دارد
               </span>
             )}
 
@@ -1715,21 +1741,21 @@ function CalendarFilters({
           onChange={(event) => onQueryChange(event.target.value)}
         />
         <Select
-          label="آرایشگر"
+          label="عضو تیم"
           labelHidden
           value={staffId}
           onValueChange={onStaffChange}
           options={[
-            { value: 'all', label: 'همه آرایشگرها' },
+            { value: 'all', label: 'همه اعضای تیم' },
             ...staff
               .filter((member) => member.active)
               .map((member) => ({
                 value: member.id,
-                label: member.fullName || 'آرایشگر بدون نام',
+                label: member.fullName || 'عضو تیم بدون نام',
               })),
           ]}
-          placeholder="آرایشگر"
-          emptyText="آرایشگری ثبت نشده است"
+          placeholder="عضو تیم"
+          emptyText="عضوی از تیم ثبت نشده است"
         />
         <Select
           label="وضعیت"
@@ -2126,10 +2152,10 @@ export function WeeklySchedulePage({
               value={target}
               onValueChange={setTarget}
               options={[
-                { value: 'salon', label: 'کل سالن و همه آرایشگرها' },
+                { value: 'salon', label: 'کل سالن و همه اعضای تیم' },
                 ...staff
                   .filter((item) => item.active && item.role !== 'Admin')
-                  .map((item) => ({ value: item.id, label: item.fullName || 'آرایشگر بدون نام' })),
+                  .map((item) => ({ value: item.id, label: item.fullName || 'عضو تیم بدون نام' })),
               ]}
             />
             <Select
@@ -2158,7 +2184,7 @@ export function WeeklySchedulePage({
                 { value: 'hybrid', label: 'هم سالن، هم محل مشتری' },
                 { value: 'not_decided', label: 'هنوز تصمیم نگرفته‌ام' },
               ]}
-              helperText="در حالت سیار، رزروها روی مسیر اختصاصی همان آرایشگر ثبت می‌شوند."
+              helperText="در حالت سیار، رزروها روی مسیر اختصاصی همان عضو تیم ثبت می‌شوند."
             />
           </section>
           <div className="grid grid-cols-1 gap-2 min-[520px]:grid-cols-2">
@@ -2304,7 +2330,7 @@ function AvailabilityDialog({
         if (active) setStaffBlocks(res.blocks);
       })
       .catch(() => {
-        if (active) setError('برنامه این آرایشگر بارگذاری نشد.');
+        if (active) setError('برنامه این عضو تیم بارگذاری نشد.');
       })
       .finally(() => {
         if (active) setBlocksLoading(false);
@@ -2383,12 +2409,12 @@ function AvailabilityDialog({
               { value: 'salon', label: 'کل سالن' },
               ...staff
                 .filter((item) => item.active && item.role !== 'Admin')
-                .map((item) => ({ value: item.id, label: item.fullName || 'آرایشگر بدون نام' })),
+                .map((item) => ({ value: item.id, label: item.fullName || 'عضو تیم بدون نام' })),
             ]}
             helperText={
               target === 'salon'
-                ? 'در این زمان هیچ آرایشگری نوبت نمی‌گیرد.'
-                : 'فقط همین آرایشگر از رزرو خارج می‌شود و سالن باز می‌ماند.'
+                ? 'در این زمان هیچ عضو تیمی نوبت نمی‌گیرد.'
+                : 'فقط همین عضو تیم از رزرو خارج می‌شود و سالن باز می‌ماند.'
             }
           />
         </div>
@@ -2731,7 +2757,14 @@ function ManualBookingDialog({
   onChanged: () => void;
 }) {
   const [services, setServices] = useState<
-    Array<{ id: string; name: string; durationMinutes: number }>
+    Array<{
+      id: string;
+      name: string;
+      durationMinutes: number;
+      durationMode?: 'fixed' | 'variable';
+      minDurationMinutes?: number | null;
+      maxDurationMinutes?: number | null;
+    }>
   >([]);
   const [serviceId, setServiceId] = useState('');
   const [startAt, setStartAt] = useState('');
@@ -2741,6 +2774,8 @@ function ManualBookingDialog({
   const [locationTypes, setLocationTypes] = useState<Array<'salon' | 'customer'>>(['salon']);
   const [locationType, setLocationType] = useState<'salon' | 'customer'>('salon');
   const [locationAddress, setLocationAddress] = useState('');
+  const [customerNote, setCustomerNote] = useState('');
+  const [durationOverride, setDurationOverride] = useState('');
   const [clientSearch, setClientSearch] = useState('');
   const [clientResults, setClientResults] = useState<SalonClient[]>([]);
   const [clientSearchLoading, setClientSearchLoading] = useState(false);
@@ -2771,6 +2806,8 @@ function ManualBookingDialog({
     setLocationTypes(['salon']);
     setLocationType('salon');
     setLocationAddress('');
+    setCustomerNote('');
+    setDurationOverride('');
     setClientSearch('');
     setClientResults([]);
     setClientSearchLoading(false);
@@ -2784,12 +2821,21 @@ function ManualBookingDialog({
           id: service.id,
           name: service.name,
           durationMinutes: service.durationMinutes,
+          durationMode: service.durationMode,
+          minDurationMinutes: service.minDurationMinutes,
+          maxDurationMinutes: service.maxDurationMinutes,
         }));
         setServices(next);
         setServiceId(
           initialServiceId && next.some((service) => service.id === initialServiceId)
             ? initialServiceId
             : next[0]?.id || '',
+        );
+        const selected = next.find((service) => service.id === (initialServiceId ?? next[0]?.id));
+        setDurationOverride(
+          selected?.durationMode === 'variable' && selected.minDurationMinutes
+            ? String(selected.minDurationMinutes)
+            : '',
         );
       })
       .catch(() => {
@@ -2958,6 +3004,25 @@ function ManualBookingDialog({
       setError('آدرس مراجعه نمی‌تواند بیشتر از ۳۰۰ نویسه باشد.');
       return;
     }
+    const selectedService = services.find((service) => service.id === serviceId);
+    const parsedDuration = durationOverride.trim() ? Number(durationOverride) : undefined;
+    if (selectedService?.durationMode === 'variable') {
+      if (
+        parsedDuration === undefined ||
+        !Number.isInteger(parsedDuration) ||
+        parsedDuration < (selectedService.minDurationMinutes ?? 5) ||
+        parsedDuration > (selectedService.maxDurationMinutes ?? 480)
+      ) {
+        setError(
+          `مدت خدمت باید بین ${toPersianDigits(String(selectedService.minDurationMinutes ?? 5))} تا ${toPersianDigits(String(selectedService.maxDurationMinutes ?? 480))} دقیقه باشد.`,
+        );
+        return;
+      }
+    }
+    if (customerNote.trim().length > 1000) {
+      setError('یادداشت مشتری نمی‌تواند بیشتر از ۱۰۰۰ نویسه باشد.');
+      return;
+    }
     const start = new Date(startAt);
     if (Number.isNaN(start.getTime())) {
       setError('زمان انتخاب‌شده معتبر نیست.');
@@ -2974,22 +3039,26 @@ function ManualBookingDialog({
         ...(locationType === 'customer'
           ? { locationType: 'customer' as const, locationAddress: normalizedAddress }
           : {}),
+        ...(customerNote.trim() ? { customerNote: customerNote.trim() } : {}),
+        ...(parsedDuration !== undefined ? { durationMinutes: parsedDuration } : {}),
       });
       onChanged();
       onOpenChange(false);
-    } catch {
-      setError('ثبت نوبت انجام نشد؛ این زمان احتمالاً پر شده است.');
+    } catch (reason) {
+      setError(getApiErrorMessage(reason, 'ثبت نوبت انجام نشد؛ این زمان احتمالاً پر شده است.'));
     } finally {
       setSaving(false);
     }
   };
+
+  const [startDate, startTime] = startAt.split('T');
 
   return (
     <Dialog open={open} onOpenChange={(next) => !saving && onOpenChange(next)}>
       <DialogContent className="manual-booking-dialog !w-[calc(100%-1rem)] !max-w-lg !max-h-[calc(100dvh-1rem)] !rounded-2xl !p-4 sm:!p-5">
         <DialogTitle className="!text-xl !font-bold tracking-tight">ثبت نوبت حضوری</DialogTitle>
         <DialogDescription className="!mt-2 max-w-xl leading-6">
-          نوبت حضوری هم از همان ظرفیت آرایشگر و صندلی استفاده می‌کند؛ بنابراین رزرو هم‌زمان ثبت نمی‌شود.
+          نوبت حضوری هم از همان ظرفیت عضو تیم و صندلی استفاده می‌کند؛ بنابراین رزرو هم‌زمان ثبت نمی‌شود.
         </DialogDescription>
         <div className="mt-5 rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3">
@@ -3127,7 +3196,15 @@ function ManualBookingDialog({
           <Select
             label="خدمت"
             value={serviceId}
-            onValueChange={setServiceId}
+            onValueChange={(nextServiceId) => {
+              setServiceId(nextServiceId);
+              const nextService = services.find((service) => service.id === nextServiceId);
+              setDurationOverride(
+                nextService?.durationMode === 'variable' && nextService.minDurationMinutes
+                  ? String(nextService.minDurationMinutes)
+                  : '',
+              );
+            }}
             options={services.map((service) => ({
               value: service.id,
               label: `${service.name} · ${toPersianDigits(String(service.durationMinutes))} دقیقه`,
@@ -3136,14 +3213,52 @@ function ManualBookingDialog({
             disabled={loading || saving}
             emptyText="خدمتی ثبت نشده است"
           />
-          <TextField
-            label="زمان شروع"
-            type="datetime-local"
-            value={startAt}
-            onChange={(event) => setStartAt(event.target.value)}
-            disabled={saving}
-            dir="ltr"
-          />
+          {services.find((service) => service.id === serviceId)?.durationMode === 'variable' && (
+            <TextField
+              label="مدت این نوبت (دقیقه)"
+              type="number"
+              min={services.find((service) => service.id === serviceId)?.minDurationMinutes ?? 5}
+              max={services.find((service) => service.id === serviceId)?.maxDurationMinutes ?? 480}
+              step={5}
+              value={durationOverride}
+              onChange={(event) => setDurationOverride(event.target.value)}
+              disabled={saving}
+              helperText={`بین ${toPersianDigits(String(services.find((service) => service.id === serviceId)?.minDurationMinutes ?? 5))} تا ${toPersianDigits(String(services.find((service) => service.id === serviceId)?.maxDurationMinutes ?? 480))} دقیقه`}
+              dir="ltr"
+            />
+          )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <MobileDatePicker
+              label="تاریخ شروع"
+              value={startDate || null}
+              onChange={(nextDate) => setStartAt(`${nextDate}T${startTime || '09:00'}`)}
+              disabled={saving}
+            />
+            <TextField
+              label="ساعت شروع"
+              type="time"
+              value={startTime || ''}
+              onChange={(event) => setStartAt(`${startDate}T${event.target.value}`)}
+              disabled={saving}
+              dir="ltr"
+              step={900}
+            />
+          </div>
+          <label className="flex flex-col gap-1.5 text-xs font-medium text-muted">
+            <span>یادداشت مشتری (اختیاری)</span>
+            <textarea
+              value={customerNote}
+              onChange={(event) => setCustomerNote(event.target.value)}
+              maxLength={1000}
+              rows={3}
+              disabled={saving}
+              aria-label="یادداشت مشتری (اختیاری)"
+              className="w-full resize-y rounded-lg border border-border bg-bg px-3 py-2.5 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+            />
+            <span className="text-[0.68rem] font-normal text-muted">
+              {toPersianDigits(String(customerNote.length))} / ۱۰۰۰
+            </span>
+          </label>
           {locationTypes.length > 1 && (
             <Select
               label="محل ارائه خدمت"
@@ -3296,6 +3411,11 @@ function ApprovalQueue({
     [canApproveOwnAppointments, load, onResolved],
   );
 
+  const openApprovalDialog = () => {
+    pendingPagination.resetPage();
+    setApprovalDialogOpen(true);
+  };
+
   if (loading && pending.length === 0 && !actionError) return null;
   if (pending.length === 0 && !actionError) return null;
 
@@ -3386,6 +3506,25 @@ function ApprovalQueue({
 
   return (
     <div className={cn('flex flex-col gap-3', className)}>
+      {pending.length > 0 && (
+        <Button
+          variant="primary"
+          size="md"
+          startIcon={<Hourglass className="h-4 w-4" />}
+          onClick={openApprovalDialog}
+          aria-haspopup="dialog"
+          aria-expanded={approvalDialogOpen}
+          data-testid="owner-approval-queue-fab"
+          className="owner-calendar-pending-fab"
+        >
+          <span className="owner-calendar-pending-fab-label">
+            {t('owner.calendar.approvalQueue', { defaultValue: 'نوبت‌های در انتظار تأیید' })}
+          </span>
+          <span className="owner-calendar-pending-fab-count">
+            <Num value={pending.length} />
+          </span>
+        </Button>
+      )}
       {actionError && (
         <p role="alert" className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
           {actionError}
@@ -3441,10 +3580,7 @@ function ApprovalQueue({
               variant="ghost"
               size="md"
               className="w-full shrink-0 text-xs sm:w-auto"
-              onClick={() => {
-                pendingPagination.resetPage();
-                setApprovalDialogOpen(true);
-              }}
+              onClick={openApprovalDialog}
               aria-haspopup="dialog"
               aria-expanded={approvalDialogOpen}
               data-testid="owner-approval-queue-toggle"
@@ -3589,7 +3725,7 @@ function PendingDepositReceiptQueue({
             <span><Num value={dateText} /> · <Num value={start ?? '—'} /></span>
             {appointment.staffName && <span>با {appointment.staffName}</span>}
             {appointment.depositAmountRial != null && (
-              <Money amountRial={appointment.depositAmountRial} className="font-semibold text-primary" />
+              <Money amountRial={appointment.depositAmountRial} unit="toman" className="font-semibold text-primary" />
             )}
           </div>
         </div>
@@ -4102,7 +4238,9 @@ export function OwnerCalendarPage() {
   const [appointmentListDate, setAppointmentListDate] = useState<Date | null>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [moveAppointment, setMoveAppointment] = useState<CalendarAppointmentLike | null>(null);
+  const [moveInitialStartAt, setMoveInitialStartAt] = useState<string | undefined>();
   const [moveError, setMoveError] = useState('');
+  const [moveNotice, setMoveNotice] = useState('');
   const [calendarQuery, setCalendarQuery] = useState('');
   const [calendarStaffId, setCalendarStaffId] = useState('all');
   const [calendarStatus, setCalendarStatus] = useState<CalendarStatusFilter>('all');
@@ -4145,11 +4283,16 @@ export function OwnerCalendarPage() {
     setManualOpen(true);
   }, []);
 
-  const openMoveDialog = useCallback((appointment: CalendarAppointmentLike) => {
-    setSelectedAppointment(null);
-    setMoveError('');
-    setMoveAppointment(appointment);
-  }, []);
+  const openMoveDialog = useCallback(
+    (appointment: CalendarAppointmentLike, initialStartAt?: string) => {
+      setSelectedAppointment(null);
+      setMoveError('');
+      setMoveNotice('');
+      setMoveInitialStartAt(initialStartAt);
+      setMoveAppointment(appointment);
+    },
+    [],
+  );
 
   const applyMove = useCallback(
     async (appointment: CalendarAppointmentLike, startAt: string) => {
@@ -4164,56 +4307,32 @@ export function OwnerCalendarPage() {
 
       const nextStartAt = nextStart.toISOString();
       const nextEndAt = movedEndAt(appointment, nextStart);
-      const previousStartAt = appointment.startAt;
-      const previousEndAt = appointment.endAt;
-      const updateLocalAppointment = (
-        appointmentId: string,
-        updatedStartAt?: string,
-        updatedEndAt?: string,
-      ) => {
-        setAppointments((current) =>
-          current.map((item) =>
-            item.id === appointment.id
-              ? { ...item, id: appointmentId, startAt: updatedStartAt, endAt: updatedEndAt }
-              : item,
-          ),
-        );
-      };
 
       setMoveError('');
-      updateLocalAppointment(appointment.id, nextStartAt, nextEndAt);
-      try {
-        const result = await adminApi.rescheduleAppointment(
-          appointment.id,
-          nextStartAt,
-          appointment.staffMemberId,
-        );
-        const replacement = result.appointment;
-        updateLocalAppointment(
-          replacement?.id ?? appointment.id,
-          replacement?.startAt ?? nextStartAt,
-          replacement?.endAt ?? nextEndAt,
-        );
-        setApprovalReloadToken((value) => value + 1);
-      } catch (error) {
-        updateLocalAppointment(appointment.id, previousStartAt, previousEndAt);
-        throw error;
-      }
+      const result = await adminApi.rescheduleAppointment(
+        appointment.id,
+        nextStartAt,
+        appointment.staffMemberId,
+      );
+      const pendingReschedule = result.pendingReschedule ?? {
+        startAt: nextStartAt,
+        endAt: nextEndAt ?? nextStartAt,
+        requestedAt: new Date().toISOString(),
+        requestedBy: null,
+      };
+      setAppointments((current) =>
+        current.map((item) =>
+          item.id === appointment.id ? { ...item, pendingReschedule } : item,
+        ),
+      );
+      setApprovalReloadToken((value) => value + 1);
+      setMoveNotice('درخواست تغییر زمان برای مشتری ارسال شد؛ تا تأیید او زمان فعلی برقرار است.');
 
       setSelectedAppointment(null);
       setMoveAppointment(null);
-      if (
-        view === 'day' &&
-        appointment.startAt &&
-        localDateKey(appointment.startAt) === dateKey(nextStart)
-      ) {
-        return;
-      }
-      setAnchor(nextStart);
-      setViewDirection(0);
-      setView('day');
+      setMoveInitialStartAt(undefined);
     },
-    [view],
+    [],
   );
 
   const handleGridMove = useCallback(
@@ -4221,12 +4340,9 @@ export function OwnerCalendarPage() {
       const nextStart = new Date(date);
       const [hour, minute] = time.split(':').map(Number);
       nextStart.setHours(hour, minute, 0, 0);
-      void applyMove(appointment, nextStart.toISOString()).catch((error) => {
-        setMoveError(getRescheduleErrorMessage(error));
-        setMoveAppointment(appointment);
-      });
+      openMoveDialog(appointment, nextStart.toISOString());
     },
-    [applyMove],
+    [openMoveDialog],
   );
 
 
@@ -4424,7 +4540,7 @@ export function OwnerCalendarPage() {
           return res.blocks.map((block) => ({
             ...block,
             staffId: item.id,
-            staffName: item.fullName || 'آرایشگر',
+            staffName: item.fullName || 'عضو تیم',
           }));
         } catch {
           return [];
@@ -4532,6 +4648,12 @@ export function OwnerCalendarPage() {
         </p>
       </header>
 
+      {moveNotice && (
+        <p role="status" className="m-0 rounded-xl border border-success/25 bg-success/10 px-3 py-2 text-sm text-success">
+          {moveNotice}
+        </p>
+      )}
+
       {/* Toolbar: view toggle + date nav */}
       <div className="owner-calendar-toolbar flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="owner-calendar-view-toggle">
@@ -4628,7 +4750,7 @@ export function OwnerCalendarPage() {
         refreshKey={approvalReloadToken}
         salonId={salonId}
         onResolved={() => setReloadToken((n) => n + 1)}
-        className="owner-calendar-approval"
+        className="owner-calendar-pending-approval"
       />
 
       {role !== 'Stylist' && (
@@ -4804,11 +4926,13 @@ export function OwnerCalendarPage() {
         onOpenChange={(next) => {
           if (!next) {
             setMoveAppointment(null);
+            setMoveInitialStartAt(undefined);
             setMoveError('');
           }
         }}
         onMoved={applyMove}
         initialError={moveError}
+        initialStartAt={moveInitialStartAt}
       />
       <Dialog
         open={Boolean(cancelAppointment)}

@@ -18,6 +18,8 @@ export const APPOINTMENT_CONTROLLER_DTO_DEFINITIONS = [
   route('appointment.cancel', 'POST', '/api/appointments/:id/cancel', AppointmentIdDto, AnyQueryDto, EmptyAppointmentBodyDto),
   route('appointment.manual', 'POST', '/api/salons/:id/appointments/manual', IdParamDto, AnyQueryDto, ManualAppointmentDto),
   route('appointment.reschedule', 'POST', '/api/appointments/:id/reschedule', AppointmentIdDto, AnyQueryDto, RescheduleAppointmentDto),
+  route('appointment.reschedule.accept', 'POST', '/api/appointments/:id/reschedule/accept', AppointmentIdDto),
+  route('appointment.reschedule.reject', 'POST', '/api/appointments/:id/reschedule/reject', AppointmentIdDto),
   route('appointment.no-show', 'POST', '/api/appointments/:id/no-show', AppointmentIdDto),
   route('appointment.approve', 'POST', '/api/appointments/:id/approve', AppointmentIdDto),
   route('appointment.reject', 'POST', '/api/appointments/:id/reject', AppointmentIdDto),

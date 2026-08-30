@@ -166,6 +166,7 @@ export function OwnerTransactionsPage() {
                 </div>
                 <Money
                   amountRial={tx.amountRial}
+                  unit="toman"
                   className="shrink-0 text-base font-bold tabular-nums text-text"
                 />
               </li>

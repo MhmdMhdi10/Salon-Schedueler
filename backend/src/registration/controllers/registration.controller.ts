@@ -6,9 +6,8 @@ import { createRateLimit, phoneRateLimitKey } from '../../http/middleware/rate-l
 import { isE2EQuietLogs } from '../../common/logging.js';
 
 /**
- * True when an error is a Prisma unique-constraint violation (P2002). The owner
- * login `phone` on staff_member is UNIQUE, so a phone already registered to
- * another staff member surfaces here and is mapped to 409 PHONE_TAKEN.
+ * True when an error is a Prisma unique-constraint violation (P2002). Kept for
+ * compatibility with older database clients; phone is no longer globally unique.
  */
 const isUniqueViolation = (err: unknown): boolean =>
   typeof err === 'object' &&
@@ -27,8 +26,8 @@ const isUniqueViolation = (err: unknown): boolean =>
  *   POST /register/salon  -> 201 { salonId, salonName }
  *
  * The only required inputs are `salonName`, `ownerName` and `phone`; every other
- * answer is optional so the questionnaire can be skipped. A phone already in use
- * by another staff member yields 409 PHONE_TAKEN; invalid input yields 400.
+ * answer is optional so the questionnaire can be skipped. A phone may belong to
+ * another salon; invalid input yields 400.
  */
 export function registrationRouter(services: Services): Router {
   const router = Router();
@@ -86,6 +85,7 @@ export function registrationRouter(services: Services): Router {
           ownerName: input.ownerName,
           phone: input.phone,
           businessType: input.businessType,
+          businessTypes: input.businessTypes,
           specialties: input.specialties,
           timezone: input.timezone,
           brandAccent: input.brandAccent ?? null,

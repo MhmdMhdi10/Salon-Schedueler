@@ -15,6 +15,7 @@ import {
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import {
+  ApiError,
   customerApi,
   type CustomerAppointment,
   type CustomerWaitlistEntry,
@@ -29,6 +30,7 @@ import {
   EmptyState,
   ErrorState,
   JalaliDate,
+  MobileDatePicker,
   Pagination,
   Skeleton,
   TextField,
@@ -174,6 +176,23 @@ function statusMeta(status: string): {
   }
 }
 
+function rescheduleErrorMessage(error: unknown): string {
+  const code = error instanceof ApiError ? error.code : '';
+  switch (code) {
+    case 'RESCHEDULE_DEADLINE_PASSED':
+      return 'مهلت تغییر زمان گذشته است؛ زمان رسیده قابل جابه‌جایی نیست.';
+    case 'RESCHEDULE_PROPOSAL_PENDING':
+      return 'ابتدا پیشنهاد تغییر زمان سالن را تأیید یا رد کن.';
+    case 'RESCHEDULE_PROPOSAL_NOT_FOUND':
+      return 'این پیشنهاد قبلاً پاسخ داده شده است؛ نوبت‌ها را تازه‌سازی کن.';
+    case 'RESCHEDULE_CONFLICT':
+    case 'BOOKING_SLOT_UNAVAILABLE':
+      return 'زمان انتخاب‌شده دیگر آزاد نیست؛ زمان دیگری را انتخاب کن.';
+    default:
+      return 'تغییر زمان انجام نشد؛ دوباره تلاش کن.';
+  }
+}
+
 function DashboardSkeleton() {
   return (
     <div
@@ -198,24 +217,40 @@ function AppointmentRow({
   appointment,
   actionBusy,
   rescheduleValue,
+  rescheduleReview,
   onCancel,
   onStartReschedule,
   onRescheduleValueChange,
+  onReviewReschedule,
+  onBackReschedule,
   onReschedule,
+  onAcceptReschedule,
+  onRejectReschedule,
 }: {
   appointment: CustomerAppointment;
   actionBusy?: boolean;
   rescheduleValue?: string;
+  rescheduleReview?: boolean;
   onCancel?: (appointment: CustomerAppointment) => void;
   onStartReschedule?: (appointment: CustomerAppointment) => void;
   onRescheduleValueChange?: (value: string) => void;
+  onReviewReschedule?: (appointment: CustomerAppointment) => void;
+  onBackReschedule?: () => void;
   onReschedule?: (appointment: CustomerAppointment) => void;
+  onAcceptReschedule?: (appointment: CustomerAppointment) => void;
+  onRejectReschedule?: (appointment: CustomerAppointment) => void;
 }) {
   const status = statusMeta(appointment.status);
   const start = parseDate(appointment.startAt);
+  const pendingStart = parseDate(appointment.pendingReschedule?.startAt);
+  const [rescheduleDate, rescheduleTime] = (rescheduleValue ?? '').split('T');
   const canManage =
     UPCOMING_STATUSES.has(appointment.status) &&
-    (start?.getTime() ?? 0) > Date.now();
+    (start?.getTime() ?? 0) > Date.now() &&
+    !pendingStart;
+  const pendingExpired =
+    Boolean(pendingStart) &&
+    ((start?.getTime() ?? 0) <= Date.now() || (pendingStart?.getTime() ?? 0) <= Date.now());
 
   return (
     <article className="flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-bg p-3">
@@ -255,6 +290,11 @@ function AppointmentRow({
             : 'مراجعه در محل سالن / محل کار'}
         </span>
       </p>
+      {appointment.customerNote && (
+        <p className="m-0 rounded-lg border border-border bg-surface px-3 py-2 text-xs leading-6 text-muted">
+          یادداشت نوبت: {appointment.customerNote}
+        </p>
+      )}
       {appointment.status === 'held' &&
         appointment.depositRequired &&
         appointment.depositMethod === 'card_transfer' && (
@@ -276,31 +316,107 @@ function AppointmentRow({
             )}
           </div>
         )}
+      {pendingStart && onAcceptReschedule && onRejectReschedule && (
+        <div
+          className="flex flex-col gap-3 rounded-xl border border-warning/30 bg-warning/10 p-3"
+          data-testid={`customer-reschedule-proposal-${appointment.id}`}
+        >
+          <div>
+            <strong className="block text-sm text-text">سالن پیشنهاد تغییر زمان داده است</strong>
+            <p className="m-0 mt-1 text-xs leading-6 text-muted">
+              زمان فعلی: {start ? <JalaliDate value={start} variant="numeric" /> : 'نامشخص'} · {clockTime(appointment.startAt) || '—'}
+              <br />
+              زمان پیشنهادی: <JalaliDate value={pendingStart} variant="numeric" /> · {clockTime(appointment.pendingReschedule?.startAt) || '—'}
+            </p>
+          </div>
+          {pendingExpired ? (
+            <p className="m-0 text-xs leading-6 text-danger">
+              مهلت این پیشنهاد گذشته است. برای پاک‌کردن آن می‌توانی ردش کنی.
+            </p>
+          ) : (
+            <p className="m-0 text-xs leading-6 text-muted">
+              زمان قبلی تا انتخاب تو برقرار است.
+            </p>
+          )}
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              variant="danger"
+              size="md"
+              disabled={actionBusy}
+              onClick={() => onRejectReschedule(appointment)}
+            >
+              رد زمان جدید
+            </Button>
+            <Button
+              type="button"
+              size="md"
+              loading={actionBusy}
+              disabled={actionBusy || pendingExpired}
+              onClick={() => onAcceptReschedule(appointment)}
+            >
+              تأیید زمان جدید
+            </Button>
+          </div>
+        </div>
+      )}
       {canManage && onCancel && onStartReschedule && (
         <div className="flex w-full flex-wrap items-center justify-end gap-2 border-t border-border/50 pt-3">
           {rescheduleValue !== undefined ? (
-            <>
-              <label className="sr-only" htmlFor={`reschedule-${appointment.id}`}>
-                زمان جدید
-              </label>
-              <input
-                id={`reschedule-${appointment.id}`}
-                type="datetime-local"
-                value={rescheduleValue}
-                min={new Date().toISOString().slice(0, 16)}
-                onChange={(event) => onRescheduleValueChange?.(event.target.value)}
-                className="min-h-10 min-w-0 flex-1 rounded-lg border border-border bg-bg px-2 text-xs text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
-              />
-              <Button
-                type="button"
-                size="md"
-                loading={actionBusy}
-                disabled={actionBusy || !rescheduleValue}
-                onClick={() => onReschedule?.(appointment)}
-              >
-                ذخیره زمان
-              </Button>
-            </>
+            rescheduleReview ? (
+              <div className="flex w-full flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3" data-testid={`customer-reschedule-review-${appointment.id}`}>
+                <div>
+                  <strong className="block text-sm text-text">تأیید نهایی تغییر زمان</strong>
+                  <p className="m-0 mt-1 text-xs leading-6 text-muted">
+                    زمان فعلی: {start ? <JalaliDate value={start} variant="numeric" /> : 'نامشخص'} · {clockTime(appointment.startAt) || '—'}
+                    <br />
+                    زمان جدید: {parseDate(rescheduleValue) ? <JalaliDate value={parseDate(rescheduleValue)!} variant="numeric" /> : 'نامعتبر'} · {clockTime(rescheduleValue) || '—'}
+                  </p>
+                </div>
+                <p className="m-0 text-xs leading-6 text-muted">
+                  با تأیید، نوبت قبلی لغو و زمان جدید ثبت می‌شود.
+                </p>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="ghost" disabled={actionBusy} onClick={onBackReschedule}>
+                    بازگشت
+                  </Button>
+                  <Button type="button" loading={actionBusy} disabled={actionBusy} onClick={() => onReschedule?.(appointment)}>
+                    تأیید نهایی تغییر زمان
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
+                  <MobileDatePicker
+                    id={`reschedule-date-${appointment.id}`}
+                    label="تاریخ جدید"
+                    value={rescheduleDate || null}
+                    min={dateKey(new Date())}
+                    onChange={(nextDate) => onRescheduleValueChange?.(`${nextDate}T${rescheduleTime || '09:00'}`)}
+                  />
+                  <TextField
+                    id={`reschedule-time-${appointment.id}`}
+                    label="ساعت جدید"
+                    type="time"
+                    value={rescheduleTime || ''}
+                    onChange={(event) => onRescheduleValueChange?.(`${rescheduleDate}T${event.target.value}`)}
+                    dir="ltr"
+                    step={900}
+                    containerClassName="min-w-0"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  size="md"
+                  loading={actionBusy}
+                  disabled={actionBusy || !rescheduleValue}
+                  onClick={() => onReviewReschedule?.(appointment)}
+                >
+                  بررسی تغییر زمان
+                </Button>
+              </>
+            )
           ) : (
             <>
               <Button
@@ -474,6 +590,7 @@ export function CustomerDashboardPage() {
   const [actionBusyId, setActionBusyId] = useState<string | null>(null);
   const [waitlistBusyId, setWaitlistBusyId] = useState<string | null>(null);
   const [rescheduleId, setRescheduleId] = useState<string | null>(null);
+  const [rescheduleReviewId, setRescheduleReviewId] = useState<string | null>(null);
   const [rescheduleValue, setRescheduleValue] = useState('');
   const [actionError, setActionError] = useState('');
   const [profileStatus, setProfileStatus] = useState<'idle' | 'loading' | 'needs-name' | 'ready'>('idle');
@@ -567,15 +684,58 @@ export function CustomerDashboardPage() {
       try {
         await customerApi.rescheduleAppointment(appointment.id, nextStart.toISOString());
         setRescheduleId(null);
+        setRescheduleReviewId(null);
         setRescheduleValue('');
         await loadAppointments();
-      } catch {
-        setActionError('تغییر زمان انجام نشد؛ زمان دیگری را انتخاب کن.');
+      } catch (error) {
+        setActionError(rescheduleErrorMessage(error));
       } finally {
         setActionBusyId(null);
       }
     },
     [loadAppointments, rescheduleValue],
+  );
+
+  const acceptReschedule = useCallback(
+    async (appointment: CustomerAppointment) => {
+      if (!appointment.pendingReschedule?.startAt) return;
+      if (
+        !window.confirm(
+          'تغییر زمان پیشنهادی سالن تأیید شود؟ زمان نوبت به زمان جدید منتقل می‌شود.',
+        )
+      ) {
+        return;
+      }
+      setActionBusyId(appointment.id);
+      setActionError('');
+      try {
+        await customerApi.acceptReschedule(appointment.id);
+        await loadAppointments();
+      } catch (error) {
+        setActionError(rescheduleErrorMessage(error));
+      } finally {
+        setActionBusyId(null);
+      }
+    },
+    [loadAppointments],
+  );
+
+  const rejectReschedule = useCallback(
+    async (appointment: CustomerAppointment) => {
+      if (!appointment.pendingReschedule?.startAt) return;
+      if (!window.confirm('پیشنهاد تغییر زمان رد شود؟ نوبت در زمان فعلی می‌ماند.')) return;
+      setActionBusyId(appointment.id);
+      setActionError('');
+      try {
+        await customerApi.rejectReschedule(appointment.id);
+        await loadAppointments();
+      } catch (error) {
+        setActionError(rescheduleErrorMessage(error));
+      } finally {
+        setActionBusyId(null);
+      }
+    },
+    [loadAppointments],
   );
 
   const cancelWaitlist = useCallback(
@@ -706,7 +866,7 @@ export function CustomerDashboardPage() {
   };
 
   return (
-    <div className="min-w-0 overflow-x-hidden bg-bg text-text" data-testid="customer-dashboard-page">
+    <div className="min-w-0 overflow-x-clip bg-bg text-text" data-testid="customer-dashboard-page">
       <SeoHead title="حساب من" description="تقویم نوبت‌ها و سالن‌های ذخیره‌شده شما در آرا" />
       <div className="mx-auto flex min-w-0 w-full max-w-6xl flex-col gap-5 px-3 py-6 sm:gap-6 sm:px-6 sm:py-10">
         <header className="flex flex-col gap-2">
@@ -895,13 +1055,22 @@ export function CustomerDashboardPage() {
                         rescheduleValue={
                           rescheduleId === appointment.id ? rescheduleValue : undefined
                         }
+                        rescheduleReview={rescheduleReviewId === appointment.id}
                         onCancel={cancelAppointment}
                         onStartReschedule={(item) => {
                           setRescheduleId(item.id);
+                          setRescheduleReviewId(null);
                           setRescheduleValue(localDateTimeValue(item.startAt));
                         }}
-                        onRescheduleValueChange={setRescheduleValue}
+                        onRescheduleValueChange={(value) => {
+                          setRescheduleReviewId(null);
+                          setRescheduleValue(value);
+                        }}
+                        onReviewReschedule={(item) => setRescheduleReviewId(item.id)}
+                        onBackReschedule={() => setRescheduleReviewId(null)}
                         onReschedule={saveReschedule}
+                        onAcceptReschedule={acceptReschedule}
+                        onRejectReschedule={rejectReschedule}
                       />
                     ))}
                     <Pagination
@@ -941,13 +1110,22 @@ export function CustomerDashboardPage() {
                       rescheduleValue={
                         rescheduleId === appointment.id ? rescheduleValue : undefined
                       }
+                      rescheduleReview={rescheduleReviewId === appointment.id}
                       onCancel={cancelAppointment}
                       onStartReschedule={(item) => {
                         setRescheduleId(item.id);
+                        setRescheduleReviewId(null);
                         setRescheduleValue(localDateTimeValue(item.startAt));
                       }}
-                      onRescheduleValueChange={setRescheduleValue}
+                      onRescheduleValueChange={(value) => {
+                        setRescheduleReviewId(null);
+                        setRescheduleValue(value);
+                      }}
+                      onReviewReschedule={(item) => setRescheduleReviewId(item.id)}
+                      onBackReschedule={() => setRescheduleReviewId(null)}
                       onReschedule={saveReschedule}
+                      onAcceptReschedule={acceptReschedule}
+                      onRejectReschedule={rejectReschedule}
                     />
                   ))}
                   <Pagination

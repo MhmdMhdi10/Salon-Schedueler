@@ -26,7 +26,27 @@ export interface PaymentServiceOptions {
   callbackBaseUrl: string;
 }
 
-export type DepositMethod = 'gateway' | 'card_transfer';
+export type DepositMethod = 'gateway' | 'card_transfer' | 'cash';
+
+/** Resolve one canonical deposit amount from fixed or percentage settings. */
+export function calculateDepositRial(service: {
+  priceRial?: bigint | number | null;
+  depositRial?: bigint | number | null;
+  depositType?: string | null;
+  depositPercent?: number | null;
+}): number | null {
+  if (service.depositType === 'percentage') {
+    const price = Number(service.priceRial ?? 0);
+    const percent = Number(service.depositPercent ?? 0);
+    if (!Number.isFinite(price) || !Number.isInteger(percent) || percent < 1 || percent > 100) {
+      return null;
+    }
+    return Math.max(0, Math.floor((price * percent) / 100));
+  }
+  if (service.depositRial == null) return null;
+  const amount = Number(service.depositRial);
+  return Number.isFinite(amount) && amount >= 0 ? amount : null;
+}
 
 export interface PendingManualReceipt {
   appointmentId: string;
@@ -132,20 +152,40 @@ export class PaymentService {
       );
     }
 
-    const depositRial = appointment.service.depositRial;
-    if (depositRial === null || depositRial === undefined) {
+    const amountRial = calculateDepositRial(appointment.service);
+    if (amountRial === null || amountRial <= 0) {
       throw new Error(`Service ${appointment.serviceId} does not have a deposit configured`);
     }
 
-    const amountRial = Number(depositRial);
     const salonSettings = appointment.salon ?? {
       depositMethod: 'card_transfer',
       depositCardNumber: null,
       depositCardHolder: null,
       depositBankName: null,
     };
-    // Online gateway checkout is disabled for deposits until the next release.
-    const method: DepositMethod = 'card_transfer';
+    // Cash and card-transfer are available now. Gateway remains supported for
+    // salons that already have a provider configured.
+    const method: DepositMethod = salonSettings.depositMethod === 'cash'
+      ? 'cash'
+      : salonSettings.depositMethod === 'gateway'
+        ? 'gateway'
+        : 'card_transfer';
+
+    if (method === 'cash') {
+      const existing = await this.prisma.payment.findFirst({
+        where: { appointmentId, gateway: 'cash', status: 'pending' },
+        orderBy: { createdAt: 'desc' },
+      });
+      const payment = existing ?? await this.prisma.payment.create({
+        data: {
+          appointmentId,
+          amountRial: BigInt(amountRial),
+          status: 'pending',
+          gateway: 'cash',
+        },
+      });
+      return { paymentId: payment.id, method, amountRial };
+    }
 
     if (method === 'card_transfer') {
       if (!salonSettings.depositCardNumber || !salonSettings.depositCardHolder) {
@@ -205,7 +245,15 @@ export class PaymentService {
     const appointment = await this.prisma.appointment.findUnique({
       where: { id: appointmentId },
       include: {
-        service: { select: { requiresDeposit: true, depositRial: true } },
+        service: {
+          select: {
+            requiresDeposit: true,
+            priceRial: true,
+            depositRial: true,
+            depositType: true,
+            depositPercent: true,
+          },
+        },
         salon: {
           select: {
             depositMethod: true,
@@ -228,9 +276,13 @@ export class PaymentService {
     return {
       required: appointment.service.requiresDeposit === true,
       method: appointment.service.requiresDeposit
-        ? 'card_transfer'
+        ? appointment.salon.depositMethod === 'cash'
+          ? 'cash'
+          : appointment.salon.depositMethod === 'gateway'
+            ? 'gateway'
+            : 'card_transfer'
         : null,
-      amountRial: appointment.service.depositRial == null ? null : Number(appointment.service.depositRial),
+      amountRial: calculateDepositRial(appointment.service),
       appointmentStatus: appointment.status,
       holdExpiresAt: appointment.holdExpiresAt,
       cardNumber: appointment.salon.depositCardNumber,
@@ -251,7 +303,15 @@ export class PaymentService {
     const appointment = await this.prisma.appointment.findUnique({
       where: { id: appointmentId },
       include: {
-        service: { select: { requiresDeposit: true, depositRial: true } },
+        service: {
+          select: {
+            requiresDeposit: true,
+            priceRial: true,
+            depositRial: true,
+            depositType: true,
+            depositPercent: true,
+          },
+        },
         salon: { select: { depositMethod: true } },
       },
     });
@@ -269,7 +329,9 @@ export class PaymentService {
       throw new Error('DEPOSIT_RECEIPT_INVALID');
     }
     const fileName = input.fileName.trim().replace(/[^\w.\- ]/g, '').slice(0, 120) || 'receipt';
-    const payment = await this.ensureManualPayment(appointmentId, Number(appointment.service.depositRial));
+    const depositAmount = calculateDepositRial(appointment.service);
+    if (depositAmount == null || depositAmount <= 0) throw new Error('DEPOSIT_NOT_CONFIGURED');
+    const payment = await this.ensureManualPayment(appointmentId, depositAmount);
     const existing = await this.prisma.depositReceipt.findUnique({ where: { appointmentId } });
     const receipt = existing
       ? await this.prisma.depositReceipt.update({

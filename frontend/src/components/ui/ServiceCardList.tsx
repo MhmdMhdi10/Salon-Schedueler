@@ -128,6 +128,7 @@ export function ServiceCardList({
                   <div className="flex items-center gap-3 shrink-0">
                     <Money
                       amountRial={service.priceRial}
+                      unit="toman"
                       className={cn(
                         'text-sm font-medium',
                         isSelected ? 'text-primary' : 'text-text',
@@ -147,7 +148,7 @@ export function ServiceCardList({
                             exit={prefersReduced ? { opacity: 0 } : { opacity: 0, scale: 0.5 }}
                             transition={{
                               duration: prefersReduced ? 0.01 : 0.2,
-                              ease: easings.emphasized,
+                              ease: easings.standard,
                             }}
                             className={cn(
                               'flex h-6 w-6 items-center justify-center',

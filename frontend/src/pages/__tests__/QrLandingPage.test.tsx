@@ -1,16 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import '../../i18n';
 import { expectNoSeriousA11yViolations } from '../../test/a11y';
 
 /**
- * Tests for the redesigned QR landing page (task 6.2; R4.3, R2.3; ui-ux
- * QR-landing recipe, §6). They cover: the resolving skeleton, the resolved
- * salon header + «انتخاب خدمت» CTA into the funnel, the two DISTINCT error
- * states (malformed payload vs unregistered salon), and the preserved
- * `qr-landing` testID.
+ * Tests for the QR entry point (R4.3, R2.3; ui-ux QR-landing recipe, §6).
+ * They cover: the resolving skeleton, direct navigation to service selection,
+ * local salon saving, and the two DISTINCT error states (malformed payload vs
+ * unregistered salon).
  */
 
 const resolveQr = vi.fn();
@@ -23,6 +22,11 @@ vi.mock('../../api/client', () => ({
 
 import { QrLandingPage } from '../QrLandingPage';
 
+function BookingProbe() {
+  const location = useLocation();
+  return <div>booking-funnel{location.search}</div>;
+}
+
 /** Renders the page at a `/qr/:payload` route, capturing navigation targets. */
 function renderQr(payload = 'abc123') {
   return render(
@@ -30,7 +34,7 @@ function renderQr(payload = 'abc123') {
       <MemoryRouter initialEntries={[`/qr/${payload}`]}>
         <Routes>
           <Route path="/qr/:payload" element={<QrLandingPage />} />
-          <Route path="/salon/:salonId/book" element={<div>booking-funnel</div>} />
+          <Route path="/salon/:salonId/book" element={<BookingProbe />} />
           <Route path="/" element={<div>home</div>} />
         </Routes>
       </MemoryRouter>
@@ -62,28 +66,30 @@ describe('QrLandingPage — resolved', () => {
     resolveQr.mockResolvedValue({ salon: { id: 'salon-1', name: 'سالن رز' } });
   });
 
-  it('preserves the qr-landing testID and shows the salon identity', async () => {
+  it('opens service selection directly after resolving the salon', async () => {
     renderQr();
-    expect(await screen.findByTestId('qr-landing')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'سالن رز' })).toBeInTheDocument();
+    expect(await screen.findByText('booking-funnel')).toBeInTheDocument();
   });
 
   it('saves a successfully scanned salon on this device', async () => {
     renderQr();
-    await screen.findByTestId('qr-landing');
+    await screen.findByText('booking-funnel');
     expect(localStorage.getItem('ara-saved-salons-v1')).toContain('سالن رز');
   });
 
-  it('offers the «انتخاب خدمت» CTA that begins the funnel', async () => {
+  it('keeps stylist-scoped scans in the direct booking URL', async () => {
+    resolveQr.mockResolvedValue({
+      salon: { id: 'salon-1', name: 'سالن رز' },
+      staff: { id: 'staff-1', fullName: 'مریم' },
+    });
     renderQr();
-    const cta = await screen.findByRole('button', { name: 'انتخاب خدمت' });
-    cta.click();
-    expect(await screen.findByText('booking-funnel')).toBeInTheDocument();
+    expect(await screen.findByText('booking-funnel?staff=staff-1')).toBeInTheDocument();
   });
 
-  it('has no serious or critical a11y violations', async () => {
+  it('has no serious or critical a11y violations in the malformed state', async () => {
+    resolveQr.mockRejectedValue({ code: 'QR_MALFORMED' });
     const { findByTestId } = renderQr();
-    await expectNoSeriousA11yViolations(await findByTestId('qr-landing'));
+    await expectNoSeriousA11yViolations(await findByTestId('qr-error-malformed'));
   });
 });
 

@@ -21,6 +21,8 @@ const getProfile = vi.fn();
 const updateProfile = vi.fn();
 
 vi.mock('../../api/client', () => ({
+  getApiErrorMessage: (error: unknown, fallback: string) =>
+    error instanceof Error && error.message ? error.message : fallback,
   getAccessToken: () => getAccessToken(),
   customerApi: {
     getProfile: () => getProfile(),
@@ -102,13 +104,13 @@ describe('BookingConfirmPage — summary', () => {
     expect(await screen.findByTestId('booking-confirm')).toBeInTheDocument();
   });
 
-  it('summarizes service, Jalali date/time, and Rial price + deposit notice', async () => {
+  it('summarizes service, Jalali date/time, and Toman price + deposit notice', async () => {
     renderPage();
     // Service name from the (unchanged) services endpoint lookup.
     expect(await screen.findByText('کوتاهی مو')).toBeInTheDocument();
-    // Rial price with Persian digits + grouping + unit label.
-    expect(screen.getByText(/۲٬۵۰۰٬۰۰۰/)).toBeInTheDocument();
-    expect(screen.getByText('ریال')).toBeInTheDocument();
+    // 250,000 Toman with Persian digits + grouping + unit label.
+    expect(screen.getByText(/۲۵۰٬۰۰۰/)).toBeInTheDocument();
+    expect(screen.getByText('تومان')).toBeInTheDocument();
     // Jalali date is rendered as a <time> element (machine ISO + Persian text).
     expect(document.querySelector('time')).toBeInTheDocument();
     // Deposit/payment notice is present.

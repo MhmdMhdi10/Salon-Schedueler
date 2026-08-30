@@ -78,6 +78,8 @@ vi.mock('../../../api/client', () => {
     }
   }
   return {
+    getApiErrorMessage: (error: unknown, fallback: string) =>
+      error instanceof Error && error.message ? error.message : fallback,
     ApiError,
     bootstrapAuth: () => bootstrapAuth(),
     getAccessToken: () => getAccessToken(),
@@ -381,7 +383,12 @@ describe('Skeleton and error states', () => {
       await waitFor(() => {
         expect(screen.getByTestId('owner-approval-queue')).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByRole('button', { name: /تأیید/ }));
+      expect(screen.getByTestId('owner-approval-queue-fab')).toBeInTheDocument();
+      fireEvent.click(
+        within(screen.getByTestId('owner-approval-queue')).getByRole('button', {
+          name: /^تأیید$/,
+        }),
+      );
 
       await waitFor(() => {
         expect(screen.getByRole('alert')).toHaveTextContent('این رزرو قبلاً تعیین تکلیف شده است');
@@ -579,11 +586,12 @@ describe('Jalali dates', () => {
       const calendarFetchesBeforeMove = mockGetCalendar.mock.calls.length;
       fireEvent.click(screen.getByRole('article', { name: /کوتاهی مو/ }));
       fireEvent.click(screen.getByRole('button', { name: /انتقال به زمان دیگر/ }));
-      const nextStart = new Date(start.getTime() + 60 * 60_000);
-      fireEvent.change(screen.getByLabelText('زمان شروع جدید'), {
-        target: { value: nextStart.toISOString().slice(0, 16) },
+      expect(screen.getByRole('button', { name: /تاریخ شروع جدید/ })).toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText('ساعت شروع جدید'), {
+        target: { value: '11:00' },
       });
-      fireEvent.click(screen.getByRole('button', { name: 'ذخیره زمان جدید' }));
+      fireEvent.click(screen.getByRole('button', { name: 'بررسی تغییر زمان' }));
+      fireEvent.click(screen.getByRole('button', { name: 'تأیید نهایی تغییر زمان' }));
 
       await waitFor(() => {
         expect(mockRescheduleAppointment).toHaveBeenCalledWith('appt-1', expect.any(String), undefined);
@@ -645,6 +653,12 @@ describe('Jalali dates', () => {
       } finally {
         document.elementsFromPoint = elementsFromPoint;
       }
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'بررسی تغییر زمان' })).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'بررسی تغییر زمان' }));
+      fireEvent.click(screen.getByRole('button', { name: 'تأیید نهایی تغییر زمان' }));
 
       await waitFor(() => {
         expect(mockRescheduleAppointment).toHaveBeenCalledWith('appt-1', expect.any(String), undefined);

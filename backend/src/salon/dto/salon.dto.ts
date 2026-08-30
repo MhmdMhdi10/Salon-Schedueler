@@ -11,6 +11,7 @@ export const SalonAvailabilityQueryDto = z
     date: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/),
     staffId: z.string().trim().min(1).optional(),
     locationType: locationType.optional(),
+    durationMinutes: z.coerce.number().int().min(5).max(480).optional(),
   })
   .passthrough();
 export const SalonScanQueryDto = z

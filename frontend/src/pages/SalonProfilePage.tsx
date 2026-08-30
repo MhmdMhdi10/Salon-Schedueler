@@ -30,7 +30,7 @@ import { RatingStars } from '../components/ui/RatingStars';
 import { SalonPlaceholder } from '../components/ui/SalonPlaceholder';
 import { Spinner } from '../components/ui/Spinner';
 import { cn } from '../components/ui/cn';
-import { formatRial } from '../components/ui/Money';
+import { formatToman } from '../components/ui/Money';
 
 // Lazy: the gallery lightbox is the only thing on this route that needs
 // @radix-ui/react-dialog, and it only opens on user interaction.
@@ -238,8 +238,8 @@ function ServicesSection({
                 </div>
                 <div className="flex w-full items-center justify-between gap-4 sm:w-auto sm:shrink-0 sm:justify-start">
                   <bdi className="whitespace-nowrap text-sm font-semibold text-text">
-                    {formatRial(service.priceRial)}{' '}
-                    <span className="text-xs font-normal text-muted">ریال</span>
+                    {formatToman(service.priceRial)}{' '}
+                    <span className="text-xs font-normal text-muted">تومان</span>
                   </bdi>
                   <Link
                     to={`${bookHref}?service=${encodeURIComponent(service.id)}`}
@@ -783,7 +783,7 @@ export function SalonProfilePage() {
               {minPrice != null && (
                 <p className="mt-3 text-sm text-muted">
                   {t('discovery.card.fromPrice', {
-                    price: toPersianDigits(formatRial(minPrice)),
+                    price: toPersianDigits(formatToman(minPrice)),
                   })}
                 </p>
               )}

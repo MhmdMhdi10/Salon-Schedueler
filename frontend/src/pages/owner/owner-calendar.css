@@ -53,6 +53,7 @@
   .owner-calendar-content,
   .owner-calendar-actions,
   .owner-calendar-policy,
+  .owner-calendar-pending-approval,
   .owner-calendar-approval {
     inline-size: 100%;
   }
@@ -61,16 +62,20 @@
     order: 1;
   }
 
-  .owner-calendar-date-nav {
+  .owner-calendar-pending-approval {
     order: 2;
   }
 
-  .owner-calendar-view-toggle {
+  .owner-calendar-date-nav {
     order: 3;
   }
 
-  .owner-calendar-filters {
+  .owner-calendar-view-toggle {
     order: 4;
+  }
+
+  .owner-calendar-filters {
+    order: 5;
   }
 
   .owner-calendar-filters {
@@ -105,21 +110,25 @@
   }
 
   .owner-calendar-content {
-    order: 5;
+    order: 6;
     min-block-size: 0;
   }
 
   .owner-calendar-actions {
-    order: 6;
-  }
-
-  .owner-calendar-policy {
     order: 7;
   }
 
-  .owner-calendar-approval {
+  .owner-calendar-policy {
     order: 8;
   }
+
+  .owner-calendar-approval {
+    order: 9;
+  }
+}
+
+.owner-calendar-pending-fab {
+  display: none;
 }
 
 /* Mobile keeps one primary booking CTA and one compact management entry point
@@ -147,6 +156,40 @@
     box-shadow: none;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+  }
+
+  .owner-calendar-pending-fab {
+    position: fixed;
+    inset-inline-start: 1rem;
+    inset-inline-end: auto;
+    bottom: calc(5.25rem + env(safe-area-inset-bottom));
+    z-index: var(--z-nav);
+    display: inline-flex;
+    max-inline-size: calc(100vw - 8rem);
+    min-block-size: 3rem;
+    padding-inline: 0.75rem;
+    overflow: hidden;
+    border: 0.0625rem solid color-mix(in srgb, var(--color-primary-contrast) 35%, var(--color-primary));
+    box-shadow: 0 0.75rem 1.75rem rgba(0, 0, 0, 0.22);
+  }
+
+  .owner-calendar-pending-fab-label {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .owner-calendar-pending-fab-count {
+    display: inline-flex;
+    min-inline-size: 1.5rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--color-primary-contrast) 18%, transparent);
+    padding-inline: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 800;
   }
 
   .owner-calendar-desktop-actions {

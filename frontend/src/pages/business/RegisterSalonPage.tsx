@@ -25,6 +25,7 @@ import {
   useToast,
 } from '../../components/ui';
 import { ACCENTS, accentVars } from '../../components/theme/accents';
+import { filterPhoneInput, normalizePhone, PHONE_PATTERN } from '../../auth/phone';
 import {
   BarberIcon,
   BrowsIcon,
@@ -43,8 +44,6 @@ import type { CategoryIconProps } from '../../components/icons';
 
 import './RegisterSalonPage.css';
 
-/** Iranian mobile pattern: `09` followed by 9 digits (ui-ux §7). */
-const PHONE_PATTERN = /^09\d{9}$/;
 /** Number of digits in the SMS one-time code. */
 const OTP_LENGTH = 6;
 /** Resend cooldown in seconds — the «ارسال مجدد تا ۰:۴۵» timer (ui-ux §7). */
@@ -114,14 +113,6 @@ const WORK_MODES: readonly { key: WorkMode; icon: React.ComponentType<CategoryIc
  * localizes digits, strips spacing/punctuation, rewrites `+98`/`0098`/`98`
  * country-code prefixes to a leading `0` (mirrors AuthPage, ui-ux §7).
  */
-function normalizePhone(raw: string): string {
-  let v = normalizeDigits(raw).replace(/[\s()-]/g, '');
-  if (v.startsWith('+98')) v = `0${v.slice(3)}`;
-  else if (v.startsWith('0098')) v = `0${v.slice(4)}`;
-  else if (v.startsWith('98') && v.length === 12) v = `0${v.slice(2)}`;
-  return v;
-}
-
 /** Format remaining seconds as `m:ss` in Persian digits (resend timer). */
 function formatCountdown(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
@@ -184,6 +175,7 @@ function RegisterSalonContent() {
   const [teamMemberNames, setTeamMemberNames] = useState<string[]>([]);
   const [mainGoal, setMainGoal] = useState<MainGoal | ''>('');
   const [category, setCategory] = useState('');
+  const [categories, setCategories] = useState<string[]>([]);
   const [specialties, setSpecialties] = useState<string[]>([]);
 
   // Identity — required before provisioning the salon.
@@ -198,7 +190,6 @@ function RegisterSalonContent() {
 
   // Services questionnaire.
   const [services, setServices] = useState<DraftService[]>([]);
-  const [selectedPresetKey, setSelectedPresetKey] = useState('');
   const [svcName, setSvcName] = useState('');
   const [svcDuration, setSvcDuration] = useState('');
   const [svcPrice, setSvcPrice] = useState('');
@@ -216,12 +207,16 @@ function RegisterSalonContent() {
   const [otpError, setOtpError] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
+  const [servicePresetPage, setServicePresetPage] = useState(0);
+  const [servicePage, setServicePage] = useState(0);
 
   const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const autoSubmittedOtp = useRef('');
+  const specialtiesRef = useRef<HTMLDivElement | null>(null);
   const normalizedPhone = useMemo(() => normalizePhone(phone), [phone]);
-  const selectedProfile = useMemo(
-    () => BUSINESS_PROFILES.find((profile) => profile.key === category),
-    [category],
+  const selectedProfiles = useMemo(
+    () => BUSINESS_PROFILES.filter((profile) => categories.includes(profile.key)),
+    [categories],
   );
   const codeValue = code.join('');
   const codeIsComplete = codeValue.length === otpLength;
@@ -240,6 +235,7 @@ function RegisterSalonContent() {
         ? response.devOtp.split('').slice(0, nextLength)
         : Array(nextLength).fill(''),
     );
+    autoSubmittedOtp.current = '';
   };
 
   // Resend countdown for the OTP step.
@@ -279,14 +275,6 @@ function RegisterSalonContent() {
           ? Boolean(salonCapacity)
           : false;
 
-  const handleWizardBack = () => {
-    if (step === 'category') {
-      setStep(workMode ? 'context' : 'profile');
-      return;
-    }
-    setStep(STEP_ORDER[Math.max(0, stepIndex - 1)]);
-  };
-
   const handleContextNext = () => {
     if (workMode === 'team') {
       setChairCount(teamRange ? CHAIR_COUNT_BY_TEAM_RANGE[teamRange] : '3');
@@ -309,49 +297,9 @@ function RegisterSalonContent() {
       errors.salonName = t('business.register.errors.salonNameRequired');
     if (ownerName.trim().length < 1)
       errors.ownerName = t('business.register.errors.ownerNameRequired');
-    if (!PHONE_PATTERN.test(normalizedPhone))
-      errors.phone = t('business.register.errors.invalidPhone');
-    // Block advancing while a duplicate-phone verdict is pending or known.
-    if (phoneCheck === 'checking')
-      errors.phone = t('business.register.info.phoneChecking', { defaultValue: 'در حال بررسی…' });
-    else if (phoneCheck === 'taken') errors.phone = t('business.register.errors.phoneTaken');
     setInfoErrors(errors);
     if (Object.keys(errors).length === 0) setStep('services');
   };
-
-  // ── Live phone-duplicate check ──────────────────────────────────────────
-  // As soon as the phone is format-valid, hit the backend to learn whether it
-  // is already registered — flag the field immediately instead of bouncing the
-  // user all the way back from Submit at Step 3. Debounced + cancels stale
-  // responses so a quick typist never sees a stale "taken" verdict.
-  const [phoneCheck, setPhoneCheck] = useState<'idle' | 'checking' | 'taken'>('idle');
-  useEffect(() => {
-    if (!PHONE_PATTERN.test(normalizedPhone)) {
-      setPhoneCheck('idle');
-      return;
-    }
-    let active = true;
-    setPhoneCheck('checking');
-    const handle = window.setTimeout(() => {
-      registrationApi
-        .checkPhone(normalizedPhone)
-        .then((res) => {
-          if (!active) return;
-          setPhoneCheck(res.available ? 'idle' : 'taken');
-          setInfoErrors((prev) => ({
-            ...prev,
-            phone: res.available ? undefined : t('business.register.errors.phoneTaken'),
-          }));
-        })
-        .catch(() => {
-          if (active) setPhoneCheck('idle');
-        });
-    }, 450);
-    return () => {
-      active = false;
-      window.clearTimeout(handle);
-    };
-  }, [normalizedPhone, t]);
 
   // ── Services: add / remove a service ─────────────────────────────────────
   // Only the name is required — duration/price are optional and default
@@ -373,28 +321,47 @@ function RegisterSalonContent() {
         priceRial: toIntOrZero(svcPrice) || undefined,
       },
     ]);
-    setSelectedPresetKey('');
     setSvcName('');
     setSvcDuration('');
     setSvcPrice('');
     setSvcError('');
   };
 
-  const handleSelectPresetService = (presetKey: (typeof SERVICE_PRESETS)[number]) => {
+  const handleTogglePresetService = (presetKey: (typeof SERVICE_PRESETS)[number]) => {
     const name = t(`business.register.services.presets.${presetKey}`);
-    const alreadyAdded = services.some((service) => service.name === name);
-    if (alreadyAdded) return;
-
-    setSelectedPresetKey(presetKey);
-    setSvcName(name);
+    setServices((previous) => {
+      const existing = previous.find((service) => service.name === name);
+      if (existing) return previous.filter((service) => service.key !== existing.key);
+      return [
+        ...previous,
+        { key: `preset-${presetKey}`, name, durationMinutes: 30, priceRial: 0 },
+      ];
+    });
     setSvcError('');
   };
 
   const handleRemoveService = (key: string) =>
     setServices((prev) => prev.filter((s) => s.key !== key));
 
+  const servicePresetPageCount = Math.ceil(SERVICE_PRESETS.length / SERVICE_PRESETS_PAGE_SIZE);
+  const visibleServicePresets = SERVICE_PRESETS.slice(
+    servicePresetPage * SERVICE_PRESETS_PAGE_SIZE,
+    (servicePresetPage + 1) * SERVICE_PRESETS_PAGE_SIZE,
+  );
+  const visibleServices = services.slice(
+    servicePage * ONBOARDING_SERVICE_PAGE_SIZE,
+    (servicePage + 1) * ONBOARDING_SERVICE_PAGE_SIZE,
+  );
+
   // ── Submit registration, then send the OTP ───────────────────────────────
   const handleSubmit = async () => {
+    if (!PHONE_PATTERN.test(normalizedPhone)) {
+      setInfoErrors((previous) => ({
+        ...previous,
+        phone: t('business.register.errors.invalidPhone'),
+      }));
+      return;
+    }
     setSubmitting(true);
     setSubmitError('');
     try {
@@ -402,7 +369,8 @@ function RegisterSalonContent() {
         salonName: salonName.trim(),
         ownerName: ownerName.trim(),
         phone: normalizedPhone,
-        businessType: category || undefined,
+        businessType: categories[0] || category || undefined,
+        businessTypes: categories,
         specialties,
         brandAccent: accentKey || undefined,
         workMode:
@@ -412,7 +380,7 @@ function RegisterSalonContent() {
         services: services.map(({ name, durationMinutes, priceRial }) => ({
           name,
           ...(durationMinutes ? { durationMinutes } : {}),
-          ...(priceRial ? { priceRial } : {}),
+          ...(priceRial ? { priceRial: priceRial * 10 } : {}),
         })),
         teamMembers: teamMemberNames
           .map((fullName) => ({ fullName: fullName.trim() }))
@@ -429,9 +397,7 @@ function RegisterSalonContent() {
       window.setTimeout(() => otpRefs.current[0]?.focus(), 0);
     } catch (err) {
       if (err instanceof ApiError && err.code === 'PHONE_TAKEN') {
-        // The phone already owns a salon — send them back to fix it.
-        setInfoErrors({ phone: t('business.register.errors.phoneTaken') });
-        setStep('info');
+        setSubmitError('این شماره قابل استفاده نیست؛ دوباره تلاش کنید.');
       } else {
         setSubmitError(t('business.register.errors.generic'));
       }
@@ -471,6 +437,21 @@ function RegisterSalonContent() {
       setOtpLoading(false);
     }
   };
+
+  // Development autofill and mobile SMS autofill should complete onboarding
+  // immediately once all code digits are present; the button remains as a
+  // fallback for users who prefer an explicit action.
+  useEffect(() => {
+    if (
+      step === 'otp' &&
+      codeIsComplete &&
+      !otpLoading &&
+      autoSubmittedOtp.current !== codeValue
+    ) {
+      autoSubmittedOtp.current = codeValue;
+      void handleVerifyOtp();
+    }
+  }, [codeIsComplete, codeValue, otpLoading, step]);
 
   const setDigit = (index: number, digit: string) => {
     setOtpError('');
@@ -512,13 +493,13 @@ function RegisterSalonContent() {
 
   return (
     <div
-      className="flex min-h-screen min-h-[100dvh] w-full flex-col bg-bg"
+      className="register-page-shell flex min-h-screen min-h-[100dvh] w-full flex-col bg-bg"
       data-testid="register-salon-page"
     >
       <SeoHead title={t('business.register.title')} />
 
-      <header className="register-page-header border-b border-border bg-elevated">
-        <div className="mx-auto flex h-14 w-full max-w-2xl items-center gap-2 px-3 sm:gap-5 sm:px-4">
+      <header className="register-page-header border-b border-border bg-elevated" dir="rtl">
+        <div className="relative mx-auto flex h-14 w-full max-w-2xl items-center justify-between gap-2 px-3 sm:gap-5 sm:px-4">
           <Link
             to="/"
             aria-label="آرا"
@@ -527,33 +508,23 @@ function RegisterSalonContent() {
             <BrandLogo className="h-9" />
           </Link>
           <div
-            className="flex min-w-0 flex-1 basis-16 gap-1"
+            className="register-step-progress pointer-events-none absolute inset-0 flex items-center justify-center"
             role="group"
             aria-label={t('business.register.progressLabel')}
           >
-            {STEP_ORDER.map((item, index) => (
-              <span
-                key={item}
-                className={cn(
-                  'h-1 flex-1 rounded-pill',
-                  index <= stepIndex ? 'bg-primary' : 'bg-border',
-                )}
-                aria-hidden="true"
-              />
-            ))}
+            <div className="flex w-[min(64%,18rem)] gap-1">
+              {STEP_ORDER.map((item, index) => (
+                <span
+                  key={item}
+                  className={cn(
+                    'h-1 flex-1 rounded-pill',
+                    index <= stepIndex ? 'bg-primary' : 'bg-border',
+                  )}
+                  aria-hidden="true"
+                />
+              ))}
+            </div>
           </div>
-          {step !== 'profile' ? (
-            <button
-              type="button"
-              onClick={handleWizardBack}
-              className="inline-flex size-10 shrink-0 items-center justify-center rounded-md text-text"
-              aria-label={t('business.register.back')}
-            >
-              <ArrowRight className="size-5 rtl:-scale-x-100" aria-hidden="true" />
-            </button>
-          ) : (
-            <span className="size-10" aria-hidden="true" />
-          )}
           <ThemeToggle className="shrink-0" />
         </div>
       </header>
@@ -623,6 +594,7 @@ function RegisterSalonContent() {
               ))}
             </div>
             <StepNav
+              onBack={() => navigate('/')}
               onNext={() => setStep('context')}
               onSkip={() => setStep('category')}
               nextLabel={t('business.register.next')}
@@ -799,14 +771,38 @@ function RegisterSalonContent() {
             <div className="grid gap-3 sm:grid-cols-2">
               {BUSINESS_PROFILES.map((profile) => {
                 const Icon = profile.icon;
-                const selected = category === profile.key;
+                const selected = categories.includes(profile.key);
                 return (
                   <button
                     key={profile.key}
                     type="button"
                     onClick={() => {
-                      setCategory(profile.key);
-                      setSpecialties([profile.specialties[0].key]);
+                      const nextCategories = selected
+                        ? categories.filter((key) => key !== profile.key)
+                        : [...categories, profile.key];
+                      setCategories(nextCategories);
+                      setCategory(nextCategories[0] ?? '');
+                      setSpecialties((previous) => {
+                        const allowed = nextCategories.flatMap(
+                          (key) =>
+                            BUSINESS_PROFILES.find((item) => item.key === key)?.specialties.map(
+                              (item) => item.key,
+                            ) ?? [],
+                        );
+                        const retained = previous.filter((key) => allowed.includes(key));
+                        const defaultSpecialty = !selected ? profile.specialties[0]?.key : undefined;
+                        return defaultSpecialty && !retained.includes(defaultSpecialty)
+                          ? [...retained, defaultSpecialty]
+                          : retained;
+                      });
+                      if (window.matchMedia('(max-width: 47.9375rem)').matches) {
+                        window.requestAnimationFrame(() => {
+                          specialtiesRef.current?.scrollIntoView({
+                            behavior: prefersReducedMotion ? 'auto' : 'smooth',
+                            block: 'start',
+                          });
+                        });
+                      }
                     }}
                     aria-pressed={selected}
                     data-testid={`business-type-${profile.key}`}
@@ -831,33 +827,49 @@ function RegisterSalonContent() {
                 );
               })}
             </div>
-            <div className="register-specialties-panel mt-4 flex flex-col gap-2 rounded-xl border border-border bg-bg p-4">
-              <p className="text-sm font-bold text-text">
-                {t('business.register.category.specialtyTitle')}
-              </p>
-              <p className="text-xs leading-5 text-muted">
-                {t('business.register.category.specialtySubtitle')}
-              </p>
-              <Select
-                label={t('business.register.category.specialtyLabel')}
-                labelHidden
-                disabled={!selectedProfile}
-                value={selectedProfile ? (specialties[0] ?? '') : ''}
-                onValueChange={(value) => setSpecialties(value ? [value] : [])}
-                options={
-                  selectedProfile?.specialties.map((specialty) => ({
-                    value: specialty.key,
-                    label: specialty.label,
-                  })) ?? []
-                }
-                placeholder={
-                  selectedProfile
-                    ? t('business.register.category.specialtyPlaceholder')
-                    : t('business.register.category.specialtyDisabledPlaceholder')
-                }
-                containerClassName="w-full"
-              />
-            </div>
+            {selectedProfiles.length > 0 && (
+              <div
+                ref={specialtiesRef}
+                className="register-specialties-panel mt-4 flex flex-col gap-2 rounded-xl border border-border bg-bg p-4"
+              >
+                <p className="text-sm font-bold text-text">
+                  {t('business.register.category.specialtyTitle')}
+                </p>
+                <p className="text-xs leading-5 text-muted">
+                  {t('business.register.category.specialtySubtitle')}
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {selectedProfiles.flatMap((profile) =>
+                    profile.specialties.map((specialty) => {
+                      const checked = specialties.includes(specialty.key);
+                      return (
+                        <label
+                          key={`${profile.key}-${specialty.key}`}
+                          className={cn(
+                            'flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm',
+                            checked ? 'border-primary bg-primary/5 text-primary' : 'border-border text-text',
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() =>
+                              setSpecialties((previous) =>
+                                checked
+                                  ? previous.filter((key) => key !== specialty.key)
+                                  : [...previous, specialty.key],
+                              )
+                            }
+                            className="size-4 accent-primary"
+                          />
+                          <span>{specialty.label}</span>
+                        </label>
+                      );
+                    }),
+                  )}
+                </div>
+              </div>
+            )}
             <StepNav
               onBack={() => setStep(workMode ? 'context' : 'profile')}
               onNext={() => setStep('info')}
@@ -865,7 +877,7 @@ function RegisterSalonContent() {
               nextLabel={t('business.register.next')}
               skipLabel={t('business.register.skip')}
               backLabel={t('business.register.back')}
-              nextDisabled={!category}
+              nextDisabled={categories.length === 0}
             />
           </section>
         ) : (
@@ -907,27 +919,6 @@ function RegisterSalonContent() {
                       setInfoErrors((p) => ({ ...p, ownerName: undefined }));
                   }}
                 />
-                <TextField
-                  id="phone"
-                  label={t('business.register.info.phoneLabel')}
-                  helperText={
-                    phoneCheck === 'checking'
-                      ? t('business.register.info.phoneChecking', { defaultValue: 'در حال بررسی…' })
-                      : t('business.register.info.phoneHelper')
-                  }
-                  error={infoErrors.phone}
-                  type="tel"
-                  inputMode="tel"
-                  dir="ltr"
-                  autoComplete="tel"
-                  maxLength={13}
-                  placeholder={t('auth.phonePlaceholder')}
-                  value={phone}
-                  onChange={(e) => {
-                    setPhone(e.target.value);
-                    if (infoErrors.phone) setInfoErrors((p) => ({ ...p, phone: undefined }));
-                  }}
-                />
                 <Button type="submit" size="lg" fullWidth>
                   {t('business.register.next')}
                 </Button>
@@ -942,36 +933,11 @@ function RegisterSalonContent() {
                       id="svcName"
                       label={t('business.register.services.nameLabel')}
                       placeholder={t('business.register.services.namePlaceholder')}
-                      endAdornment={
-                        <Select
-                          id="svcPreset"
-                          label={t('business.register.services.presetsLabel')}
-                          labelHidden
-                          placeholder={t('business.register.services.presetsPlaceholder')}
-                          value={selectedPresetKey}
-                          options={SERVICE_PRESETS.filter((presetKey) => {
-                            const presetName = t(`business.register.services.presets.${presetKey}`);
-                            return !services.some((service) => service.name === presetName);
-                          }).map((presetKey) => ({
-                            value: presetKey,
-                            label: t(`business.register.services.presets.${presetKey}`),
-                          }))}
-                          emptyText={t('business.register.services.presetsEmpty')}
-                          onValueChange={(value) =>
-                            handleSelectPresetService(value as (typeof SERVICE_PRESETS)[number])
-                          }
-                          containerClassName="w-36 shrink-0"
-                          className="h-9 min-h-9 border-0 bg-transparent px-2 py-1 text-xs text-primary shadow-none focus-visible:outline-offset-0"
-                        />
-                      }
                       value={svcName}
-                      onChange={(e) => {
-                        setSelectedPresetKey('');
-                        setSvcName(e.target.value);
-                      }}
+                      onChange={(e) => setSvcName(e.target.value)}
                     />
                   </div>
-                  <TextField
+                    <TextField
                     id="svcDuration"
                     label={
                       <span className="whitespace-nowrap">
@@ -1000,6 +966,70 @@ function RegisterSalonContent() {
                     onChange={(e) => setSvcPrice(e.target.value)}
                   />
                 </div>
+                <div className="rounded-xl border border-border bg-bg p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-text">
+                        {t('business.register.services.presetsLabel')}
+                      </p>
+                      <p className="text-xs text-muted">
+                        خدمت‌های آماده را تیک بزنید؛ جزئیات را بعداً هم می‌توانید ویرایش کنید.
+                      </p>
+                    </div>
+                    <span className="text-xs text-muted">
+                      {toPersianDigits(`${servicePresetPage + 1}/${servicePresetPageCount}`)}
+                    </span>
+                  </div>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {visibleServicePresets.map((presetKey) => {
+                      const name = t(`business.register.services.presets.${presetKey}`);
+                      const checked = services.some((service) => service.name === name);
+                      return (
+                        <label
+                          key={presetKey}
+                          className={cn(
+                            'flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm',
+                            checked ? 'border-primary bg-primary/5 text-primary' : 'border-border text-text',
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => handleTogglePresetService(presetKey)}
+                            className="size-4 accent-primary"
+                          />
+                          <span>{name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {servicePresetPageCount > 1 && (
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="md"
+                        disabled={servicePresetPage === 0}
+                        onClick={() => setServicePresetPage((page) => Math.max(0, page - 1))}
+                      >
+                        قبلی
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="md"
+                        disabled={servicePresetPage >= servicePresetPageCount - 1}
+                        onClick={() =>
+                          setServicePresetPage((page) =>
+                            Math.min(servicePresetPageCount - 1, page + 1),
+                          )
+                        }
+                      >
+                        بعدی
+                      </Button>
+                    </div>
+                  )}
+                </div>
                 {svcError && (
                   <p className="flex items-center gap-1 text-sm text-danger" role="alert">
                     {svcError}
@@ -1022,7 +1052,7 @@ function RegisterSalonContent() {
                     className="flex flex-col gap-2"
                     aria-label={t('business.register.services.listLabel')}
                   >
-                    {services.map((s) => (
+                    {visibleServices.map((s) => (
                       <li
                         key={s.key}
                         className="flex items-center justify-between gap-3 rounded-md border border-border bg-bg px-3 py-2"
@@ -1047,6 +1077,41 @@ function RegisterSalonContent() {
                       </li>
                     ))}
                   </ul>
+                )}
+
+                {services.length > ONBOARDING_SERVICE_PAGE_SIZE && (
+                  <div className="flex items-center justify-between gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="md"
+                      disabled={servicePage === 0}
+                      onClick={() => setServicePage((page) => Math.max(0, page - 1))}
+                    >
+                      قبلی
+                    </Button>
+                    <span className="text-xs text-muted">
+                      {toPersianDigits(
+                        `${servicePage + 1}/${Math.ceil(services.length / ONBOARDING_SERVICE_PAGE_SIZE)}`,
+                      )}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="md"
+                      disabled={servicePage >= Math.ceil(services.length / ONBOARDING_SERVICE_PAGE_SIZE) - 1}
+                      onClick={() =>
+                        setServicePage((page) =>
+                          Math.min(
+                            Math.ceil(services.length / ONBOARDING_SERVICE_PAGE_SIZE) - 1,
+                            page + 1,
+                          ),
+                        )
+                      }
+                    >
+                      بعدی
+                    </Button>
+                  </div>
                 )}
 
                 {services.length === 0 && (
@@ -1076,11 +1141,29 @@ function RegisterSalonContent() {
                 />
 
                 <TextField
+                  id="phone"
+                  label={t('business.register.info.phoneLabel')}
+                  helperText={t('business.register.info.phoneHelper')}
+                  error={infoErrors.phone}
+                  type="tel"
+                  inputMode="tel"
+                  dir="ltr"
+                  autoComplete="tel"
+                  maxLength={14}
+                  placeholder={t('auth.phonePlaceholder')}
+                  value={phone}
+                  onChange={(e) => {
+                    setPhone(filterPhoneInput(e.target.value));
+                    if (infoErrors.phone) setInfoErrors((p) => ({ ...p, phone: undefined }));
+                  }}
+                />
+
+                <TextField
                   id="chairCount"
                   label={t('business.register.setup.chairsLabel')}
                   helperText={
                     isMobileWorkspace
-                      ? 'برای خدمات سیار صندلی فیزیکی لازم نیست؛ مسیر اختصاصی آرایشگر ساخته می‌شود.'
+                      ? 'برای خدمات سیار صندلی فیزیکی لازم نیست؛ مسیر اختصاصی عضو تیم ساخته می‌شود.'
                       : t('business.register.setup.chairsHelper')
                   }
                   inputMode="numeric"
@@ -1177,14 +1260,15 @@ function RegisterSalonContent() {
                   <SummaryRow
                     label={t('business.register.review.category')}
                     value={
-                      selectedProfile?.label ?? (category || t('business.register.review.none'))
+                      selectedProfiles.map((profile) => profile.label).join('، ') ||
+                      (category || t('business.register.review.none'))
                     }
                   />
                   <SummaryRow
                     label={t('business.register.review.specialty')}
                     value={
                       specialties.length > 0
-                        ? specialtyLabels(category, specialties)
+                        ? specialtyLabels(categories, specialties)
                         : t('business.register.review.none')
                     }
                   />
@@ -1424,18 +1508,19 @@ const BUSINESS_PROFILES: readonly BusinessProfile[] = [
   },
 ] as const;
 
-function specialtyLabels(category: string, keys: string[]): string {
-  const profile = BUSINESS_PROFILES.find((item) => item.key === category);
-  return (
-    profile?.specialties
-      .filter((item) => keys.includes(item.key))
-      .map((item) => item.label)
-      .join('، ') || '—'
-  );
+function specialtyLabels(categories: string[], keys: string[]): string {
+  const labels = BUSINESS_PROFILES
+    .filter((item) => categories.includes(item.key))
+    .flatMap((item) => item.specialties)
+    .filter((item) => keys.includes(item.key))
+    .map((item) => item.label);
+  return labels.join('، ') || '—';
 }
 
 /** Quick-add service presets (keys map to `business.register.services.presets.*`). */
 const SERVICE_PRESETS = ['haircut', 'color', 'highlights', 'blowout', 'makeup', 'nails'] as const;
+const SERVICE_PRESETS_PAGE_SIZE = 4;
+const ONBOARDING_SERVICE_PAGE_SIZE = 5;
 
 /** Large, touch-friendly choice used for the first adaptive onboarding question. */
 function ChoiceCard({
@@ -1551,7 +1636,8 @@ function StepNav({
               type="button"
               variant="ghost"
               size="md"
-              startIcon={<ArrowRight className="h-4 w-4 rtl:-scale-x-100" />}
+              // RTL-native: back affordance intentionally points visually right.
+              startIcon={<ArrowRight className="h-4 w-4" />}
               onClick={onBack}
             >
               {backLabel}

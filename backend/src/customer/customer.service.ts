@@ -27,15 +27,22 @@ export interface AppointmentRecord {
   createdAt: Date;
   locationType?: 'salon' | 'customer';
   locationAddress?: string | null;
+  customerNote?: string | null;
+  durationMinOverride?: number | null;
   /** Optional display fields used by the customer's own dashboard. */
   salonName?: string;
   serviceName?: string;
   staffName?: string;
   depositRequired?: boolean;
-  depositMethod?: 'gateway' | 'card_transfer' | null;
+  depositMethod?: 'gateway' | 'card_transfer' | 'cash' | null;
   depositAmountRial?: number | null;
   paymentStatus?: string | null;
   depositReceiptStatus?: string | null;
+  pendingReschedule?: {
+    startAt: Date;
+    endAt: Date | null;
+    requestedAt: Date | null;
+  } | null;
 }
 
 /**

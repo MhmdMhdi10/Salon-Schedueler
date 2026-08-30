@@ -111,7 +111,7 @@ export function BookingSuccessPage() {
       <div
         data-testid="payment-result"
         data-shell="funnel-payment-result"
-        className="flex min-h-screen min-h-[100dvh] flex-col overflow-x-hidden bg-bg text-text"
+        className="flex min-h-screen min-h-[100dvh] flex-col overflow-x-clip bg-bg text-text"
       >
         <SeoHead title={t('seo.titles.success')} />
 
@@ -190,7 +190,7 @@ export function BookingSuccessPage() {
       <div
         data-testid="booking-success"
         data-shell="funnel-success"
-        className="flex min-h-screen min-h-[100dvh] flex-col overflow-x-hidden bg-bg text-text"
+        className="flex min-h-screen min-h-[100dvh] flex-col overflow-x-clip bg-bg text-text"
       >
         <SeoHead title={t('seo.titles.success')} />
         <main
@@ -215,7 +215,7 @@ export function BookingSuccessPage() {
     <div
       data-testid="booking-success"
       data-shell="funnel-success"
-      className="flex min-h-screen min-h-[100dvh] flex-col overflow-x-hidden bg-bg text-text"
+      className="flex min-h-screen min-h-[100dvh] flex-col overflow-x-clip bg-bg text-text"
     >
       <SeoHead title={t('seo.titles.success')} />
 

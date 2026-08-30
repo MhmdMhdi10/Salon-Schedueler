@@ -132,18 +132,29 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
     publicReadLimit,
     asyncRoute(async (req, res) => {
       const services_ = await services.serviceCatalog.listServices(req.params.id);
+      const depositSettings =
+        typeof services.availabilityConfig.getSalonDepositSettings === 'function'
+          ? await services.availabilityConfig.getSalonDepositSettings(req.params.id)
+          : null;
       res.status(200).json({
         services: services_.map((s) => ({
           id: s.id,
           name: s.name,
           durationMinutes: s.durationMin,
+          durationMode: s.durationMode,
+          minDurationMinutes: s.minDurationMin,
+          maxDurationMinutes: s.maxDurationMin,
           bufferMinutes: s.bufferMin,
           priceRial: Number(s.priceRial),
           // Additive deposit fields so the confirm step can show the deposit
           // notice (with its amount) ONLY for services that actually require
           // one, instead of a blanket payment claim (ui-ux §12 honesty).
           requiresDeposit: s.requiresDeposit,
+          depositMethod: depositSettings?.depositMethod ?? null,
           depositRial: s.depositRial != null ? Number(s.depositRial) : null,
+          depositType: s.depositType,
+          depositPercent: s.depositPercent,
+          approvalStaffId: s.approvalStaffId ?? null,
           staffIds: s.serviceStaff.map((mapping) => mapping.staffMemberId),
         })),
       });
@@ -174,6 +185,10 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
         // Optional stylist filter (R14.3): `&staffId=` narrows the slots to
         // ones that specific staff member can personally serve.
         staffId: req.query.staffId ? String(req.query.staffId) : undefined,
+        durationMinutes:
+          req.query.durationMinutes === undefined
+            ? undefined
+            : Number(req.query.durationMinutes),
         ...(rawLocationType ? { locationType: rawLocationType as 'salon' | 'customer' } : {}),
       });
       res.status(200).json({ slots });

@@ -18,7 +18,12 @@ export const AuthVerifyDto = z
 export const AuthRefreshDto = z
   .object({ refreshToken: z.string().trim().min(1).optional() })
   .passthrough();
+/** Selects one salon membership for a phone that belongs to several salons. */
+export const AuthContextDto = z
+  .object({ staffMemberId: z.string().uuid() })
+  .passthrough();
 
 export type AuthRequestInput = z.infer<typeof AuthRequestDto>;
 export type AuthVerifyInput = z.infer<typeof AuthVerifyDto>;
 export type AuthRefreshInput = z.infer<typeof AuthRefreshDto>;
+export type AuthContextInput = z.infer<typeof AuthContextDto>;

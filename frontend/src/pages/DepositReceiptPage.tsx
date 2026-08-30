@@ -133,6 +133,7 @@ export function DepositReceiptPage() {
       <SeoHead title="ارسال رسید بیعانه" />
       <main className="mx-auto flex w-full max-w-xl flex-col gap-5">
         <Link to="/account" className="inline-flex min-h-10 w-fit items-center gap-2 text-sm font-bold text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus">
+          {/* RTL-native: account back affordance points visually right. */}
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
           بازگشت به حساب من
         </Link>
@@ -157,7 +158,7 @@ export function DepositReceiptPage() {
               </div>
               <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-border bg-surface p-3">
                 <span className="text-sm text-muted">مبلغ بیعانه</span>
-                <Money amountRial={deposit.amountRial ?? 0} className="font-bold text-text" />
+                <Money amountRial={deposit.amountRial ?? 0} unit="toman" className="font-bold text-text" />
               </div>
               {deposit.method === 'card_transfer' && deposit.cardNumber && (
                 <div className="mt-3 rounded-xl border border-border bg-surface p-3">

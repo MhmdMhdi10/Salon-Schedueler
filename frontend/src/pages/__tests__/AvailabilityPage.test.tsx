@@ -96,12 +96,12 @@ describe('AvailabilityPage — service selector', () => {
     expect(await screen.findByTestId('availability-page')).toBeInTheDocument();
   });
 
-  it('lists services with their Rial price (Persian digits + ریال)', async () => {
+  it('lists services with their Toman price (Persian digits + تومان)', async () => {
     renderPage();
     expect(await screen.findByText('کوتاهی مو')).toBeInTheDocument();
-    // 2,500,000 rendered with Persian digits + grouping + unit label.
-    expect(screen.getByText(/۲٬۵۰۰٬۰۰۰/)).toBeInTheDocument();
-    expect(screen.getAllByText('ریال').length).toBeGreaterThan(0);
+    // 250,000 Toman rendered with Persian digits + grouping + unit label.
+    expect(screen.getByText(/۲۵۰٬۰۰۰/)).toBeInTheDocument();
+    expect(screen.getAllByText('تومان').length).toBeGreaterThan(0);
   });
 
   it('shows a retry error state when services fail to load', async () => {

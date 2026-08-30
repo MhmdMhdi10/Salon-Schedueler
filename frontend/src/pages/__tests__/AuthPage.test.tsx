@@ -19,6 +19,8 @@ const verifyOtp = vi.fn();
 const setAccessToken = vi.fn();
 
 vi.mock('../../api/client', () => ({
+  getApiErrorMessage: (error: unknown, fallback: string) =>
+    error instanceof Error && error.message ? error.message : fallback,
   setAccessToken: (token: string | null) => setAccessToken(token),
   setRefreshToken: vi.fn(),
   authApi: {
@@ -141,7 +143,6 @@ describe('AuthPage — OTP step', () => {
       clipboardData: { getData: () => '3741437414' },
     });
     await waitFor(() => expect(screen.getByLabelText('رقم ۱۰ کد تایید')).toHaveValue('4'));
-    fireEvent.click(screen.getByRole('button', { name: 'تایید و ورود' }));
     await waitFor(() => expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '3741437414'));
   });
 
@@ -167,7 +168,6 @@ describe('AuthPage — OTP step', () => {
       clipboardData: { getData: () => '123456' },
     });
     await waitFor(() => expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('6'));
-    fireEvent.click(screen.getByRole('button', { name: 'تایید و ورود' }));
     await waitFor(() => expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '123456'));
   });
 
@@ -185,7 +185,6 @@ describe('AuthPage — OTP step', () => {
     const first = screen.getByLabelText('رقم ۱ کد تایید') as HTMLInputElement;
     fireEvent.paste(first, { clipboardData: { getData: () => '000000' } });
     await waitFor(() => expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('0'));
-    fireEvent.click(screen.getByRole('button', { name: 'تایید و ورود' }));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     // Still on the OTP step.
     expect(screen.getByLabelText('رقم ۱ کد تایید')).toBeInTheDocument();
@@ -257,7 +256,6 @@ describe('AuthPage — booking return intent', () => {
     const first = await screen.findByLabelText('رقم ۱ کد تایید');
     fireEvent.paste(first, { clipboardData: { getData: () => '123456' } });
     await waitFor(() => expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('6'));
-    fireEvent.click(screen.getByRole('button', { name: 'تایید و ورود' }));
 
     // Landed back on the booking funnel with the selection + the resume flag.
     const probe = await screen.findByText(/^return-page:/);

@@ -95,8 +95,8 @@ describe('AnalyticsPage', () => {
 
     // Utilization renders as a Persian-digit percentage (0.82 → ۸۲٪).
     expect(screen.getByTestId('analytics-utilization').textContent).toContain('۸۲');
-    // Revenue renders as grouped Persian-digit Rial (1234000 → ۱٬۲۳۴٬۰۰۰).
-    expect(screen.getByTestId('analytics-revenue').textContent).toContain('۱٬۲۳۴٬۰۰۰');
+    // Revenue renders as grouped Persian-digit Toman (1234000 Rial → ۱۲۳٬۴۰۰ تومان).
+    expect(screen.getByTestId('analytics-revenue').textContent).toContain('۱۲۳٬۴۰۰');
     // The busiest-windows table renders the numeric concurrent-count column.
     expect(screen.getByTestId('analytics-table')).toBeTruthy();
     expect(screen.getByTestId('analytics-table').textContent).toContain('۱۲');

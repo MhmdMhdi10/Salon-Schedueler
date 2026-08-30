@@ -14,6 +14,8 @@ export const CreateAppointmentDto = z
     serviceId: z.string().trim().min(1),
     startAt: z.string().trim().min(1),
     preferredStaffId: z.string().trim().min(1).optional(),
+    durationMinutes: z.coerce.number().int().min(5).max(480).optional(),
+    customerNote: z.string().trim().max(1000).optional(),
     website: z.string().optional(),
     ...locationFields,
   })
@@ -25,6 +27,8 @@ export const ManualAppointmentDto = z
     phone: z.string().trim().min(1),
     fullName: z.string().trim().max(120).optional(),
     preferredStaffId: z.string().trim().min(1).optional(),
+    durationMinutes: z.coerce.number().int().min(5).max(480).optional(),
+    customerNote: z.string().trim().max(1000).optional(),
     ...locationFields,
   })
   .passthrough();

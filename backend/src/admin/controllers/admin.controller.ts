@@ -39,30 +39,17 @@ const toCalendarDto = (a: any) => ({
   staffName: a.staffMember?.fullName ?? null,
   locationType: a.locationType ?? 'salon',
   locationAddress: a.locationAddress ?? null,
+  customerNote: a.customerNote ?? null,
+  durationMinOverride: a.durationMinOverride ?? null,
   depositReceiptStatus: a.depositReceipt?.status ?? null,
   depositPaymentStatus: a.payments?.[0]?.status ?? null,
-});
-
-const toDepositPayload = (payment: {
-  method?: string;
-  redirectUrl?: string;
-  amountRial?: number;
-  cardNumber?: string;
-  cardHolder?: string;
-  bankName?: string;
-}) => ({
-  ...(payment.redirectUrl ? { paymentRedirectUrl: payment.redirectUrl } : {}),
-  ...(payment.method === 'card_transfer'
+  pendingReschedule: a.pendingRescheduleStartAt
     ? {
-        deposit: {
-          method: 'card_transfer',
-          amountRial: payment.amountRial,
-          cardNumber: payment.cardNumber,
-          cardHolder: payment.cardHolder,
-          bankName: payment.bankName ?? null,
-        },
+        startAt: a.pendingRescheduleStartAt,
+        endAt: a.pendingRescheduleEndAt,
+        requestedAt: a.pendingRescheduleRequestedAt,
       }
-    : {}),
+    : null,
 });
 
 /**
@@ -242,6 +229,15 @@ const SALON_WORK_MODES = [
 /** Iranian mobile pattern for an optional staff login phone. */
 const PHONE_RE = /^09\d{9}$/;
 
+/** Keep staff/client phone values canonical at the API boundary. */
+function normalizeIranianPhone(raw: string): string {
+  let phone = normalizeDigits(raw).replace(/[\s()-]/g, '');
+  if (phone.startsWith('+98')) phone = `0${phone.slice(3)}`;
+  else if (phone.startsWith('0098')) phone = `0${phone.slice(4)}`;
+  else if (phone.startsWith('98') && phone.length === 12) phone = `0${phone.slice(2)}`;
+  return phone;
+}
+
 type ServiceCatalogWithAppend = Pick<ServiceCatalog, 'listServices'> & {
   addServiceStaff?: (serviceId: string, staffIds: string[]) => Promise<void>;
 };
@@ -269,6 +265,19 @@ const toStaffDto = (s: {
   assignedChairId: s.assignedChairId ?? null,
 });
 
+/** Flatten equipment rows so soft-delete metadata stays explicit to clients. */
+const toEquipmentDto = (equipment: {
+  id: string;
+  salonId: string;
+  name: string;
+  deletedAt?: Date | null;
+}) => ({
+  id: equipment.id,
+  salonId: equipment.salonId,
+  name: equipment.name,
+  deletedAt: equipment.deletedAt ?? null,
+});
+
 /** True for a Prisma unique-constraint violation (e.g. a duplicate phone). */
 const isUniqueViolation = (err: unknown): boolean =>
   typeof err === 'object' && err !== null && (err as { code?: string }).code === 'P2002';
@@ -277,6 +286,42 @@ const uniqueViolationTargets = (err: { meta?: { target?: unknown } }): string[] 
   const target = err.meta?.target;
   return Array.isArray(target) ? target.map(String) : typeof target === 'string' ? [target] : [];
 };
+
+type ApprovalStaffResult =
+  | { ok: true; value: string | null | undefined }
+  | { ok: false };
+
+/**
+ * Resolve the optional service approver inside the current salon. Only active
+ * Owner/Admin members or Stylists who were explicitly granted approval access
+ * can be selected, so an arbitrary staff UUID can never receive another
+ * salon's booking notices or gain approval scope.
+ */
+async function resolveApprovalStaffId(
+  raw: unknown,
+  salonId: string,
+  listStaff: (salonId: string) => Promise<Array<{
+    id: string;
+    salonId: string;
+    active: boolean;
+    role: string;
+    canApproveOwnAppointments?: boolean;
+  }>>,
+): Promise<ApprovalStaffResult> {
+  if (raw === undefined) return { ok: true, value: undefined };
+  if (raw === null || raw === '') return { ok: true, value: null };
+  if (typeof raw !== 'string') return { ok: false };
+  const staff = (await listStaff(salonId)).find((member) => member.id === raw);
+  if (
+    !staff ||
+    staff.salonId !== salonId ||
+    !staff.active ||
+    (staff.role === 'Stylist' && staff.canApproveOwnAppointments !== true)
+  ) {
+    return { ok: false };
+  }
+  return { ok: true, value: staff.id };
+}
 
 export function adminRouter(services: Services, requireRole: RequireRole): Router {
   const router = Router();
@@ -494,32 +539,17 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         return;
       }
       if (!validateRequired(res, req.body, ['startAt'])) return;
-      const result = await services.appointmentManagementService.rescheduleForStaff({
+      const result = await services.appointmentManagementService.requestRescheduleForStaff({
         appointmentId: req.params.id,
         startAt: String(req.body.startAt),
         preferredStaffId:
           typeof req.body.preferredStaffId === 'string' ? req.body.preferredStaffId : undefined,
+        requestedByStaffId: req.principal?.staffMemberId,
       });
-      if (result.booking.status === 'held') {
-        const payment = await services.paymentService.initiateDeposit(
-          result.booking.appointment.id,
-        );
-        res.status(200).json({
-          status: result.booking.status,
-          appointment: result.booking.appointment,
-          previousAppointmentId: result.previousAppointment.id,
-          ...toDepositPayload(payment),
-        });
-        return;
-      }
-      if (result.booking.status === 'rejected') {
-        res.status(409).json({ code: 'BOOKING_SLOT_UNAVAILABLE' });
-        return;
-      }
       res.status(200).json({
-        status: result.booking.status,
-        appointment: result.booking.appointment,
-        previousAppointmentId: result.previousAppointment.id,
+        status: result.appointment.status,
+        appointment: result.appointment,
+        pendingReschedule: result.pendingReschedule,
       });
     }),
   );
@@ -717,7 +747,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
       }
       const body = (req.body ?? {}) as Record<string, unknown>;
       const fullName = typeof body.fullName === 'string' ? body.fullName.trim() : '';
-      const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
+      const phone = typeof body.phone === 'string' ? normalizeIranianPhone(body.phone) : '';
       if (fullName.length < 2 || fullName.length > 120) {
         res.status(400).json({ code: 'VALIDATION_ERROR', field: 'fullName' });
         return;
@@ -726,7 +756,10 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         res.status(400).json({ code: 'VALIDATION_ERROR', field: 'phone' });
         return;
       }
-      const client = await services.clientService.add(req.params.id, { fullName, phone });
+      const client = await services.clientService.add(req.params.id, {
+        fullName,
+        phone,
+      });
       res.status(201).json({ client });
     }),
   );
@@ -795,7 +828,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         res.status(400).json({ code: 'VALIDATION_ERROR', field: 'role' });
         return;
       }
-      const rawPhone = typeof body.phone === 'string' ? body.phone.trim() : '';
+      const rawPhone = typeof body.phone === 'string' ? normalizeIranianPhone(body.phone) : '';
       if (rawPhone && !PHONE_RE.test(rawPhone)) {
         res.status(400).json({ code: 'VALIDATION_ERROR', field: 'phone' });
         return;
@@ -862,6 +895,18 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
           }
         }
         const current = await services.resourceRegistration.getStaffMember(created.id);
+        if (rawPhone && typeof services.notificationService.sendTeamInvitation === 'function') {
+          const salonBrand =
+            typeof services.salonRegistration.getSalonPublicBrand === 'function'
+              ? await services.salonRegistration.getSalonPublicBrand(req.params.id)
+              : { name: null };
+          await services.notificationService.sendTeamInvitation(
+            rawPhone,
+            salonBrand.name ?? 'سالن شما',
+            created.fullName,
+            created.role === 'Admin' ? 'مدیر' : created.role === 'Owner' ? 'مالک' : 'عضو تیم',
+          );
+        }
         res.status(201).json({ staff: toStaffDto(current ?? created) });
       } catch (err) {
         if (isUniqueViolation(err)) {
@@ -909,7 +954,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         patch.role = body.role as (typeof STAFF_ROLES)[number];
       }
       if (body.phone !== undefined) {
-        const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
+        const phone = typeof body.phone === 'string' ? normalizeIranianPhone(body.phone) : '';
         if (phone && !PHONE_RE.test(phone)) {
           res.status(400).json({ code: 'VALIDATION_ERROR', field: 'phone' });
           return;
@@ -954,6 +999,44 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         }
         throw err;
       }
+    }),
+  );
+
+  router.get(
+    '/staff/:id',
+    requireRole('configure_salon'),
+    requireStaffTenantScope,
+    asyncRoute(async (req, res) => {
+      const staff = await services.resourceRegistration.getStaffMember(req.params.id);
+      if (!staff) {
+        res.status(404).json({ code: 'NOT_FOUND' });
+        return;
+      }
+      res.status(200).json({ staff: toStaffDto(staff) });
+    }),
+  );
+
+  router.delete(
+    '/staff/:id',
+    requireRole('configure_salon'),
+    requireStaffTenantScope,
+    asyncRoute(async (req, res) => {
+      const staff = await services.resourceRegistration.getStaffMember(req.params.id);
+      if (!staff) {
+        res.status(404).json({ code: 'NOT_FOUND' });
+        return;
+      }
+      if (staff.role === 'Owner' && staff.active) {
+        const activeOwners = (await services.resourceRegistration.listStaff(staff.salonId)).filter(
+          (member) => member.role === 'Owner' && member.active,
+        );
+        if (activeOwners.length <= 1) {
+          res.status(409).json({ code: 'LAST_OWNER_REQUIRED' });
+          return;
+        }
+      }
+      await services.resourceRegistration.deleteStaffMember(req.params.id);
+      res.status(200).json({ ok: true });
     }),
   );
 
@@ -1025,7 +1108,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     requireRole('configure_salon'),
     asyncRoute(async (req, res) => {
       const rawMethod = req.body?.depositMethod;
-      if (rawMethod !== 'card_transfer') {
+      if (rawMethod !== 'card_transfer' && rawMethod !== 'gateway' && rawMethod !== 'cash') {
         res.status(400).json({ code: 'VALIDATION_ERROR', field: 'depositMethod' });
         return;
       }
@@ -1186,7 +1269,22 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     '/salons/:id/chairs/:chairId',
     requireRole('configure_salon'),
     asyncRoute(async (req, res) => {
-      if (typeof req.body?.active !== 'boolean') {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const hasName = body.name !== undefined;
+      const hasActive = body.active !== undefined;
+      if (!hasName && !hasActive) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'name' });
+        return;
+      }
+      let name: string | undefined;
+      if (hasName) {
+        name = typeof body.name === 'string' ? body.name.trim() : '';
+        if (!name || name.length > 120) {
+          res.status(400).json({ code: 'VALIDATION_ERROR', field: 'name' });
+          return;
+        }
+      }
+      if (hasActive && typeof body.active !== 'boolean') {
         res.status(400).json({ code: 'VALIDATION_ERROR', field: 'active' });
         return;
       }
@@ -1195,9 +1293,12 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         res.status(404).json({ code: 'NOT_FOUND' });
         return;
       }
-      const chair = await services.resourceRegistration.setChairActive(
+      const chair = await services.resourceRegistration.updateChair(
         req.params.chairId,
-        req.body.active,
+        {
+          ...(name !== undefined ? { name } : {}),
+          ...(hasActive ? { active: body.active as boolean } : {}),
+        },
       );
       res.status(200).json({ chair });
     }),
@@ -1208,7 +1309,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     requireRole('configure_salon'),
     asyncRoute(async (req, res) => {
       const chairs = await services.resourceRegistration.listChairs(req.params.id);
-      if (!chairs.some((item) => item.id === req.params.chairId)) {
+      if (!chairs.some((item) => item.id === req.params.chairId && item.active)) {
         res.status(404).json({ code: 'NOT_FOUND' });
         return;
       }
@@ -1217,10 +1318,85 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     }),
   );
 
-  // Add a service to the salon (Owner/Admin). Body: { name, durationMinutes,
-  // priceRial, requiresDeposit?, depositRial? }. Duration/price are optional
-  // (default 30 min / 0 Rial). Deposit amount is required when deposits are
-  // enabled so a held booking can always create a real payment session.
+  router.get(
+    '/salons/:id/equipment',
+    requireRole('manage_appointments'),
+    asyncRoute(async (req, res) => {
+      const equipment = await services.resourceRegistration.listEquipment(req.params.id);
+      res.status(200).json({ equipment });
+    }),
+  );
+
+  router.post(
+    '/salons/:id/equipment',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+      if (!name || name.length > 120) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'name' });
+        return;
+      }
+      const equipment = await services.resourceRegistration.registerEquipment(req.params.id, name);
+      res.status(201).json({ equipment });
+    }),
+  );
+
+  router.patch(
+    '/salons/:id/equipment/:equipmentId',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const equipment = await services.resourceRegistration.getEquipment(req.params.equipmentId);
+      if (!equipment || equipment.salonId !== req.params.id) {
+        res.status(404).json({ code: 'NOT_FOUND' });
+        return;
+      }
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const hasName = body.name !== undefined;
+      const hasActive = body.active !== undefined;
+      if (!hasName && !hasActive) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'name' });
+        return;
+      }
+      let name: string | undefined;
+      if (hasName) {
+        name = typeof body.name === 'string' ? body.name.trim() : '';
+        if (!name || name.length > 120) {
+          res.status(400).json({ code: 'VALIDATION_ERROR', field: 'name' });
+          return;
+        }
+      }
+      if (hasActive && typeof body.active !== 'boolean') {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'active' });
+        return;
+      }
+      const updated = await services.resourceRegistration.updateEquipment(
+        req.params.equipmentId,
+        {
+          ...(name !== undefined ? { name } : {}),
+          ...(hasActive ? { active: body.active as boolean } : {}),
+        },
+      );
+      res.status(200).json({ equipment: toEquipmentDto(updated) });
+    }),
+  );
+
+  router.delete(
+    '/salons/:id/equipment/:equipmentId',
+    requireRole('configure_salon'),
+    asyncRoute(async (req, res) => {
+      const equipment = await services.resourceRegistration.getEquipment(req.params.equipmentId);
+      if (!equipment || equipment.salonId !== req.params.id || equipment.deletedAt !== null) {
+        res.status(404).json({ code: 'NOT_FOUND' });
+        return;
+      }
+      await services.resourceRegistration.deleteEquipment(req.params.equipmentId);
+      res.status(200).json({ ok: true });
+    }),
+  );
+
+  // Add a service to the salon (Owner/Admin). Duration can be fixed or variable;
+  // prices remain Rial at this internal API boundary and are displayed as Toman
+  // by the web client.
   router.post(
     '/salons/:id/services',
     requireRole('configure_salon'),
@@ -1243,11 +1419,54 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
           : 0;
       const priceRial =
         typeof req.body?.priceRial === 'number' && req.body.priceRial >= 0 ? req.body.priceRial : 0;
+      const durationMode = req.body?.durationMode === 'variable' ? 'variable' : 'fixed';
+      const approvalStaff = await resolveApprovalStaffId(
+        req.body?.approvalStaffId,
+        req.params.id,
+        services.resourceRegistration.listStaff.bind(services.resourceRegistration),
+      );
+      if (!approvalStaff.ok) {
+        res.status(400).json({ code: 'INVALID_APPROVAL_STAFF', field: 'approvalStaffId' });
+        return;
+      }
+      const minDurationMinutes =
+        req.body?.minDurationMinutes === undefined
+          ? durationMinutes
+          : Number(req.body.minDurationMinutes);
+      const maxDurationMinutes =
+        req.body?.maxDurationMinutes === undefined
+          ? minDurationMinutes
+          : Number(req.body.maxDurationMinutes);
+      if (
+        durationMode === 'variable' &&
+        (!Number.isInteger(minDurationMinutes) ||
+          !Number.isInteger(maxDurationMinutes) ||
+          minDurationMinutes < 5 ||
+          maxDurationMinutes < minDurationMinutes ||
+          maxDurationMinutes > 480)
+      ) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'maxDurationMinutes' });
+        return;
+      }
       const requiresDeposit =
         req.body?.requiresDeposit === true || req.body?.requiresDeposit === 'true';
+      const depositType = req.body?.depositType === 'percentage' ? 'percentage' : 'fixed';
+      const rawDepositPercent = req.body?.depositPercent;
+      if (
+        requiresDeposit &&
+        depositType === 'percentage' &&
+        (typeof rawDepositPercent !== 'number' ||
+          !Number.isInteger(rawDepositPercent) ||
+          rawDepositPercent < 1 ||
+          rawDepositPercent > 100)
+      ) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'depositPercent' });
+        return;
+      }
       const rawDepositRial = req.body?.depositRial;
       if (
         requiresDeposit &&
+        depositType === 'fixed' &&
         (typeof rawDepositRial !== 'number' ||
           !Number.isInteger(rawDepositRial) ||
           rawDepositRial <= 0)
@@ -1259,10 +1478,17 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         salonId: req.params.id,
         name,
         durationMinutes,
+        durationMode,
+        ...(durationMode === 'variable'
+          ? { minDurationMinutes, maxDurationMinutes }
+          : {}),
         bufferMinutes,
         priceRial,
         requiresDeposit,
         ...(requiresDeposit ? { depositRial: rawDepositRial as number } : {}),
+        depositType,
+        ...(depositType === 'percentage' ? { depositPercent: rawDepositPercent as number } : {}),
+        ...(approvalStaff.value !== undefined ? { approvalStaffId: approvalStaff.value } : {}),
         requiredEquipmentIds: [],
       });
       // Auto-link the service to all active staff so it is immediately bookable
@@ -1277,10 +1503,16 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
           id: service.id,
           name: service.name,
           durationMinutes: service.durationMin,
+          durationMode: service.durationMode,
+          minDurationMinutes: service.minDurationMin,
+          maxDurationMinutes: service.maxDurationMin,
           bufferMinutes: service.bufferMin,
           priceRial: Number(service.priceRial),
           requiresDeposit: service.requiresDeposit,
           depositRial: service.depositRial == null ? null : Number(service.depositRial),
+          depositType: service.depositType,
+          depositPercent: service.depositPercent,
+          approvalStaffId: service.approvalStaffId ?? null,
           staffIds:
             (await services.serviceCatalog.listServices(req.params.id))
               .find((item) => item.id === service.id)
@@ -1304,10 +1536,16 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
       const patch: {
         name?: string;
         durationMinutes?: number;
+        durationMode?: 'fixed' | 'variable';
+        minDurationMinutes?: number | null;
+        maxDurationMinutes?: number | null;
         bufferMinutes?: number;
         priceRial?: number;
         requiresDeposit?: boolean;
         depositRial?: number | null;
+        depositType?: 'fixed' | 'percentage';
+        depositPercent?: number | null;
+        approvalStaffId?: string | null;
       } = {};
       if (body.name !== undefined) {
         if (typeof body.name !== 'string' || !body.name.trim()) {
@@ -1336,6 +1574,46 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
       if (body.requiresDeposit !== undefined) {
         patch.requiresDeposit = body.requiresDeposit === true || body.requiresDeposit === 'true';
       }
+      if (body.durationMode !== undefined) {
+        if (body.durationMode !== 'fixed' && body.durationMode !== 'variable') {
+          res.status(400).json({ code: 'VALIDATION_ERROR', field: 'durationMode' });
+          return;
+        }
+        patch.durationMode = body.durationMode;
+      }
+      for (const field of ['minDurationMinutes', 'maxDurationMinutes'] as const) {
+        if (body[field] === undefined) continue;
+        if (
+          typeof body[field] !== 'number' ||
+          !Number.isInteger(body[field]) ||
+          body[field] < 5 ||
+          body[field] > 480
+        ) {
+          res.status(400).json({ code: 'VALIDATION_ERROR', field });
+          return;
+        }
+        patch[field] = body[field];
+      }
+      if (body.depositType !== undefined) {
+        if (body.depositType !== 'fixed' && body.depositType !== 'percentage') {
+          res.status(400).json({ code: 'VALIDATION_ERROR', field: 'depositType' });
+          return;
+        }
+        patch.depositType = body.depositType;
+      }
+      if (body.depositPercent !== undefined) {
+        if (
+          body.depositPercent !== null &&
+          (typeof body.depositPercent !== 'number' ||
+            !Number.isInteger(body.depositPercent) ||
+            body.depositPercent < 1 ||
+            body.depositPercent > 100)
+        ) {
+          res.status(400).json({ code: 'VALIDATION_ERROR', field: 'depositPercent' });
+          return;
+        }
+        patch.depositPercent = body.depositPercent as number | null;
+      }
       if (body.depositRial !== undefined) {
         if (
           body.depositRial !== null &&
@@ -1348,16 +1626,34 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         }
         patch.depositRial = body.depositRial as number | null;
       }
+      if (body.approvalStaffId !== undefined) {
+        const approvalStaff = await resolveApprovalStaffId(
+          body.approvalStaffId,
+          req.params.id,
+          services.resourceRegistration.listStaff.bind(services.resourceRegistration),
+        );
+        if (!approvalStaff.ok || approvalStaff.value === undefined) {
+          res.status(400).json({ code: 'INVALID_APPROVAL_STAFF', field: 'approvalStaffId' });
+          return;
+        }
+        patch.approvalStaffId = approvalStaff.value;
+      }
       const updated = await services.serviceCatalog.updateService(req.params.serviceId, patch);
       res.status(200).json({
         service: {
           id: updated.id,
           name: updated.name,
           durationMinutes: updated.durationMin,
+          durationMode: updated.durationMode,
+          minDurationMinutes: updated.minDurationMin,
+          maxDurationMinutes: updated.maxDurationMin,
           bufferMinutes: updated.bufferMin,
           priceRial: Number(updated.priceRial),
           requiresDeposit: updated.requiresDeposit,
           depositRial: updated.depositRial == null ? null : Number(updated.depositRial),
+          depositType: updated.depositType,
+          depositPercent: updated.depositPercent,
+          approvalStaffId: updated.approvalStaffId ?? null,
           staffIds: updated.serviceStaff.map((mapping) => mapping.staffMemberId),
         },
       });
