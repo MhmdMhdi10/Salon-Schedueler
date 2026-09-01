@@ -882,6 +882,7 @@ export function CustomerDashboardPage() {
         <Card
           as="section"
           data-testid="customer-workspace-card"
+          data-panel-guide="customer-workspace"
           className="border-primary/20 bg-primary/[0.04]"
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -998,7 +999,10 @@ export function CustomerDashboardPage() {
         ) : (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.8fr)]">
             <Card as="section" className="min-w-0" data-testid="customer-calendar-card">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div
+                className="mb-4 flex flex-wrap items-center justify-between gap-3"
+                data-panel-guide="customer-calendar"
+              >
                 <div>
                   <h2 className="text-lg font-bold text-text">تقویم من</h2>
                   <p className="mt-1 text-xs text-muted">روزهای دارای نوبت با نقطه مشخص شده‌اند.</p>
@@ -1088,7 +1092,10 @@ export function CustomerDashboardPage() {
             </Card>
 
             <Card as="section" className="min-w-0" data-testid="customer-upcoming">
-              <div className="mb-4 flex items-start justify-between gap-3">
+              <div
+                className="mb-4 flex items-start justify-between gap-3"
+                data-panel-guide="customer-upcoming"
+              >
                 <div>
                   <h2 className="text-lg font-bold text-text">نوبت‌های پیش‌رو</h2>
                   <p className="mt-1 text-xs text-muted">نزدیک‌ترین برنامه‌هایت اینجا هستند.</p>
@@ -1147,7 +1154,10 @@ export function CustomerDashboardPage() {
             </Card>
 
             <Card as="section" className="min-w-0 lg:col-span-2" data-testid="customer-history">
-              <div className="mb-4 flex items-start justify-between gap-3">
+              <div
+                className="mb-4 flex items-start justify-between gap-3"
+                data-panel-guide="customer-history"
+              >
                 <div>
                   <h2 className="text-lg font-bold text-text">سوابق نوبت‌ها</h2>
                   <p className="mt-1 text-xs text-muted">نوبت‌های انجام‌شده و لغوشده حذف نمی‌شوند.</p>
@@ -1175,7 +1185,10 @@ export function CustomerDashboardPage() {
         )}
 
         <Card as="section" data-testid="customer-salons">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div
+            className="mb-4 flex flex-wrap items-start justify-between gap-3"
+            data-panel-guide="customer-salons"
+          >
             <div>
               <h2 className="text-lg font-bold text-text">سالن‌های من</h2>
               <p className="mt-1 text-xs leading-6 text-muted">

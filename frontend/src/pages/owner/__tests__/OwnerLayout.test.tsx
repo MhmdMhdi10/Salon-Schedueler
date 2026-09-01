@@ -197,6 +197,17 @@ describe('OwnerLayout — RBAC (R2.3)', () => {
     expect(screen.getByRole('link', { name: 'پروفایل' })).toBeInTheDocument();
   });
 
+  it('keeps team and services as separate profile destinations', async () => {
+    getAccessToken.mockReturnValue('t');
+    getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Owner' } });
+
+    renderOwnerApp('/owner/profile');
+
+    expect(await screen.findByTestId('owner-profile-page')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^تیم/ })).toHaveAttribute('href', '/owner/team');
+    expect(screen.getByRole('link', { name: /^خدمات/ })).toHaveAttribute('href', '/owner/services');
+  });
+
   it('limits a Stylist to the own-appointments view', async () => {
     getAccessToken.mockReturnValue('t');
     getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Stylist' } });

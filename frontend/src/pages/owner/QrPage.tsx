@@ -437,6 +437,7 @@ export function OwnerQrPage() {
   return (
     <section
       data-testid="owner-qr-page"
+      data-panel-guide="owner-qr"
       data-print-kind={kind}
       className="owner-qr-page flex flex-col gap-6"
     >

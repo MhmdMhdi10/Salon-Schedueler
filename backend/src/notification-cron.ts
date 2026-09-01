@@ -6,6 +6,8 @@ export interface NotificationCronOptions {
   intervalMs: number;
   reminderLeadTimeMinutes: number;
   logger?: Pick<Console, 'error'>;
+  /** Optional subscription-expiry reminder task. */
+  subscriptionReminderTask?: (now: Date) => Promise<unknown>;
 }
 
 /** One idempotent maintenance pass used by both API fallback and cron worker. */
@@ -14,11 +16,15 @@ export async function runNotificationMaintenance(
   cancellationFlow: CancellationFlow,
   reminderLeadTimeMinutes: number,
   logger: Pick<Console, 'error'> = console,
+  subscriptionReminderTask?: (now: Date) => Promise<unknown>,
 ): Promise<void> {
-  const results = await Promise.allSettled([
-    notificationService.dispatchReminders(new Date(), reminderLeadTimeMinutes),
-    cancellationFlow.releaseExpiredHoldsAndNotify(new Date()),
-  ]);
+  const now = new Date();
+  const tasks: Promise<unknown>[] = [
+    notificationService.dispatchReminders(now, reminderLeadTimeMinutes),
+    cancellationFlow.releaseExpiredHoldsAndNotify(now),
+  ];
+  if (subscriptionReminderTask) tasks.push(subscriptionReminderTask(now));
+  const results = await Promise.allSettled(tasks);
   for (const result of results) {
     if (result.status === 'rejected') logger.error('[notification-cron] maintenance failed:', result.reason);
   }
@@ -40,6 +46,7 @@ export function startNotificationCron(
         cancellationFlow,
         options.reminderLeadTimeMinutes,
         options.logger,
+        options.subscriptionReminderTask,
       );
     } finally {
       running = false;
@@ -58,6 +65,8 @@ if (process.argv[1]?.endsWith('/notification-cron.js')) {
   const stop = startNotificationCron(services.notificationService, services.cancellationFlow, {
     intervalMs: config.reminderIntervalMs,
     reminderLeadTimeMinutes: config.reminderLeadTimeMinutes,
+    subscriptionReminderTask: (now) =>
+      services.subscriptionService.dispatchExpiryReminders(services.salonInboxService, now),
   });
   const shutdown = () => {
     stop();

@@ -23,8 +23,7 @@ const instructionKeys: Record<PwaInstallPlatform, string> = {
 };
 
 /**
- * App-level PWA invitation for every route, including the landing page,
- * booking funnel, and owner panel.
+ * PWA invitation shown on the landing page.
  *
  * Browsers do not allow `beforeinstallprompt.prompt()` without a user gesture,
  * so the floating CTA triggers the native browser install sheet directly when

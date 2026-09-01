@@ -186,7 +186,11 @@ export function OwnerNotificationsPage() {
   );
 
   return (
-    <section data-testid="owner-notifications-page" className="flex flex-col gap-5">
+    <section
+      data-testid="owner-notifications-page"
+      data-panel-guide="owner-notifications"
+      className="flex flex-col gap-5"
+    >
       <SeoHead title={t('owner.inbox.pageTitle', { defaultValue: 'اعلان‌ها' })} />
 
       <header className="flex flex-col gap-1">

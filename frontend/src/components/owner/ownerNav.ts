@@ -22,6 +22,8 @@ export interface OwnerNavItem {
   labelKey: string;
   to: string;
   icon: LucideIcon;
+  /** Stable target id used by the first-entry panel walkthrough. */
+  guideId: string;
   /** Roles allowed to see this destination. */
   roles: readonly OwnerRole[];
 }
@@ -44,6 +46,7 @@ export const OWNER_NAV: readonly OwnerNavItem[] = [
     labelKey: 'owner.nav.calendar',
     to: '/owner/calendar',
     icon: Calendar,
+    guideId: 'owner-calendar',
     roles: ['Owner', 'Admin', 'Stylist'],
   },
   {
@@ -51,30 +54,35 @@ export const OWNER_NAV: readonly OwnerNavItem[] = [
     labelKey: 'owner.nav.team',
     to: '/owner/team',
     icon: UsersRound,
+    guideId: 'owner-team',
     roles: ['Owner', 'Admin'],
   },
   {
     labelKey: 'owner.nav.clients',
     to: '/owner/clients',
     icon: ContactRound,
+    guideId: 'owner-clients',
     roles: ['Owner', 'Admin', 'Stylist'],
   },
   {
     labelKey: 'owner.nav.marketing',
     to: '/owner/marketing',
     icon: Megaphone,
+    guideId: 'owner-marketing',
     roles: ['Owner', 'Admin'],
   },
   {
     labelKey: 'owner.nav.analytics',
     to: '/owner/analytics',
     icon: BarChart3,
+    guideId: 'owner-analytics',
     roles: ['Owner', 'Admin'],
   },
   {
     labelKey: 'owner.nav.qr',
     to: '/owner/qr',
     icon: QrCode,
+    guideId: 'owner-qr',
     roles: ['Owner', 'Admin'],
   },
   {
@@ -82,42 +90,49 @@ export const OWNER_NAV: readonly OwnerNavItem[] = [
     labelKey: 'owner.nav.configuration',
     to: '/owner/config',
     icon: Settings,
+    guideId: 'owner-configuration',
     roles: ['Owner', 'Admin'],
   },
   {
     labelKey: 'owner.nav.services',
-    to: '/owner/config#services',
+    to: '/owner/services',
     icon: Scissors,
+    guideId: 'owner-services',
     roles: ['Owner', 'Admin'],
   },
   {
     labelKey: 'owner.nav.transactions',
     to: '/owner/transactions',
     icon: Receipt,
+    guideId: 'owner-transactions',
     roles: ['Owner', 'Admin'],
   },
   {
     labelKey: 'owner.nav.notifications',
     to: '/owner/notifications',
     icon: Bell,
+    guideId: 'owner-notifications',
     roles: ['Owner', 'Admin', 'Stylist'],
   },
   {
     labelKey: 'owner.nav.subscription',
     to: '/owner/subscription',
     icon: CreditCard,
+    guideId: 'owner-subscription',
     roles: ['Owner', 'Admin'],
   },
   {
     labelKey: 'owner.nav.myQr',
     to: '/owner/my-qr',
     icon: Share2,
+    guideId: 'owner-my-qr',
     roles: ['Owner', 'Admin', 'Stylist'],
   },
   {
     labelKey: 'owner.nav.profile',
     to: '/owner/profile',
     icon: UserRound,
+    guideId: 'owner-profile',
     roles: ['Owner', 'Admin', 'Stylist'],
   },
 ] as const;

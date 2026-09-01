@@ -1,8 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { NavLink, Link } from 'react-router-dom';
-import { Calendar, BarChart3, Settings, type LucideIcon } from 'lucide-react';
+import { Calendar, BarChart3, CircleHelp, Settings, type LucideIcon } from 'lucide-react';
 import { ThemeToggle } from '../theme';
 import { cn } from '../ui/cn';
+import {
+  PanelOnboardingGuide,
+  useFirstVisitPanelGuide,
+  type PanelGuideStep,
+} from './PanelOnboardingGuide';
 
 /** Stable id the admin `<main>` exposes (skip-link target / focus). */
 export const ADMIN_CONTENT_ID = 'admin-content';
@@ -32,6 +37,31 @@ const ADMIN_NAV: readonly AdminNavItem[] = [
   { labelKey: 'admin.analytics', to: '/admin/analytics', icon: BarChart3 },
   { labelKey: 'admin.configuration', to: '/admin/config', icon: Settings },
 ] as const;
+
+const ADMIN_GUIDE_STEPS: readonly PanelGuideStep[] = [
+  {
+    id: 'admin-calendar',
+    title: 'تقویم',
+    body: 'نوبت‌های روزانه، هفتگی و ماهانه را ببینید و برنامهٔ سالن را از همین بخش مدیریت کنید.',
+    to: '/admin/calendar',
+  },
+  {
+    id: 'admin-analytics',
+    title: 'آمار',
+    body: 'روند نوبت‌ها، درآمد و شلوغ‌ترین بازه‌های سالن را برای تصمیم‌گیری بهتر بررسی کنید.',
+    to: '/admin/analytics',
+  },
+  {
+    id: 'admin-configuration',
+    title: 'تنظیمات',
+    body: 'اعضای تیم، خدمات، منابع، پیامک و قوانین سالن را از این بخش تنظیم کنید.',
+    to: '/admin/config',
+  },
+] as const;
+
+function adminGuideId(to: string): string {
+  return to === '/admin/config' ? 'admin-configuration' : `admin-${to.replace('/admin/', '')}`;
+}
 
 export interface AdminShellProps {
   /** Routed admin page content rendered inside the single `<main>`. */
@@ -65,6 +95,7 @@ export interface AdminShellProps {
  */
 export function AdminShell({ children, breadcrumbs, className }: AdminShellProps) {
   const { t } = useTranslation();
+  const adminGuide = useFirstVisitPanelGuide('ara:admin-guide:v1');
 
   return (
     <div
@@ -90,7 +121,23 @@ export function AdminShell({ children, breadcrumbs, className }: AdminShellProps
           >
             {t('app.title')}
           </Link>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={adminGuide.replay}
+              aria-label="راهنمای پنل"
+              data-testid="panel-guide-trigger"
+              className={cn(
+                'inline-flex min-h-10 items-center gap-2 rounded-md px-2 py-2 text-sm font-semibold text-text',
+                'hover:bg-elevated outline-none focus-visible:outline focus-visible:outline-2',
+                'focus-visible:outline-offset-2 focus-visible:outline-focus sm:px-3',
+              )}
+            >
+              <CircleHelp className="h-4 w-4" aria-hidden="true" />
+              <span className="hidden sm:inline">راهنما</span>
+            </button>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
@@ -108,6 +155,7 @@ export function AdminShell({ children, breadcrumbs, className }: AdminShellProps
                 <li key={item.to}>
                   <NavLink
                     to={item.to}
+                    data-panel-guide={adminGuideId(item.to)}
                     className={({ isActive }) =>
                       cn(
                         'flex items-center gap-3 rounded-md px-3 py-2 text-sm no-underline',
@@ -192,6 +240,7 @@ export function AdminShell({ children, breadcrumbs, className }: AdminShellProps
               <li key={item.to} className="flex-1">
                 <NavLink
                   to={item.to}
+                  data-panel-guide={adminGuideId(item.to)}
                   className={({ isActive }) =>
                     cn(
                       'flex min-h-[44px] flex-col items-center justify-center gap-1 px-2 py-2 text-2xs no-underline',
@@ -209,6 +258,12 @@ export function AdminShell({ children, breadcrumbs, className }: AdminShellProps
           })}
         </ul>
       </nav>
+
+      <PanelOnboardingGuide
+        open={adminGuide.open}
+        onClose={adminGuide.close}
+        steps={ADMIN_GUIDE_STEPS}
+      />
     </div>
   );
 }

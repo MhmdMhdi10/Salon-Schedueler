@@ -7,6 +7,7 @@ import { BookingConflictError } from '../app/appointment-management.js';
 import { AppointmentStateError, RescheduleError } from '../scheduling/scheduling-engine.js';
 import { PlatformAdminError } from '../platform-admin/services/index.js';
 import { ReferralConflictError } from '../referral/services/index.js';
+import { SubscriptionDomainError } from '../subscription/subscription.service.js';
 import { isE2EQuietLogs } from '../common/logging.js';
 
 /**
@@ -119,6 +120,13 @@ export function mapDomainError(err: unknown): MappedError {
   if (err instanceof PlatformAdminError) {
     return {
       status: err.code === 'NOT_FOUND' ? 404 : 409,
+      code: err.code,
+    };
+  }
+
+  if (err instanceof SubscriptionDomainError) {
+    return {
+      status: err.code === 'SUBSCRIPTION_PLAN_UNAVAILABLE' ? 400 : 409,
       code: err.code,
     };
   }

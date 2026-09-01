@@ -49,6 +49,9 @@ export type {
 export { PanelHeader } from './PanelHeader';
 export type { PanelHeaderProps, PanelHeaderSurface } from './PanelHeader';
 
+export { PanelOnboardingGuide, useFirstVisitPanelGuide } from './PanelOnboardingGuide';
+export type { PanelGuideStep } from './PanelOnboardingGuide';
+
 /**
  * Editorial layout primitives (design §3; R1.4, R2.2, R3.4) — thin CSS-grid
  * wrappers (logical properties + tokens only) that let surfaces escape the

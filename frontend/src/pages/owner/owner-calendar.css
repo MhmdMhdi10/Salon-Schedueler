@@ -137,13 +137,16 @@
   .owner-calendar-page {
     padding-block-end: calc(7rem + env(safe-area-inset-bottom));
     scroll-padding-block-end: calc(7rem + env(safe-area-inset-bottom));
+    /* OwnerBottomTabs is ~66px tall and sits 12px above the viewport edge.
+       Keep calendar CTAs above its upper edge with a stable breathing gap. */
+    --owner-calendar-actions-bottom: calc(5.75rem + env(safe-area-inset-bottom));
   }
 
   .owner-calendar-actions {
     position: fixed;
     inset-inline-end: 1rem;
     inset-inline-start: auto;
-    bottom: calc(5.25rem + env(safe-area-inset-bottom));
+    bottom: var(--owner-calendar-actions-bottom);
     z-index: var(--z-nav);
     display: block;
     inline-size: auto;
@@ -162,7 +165,7 @@
     position: fixed;
     inset-inline-start: 1rem;
     inset-inline-end: auto;
-    bottom: calc(5.25rem + env(safe-area-inset-bottom));
+    bottom: var(--owner-calendar-actions-bottom);
     z-index: var(--z-nav);
     display: inline-flex;
     max-inline-size: calc(100vw - 8rem);

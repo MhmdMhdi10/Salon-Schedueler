@@ -5,12 +5,14 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   Armchair,
   BellRing,
+  Check,
   CheckCircle2,
   ChevronDown,
   Clock,
   CreditCard,
   Package,
   Plus,
+  Search,
   Scissors,
   Trash2,
   Users,
@@ -51,6 +53,10 @@ import {
   Pagination,
   Select,
   Skeleton,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
   Switch,
   TextField,
   cn,
@@ -76,7 +82,7 @@ import {
 
 type LoadStatus = 'loading' | 'success' | 'error';
 
-type ConfigurationView = 'all' | 'team';
+type ConfigurationView = 'all' | 'team' | 'services';
 
 const DEFAULT_DEPOSIT_SETTINGS: DepositSettings = {
   depositMethod: 'card_transfer',
@@ -121,8 +127,8 @@ type ServicePatch = {
   name: string;
   durationMinutes: number;
   durationMode: 'fixed' | 'variable';
-  minDurationMinutes: number | null;
-  maxDurationMinutes: number | null;
+  minDurationMinutes?: number;
+  maxDurationMinutes?: number;
   bufferMinutes: number;
   priceRial: number;
   requiresDeposit: boolean;
@@ -226,6 +232,7 @@ interface CollapsibleSectionProps {
   id: string;
   icon: LucideIcon;
   title: string;
+  guideId?: string;
   defaultExpanded?: boolean;
   children: React.ReactNode;
 }
@@ -239,6 +246,7 @@ function CollapsibleSection({
   id,
   icon: Icon,
   title,
+  guideId,
   defaultExpanded = true,
   children,
 }: CollapsibleSectionProps) {
@@ -249,6 +257,7 @@ function CollapsibleSection({
     <Card
       as="section"
       id={id}
+      data-panel-guide={guideId}
       aria-labelledby={`${id}-title`}
       className="scroll-mt-24 overflow-hidden"
     >
@@ -740,6 +749,11 @@ function ServicesSection({
   const [drafts, setDrafts] = useState<Record<string, ServiceDraft>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
   const [formError, setFormError] = useState('');
+  const [staffPickerServiceId, setStaffPickerServiceId] = useState<string | null>(null);
+  const [staffPickerIds, setStaffPickerIds] = useState<string[]>([]);
+  const [staffPickerSearch, setStaffPickerSearch] = useState('');
+  const [staffPickerError, setStaffPickerError] = useState('');
+  const [savingStaffPicker, setSavingStaffPicker] = useState(false);
   const {
     page,
     pageItems,
@@ -760,6 +774,51 @@ function ServicesSection({
       label: `${member.fullName ?? member.id}${member.role === 'Admin' ? ' (مدیر)' : ''}`,
     })),
   ];
+  const staffPickerService = services.find((service) => service.id === staffPickerServiceId) ?? null;
+  const normalizedStaffPickerSearch = staffPickerSearch.trim().toLocaleLowerCase();
+  const filteredStaffPickerMembers = normalizedStaffPickerSearch
+    ? eligibleStaff.filter((member) =>
+        (member.fullName ?? member.id).toLocaleLowerCase().includes(normalizedStaffPickerSearch),
+      )
+    : eligibleStaff;
+  const selectedEligibleStaffCount = eligibleStaff.filter((member) =>
+    staffPickerIds.includes(member.id),
+  ).length;
+  const allEligibleStaffSelected =
+    eligibleStaff.length > 0 && selectedEligibleStaffCount === eligibleStaff.length;
+  const unavailableSelectedStaffCount = staffPickerIds.length - selectedEligibleStaffCount;
+
+  const openStaffPicker = (service: ServiceItem) => {
+    setStaffPickerServiceId(service.id);
+    // Keep existing assignments, including inactive members, so opening the
+    // picker and saving does not silently remove data that is not currently
+    // selectable.
+    setStaffPickerIds([...new Set(service.staffIds ?? [])]);
+    setStaffPickerSearch('');
+    setStaffPickerError('');
+  };
+
+  const closeStaffPicker = () => {
+    if (savingStaffPicker) return;
+    setStaffPickerServiceId(null);
+    setStaffPickerSearch('');
+    setStaffPickerError('');
+  };
+
+  const saveStaffPicker = async () => {
+    if (!staffPickerService) return;
+    setSavingStaffPicker(true);
+    setStaffPickerError('');
+    try {
+      await onStaffChange(staffPickerService.id, staffPickerIds);
+      setStaffPickerServiceId(null);
+      setStaffPickerSearch('');
+    } catch (reason) {
+      setStaffPickerError(getApiErrorMessage(reason, 'ذخیره اعضای تیم انجام نشد.'));
+    } finally {
+      setSavingStaffPicker(false);
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -878,8 +937,9 @@ function ServicesSection({
         name: nameValue,
         durationMinutes,
         durationMode: draft.durationMode,
-        minDurationMinutes: draft.durationMode === 'variable' ? minDurationMinutes : null,
-        maxDurationMinutes: draft.durationMode === 'variable' ? maxDurationMinutes : null,
+        ...(draft.durationMode === 'variable'
+          ? { minDurationMinutes, maxDurationMinutes }
+          : {}),
         bufferMinutes,
         priceRial,
         requiresDeposit: draft.requiresDeposit,
@@ -895,13 +955,19 @@ function ServicesSection({
   };
 
   return (
-    <CollapsibleSection id="services" icon={Scissors} title={t('admin.services')}>
+    <>
+      <CollapsibleSection
+        id="services"
+        icon={Scissors}
+        title={t('admin.services')}
+        guideId="owner-services"
+      >
       <div className="flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/10 p-3">
         <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-contrast">
           <Users className="h-5 w-5" aria-hidden="true" />
         </span>
         <div className="min-w-0">
-        <p className="m-0 text-sm font-bold text-text">هر خدمت را به اعضای تیمش وصل کن</p>
+        <p className="m-0 text-sm font-bold text-text">مشخص کن چه اعضایی هر خدمت را ارائه می‌دهند</p>
         <p className="mt-1 text-xs leading-6 text-muted">
             برای هر خدمت یک یا چند عضو تیم انتخاب کن تا هنگام رزرو فقط افراد مرتبط نمایش داده شوند.
           </p>
@@ -962,9 +1028,9 @@ function ServicesSection({
                   </span>
                   <button
                     type="button"
-                    aria-expanded={editingId === service.id}
-                    aria-controls={`service-staff-${service.id}`}
-                    onClick={() => toggleEditing(service)}
+                    aria-haspopup="dialog"
+                    aria-expanded={staffPickerServiceId === service.id}
+                    onClick={() => openStaffPicker(service)}
                     className={cn(
                       'inline-flex min-h-10 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold text-primary',
                       'border-primary/40 bg-primary/10 transition-colors duration-fast hover:bg-primary/20',
@@ -972,19 +1038,16 @@ function ServicesSection({
                     )}
                   >
                     <Users className="h-4 w-4" aria-hidden="true" />
-                    {editingId === service.id ? 'بستن' : 'انتخاب عضو تیم'}
-                    <ChevronDown
-                      className={cn(
-                        'h-4 w-4 transition-transform duration-fast',
-                        editingId === service.id && 'rotate-180',
-                      )}
-                      aria-hidden="true"
-                    />
+                    {service.staffIds?.some((staffId) =>
+                      eligibleStaff.some((member) => member.id === staffId),
+                    )
+                      ? 'ویرایش اعضا'
+                      : 'انتخاب اعضای تیم'}
                   </button>
                 </div>
                 {editingId === service.id && (
                   <div
-                    id={`service-staff-${service.id}`}
+                    id={`service-edit-${service.id}`}
                     className="mt-2 flex flex-col gap-2 rounded-lg border border-border bg-bg p-2"
                   >
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -1085,39 +1148,6 @@ function ServicesSection({
                       options={approvalOptions}
                       helperText="این عضو تیم پیامک رزروهای در انتظار را می‌گیرد و در صورت داشتن دسترسی می‌تواند آن‌ها را تأیید یا رد کند."
                     />
-                    <p className="m-0 text-xs font-semibold text-text">
-                      چه کسی این خدمت را انجام می‌دهد؟
-                    </p>
-                    {eligibleStaff.length === 0 ? (
-                      <p className="m-0 text-xs text-muted">ابتدا حداقل یک عضو تیم یا صاحب سالن اضافه کن.</p>
-                    ) : (
-                      <div className="grid max-h-44 gap-1 overflow-y-auto sm:grid-cols-2">
-                        {eligibleStaff.map((member) => {
-                          const checked = service.staffIds?.includes(member.id) ?? false;
-                          return (
-                            <label
-                              key={member.id}
-                              className="flex min-h-10 cursor-pointer items-center gap-2 rounded-md px-2 text-xs text-text hover:bg-elevated"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => {
-                                  const current = service.staffIds ?? [];
-                                  const next = checked
-                                    ? current.filter((id) => id !== member.id)
-                                    : [...current, member.id];
-                                  void onStaffChange(service.id, next);
-                                }}
-                                className="h-4 w-4 accent-primary"
-                              />
-                              <span className="min-w-0 truncate">{member.fullName ?? member.id}</span>
-                              {member.role === 'Owner' && <span className="text-muted">(مالک)</span>}
-                            </label>
-                          );
-                        })}
-                      </div>
-                    )}
                     {formError && <p className="m-0 text-sm text-danger" role="alert">{formError}</p>}
                     <Button
                       type="button"
@@ -1270,7 +1300,182 @@ function ServicesSection({
           {t('admin.config.services.addCta')}
         </Button>
       </form>
-    </CollapsibleSection>
+      </CollapsibleSection>
+
+      <Sheet
+        open={Boolean(staffPickerService)}
+        onOpenChange={(open) => {
+          if (!open) closeStaffPicker();
+        }}
+      >
+        <SheetContent
+          side="inline-end"
+          data-testid="service-staff-picker"
+          className="flex flex-col gap-0"
+        >
+          {staffPickerService && (
+            <>
+              <div className="pe-10">
+                <SheetTitle>انتخاب اعضای تیم</SheetTitle>
+                <SheetDescription>
+                  برای «{staffPickerService.name}» اعضایی را انتخاب کن که این خدمت را ارائه می‌دهند.
+                </SheetDescription>
+              </div>
+
+              <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-bold text-text">اعضای انتخاب‌شده</span>
+                  <span className="rounded-full bg-primary px-2.5 py-1 text-xs font-bold text-primary-contrast">
+                    {staffPickerIds.length.toLocaleString('fa-IR')} نفر
+                  </span>
+                </div>
+                <p className="mt-1 text-xs leading-6 text-muted">
+                  انتخاب‌ها بعد از زدن «ذخیره اعضا» ثبت می‌شوند.
+                </p>
+                {unavailableSelectedStaffCount > 0 && (
+                  <p className="mt-1 text-xs leading-6 text-muted">
+                    {unavailableSelectedStaffCount.toLocaleString('fa-IR')} عضو غیرفعال هم متصل است و
+                    برای جلوگیری از حذف ناخواسته حفظ می‌شود.
+                  </p>
+                )}
+              </div>
+
+              {eligibleStaff.length > 4 && (
+                <TextField
+                  label="جست‌وجوی عضو تیم"
+                  placeholder="نام عضو تیم را بنویس"
+                  value={staffPickerSearch}
+                  onChange={(event) => setStaffPickerSearch(event.target.value)}
+                  containerClassName="mt-4"
+                  endAdornment={<Search className="h-4 w-4 text-muted" aria-hidden="true" />}
+                />
+              )}
+
+              <div className="mt-4 flex items-center justify-between gap-3">
+                <p className="m-0 text-sm font-bold text-text">اعضای قابل انتخاب</p>
+                {eligibleStaff.length > 0 && (
+                  <button
+                    type="button"
+                    className="min-h-10 rounded-md px-2 text-xs font-bold text-primary outline-none hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+                    onClick={() =>
+                      setStaffPickerIds((current) =>
+                        allEligibleStaffSelected
+                          ? current.filter(
+                              (id) => !eligibleStaff.some((member) => member.id === id),
+                            )
+                          : [...new Set([...current, ...eligibleStaff.map((member) => member.id)])],
+                      )
+                    }
+                  >
+                    {allEligibleStaffSelected ? 'حذف همه' : 'انتخاب همه'}
+                  </button>
+                )}
+              </div>
+
+              {eligibleStaff.length === 0 ? (
+                <p className="mt-3 rounded-xl border border-dashed border-border p-4 text-sm leading-7 text-muted">
+                  ابتدا حداقل یک عضو تیم یا صاحب سالن اضافه کن.
+                </p>
+              ) : filteredStaffPickerMembers.length === 0 ? (
+                <p className="mt-3 rounded-xl border border-dashed border-border p-4 text-sm leading-7 text-muted">
+                  عضوی با این نام پیدا نشد.
+                </p>
+              ) : (
+                <div
+                  role="group"
+                  aria-label="اعضای قابل انتخاب برای خدمت"
+                  className="mt-3 grid max-h-[min(45dvh,24rem)] gap-2 overflow-y-auto pe-1"
+                >
+                  {filteredStaffPickerMembers.map((member) => {
+                    const checked = staffPickerIds.includes(member.id);
+                    const memberName = member.fullName?.trim() || member.id;
+                    return (
+                      <button
+                        key={member.id}
+                        type="button"
+                        role="checkbox"
+                        aria-checked={checked}
+                        data-testid={`service-staff-option-${member.id}`}
+                        onClick={() =>
+                          setStaffPickerIds((current) =>
+                            checked
+                              ? current.filter((id) => id !== member.id)
+                              : [...current, member.id],
+                          )
+                        }
+                        className={cn(
+                          'flex min-h-14 w-full items-center gap-3 rounded-xl border p-3 text-start',
+                          'transition-colors duration-fast outline-none',
+                          'focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus',
+                          checked
+                            ? 'border-primary bg-primary/10'
+                            : 'border-border bg-bg hover:bg-surface',
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold',
+                            checked
+                              ? 'bg-primary text-primary-contrast'
+                              : 'bg-surface text-primary',
+                          )}
+                          aria-hidden="true"
+                        >
+                          {memberName.slice(0, 1)}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-bold text-text">{memberName}</span>
+                          <span className="mt-0.5 block text-xs text-muted">
+                            {member.role === 'Owner' ? 'صاحب سالن' : 'عضو تیم'}
+                          </span>
+                        </span>
+                        <span
+                          className={cn(
+                            'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border',
+                            checked
+                              ? 'border-primary bg-primary text-primary-contrast'
+                              : 'border-border bg-bg text-transparent',
+                          )}
+                          aria-hidden="true"
+                        >
+                          <Check className="h-4 w-4" />
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {staffPickerError && (
+                <p className="mt-3 text-sm text-danger" role="alert">
+                  {staffPickerError}
+                </p>
+              )}
+
+              <div className="mt-5 grid gap-2 sm:grid-cols-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  fullWidth
+                  disabled={savingStaffPicker}
+                  onClick={closeStaffPicker}
+                >
+                  انصراف
+                </Button>
+                <Button
+                  type="button"
+                  fullWidth
+                  loading={savingStaffPicker}
+                  onClick={() => void saveStaffPicker()}
+                >
+                  ذخیره اعضا
+                </Button>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }
 
@@ -1353,7 +1558,10 @@ function DepositSettingsSection({
   onChange: React.Dispatch<React.SetStateAction<DepositSettings>>;
 }) {
   const { success, error: toastError } = useToast();
-  const [method, setMethod] = useState<DepositSettings['depositMethod']>(settings.depositMethod);
+  // Card-to-card is the only deposit method currently exposed in the panel.
+  // Keep legacy API values out of this screen until the other methods are
+  // intentionally reintroduced.
+  const method: DepositSettings['depositMethod'] = 'card_transfer';
   const [cardNumber, setCardNumber] = useState(settings.depositCardNumber ?? '');
   const [cardHolder, setCardHolder] = useState(settings.depositCardHolder ?? '');
   const [bankName, setBankName] = useState(settings.depositBankName ?? '');
@@ -1361,7 +1569,6 @@ function DepositSettingsSection({
   const [formError, setFormError] = useState('');
 
   useEffect(() => {
-    setMethod(settings.depositMethod);
     setCardNumber(settings.depositCardNumber ?? '');
     setCardHolder(settings.depositCardHolder ?? '');
     setBankName(settings.depositBankName ?? '');
@@ -1403,14 +1610,9 @@ function DepositSettingsSection({
       <Select
         label="روش پرداخت بیعانه"
         value={method}
-        onValueChange={(value) => {
-          setMethod(value as DepositSettings['depositMethod']);
-          setFormError('');
-        }}
+        onValueChange={() => setFormError('')}
         options={[
           { value: 'card_transfer', label: 'کارت‌به‌کارت و ارسال رسید' },
-          { value: 'cash', label: 'نقدی در محل' },
-          { value: 'gateway', label: 'پرداخت آنلاین از درگاه' },
         ]}
       />
       {method === 'card_transfer' && (
@@ -1871,20 +2073,30 @@ function OwnerConfigPageContent({
     [success, t],
   );
 
+  const isTeamView = view === 'team';
+  const isServicesView = view === 'services';
+  const isAllView = view === 'all';
+  const pageTitle = isTeamView
+    ? t('owner.team.title')
+    : isServicesView
+      ? t('owner.services.title')
+      : t('seo.titles.adminConfiguration');
+  const pageSubtitle = isTeamView
+    ? t('owner.team.subtitle')
+    : isServicesView
+      ? t('owner.services.subtitle')
+      : t('admin.config.subtitle');
+
   return (
     <div data-testid="admin-configuration" className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <SeoHead
-        title={view === 'team' ? t('owner.team.title') : t('seo.titles.adminConfiguration')}
-      />
+      <SeoHead title={pageTitle} />
 
       {/* Page header */}
       <header className="flex flex-col gap-1">
         <h1 className="text-xl text-display text-text">
-          {view === 'team' ? t('owner.team.title') : t('admin.configuration')}
+          {isAllView ? t('admin.configuration') : pageTitle}
         </h1>
-        <p className="max-w-[60ch] text-sm text-muted">
-          {view === 'team' ? t('owner.team.subtitle') : t('admin.config.subtitle')}
-        </p>
+        <p className="max-w-[60ch] text-sm text-muted">{pageSubtitle}</p>
       </header>
 
       {/* Loading skeleton */}
@@ -1918,28 +2130,30 @@ function OwnerConfigPageContent({
               </div>
             </div>
           )}
-          <StaffSection
-            staff={staff}
-            chairs={chairs}
-            salonId={salonId}
-            onChange={setStaff}
-            onStaffAdded={() => {
-              void adminApi.getChairs(salonId).then((result) => {
-                setChairs(result.chairs.map((chair, index) => toEntry(chair, `chair-${index + 1}`)));
-              });
-            }}
-            requestDelete={setPendingDelete}
-          />
-
-          {view !== 'team' && (
-          <SmsSettingsSection
-            salonId={salonId}
-            settings={smsSettings}
-            onChange={setSmsSettings}
-          />
+          {isTeamView && (
+            <StaffSection
+              staff={staff}
+              chairs={chairs}
+              salonId={salonId}
+              onChange={setStaff}
+              onStaffAdded={() => {
+                void adminApi.getChairs(salonId).then((result) => {
+                  setChairs(result.chairs.map((chair, index) => toEntry(chair, `chair-${index + 1}`)));
+                });
+              }}
+              requestDelete={setPendingDelete}
+            />
           )}
 
-          {view !== 'team' && (
+          {isAllView && (
+            <SmsSettingsSection
+              salonId={salonId}
+              settings={smsSettings}
+              onChange={setSmsSettings}
+            />
+          )}
+
+          {isAllView && (
             <DepositSettingsSection
               salonId={salonId}
               settings={depositSettings}
@@ -1947,7 +2161,8 @@ function OwnerConfigPageContent({
             />
           )}
 
-          <ServicesSection
+          {isServicesView && (
+            <ServicesSection
             services={services}
             staff={staff}
             onStaffChange={async (serviceId, staffIds) => {
@@ -1960,9 +2175,10 @@ function OwnerConfigPageContent({
               try {
                 await adminApi.setServiceStaff(salonId, serviceId, staffIds);
                 success({ title: 'اعضای تیم خدمت ذخیره شدند' });
-              } catch {
+              } catch (reason) {
                 setServices(previous);
                 toastError({ title: 'ذخیره اعضای تیم خدمت انجام نشد' });
+                throw reason;
               }
             }}
             onUpdate={async (serviceId, patch) => {
@@ -2063,10 +2279,11 @@ function OwnerConfigPageContent({
               });
             }}
             requestDelete={setPendingDelete}
-          />
+            />
+          )}
 
-          {view !== 'team' && (
-          <ChairsSection
+          {isAllView && (
+            <ChairsSection
             chairs={chairs}
             onAdd={(label) => {
               return adminApi.createChair(salonId, { name: label }).then((res) => {
@@ -2129,10 +2346,10 @@ function OwnerConfigPageContent({
               });
             }}
             requestDelete={setPendingDelete}
-          />
+            />
           )}
 
-          {view !== 'team' && (
+          {isAllView && (
             <EquipmentSection
               equipment={equipment}
               onAdd={(name) => {

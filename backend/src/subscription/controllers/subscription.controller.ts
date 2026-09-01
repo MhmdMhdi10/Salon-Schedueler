@@ -7,7 +7,7 @@ import { createRateLimit } from '../../http/middleware/rate-limit.js';
 import { isE2EQuietLogs } from '../../common/logging.js';
 
 /** Purchasable (non-trial) plan kinds accepted by POST /subscription/purchase. */
-const PAID_PLANS: ReadonlySet<string> = new Set(['monthly', 'quarterly', 'annual']);
+const PAID_PLANS: ReadonlySet<string> = new Set(['monthly', 'quarterly']);
 
 /**
  * Subscription routes for the owner panel (Requirements 3.1, 3.2, 3.4, 3.6,
@@ -27,12 +27,19 @@ const PAID_PLANS: ReadonlySet<string> = new Set(['monthly', 'quarterly', 'annual
 export function subscriptionRouter(services: Services, requireRole: RequireRole): Router {
   const router = Router();
 
-  // The configurable, IRR-priced plan catalogue (trial + paid plans).
+  // Only currently purchasable plans are exposed. Legacy annual definitions
+  // remain readable inside the domain for existing subscription records.
   router.get(
     '/subscription/plans',
     requireRole('manage_appointments'),
     asyncRoute(async (_req, res) => {
-      const plans = services.subscriptionService.getPlans().map((plan) => ({
+      const getPurchasablePlans = services.subscriptionService.getPurchasablePlans;
+      const sourcePlans = getPurchasablePlans
+        ? getPurchasablePlans.call(services.subscriptionService)
+        : services.subscriptionService
+            .getPlans()
+            .filter((plan) => PAID_PLANS.has(plan.kind));
+      const plans = sourcePlans.map((plan) => ({
         kind: plan.kind,
         durationDays: plan.durationDays,
         // bigint → string: IRR amounts can exceed Number.MAX_SAFE_INTEGER and
@@ -138,6 +145,18 @@ export function subscriptionCallbackRouter(services: Services): Router {
           : ['OK', '100', '101', '201'].includes((status ?? '').toUpperCase());
 
       if (!authority || !isSuccessful) {
+        if (authority && !isSuccessful) {
+          try {
+            const releasePayment = services.subscriptionService.markPaymentFailedByAuthority;
+            if (releasePayment) {
+              await releasePayment.call(services.subscriptionService, authority);
+            }
+          } catch (err) {
+            if (!isE2EQuietLogs()) {
+              console.error('[subscription-callback] failed-payment cleanup failed:', err);
+            }
+          }
+        }
         res.redirect('/owner/subscription?payment=error');
         return;
       }

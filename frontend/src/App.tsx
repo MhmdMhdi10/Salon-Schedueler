@@ -153,6 +153,9 @@ const OwnerConfigurationPage = lazy(() =>
 const OwnerTeamPage = lazy(() =>
   import('./pages/owner').then((m) => ({ default: m.OwnerTeamPage })),
 );
+const OwnerServicesPage = lazy(() =>
+  import('./pages/owner').then((m) => ({ default: m.OwnerServicesPage })),
+);
 const OwnerSubscriptionPage = lazy(() =>
   import('./pages/owner').then((m) => ({ default: m.OwnerSubscriptionPage })),
 );
@@ -247,6 +250,12 @@ function CustomerOnlyRoute() {
   return <Outlet />;
 }
 
+function LandingPwaInstallPrompt() {
+  const { pathname } = useLocation();
+
+  return pathname === '/' ? <PwaInstallPrompt /> : null;
+}
+
 export function App() {
   return (
     <HelmetProvider>
@@ -293,6 +302,7 @@ export function App() {
                       <Route path="analytics" element={<OwnerAnalyticsPage />} />
                       <Route path="config" element={<OwnerConfigurationPage />} />
                       <Route path="team" element={<OwnerTeamPage />} />
+                      <Route path="services" element={<OwnerServicesPage />} />
                       <Route path="subscription" element={<OwnerSubscriptionPage />} />
                       <Route path="transactions" element={<OwnerTransactionsPage />} />
                       <Route path="notifications" element={<OwnerNotificationsPage />} />
@@ -394,7 +404,7 @@ export function App() {
                     </Route>
                   </Routes>
                 </Suspense>
-                <PwaInstallPrompt />
+                <LandingPwaInstallPrompt />
               </div>
             </ToastProvider>
           </AuthProvider>

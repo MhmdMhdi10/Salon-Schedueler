@@ -28,6 +28,9 @@ const API_ERROR_MESSAGES: Record<string, string> = {
   RESCHEDULE_PROPOSAL_PENDING: 'یک پیشنهاد تغییر زمان در انتظار پاسخ است.',
   ASSIGNED_CHAIR_TAKEN: 'این صندلی قبلاً به عضو دیگری اختصاص داده شده است.',
   SUBSCRIPTION_REQUIRED: 'اشتراک سالن منقضی شده است؛ ابتدا اشتراک را تمدید کن.',
+  SUBSCRIPTION_PLAN_UNAVAILABLE: 'این پلن فعلاً برای خرید در دسترس نیست.',
+  SUBSCRIPTION_WINDOW_LIMIT_REACHED: 'با توجه به اشتراک فعلی، تمدید نباید تاریخ پایان را بیشتر از ۳ ماه آینده ببرد.',
+  SUBSCRIPTION_PAYMENT_PENDING: 'یک پرداخت اشتراک هنوز در حال بررسی است؛ تا مشخص‌شدن نتیجه، پرداخت دیگری شروع نکن.',
   RATE_LIMITED: 'تعداد درخواست‌ها زیاد است؛ کمی بعد دوباره تلاش کن.',
   OTP_INVALID: 'کد ورود نادرست است.',
   OTP_EXPIRED: 'کد ورود منقضی شده است؛ کد تازه بگیر.',
@@ -37,12 +40,53 @@ const API_ERROR_MESSAGES: Record<string, string> = {
   INTERNAL: 'خطای موقت رخ داد؛ دوباره تلاش کن.',
 };
 
+/** Field-level explanations returned by validation-heavy owner endpoints. */
+const API_VALIDATION_FIELD_MESSAGES: Record<string, string> = {
+  name: 'نام را وارد کن.',
+  durationMinutes: 'مدت خدمت باید عدد صحیح بین ۵ تا ۴۸۰ دقیقه باشد.',
+  durationMode: 'نوع زمان‌بندی را روی زمان ثابت یا متغیر بگذار.',
+  minDurationMinutes: 'حداقل زمان باید عدد صحیح بین ۵ تا ۴۸۰ دقیقه باشد.',
+  maxDurationMinutes: 'حداکثر زمان باید بین ۵ تا ۴۸۰ دقیقه و حداقل به‌اندازه حداقل زمان باشد.',
+  bufferMinutes: 'فاصله بین نوبت‌ها باید عدد صحیح بین ۰ تا ۱۲۰ دقیقه باشد.',
+  priceRial: 'قیمت باید عدد صحیح صفر یا بیشتر باشد.',
+  depositType: 'نوع بیعانه را انتخاب کن.',
+  depositRial: 'مبلغ بیعانه باید عدد صحیح بیشتر از صفر باشد.',
+  depositPercent: 'درصد بیعانه باید عدد صحیح بین ۱ تا ۱۰۰ باشد.',
+  approvalStaffId: 'مسئول تأیید را از بین اعضای فعالِ دارای دسترسی انتخاب کن.',
+  staffIds: 'فقط اعضای فعال همین سالن را برای ارائه خدمت انتخاب کن.',
+  fullName: 'نام و نام خانوادگی را کامل وارد کن.',
+  phone: 'شماره موبایل را صحیح وارد کن.',
+};
+
+function getFieldErrorMessage(code: string, field?: string): string | undefined {
+  if (!field) return undefined;
+  const fieldName = field.split('.').pop() ?? field;
+  if (code === 'VALIDATION_ERROR') return API_VALIDATION_FIELD_MESSAGES[fieldName];
+  if (code === 'INVALID_STAFF_ASSIGNMENT' && fieldName === 'staffIds') {
+    return API_VALIDATION_FIELD_MESSAGES.staffIds;
+  }
+  if (code === 'INVALID_APPROVAL_STAFF' && fieldName === 'approvalStaffId') {
+    return API_VALIDATION_FIELD_MESSAGES.approvalStaffId;
+  }
+  return undefined;
+}
+
 export function getApiErrorMessage(error: unknown, fallback = 'عملیات انجام نشد. دوباره تلاش کن.'): string {
   if (error instanceof ApiError) {
-    return error.message || API_ERROR_MESSAGES[error.code] || fallback;
+    return (
+      getFieldErrorMessage(error.code, error.field) ||
+      error.message ||
+      API_ERROR_MESSAGES[error.code] ||
+      fallback
+    );
   }
   if (error && typeof error === 'object') {
-    const value = error as { code?: unknown; message?: unknown };
+    const value = error as { code?: unknown; field?: unknown; message?: unknown };
+    const fieldMessage =
+      typeof value.code === 'string' && typeof value.field === 'string'
+        ? getFieldErrorMessage(value.code, value.field)
+        : undefined;
+    if (fieldMessage) return fieldMessage;
     if (typeof value.code === 'string' && API_ERROR_MESSAGES[value.code]) {
       return API_ERROR_MESSAGES[value.code];
     }
@@ -127,7 +171,9 @@ async function request<T>(
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Request failed' }));
     const code = typeof error.code === 'string' ? error.code : 'UNKNOWN';
-    throw new ApiError(response.status, code, error.message || API_ERROR_MESSAGES[code]);
+    const message = typeof error.message === 'string' ? error.message : undefined;
+    const field = typeof error.field === 'string' ? error.field : undefined;
+    throw new ApiError(response.status, code, message, field);
   }
 
   if (response.status === 204) return undefined as T;
@@ -139,6 +185,7 @@ export class ApiError extends Error {
     public status: number,
     public code: string,
     message?: string,
+    public field?: string,
   ) {
     super(message || API_ERROR_MESSAGES[code] || 'عملیات انجام نشد. دوباره تلاش کن.');
     this.name = 'ApiError';
@@ -599,7 +646,7 @@ export interface SubscriptionStatusResponse {
   expiresAt: string;
 }
 
-/** A purchasable/trial plan definition with its configurable IRR price. */
+/** A plan definition with its configurable IRR price. The UI exposes monthly/quarterly only. */
 export interface SubscriptionPlan {
   kind: SubscriptionPlanKind;
   /** Plan length in days (display-localized; e.g. «۳۰ روز»). */
@@ -617,7 +664,7 @@ export const subscriptionApi = {
   /** Current effective status + expiry for the salon's subscription. */
   getStatus: (salonId: string) =>
     request<SubscriptionStatusResponse>(`/salons/${salonId}/subscription`),
-  /** The configurable, IRR-priced plans (trial + monthly/quarterly/annual). */
+  /** The currently purchasable IRR-priced plans (monthly + quarterly). */
   getPlans: () => request<{ plans: SubscriptionPlan[] }>('/subscription/plans'),
   /**
    * Begin a purchase/renewal for a paid plan. Returns the payment-gateway
@@ -1045,8 +1092,8 @@ export const adminApi = {
       name?: string;
       durationMinutes?: number;
       durationMode?: 'fixed' | 'variable';
-      minDurationMinutes?: number | null;
-      maxDurationMinutes?: number | null;
+      minDurationMinutes?: number;
+      maxDurationMinutes?: number;
       bufferMinutes?: number;
       priceRial?: number;
       requiresDeposit?: boolean;

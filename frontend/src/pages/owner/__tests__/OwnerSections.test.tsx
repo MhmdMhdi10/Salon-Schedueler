@@ -38,6 +38,9 @@ const getBookingPolicy = vi.fn();
 const setBookingPolicy = vi.fn();
 const getAdminStaff = vi.fn();
 const updateStaff = vi.fn();
+const getSalonServices = vi.fn();
+const setServiceStaff = vi.fn();
+const updateService = vi.fn();
 
 vi.mock('../../../api/client', () => {
   class ApiError extends Error {
@@ -65,9 +68,11 @@ vi.mock('../../../api/client', () => {
       getAnalytics: vi.fn().mockResolvedValue({ utilization: {}, revenue: 0, busiestWindows: [] }),
       getStaff: (...args: unknown[]) => getAdminStaff(...args),
       getChairs: vi.fn().mockResolvedValue({ chairs: [] }),
+      setServiceStaff: (...args: unknown[]) => setServiceStaff(...args),
+      updateService: (...args: unknown[]) => updateService(...args),
     },
     salonApi: {
-      getServices: vi.fn().mockResolvedValue({ services: [] }),
+      getServices: (...args: unknown[]) => getSalonServices(...args),
     },
     approvalPolicyApi: {
       get: vi.fn().mockResolvedValue({ autoApprove: false, staff: [] }),
@@ -115,6 +120,8 @@ import {
   OwnerWorkingHoursPage,
   OwnerAnalyticsPage,
   OwnerConfigurationPage,
+  OwnerTeamPage,
+  OwnerServicesPage,
 } from '..';
 import type { OwnerRole } from '../../../api/client';
 import { ToastProvider } from '../../../components/ui/Toast';
@@ -140,6 +147,8 @@ function renderOwnerApp(role: OwnerRole, initialPath: string) {
                   <Route path="calendar/working-hours" element={<OwnerWorkingHoursPage />} />
                   <Route path="analytics" element={<OwnerAnalyticsPage />} />
                   <Route path="config" element={<OwnerConfigurationPage />} />
+                  <Route path="team" element={<OwnerTeamPage />} />
+                  <Route path="services" element={<OwnerServicesPage />} />
                 </Route>
               </Routes>
             </MemoryRouter>
@@ -162,6 +171,9 @@ beforeEach(() => {
   setBookingPolicy.mockResolvedValue({ ok: true, bookingWindowDays: 14 });
   getAdminStaff.mockResolvedValue({ staff: [] });
   updateStaff.mockResolvedValue({ staff: {} });
+  getSalonServices.mockResolvedValue({ services: [] });
+  setServiceStaff.mockResolvedValue({ ok: true });
+  updateService.mockResolvedValue({ service: {} });
 });
 
 afterEach(() => {
@@ -265,9 +277,116 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
 
     expect(await screen.findByTestId('owner-config-page')).toBeInTheDocument();
     expect(await screen.findByTestId('admin-configuration')).toBeInTheDocument();
+    expect(screen.queryByTestId('staff-list')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('services-list')).not.toBeInTheDocument();
+    const depositMethod = screen.getByRole('combobox', { name: 'روش پرداخت بیعانه' });
+    fireEvent.click(depositMethod);
+    expect(
+      await screen.findByRole('option', { name: 'کارت‌به‌کارت و ارسال رسید' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'نقدی در محل' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'پرداخت آنلاین از درگاه' })).not.toBeInTheDocument();
     expect(screen.queryByTestId('holidays-list')).not.toBeInTheDocument();
     expect(screen.queryByTestId('approval-policy')).not.toBeInTheDocument();
     expect(screen.queryByTestId('approval-loading')).not.toBeInTheDocument();
+  });
+
+  it('keeps team controls separate from service controls', async () => {
+    renderOwnerApp('Owner', '/owner/team');
+
+    expect(await screen.findByTestId('owner-team-page')).toBeInTheDocument();
+    expect(await screen.findByTestId('staff-list')).toBeInTheDocument();
+    expect(screen.queryByTestId('services-list')).not.toBeInTheDocument();
+  });
+
+  it('renders service controls on their dedicated owner section', async () => {
+    renderOwnerApp('Owner', '/owner/services');
+
+    expect(await screen.findByTestId('owner-services-page')).toBeInTheDocument();
+    expect(await screen.findByTestId('services-list')).toBeInTheDocument();
+    expect(screen.queryByTestId('staff-list')).not.toBeInTheDocument();
+  });
+
+  it('opens a focused team picker and saves all selected members together', async () => {
+    getAdminStaff.mockResolvedValue({
+      staff: [
+        {
+          id: 'staff-1',
+          fullName: 'سارا محمدی',
+          role: 'Stylist',
+          phone: null,
+          active: true,
+          autoApprove: null,
+          manageOwnAvailability: false,
+        },
+        {
+          id: 'staff-2',
+          fullName: 'نرگس احمدی',
+          role: 'Owner',
+          phone: null,
+          active: true,
+          autoApprove: null,
+          manageOwnAvailability: false,
+        },
+      ],
+    });
+    getSalonServices.mockResolvedValue({
+      services: [
+        {
+          id: 'service-1',
+          name: 'رنگ مو',
+          durationMinutes: 60,
+          priceRial: 500000,
+          staffIds: ['staff-1'],
+        },
+      ],
+    });
+
+    renderOwnerApp('Owner', '/owner/services');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'ویرایش اعضا' }));
+    const picker = await screen.findByTestId('service-staff-picker');
+    expect(picker).toHaveTextContent('انتخاب اعضای تیم');
+    expect(screen.queryByRole('button', { name: 'ذخیره تغییرات خدمت' })).not.toBeInTheDocument();
+    expect(
+      within(picker).getByRole('checkbox', { name: /سارا محمدی/ }),
+    ).toHaveAttribute('aria-checked', 'true');
+
+    fireEvent.click(within(picker).getByRole('checkbox', { name: /نرگس احمدی/ }));
+    fireEvent.click(within(picker).getByRole('button', { name: 'ذخیره اعضا' }));
+
+    await waitFor(() =>
+      expect(setServiceStaff).toHaveBeenCalledWith(
+        expect.any(String),
+        'service-1',
+        ['staff-1', 'staff-2'],
+      ),
+    );
+    await waitFor(() => expect(screen.queryByTestId('service-staff-picker')).not.toBeInTheDocument());
+  });
+
+  it('does not send nullable variable-duration fields for a fixed service', async () => {
+    getSalonServices.mockResolvedValue({
+      services: [
+        {
+          id: 'service-1',
+          name: 'رنگ مو',
+          durationMinutes: 60,
+          durationMode: 'fixed',
+          priceRial: 500000,
+          staffIds: [],
+        },
+      ],
+    });
+
+    renderOwnerApp('Owner', '/owner/services');
+    fireEvent.click(await screen.findByRole('button', { name: 'ویرایش رنگ مو' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ذخیره تغییرات خدمت' }));
+
+    await waitFor(() => expect(updateService).toHaveBeenCalled());
+    const patch = updateService.mock.calls[0]?.[2] as Record<string, unknown>;
+    expect(patch).not.toHaveProperty('minDurationMinutes');
+    expect(patch).not.toHaveProperty('maxDurationMinutes');
   });
 
   it('deactivates a staff member through the owner API and keeps the row recoverable', async () => {
@@ -283,7 +402,7 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
     getAdminStaff.mockResolvedValue({ staff: [member] });
     updateStaff.mockResolvedValue({ staff: { ...member, active: false } });
 
-    renderOwnerApp('Owner', '/owner/config');
+    renderOwnerApp('Owner', '/owner/team');
 
     fireEvent.click(await screen.findByRole('button', { name: 'غیرفعال کردن سارا محمدی' }));
     expect(screen.getByRole('dialog')).toHaveTextContent('غیرفعال کردن سارا محمدی؟');

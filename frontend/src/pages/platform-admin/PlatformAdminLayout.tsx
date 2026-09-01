@@ -47,6 +47,11 @@ import { useAuth } from '../../auth/AuthContext';
 import { RouteLoader } from '../../components/layout/RouteLoader';
 import { BrandLogo } from '../../components/brand';
 import { ThemeScope, useTheme, OwnerThemeToggle } from '../../components/theme';
+import {
+  PanelOnboardingGuide,
+  useFirstVisitPanelGuide,
+  type PanelGuideStep,
+} from '../../components/layout/PanelOnboardingGuide';
 import { SeoHead } from '../../components/seo';
 import { getPlatformAdminTheme } from './PlatformAdminTheme';
 import { PanelAccessNav } from '../../components/layout/PanelAccessNav';
@@ -100,6 +105,73 @@ const ALL_ENTRIES: NavEntry[] = [
   { key: '/platform-admin', label: 'داشبورد', icon: <DashboardOutlined /> },
   ...NAV_GROUPS.flatMap((group) => group.children),
 ];
+
+const PLATFORM_ADMIN_GUIDE_STEPS: readonly PanelGuideStep[] = [
+  {
+    id: 'platform-admin-dashboard',
+    title: 'داشبورد ادمین',
+    body: 'نمای کلی پلتفرم، وضعیت سالن‌ها و شاخص‌های مهم را از اینجا بررسی کنید.',
+    to: '/platform-admin',
+  },
+  {
+    id: 'platform-admin-salons',
+    title: 'سالن‌ها',
+    body: 'سالن‌ها را جستجو کنید، جزئیاتشان را ببینید و وضعیت هر سالن را مدیریت کنید.',
+    to: '/platform-admin/salons',
+  },
+  {
+    id: 'platform-admin-appointments',
+    title: 'نوبت‌ها',
+    body: 'نوبت‌های ثبت‌شده در پلتفرم را برای پیگیری و بررسی جزئیات ببینید.',
+    to: '/platform-admin/appointments',
+  },
+  {
+    id: 'platform-admin-waitlist',
+    title: 'صف انتظار',
+    body: 'درخواست‌های صف انتظار را بررسی و وضعیت آن‌ها را مدیریت کنید.',
+    to: '/platform-admin/waitlist',
+  },
+  {
+    id: 'platform-admin-qr-scans',
+    title: 'اسکن‌های QR',
+    body: 'عملکرد کدهای QR و مسیر ورود مشتری‌ها به رزرو را بررسی کنید.',
+    to: '/platform-admin/qr-scans',
+  },
+  {
+    id: 'platform-admin-customers',
+    title: 'مشتری‌ها',
+    body: 'حساب‌های مشتری، سابقهٔ استفاده و جزئیات موردنیاز پشتیبانی را ببینید.',
+    to: '/platform-admin/customers',
+  },
+  {
+    id: 'platform-admin-staff',
+    title: 'تیم سالن‌ها',
+    body: 'اعضای تیم سالن‌ها و ارتباط آن‌ها با سالن‌های ثبت‌شده را مدیریت کنید.',
+    to: '/platform-admin/staff',
+  },
+  {
+    id: 'platform-admin-subscriptions',
+    title: 'اشتراک‌ها',
+    body: 'پلن‌ها، وضعیت اشتراک و تمدید سالن‌ها را از این بخش پیگیری کنید.',
+    to: '/platform-admin/subscriptions',
+  },
+  {
+    id: 'platform-admin-payments',
+    title: 'پرداخت‌ها',
+    body: 'پرداخت‌ها و وضعیت مالی ثبت‌شده در پلتفرم را بررسی کنید.',
+    to: '/platform-admin/payments',
+  },
+  {
+    id: 'platform-admin-audit-logs',
+    title: 'گزارش تغییرات',
+    body: 'تغییرات حساس و رویدادهای مدیریتی را برای کنترل و پاسخ‌گویی دنبال کنید.',
+    to: '/platform-admin/audit-logs',
+  },
+] as const;
+
+function platformAdminGuideId(pathname: string): string | undefined {
+  return PLATFORM_ADMIN_GUIDE_STEPS.find((step) => step.to === pathname)?.id;
+}
 
 const routeLabel = (pathname: string) =>
   ALL_ENTRIES.find((entry) => entry.key === pathname)?.label ??
@@ -180,7 +252,7 @@ function PlatformSider({ collapsed, onNavigate }: { collapsed: boolean; onNaviga
   );
 }
 
-function PlatformHeader({ collapsed, mobile, onToggleCollapsed, onSignOut }: { collapsed: boolean; mobile: boolean; onToggleCollapsed: () => void; onSignOut: () => void }) {
+function PlatformHeader({ collapsed, mobile, onToggleCollapsed, onSignOut, onHelp }: { collapsed: boolean; mobile: boolean; onToggleCollapsed: () => void; onSignOut: () => void; onHelp: () => void }) {
   const { theme, toggleTheme } = useTheme();
   const { pathname } = useLocation();
   const [commandOpen, setCommandOpen] = useState(false);
@@ -217,6 +289,15 @@ function PlatformHeader({ collapsed, mobile, onToggleCollapsed, onSignOut }: { c
         </div>
         <div className="platform-admin-header__tools">
           <PanelAccessNav tone="platform" />
+          <Tooltip title="راهنمای پنل">
+            <Button
+              type="text"
+              aria-label="راهنمای پنل"
+              data-testid="panel-guide-trigger"
+              icon={<QuestionCircleOutlined />}
+              onClick={onHelp}
+            />
+          </Tooltip>
           <Button type="text" className="platform-admin-header__search" icon={<SearchOutlined />} onClick={() => setCommandOpen(true)}>
             <span>جستجو</span><kbd>⌘ K</kbd>
           </Button>
@@ -254,10 +335,12 @@ function PlatformBreadcrumb() {
 export function PlatformAdminShell({ children, onSignOut }: { children: ReactNode; onSignOut: () => void }) {
   const { theme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const screens = Grid.useBreakpoint();
   const mobile = screens.lg === false;
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const platformGuide = useFirstVisitPanelGuide('ara:platform-admin-guide:v1');
 
   return (
     <ThemeScope theme={theme} data-shell="platform-admin" className="platform-admin-root">
@@ -276,9 +359,9 @@ export function PlatformAdminShell({ children, onSignOut }: { children: ReactNod
             )}
             <Layout>
               <Layout.Header>
-                <PlatformHeader mobile={mobile} collapsed={collapsed} onToggleCollapsed={() => mobile ? setMobileOpen(true) : setCollapsed((value) => !value)} onSignOut={onSignOut} />
+                <PlatformHeader mobile={mobile} collapsed={collapsed} onToggleCollapsed={() => mobile ? setMobileOpen(true) : setCollapsed((value) => !value)} onSignOut={onSignOut} onHelp={platformGuide.replay} />
               </Layout.Header>
-              <Layout.Content id={PLATFORM_ADMIN_CONTENT_ID} tabIndex={-1}>
+              <Layout.Content id={PLATFORM_ADMIN_CONTENT_ID} tabIndex={-1} data-panel-guide={platformAdminGuideId(location.pathname)}>
                 <PlatformBreadcrumb />
                 <a href={`#${PLATFORM_ADMIN_CONTENT_ID}`} className="sr-only">رفتن به محتوای اصلی</a>
                 {children}
@@ -287,6 +370,11 @@ export function PlatformAdminShell({ children, onSignOut }: { children: ReactNod
           </Layout>
         </AntdApp>
       </ConfigProvider>
+      <PanelOnboardingGuide
+        open={platformGuide.open}
+        onClose={platformGuide.close}
+        steps={PLATFORM_ADMIN_GUIDE_STEPS}
+      />
     </ThemeScope>
   );
 }

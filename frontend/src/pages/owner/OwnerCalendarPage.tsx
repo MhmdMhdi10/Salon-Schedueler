@@ -4636,6 +4636,7 @@ export function OwnerCalendarPage() {
   return (
     <section
       data-testid="owner-calendar-page"
+      data-panel-guide="owner-calendar"
       className="owner-calendar-page flex flex-col gap-4 sm:gap-5"
     >
       {/* Header */}

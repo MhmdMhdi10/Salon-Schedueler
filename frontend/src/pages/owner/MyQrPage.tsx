@@ -116,7 +116,11 @@ export function MyQrPage() {
   };
 
   return (
-    <section data-testid="owner-my-qr-page" className="flex flex-col gap-6">
+    <section
+      data-testid="owner-my-qr-page"
+      data-panel-guide="owner-my-qr"
+      className="flex flex-col gap-6"
+    >
       <SeoHead title={t('owner.myQr.title')} />
 
       <header className="flex flex-col gap-2">

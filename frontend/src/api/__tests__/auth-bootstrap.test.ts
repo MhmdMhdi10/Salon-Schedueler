@@ -78,6 +78,29 @@ describe('expired access token recovery', () => {
   });
 });
 
+describe('field-level API validation errors', () => {
+  it('preserves the invalid field and explains service validation failures', async () => {
+    const client = await import('../client');
+    client.setAccessToken('access-token');
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ code: 'VALIDATION_ERROR', field: 'maxDurationMinutes' }, false, 400),
+    );
+
+    const error = await client.adminApi
+      .updateService('salon-1', 'service-1', {
+        durationMode: 'variable',
+        minDurationMinutes: 60,
+        maxDurationMinutes: 30,
+      })
+      .catch((reason: unknown) => reason);
+
+    expect(error).toMatchObject({ code: 'VALIDATION_ERROR', field: 'maxDurationMinutes' });
+    expect(client.getApiErrorMessage(error)).toBe(
+      'حداکثر زمان باید بین ۵ تا ۴۸۰ دقیقه و حداقل به‌اندازه حداقل زمان باشد.',
+    );
+  });
+});
+
 describe('signOut', () => {
   it('clears the in-memory access token without writing browser storage', async () => {
     const client = await import('../client');
