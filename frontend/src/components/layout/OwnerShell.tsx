@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type UIEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type UIEvent,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
@@ -100,7 +108,10 @@ export function OwnerShell({
   const prefersReducedMotion = useReducedMotion();
   const guideKey = `ara:owner-guide:v1:${role}:${salonId || 'default'}`;
   const ownerGuide = useFirstVisitPanelGuide(guideKey);
-  const guideSteps = OWNER_GUIDE_STEPS.filter((step) => step.roles.includes(role));
+  const guideSteps = useMemo(
+    () => OWNER_GUIDE_STEPS.filter((step) => step.roles.includes(role)),
+    [role],
+  );
   const contentRef = useRef<HTMLElement | null>(null);
   const profileScrollPositionRef = useRef<{ top: number; left: number } | null>(null);
 
@@ -251,11 +262,7 @@ export function OwnerShell({
 
       {/* Mobile bottom tabs — visible only below lg */}
       {!isDesktop && <OwnerBottomTabs role={role} />}
-      <PanelOnboardingGuide
-        open={ownerGuide.open}
-        onClose={ownerGuide.close}
-        steps={guideSteps}
-      />
+      <PanelOnboardingGuide open={ownerGuide.open} onClose={ownerGuide.close} steps={guideSteps} />
     </ThemeScope>
   );
 }

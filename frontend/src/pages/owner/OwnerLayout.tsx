@@ -145,7 +145,8 @@ export function OwnerLayout() {
   }
 
   if (state.phase === 'unauthenticated') {
-    return <Navigate to="/auth" replace />;
+    const returnTo = `${location.pathname}${location.search}${location.hash}`;
+    return <Navigate to="/auth" state={{ returnTo }} replace />;
   }
 
   if (state.phase === 'customer') {

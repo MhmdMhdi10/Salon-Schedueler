@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { Link, MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   PanelOnboardingGuide,
@@ -47,8 +47,9 @@ describe('PanelOnboardingGuide', () => {
     expect(screen.getByRole('heading', { name: 'سکشن اول' })).toBeInTheDocument();
     await waitFor(() => {
       expect(document.querySelector('[data-panel-guide-active="true"]')).toBeInTheDocument();
-      expect(document.querySelector('.panel-onboarding-guide__scrim')).toBeInTheDocument();
+      expect(document.querySelector('.panel-onboarding-guide__spotlight')).toBeInTheDocument();
     });
+    expect(screen.getByTestId('panel-guide-dialog')).toHaveAttribute('aria-modal', 'false');
 
     fireEvent.click(screen.getByTestId('panel-guide-close'));
     await waitFor(() => {
@@ -91,6 +92,27 @@ describe('PanelOnboardingGuide', () => {
       expect(document.querySelector('[data-panel-guide-active="true"]')).toHaveTextContent(
         'سکشن دوم صفحه',
       );
+    });
+  });
+
+  it('follows a section selected from panel navigation without snapping back', async () => {
+    render(
+      <MemoryRouter initialEntries={['/first']}>
+        <LocationProbe />
+        <Link to="/second" data-testid="second-section-link">
+          رفتن به سکشن دوم
+        </Link>
+        <div data-panel-guide="first">سکشن اول صفحه</div>
+        <div data-panel-guide="second">سکشن دوم صفحه</div>
+        <PanelOnboardingGuide open onClose={() => {}} steps={STEPS} />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByTestId('second-section-link'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('guide-location')).toHaveTextContent('/second');
+      expect(screen.getByRole('heading', { name: 'سکشن دوم' })).toBeInTheDocument();
     });
   });
 });

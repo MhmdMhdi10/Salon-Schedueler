@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { ThemeProvider } from '../../../components/theme';
 import '../../../i18n';
@@ -94,16 +94,27 @@ function renderOwnerApp(initialPath = '/owner/calendar') {
           <Routes>
             <Route path="/owner" element={<OwnerLayout />}>
               <Route path="calendar" element={<OwnerCalendarPage />} />
+              <Route path="marketing" element={<div data-testid="owner-marketing-stub" />} />
               <Route path="config" element={<OwnerConfigurationPage />} />
               <Route path="profile" element={<OwnerProfilePage />} />
               <Route path="subscription" element={<OwnerSubscriptionPage />} />
             </Route>
-            <Route path="/auth" element={<div data-testid="auth-surface">ورود</div>} />
+            <Route path="/auth" element={<AuthSurface />} />
             <Route path="/account" element={<div data-testid="account-surface">حساب</div>} />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>
     </HelmetProvider>,
+  );
+}
+
+function AuthSurface() {
+  const location = useLocation();
+  const returnTo = (location.state as { returnTo?: string } | null)?.returnTo;
+  return (
+    <div data-testid="auth-surface" data-return-to={returnTo ?? ''}>
+      ورود
+    </div>
   );
 }
 
@@ -152,6 +163,18 @@ describe('OwnerLayout — auth bootstrap (R2.2)', () => {
 
     expect(await screen.findByTestId('auth-surface')).toBeInTheDocument();
     expect(getMe).not.toHaveBeenCalled();
+  });
+
+  it('preserves a deep owner destination through the OTP login', async () => {
+    getAccessToken.mockReturnValue(null);
+    bootstrapAuth.mockResolvedValue(false);
+
+    renderOwnerApp('/owner/marketing');
+
+    expect(await screen.findByTestId('auth-surface')).toHaveAttribute(
+      'data-return-to',
+      '/owner/marketing',
+    );
   });
 
   it('clears the session and redirects when /me rejects (stale token)', async () => {
