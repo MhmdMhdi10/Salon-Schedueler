@@ -48,6 +48,10 @@ export interface AppConfig {
   melliPayamakBodyId: number;
   /** Legacy Melli Payamak generated-OTP endpoint URL (optional). */
   melliPayamakOtpUrl?: string;
+  /** Full Melli Payamak simple-text endpoint URL (optional). */
+  melliPayamakSimpleUrl?: string;
+  /** Sender line used by the Melli Payamak simple-text endpoint (optional). */
+  melliPayamakSimpleFrom?: string;
   /** Pushe push API key (optional). */
   pusheApiKey?: string;
   /** Pushe API base URL override (optional). */
@@ -80,6 +84,8 @@ export interface AppConfig {
   otpWindowSeconds: number;
   /** Explicit temporary opt-in to return generated OTPs to the web client. */
   devOtpAutoFill: boolean;
+  /** Allow real external OTP delivery in development only. */
+  devUseRealOtp: boolean;
   /**
    * Public origin (scheme + host) for salon profile links / QR destinations.
    * Optional; QR_Service falls back to its own documented default when absent.
@@ -176,6 +182,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       ? Number(env.MELIPAYAMAK_BODY_ID)
       : 523232,
     melliPayamakOtpUrl: env.MELIPAYAMAK_OTP_URL,
+    melliPayamakSimpleUrl: env.MELIPAYAMAK_SIMPLE_URL,
+    melliPayamakSimpleFrom: env.MELIPAYAMAK_SIMPLE_FROM ?? env.MELIPAYAMAK_FROM,
     pusheApiKey: env.PUSHE_API_KEY,
     pusheBaseUrl: env.PUSHE_BASE_URL,
     pusheAppId: env.PUSHE_APP_ID,
@@ -192,6 +200,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       ? Number(env.OTP_WINDOW_SECONDS)
       : 120,
     devOtpAutoFill: env.DEV_OTP_AUTO_FILL === 'true',
+    devUseRealOtp: env.DEV_USE_REAL_OTP === 'true',
     publicBaseUrl: env.PUBLIC_BASE_URL,
     rabbitmqUrl: env.RABBITMQ_URL,
     smsQueueMaxAttempts: env.SMS_QUEUE_MAX_ATTEMPTS

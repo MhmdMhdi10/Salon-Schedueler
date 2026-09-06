@@ -7,6 +7,8 @@ import { generateCandidateStarts, intervalsOverlap, computeOccupancyEnd } from '
 export interface AvailabilityQuery {
   salonId: string;
   serviceId: string;
+  /** Additional services booked in the same appointment, ordered by customer selection. */
+  serviceIds?: string[];
   date: string; // ISO date in salon timezone (e.g., '2024-03-15')
   granularityMinutes?: number; // default 15
   /**
@@ -38,6 +40,8 @@ export interface TimeSlot {
 export interface BookingRequest {
   salonId: string;
   serviceId: string;
+  /** Additional services booked in the same appointment. `serviceId` stays primary. */
+  serviceIds?: string[];
   startAt: string; // ISO datetime
   customerId: string;
   preferredStaffId?: string; // R14.3
@@ -148,6 +152,48 @@ const MAX_BOOKING_RETRIES = 3;
 const DEFAULT_HOLD_PERIOD_SECONDS = 900;
 const MANUAL_DEPOSIT_HOLD_PERIOD_SECONDS = 1800;
 
+/**
+ * Split aggregate appointment duration across selected services.
+ *
+ * Variable duration belongs to individual services, while the appointment
+ * row stores one aggregate override for backwards compatibility. Snapshots
+ * still need the concrete duration each service received so receipts,
+ * rescheduling, and the owner timeline all describe the same occupancy.
+ */
+function allocateServiceDurations(
+  services: ReadonlyArray<{
+    durationMode: string;
+    durationMin: number;
+    minDurationMin: number | null;
+    maxDurationMin: number | null;
+  }>,
+  selectedDurationMin: number,
+): number[] {
+  const defaultDurationMin = services.reduce(
+    (total, item) =>
+      total +
+      (item.durationMode === 'variable'
+        ? item.minDurationMin ?? item.durationMin
+        : item.durationMin),
+    0,
+  );
+  let remainingExtra = Math.max(0, selectedDurationMin - defaultDurationMin);
+
+  return services.map((item) => {
+    const min =
+      item.durationMode === 'variable'
+        ? item.minDurationMin ?? item.durationMin
+        : item.durationMin;
+    const max =
+      item.durationMode === 'variable'
+        ? item.maxDurationMin ?? min
+        : min;
+    const extra = Math.min(remainingExtra, Math.max(0, max - min));
+    remainingExtra -= extra;
+    return min + extra;
+  });
+}
+
 function dateInTimeZone(now: Date, timeZone: string): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone,
@@ -209,6 +255,7 @@ export class SchedulingEngine {
     const {
       salonId,
       serviceId,
+      serviceIds: requestedServiceIds,
       date,
       granularityMinutes = 15,
       staffId,
@@ -231,16 +278,31 @@ export class SchedulingEngine {
       if (date < today || date > addIsoDays(today, salon.bookingWindowDays)) return [];
     }
 
-    // 1. Fetch the service details
-    const service = await this.prisma.service.findUnique({
-      where: { id: serviceId },
-      include: {
-        serviceStaff: true,
-        serviceEquipment: true,
-      },
-    });
+    // 1. Fetch service details. A multi-service appointment uses the same staff
+    // intersection and the sum of every selected service's duration/buffer.
+    const selectedServiceIds = [...new Set([serviceId, ...(requestedServiceIds ?? [])])];
+    const services = selectedServiceIds.length === 1
+      ? [await this.prisma.service.findUnique({
+          where: { id: selectedServiceIds[0] },
+          include: { serviceStaff: true, serviceEquipment: true },
+        })]
+      : await this.prisma.service.findMany({
+          where: { id: { in: selectedServiceIds } },
+          include: { serviceStaff: true, serviceEquipment: true },
+        });
+    // Prisma does not promise `findMany` ordering. Rebuild selection order so
+    // the primary service remains stable for staff preference, variable
+    // duration, deposit policy, and appointment snapshots.
+    const orderedServices = selectedServiceIds
+      .map((id) => services.find((item) => item?.id === id) ?? null)
+      .filter((item): item is NonNullable<typeof item> => item !== null);
+    const service = orderedServices[0];
 
-    if (!service || service.salonId !== salonId || service.deletedAt) {
+    if (
+      !service ||
+      orderedServices.length !== selectedServiceIds.length ||
+      orderedServices.some((item) => item.salonId !== salonId || item.deletedAt)
+    ) {
       return [];
     }
 
@@ -250,14 +312,14 @@ export class SchedulingEngine {
     );
     if (!locationType) return [];
 
-    const defaultDurationMin =
-      service.durationMode === 'variable'
-        ? service.minDurationMin ?? service.durationMin
-        : service.durationMin;
-    const maxDurationMin =
-      service.durationMode === 'variable'
-        ? service.maxDurationMin ?? defaultDurationMin
-        : service.durationMin;
+    const defaultDurationMin = orderedServices.reduce(
+      (total, item) => total + (item!.durationMode === 'variable' ? item!.minDurationMin ?? item!.durationMin : item!.durationMin),
+      0,
+    );
+    const maxDurationMin = orderedServices.reduce(
+      (total, item) => total + (item!.durationMode === 'variable' ? item!.maxDurationMin ?? item!.durationMin : item!.durationMin),
+      0,
+    );
     if (
       requestedDuration !== undefined &&
       (!Number.isInteger(requestedDuration) ||
@@ -267,11 +329,11 @@ export class SchedulingEngine {
       return [];
     }
     const durationMin = requestedDuration ?? defaultDurationMin;
-    const bufferMin = service.bufferMin;
+    const bufferMin = orderedServices.reduce((total, item) => total + item.bufferMin, 0);
     const requiredEquipmentIds =
       locationType === 'customer'
         ? []
-        : service.serviceEquipment.map((se) => se.equipmentId);
+        : [...new Set(services.flatMap((item) => item!.serviceEquipment.map((se) => se.equipmentId)))];
 
     // 2. Resolve salon closures on this date (R4.5). A closure with no time
     //    window closes the WHOLE day; a closure with a [startTime,endTime)
@@ -303,7 +365,10 @@ export class SchedulingEngine {
     // 3. Resolve qualified staff set (R6.2). An explicit `staffId` filter
     //    narrows availability to that one stylist (R14.3): if they are not
     //    qualified for the service there is simply no availability.
-    let qualifiedStaffIds = service.serviceStaff.map((ss) => ss.staffMemberId);
+    let qualifiedStaffIds = orderedServices.slice(1).reduce(
+      (ids, item) => ids.filter((id) => item!.serviceStaff.some((ss) => ss.staffMemberId === id)),
+      orderedServices[0].serviceStaff.map((ss) => ss.staffMemberId),
+    );
     if (staffId) {
       qualifiedStaffIds = qualifiedStaffIds.filter((id) => id === staffId);
     }
@@ -621,6 +686,7 @@ export class SchedulingEngine {
     const {
       salonId,
       serviceId,
+      serviceIds: requestedServiceIds,
       startAt: startAtISO,
       customerId,
       preferredStaffId,
@@ -630,18 +696,36 @@ export class SchedulingEngine {
       durationMinutes: requestedDuration,
     } = req;
 
-    // 1. Fetch service details
-    const service = await this.prisma.service.findUnique({
-      where: { id: serviceId },
-      include: {
-        serviceStaff: true,
-        serviceEquipment: true,
-        // The salon's default approval policy (auto-confirm vs manual).
-        salon: { select: { autoApprove: true, active: true, workMode: true, depositMethod: true } },
-      },
-    });
+    // 1. Fetch service details. The primary service keeps existing appointment
+    // compatibility while all selected rows contribute to occupancy and price.
+    const selectedServiceIds = [...new Set([serviceId, ...(requestedServiceIds ?? [])])];
+    const services = selectedServiceIds.length === 1
+      ? [await this.prisma.service.findUnique({
+          where: { id: selectedServiceIds[0] },
+          include: {
+            serviceStaff: true,
+            serviceEquipment: true,
+            salon: { select: { autoApprove: true, active: true, workMode: true, depositMethod: true } },
+          },
+        })]
+      : await this.prisma.service.findMany({
+          where: { id: { in: selectedServiceIds } },
+          include: {
+            serviceStaff: true,
+            serviceEquipment: true,
+            salon: { select: { autoApprove: true, active: true, workMode: true, depositMethod: true } },
+          },
+        });
+    const orderedServices = selectedServiceIds
+      .map((id) => services.find((item) => item?.id === id) ?? null)
+      .filter((item): item is NonNullable<typeof item> => item !== null);
+    const service = orderedServices[0];
 
-    if (!service || service.salonId !== salonId || service.salon?.active === false || service.deletedAt) {
+    if (
+      !service ||
+      orderedServices.length !== selectedServiceIds.length ||
+      orderedServices.some((item) => item.salonId !== salonId || item.salon?.active === false || item.deletedAt)
+    ) {
       return { status: 'rejected', reason: 'no_availability' };
     }
 
@@ -680,12 +764,14 @@ export class SchedulingEngine {
 
     // 2. Compute the occupancy interval
     const startAt = new Date(startAtISO);
-    const durationMin = service.durationMode === 'variable'
-      ? service.minDurationMin ?? service.durationMin
-      : service.durationMin;
-    const maxDurationMin = service.durationMode === 'variable'
-      ? service.maxDurationMin ?? durationMin
-      : service.durationMin;
+    const durationMin = orderedServices.reduce(
+      (total, item) => total + (item!.durationMode === 'variable' ? item!.minDurationMin ?? item!.durationMin : item!.durationMin),
+      0,
+    );
+    const maxDurationMin = orderedServices.reduce(
+      (total, item) => total + (item!.durationMode === 'variable' ? item!.maxDurationMin ?? item!.durationMin : item!.durationMin),
+      0,
+    );
     const selectedDurationMin = requestedDuration ?? durationMin;
     if (
       !Number.isInteger(selectedDurationMin) ||
@@ -694,7 +780,8 @@ export class SchedulingEngine {
     ) {
       return { status: 'rejected', reason: 'no_availability' };
     }
-    const endAt = computeOccupancyEnd(startAt, selectedDurationMin, service.bufferMin);
+    const bufferMin = orderedServices.reduce((total, item) => total + item.bufferMin, 0);
+    const endAt = computeOccupancyEnd(startAt, selectedDurationMin, bufferMin);
     const customerNote = typeof rawCustomerNote === 'string' ? rawCustomerNote.trim() : '';
     const date = startAtISO.slice(0, 10); // Extract ISO date portion
 
@@ -729,7 +816,10 @@ export class SchedulingEngine {
     }
 
     // 4. Resolve qualified staff (service_staff ∩ active ∩ working hours ∩ ¬day-off)
-    const qualifiedStaffIds = service.serviceStaff.map((ss) => ss.staffMemberId);
+    const qualifiedStaffIds = orderedServices.slice(1).reduce(
+      (ids, item) => ids.filter((id) => item!.serviceStaff.some((ss) => ss.staffMemberId === id)),
+      orderedServices[0].serviceStaff.map((ss) => ss.staffMemberId),
+    );
     if (qualifiedStaffIds.length === 0) {
       return { status: 'rejected', reason: 'no_availability' };
     }
@@ -814,7 +904,7 @@ export class SchedulingEngine {
     const requiredEquipmentIds =
       locationType === 'customer'
         ? []
-        : service.serviceEquipment.map((se) => se.equipmentId);
+        : [...new Set(orderedServices.flatMap((item) => item.serviceEquipment.map((se) => se.equipmentId)))];
     let compatibleChairs;
     if (requiredEquipmentIds.length === 0) {
       compatibleChairs = await this.prisma.chair.findMany({
@@ -968,7 +1058,7 @@ export class SchedulingEngine {
         // Otherwise create as 'pending' — the booking awaits salon admin approval
         // before it becomes 'confirmed' and the customer is notified. Both states
         // reserve the slot via the no-overlap exclusion constraints.
-        const requiresDeposit = service.requiresDeposit === true;
+        const requiresDeposit = orderedServices.some((item) => item.requiresDeposit === true);
         const now = new Date();
         const holdPeriodSeconds = service.salon?.depositMethod === 'card_transfer'
           ? Math.max(this.holdPeriodSeconds, MANUAL_DEPOSIT_HOLD_PERIOD_SECONDS)
@@ -1010,7 +1100,7 @@ export class SchedulingEngine {
             source: source as unknown as 'web',
             holdExpiresAt,
             ...(customerNote ? { customerNote } : {}),
-            ...(service.durationMode === 'variable' || selectedDurationMin !== service.durationMin
+            ...(orderedServices.some((item) => item.durationMode === 'variable') || selectedDurationMin !== durationMin
               ? { durationMinOverride: selectedDurationMin }
               : {}),
             ...(locationType === 'customer'
@@ -1021,6 +1111,22 @@ export class SchedulingEngine {
               : {}),
           },
         });
+
+        const appointmentServiceDelegate = (this.prisma as any).appointmentService;
+        if (appointmentServiceDelegate?.createMany) {
+          const serviceDurations = allocateServiceDurations(orderedServices, selectedDurationMin);
+          await appointmentServiceDelegate.createMany({
+            data: orderedServices.map((item, position) => ({
+              appointmentId: appointment.id,
+              serviceId: item!.id,
+              position,
+              name: item!.name,
+              durationMin: serviceDurations[position],
+              bufferMin: item.bufferMin,
+              priceRial: item.priceRial,
+            })),
+          });
+        }
 
         if (requiresDeposit && !cashDeposit) {
           // R10.1, R10.2: Return held appointment with payment placeholder
@@ -1108,8 +1214,21 @@ export class SchedulingEngine {
       throw new RescheduleError('APPOINTMENT_NOT_MOVABLE');
     }
 
-    const durationMinutes = appointment.durationMinOverride ?? service.durationMin;
-    const endAt = computeOccupancyEnd(startAt, durationMinutes, service.bufferMin);
+    const appointmentServiceDelegate = (this.prisma as any).appointmentService;
+    const serviceSnapshots = appointmentServiceDelegate?.findMany
+      ? ((await appointmentServiceDelegate.findMany({
+          where: { appointmentId: appointment.id },
+          orderBy: { position: 'asc' },
+          select: { durationMin: true, bufferMin: true },
+        })) as Array<{ durationMin: number; bufferMin: number }>)
+      : [];
+    const durationMinutes = serviceSnapshots.length > 0
+      ? serviceSnapshots.reduce((total, item) => total + item.durationMin, 0)
+      : appointment.durationMinOverride ?? service.durationMin;
+    const bufferMinutes = serviceSnapshots.length > 0
+      ? serviceSnapshots.reduce((total, item) => total + item.bufferMin, 0)
+      : service.bufferMin;
+    const endAt = computeOccupancyEnd(startAt, durationMinutes, bufferMinutes);
     // The scheduling engine represents time-only availability windows on the
     // nominal salon date in UTC. Keep the same date contract as booking slots.
     const date = req.startAt.slice(0, 10);

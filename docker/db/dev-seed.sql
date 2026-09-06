@@ -375,7 +375,7 @@ CROSS JOIN (
       'dddddddd-3333-3333-3333-333333333333'::uuid,
       '33333333-3333-3333-3333-333333333333'::uuid,
       '55555555-5555-5555-5555-555555555555'::uuid,
-      INTERVAL '15 hours', INTERVAL '16 hours 40 minutes',
+      INTERVAL '18 hours', INTERVAL '19 hours 40 minutes',
       'confirmed', 'walkin', INTERVAL '3 hours'
     ),
     (

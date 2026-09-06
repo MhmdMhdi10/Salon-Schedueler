@@ -14,7 +14,7 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
-import { ApiError, cardOrderApi, qrApi, salonApi, type SalonQrResponse } from '../../api/client';
+import { ApiError, cardOrderApi, qrApi, type SalonQrResponse } from '../../api/client';
 import { useSalonId } from '../../auth/useSalonId';
 import { useHashScroll } from '../../hooks/useHashScroll';
 import { SeoHead } from '../../components/seo';
@@ -38,24 +38,51 @@ import {
   ASSET_KINDS,
   downloadQrPng,
   downloadQrSvg,
+  downloadAssetPng,
   qrImageDataUri,
   resolveAccent,
   type AccentTheme,
   type AssetKind,
 } from './marketing-assets';
-import { StylistQrGallery } from './StylistQrGallery';
 
 import './owner-qr.css';
 
 type LoadStatus = 'loading' | 'success' | 'error';
 type OrderStatus = 'idle' | 'submitting' | 'success' | 'error';
 
-/** A bookable stylist for the QR target selector. */
-interface Stylist {
-  id: string;
-  fullName: string | null;
-  role: string;
-}
+const IRAN_PROVINCE_OPTIONS = [
+  'آذربایجان شرقی',
+  'آذربایجان غربی',
+  'اردبیل',
+  'اصفهان',
+  'البرز',
+  'ایلام',
+  'بوشهر',
+  'تهران',
+  'چهارمحال و بختیاری',
+  'خراسان جنوبی',
+  'خراسان رضوی',
+  'خراسان شمالی',
+  'خوزستان',
+  'زنجان',
+  'سمنان',
+  'سیستان و بلوچستان',
+  'فارس',
+  'قزوین',
+  'قم',
+  'کردستان',
+  'کرمان',
+  'کرمانشاه',
+  'کهگیلویه و بویراحمد',
+  'گلستان',
+  'گیلان',
+  'لرستان',
+  'مازندران',
+  'مرکزی',
+  'هرمزگان',
+  'همدان',
+  'یزد',
+].map((name) => ({ value: name, label: name }));
 
 /** Minimal translator shape used by the asset renderer. */
 type T = (key: string, options?: Record<string, unknown>) => string;
@@ -249,19 +276,18 @@ export function OwnerQrPage() {
   const [showBrand, setShowBrand] = useState(true);
   const [customizationOpen, setCustomizationOpen] = useState(false);
 
-  // QR target: '' = the whole salon (default), or a specific stylist's id. A
-  // stylist target swaps in that stylist's QR payload (best-effort) so the owner
-  // can print a per-stylist code that opens that stylist's page pre-selected.
-  const [stylists, setStylists] = useState<Stylist[]>([]);
-  const [targetStaffId, setTargetStaffId] = useState('');
-  const [staffPayload, setStaffPayload] = useState<string | null>(null);
-
   // Print-order state.
   const [orderQty, setOrderQty] = useState('100');
   const [orderName, setOrderName] = useState('');
   const [orderPhone, setOrderPhone] = useState('');
+  const [orderProvince, setOrderProvince] = useState('');
+  const [orderCity, setOrderCity] = useState('');
   const [orderAddress, setOrderAddress] = useState('');
+  const [orderPostalCode, setOrderPostalCode] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
+  const [orderPaper, setOrderPaper] = useState('standard');
+  const [orderFinish, setOrderFinish] = useState('matte');
+  const [orderDoubleSided, setOrderDoubleSided] = useState(true);
   const [orderStatus, setOrderStatus] = useState<OrderStatus>('idle');
   const [orderError, setOrderError] = useState('');
   const [orderId, setOrderId] = useState('');
@@ -289,68 +315,14 @@ export function OwnerQrPage() {
     };
   }, [salonId, reloadToken, t]);
 
-  // Best-effort: load the salon's bookable stylists so the owner can target a
-  // per-stylist QR. A failure just leaves the selector at "whole salon".
-  useEffect(() => {
-    let active = true;
-    salonApi
-      .getStylists(salonId)
-      .then((res) => {
-        if (active) setStylists(res.stylists);
-      })
-      .catch(() => {
-        if (active) setStylists([]);
-      });
-    return () => {
-      active = false;
-    };
-  }, [salonId]);
-
-  // When a stylist is targeted, fetch their QR payload; reset to the salon QR
-  // when "whole salon" is selected.
-  useEffect(() => {
-    if (!targetStaffId) {
-      setStaffPayload(null);
-      return;
-    }
-    let active = true;
-    setStaffPayload(null);
-    qrApi
-      .getStaffQr(salonId, targetStaffId)
-      .then((res) => {
-        if (active) setStaffPayload(res.payload);
-      })
-      .catch(() => {
-        if (active) setStaffPayload(null);
-      });
-    return () => {
-      active = false;
-    };
-  }, [salonId, targetStaffId]);
-
   const accent = useMemo(() => resolveAccent(accentKey), [accentKey]);
-  const targetStylist = useMemo(
-    () => stylists.find((s) => s.id === targetStaffId) ?? null,
-    [stylists, targetStaffId],
-  );
-  const stylistName = targetStylist?.fullName?.trim() ?? '';
-  // The QR to render/print/download: the targeted stylist's payload when one is
-  // selected and loaded, otherwise the salon-wide payload.
-  const activePayload = targetStaffId && staffPayload ? staffPayload : (data?.payload ?? '');
-  const qrAlt = data
-    ? stylistName
-      ? t('owner.qr.imageAltStylist', { salon: data.salonName, stylist: stylistName })
-      : t('owner.qr.imageAlt', { salon: data.salonName })
-    : '';
+  const activePayload = data?.payload ?? '';
+  const qrAlt = data ? t('owner.qr.imageAlt', { salon: data.salonName }) : '';
   const qrDataUri = useMemo(
     () => (activePayload ? qrImageDataUri(activePayload, qrAlt) : ''),
     [activePayload, qrAlt],
   );
-  const effectiveTagline =
-    tagline.trim() ||
-    (stylistName
-      ? t('owner.qr.stylistTagline', { name: stylistName })
-      : t('owner.qr.defaultTagline'));
+  const effectiveTagline = tagline.trim() || t('owner.qr.defaultTagline');
   const effectiveName = displayName.trim() || data?.salonName || '';
   const effectiveCta = cta.trim() || t('owner.qr.scanCta');
 
@@ -393,11 +365,17 @@ export function OwnerQrPage() {
     // No longer require `data` (the QR payload); order form only needs salonId.
     const name = orderName.trim();
     const phone = toLatinDigits(orderPhone).replace(/\D/g, '');
+    const province = orderProvince.trim();
+    const city = orderCity.trim();
     const address = orderAddress.trim();
-    const fieldErrors: { name?: string; phone?: string; address?: string } = {};
+    const postalCode = toLatinDigits(orderPostalCode).replace(/\D/g, '');
+    const fieldErrors: { name?: string; phone?: string; province?: string; city?: string; address?: string; postalCode?: string } = {};
     if (name.length < 2) fieldErrors.name = t('owner.qr.order.nameLabel');
     if (!/^09\d{9}$/.test(phone)) fieldErrors.phone = t('owner.qr.order.phoneLabel');
+    if (!province) fieldErrors.province = t('owner.qr.order.provinceLabel');
+    if (city.length < 2) fieldErrors.city = t('owner.qr.order.cityLabel');
     if (address.length < 5) fieldErrors.address = t('owner.qr.order.addressLabel');
+    if (!/^\d{10}$/.test(postalCode)) fieldErrors.postalCode = t('owner.qr.order.postalCodeLabel');
     if (Object.keys(fieldErrors).length > 0) {
       setOrderStatus('error');
       setOrderError(
@@ -418,8 +396,16 @@ export function OwnerQrPage() {
         quantity: Number(orderQty),
         contactName: name,
         phone,
+        province,
+        city,
         address,
+        postalCode,
         notes: orderNotes.trim() || undefined,
+        printSpecs: {
+          paper: orderPaper,
+          finish: orderFinish,
+          doubleSided: orderDoubleSided,
+        },
       });
       setOrderId(res.orderId);
       setOrderStatus('success');
@@ -509,24 +495,6 @@ export function OwnerQrPage() {
                   </span>
                   <ChevronDown className="owner-qr-controls__chevron h-5 w-5" aria-hidden="true" />
                 </button>
-                {/* QR target: the whole salon (default) or a specific stylist. Only
-                    shown when the salon has bookable stylists. */}
-                {stylists.length > 0 && (
-                  <Select
-                    label={t('owner.qr.targetLabel')}
-                    value={targetStaffId === '' ? 'salon' : targetStaffId}
-                    onValueChange={(v) => setTargetStaffId(v === 'salon' ? '' : v)}
-                    options={[
-                      { value: 'salon', label: t('owner.qr.targetSalon') },
-                      ...stylists.map((s) => ({
-                        value: s.id,
-                        label: s.fullName ?? t('owner.qr.targetStylistFallback'),
-                      })),
-                    ]}
-                    helperText={t('owner.qr.targetHint')}
-                  />
-                )}
-
                 {/* Template segmented control */}
                 <div className="flex flex-col gap-2">
                   <span className="text-xs font-medium text-muted">
@@ -664,6 +632,7 @@ export function OwnerQrPage() {
                     cta={effectiveCta}
                     showBrand={showBrand}
                     t={t}
+                    imgTestId="qr-asset-image"
                   />
                 </div>
 
@@ -676,6 +645,26 @@ export function OwnerQrPage() {
                     onClick={handlePrint}
                   >
                     {t(`owner.qr.print.${kind}`)}
+                  </Button>
+                  <Button
+                    data-testid="qr-download-asset"
+                    variant="secondary"
+                    startIcon={<ImageIcon className="h-4 w-4" />}
+                    onClick={() =>
+                      void downloadAssetPng({
+                        kind,
+                        salonName: effectiveName,
+                        tagline: effectiveTagline,
+                        cta: effectiveCta,
+                        payload: activePayload,
+                        accent,
+                        logoDataUri: logoDataUri || undefined,
+                        showBrand,
+                        footer: t('owner.qr.cardFoot'),
+                      })
+                    }
+                  >
+                    {t(`owner.qr.downloadAsset.${kind}`)}
                   </Button>
                   <Button
                     variant="secondary"
@@ -696,9 +685,6 @@ export function OwnerQrPage() {
               </div>
             </div>
           </Card>
-
-          {/* ── Per-stylist QR gallery (every bookable stylist at once) ── */}
-          <StylistQrGallery salonId={salonId} salonName={data.salonName} />
 
           {/* ── Raw QR preview (stable code for digital reuse) ── */}
           <Card
@@ -853,15 +839,82 @@ export function OwnerQrPage() {
                   placeholder="09xxxxxxxxx"
                   required
                 />
+                <Select
+                  label="جنس و اندازه چاپ"
+                  value={orderPaper}
+                  onValueChange={setOrderPaper}
+                  options={[
+                    { value: 'standard', label: 'کارت استاندارد' },
+                    { value: 'premium', label: 'کارت ضخیم پریمیوم' },
+                    { value: 'banner', label: 'بنر عمودی' },
+                  ]}
+                />
+                <Select
+                  label="روکش چاپ"
+                  value={orderFinish}
+                  onValueChange={setOrderFinish}
+                  options={[
+                    { value: 'matte', label: 'مات' },
+                    { value: 'glossy', label: 'براق' },
+                  ]}
+                />
               </div>
-              <TextField
-                label={t('owner.qr.order.addressLabel')}
-                value={orderAddress}
-                onChange={(e) => setOrderAddress(e.target.value)}
-                placeholder={t('owner.qr.order.addressPlaceholder')}
-                autoComplete="street-address"
-                required
-              />
+              <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-text">
+                <input
+                  type="checkbox"
+                  checked={orderDoubleSided}
+                  onChange={(event) => setOrderDoubleSided(event.target.checked)}
+                />
+                چاپ دوطرفه با QR سالن
+              </label>
+              <fieldset
+                data-testid="qr-order-location"
+                className="owner-qr-order__location flex flex-col gap-4 rounded-xl border border-border p-4"
+              >
+                <legend className="px-2 text-sm font-bold text-text">
+                  {t('owner.qr.order.deliveryTitle')}
+                </legend>
+                <p className="text-sm text-muted">{t('owner.qr.order.deliveryHint')}</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Select
+                    label={t('owner.qr.order.provinceLabel')}
+                    value={orderProvince}
+                    onValueChange={setOrderProvince}
+                    options={IRAN_PROVINCE_OPTIONS}
+                    placeholder={t('owner.qr.order.provincePlaceholder')}
+                    required
+                  />
+                  <TextField
+                    label={t('owner.qr.order.cityLabel')}
+                    value={orderCity}
+                    onChange={(e) => setOrderCity(e.target.value)}
+                    placeholder={t('owner.qr.order.cityPlaceholder')}
+                    autoComplete="address-level2"
+                    required
+                  />
+                </div>
+                <Textarea
+                  label={t('owner.qr.order.addressLabel')}
+                  value={orderAddress}
+                  onChange={(e) => setOrderAddress(e.target.value)}
+                  placeholder={t('owner.qr.order.addressPlaceholder')}
+                  autoComplete="street-address"
+                  rows={3}
+                  required
+                />
+                <TextField
+                  label={t('owner.qr.order.postalCodeLabel')}
+                  value={orderPostalCode}
+                  onChange={(e) => setOrderPostalCode(e.target.value)}
+                  placeholder={t('owner.qr.order.postalCodePlaceholder')}
+                  helperText={t('owner.qr.order.postalCodeHint')}
+                  inputMode="numeric"
+                  dir="ltr"
+                  maxLength={10}
+                  autoComplete="postal-code"
+                  required
+                />
+              </fieldset>
               <Textarea
                 label={t('owner.qr.order.notesLabel')}
                 value={orderNotes}

@@ -849,7 +849,11 @@ describe('HTTP routes', () => {
       const res = await request(app)
         .post('/api/salons/salon-1/emergency-close')
         .set('Authorization', `Bearer ${staffToken('Owner')}`)
-        .send({ onDate: '2026-07-15', cancelAppointments: true });
+        .send({
+          onDate: '2026-07-15',
+          cancelAppointments: true,
+          reason: 'سالن به دلیل شرایط اضطراری تعطیل است.',
+        });
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({ cancelledCount: 2, failedCount: 0 });
       expect(fake.availabilityConfig.addHoliday).toHaveBeenCalledWith('salon-1', '2026-07-15');
@@ -1043,6 +1047,7 @@ describe('HTTP routes', () => {
           service: { name: 'کوتاهی مو' },
           customer: { fullName: 'سارا' },
           staffMember: { fullName: 'زهرا' },
+          salon: { timezone: 'Asia/Tehran' },
         },
       ]);
       const res = await request(app)
@@ -1055,6 +1060,7 @@ describe('HTTP routes', () => {
         serviceName: 'کوتاهی مو',
         customerName: 'سارا',
         staffName: 'زهرا',
+        timezone: 'Asia/Tehran',
       });
     });
 

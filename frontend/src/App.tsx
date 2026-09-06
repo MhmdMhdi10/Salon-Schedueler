@@ -1,6 +1,13 @@
 import { lazy, Suspense } from 'react';
 import { HelmetProvider } from 'react-helmet-async';
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  Outlet,
+  useLocation,
+} from 'react-router-dom';
 import { ThemeProvider } from './components/theme/ThemeProvider';
 import { AppShell } from './components/layout/AppShell';
 import { RouteLoader } from './components/layout/RouteLoader';
@@ -75,6 +82,9 @@ const PrivacyPage = lazy(() =>
 );
 const TermsPage = lazy(() => import('./pages/LegalPages').then((m) => ({ default: m.TermsPage })));
 const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })));
+const BookingAuthPage = lazy(() =>
+  import('./pages/BookingAuthPage').then((m) => ({ default: m.BookingAuthPage })),
+);
 const QrLandingPage = lazy(() =>
   import('./pages/QrLandingPage').then((m) => ({ default: m.QrLandingPage })),
 );
@@ -84,6 +94,7 @@ const MySalonsPage = lazy(() =>
 const CustomerDashboardPage = lazy(() =>
   import('./pages/CustomerDashboardPage').then((m) => ({ default: m.CustomerDashboardPage })),
 );
+const SupportPage = lazy(() => import('./pages/SupportPage').then((m) => ({ default: m.SupportPage })));
 const ReferralPage = lazy(() =>
   import('./pages/ReferralPage').then((m) => ({ default: m.ReferralPage })),
 );
@@ -205,6 +216,12 @@ const PlatformQrScansPage = lazy(() =>
 const PlatformAuditPage = lazy(() =>
   import('./pages/platform-admin/PlatformAdminPages').then((m) => ({ default: m.PlatformAuditPage })),
 );
+const PlatformCardOrdersPage = lazy(() =>
+  import('./pages/platform-admin/PlatformAdminPages').then((m) => ({ default: m.PlatformCardOrdersPage })),
+);
+const PlatformSupportPage = lazy(() =>
+  import('./pages/platform-admin/PlatformAdminPages').then((m) => ({ default: m.PlatformSupportPage })),
+);
 const PlatformAdminRecordDetailPage = lazy(() =>
   import('./pages/platform-admin/PlatformAdminRecordDetailPage').then((m) => ({ default: m.PlatformAdminRecordDetailPage })),
 );
@@ -247,6 +264,13 @@ function CustomerOnlyRoute() {
   return <Outlet />;
 }
 
+function AuthenticatedRoute() {
+  const { status } = useAuth();
+  if (status === 'loading') return <RouteLoader />;
+  if (status === 'anonymous') return <Navigate to="/auth" replace />;
+  return <Outlet />;
+}
+
 export function App() {
   return (
     <HelmetProvider>
@@ -274,6 +298,8 @@ export function App() {
                       <Route path="waitlist" element={<PlatformWaitlistPage />} />
                       <Route path="qr-scans" element={<PlatformQrScansPage />} />
                       <Route path="audit-logs" element={<PlatformAuditPage />} />
+                      <Route path="card-orders" element={<PlatformCardOrdersPage />} />
+                      <Route path="support" element={<PlatformSupportPage />} />
                     </Route>
 
                     {/*
@@ -310,6 +336,7 @@ export function App() {
                      */}
                     <Route path="/salon/:salonId/book" element={<FunnelTenantTheme />}>
                       <Route index element={<AvailabilityPage />} />
+                      <Route path="auth" element={<BookingAuthPage />} />
                       <Route path="confirm" element={<BookingConfirmPage />} />
                     </Route>
                     <Route path="/booking/success" element={<BookingSuccessPage />} />
@@ -360,6 +387,9 @@ export function App() {
 
                       {/* Customer flows — dashboard and saved-salon surfaces require a customer session. */}
                       <Route path="/auth" element={<AuthPage />} />
+                      <Route element={<AuthenticatedRoute />}>
+                        <Route path="/support" element={<SupportPage />} />
+                      </Route>
                       <Route element={<CustomerOnlyRoute />}>
                         <Route path="/account" element={<CustomerDashboardPage />} />
                         <Route path="/salon/:salonId/waitlist" element={<WaitlistPage />} />

@@ -536,6 +536,14 @@ function DayGrid({
     }
     return map;
   }, [appointments, staff]);
+  const appointmentsOutsideDisplayedHours = useMemo(
+    () =>
+      appointments.filter((appt) => {
+        const hour = hourOf(appt.startAt);
+        return hour === null || !HOUR_SLOTS.includes(hour);
+      }),
+    [appointments],
+  );
 
   const handleGridKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -662,6 +670,24 @@ function DayGrid({
           </div>
         ))}
       </div>
+      {appointmentsOutsideDisplayedHours.length > 0 && (
+        <section
+          aria-label="نوبت‌های خارج از ساعات نمایشی"
+          className="mt-3 rounded-md border border-warning/30 bg-warning/5 p-3"
+        >
+          <h2 className="m-0 text-sm font-semibold text-text">نوبت‌های خارج از ساعات نمایشی</h2>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {appointmentsOutsideDisplayedHours.map((appt) => (
+              <AppointmentBlock
+                key={appt.id}
+                appt={appt}
+                canManage={canManage}
+                onChanged={onChanged}
+              />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

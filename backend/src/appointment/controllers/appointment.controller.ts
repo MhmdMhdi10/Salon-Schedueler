@@ -278,9 +278,20 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
     bookingIpLimit,
     bookingCustomerLimit,
     asyncRoute(async (req, res) => {
-      if (!validateRequired(res, req.body, ['salonId', 'serviceId', 'startAt'])) {
+      if (!validateRequired(res, req.body, ['salonId', 'startAt'])) {
         return;
       }
+      const rawServiceIds = Array.isArray(req.body.serviceIds)
+        ? req.body.serviceIds.filter(
+            (id: unknown): id is string => typeof id === 'string' && id.trim().length > 0,
+          )
+        : [];
+      const serviceId = typeof req.body.serviceId === 'string' ? req.body.serviceId.trim() : rawServiceIds[0];
+      if (!serviceId) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'serviceId' });
+        return;
+      }
+      const serviceIds = [...new Set([serviceId, ...rawServiceIds])];
       const rawLocationType = req.body.locationType;
       if (
         rawLocationType !== undefined &&
@@ -317,7 +328,7 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
         await services.bookingAbuseGuard.check({
           customerId: principal.id,
           salonId: String(req.body.salonId),
-          serviceId: String(req.body.serviceId),
+          serviceId,
           startAt: String(req.body.startAt),
           ip: req.ip ?? 'unknown',
           idempotencyKey: idempotencyKey || undefined,
@@ -326,7 +337,8 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
       }
       const bookingRequest = {
         salonId: req.body.salonId,
-        serviceId: req.body.serviceId,
+        serviceId,
+        ...(serviceIds.length > 1 ? { serviceIds } : {}),
         startAt: req.body.startAt,
         preferredStaffId: req.body.preferredStaffId,
         customerId: principal.id,
@@ -376,8 +388,100 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
     requireCanCancelAppointment,
     appointmentMutationLimit,
     asyncRoute(async (req, res) => {
-      const appointment = await services.cancellationFlow.cancel(req.params.id);
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+      const isStaff = Boolean(req.principal?.role);
+      const emergency = body.kind === 'emergency';
+      if (isStaff && emergency && (reason.length < 5 || reason.length > 1000)) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'reason' });
+        return;
+      }
+      if (body.kind !== undefined && body.kind !== 'standard' && body.kind !== 'emergency') {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'kind' });
+        return;
+      }
+      let refundProof;
+      if (body.refundProof !== undefined) {
+        const proof = body.refundProof as Record<string, unknown>;
+        if (
+          !proof ||
+          typeof proof.fileName !== 'string' ||
+          typeof proof.mimeType !== 'string' ||
+          typeof proof.dataBase64 !== 'string' ||
+          !['image/jpeg', 'image/png', 'image/webp'].includes(proof.mimeType) ||
+          proof.fileName.length > 120 ||
+          proof.dataBase64.length > 7_200_000
+        ) {
+          res.status(400).json({ code: 'VALIDATION_ERROR', field: 'refundProof' });
+          return;
+        }
+        const data = Buffer.from(proof.dataBase64, 'base64');
+        if (data.length === 0 || data.length > 5 * 1024 * 1024) {
+          res.status(400).json({ code: 'VALIDATION_ERROR', field: 'refundProof' });
+          return;
+        }
+        refundProof = {
+          fileName: proof.fileName,
+          mimeType: proof.mimeType as 'image/jpeg' | 'image/png' | 'image/webp',
+          data,
+        };
+      }
+      const details = emergency || reason || refundProof
+        ? {
+            actor: isStaff ? ('staff' as const) : ('customer' as const),
+            kind: emergency ? ('emergency' as const) : ('standard' as const),
+            ...(reason ? { reason } : {}),
+            ...(refundProof ? { refundProof } : {}),
+          }
+        : undefined;
+      const appointment = details
+        ? await services.cancellationFlow.cancel(req.params.id, undefined, undefined, details)
+        : await services.cancellationFlow.cancel(req.params.id);
       res.status(200).json({ status: 'cancelled', appointment });
+    }),
+  );
+
+  router.get(
+    '/appointments/:id/cancellation',
+    requireCanCancelAppointment,
+    asyncRoute(async (req, res) => {
+      const cancellation = await services.cancellationService.getCancellation(req.params.id);
+      if (!cancellation) {
+        res.status(404).json({ code: 'NOT_FOUND' });
+        return;
+      }
+      res.status(200).json({ cancellation });
+    }),
+  );
+
+  router.get(
+    '/appointments/:id/cancellation/refund-proof',
+    requireCanCancelAppointment,
+    asyncRoute(async (req, res) => {
+      const cancellation = await services.cancellationService.getCancellation(req.params.id, true);
+      if (!cancellation?.proof) {
+        res.status(404).json({ code: 'NOT_FOUND' });
+        return;
+      }
+      res.status(200).json({ proof: cancellation.proof });
+    }),
+  );
+
+  router.post(
+    '/appointments/:id/report-customer',
+    requireCanManageAppointment,
+    asyncRoute(async (req, res) => {
+      const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
+      if (reason.length < 5 || reason.length > 1000) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'reason' });
+        return;
+      }
+      await services.cancellationService.reportCustomer({
+        appointmentId: req.params.id,
+        reason,
+        block: req.body?.block === true,
+      });
+      res.status(201).json({ ok: true });
     }),
   );
 
@@ -658,7 +762,12 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
     '/appointments/:id/reject',
     requireCanApproveOwnAppointment,
     asyncRoute(async (req, res) => {
-      const appointment = await services.bookingFlow.reject(req.params.id);
+      const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : undefined;
+      if (reason && reason.length > 1000) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'reason' });
+        return;
+      }
+      const appointment = await services.bookingFlow.reject(req.params.id, reason);
       res.status(200).json({ status: 'cancelled', appointment });
     }),
   );

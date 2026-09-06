@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
+  LifeBuoy,
   MapPin,
   QrCode,
   Scissors,
@@ -18,6 +19,7 @@ import {
   ApiError,
   customerApi,
   type CustomerAppointment,
+  type CustomerNotification,
   type CustomerWaitlistEntry,
 } from '../api/client';
 import { usePagination } from '../hooks/usePagination';
@@ -251,6 +253,29 @@ function AppointmentRow({
   const pendingExpired =
     Boolean(pendingStart) &&
     ((start?.getTime() ?? 0) <= Date.now() || (pendingStart?.getTime() ?? 0) <= Date.now());
+  const [refundProofState, setRefundProofState] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
+  const [refundProof, setRefundProof] = useState<{
+    fileName: string;
+    mimeType: string;
+    sizeBytes: number;
+    dataBase64: string;
+  } | null>(null);
+
+  const loadRefundProof = async () => {
+    if (refundProofState === 'loaded') {
+      setRefundProof(null);
+      setRefundProofState('idle');
+      return;
+    }
+    setRefundProofState('loading');
+    try {
+      const response = await customerApi.getCancellationRefundProof(appointment.id);
+      setRefundProof(response.proof);
+      setRefundProofState('loaded');
+    } catch {
+      setRefundProofState('error');
+    }
+  };
 
   return (
     <article className="flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-bg p-3">
@@ -294,6 +319,46 @@ function AppointmentRow({
         <p className="m-0 rounded-lg border border-border bg-surface px-3 py-2 text-xs leading-6 text-muted">
           یادداشت نوبت: {appointment.customerNote}
         </p>
+      )}
+      {appointment.status === 'cancelled' && appointment.cancellation && (
+        <div className="rounded-lg border border-danger/25 bg-danger/5 p-3 text-xs leading-6">
+          <strong className="block text-danger">این نوبت لغو شد</strong>
+          <span className="mt-1 block text-text">دلیل: {appointment.cancellation.reason || 'اعلام‌نشده'}</span>
+          {appointment.cancellation.refundDueAt && (
+            <span className="mt-1 block text-muted">
+              بازپرداخت تا {new Date(appointment.cancellation.refundDueAt).toLocaleString('fa-IR')} پیگیری می‌شود.
+            </span>
+          )}
+          {appointment.cancellation.proof && (
+            <div className="mt-2 flex flex-col items-start gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                loading={refundProofState === 'loading'}
+                onClick={loadRefundProof}
+                aria-expanded={refundProofState === 'loaded'}
+              >
+                {refundProofState === 'loaded' ? 'بستن مدرک بازگشت وجه' : 'مشاهده مدرک بازگشت وجه'}
+              </Button>
+              {refundProofState === 'error' && (
+                <span className="text-danger">مدرک بارگذاری نشد؛ دوباره تلاش کن.</span>
+              )}
+              {refundProof && (
+                <figure className="m-0 w-full max-w-sm overflow-hidden rounded-lg border border-border bg-bg p-2">
+                  <img
+                    src={`data:${refundProof.mimeType};base64,${refundProof.dataBase64}`}
+                    alt={`مدرک بازگشت وجه ${refundProof.fileName}`}
+                    className="h-auto max-h-80 w-full object-contain"
+                  />
+                  <figcaption className="mt-1 truncate text-[11px] text-muted">
+                    {refundProof.fileName}
+                  </figcaption>
+                </figure>
+              )}
+            </div>
+          )}
+        </div>
       )}
       {appointment.status === 'held' &&
         appointment.depositRequired &&
@@ -583,6 +648,7 @@ export function CustomerDashboardPage() {
   const { status: authStatus, isCustomer, isPlatformAdmin, isStaff } = useAuth();
   const [appointments, setAppointments] = useState<CustomerAppointment[]>([]);
   const [waitlistEntries, setWaitlistEntries] = useState<CustomerWaitlistEntry[]>([]);
+  const [notifications, setNotifications] = useState<CustomerNotification[]>([]);
   const [loadStatus, setLoadStatus] = useState<LoadStatus>('loading');
   const [savedSalons, setSavedSalons] = useState<SavedSalon[]>(readSavedSalons);
   const [monthAnchor, setMonthAnchor] = useState(() => new Date());
@@ -617,6 +683,16 @@ export function CustomerDashboardPage() {
     } catch {
       // The booking calendar remains usable if this optional account surface
       // is temporarily unavailable.
+    }
+  }, []);
+
+  const loadNotifications = useCallback(async () => {
+    if (typeof customerApi.getNotifications !== 'function') return;
+    try {
+      const response = await customerApi.getNotifications();
+      setNotifications(response.notifications ?? []);
+    } catch {
+      // Notification delivery must not block the booking calendar.
     }
   }, []);
 
@@ -760,8 +836,9 @@ export function CustomerDashboardPage() {
       void loadAppointments();
       void loadWaitlist();
       void loadProfile();
+      void loadNotifications();
     }
-  }, [isCustomer, loadAppointments, loadProfile, loadWaitlist]);
+  }, [isCustomer, loadAppointments, loadNotifications, loadProfile, loadWaitlist]);
 
   useEffect(() => {
     const refreshSaved = () => setSavedSalons(readSavedSalons());
@@ -870,7 +947,16 @@ export function CustomerDashboardPage() {
       <SeoHead title="حساب من" description="تقویم نوبت‌ها و سالن‌های ذخیره‌شده شما در آرا" />
       <div className="mx-auto flex min-w-0 w-full max-w-6xl flex-col gap-5 px-3 py-6 sm:gap-6 sm:px-6 sm:py-10">
         <header className="flex flex-col gap-2">
-          <p className="text-sm font-semibold text-primary">حساب من</p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-primary">حساب من</p>
+            <Link
+              to="/support"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-pill border border-border px-3 text-xs font-semibold text-text no-underline hover:border-primary hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+            >
+              <LifeBuoy className="h-4 w-4" aria-hidden="true" />
+              پشتیبانی
+            </Link>
+          </div>
           <h1 className="text-display text-2xl font-bold text-text sm:text-3xl">
             برنامه نوبت‌های من
           </h1>
@@ -913,6 +999,52 @@ export function CustomerDashboardPage() {
           <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
             {actionError}
           </p>
+        )}
+
+        {notifications.length > 0 && (
+          <Card as="section" data-testid="customer-notifications" className="border-primary/20">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-text">پیام‌های آرا</h2>
+                <p className="mt-1 text-xs text-muted">تغییر وضعیت رزرو و اطلاعیه‌های سالن</p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="md"
+                onClick={() => {
+                  setNotifications((current) => current.map((item) => ({ ...item, readAt: item.readAt ?? new Date().toISOString() })));
+                  void customerApi.markAllNotificationsRead?.();
+                }}
+              >
+                خوانده شد
+              </Button>
+            </div>
+            <ul className="mt-3 flex flex-col gap-2" role="list">
+              {notifications.slice(0, 5).map((notification) => (
+                <li
+                  key={notification.id}
+                  className={cn(
+                    'rounded-lg border p-3 text-sm',
+                    notification.readAt ? 'border-border bg-surface' : 'border-primary/30 bg-primary/5',
+                  )}
+                >
+                  <button
+                    type="button"
+                    className="min-h-11 w-full rounded-md text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+                    onClick={() => {
+                      if (notification.readAt) return;
+                      setNotifications((current) => current.map((item) => item.id === notification.id ? { ...item, readAt: new Date().toISOString() } : item));
+                      void customerApi.markNotificationRead?.(notification.id);
+                    }}
+                  >
+                    <strong className="block text-text">{notification.title}</strong>
+                    <span className="mt-1 block leading-6 text-muted">{notification.body}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </Card>
         )}
 
         {profileStatus === 'needs-name' && (

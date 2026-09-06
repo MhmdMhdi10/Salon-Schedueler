@@ -67,7 +67,9 @@ type BookingWorkMode =
  */
 interface PersistedSelection {
   serviceId: string;
+  serviceIds?: string[];
   date: string;
+  startAt?: string;
   /** Preferred stylist id; '' (or absent) means "any stylist". */
   staffId?: string;
   locationType?: 'salon' | 'customer';
@@ -84,12 +86,21 @@ function readSelection(salonId: string | undefined): PersistedSelection | null {
     const raw = window.sessionStorage.getItem(selectionKey(salonId));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<PersistedSelection>;
-    if (typeof parsed.serviceId !== 'string' || typeof parsed.date !== 'string') {
+    const serviceIds = Array.isArray(parsed.serviceIds)
+      ? parsed.serviceIds.filter((id): id is string => typeof id === 'string' && id.length > 0)
+      : [];
+    const serviceId =
+      typeof parsed.serviceId === 'string' && parsed.serviceId.length > 0
+        ? parsed.serviceId
+        : serviceIds[0];
+    if (!serviceId || typeof parsed.date !== 'string') {
       return null;
     }
     return {
-      serviceId: parsed.serviceId,
+      serviceId,
+      serviceIds: [...new Set([serviceId, ...serviceIds])],
       date: parsed.date,
+      startAt: typeof parsed.startAt === 'string' ? parsed.startAt : undefined,
       staffId: typeof parsed.staffId === 'string' ? parsed.staffId : undefined,
       locationType:
         parsed.locationType === 'salon' || parsed.locationType === 'customer'
@@ -130,9 +141,9 @@ const PERSIAN_WEEKDAY_SHORT: Record<number, string> = {
  * + day-of-month + month — starting today. Each item's `iso` is a local
  * `YYYY-MM-DD` the availability API understands.
  */
-function buildUpcomingDays(count: number): DayScrollerItem[] {
+function buildUpcomingDays(count: number, startISO = todayISO()): DayScrollerItem[] {
   const out: DayScrollerItem[] = [];
-  const base = new Date();
+  const base = new Date(`${startISO}T00:00:00`);
   base.setHours(0, 0, 0, 0);
   for (let i = 0; i < count; i += 1) {
     const d = new Date(base);
@@ -241,9 +252,14 @@ export function AvailabilityPage() {
     () => addDaysISO(minDate, bookingWindowDays),
     [minDate, bookingWindowDays],
   );
+  const [weekOffset, setWeekOffset] = useState(0);
   const upcomingDays = useMemo(
-    () => buildUpcomingDays(Math.min(bookingWindowDays + 1, 31)),
-    [bookingWindowDays],
+    () =>
+      buildUpcomingDays(
+        Math.min(7, Math.max(0, bookingWindowDays - weekOffset * 7 + 1)),
+        addDaysISO(minDate, weekOffset * 7),
+      ),
+    [bookingWindowDays, minDate, weekOffset],
   );
 
   // Restore any persisted selection so back-navigation keeps the user's place.
@@ -255,7 +271,14 @@ export function AvailabilityPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [servicesStatus, setServicesStatus] = useState<Status>('idle');
   const [selectedService, setSelectedService] = useState(restored?.serviceId ?? '');
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(
+    restored?.serviceIds?.length ? restored.serviceIds : restored?.serviceId ? [restored.serviceId] : [],
+  );
+  const [multiServiceSelection, setMultiServiceSelection] = useState(
+    Boolean(restored?.serviceIds && restored.serviceIds.length > 1),
+  );
   const [date, setDate] = useState(restored?.date ?? '');
+  const [selectedStartAt, setSelectedStartAt] = useState(restored?.startAt ?? '');
   const [slots, setSlots] = useState<Slot[]>([]);
   const [slotsStatus, setSlotsStatus] = useState<Status>('idle');
   // Stylist picker: '' means "any stylist" (the default). A specific id is a
@@ -277,6 +300,38 @@ export function AvailabilityPage() {
     () => services.find((service) => service.id === selectedService),
     [services, selectedService],
   );
+  const selectedServiceDetailsList = useMemo(
+    () => selectedServiceIds.map((id) => services.find((service) => service.id === id)).filter(Boolean) as Service[],
+    [services, selectedServiceIds],
+  );
+  const selectedTotalDuration = useMemo(() => {
+    const variablePrimaryDuration = selectedServiceDetails?.durationMode === 'variable' && durationMinutes
+      ? Number(durationMinutes)
+      : undefined;
+    return selectedServiceDetailsList.reduce((total, service, index) => {
+      if (index === 0 && variablePrimaryDuration !== undefined) return total + variablePrimaryDuration;
+      return total + (service.durationMode === 'variable'
+        ? service.minDurationMinutes ?? service.durationMinutes
+        : service.durationMinutes);
+    }, 0);
+  }, [durationMinutes, selectedServiceDetails, selectedServiceDetailsList]);
+
+  const selectedDurationBounds = useMemo(() => {
+    return selectedServiceDetailsList.reduce(
+      (bounds, service, index) => {
+        const min =
+          service.durationMode === 'variable'
+            ? service.minDurationMinutes ?? service.durationMinutes
+            : service.durationMinutes;
+        const max =
+          service.durationMode === 'variable'
+            ? service.maxDurationMinutes ?? service.durationMinutes
+            : service.durationMinutes;
+        return { min: bounds.min + min, max: bounds.max + max };
+      },
+      { min: 0, max: 0 },
+    );
+  }, [durationMinutes, selectedServiceDetailsList]);
 
   useEffect(() => {
     if (selectedServiceDetails?.durationMode !== 'variable') {
@@ -304,7 +359,12 @@ export function AvailabilityPage() {
         setSelectedService((current) => {
           const currentIsValid =
             current.length > 0 && res.services.some((service) => service.id === current);
-          return currentIsValid ? current : (res.services[0]?.id ?? '');
+          const next = currentIsValid ? current : (res.services[0]?.id ?? '');
+          setSelectedServiceIds((ids) => {
+            const valid = ids.filter((id) => res.services.some((service) => service.id === id));
+            return valid.length > 0 ? valid : next ? [next] : [];
+          });
+          return next;
         });
         setServicesStatus('ready');
       })
@@ -354,7 +414,8 @@ export function AvailabilityPage() {
       .catch(() => undefined);
   }, [salonId, minDate]);
 
-  // Load availability whenever a service + date are both chosen.
+  // Load availability whenever selected services + date are both chosen. The
+  // API returns only starts that fit the whole appointment duration.
   const loadSlots = useCallback(() => {
     if (!salonId || !selectedService || !date) {
       setSlotsStatus('idle');
@@ -363,16 +424,14 @@ export function AvailabilityPage() {
     }
     const requestedDuration =
       selectedServiceDetails?.durationMode === 'variable' && durationMinutes
-        ? Number(durationMinutes)
+        ? selectedTotalDuration
         : undefined;
     if (
       selectedServiceDetails?.durationMode === 'variable' &&
       (requestedDuration === undefined ||
         !Number.isInteger(requestedDuration) ||
-        requestedDuration <
-          (selectedServiceDetails.minDurationMinutes ?? selectedServiceDetails.durationMinutes) ||
-        requestedDuration >
-          (selectedServiceDetails.maxDurationMinutes ?? selectedServiceDetails.durationMinutes))
+        requestedDuration < selectedDurationBounds.min ||
+        requestedDuration > selectedDurationBounds.max)
     ) {
       setSlots([]);
       setSlotsStatus('idle');
@@ -387,6 +446,7 @@ export function AvailabilityPage() {
         selectedStaff || undefined,
         locationType,
         requestedDuration,
+        selectedServiceIds,
       )
       .then((res) => {
         setSlots(res.slots);
@@ -397,6 +457,9 @@ export function AvailabilityPage() {
     salonId,
     selectedService,
     selectedServiceDetails,
+    selectedDurationBounds,
+    selectedTotalDuration,
+    selectedServiceIds,
     date,
     selectedStaff,
     locationType,
@@ -428,88 +491,82 @@ export function AvailabilityPage() {
             defaultValue: 'خدمات در محل ثابت سالن انجام می‌شود.',
           });
 
-  const handleServiceChange = (value: string) => {
-    setSelectedService(value);
-    const nextService = services.find((service) => service.id === value);
+  const persistSelection = (patch: Partial<PersistedSelection> = {}) => {
+    if (!salonId) return;
+    const serviceIds = patch.serviceIds ?? selectedServiceIds;
+    const serviceId = patch.serviceId ?? serviceIds[0] ?? selectedService;
+    if (!serviceId || !(patch.date ?? date)) return;
+    const startAt = Object.prototype.hasOwnProperty.call(patch, 'startAt')
+      ? patch.startAt
+      : selectedStartAt;
+    writeSelection(salonId, {
+      serviceId,
+      serviceIds: [...new Set([serviceId, ...serviceIds])],
+      date: patch.date ?? date,
+      staffId: patch.staffId ?? selectedStaff,
+      locationType: patch.locationType ?? locationType,
+      durationMinutes: patch.durationMinutes ?? (durationMinutes ? Number(durationMinutes) : undefined),
+      startAt: startAt || undefined,
+    });
+  };
+
+  const handleServiceSelection = (values: string[]) => {
+    const nextIds = [...new Set(values)];
+    const nextService = services.find((service) => service.id === nextIds[0]);
+    setSelectedServiceIds(nextIds);
+    setSelectedService(nextIds[0] ?? '');
     setDurationMinutes(
       nextService?.durationMode === 'variable'
         ? String(nextService.minDurationMinutes ?? nextService.durationMinutes)
         : '',
     );
+    setSelectedStartAt('');
     setDurationError('');
-    if (salonId && date) {
-      writeSelection(salonId, {
-        serviceId: value,
-        date,
-        staffId: selectedStaff,
-        locationType,
-        durationMinutes:
-          nextService?.durationMode === 'variable'
-            ? nextService.minDurationMinutes ?? nextService.durationMinutes
-            : undefined,
-      });
-    }
+    persistSelection({
+      serviceId: nextIds[0] ?? '',
+      serviceIds: nextIds,
+      startAt: undefined,
+      durationMinutes:
+        nextService?.durationMode === 'variable'
+          ? nextService.minDurationMinutes ?? nextService.durationMinutes
+          : undefined,
+    });
   };
+
+  const handleServiceChange = (value: string) => handleServiceSelection([value]);
 
   const handleDateChange = (value: string) => {
     setDate(value);
-    if (salonId && selectedService) {
-      writeSelection(salonId, {
-        serviceId: selectedService,
-        date: value,
-        staffId: selectedStaff,
-        locationType,
-        durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
-      });
-    }
+    setSelectedStartAt('');
+    persistSelection({ date: value, startAt: undefined });
   };
 
   const handleStaffChange = (value: string) => {
     setSelectedStaff(value);
-    if (salonId && selectedService && date) {
-      writeSelection(salonId, {
-        serviceId: selectedService,
-        date,
-        staffId: value,
-        locationType,
-        durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
-      });
-    }
+    persistSelection({ staffId: value });
   };
 
   const handleLocationChange = (value: string) => {
     if (value !== 'salon' && value !== 'customer') return;
     setLocationType(value);
-    if (salonId && selectedService && date) {
-      writeSelection(salonId, {
-        serviceId: selectedService,
-        date,
-        staffId: selectedStaff,
-        locationType: value,
-        durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
-      });
-    }
+    persistSelection({ locationType: value });
   };
 
   const handleSlotSelect = (startAt: string) => {
-    if (salonId) {
-      writeSelection(salonId, {
-        serviceId: selectedService,
-        date,
-        staffId: selectedStaff,
-        locationType,
-        durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
-      });
-    }
+    setSelectedStartAt(startAt);
+    persistSelection({ startAt });
     navigate(`/salon/${salonId}/book/confirm`, {
       state: {
         serviceId: selectedService,
+        serviceIds: selectedServiceIds,
         startAt,
         // Pass the stylist preference through to confirm → booking (omit when
         // "any" so the scheduler is free to assign).
         preferredStaffId: selectedStaff || undefined,
         locationType,
-        durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
+        durationMinutes: selectedServiceDetails?.durationMode === 'variable' && durationMinutes
+          ? Number(durationMinutes)
+          : undefined,
       },
     });
   };
@@ -517,7 +574,7 @@ export function AvailabilityPage() {
   const handleJoinWaitlist = () => {
     if (!salonId || !selectedService || !date) return;
     const returnTo = `/salon/${salonId}/waitlist`;
-    const returnState = { serviceId: selectedService, date };
+    const returnState = { serviceId: selectedService, serviceIds: selectedServiceIds, date };
     if (getAccessToken()) {
       navigate(returnTo, { state: returnState });
       return;
@@ -533,6 +590,7 @@ export function AvailabilityPage() {
   const slotItems: SlotItem[] = slots.map((slot) => {
     let state: SlotState = 'available';
     if (new Date(slot.startAt).getTime() < now) state = 'past';
+    if (slot.startAt === selectedStartAt) state = 'selected';
     return { id: slot.startAt, label: slotLabel(slot.startAt), state };
   });
 
@@ -608,13 +666,37 @@ export function AvailabilityPage() {
           )}
 
           {servicesStatus === 'ready' && services.length > 0 && (
-            <ServiceCardList
-              services={serviceCardItems}
-              value={selectedService}
-              onValueChange={handleServiceChange}
-              ariaLabel={t('booking.selectService')}
-              durationLabel={(minutes) => t('booking.durationMinutes', { count: minutes })}
-            />
+            <>
+              <ServiceCardList
+                services={serviceCardItems}
+                value={selectedService}
+                onValueChange={handleServiceChange}
+                multiple={multiServiceSelection}
+                values={selectedServiceIds}
+                onValuesChange={handleServiceSelection}
+                ariaLabel={t('booking.selectService')}
+                durationLabel={(minutes) => t('booking.durationMinutes', { count: minutes })}
+              />
+              {services.length > 1 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="md"
+                  className="self-start"
+                  onClick={() => {
+                    setMultiServiceSelection((enabled) => {
+                      if (enabled && selectedService) {
+                        setSelectedServiceIds([selectedService]);
+                        persistSelection({ serviceIds: [selectedService] });
+                      }
+                      return !enabled;
+                    });
+                  }}
+                >
+                  {multiServiceSelection ? 'انتخاب یک خدمت' : 'انتخاب همزمان چند خدمت'}
+                </Button>
+              )}
+            </>
           )}
         </section>
 
@@ -737,16 +819,43 @@ export function AvailabilityPage() {
             className="flex items-center gap-2 text-lg font-bold text-text"
           >
             <CalendarClock className="h-5 w-5" aria-hidden="true" />
-            {t('booking.selectDate')}
+            {t('booking.bookingDate', { defaultValue: 'تاریخ رزرو' })}
           </h2>
           <DayScroller
             days={upcomingDays}
             value={date || null}
             onChange={handleDateChange}
-            label={t('booking.selectDate')}
+            label={t('booking.nearbyDates', { defaultValue: 'روزهای نزدیک' })}
           />
+          <div
+            className="flex items-center justify-between gap-2"
+            aria-label={t('booking.changeWeek', { defaultValue: 'تغییر هفته' })}
+          >
+            <Button
+              type="button"
+              variant="ghost"
+              size="md"
+              disabled={weekOffset === 0}
+              onClick={() => setWeekOffset((current) => Math.max(0, current - 1))}
+            >
+              هفته قبل
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              disabled={weekOffset >= Math.max(0, Math.ceil((bookingWindowDays + 1) / 7) - 1)}
+              onClick={() =>
+                setWeekOffset((current) =>
+                  Math.min(Math.max(0, Math.ceil((bookingWindowDays + 1) / 7) - 1), current + 1),
+                )
+              }
+            >
+              هفته بعد
+            </Button>
+          </div>
           <JalaliDatePicker
-            label={t('booking.selectDate')}
+            label={t('booking.chooseAnotherDate', { defaultValue: 'انتخاب تاریخ دیگر' })}
             value={date || null}
             onChange={handleDateChange}
             min={minDate}

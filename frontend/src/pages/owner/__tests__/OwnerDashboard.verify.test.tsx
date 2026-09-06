@@ -556,6 +556,98 @@ describe('Jalali dates', () => {
       });
     });
 
+    it('renders appointment data in the vertical day grid with duration-based height', async () => {
+      const start = new Date();
+      start.setHours(10, 0, 0, 0);
+      const end = new Date(start.getTime() + 120 * 60_000);
+      mockGetCalendar.mockResolvedValue({
+        appointments: [
+          {
+            id: 'appt-long',
+            startAt: start.toISOString(),
+            endAt: end.toISOString(),
+            serviceName: 'کراتین و احیا',
+            customerName: 'ترانه موسوی',
+            status: 'confirmed',
+          },
+        ],
+      });
+
+      renderCalendarPage();
+      await waitFor(() => {
+        expect(screen.getByTestId('owner-calendar-page')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole('tab', { name: /روز/ }));
+
+      const appointment = await screen.findByRole('article', { name: /کراتین و احیا/ });
+      expect(appointment).toHaveStyle({ top: '360px', height: '240px' });
+      expect(screen.queryByTestId('owner-calendar-day-timeline')).not.toBeInTheDocument();
+      expect(screen.getByRole('row', { name: '10:00' })).toBeInTheDocument();
+    });
+
+    it('positions UTC appointments using the salon timezone', async () => {
+      const salonDate = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Tehran',
+      }).format(new Date());
+      const start = new Date(`${salonDate}T06:30:00.000Z`);
+      const end = new Date(start.getTime() + 120 * 60_000);
+      mockGetCalendar.mockResolvedValue({
+        appointments: [
+          {
+            id: 'appt-timezone',
+            startAt: start.toISOString(),
+            endAt: end.toISOString(),
+            timezone: 'Asia/Tehran',
+            serviceName: 'کراتین و احیا',
+            customerName: 'ترانه موسوی',
+            status: 'confirmed',
+          },
+        ],
+      });
+
+      renderCalendarPage();
+      await waitFor(() => {
+        expect(screen.getByTestId('owner-calendar-page')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole('tab', { name: /روز/ }));
+
+      const appointment = await screen.findByRole('article', { name: /کراتین و احیا/ });
+      expect(appointment).toHaveStyle({ top: '360px', height: '240px' });
+      expect(appointment).toHaveTextContent('۱۰:۰۰');
+    });
+
+    it('keeps quick actions compact for short day appointments', async () => {
+      const start = new Date();
+      start.setHours(10, 0, 0, 0);
+      const end = new Date(start.getTime() + 30 * 60_000);
+      mockGetCalendar.mockResolvedValue({
+        appointments: [
+          {
+            id: 'appt-short',
+            startAt: start.toISOString(),
+            endAt: end.toISOString(),
+            serviceName: 'کوتاهی مو',
+            customerName: 'زهرا محمدی',
+            status: 'confirmed',
+          },
+        ],
+      });
+
+      renderCalendarPage();
+      await waitFor(() => {
+        expect(screen.getByTestId('owner-calendar-page')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole('tab', { name: /روز/ }));
+
+      const appointment = await screen.findByRole('article', { name: /کوتاهی مو/ });
+      const noShow = within(appointment).getByRole('button', { name: /ثبت عدم حضور/ });
+      const cancel = within(appointment).getByRole('button', { name: /لغو نوبت/ });
+      expect(noShow).toHaveAttribute('title', 'ثبت عدم حضور');
+      expect(cancel).toHaveAttribute('title', 'لغو نوبت');
+      expect(within(appointment).queryByText('عدم حضور')).not.toBeInTheDocument();
+      expect(within(appointment).queryByText('لغو نوبت')).not.toBeInTheDocument();
+    });
+
     it('moves an appointment in place without refetching the whole calendar', async () => {
       const start = new Date();
       start.setHours(10, 0, 0, 0);

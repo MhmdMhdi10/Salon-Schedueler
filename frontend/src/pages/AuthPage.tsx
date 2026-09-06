@@ -9,6 +9,7 @@ import { OtpInput, OTP_LENGTH, type OtpInputHandle } from '../auth/OtpInput';
 import { filterPhoneInput, normalizePhone, PHONE_PATTERN } from '../auth/phone';
 import { SeoHead } from '../components/seo';
 import { BrandLogo } from '../components/brand';
+import { FunnelShell } from '../components/layout';
 import { Button, TextField, cn, toPersianDigits, useToast } from '../components/ui';
 import { durations, stepTransition, stepVariants } from '../lib/motion-variants';
 
@@ -55,6 +56,15 @@ const fadeStepVariants: Variants = {
   exit: { opacity: 0 },
 };
 
+export interface AuthPageProps {
+  /** Render auth inside the customer booking funnel instead of app chrome. */
+  bookingMode?: boolean;
+  /** Salon label shown by the booking funnel shell. */
+  bookingSalonName?: string;
+  /** Back action for the booking funnel shell. */
+  onBookingBack?: () => void;
+}
+
 /**
  * Phone + OTP authentication page (R4.1, R4.2, R7.6; ui-ux Auth recipe, §7,
  * §10, §11; Booksy directive §auth).
@@ -80,7 +90,11 @@ const fadeStepVariants: Variants = {
  * `<SeoHead>` default emits `noindex,follow` (seo §1, R8.7). Toasts come from
  * the app-root `ToastProvider` (no page-level provider).
  */
-export function AuthPage() {
+export function AuthPage({
+  bookingMode = false,
+  bookingSalonName,
+  onBookingBack,
+}: AuthPageProps = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -218,7 +232,7 @@ export function AuthPage() {
       lastAccessToken.current = result.accessToken;
       // Resolve the app-wide session before navigating. This prevents the
       // owner guard from racing the /me request and bouncing a valid login
-      // back to /auth on slower mobile connections.
+      // back to auth on slower mobile connections.
       await refreshAuth();
       // Show a brief in-button success beat (motion-safe), then route: back to
       // the funnel with `autoConfirm` when we arrived mid-booking, otherwise by
@@ -271,30 +285,36 @@ export function AuthPage() {
 
   const variants = prefersReduced ? fadeStepVariants : stepVariants;
 
-  return (
+  const page = (
     <div
-      className="auth-page mx-auto flex min-h-screen min-h-[100dvh] w-full max-w-md flex-col items-center justify-center gap-4 px-3 py-8 sm:gap-5 sm:px-4 sm:py-12"
+      className={cn(
+        'auth-page mx-auto flex w-full max-w-md flex-col gap-4',
+        !bookingMode &&
+          'min-h-screen min-h-[100dvh] items-center justify-center px-3 py-8 sm:gap-5 sm:px-4 sm:py-12',
+      )}
       data-testid="auth-page"
     >
       <SeoHead title={t('seo.titles.auth')} />
 
-      <div className="relative flex w-full items-center justify-center">
-        <Button
-          variant="ghost"
-          size="md"
-          // In RTL the back affordance points RIGHT (steering §8) —
-          // ArrowRight is already correct, so no rtl flip.
-          startIcon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
-          onClick={handleBack}
-          className="absolute start-0 top-1"
-          aria-label={t('common.back')}
-        >
-          {t('common.back')}
-        </Button>
-        <Link to="/" aria-label="آرا" className="inline-flex min-h-10 items-center no-underline">
-          <BrandLogo className="h-12" />
-        </Link>
-      </div>
+      {!bookingMode && (
+        <div className="relative flex w-full items-center justify-center">
+          <Button
+            variant="ghost"
+            size="md"
+            // In RTL the back affordance points RIGHT (steering §8) —
+            // ArrowRight is already correct, so no rtl flip.
+            startIcon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
+            onClick={handleBack}
+            className="absolute start-0 top-1"
+            aria-label={t('common.back')}
+          >
+            {t('common.back')}
+          </Button>
+          <Link to="/" aria-label="آرا" className="inline-flex min-h-10 items-center no-underline">
+            <BrandLogo className="h-12" />
+          </Link>
+        </div>
+      )}
 
       <div className="w-full overflow-hidden rounded-2xl border border-border bg-elevated p-4 shadow-1 sm:p-8">
         <AnimatePresence mode="wait" initial={false} custom={direction}>
@@ -309,39 +329,43 @@ export function AuthPage() {
               transition={stepTransition}
             >
               <div className="mb-5 text-start">
-                <h1 className="text-lg font-bold leading-display text-text">{t('auth.title')}</h1>
-                <div className="mt-4 grid grid-cols-2 gap-2" role="tablist" aria-label="نوع ورود">
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={audience === 'customer'}
-                    onClick={() => setAudience('customer')}
-                    className={cn(
-                      'min-h-11 rounded-md border px-3 py-2 text-sm font-semibold transition-colors',
-                      audience === 'customer'
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border text-muted hover:bg-bg',
-                    )}
-                  >
-                    رزرو نوبت
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={audience === 'salon'}
-                    onClick={() => setAudience('salon')}
-                    className={cn(
-                      'min-h-11 rounded-md border px-3 py-2 text-sm font-semibold transition-colors',
-                      audience === 'salon'
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border text-muted hover:bg-bg',
-                    )}
-                  >
-                    ورود سالن و تیم
-                  </button>
-                </div>
+                <h1 className="text-lg font-bold leading-display text-text">
+                  {bookingMode ? t('auth.bookingTitle', { defaultValue: 'برای ادامه رزرو وارد شوید' }) : t('auth.title')}
+                </h1>
+                {!bookingMode && (
+                  <div className="mt-4 grid grid-cols-2 gap-2" role="tablist" aria-label="نوع ورود">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={audience === 'customer'}
+                      onClick={() => setAudience('customer')}
+                      className={cn(
+                        'min-h-11 rounded-md border px-3 py-2 text-sm font-semibold transition-colors',
+                        audience === 'customer'
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border text-muted hover:bg-bg',
+                      )}
+                    >
+                      رزرو نوبت
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={audience === 'salon'}
+                      onClick={() => setAudience('salon')}
+                      className={cn(
+                        'min-h-11 rounded-md border px-3 py-2 text-sm font-semibold transition-colors',
+                        audience === 'salon'
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border text-muted hover:bg-bg',
+                      )}
+                    >
+                      ورود سالن و تیم
+                    </button>
+                  </div>
+                )}
                 <p className="mt-1 text-sm leading-5 text-muted">
-                  {hasBookingReturnIntent
+                  {bookingMode || hasBookingReturnIntent
                     ? t('auth.bookingIntentSubtitle')
                     : audience === 'salon'
                       ? 'برای ورود به پنل سالن یا انتخاب سالن، شماره موبایل خود را وارد کنید.'
@@ -407,7 +431,9 @@ export function AuthPage() {
             >
               <div className="mb-5 text-start">
                 <h1 className="text-lg font-bold leading-display text-text">
-                  {t('auth.otpLabel')}
+                  {bookingMode
+                    ? t('auth.bookingOtpLabel', { defaultValue: 'کد تایید رزرو' })
+                    : t('auth.otpLabel')}
                 </h1>
                 <p className="mt-1 text-sm leading-5 text-muted">
                   {t('auth.otpStepSubtitle', { phone: toPersianDigits(normalizedPhone) })}
@@ -422,7 +448,9 @@ export function AuthPage() {
               >
                 <fieldset className="m-0 border-0 p-0">
                   <legend className="mb-1 block text-xs font-medium text-text">
-                    {t('auth.otpLabel')}
+                    {bookingMode
+                      ? t('auth.bookingOtpLabel', { defaultValue: 'کد تایید رزرو' })
+                      : t('auth.otpLabel')}
                   </legend>
                   <OtpInput
                     ref={otpRef}
@@ -517,5 +545,17 @@ export function AuthPage() {
         </AnimatePresence>
       </div>
     </div>
+  );
+
+  return bookingMode ? (
+    <FunnelShell
+      currentStep="confirm"
+      salonName={bookingSalonName}
+      onBack={onBookingBack}
+    >
+      {page}
+    </FunnelShell>
+  ) : (
+    page
   );
 }

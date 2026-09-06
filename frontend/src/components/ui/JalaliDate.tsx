@@ -37,7 +37,12 @@ export interface JalaliDateProps extends React.HTMLAttributes<HTMLElement> {
 }
 
 function toDate(value: Date | string | number): Date {
-  return value instanceof Date ? value : new Date(value);
+  if (value instanceof Date) return value;
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+  return new Date(value);
 }
 
 /**
@@ -91,7 +96,11 @@ export const JalaliDate = forwardRef<HTMLTimeElement, JalaliDateProps>(function 
   const date = toDate(value);
   const display = formatJalaliDisplay(value, variant, withWeekday);
   // Machine-readable ISO date (YYYY-MM-DD) for the `datetime` attribute.
-  const iso = Number.isNaN(date.getTime()) ? undefined : date.toISOString().slice(0, 10);
+  const iso = Number.isNaN(date.getTime())
+    ? undefined
+    : typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+      ? value
+      : date.toISOString().slice(0, 10);
   return (
     <time
       ref={ref}

@@ -15,6 +15,7 @@ import {
 import {
   ApiError,
   adminApi,
+  getApiErrorMessage,
   type AppointmentCustomerOverview,
 } from '../../api/client';
 import {
@@ -155,6 +156,8 @@ export function AppointmentDetailsSheet({
   onMove,
   onRebook,
   onDepositReviewed,
+  onCancel,
+  onReportCustomer,
 }: {
   open: boolean;
   appointment: CalendarAppointmentLike | null;
@@ -162,12 +165,17 @@ export function AppointmentDetailsSheet({
   onMove: (appointment: CalendarAppointmentLike) => void;
   onRebook: (appointment: CalendarAppointmentLike) => void;
   onDepositReviewed?: (status: string) => void;
+  onCancel?: (appointment: CalendarAppointmentLike) => void;
+  onReportCustomer?: (appointment: CalendarAppointmentLike) => void;
 }) {
   const [overview, setOverview] = useState<AppointmentCustomerOverview | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [message, setMessage] = useState('');
+  const [lastMessage, setLastMessage] = useState('');
+  const [messageProviderId, setMessageProviderId] = useState('');
   const [messageState, setMessageState] = useState<'idle' | 'sent' | 'error'>('idle');
+  const [messageError, setMessageError] = useState('');
   const [sending, setSending] = useState(false);
   const [noteDraft, setNoteDraft] = useState('');
   const [noteSaving, setNoteSaving] = useState(false);
@@ -189,7 +197,10 @@ export function AppointmentDetailsSheet({
     setOverview(null);
     setLoadError('');
     setMessage('');
+    setLastMessage('');
+    setMessageProviderId('');
     setMessageState('idle');
+    setMessageError('');
     setNoteDraft('');
     setNoteError('');
     setReceipt(null);
@@ -245,21 +256,32 @@ export function AppointmentDetailsSheet({
     [overview?.appointments],
   );
 
-  const sendMessage = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const text = message.trim();
+  const sendMessageText = async (text: string) => {
     if (!appointment || !text || sending) return;
     setSending(true);
     setMessageState('idle');
+    setMessageProviderId('');
+    setMessageError('');
     try {
-      await adminApi.sendCustomerMessage(appointment.id, text);
+      const result = await adminApi.sendCustomerMessage(appointment.id, text);
       setMessage('');
+      setLastMessage('');
+      setMessageProviderId(result.providerId ?? '');
       setMessageState('sent');
-    } catch {
+    } catch (error) {
+      setMessageProviderId('');
       setMessageState('error');
+      setMessageError(getApiErrorMessage(error, 'ارسال پیامک انجام نشد؛ دوباره تلاش کن.'));
     } finally {
       setSending(false);
     }
+  };
+
+  const sendMessage = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const text = message.trim();
+    setLastMessage(text);
+    await sendMessageText(text);
   };
 
   const addNote = async (event: React.FormEvent) => {
@@ -383,6 +405,30 @@ export function AppointmentDetailsSheet({
             >
               رزرو مجدد
             </Button>
+            {onCancel && ['pending', 'held', 'confirmed', 'approved'].includes(appointment.status ?? '') && (
+              <Button
+                type="button"
+                variant="danger"
+                size="md"
+                className="mt-2 w-full"
+                startIcon={<TriangleAlert className="h-4 w-4" />}
+                onClick={() => onCancel(appointment)}
+              >
+                {appointment.status === 'pending' ? 'رد و لغو درخواست' : 'لغو نوبت'}
+              </Button>
+            )}
+            {onReportCustomer && appointment.customerId && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="md"
+                className="mt-2 w-full text-danger"
+                startIcon={<TriangleAlert className="h-4 w-4" />}
+                onClick={() => onReportCustomer(appointment)}
+              >
+                گزارش مشتری / مسدودکردن
+              </Button>
+            )}
           </section>
         )}
 
@@ -432,6 +478,7 @@ export function AppointmentDetailsSheet({
               onChange={(event) => {
                 setMessage(event.target.value);
                 setMessageState('idle');
+                setMessageError('');
               }}
               maxLength={500}
               rows={3}
@@ -453,10 +500,28 @@ export function AppointmentDetailsSheet({
             </Button>
           </form>
           {messageState === 'sent' && (
-            <p role="status" className="m-0 mt-2 text-xs text-success">پیامک ارسال شد.</p>
+            <p role="status" className="m-0 mt-2 text-xs text-success">
+              پیامک برای ارسال پذیرفته شد.
+              {messageProviderId && (
+                <span className="ms-1 text-muted" dir="ltr">
+                  کد پیگیری: {messageProviderId}
+                </span>
+              )}
+            </p>
           )}
           {messageState === 'error' && (
-            <p role="alert" className="m-0 mt-2 text-xs text-danger">ارسال پیامک انجام نشد.</p>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+              <p role="alert" className="m-0 text-xs text-danger">{messageError || 'ارسال پیامک انجام نشد.'}</p>
+              <Button
+                type="button"
+                size="md"
+                variant="ghost"
+                disabled={sending || !lastMessage}
+                onClick={() => void sendMessageText(lastMessage)}
+              >
+                تلاش مجدد
+              </Button>
+            </div>
           )}
         </section>
 

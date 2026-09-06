@@ -166,9 +166,19 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
     '/salons/:id/availability',
     availabilityLimit,
     asyncRoute(async (req, res) => {
-      if (!validateRequired(res, req.query as Record<string, unknown>, ['serviceId', 'date'])) {
+      if (!validateRequired(res, req.query as Record<string, unknown>, ['date'])) {
         return;
       }
+      const rawServiceIds = String(req.query.serviceIds ?? '')
+        .split(',')
+        .map((id) => id.trim())
+        .filter(Boolean);
+      const serviceId = req.query.serviceId ? String(req.query.serviceId) : rawServiceIds[0];
+      if (!serviceId) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'serviceId' });
+        return;
+      }
+      const serviceIds = [...new Set([serviceId, ...rawServiceIds])];
       const rawLocationType = req.query.locationType;
       if (
         rawLocationType !== undefined &&
@@ -180,7 +190,8 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
       }
       const slots = await services.schedulingEngine.getAvailability({
         salonId: req.params.id,
-        serviceId: String(req.query.serviceId),
+        serviceId,
+        ...(serviceIds.length > 1 ? { serviceIds } : {}),
         date: String(req.query.date),
         // Optional stylist filter (R14.3): `&staffId=` narrows the slots to
         // ones that specific staff member can personally serve.

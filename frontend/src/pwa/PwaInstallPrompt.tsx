@@ -42,6 +42,7 @@ export function PwaInstallPrompt() {
   const instructions = t(`app.pwaInstall.instructions.${instructionKeys[platform]}`, {
     returnObjects: true,
   }) as unknown as { title: string; steps: string[] };
+  const installAvailable = secureContext && (canPrompt || platform !== 'other');
 
   useEffect(() => {
     if (installed) setOpen(false);
@@ -76,10 +77,10 @@ export function PwaInstallPrompt() {
 
   return (
     <>
-      {!installed && (
+      {!installed && installAvailable && (
         <div
           className={cn(
-            'pointer-events-none fixed inset-x-3 bottom-3 z-nav flex justify-end pb-[env(safe-area-inset-bottom)] sm:end-5 sm:bottom-5 sm:inset-x-auto',
+            'pointer-events-none fixed end-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-nav flex justify-end sm:end-5 sm:bottom-5',
             isRegistrationRoute && 'max-sm:hidden',
           )}
         >

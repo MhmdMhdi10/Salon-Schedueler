@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   CircleUserRound,
   LogOut,
+  LifeBuoy,
   ShieldCheck,
 } from 'lucide-react';
 import { adminApi, qrApi, type OwnerRole } from '../../api/client';
@@ -315,6 +316,20 @@ export function OwnerProfilePage() {
           </section>
         ))}
       </div>
+
+      <NavLink
+        to="/support"
+        className="mt-6 flex min-h-[68px] items-center gap-3 rounded-xl border border-primary/25 bg-primary/5 px-3 py-3 no-underline outline-none transition-colors hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+      >
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <LifeBuoy className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold text-text">پشتیبانی و گزارش خطا</span>
+          <span className="mt-1 block text-xs text-muted">مشکل را با مسیر و شناسه درخواست برای تیم آرا بفرست</span>
+        </span>
+        <ChevronLeft className="h-4 w-4 shrink-0 text-muted rtl:-scale-x-100" aria-hidden="true" />
+      </NavLink>
 
       {onSignOut && (
         <div className="mt-7 border-t border-border pt-4">

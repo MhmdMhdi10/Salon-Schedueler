@@ -44,6 +44,7 @@ import {
   DialogContent,
   DialogDescription,
   DialogTitle,
+  DurationStepper,
   EmptyState,
   ErrorState,
   IconButton,
@@ -726,7 +727,7 @@ function ServicesSection({
 }) {
   const { t } = useTranslation();
   const [name, setName] = useState('');
-  const [duration, setDuration] = useState('');
+  const [duration, setDuration] = useState('30');
   const [durationMode, setDurationMode] = useState<'fixed' | 'variable'>('fixed');
   const [minDuration, setMinDuration] = useState('');
   const [maxDuration, setMaxDuration] = useState('');
@@ -807,7 +808,7 @@ function ServicesSection({
         approvalStaffId: approvalStaffId === 'auto' ? null : approvalStaffId,
       });
       setName('');
-      setDuration('');
+      setDuration('30');
       setDurationMode('fixed');
       setMinDuration('');
       setMaxDuration('');
@@ -993,12 +994,11 @@ function ServicesSection({
                         value={drafts[service.id]?.name ?? service.name}
                         onChange={(event) => updateDraft(service.id, { name: event.target.value })}
                       />
-                      <TextField
+                      <DurationStepper
                         label="مدت (دقیقه)"
-                        inputMode="numeric"
-                        dir="ltr"
+                        ariaLabel="مدت (دقیقه)"
                         value={drafts[service.id]?.durationMinutes ?? String(service.durationMinutes)}
-                        onChange={(event) => updateDraft(service.id, { durationMinutes: event.target.value })}
+                        onChange={(value) => updateDraft(service.id, { durationMinutes: value })}
                       />
                       <TextField
                         label="فاصله بین نوبت‌ها (دقیقه)"
@@ -1169,14 +1169,12 @@ function ServicesSection({
           onChange={(e) => setName(e.target.value)}
         />
         <div className="flex flex-col gap-3 sm:flex-row">
-          <TextField
+          <DurationStepper
             label={t('admin.config.services.durationLabel')}
-            placeholder={t('admin.config.services.durationPlaceholder')}
-            inputMode="numeric"
-            dir="ltr"
+            ariaLabel={t('admin.config.services.durationLabel')}
             value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-            containerClassName="sm:flex-1"
+            onChange={setDuration}
+            className="sm:flex-1"
           />
           <TextField
             label={t('admin.config.services.priceLabel')}

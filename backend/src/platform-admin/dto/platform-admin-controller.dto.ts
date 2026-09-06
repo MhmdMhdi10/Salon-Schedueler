@@ -6,6 +6,8 @@ import {
   PlatformAdminIdDto,
   PlatformAdminQueryDto,
   PlatformAdminStatusDto,
+  PlatformCardOrderUpdateDto,
+  PlatformSupportTicketUpdateDto,
 } from './platform-admin.dto.js';
 
 const route = controllerRouteDto.bind(null, 'PlatformAdminController');
@@ -26,4 +28,9 @@ export const PLATFORM_ADMIN_CONTROLLER_DTO_DEFINITIONS = [
   route('platform-admin.waitlist.list', 'GET', '/api/platform-admin/waitlist', EmptyDto, PlatformAdminQueryDto),
   route('platform-admin.qr-scans.list', 'GET', '/api/platform-admin/qr-scans', EmptyDto, PlatformAdminQueryDto),
   route('platform-admin.audit-logs.list', 'GET', '/api/platform-admin/audit-logs', EmptyDto, PlatformAdminQueryDto),
+  route('platform-admin.card-orders.list', 'GET', '/api/platform-admin/card-orders', EmptyDto, PlatformAdminQueryDto),
+  route('platform-admin.card-orders.update', 'PATCH', '/api/platform-admin/card-orders/:id', PlatformAdminIdDto, AnyQueryDto, PlatformCardOrderUpdateDto),
+  route('platform-admin.support.list', 'GET', '/api/platform-admin/support/tickets', EmptyDto, PlatformAdminQueryDto),
+  route('platform-admin.support.read', 'GET', '/api/platform-admin/support/tickets/:id', PlatformAdminIdDto),
+  route('platform-admin.support.update', 'PATCH', '/api/platform-admin/support/tickets/:id', PlatformAdminIdDto, AnyQueryDto, PlatformSupportTicketUpdateDto),
 ] as const satisfies readonly ControllerDtoDefinition[];

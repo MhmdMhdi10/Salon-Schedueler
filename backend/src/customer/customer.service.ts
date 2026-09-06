@@ -43,6 +43,20 @@ export interface AppointmentRecord {
     endAt: Date | null;
     requestedAt: Date | null;
   } | null;
+  serviceItems?: Array<{
+    serviceId: string;
+    name: string;
+    durationMin: number;
+    priceRial: number;
+  }>;
+  cancellation?: {
+    cancelledBy: string;
+    kind: string;
+    reason: string;
+    refundStatus: string;
+    refundDueAt: Date | null;
+    proof?: { fileName: string; mimeType: string; sizeBytes: number } | null;
+  } | null;
 }
 
 /**

@@ -1,9 +1,11 @@
 import express, { type Express, Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import type { SchedulingEngine } from '../scheduling/scheduling-engine.js';
 import type { CancellationService } from '../scheduling/cancellation.js';
 import type { AuthService, Authorizer } from '../auth/index.js';
 import type { PaymentService } from '../payment/services/index.js';
 import type { NotificationService } from '../notifications/notification.service.js';
+import type { CustomerNotificationService } from '../notifications/customer-notification.service.js';
 import type { NotificationSettingsService } from '../notifications/notification-settings.service.js';
 import type { BotChannel } from '../notifications/bot-channel.js';
 import type { BotService } from '../bots/index.js';
@@ -49,6 +51,9 @@ import { ReferralController } from '../referral/controllers/referral.controller.
 import { createControllerDtoMiddleware } from '../common/dto/index.js';
 import { CONTROLLER_DTO_DEFINITIONS } from './dto/controller-dto.registry.js';
 import type { ReferralService } from '../referral/services/index.js';
+import type { CardOrderService } from '../card-order/services/index.js';
+import type { SupportTicketService } from '../support/index.js';
+import { SupportController } from '../support/index.js';
 
 /**
  * All domain services and the authorizer, constructed by the Composition_Root and
@@ -61,6 +66,7 @@ export interface Services {
   authService: AuthService;
   paymentService: PaymentService;
   notificationService: NotificationService;
+  customerNotificationService: CustomerNotificationService;
   /** Role-aware SMS audience preferences. Optional for legacy route fakes. */
   notificationSettings?: NotificationSettingsService;
   /** Bot-based notification channel sitting behind notifications (Requirement 1.8). */
@@ -97,6 +103,8 @@ export interface Services {
   /** Global operations center; optional for legacy route-test service fakes. */
   platformAdminService?: PlatformAdminService;
   referralService?: ReferralService;
+  cardOrderService: CardOrderService;
+  supportTicketService: SupportTicketService;
 }
 
 /** Options for building the Express app. */
@@ -125,6 +133,12 @@ export function buildApp(opts: BuildAppOptions): Express {
   // executable content by a browser. The frontend is served separately by
   // nginx, so DENY is safe for this API process.
   app.disable('x-powered-by');
+  app.use((req, res, next) => {
+    const requestId = req.get('X-Request-Id')?.trim() || randomUUID();
+    res.setHeader('X-Request-Id', requestId);
+    req.headers['x-request-id'] = requestId;
+    next();
+  });
   app.use((_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
@@ -223,6 +237,7 @@ export function buildApp(opts: BuildAppOptions): Express {
   // add RBAC guards where the authorization matrix requires them (Requirement 2.4).
   const protectedRouter = Router();
   protectedRouter.use(requireAuth);
+  protectedRouter.use(new SupportController(services).router());
   protectedRouter.use(new AuthController(services).protectedRouter());
   protectedRouter.use(
     createRateLimit({
@@ -245,7 +260,7 @@ export function buildApp(opts: BuildAppOptions): Express {
   }
   protectedRouter.use(new WaitlistController(services).router());
   protectedRouter.use(new AppointmentController(services, requireRole).router());
-  protectedRouter.use(new CardOrderController(requireRole).router());
+  protectedRouter.use(new CardOrderController(services, requireRole).router());
   protectedRouter.use(new TransactionController(services, requireRole).router());
   protectedRouter.use(new PaymentController(services).initiateRouter());
   protectedRouter.use(new AdminController(services, requireRole).router());

@@ -34,6 +34,13 @@
   display: none;
 }
 
+/* Day schedule keeps time on a vertical axis so long services occupy
+   their actual height and the whole day remains easy to scan. */
+.owner-calendar-day-grid {
+  max-inline-size: 100%;
+  overscroll-behavior: contain;
+}
+
 @media (max-width: 47.9375rem) {
   .owner-calendar-page {
     gap: 0.75rem;
@@ -95,7 +102,8 @@
 
   .owner-calendar-day-grid {
     order: 1;
-    overflow: visible;
+    overflow-x: hidden;
+    overflow-y: auto;
     touch-action: pan-y;
   }
 

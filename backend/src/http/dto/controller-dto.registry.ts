@@ -17,6 +17,7 @@ import { SALON_CONTROLLER_DTO_DEFINITIONS } from '../../salon/dto/salon-controll
 import { SUBSCRIPTION_CONTROLLER_DTO_DEFINITIONS } from '../../subscription/dto/subscription-controller.dto.js';
 import { TRANSACTION_CONTROLLER_DTO_DEFINITIONS } from '../../transaction/dto/transaction-controller.dto.js';
 import { WAITLIST_CONTROLLER_DTO_DEFINITIONS } from '../../waitlist/dto/waitlist-controller.dto.js';
+import { SUPPORT_CONTROLLER_DTO_DEFINITIONS } from '../../support/support.dto.js';
 
 /**
  * Composition-root DTO registry.
@@ -45,6 +46,7 @@ export const CONTROLLER_DTO_DEFINITIONS = [
   ...SUBSCRIPTION_CONTROLLER_DTO_DEFINITIONS,
   ...TRANSACTION_CONTROLLER_DTO_DEFINITIONS,
   ...WAITLIST_CONTROLLER_DTO_DEFINITIONS,
+  ...SUPPORT_CONTROLLER_DTO_DEFINITIONS,
 ] as const satisfies readonly ControllerDtoDefinition[];
 
 export const CONTROLLER_DTO_COUNT = CONTROLLER_DTO_DEFINITIONS.length;

@@ -20,7 +20,7 @@ export interface BookingEngine {
  */
 export interface ConfirmationNotifier {
   sendConfirmation(appointmentId: string): Promise<void>;
-  sendRejection(appointmentId: string): Promise<void>;
+  sendRejection(appointmentId: string, reason?: string): Promise<void>;
   sendSalonBookingNotice(
     appointmentId: string,
     status: 'pending' | 'confirmed',
@@ -50,6 +50,9 @@ export interface BookingFlowDeps {
         | null;
     }): Promise<unknown>;
   };
+  cancellationRecorder?: {
+    recordRejection(appointment: Appointment, reason?: string): Promise<void>;
+  };
   logger?: Logger;
 }
 
@@ -70,12 +73,14 @@ export class BookingFlow {
   private readonly schedulingEngine: BookingEngine;
   private readonly notificationService: ConfirmationNotifier;
   private readonly inboxService: BookingFlowDeps['inboxService'];
+  private readonly cancellationRecorder: BookingFlowDeps['cancellationRecorder'];
   private readonly logger: Logger;
 
   constructor(deps: BookingFlowDeps) {
     this.schedulingEngine = deps.schedulingEngine;
     this.notificationService = deps.notificationService;
     this.inboxService = deps.inboxService;
+    this.cancellationRecorder = deps.cancellationRecorder;
     this.logger = deps.logger ?? console;
   }
 
@@ -175,10 +180,13 @@ export class BookingFlow {
    * and notify the customer that the request was declined (best-effort). A
    * delivery failure is logged but never rolls back the rejection (Requirement 4.4).
    */
-  async reject(appointmentId: string): Promise<Appointment> {
+  async reject(appointmentId: string, reason?: string): Promise<Appointment> {
     const appointment = await this.schedulingEngine.reject(appointmentId);
+    if (this.cancellationRecorder) {
+      await this.safelyNotify(() => this.cancellationRecorder!.recordRejection(appointment, reason));
+    }
     await this.safelyNotify(() =>
-      this.notificationService.sendRejection(appointment.id),
+      this.notificationService.sendRejection(appointment.id, reason),
     );
     if (this.inboxService) {
       const inbox = this.inboxService;

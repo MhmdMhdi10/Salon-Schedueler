@@ -19,6 +19,20 @@ export interface CancellationServiceOptions {
   defaultCancellationWindowMinutes?: number;
 }
 
+export interface RefundProof {
+  fileName: string;
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp';
+  data: Buffer;
+}
+
+export interface CancellationDetails {
+  actor?: 'customer' | 'staff' | 'system';
+  kind?: 'standard' | 'emergency' | 'rejected';
+  reason?: string;
+  refundProof?: RefundProof;
+  refundDueHours?: number;
+}
+
 export class CancellationService {
   private readonly prisma: PrismaClient;
   private readonly paymentService: PaymentService;
@@ -54,6 +68,7 @@ export class CancellationService {
     appointmentId: string,
     cancellationWindowMinutes?: number,
     now: Date = new Date(),
+    details?: CancellationDetails,
   ): Promise<Appointment> {
     const windowMinutes =
       cancellationWindowMinutes ?? this.defaultCancellationWindowMinutes;
@@ -77,6 +92,9 @@ export class CancellationService {
       );
     }
 
+    const payment = await this.prisma.payment.findFirst({
+      where: { appointmentId: appointment.id, status: 'paid' },
+    });
     // R11.1: Change status to 'cancelled' — this releases both staff and chair
     // because the exclusion constraints only apply to 'held' and 'confirmed' statuses.
     const cancelled = await this.prisma.appointment.update({
@@ -85,9 +103,96 @@ export class CancellationService {
     });
 
     // Handle deposit refund/retain policy (R11.2, R11.3)
-    await this.handleDepositPolicy(appointment, windowMinutes, now);
+    await this.handleDepositPolicy(appointment, windowMinutes, now, details, payment);
+    await this.writeCancellation(appointment, details, payment, now);
 
     return cancelled;
+  }
+
+  async recordRejection(appointment: Appointment, reason?: string): Promise<void> {
+    const delegate = (this.prisma as any).appointmentCancellation;
+    if (!delegate?.upsert) return;
+    await delegate.upsert({
+      where: { appointmentId: appointment.id },
+      create: {
+        appointmentId: appointment.id,
+        cancelledBy: 'staff',
+        kind: 'rejected',
+        reason: reason?.trim() || 'درخواست نوبت توسط سالن رد شد.',
+        refundStatus: 'not_required',
+      },
+      update: {
+        cancelledBy: 'staff',
+        kind: 'rejected',
+        reason: reason?.trim() || 'درخواست نوبت توسط سالن رد شد.',
+      },
+    });
+  }
+
+  async getCancellation(appointmentId: string, includeProof = false) {
+    const delegate = (this.prisma as any).appointmentCancellation;
+    if (!delegate?.findUnique) return null;
+    const row = await delegate.findUnique({ where: { appointmentId } });
+    if (!row) return null;
+    return {
+      id: row.id,
+      appointmentId: row.appointmentId,
+      cancelledBy: row.cancelledBy,
+      kind: row.kind,
+      reason: row.reason,
+      refundStatus: row.refundStatus,
+      refundDueAt: row.refundDueAt?.toISOString() ?? null,
+      proof: row.proofFileName
+        ? {
+            fileName: row.proofFileName,
+            mimeType: row.proofMimeType,
+            sizeBytes: row.proofSizeBytes,
+            ...(includeProof && row.proofData
+              ? { dataBase64: row.proofData.toString('base64') }
+              : {}),
+          }
+        : null,
+      createdAt: row.createdAt.toISOString(),
+    };
+  }
+
+  async reportCustomer(input: {
+    appointmentId: string;
+    reason: string;
+    block: boolean;
+  }): Promise<void> {
+    const appointment = await this.prisma.appointment.findUnique({
+      where: { id: input.appointmentId },
+      select: { salonId: true, customerId: true },
+    });
+    if (!appointment) throw new Error('APPOINTMENT_NOT_FOUND');
+    const report = (this.prisma as any).customerModerationReport;
+    if (report?.create) {
+      await report.create({
+        data: {
+          salonId: appointment.salonId,
+          customerId: appointment.customerId,
+          appointmentId: input.appointmentId,
+          reason: input.reason,
+        },
+      });
+    }
+    if (input.block) {
+      const blocks = (this.prisma as any).customerSalonBlock;
+      if (blocks?.upsert) {
+        await blocks.upsert({
+          where: { salonId_customerId: { salonId: appointment.salonId, customerId: appointment.customerId } },
+          create: {
+            salonId: appointment.salonId,
+            customerId: appointment.customerId,
+            appointmentId: input.appointmentId,
+            reason: input.reason,
+            active: true,
+          },
+          update: { appointmentId: input.appointmentId, reason: input.reason, active: true },
+        });
+      }
+    }
   }
 
   /**
@@ -142,13 +247,12 @@ export class CancellationService {
     appointment: Appointment,
     windowMinutes: number,
     now: Date,
+    details?: CancellationDetails,
+    existingPayment?: { id: string } | null,
   ): Promise<void> {
     // Check if there's a paid deposit for this appointment
-    const payment = await this.prisma.payment.findFirst({
-      where: {
-        appointmentId: appointment.id,
-        status: 'paid',
-      },
+    const payment = existingPayment ?? await this.prisma.payment.findFirst({
+      where: { appointmentId: appointment.id, status: 'paid' },
     });
 
     if (!payment) {
@@ -158,7 +262,10 @@ export class CancellationService {
 
     // Calculate whether we're within the cancellation window
     const windowBoundary = new Date(now.getTime() + windowMinutes * 60 * 1000);
-    const isWithinWindow = windowBoundary >= appointment.startAt;
+    const isWithinWindow =
+      details?.kind === 'emergency' && details.actor === 'staff'
+        ? false
+        : windowBoundary >= appointment.startAt;
 
     if (isWithinWindow) {
       // R11.3: Cancellation within the window — retain the deposit
@@ -167,5 +274,49 @@ export class CancellationService {
       // R11.2: Cancellation before the window — refund the deposit
       await this.paymentService.refundDeposit(appointment.id);
     }
+  }
+
+  private async writeCancellation(
+    appointment: Appointment,
+    details: CancellationDetails | undefined,
+    payment: { id: string } | null,
+    now: Date,
+  ): Promise<void> {
+    const delegate = (this.prisma as any).appointmentCancellation;
+    if (!delegate?.upsert) return;
+    const emergency = details?.kind === 'emergency' && details.actor === 'staff';
+    const refundDueAt = emergency && payment
+      ? new Date(now.getTime() + (details?.refundDueHours ?? 24) * 60 * 60 * 1000)
+      : null;
+    await delegate.upsert({
+      where: { appointmentId: appointment.id },
+      create: {
+        appointmentId: appointment.id,
+        cancelledBy: details?.actor ?? 'customer',
+        kind: details?.kind ?? 'standard',
+        reason: details?.reason?.trim() || 'نوبت لغو شد.',
+        refundStatus: payment
+          ? (emergency ? (details?.refundProof ? 'proof_attached' : 'pending') : 'processed')
+          : 'not_required',
+        refundDueAt,
+        proofFileName: details?.refundProof?.fileName ?? null,
+        proofMimeType: details?.refundProof?.mimeType ?? null,
+        proofSizeBytes: details?.refundProof?.data.length ?? null,
+        proofData: details?.refundProof?.data ?? null,
+      },
+      update: {
+        cancelledBy: details?.actor ?? 'customer',
+        kind: details?.kind ?? 'standard',
+        reason: details?.reason?.trim() || 'نوبت لغو شد.',
+        refundStatus: payment
+          ? (emergency ? (details?.refundProof ? 'proof_attached' : 'pending') : 'processed')
+          : 'not_required',
+        refundDueAt,
+        proofFileName: details?.refundProof?.fileName ?? null,
+        proofMimeType: details?.refundProof?.mimeType ?? null,
+        proofSizeBytes: details?.refundProof?.data.length ?? null,
+        proofData: details?.refundProof?.data ?? null,
+      },
+    });
   }
 }

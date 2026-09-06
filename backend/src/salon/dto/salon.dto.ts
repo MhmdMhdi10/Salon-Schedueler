@@ -7,13 +7,15 @@ export const SalonIdDto = IdParamDto;
 export const SalonQrParamDto = z.object({ payload: z.string().trim().min(1) }).passthrough();
 export const SalonAvailabilityQueryDto = z
   .object({
-    serviceId: z.string().trim().min(1),
+    serviceId: z.string().trim().min(1).optional(),
+    serviceIds: z.string().trim().min(1).optional(),
     date: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/),
     staffId: z.string().trim().min(1).optional(),
     locationType: locationType.optional(),
     durationMinutes: z.coerce.number().int().min(5).max(480).optional(),
   })
-  .passthrough();
+  .passthrough()
+  .refine((value) => Boolean(value.serviceId || value.serviceIds), { path: ['serviceId'] });
 export const SalonScanQueryDto = z
   .object({ utm_source: z.string().optional(), source: z.string().optional() })
   .passthrough();

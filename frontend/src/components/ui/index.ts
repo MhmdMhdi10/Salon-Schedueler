@@ -102,6 +102,8 @@ export { BookingFlowTransition } from './BookingFlowTransition';
 export type { BookingFlowTransitionProps } from './BookingFlowTransition';
 export { ServiceCardList } from './ServiceCardList';
 export type { ServiceCardListProps, ServiceCardItem } from './ServiceCardList';
+export { DurationStepper } from './DurationStepper';
+export type { DurationStepperProps } from './DurationStepper';
 
 // Persian formatting & bidi helpers (display-only localization, R7.2–7.5)
 export { Num, toPersianDigits } from './Num';

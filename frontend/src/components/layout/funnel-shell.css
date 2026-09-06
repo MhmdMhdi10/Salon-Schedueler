@@ -2,6 +2,13 @@
   box-shadow: 0 -0.75rem 2rem color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
+/* Booking funnel owns document scrolling. Keep content and shell transparent
+   to overflow so Chrome never exposes a second vertical scroll container. */
+[data-shell='funnel'],
+[data-shell='funnel'] main {
+  overflow-y: visible;
+}
+
 @media (max-width: 47.9375rem) {
   [data-shell='funnel'] .funnel-content-with-cta {
     padding-bottom: calc(8rem + env(safe-area-inset-bottom));

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, cleanup, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { ThemeProvider } from '../../../components/theme';
@@ -24,6 +24,7 @@ const getSalonQr = vi.fn();
 const getStaffQr = vi.fn();
 const getStylists = vi.fn();
 const createCardOrder = vi.fn();
+const downloadAssetPng = vi.fn();
 
 vi.mock('../../../api/client', () => {
   class ApiError extends Error {
@@ -50,6 +51,11 @@ vi.mock('../../../api/client', () => {
     },
   };
 });
+
+vi.mock('../marketing-assets', async () => ({
+  ...(await vi.importActual<typeof import('../marketing-assets')>('../marketing-assets')),
+  downloadAssetPng: (...args: unknown[]) => downloadAssetPng(...args),
+}));
 
 import { OwnerQrPage } from '../QrPage';
 
@@ -125,8 +131,8 @@ describe('OwnerQrPage — load + data states (R4.1)', () => {
   });
 });
 
-describe('OwnerQrPage — per-stylist QR gallery', () => {
-  it('renders the per-stylist QR gallery once the page loads', async () => {
+describe('OwnerQrPage — salon-wide QR', () => {
+  it('keeps the QR surface salon-wide and does not load team QR codes', async () => {
     getSalonQr.mockResolvedValue(QR_RESPONSE);
     getStylists.mockResolvedValue({
       stylists: [{ id: 's1', fullName: 'زهرا', role: 'Stylist' }],
@@ -134,7 +140,10 @@ describe('OwnerQrPage — per-stylist QR gallery', () => {
 
     renderPage();
 
-    expect(await screen.findByTestId('qr-stylist-gallery')).toBeInTheDocument();
+    expect(await screen.findByTestId('qr-card')).toBeInTheDocument();
+    expect(screen.queryByTestId('qr-stylist-gallery')).not.toBeInTheDocument();
+    expect(getStylists).not.toHaveBeenCalled();
+    expect(getStaffQr).not.toHaveBeenCalled();
   });
 });
 
@@ -159,6 +168,23 @@ describe('OwnerQrPage — QR image (R4.1)', () => {
 
     expect(brandIcons.length).toBeGreaterThanOrEqual(2);
     expect(brandIcons[0]).toHaveAttribute('src', '/icons/icon-192.png');
+  });
+
+  it('shows the QR inside the card preview and downloads the complete card picture', async () => {
+    renderPage();
+    const preview = await screen.findByTestId('qr-asset-preview');
+    const cardQr = within(preview).getByTestId('qr-asset-image');
+
+    expect(cardQr).toHaveAttribute('src', expect.stringMatching(/^data:image\/svg\+xml/));
+    fireEvent.click(screen.getByTestId('qr-download-asset'));
+
+    expect(downloadAssetPng).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'card',
+        salonName: 'سالن رز',
+        payload: QR_RESPONSE.payload,
+      }),
+    );
   });
 });
 
@@ -238,12 +264,28 @@ describe('OwnerQrPage — printed card order', () => {
     fireEvent.change(screen.getByPlaceholderText('09xxxxxxxxx'), {
       target: { value: '09123456789' },
     });
-    fireEvent.change(screen.getByPlaceholderText('استان، شهر، خیابان، پلاک و کد پستی'), {
+    fireEvent.click(screen.getByRole('combobox', { name: 'استان' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'تهران' }));
+    fireEvent.change(screen.getByPlaceholderText('مثلاً تهران'), {
+      target: { value: 'تهران' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('خیابان، کوچه، پلاک و واحد'), {
       target: { value: 'تهران، خیابان آزادی، پلاک ۱۰' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('کد پستی ۱۰ رقمی'), {
+      target: { value: '1234567890' },
     });
     fireEvent.submit(screen.getByTestId('qr-order-submit').closest('form')!);
 
     await waitFor(() => expect(createCardOrder).toHaveBeenCalledTimes(1));
+    expect(createCardOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        province: 'تهران',
+        city: 'تهران',
+        address: 'تهران، خیابان آزادی، پلاک ۱۰',
+        postalCode: '1234567890',
+      }),
+    );
     expect(await screen.findByTestId('qr-order-success')).toHaveTextContent('order-42');
   });
 });

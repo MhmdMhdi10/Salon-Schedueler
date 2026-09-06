@@ -55,6 +55,37 @@ export function customerRouter(services: Services): Router {
     }),
   );
 
+  router.get(
+    '/customers/me/notifications',
+    asyncRoute(async (req, res) => {
+      const notifications = await services.customerNotificationService.list(req.principal!.id);
+      res.status(200).json({ notifications });
+    }),
+  );
+
+  router.patch(
+    '/customers/me/notifications/:id/read',
+    asyncRoute(async (req, res) => {
+      const updated = await services.customerNotificationService.markRead(
+        req.principal!.id,
+        req.params.id,
+      );
+      if (!updated) {
+        res.status(404).json({ code: 'NOT_FOUND' });
+        return;
+      }
+      res.status(200).json({ ok: true });
+    }),
+  );
+
+  router.post(
+    '/customers/me/notifications/read-all',
+    asyncRoute(async (req, res) => {
+      const count = await services.customerNotificationService.markAllRead(req.principal!.id);
+      res.status(200).json({ count });
+    }),
+  );
+
   /** DELETE /waitlist/:id — customer-owned cancellation. */
   router.delete(
     '/waitlist/:id',

@@ -26,6 +26,12 @@ export interface ServiceCardListProps {
   value: string;
   /** Callback when a service card is selected. */
   onValueChange: (serviceId: string) => void;
+  /** Enable selecting more than one service in the same appointment. */
+  multiple?: boolean;
+  /** Controlled values used when `multiple` is enabled. */
+  values?: string[];
+  /** Multi-select callback used when `multiple` is enabled. */
+  onValuesChange?: (serviceIds: string[]) => void;
   /** Accessible label for the service list. */
   ariaLabel?: string;
   /** Duration format template (e.g. "{{count}} دقیقه"). */
@@ -53,6 +59,9 @@ export function ServiceCardList({
   services,
   value,
   onValueChange,
+  multiple = false,
+  values,
+  onValuesChange,
   ariaLabel,
   durationLabel,
   className,
@@ -72,14 +81,19 @@ export function ServiceCardList({
     : { '': services };
 
   const formatDuration = durationLabel ?? ((m: number) => `${toPersianDigits(m)} دقیقه`);
+  const selectedValues = values ?? (value ? [value] : []);
 
   return (
-    <div role="radiogroup" aria-label={ariaLabel} className={cn('flex flex-col gap-3', className)}>
+    <div
+      role={multiple ? 'group' : 'radiogroup'}
+      aria-label={ariaLabel}
+      className={cn('flex flex-col gap-3', className)}
+    >
       {Object.entries(grouped).map(([category, items]) => (
         <div key={category || '__uncategorized'} className="flex flex-col gap-2">
           {category && <h3 className="text-sm font-bold text-muted px-1">{category}</h3>}
           {items.map((service) => {
-            const isSelected = value === service.id;
+            const isSelected = selectedValues.includes(service.id);
             const cardId = `${groupId}-service-${service.id}`;
 
             return (
@@ -87,10 +101,19 @@ export function ServiceCardList({
                 key={service.id}
                 id={cardId}
                 type="button"
-                role="radio"
+                role={multiple ? 'checkbox' : 'radio'}
                 aria-checked={isSelected}
                 aria-label={service.name}
-                onClick={() => onValueChange(service.id)}
+                onClick={() => {
+                  if (!multiple) {
+                    onValueChange(service.id);
+                    return;
+                  }
+                  const next = isSelected
+                    ? selectedValues.filter((id) => id !== service.id)
+                    : [...selectedValues, service.id];
+                  onValuesChange?.(next);
+                }}
                 whileTap={prefersReduced ? undefined : { scale: 0.97 }}
                 transition={{
                   duration: 0.2,

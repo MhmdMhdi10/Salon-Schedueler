@@ -18,6 +18,7 @@ import { ThemeToggle } from '../../components/theme/ThemeToggle';
 import {
   Button,
   Checkbox,
+  DurationStepper,
   Select,
   TextField,
   cn,
@@ -217,6 +218,10 @@ function RegisterSalonContent() {
   const [servicePresetPage, setServicePresetPage] = useState(0);
   const [servicePage, setServicePage] = useState(0);
 
+  useEffect(() => {
+    setServicePresetPage(0);
+  }, [categories]);
+
   const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
   const autoSubmittedOtp = useRef('');
   const specialtiesRef = useRef<HTMLDivElement | null>(null);
@@ -333,9 +338,9 @@ function RegisterSalonContent() {
     setSvcError('');
   };
 
-  const handleTogglePresetService = (presetKey: (typeof SERVICE_PRESETS)[number]) => {
-    const key = `preset-${presetKey}`;
-    const name = t(`business.register.services.presets.${presetKey}`);
+  const handleTogglePresetService = (preset: SuggestedService) => {
+    const key = `preset-${preset.key}`;
+    const name = preset.label;
     const existing = services.find((service) => service.key === key);
     if (existing) {
       if (editingService?.key === existing.key) cancelEditingService();
@@ -390,8 +395,23 @@ function RegisterSalonContent() {
     setServices((prev) => prev.filter((s) => s.key !== key));
   };
 
-  const servicePresetPageCount = Math.ceil(SERVICE_PRESETS.length / SERVICE_PRESETS_PAGE_SIZE);
-  const visibleServicePresets = SERVICE_PRESETS.slice(
+  const suggestedServices = useMemo(() => {
+    const profileKeys = categories.length > 0 ? categories : ['hair_salon'];
+    const keys = profileKeys.flatMap((profileKey) => SERVICE_PRESETS_BY_PROFILE[profileKey] ?? []);
+    return [...new Set(keys)].map((key) => {
+      const specialty = BUSINESS_PROFILES
+        .flatMap((profile) => profile.specialties)
+        .find((item) => item.key === key);
+      return {
+        key,
+        label: t(`business.register.services.presets.${key}`, {
+          defaultValue: specialty?.label ?? key,
+        }),
+      };
+    });
+  }, [categories, t]);
+  const servicePresetPageCount = Math.max(1, Math.ceil(suggestedServices.length / SERVICE_PRESETS_PAGE_SIZE));
+  const visibleServicePresets = suggestedServices.slice(
     servicePresetPage * SERVICE_PRESETS_PAGE_SIZE,
     (servicePresetPage + 1) * SERVICE_PRESETS_PAGE_SIZE,
   );
@@ -554,7 +574,7 @@ function RegisterSalonContent() {
             role="group"
             aria-label={t('business.register.progressLabel')}
           >
-            <div className="flex w-[min(64%,18rem)] gap-1">
+            <div className="register-step-progress__track flex gap-1">
               {STEP_ORDER.map((item, index) => (
                 <span
                   key={item}
@@ -968,6 +988,17 @@ function RegisterSalonContent() {
                     <Button type="submit" size="lg" fullWidth>
                       {t('business.register.next')}
                     </Button>
+                    <div className="flex justify-start">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="md"
+                        startIcon={<ArrowRight className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
+                        onClick={() => setStep('category')}
+                      >
+                        {t('business.register.back')}
+                      </Button>
+                    </div>
                   </form>
                 )}
 
@@ -1004,19 +1035,17 @@ function RegisterSalonContent() {
                             onChange={(e) => setSvcName(e.target.value)}
                           />
                         </div>
-                        <TextField
-                          id="svcDuration"
+                        <DurationStepper
                           label={
                             <span className="whitespace-nowrap">
                               {t('business.register.services.durationLabel')}
                             </span>
                           }
-                          inputMode="numeric"
-                          dir="ltr"
-                          placeholder="۳۰"
-                          containerClassName="min-w-0 w-full"
+                          ariaLabel={t('business.register.services.durationLabel')}
                           value={svcDuration}
-                          onChange={(e) => setSvcDuration(e.target.value)}
+                          onChange={setSvcDuration}
+                          allowEmpty
+                          className="min-w-0 w-full"
                         />
                         <TextField
                           id="svcPrice"
@@ -1066,14 +1095,14 @@ function RegisterSalonContent() {
                         </span>
                       </div>
                       <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                        {visibleServicePresets.map((presetKey) => {
-                          const name = t(`business.register.services.presets.${presetKey}`);
+                        {visibleServicePresets.map((preset) => {
+                          const name = preset.label;
                           const checked = services.some(
-                            (service) => service.key === `preset-${presetKey}`,
+                            (service) => service.key === `preset-${preset.key}`,
                           );
                           return (
                             <label
-                              key={presetKey}
+                              key={preset.key}
                               className={cn(
                                 'flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm',
                                 checked
@@ -1084,7 +1113,7 @@ function RegisterSalonContent() {
                               <input
                                 type="checkbox"
                                 checked={checked}
-                                onChange={() => handleTogglePresetService(presetKey)}
+                                onChange={() => handleTogglePresetService(preset)}
                                 className="size-4 accent-primary"
                               />
                               <span>{name}</span>
@@ -1149,19 +1178,16 @@ function RegisterSalonContent() {
                                       )
                                     }
                                   />
-                                  <TextField
-                                    id={`edit-svc-duration-${s.key}`}
+                                  <DurationStepper
                                     label={t('business.register.services.durationLabel')}
-                                    inputMode="numeric"
-                                    dir="ltr"
+                                    ariaLabel={t('business.register.services.durationLabel')}
                                     value={editingService.duration}
-                                    onChange={(event) =>
+                                    onChange={(value) =>
                                       setEditingService((current) =>
-                                        current
-                                          ? { ...current, duration: event.target.value }
-                                          : current,
+                                        current ? { ...current, duration: value } : current,
                                       )
                                     }
+                                    allowEmpty
                                   />
                                   <TextField
                                     id={`edit-svc-price-${s.key}`}
@@ -1602,6 +1628,11 @@ interface BusinessProfile {
   specialties: readonly { key: string; label: string }[];
 }
 
+interface SuggestedService {
+  key: string;
+  label: string;
+}
+
 const BUSINESS_PROFILES: readonly BusinessProfile[] = [
   {
     key: 'hair_salon',
@@ -1692,8 +1723,16 @@ function specialtyLabels(categories: string[], keys: string[]): string {
   return labels.join('، ') || '—';
 }
 
-/** Quick-add service presets (keys map to `business.register.services.presets.*`). */
-const SERVICE_PRESETS = ['haircut', 'color', 'highlights', 'blowout', 'makeup', 'nails'] as const;
+/** Quick-add service presets adapt to every selected business profile. */
+const SERVICE_PRESETS_BY_PROFILE: Record<string, readonly string[]> = {
+  hair_salon: ['haircut', 'color', 'highlights', 'blowout'],
+  barber: ['mens_haircut', 'beard', 'fade'],
+  nails: ['manicure', 'pedicure', 'nail_art', 'extensions'],
+  brows_lashes: ['brows', 'lash_lift', 'lash_extension'],
+  makeup: ['makeup', 'bridal_makeup', 'skin_prep'],
+  spa: ['massage', 'facial', 'spa'],
+  tattoo: ['tattoo', 'microblading', 'piercing'],
+};
 const SERVICE_PRESETS_PAGE_SIZE = 4;
 const ONBOARDING_SERVICE_PAGE_SIZE = 5;
 

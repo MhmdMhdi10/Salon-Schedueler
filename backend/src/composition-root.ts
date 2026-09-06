@@ -16,13 +16,14 @@ import {
   MockGateway,
   type PaymentGateway,
 } from './payment/services/index.js';
-import { NotificationService } from './notifications/index.js';
+import { CustomerNotificationService, NotificationService } from './notifications/index.js';
 import { NotificationSettingsService } from './notifications/notification-settings.service.js';
 import {
   KavenegarSmsAdapter,
   SmsIrAdapter,
   MelliPayamakOtpAdapter,
   MelliPayamakSharedOtpAdapter,
+  MelliPayamakSimpleAdapter,
   PusheAdapter,
   NajvaAdapter,
   BotChannel,
@@ -53,6 +54,8 @@ import { BookingAbuseGuard } from './security/booking-abuse-guard.js';
 import { PlatformAdminService } from './platform-admin/services/index.js';
 import { SalonClientService } from './customer/services/index.js';
 import { ReferralService } from './referral/services/index.js';
+import { CardOrderService } from './card-order/services/index.js';
+import { SupportTicketService } from './support/index.js';
 
 // Provider ports + adapters.
 import type { SmsProvider } from './auth/sms-provider.interface.js';
@@ -141,6 +144,12 @@ function selectSmsProvider(config: AppConfig): SmsProvider {
       lineNumber: config.smsirLineNumber,
     });
   }
+  if (config.melliPayamakSimpleUrl) {
+    return new MelliPayamakSimpleAdapter({
+      endpointUrl: config.melliPayamakSimpleUrl,
+      from: config.melliPayamakSimpleFrom,
+    });
+  }
   return new DevLogSmsProvider();
 }
 
@@ -153,6 +162,12 @@ function selectOtpProvider(
   config: AppConfig,
   sharedTemplateProvider?: MelliPayamakSharedOtpAdapter,
 ): OtpProvider | undefined {
+  // Development login must remain usable when production provider credentials
+  // happen to be present in a local .env file. Real delivery is an explicit
+  // opt-in so local OTPs use the dev provider and autofill path by default.
+  if (config.nodeEnv !== 'production' && !config.devUseRealOtp) {
+    return undefined;
+  }
   if (sharedTemplateProvider) {
     return sharedTemplateProvider;
   }
@@ -255,6 +270,10 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
 
   // External providers / gateways.
   const smsProvider = selectApiSmsProvider(config);
+  const authSmsProvider =
+    config.nodeEnv !== 'production' && !config.devUseRealOtp
+      ? new DevLogSmsProvider()
+      : smsProvider;
   const sharedTemplateProvider = config.melliPayamakUrl
     ? new MelliPayamakSharedOtpAdapter({
         endpointUrl: config.melliPayamakUrl,
@@ -274,7 +293,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
   const cancellationService = new CancellationService(prisma, paymentService);
 
   // Auth.
-  const authService = new AuthService(prisma, smsProvider, {
+  const authService = new AuthService(prisma, authSmsProvider, {
     jwtAccessSecret: config.jwtAccessSecret,
     jwtRefreshSecret: config.jwtRefreshSecret,
     otpWindowSeconds: config.otpWindowSeconds,
@@ -282,6 +301,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
   }, otpProvider);
 
   // Port-based services with Prisma-backed adapters.
+  const customerNotificationService = new CustomerNotificationService(prisma);
   const notificationService = new NotificationService(
     smsProvider,
     pushProvider,
@@ -289,6 +309,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     {
       defaultReminderLeadTimeMinutes: config.reminderLeadTimeMinutes,
       templateProvider: sharedTemplateProvider,
+      customerNotification: customerNotificationService,
     },
   );
   const notificationSettings = new NotificationSettingsService(prisma);
@@ -358,6 +379,7 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     schedulingEngine,
     notificationService,
     inboxService: salonInboxService,
+    cancellationRecorder: cancellationService,
   });
   const cancellationFlow = new CancellationFlow({
     cancellationService,
@@ -377,6 +399,8 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
   const bookingAbuseGuard = new BookingAbuseGuard(prisma);
   const platformAdminService = new PlatformAdminService(prisma);
   const referralService = new ReferralService(prisma, { publicBaseUrl: config.publicBaseUrl });
+  const cardOrderService = new CardOrderService(prisma);
+  const supportTicketService = new SupportTicketService(prisma);
 
   // Conversational in-chat booking (task 7.2): a BotSession-backed state machine
   // (service → date → slot → confirm, with an in-chat OTP sub-flow when the chat
@@ -425,6 +449,9 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     bookingAbuseGuard,
     platformAdminService,
     referralService,
+    cardOrderService,
+    supportTicketService,
+    customerNotificationService,
   };
 
   return { prisma, services, config };

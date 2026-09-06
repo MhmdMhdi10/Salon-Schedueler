@@ -53,6 +53,9 @@ export function mapDomainError(err: unknown): MappedError {
   if (domainCode === 'APPOINTMENT_NOT_FOUND' || domainCode === 'SALON_NOT_FOUND') {
     return { status: 404, code: domainCode };
   }
+  if (domainCode === 'REFUND_PROOF_REQUIRED') {
+    return { status: 400, code: domainCode };
+  }
 
   if (err instanceof ReferralConflictError) {
     return { status: 409, code: 'REFERRAL_EXISTS' };
@@ -68,6 +71,8 @@ export function mapDomainError(err: unknown): MappedError {
         return { status: 400, code: 'INVALID_IDEMPOTENCY_KEY' };
       case 'DUPLICATE_BOOKING':
         return { status: 409, code: 'DUPLICATE_BOOKING' };
+      case 'CUSTOMER_BLOCKED':
+        return { status: 403, code: 'CUSTOMER_BLOCKED' };
     }
   }
 
