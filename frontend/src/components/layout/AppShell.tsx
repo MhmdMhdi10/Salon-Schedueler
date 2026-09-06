@@ -4,6 +4,11 @@ import { LogIn } from 'lucide-react';
 import { BrandLogo } from '../brand';
 import { ThemeToggle } from '../theme/ThemeToggle';
 import { PanelHeader } from './PanelHeader';
+import {
+  PanelOnboardingGuide,
+  useFirstVisitPanelGuide,
+  type PanelGuideStep,
+} from './PanelOnboardingGuide';
 import { toPersianDigits } from '../ui/Num';
 import { cn } from '../ui/cn';
 
@@ -13,6 +18,34 @@ export const MAIN_CONTENT_ID = 'main-content';
 const ENAMAD_CODE = '9VvZMqffMTky88WMBv1WJpNzNafnVCyo';
 const ENAMAD_LINK = `https://trustseal.enamad.ir/?id=7396256&Code=${ENAMAD_CODE}`;
 const ENAMAD_LOGO = `https://trustseal.enamad.ir/logo.aspx?id=7396256&Code=${ENAMAD_CODE}`;
+
+const CUSTOMER_GUIDE_STEPS: readonly PanelGuideStep[] = [
+  {
+    id: 'customer-workspace',
+    title: 'حساب و پنل‌ها',
+    body: 'رزروهای شخصی‌ات از این حساب جداست و اگر عضو تیم یا صاحب سالن باشی، پنل سالن هم از همین‌جا در دسترس است.',
+  },
+  {
+    id: 'customer-upcoming',
+    title: 'نوبت‌های پیش‌رو',
+    body: 'نزدیک‌ترین نوبت‌ها، وضعیت تأیید و پیشنهاد تغییر زمان را از این بخش دنبال کن.',
+  },
+  {
+    id: 'customer-calendar',
+    title: 'تقویم من',
+    body: 'با تقویم ایرانی روزهای دارای نوبت را پیدا کن و جزئیات برنامهٔ هر روز را ببین.',
+  },
+  {
+    id: 'customer-history',
+    title: 'سوابق نوبت‌ها',
+    body: 'نوبت‌های انجام‌شده و لغوشده برای مراجعه و پیگیری بعدی در سوابق باقی می‌مانند.',
+  },
+  {
+    id: 'customer-salons',
+    title: 'سالن‌های من',
+    body: 'سالن‌هایی که ذخیره کرده‌ای یا قبلاً از آن‌ها نوبت گرفته‌ای اینجا آمادهٔ رزرو دوباره‌اند.',
+  },
+] as const;
 
 // Preserve eNamad's provider-supplied custom `code` attribute in rendered HTML.
 const enamadSealImageProps = {
@@ -66,6 +99,10 @@ export interface AppShellProps {
 export function AppShell({ children, className, headerVariant }: AppShellProps) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
+  const isCustomerPanel = pathname === '/account';
+  const customerGuide = useFirstVisitPanelGuide(
+    isCustomerPanel ? 'ara:customer-guide:v1' : null,
+  );
 
   const derived: AppShellHeaderVariant =
     pathname === '/'
@@ -102,7 +139,7 @@ export function AppShell({ children, className, headerVariant }: AppShellProps) 
       {variant === 'business' ? (
         <BusinessHeader />
       ) : variant === 'default' ? (
-        <DefaultHeader />
+        <DefaultHeader onHelp={isCustomerPanel ? customerGuide.replay : undefined} />
       ) : null}
 
       {isBare && pathname !== '/business/register' && (
@@ -116,6 +153,11 @@ export function AppShell({ children, className, headerVariant }: AppShellProps) 
       </main>
 
       {isBare || hideFooter ? null : <PublicFooter />}
+      <PanelOnboardingGuide
+        open={isCustomerPanel && customerGuide.open}
+        onClose={customerGuide.close}
+        steps={CUSTOMER_GUIDE_STEPS}
+      />
     </div>
   );
 }
@@ -126,8 +168,8 @@ export default AppShell;
  * Compact inner-page header. Marketplace category navigation is intentionally
  * absent during the owner-first launch.
  */
-function DefaultHeader() {
-  return <PanelHeader surface="customer" />;
+function DefaultHeader({ onHelp }: { onHelp?: () => void }) {
+  return <PanelHeader surface="customer" onHelp={onHelp} />;
 }
 
 /**

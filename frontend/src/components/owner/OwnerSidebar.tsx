@@ -90,6 +90,7 @@ export function OwnerSidebar({
                 to={item.to}
                 aria-label={collapsed ? label : undefined}
                 aria-current={isActive ? 'page' : undefined}
+                data-panel-guide={item.guideId}
                 className={cn(
                   'group relative flex items-center gap-3 rounded-md no-underline',
                   'min-h-[44px] min-w-[44px] px-3 py-2',

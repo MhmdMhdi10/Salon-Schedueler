@@ -79,6 +79,8 @@ export class NullInboxHub implements InboxHub {
  * persisted row. The whole transaction lives on the HTTP process for now.
  */
 export class SalonInboxService {
+  private readonly inFlightDedupeKeys = new Set<string>();
+
   constructor(
     private readonly prisma: PrismaClient,
     private readonly hub: InboxHub = new NullInboxHub(),
@@ -139,6 +141,44 @@ export class SalonInboxService {
       // swallow — realtime is best-effort; row is durable for inbox list
     }
     return row;
+  }
+
+  /**
+   * Check whether a durable notification with the supplied dedupe key exists.
+   * Dedupe keys live in the structured payload so this remains backwards
+   * compatible with existing inbox rows and requires no schema migration.
+   */
+  async hasReminder(
+    salonId: string,
+    dedupeKey: string,
+    type = 'subscription.expiring',
+  ): Promise<boolean> {
+    const row = await this.prisma.salonNotification.findFirst({
+      where: {
+        salonId,
+        type,
+        payload: { path: ['dedupeKey'], equals: dedupeKey },
+      },
+      select: { id: true },
+    });
+    return Boolean(row);
+  }
+
+  /**
+   * Persist a notification once per dedupe key. The in-process lock prevents
+   * overlapping cron ticks from racing; the durable lookup protects restarts.
+   */
+  async emitOnce(input: CreateInboxNotificationInput, dedupeKey: string): Promise<boolean> {
+    const key = `${input.salonId}:${input.type}:${dedupeKey}`;
+    if (this.inFlightDedupeKeys.has(key)) return false;
+    this.inFlightDedupeKeys.add(key);
+    try {
+      if (await this.hasReminder(input.salonId, dedupeKey, input.type)) return false;
+      await this.emit(input);
+      return true;
+    } finally {
+      this.inFlightDedupeKeys.delete(key);
+    }
   }
 
   /**

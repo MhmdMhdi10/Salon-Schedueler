@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { EmptyDto, IdParamDto } from '../../common/dto/index.js';
 
 export const SubscriptionPurchaseDto = z
-  .object({ salonId: z.string().trim().min(1), plan: z.enum(['monthly', 'quarterly', 'annual']) })
+  .object({ salonId: z.string().trim().min(1), plan: z.enum(['monthly', 'quarterly']) })
   .passthrough();
 export const SubscriptionIdDto = IdParamDto;
 export const SubscriptionCallbackQueryDto = z

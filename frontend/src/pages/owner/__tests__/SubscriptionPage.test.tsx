@@ -53,7 +53,6 @@ vi.mock('../../../api/client', () => {
 import { OwnerSubscriptionPage } from '../SubscriptionPage';
 
 const PLANS = [
-  { kind: 'annual', durationDays: 365, priceRial: 60000000 },
   { kind: 'monthly', durationDays: 30, priceRial: 6000000 },
   { kind: 'quarterly', durationDays: 90, priceRial: 16000000 },
 ];
@@ -180,10 +179,10 @@ describe('OwnerSubscriptionPage — plan selection (R3.1, R3.2)', () => {
     // Monthly price 600,000 Toman → grouped Persian digits.
     expect(plans).toHaveTextContent('۶۰۰٬۰۰۰');
     expect(plans).toHaveTextContent('تومان');
-    // All three paid plans are present (trial is excluded).
+    // Only monthly + quarterly paid plans are present (trial/annual excluded).
     expect(plans).toHaveTextContent('ماهانه');
     expect(plans).toHaveTextContent('سه‌ماهه');
-    expect(plans).toHaveTextContent('سالانه');
+    expect(plans).not.toHaveTextContent('سالانه');
   });
 
   it('gates the purchase CTA until a plan is selected', async () => {
@@ -228,13 +227,13 @@ describe('OwnerSubscriptionPage — purchase redirect (R3.6)', () => {
     renderPage();
     await screen.findByTestId('subscription-plans');
 
-    fireEvent.click(screen.getByRole('radio', { name: /سالانه/ }));
+    fireEvent.click(screen.getByRole('radio', { name: /سه‌ماهه/ }));
     fireEvent.click(screen.getByTestId('subscription-purchase'));
 
     await waitFor(() =>
       expect(initiatePurchase).toHaveBeenCalledWith(
         '11111111-1111-1111-1111-111111111111',
-        'annual',
+        'quarterly',
       ),
     );
     await waitFor(() => expect(assigned).toContain('https://zarinpal.example/pay/sub-123'));
@@ -258,6 +257,39 @@ describe('OwnerSubscriptionPage — purchase redirect (R3.6)', () => {
 
     expect(await screen.findByTestId('subscription-purchase-error')).toBeInTheDocument();
     expect(screen.queryByTestId('subscription-redirecting')).not.toBeInTheDocument();
+  });
+
+  it('disables plans that would move expiry beyond three months', async () => {
+    getStatus.mockResolvedValue({
+      status: 'active',
+      planKind: 'monthly',
+      expiresAt: new Date(Date.now() + 70 * 86_400_000).toISOString(),
+    });
+    renderPage();
+
+    await screen.findByTestId('subscription-plans');
+    expect(screen.getByRole('radio', { name: /ماهانه/ })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: /سه‌ماهه/ })).toBeDisabled();
+    expect(screen.getByTestId('subscription-purchase')).toBeDisabled();
+    expect(screen.getByTestId('subscription-window-hint')).toHaveTextContent(
+      'سقف ۳ ماه آینده',
+    );
+  });
+
+  it('keeps only a plan that fits remaining capacity in the three-month window', async () => {
+    getStatus.mockResolvedValue({
+      status: 'active',
+      planKind: 'monthly',
+      expiresAt: new Date(Date.now() + 60 * 86_400_000).toISOString(),
+    });
+    renderPage();
+
+    await screen.findByTestId('subscription-plans');
+    expect(screen.getByRole('radio', { name: /ماهانه/ })).toBeEnabled();
+    expect(screen.getByRole('radio', { name: /سه‌ماهه/ })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('radio', { name: /ماهانه/ }));
+    expect(screen.getByTestId('subscription-purchase')).toBeEnabled();
   });
 });
 

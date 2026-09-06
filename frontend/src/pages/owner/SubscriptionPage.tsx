@@ -50,8 +50,8 @@ import { easings } from '../../lib/motion-variants';
  *     `expired`) from `subscriptionApi.getStatus`, shown with an **icon + text**
  *     `Badge` (never color-only, §3) and the expiry rendered as a Jalali date in
  *     Persian digits (`<JalaliDate>`, §11).
- *  2. **Plan selection (R3.1, R3.2):** the configurable, IRR-priced paid plans
- *     (monthly/quarterly/annual) as a `RadioGroup`; prices use `<Money>` (Rial,
+ *  2. **Plan selection (R3.1, R3.2):** the configurable, IRR-priced monthly
+ *     and quarterly plans as a `RadioGroup`; prices use `<Money>` (Rial,
  *     Persian digits, grouped) and durations `<Num>`.
  *  3. **Purchase (R3.6):** on confirm we call `initiatePurchase` and hand off to
  *     the returned gateway URL — success is never faked, money flows are
@@ -67,7 +67,9 @@ import { easings } from '../../lib/motion-variants';
  */
 
 /** The paid plans the owner can buy/renew with, in ascending duration order. */
-const PAID_PLAN_ORDER: SubscriptionPlanKind[] = ['monthly', 'quarterly', 'annual'];
+const PAID_PLAN_ORDER: SubscriptionPlanKind[] = ['monthly', 'quarterly'];
+const MAX_SUBSCRIPTION_WINDOW_DAYS = 90;
+const MS_PER_DAY = 86_400_000;
 
 type LoadStatus = 'loading' | 'success' | 'error';
 
@@ -103,6 +105,16 @@ function daysRemaining(expiresAt: string, status: SubscriptionStatus): string {
   const remaining = Math.ceil((Date.parse(expiresAt) - Date.now()) / 86_400_000);
   if (!Number.isFinite(remaining) || remaining <= 0) return 'تا پایان امروز';
   return status === 'grace' ? `${remaining.toLocaleString('fa-IR')} روز مهلت تمدید` : `${remaining.toLocaleString('fa-IR')} روز تا پایان`;
+}
+
+/** A renewal is available only when its resulting expiry stays within ۹۰ days. */
+function isPlanWithinRenewalWindow(plan: SubscriptionPlan, expiresAt: string): boolean {
+  const now = Date.now();
+  const parsedExpiry = Date.parse(expiresAt);
+  const currentExpiry = Number.isFinite(parsedExpiry) ? parsedExpiry : now;
+  const renewalBase = Math.max(currentExpiry, now);
+  const ceiling = now + MAX_SUBSCRIPTION_WINDOW_DAYS * MS_PER_DAY;
+  return renewalBase + plan.durationDays * MS_PER_DAY <= ceiling;
 }
 
 /** Layout-matched skeleton shown while the subscription data loads (§6/§12). */
@@ -226,11 +238,13 @@ function SubscriptionManagementPage() {
       .then(([statusRes, plansRes]) => {
         if (!active) return;
         setSubscription(statusRes);
-        // Only paid plans are purchasable; keep them in a stable display order.
+        // Keep only the two plans currently purchasable; keep display order
+        // stable even if a legacy/older backend still returns annual.
         const paid = plansRes.plans
-          .filter((p) => p.kind !== 'trial')
+          .filter((p) => PAID_PLAN_ORDER.includes(p.kind))
           .sort((a, b) => PAID_PLAN_ORDER.indexOf(a.kind) - PAID_PLAN_ORDER.indexOf(b.kind));
         setPlans(paid);
+        setSelectedPlan(null);
         setStatus('success');
       })
       .catch((err: unknown) => {
@@ -250,6 +264,14 @@ function SubscriptionManagementPage() {
   const purchaseLabel = isExpired
     ? t('owner.subscription.renewCta')
     : t('owner.subscription.purchaseCta');
+  const planAvailability = plans.map((plan) => ({
+    plan,
+    available: subscription ? isPlanWithinRenewalWindow(plan, subscription.expiresAt) : false,
+  }));
+  const selectedPlanIsAvailable = planAvailability.some(
+    ({ plan, available }) => plan.kind === selectedPlan && available,
+  );
+  const hasAvailablePlan = planAvailability.some(({ available }) => available);
 
   const handlePurchase = async () => {
     if (!selectedPlan) return;
@@ -267,7 +289,11 @@ function SubscriptionManagementPage() {
   };
 
   return (
-    <section data-testid="owner-subscription-page" className="flex flex-col gap-6">
+    <section
+      data-testid="owner-subscription-page"
+      data-panel-guide="owner-subscription"
+      className="flex flex-col gap-6"
+    >
       <SeoHead title={t('owner.subscription.title')} />
 
       <header className="flex flex-col gap-2">
@@ -383,9 +409,13 @@ function SubscriptionManagementPage() {
                   label={t('owner.subscription.plansLabel')}
                   labelHidden
                   value={selectedPlan ?? ''}
-                  onValueChange={(value) => setSelectedPlan(value as SubscriptionPlanKind)}
-                  options={plans.map((plan) => ({
+                  onValueChange={(value) => {
+                    const option = planAvailability.find(({ plan }) => plan.kind === value);
+                    if (option?.available) setSelectedPlan(value as SubscriptionPlanKind);
+                  }}
+                  options={planAvailability.map(({ plan, available }) => ({
                     value: plan.kind,
+                    disabled: !available,
                     label: (
                       <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                         <span className="font-medium text-text">
@@ -395,13 +425,30 @@ function SubscriptionManagementPage() {
                       </span>
                     ),
                     helperText: (
-                      <span className="flex items-center gap-1">
-                        <Num value={plan.durationDays} />
-                        <span>{t('owner.subscription.durationUnit')}</span>
+                      <span className="flex flex-wrap items-center gap-x-1 gap-y-0.5">
+                        <span className="flex items-center gap-1">
+                          <Num value={plan.durationDays} />
+                          <span>{t('owner.subscription.durationUnit')}</span>
+                        </span>
+                        {!available && (
+                          <span className="text-warning">
+                            {t('owner.subscription.planOutsideWindow')}
+                          </span>
+                        )}
                       </span>
                     ),
                   }))}
                 />
+
+                <p
+                  data-testid="subscription-window-hint"
+                  className="text-xs leading-6 text-muted"
+                  role={!hasAvailablePlan ? 'alert' : undefined}
+                >
+                  {hasAvailablePlan
+                    ? t('owner.subscription.maxWindowHint')
+                    : t('owner.subscription.maxWindowReached')}
+                </p>
 
                 {purchaseStatus === 'redirecting' ? (
                   <p
@@ -428,7 +475,7 @@ function SubscriptionManagementPage() {
                       data-testid="subscription-purchase"
                       variant="primary"
                       startIcon={<CreditCard className="h-4 w-4" />}
-                      disabled={!selectedPlan}
+                      disabled={!selectedPlan || !selectedPlanIsAvailable}
                       loading={purchaseStatus === 'submitting'}
                       onClick={handlePurchase}
                       className="self-start"

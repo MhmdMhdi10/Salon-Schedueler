@@ -97,13 +97,14 @@ export function PanelHeader({ surface, brandLabel, themeControl, onSignOut, onHe
         </nav>
 
         <div className="flex shrink-0 items-center gap-2">
-          {isOwnerSurface && onHelp && (
+          {onHelp && (
             <Button
               variant="ghost"
               size="md"
               startIcon={<CircleHelp className="h-4 w-4" aria-hidden="true" />}
               onClick={onHelp}
               aria-label="راهنمای پنل"
+              data-testid="panel-guide-trigger"
               className="shrink-0 !px-1 sm:!px-3"
             >
               <span className="hidden sm:inline">راهنما</span>

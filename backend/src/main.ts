@@ -63,6 +63,8 @@ function bootstrap(): void {
     : startNotificationCron(services.notificationService, services.cancellationFlow, {
         intervalMs: config.reminderIntervalMs,
         reminderLeadTimeMinutes: config.reminderLeadTimeMinutes,
+        subscriptionReminderTask: (now) =>
+          services.subscriptionService.dispatchExpiryReminders(services.salonInboxService, now),
       });
 
   server.listen(config.port, () => {

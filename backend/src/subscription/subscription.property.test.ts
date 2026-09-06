@@ -139,6 +139,14 @@ function createMockPrisma() {
       async findUnique({ where }: { where: { id: string } }): Promise<any> {
         return payments.get(where.id) ?? null;
       },
+      async findFirst({ where }: { where: { subscriptionId?: string; status?: string; authority?: string } }): Promise<any> {
+        return [...payments.values()].find(
+          (payment) =>
+            (where.subscriptionId === undefined || payment.subscriptionId === where.subscriptionId) &&
+            (where.status === undefined || payment.status === where.status) &&
+            (where.authority === undefined || payment.authority === where.authority),
+        ) ?? null;
+      },
       async update({
         where,
         data,
@@ -254,7 +262,7 @@ describe('Feature: salon-platform-expansion, Property 6: callback idempotency', 
   it('processing the same SubscriptionPayment twice never applies activation/extension twice', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.constantFrom<'monthly' | 'quarterly' | 'annual'>('monthly', 'quarterly', 'annual'),
+        fc.constantFrom<'monthly' | 'quarterly'>('monthly', 'quarterly'),
         fc.integer({ min: 0, max: 100 }), // days after trial start that the callback fires
         async (plan, callbackOffsetDays) => {
           const prisma = createMockPrisma();

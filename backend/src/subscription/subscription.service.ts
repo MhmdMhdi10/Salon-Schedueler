@@ -3,6 +3,10 @@ import type { PaymentService } from '../payment/index.js';
 import {
   buildPlans,
   DEFAULT_GRACE_DAYS,
+  MAX_SUBSCRIPTION_WINDOW_DAYS,
+  PURCHASABLE_SUBSCRIPTION_PLAN_KINDS,
+  SUBSCRIPTION_REMINDER_DAYS,
+  isPurchasableSubscriptionPlan,
   type PlanDefinition,
   type SubscriptionPlanKind,
   type SubscriptionPrices,
@@ -79,6 +83,45 @@ export interface SubscriptionServiceOptions {
   callbackPath?: string;
 }
 
+/** Stable errors returned when a subscription purchase cannot be accepted. */
+export type SubscriptionErrorCode =
+  | 'SUBSCRIPTION_PLAN_UNAVAILABLE'
+  | 'SUBSCRIPTION_WINDOW_LIMIT_REACHED'
+  | 'SUBSCRIPTION_PAYMENT_PENDING';
+
+export class SubscriptionDomainError extends Error {
+  constructor(public readonly code: SubscriptionErrorCode) {
+    super(code);
+    this.name = 'SubscriptionDomainError';
+  }
+}
+
+/** Minimal inbox port used by the subscription reminder dispatcher. */
+export interface SubscriptionReminderInbox {
+  emit(input: {
+    salonId: string;
+    audience: 'owner';
+    type: 'subscription.expiring';
+    title: string;
+    body: string;
+    payload: Record<string, unknown>;
+  }): Promise<unknown>;
+  /** Optional atomic-ish dedupe helper supplied by the durable salon inbox. */
+  emitOnce?: (
+    input: {
+      salonId: string;
+      audience: 'owner';
+      type: 'subscription.expiring';
+      title: string;
+      body: string;
+      payload: Record<string, unknown>;
+    },
+    dedupeKey: string,
+  ) => Promise<boolean>;
+  /** Compatibility fallback for simple test/adapter implementations. */
+  hasReminder?: (salonId: string, dedupeKey: string, type?: string) => Promise<boolean>;
+}
+
 /**
  * Minimal view of the Prisma delegate this service needs. Declared locally
  * because the checked-in generated Prisma client can be stale and may not yet
@@ -88,6 +131,7 @@ export interface SubscriptionServiceOptions {
 interface SubscriptionDelegate {
   create(args: { data: Record<string, unknown> }): Promise<SubscriptionRecord>;
   findUnique(args: { where: { salonId: string } }): Promise<SubscriptionRecord | null>;
+  findMany(args: { where: Record<string, unknown> }): Promise<SubscriptionRecord[]>;
   update(args: {
     where: { id: string };
     data: Record<string, unknown>;
@@ -98,7 +142,7 @@ interface SubscriptionDelegate {
 interface SubscriptionPaymentDelegate {
   create(args: { data: Record<string, unknown> }): Promise<SubscriptionPaymentRecord>;
   findUnique(args: { where: { id: string } }): Promise<SubscriptionPaymentRecord | null>;
-  findFirst(args: { where: Record<string, unknown> }): Promise<SubscriptionPaymentRecord | null>;
+  findFirst?(args: { where: Record<string, unknown> }): Promise<SubscriptionPaymentRecord | null>;
   update(args: {
     where: { id: string };
     data: Record<string, unknown>;
@@ -144,9 +188,29 @@ export class SubscriptionService {
     return Object.values(this.plans);
   }
 
+  /** Only plans that can be purchased now; legacy annual definitions stay readable. */
+  getPurchasablePlans(): PlanDefinition[] {
+    return PURCHASABLE_SUBSCRIPTION_PLAN_KINDS.map((kind) => this.plans[kind]);
+  }
+
   /** Find a subscription payment by its gateway authority string. */
   async findPaymentByAuthority(authority: string): Promise<SubscriptionPaymentRecord | null> {
-    return this.subscriptionPayments.findFirst({ where: { authority } });
+    const findFirst = this.subscriptionPayments.findFirst;
+    return findFirst ? findFirst.call(this.subscriptionPayments, { where: { authority } }) : null;
+  }
+
+  /** Release a gateway checkout that returned a definitive failure. */
+  async markPaymentFailedByAuthority(authority: string): Promise<void> {
+    const findFirst = this.subscriptionPayments.findFirst;
+    if (!findFirst) return;
+    const payment = await findFirst.call(this.subscriptionPayments, {
+      where: { authority, status: 'pending' },
+    });
+    if (!payment) return;
+    await this.subscriptionPayments.update({
+      where: { id: payment.id },
+      data: { status: 'failed' },
+    });
   }
 
   /** Look up a single plan definition by kind. */
@@ -232,9 +296,10 @@ export class SubscriptionService {
   async initiatePurchase(
     salonId: string,
     plan: SubscriptionPlanKind,
+    now: Date = new Date(),
   ): Promise<{ redirectUrl: string }> {
-    if (plan === 'trial') {
-      throw new Error('The trial plan cannot be purchased');
+    if (!isPurchasableSubscriptionPlan(plan)) {
+      throw new SubscriptionDomainError('SUBSCRIPTION_PLAN_UNAVAILABLE');
     }
 
     const subscription = await this.subscriptions.findUnique({ where: { salonId } });
@@ -242,7 +307,31 @@ export class SubscriptionService {
       throw new Error(`No subscription found for salon ${salonId}`);
     }
 
+    // Do not open a second checkout while the first gateway payment is still
+    // pending. Without this guard, two quarter payments could be made before
+    // either callback arrives; the expiry cap would protect dates but could
+    // leave the owner paying twice for one usable window.
+    const findFirst = this.subscriptionPayments.findFirst;
+    const pendingPayment = findFirst
+      ? await findFirst.call(this.subscriptionPayments, {
+          where: { subscriptionId: subscription.id, status: 'pending' },
+        })
+      : null;
+    if (pendingPayment) {
+      // Keep the lock until the gateway sends a definitive callback. Releasing
+      // it by timer could allow a late successful payment to be charged twice.
+      throw new SubscriptionDomainError('SUBSCRIPTION_PAYMENT_PENDING');
+    }
+
     const planDef = this.plans[plan];
+    const proposedExpiry = computeRenewedExpiryWithinLimit(
+      subscription.expiresAt,
+      planDef.durationDays,
+      now,
+    );
+    if (!proposedExpiry) {
+      throw new SubscriptionDomainError('SUBSCRIPTION_WINDOW_LIMIT_REACHED');
+    }
     const gatewayName = this.paymentService.getGatewayName();
 
     // Create the pending payment record (amount from configured plan price).
@@ -338,7 +427,11 @@ export class SubscriptionService {
     });
 
     const planDef = this.plans[payment.planKind];
-    const newExpiresAt = computeRenewedExpiry(subscription.expiresAt, planDef.durationDays, now);
+    const newExpiresAt = computeCappedRenewedExpiry(
+      subscription.expiresAt,
+      planDef.durationDays,
+      now,
+    );
     const graceUntil = addDays(newExpiresAt, this.graceDays);
 
     return this.subscriptions.update({
@@ -350,6 +443,84 @@ export class SubscriptionService {
         graceUntil,
       },
     });
+  }
+
+  /**
+   * Find active/trial subscriptions inside the reminder horizon. The query is
+   * intentionally bounded so the cron task remains cheap as the platform grows.
+   */
+  async findSubscriptionsExpiringBy(
+    now: Date = new Date(),
+    maxLeadDays: number = Math.max(...SUBSCRIPTION_REMINDER_DAYS),
+  ): Promise<SubscriptionRecord[]> {
+    return this.subscriptions.findMany({
+      where: {
+        status: { in: ['trial', 'active'] },
+        expiresAt: { gt: now, lte: addDays(now, maxLeadDays) },
+      },
+    });
+  }
+
+  /**
+   * Write at most one durable inbox reminder per checkpoint. Checkpoints are
+   * ۷، ۳ و ۱ روز before expiry by default; the closest due checkpoint wins when
+   * the scheduler was temporarily offline, preventing a burst of stale notices.
+   */
+  async dispatchExpiryReminders(
+    inbox: SubscriptionReminderInbox,
+    now: Date = new Date(),
+    reminderDays: readonly number[] = SUBSCRIPTION_REMINDER_DAYS,
+  ): Promise<number> {
+    const checkpoints = [...new Set(reminderDays)]
+      .filter((days) => Number.isFinite(days) && days > 0)
+      .sort((a, b) => a - b);
+    if (checkpoints.length === 0) return 0;
+
+    const expiring = await this.findSubscriptionsExpiringBy(now, Math.max(...checkpoints));
+    const results = await Promise.allSettled(
+      expiring.map(async (subscription) => {
+        const expiryMs = subscription.expiresAt.getTime();
+        const nowMs = now.getTime();
+        const due = checkpoints.filter(
+          (days) => nowMs >= expiryMs - days * MS_PER_DAY && nowMs < expiryMs,
+        );
+        if (due.length === 0) return false;
+
+        // Use closest due checkpoint. This makes a delayed scheduler useful
+        // without sending several old reminders in one maintenance pass.
+        const daysBefore = due[0];
+        const dedupeKey = `subscription-expiry:${subscription.id}:${daysBefore}`;
+        const daysText = daysBefore.toLocaleString('fa-IR');
+        const input = {
+          salonId: subscription.salonId,
+          audience: 'owner' as const,
+          type: 'subscription.expiring' as const,
+          title: 'یادآوری تمدید اشتراک',
+          body:
+            daysBefore === 1
+              ? 'اشتراک سالن شما فردا به پایان می‌رسد. برای ادامهٔ دسترسی، اشتراک را تمدید کنید.'
+              : `اشتراک سالن شما ${daysText} روز دیگر به پایان می‌رسد. برای جلوگیری از قطع دسترسی، اشتراک را تمدید کنید.`,
+          payload: {
+            subscriptionId: subscription.id,
+            reminderDaysBefore: daysBefore,
+            expiresAt: subscription.expiresAt.toISOString(),
+            dedupeKey,
+          },
+        };
+
+        if (inbox.emitOnce) return inbox.emitOnce(input, dedupeKey);
+        if (inbox.hasReminder && (await inbox.hasReminder(subscription.salonId, dedupeKey))) {
+          return false;
+        }
+        await inbox.emit(input);
+        return true;
+      }),
+    );
+
+    return results.reduce(
+      (count, result) => count + (result.status === 'fulfilled' && result.value ? 1 : 0),
+      0,
+    );
   }
 
   /**
@@ -386,6 +557,33 @@ export function computeRenewedExpiry(
 ): Date {
   const base = currentExpiresAt.getTime() > now.getTime() ? currentExpiresAt : now;
   return addDays(base, durationDays);
+}
+
+/** Return null when a renewal would pass the rolling three-month ceiling. */
+export function computeRenewedExpiryWithinLimit(
+  currentExpiresAt: Date,
+  durationDays: number,
+  now: Date,
+  maxWindowDays: number = MAX_SUBSCRIPTION_WINDOW_DAYS,
+): Date | null {
+  const renewed = computeRenewedExpiry(currentExpiresAt, durationDays, now);
+  return renewed.getTime() <= addDays(now, maxWindowDays).getTime() ? renewed : null;
+}
+
+/**
+ * Safety net for already-created/concurrent payments. Never extends beyond the
+ * ceiling; never shortens an existing entitlement that was already beyond it.
+ */
+export function computeCappedRenewedExpiry(
+  currentExpiresAt: Date,
+  durationDays: number,
+  now: Date,
+  maxWindowDays: number = MAX_SUBSCRIPTION_WINDOW_DAYS,
+): Date {
+  const renewed = computeRenewedExpiry(currentExpiresAt, durationDays, now);
+  const ceiling = addDays(now, maxWindowDays);
+  if (currentExpiresAt.getTime() > ceiling.getTime()) return currentExpiresAt;
+  return renewed.getTime() > ceiling.getTime() ? ceiling : renewed;
 }
 
 /**

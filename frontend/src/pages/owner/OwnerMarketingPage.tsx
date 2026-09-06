@@ -170,7 +170,11 @@ export function OwnerMarketingPage() {
   };
 
   return (
-    <section data-testid="owner-marketing-page" className="flex flex-col gap-5">
+    <section
+      data-testid="owner-marketing-page"
+      data-panel-guide="owner-marketing"
+      className="flex flex-col gap-5"
+    >
       <SeoHead title="بازاریابی" />
 
       <header className="flex items-start gap-3">

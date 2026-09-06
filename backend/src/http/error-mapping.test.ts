@@ -1,5 +1,6 @@
 import type { Response } from 'express';
 import { sendDomainError } from './error-mapping.js';
+import { SubscriptionDomainError } from '../subscription/subscription.service.js';
 
 function responseStub(): Response {
   return {
@@ -39,5 +40,14 @@ describe('sendDomainError', () => {
     expect(errorSpy).not.toHaveBeenCalled();
     expect(response.status).toHaveBeenCalledWith(500);
     expect(response.json).toHaveBeenCalledWith({ code: 'INTERNAL' });
+  });
+
+  it('maps subscription catalogue and three-month-window errors to stable conflicts', () => {
+    const response = responseStub();
+
+    sendDomainError(response, new SubscriptionDomainError('SUBSCRIPTION_WINDOW_LIMIT_REACHED'));
+
+    expect(response.status).toHaveBeenCalledWith(409);
+    expect(response.json).toHaveBeenCalledWith({ code: 'SUBSCRIPTION_WINDOW_LIMIT_REACHED' });
   });
 });

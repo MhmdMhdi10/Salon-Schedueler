@@ -90,7 +90,11 @@ export function OwnerTransactionsPage() {
   useEffect(load, [salonId, t]);
 
   return (
-    <section data-testid="owner-transactions-page" className="flex flex-col gap-5">
+    <section
+      data-testid="owner-transactions-page"
+      data-panel-guide="owner-transactions"
+      className="flex flex-col gap-5"
+    >
       <SeoHead title={t('owner.transactions.title', { defaultValue: 'تراکنش‌ها' })} />
 
       <header className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">

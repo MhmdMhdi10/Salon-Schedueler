@@ -56,7 +56,7 @@ export function OwnerSetupAlert({ salonId, refreshKey }: { salonId: string; refr
           key: 'services',
           title: 'هنوز سرویسی برای رزرو نداری',
           description: 'حداقل یک خدمت مثل کوتاهی یا اصلاح تعریف کن.',
-          to: '/owner/config#services',
+          to: '/owner/services',
         });
       }
       if (activeStaff.length === 0) {

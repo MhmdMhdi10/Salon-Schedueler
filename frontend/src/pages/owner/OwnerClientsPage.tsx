@@ -110,7 +110,11 @@ export function OwnerClientsPage() {
   };
 
   return (
-    <section data-testid="owner-clients-page" className="flex flex-col gap-5">
+    <section
+      data-testid="owner-clients-page"
+      data-panel-guide="owner-clients"
+      className="flex flex-col gap-5"
+    >
       <SeoHead title="مشتری‌ها" />
 
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

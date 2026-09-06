@@ -650,6 +650,7 @@ describe('Jalali dates', () => {
 
     it('moves an appointment in place without refetching the whole calendar', async () => {
       const start = new Date();
+      start.setDate(start.getDate() + 1);
       start.setHours(10, 0, 0, 0);
       const end = new Date(start.getTime() + 45 * 60_000);
       mockGetCalendar.mockResolvedValue({
@@ -671,6 +672,7 @@ describe('Jalali dates', () => {
         expect(screen.getByTestId('owner-calendar-week')).toBeInTheDocument();
       });
       fireEvent.click(screen.getByRole('tab', { name: /روز/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'بعدی' }));
       await waitFor(() => {
         expect(screen.getByText('زهرا محمدی')).toBeInTheDocument();
       });
@@ -693,6 +695,7 @@ describe('Jalali dates', () => {
 
     it('supports day-view drag and drop without refreshing the calendar', async () => {
       const start = new Date();
+      start.setDate(start.getDate() + 1);
       start.setHours(10, 0, 0, 0);
       const end = new Date(start.getTime() + 45 * 60_000);
       mockGetCalendar.mockResolvedValue({
@@ -714,6 +717,7 @@ describe('Jalali dates', () => {
         expect(screen.getByTestId('owner-calendar-week')).toBeInTheDocument();
       });
       fireEvent.click(screen.getByRole('tab', { name: /روز/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'بعدی' }));
       await waitFor(() => {
         expect(screen.getByRole('article', { name: /کوتاهی مو/ })).toBeInTheDocument();
       });

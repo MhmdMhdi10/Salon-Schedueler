@@ -18,7 +18,7 @@ import { useOwnerContext } from './index';
 
 import './owner-profile.css';
 
-type ProfileSectionKey = 'operations' | 'business' | 'communication';
+type ProfileSectionKey = 'operations' | 'services' | 'business' | 'communication';
 
 interface ProfileSectionDefinition {
   key: ProfileSectionKey;
@@ -33,6 +33,12 @@ const PROFILE_SECTIONS: readonly ProfileSectionDefinition[] = [
     titleKey: 'owner.profile.sections.operations',
     hintKey: 'owner.profile.sections.operationsHint',
     routes: ['/owner/team', '/owner/config', '/owner/qr', '/owner/my-qr'],
+  },
+  {
+    key: 'services',
+    titleKey: 'owner.profile.sections.services',
+    hintKey: 'owner.profile.sections.servicesHint',
+    routes: ['/owner/services'],
   },
   {
     key: 'business',
@@ -51,6 +57,7 @@ const PROFILE_SECTIONS: readonly ProfileSectionDefinition[] = [
 const PROFILE_ITEM_HINTS: Record<string, string> = {
   '/owner/team': 'owner.profile.itemHints.team',
   '/owner/config': 'owner.profile.itemHints.configuration',
+  '/owner/services': 'owner.profile.itemHints.services',
   '/owner/qr': 'owner.profile.itemHints.qr',
   '/owner/my-qr': 'owner.profile.itemHints.myQr',
   '/owner/analytics': 'owner.profile.itemHints.analytics',
@@ -180,6 +187,7 @@ export function OwnerProfilePage() {
     <section
       className="owner-profile-page mx-auto w-full max-w-3xl"
       data-testid="owner-profile-page"
+      data-panel-guide="owner-profile"
       aria-busy={identityLoading}
     >
       <header className="owner-profile-page__intro mb-5">

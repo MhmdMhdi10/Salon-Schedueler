@@ -1,4 +1,10 @@
-import { SubscriptionService, computeEffectiveStatus, computeRenewedExpiry } from './subscription.service';
+import {
+  SubscriptionService,
+  computeCappedRenewedExpiry,
+  computeEffectiveStatus,
+  computeRenewedExpiry,
+  computeRenewedExpiryWithinLimit,
+} from './subscription.service';
 import type { SubscriptionRecord } from './subscription.service';
 import {
   buildPlans,
@@ -55,6 +61,9 @@ function createMockPrisma() {
         if (where.id !== undefined) return row.id === where.id ? row : null;
         return row.salonId === where.salonId ? row : null;
       },
+      async findMany(): Promise<SubscriptionRecord[]> {
+        return row ? [row] : [];
+      },
       async update({
         where,
         data,
@@ -82,6 +91,14 @@ function createMockPrisma() {
       },
       async findUnique({ where }: { where: { id: string } }): Promise<any> {
         return payments.get(where.id) ?? null;
+      },
+      async findFirst({ where }: { where: { subscriptionId?: string; status?: string; authority?: string } }): Promise<any> {
+        return [...payments.values()].find(
+          (payment) =>
+            (where.subscriptionId === undefined || payment.subscriptionId === where.subscriptionId) &&
+            (where.status === undefined || payment.status === where.status) &&
+            (where.authority === undefined || payment.authority === where.authority),
+        ) ?? null;
       },
       async update({
         where,
@@ -292,6 +309,7 @@ describe('plan definitions (R3.1, R3.2)', () => {
     const service = new SubscriptionService(createMockPrisma(), createMockPaymentService(), options);
     expect(service.getPlans()).toHaveLength(4);
     expect(service.getPlan('annual').durationDays).toBe(PLAN_DURATION_DAYS.annual);
+    expect(service.getPurchasablePlans().map((plan) => plan.kind)).toEqual(['monthly', 'quarterly']);
   });
 });
 
@@ -320,6 +338,107 @@ describe('SubscriptionService.initiatePurchase (R3.4, R3.6)', () => {
     await service.startTrial('salon-1', NOW);
 
     await expect(service.initiatePurchase('salon-1', 'trial')).rejects.toThrow();
+  });
+
+  it('rejects purchasing the legacy annual plan', async () => {
+    const { service } = makeService();
+    await service.startTrial('salon-1', NOW);
+
+    await expect(service.initiatePurchase('salon-1', 'annual', NOW)).rejects.toMatchObject({
+      code: 'SUBSCRIPTION_PLAN_UNAVAILABLE',
+    });
+  });
+
+  it('does not start a second checkout while the first payment is pending', async () => {
+    const { payment, service } = makeService();
+    await service.startTrial('salon-1', NOW);
+    await service.initiatePurchase('salon-1', 'monthly', NOW);
+
+    await expect(service.initiatePurchase('salon-1', 'monthly', NOW)).rejects.toMatchObject({
+      code: 'SUBSCRIPTION_PAYMENT_PENDING',
+    });
+    expect(payment.requestCalls).toHaveLength(1);
+  });
+
+  it('allows retry after a failed gateway callback releases the pending checkout', async () => {
+    const { prisma, payment, service } = makeService();
+    await service.startTrial('salon-1', NOW);
+    await service.initiatePurchase('salon-1', 'monthly', NOW);
+
+    await service.markPaymentFailedByAuthority('auth-1');
+    await service.initiatePurchase('salon-1', 'monthly', NOW);
+
+    expect(payment.requestCalls).toHaveLength(2);
+    expect(
+      (await prisma.subscriptionPayment.findUnique({ where: { id: 'pay-1' } })).status,
+    ).toBe('failed');
+  });
+
+  it('rejects renewals that would exceed the rolling three-month ceiling', async () => {
+    const { prisma, service } = makeService();
+    const subscription = await service.startTrial('salon-1', NOW);
+    prisma._setSubscription({
+      ...subscription,
+      expiresAt: new Date(NOW.getTime() + 70 * MS_PER_DAY),
+    });
+
+    await expect(service.initiatePurchase('salon-1', 'monthly', NOW)).rejects.toMatchObject({
+      code: 'SUBSCRIPTION_WINDOW_LIMIT_REACHED',
+    });
+    await expect(service.initiatePurchase('salon-1', 'quarterly', NOW)).rejects.toMatchObject({
+      code: 'SUBSCRIPTION_WINDOW_LIMIT_REACHED',
+    });
+  });
+
+  it('allows capacity exactly up to three months, then blocks another purchase', async () => {
+    const { prisma, service } = makeService(
+      createMockPrisma(),
+      createMockPaymentService({ verifyOk: true }),
+    );
+    const subscription = await service.startTrial('salon-1', NOW);
+    prisma._setSubscription({
+      ...subscription,
+      expiresAt: new Date(NOW.getTime() + 60 * MS_PER_DAY),
+    });
+
+    await service.initiatePurchase('salon-1', 'monthly', NOW);
+    const renewed = await service.activateFromPayment('pay-1', NOW);
+    expect(renewed.expiresAt.getTime()).toBe(NOW.getTime() + 90 * MS_PER_DAY);
+    await expect(service.initiatePurchase('salon-1', 'monthly', NOW)).rejects.toMatchObject({
+      code: 'SUBSCRIPTION_WINDOW_LIMIT_REACHED',
+    });
+  });
+
+  it('dispatches each expiry reminder checkpoint once', async () => {
+    const prisma = createMockPrisma();
+    const { service } = makeService(prisma);
+    const subscription = await service.startTrial('salon-1', NOW);
+    const expiresAt = new Date(NOW.getTime() + 7 * MS_PER_DAY);
+    prisma._setSubscription({ ...subscription, status: 'active', expiresAt });
+
+    const sent = new Set<string>();
+    const emitted: Array<{ days: number; key: string }> = [];
+    const inbox = {
+      async emitOnce(input: { payload: Record<string, unknown> }, key: string) {
+        if (sent.has(key)) return false;
+        sent.add(key);
+        emitted.push({ days: input.payload.reminderDaysBefore as number, key });
+        return true;
+      },
+      async emit() {
+        return undefined;
+      },
+    };
+
+    expect(await service.dispatchExpiryReminders(inbox, NOW)).toBe(1);
+    expect(await service.dispatchExpiryReminders(inbox, NOW)).toBe(0);
+    expect(emitted).toEqual([
+      { days: 7, key: 'subscription-expiry:generated-id:7' },
+    ]);
+
+    const threeDaysBefore = new Date(NOW.getTime() + 4 * MS_PER_DAY);
+    expect(await service.dispatchExpiryReminders(inbox, threeDaysBefore)).toBe(1);
+    expect(emitted[1]).toEqual({ days: 3, key: 'subscription-expiry:generated-id:3' });
   });
 
   it('throws when the salon has no subscription', async () => {
@@ -414,5 +533,19 @@ describe('computeRenewedExpiry renewal accumulation (R3.11, Property 5)', () => 
     const expiresAt = new Date(NOW.getTime() - 5 * MS_PER_DAY);
     const renewed = computeRenewedExpiry(expiresAt, 30, NOW);
     expect(renewed.getTime()).toBe(NOW.getTime() + 30 * MS_PER_DAY);
+  });
+
+  it('returns no eligible renewal when the three-month ceiling would be crossed', () => {
+    const expiresAt = new Date(NOW.getTime() + 70 * MS_PER_DAY);
+    expect(computeRenewedExpiryWithinLimit(expiresAt, 30, NOW)).toBeNull();
+    expect(computeRenewedExpiryWithinLimit(new Date(NOW.getTime() + 60 * MS_PER_DAY), 30, NOW))
+      .toEqual(new Date(NOW.getTime() + 90 * MS_PER_DAY));
+  });
+
+  it('caps already-created legacy/concurrent extensions at three months', () => {
+    const expiresAt = new Date(NOW.getTime() + 70 * MS_PER_DAY);
+    expect(computeCappedRenewedExpiry(expiresAt, 30, NOW)).toEqual(
+      new Date(NOW.getTime() + 90 * MS_PER_DAY),
+    );
   });
 });

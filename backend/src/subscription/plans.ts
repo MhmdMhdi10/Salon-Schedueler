@@ -1,11 +1,10 @@
 /**
  * Subscription plan definitions (Requirement 3.1, 3.2).
  *
- * The platform offers a free trial plus three paid plans. Plan *durations* are
- * fixed domain constants (a month is 30 days, a quarter 90, a year 365); plan
- * *prices* are configurable at runtime (read from env via `config.ts`) and are
- * never hard-coded as money values (Requirement 3.2). All amounts are integer
- * Rial (IRR) carried as `bigint`.
+ * The platform keeps a free trial plus the historical paid-plan definitions.
+ * Only monthly and quarterly plans are currently purchasable. The annual
+ * definition remains readable so existing subscriptions and old reports keep
+ * working after the catalogue change.
  */
 
 /** Effective subscription lifecycle status. Mirrors the `SubscriptionStatus` enum. */
@@ -13,6 +12,11 @@ export type SubscriptionStatus = 'trial' | 'active' | 'grace' | 'expired';
 
 /** Subscription plan kind. Mirrors the `SubscriptionPlanKind` enum. */
 export type SubscriptionPlanKind = 'trial' | 'monthly' | 'quarterly' | 'annual';
+
+/** Paid plans currently exposed for new purchases. */
+export const PURCHASABLE_SUBSCRIPTION_PLAN_KINDS = ['monthly', 'quarterly'] as const;
+export type PurchasableSubscriptionPlanKind =
+  (typeof PURCHASABLE_SUBSCRIPTION_PLAN_KINDS)[number];
 
 /** A single plan: its kind, how many days it grants, and its price in IRR. */
 export interface PlanDefinition {
@@ -40,6 +44,18 @@ export const PLAN_DURATION_DAYS: Record<Exclude<SubscriptionPlanKind, 'trial'>, 
   quarterly: 90,
   annual: 365,
 };
+
+/** Maximum distance between now and a subscription expiry. */
+export const MAX_SUBSCRIPTION_WINDOW_DAYS = PLAN_DURATION_DAYS.quarterly;
+
+/** Reminder checkpoints used by the subscription maintenance task. */
+export const SUBSCRIPTION_REMINDER_DAYS = [7, 3, 1] as const;
+
+export function isPurchasableSubscriptionPlan(
+  kind: string,
+): kind is PurchasableSubscriptionPlanKind {
+  return (PURCHASABLE_SUBSCRIPTION_PLAN_KINDS as readonly string[]).includes(kind);
+}
 
 /** Documented default paid-plan prices in IRR, used when no env override is set. */
 export const DEFAULT_SUBSCRIPTION_PRICES: SubscriptionPrices = {
