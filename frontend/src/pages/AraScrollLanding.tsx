@@ -809,7 +809,7 @@ function AraScrollFeatureSection({
         animate={
           prefersReducedMotion || isVisible ? { opacity: 1, x: 0 } : { opacity: 0, x: copyOffset }
         }
-        transition={{ duration: 0.62, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.86, ease: [0.22, 1, 0.36, 1] }}
       >
         <span className={`ara-scroll-feature-eyebrow is-${feature.accent}`}>
           <ScrollFeatureIcon id={feature.id} />
@@ -977,7 +977,7 @@ export function AraScrollLanding() {
         () => {
           isLocked = false;
         },
-        prefersReducedMotion ? 120 : 480,
+        prefersReducedMotion ? 120 : 860,
       );
     };
 

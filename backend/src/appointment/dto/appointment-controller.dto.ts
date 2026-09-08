@@ -9,6 +9,8 @@ import {
   RescheduleAppointmentDto,
   DepositReceiptDto,
   DepositReceiptReviewDto,
+  RejectAppointmentDto,
+  ReportCustomerDto,
 } from './appointment.dto.js';
 
 const route = controllerRouteDto.bind(null, 'AppointmentController');
@@ -22,7 +24,10 @@ export const APPOINTMENT_CONTROLLER_DTO_DEFINITIONS = [
   route('appointment.reschedule.reject', 'POST', '/api/appointments/:id/reschedule/reject', AppointmentIdDto),
   route('appointment.no-show', 'POST', '/api/appointments/:id/no-show', AppointmentIdDto),
   route('appointment.approve', 'POST', '/api/appointments/:id/approve', AppointmentIdDto),
-  route('appointment.reject', 'POST', '/api/appointments/:id/reject', AppointmentIdDto),
+  route('appointment.reject', 'POST', '/api/appointments/:id/reject', AppointmentIdDto, AnyQueryDto, RejectAppointmentDto),
+  route('appointment.cancellation.read', 'GET', '/api/appointments/:id/cancellation', AppointmentIdDto),
+  route('appointment.cancellation.proof', 'GET', '/api/appointments/:id/cancellation/refund-proof', AppointmentIdDto),
+  route('appointment.customer.report', 'POST', '/api/appointments/:id/report-customer', AppointmentIdDto, AnyQueryDto, ReportCustomerDto),
   route('appointment.reschedule-managed', 'PATCH', '/api/appointments/:id/reschedule', AppointmentIdDto, AnyQueryDto, ManagedRescheduleDto),
   route('appointment.deposit.read', 'GET', '/api/appointments/:id/deposit', AppointmentIdDto),
   route('appointment.deposit-receipt.upload', 'POST', '/api/appointments/:id/deposit-receipt', AppointmentIdDto, AnyQueryDto, DepositReceiptDto),

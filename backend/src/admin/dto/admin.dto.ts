@@ -62,7 +62,18 @@ export const AdminDepositSettingsDto = z
   })
   .passthrough();
 export const AdminHolidayDto = z.object({ onDate: z.string().trim().min(1), toDate: z.string().optional(), startTime: z.string().optional(), endTime: z.string().optional(), cancelAppointments: bool.optional() }).passthrough();
-export const AdminEmergencyCloseDto = z.object({ onDate: z.string().trim().min(1), cancelAppointments: bool.optional() }).passthrough();
+export const AdminEmergencyCloseDto = z
+  .object({
+    onDate: z.string().trim().min(1),
+    cancelAppointments: bool.optional(),
+    reason: z.string().trim().max(1000).optional(),
+    refundProof: z.object({
+      fileName: z.string().trim().min(1).max(120),
+      mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+      dataBase64: z.string().max(7_200_000),
+    }).optional(),
+  })
+  .passthrough();
 export const AdminWorkingHoursDto = loose;
 export const AdminAvailabilityBlockDto = z.object({ onDate: z.string().optional(), toDate: z.string().optional(), startTime: z.string().optional(), endTime: z.string().optional(), startAt: z.string().optional(), endAt: z.string().optional() }).passthrough();
 export const AdminNoteDto = z.object({ body: z.string().trim().min(1).max(1000) }).passthrough();

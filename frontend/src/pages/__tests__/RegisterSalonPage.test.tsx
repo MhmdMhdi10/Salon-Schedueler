@@ -63,6 +63,20 @@ async function reachServicesStep() {
   return screen.findByTestId('register-services-step');
 }
 
+async function reachInfoStep() {
+  renderRegister();
+
+  fireEvent.click(screen.getByTestId('work-mode-starting'));
+  fireEvent.click(screen.getByRole('button', { name: 'ادامه' }));
+  await screen.findByRole('heading', { level: 1, name: 'برای شروع چه شرایطی دارید؟' });
+  fireEvent.click(screen.getByRole('button', { name: 'رد کردن این مرحله' }));
+
+  await screen.findByRole('heading', { level: 1, name: 'حوزه کاری‌تان چیست؟' });
+  fireEvent.click(screen.getByRole('button', { name: 'رد کردن این مرحله' }));
+
+  return screen.findByLabelText('نام سالن');
+}
+
 beforeEach(() => {
   window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
 });
@@ -73,6 +87,16 @@ afterEach(() => {
 });
 
 describe('RegisterSalonPage services step', () => {
+  it('lets the user go back from the salon information step', async () => {
+    await reachInfoStep();
+
+    fireEvent.click(screen.getByRole('button', { name: 'بازگشت' }));
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'حوزه کاری‌تان چیست؟' }),
+    ).toBeInTheDocument();
+  });
+
   it('keeps add service action attached to its form and edits a custom service inline', async () => {
     const step = await reachServicesStep();
     const addForm = within(step).getByTestId('add-service-form');
@@ -82,7 +106,15 @@ describe('RegisterSalonPage services step', () => {
     fireEvent.change(within(addForm).getByLabelText('نام خدمت'), {
       target: { value: 'کوتاهی ویژه' },
     });
-    fireEvent.change(within(addForm).getByLabelText(/مدت/), { target: { value: '۴۵' } });
+    const durationControl = within(addForm).getByRole('group', { name: /مدت/ });
+    const increaseDuration = within(durationControl).getByRole('button', { name: 'افزایش ۳۰ دقیقه' });
+    const decreaseDuration = within(durationControl).getByRole('button', { name: 'کاهش ۳۰ دقیقه' });
+    fireEvent.click(increaseDuration);
+    expect(within(durationControl).getByText('۳۰')).toBeInTheDocument();
+    fireEvent.click(increaseDuration);
+    expect(within(durationControl).getByText('۶۰')).toBeInTheDocument();
+    fireEvent.click(decreaseDuration);
+    expect(within(durationControl).getByText('۳۰')).toBeInTheDocument();
     fireEvent.change(within(addForm).getByLabelText(/هزینه/), { target: { value: '۲۵۰۰۰۰' } });
     fireEvent.submit(addForm);
 

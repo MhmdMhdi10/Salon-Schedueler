@@ -96,6 +96,9 @@ services:
       # Development only: return the generated OTP so the web form can fill it
       # automatically. Production keeps this disabled and uses real SMS.
       DEV_OTP_AUTO_FILL: "true"
+      # Keep development auth local even when provider credentials exist in .env.
+      # Set true only when explicitly testing real OTP delivery.
+      DEV_USE_REAL_OTP: "${DEV_USE_REAL_OTP:-false}"
       # Cucumber creates one isolated salon per scenario. This only affects the
       # development container; production keeps the registration limit at 15.
       E2E_REGISTRATION_IP_LIMIT: "500"
@@ -115,6 +118,8 @@ services:
       # Keep token in .env only; dev normally leaves this unset.
       MELIPAYAMAK_URL: "${MELIPAYAMAK_URL-}"
       MELIPAYAMAK_BODY_ID: "${MELIPAYAMAK_BODY_ID:-523232}"
+      MELIPAYAMAK_SIMPLE_URL: "${MELIPAYAMAK_SIMPLE_URL-}"
+      MELIPAYAMAK_SIMPLE_FROM: "${MELIPAYAMAK_SIMPLE_FROM-${MELIPAYAMAK_FROM-}}"
       # Legacy generated-code endpoint fallback.
       MELIPAYAMAK_OTP_URL: "${MELIPAYAMAK_OTP_URL-}"
       # Consumed by pg_isready + psql in the dev entrypoint.

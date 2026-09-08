@@ -130,7 +130,7 @@ export const DialogContent = forwardRef<
             <IconButton
               aria-label={closeLabel ?? t('common.close', 'بستن')}
               variant="ghost"
-              className="!absolute end-2 top-2 h-9 min-h-0 w-9 min-w-0"
+              className="!absolute end-2 top-2 h-11 min-h-11 w-11 min-w-11"
             >
               <X className="h-5 w-5" />
             </IconButton>

@@ -159,6 +159,7 @@ describe('CalendarService', () => {
           service: { select: { name: true } },
           customer: { select: { fullName: true, phone: true } },
           staffMember: { select: { fullName: true } },
+          salon: { select: { timezone: true } },
           depositReceipt: { select: { status: true } },
           payments: {
             orderBy: { createdAt: 'desc' },

@@ -1,5 +1,6 @@
 import type { Appointment } from '@prisma/client';
 import { safelyNotify, type Logger } from './safely-notify.js';
+import type { CancellationDetails } from '../scheduling/cancellation.js';
 
 /**
  * The cancellation capability CancellationFlow needs. `CancellationService`
@@ -10,6 +11,7 @@ export interface CancellationOps {
     appointmentId: string,
     cancellationWindowMinutes?: number,
     now?: Date,
+    details?: CancellationDetails,
   ): Promise<Appointment>;
 }
 
@@ -40,7 +42,14 @@ export interface WaitlistNotify {
  * best-effort and never throws).
  */
 export interface CustomerCancellationNotify {
-  sendCancellation(appointmentId: string): Promise<void>;
+  sendCancellation(
+    appointmentId: string,
+    notice?: {
+      kind?: CancellationDetails['kind'];
+      reason?: string;
+      refundDueHours?: number;
+    },
+  ): Promise<void>;
 }
 
 /** Constructor dependencies for {@link CancellationFlow}. */
@@ -94,18 +103,29 @@ export class CancellationFlow {
     appointmentId: string,
     cancellationWindowMinutes?: number,
     now?: Date,
+    details?: CancellationDetails,
   ): Promise<Appointment> {
-    const appointment = await this.cancellationService.cancel(
-      appointmentId,
-      cancellationWindowMinutes,
-      now,
-    );
+    const appointment = details
+      ? await this.cancellationService.cancel(appointmentId, cancellationWindowMinutes, now, details)
+      : await this.cancellationService.cancel(appointmentId, cancellationWindowMinutes, now);
     // Tell the booked customer their slot was cancelled (best-effort). This is
     // the path a stylist/admin cancellation flows through, so the customer is
     // always informed by SMS.
     if (this.notificationService) {
       const notifier = this.notificationService;
-      await safelyNotify(() => notifier.sendCancellation(appointment.id), this.logger);
+      await safelyNotify(
+        () => notifier.sendCancellation(
+          appointment.id,
+          details
+            ? {
+                kind: details.kind,
+                reason: details.reason,
+                refundDueHours: details.refundDueHours,
+              }
+            : undefined,
+        ),
+        this.logger,
+      );
     }
     await this.notifyWaitlistForWindow(
       appointment.salonId,

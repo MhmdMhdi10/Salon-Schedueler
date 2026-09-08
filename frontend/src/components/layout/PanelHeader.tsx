@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { CircleHelp, LogIn, LogOut } from 'lucide-react';
+import { CircleHelp, LifeBuoy, LogIn, LogOut } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { BrandLogo } from '../brand';
 import { OwnerInboxBell } from '../owner/OwnerInboxBell';
@@ -142,6 +142,23 @@ export function PanelHeader({ surface, brandLabel, themeControl, onSignOut, onHe
                 </Link>
               ) : null}
             </>
+          )}
+
+          {isAuthenticated && !isPlatformAdmin && (
+            <Link
+              to="/support"
+              data-testid="header-support-link"
+              aria-label="پشتیبانی و گزارش خطا"
+              className={cn(
+                'inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-md px-2 text-sm font-semibold text-text no-underline',
+                'transition-colors duration-fast ease-standard hover:bg-elevated',
+                'outline-none focus-visible:outline focus-visible:outline-2',
+                'focus-visible:outline-offset-2 focus-visible:outline-focus',
+              )}
+            >
+              <LifeBuoy className="h-4 w-4" aria-hidden="true" />
+              <span className="hidden sm:inline">پشتیبانی</span>
+            </Link>
           )}
 
           {showOwnerInbox && <OwnerInboxBell />}

@@ -213,6 +213,40 @@ describe('CancellationService', () => {
       expect(mockPayment.retainDeposit).not.toHaveBeenCalled();
     });
 
+    it('allows staff emergency cancellation before a refund proof image is available', async () => {
+      const appt = confirmedAppointment();
+      const cancellationUpsert = jest.fn().mockResolvedValue({});
+      const mockPrisma = createMockPrisma({
+        appointment: {
+          findUnique: jest.fn().mockResolvedValue(appt),
+          update: jest.fn().mockImplementation((args: any) =>
+            Promise.resolve({ ...appt, ...args.data }),
+          ),
+        },
+        payment: {
+          findFirst: jest.fn().mockResolvedValue({
+            id: 'pay-1',
+            appointmentId: APPOINTMENT_ID,
+            status: 'paid',
+          }),
+        },
+        appointmentCancellation: { upsert: cancellationUpsert },
+      });
+      const mockPayment = createMockPaymentService();
+      const service = new CancellationService(mockPrisma, mockPayment);
+
+      await expect(
+        service.cancel(APPOINTMENT_ID, undefined, new Date('2024-03-15T09:00:00.000Z'), {
+          actor: 'staff',
+          kind: 'emergency',
+          reason: 'بسته شدن اضطراری سالن',
+        }),
+      ).resolves.toMatchObject({ status: 'cancelled' });
+
+      expect(mockPayment.refundDeposit).toHaveBeenCalledWith(APPOINTMENT_ID);
+      expect(cancellationUpsert.mock.calls[0][0].create.refundStatus).toBe('pending');
+    });
+
     it('uses custom cancellation window when provided', async () => {
       // Appointment at 14:00, custom window = 120 min
       // now = 12:30 → windowBoundary = 14:30 >= 14:00 → within window → retain

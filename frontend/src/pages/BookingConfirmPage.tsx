@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { useParams, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { CalendarClock, Clock, CreditCard, MapPin, Scissors, Store } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
@@ -9,7 +9,6 @@ import { FunnelShell } from '../components/layout';
 import { readSalonName } from '../utils/salonName';
 import {
   Button,
-  EmptyState,
   ErrorState,
   JalaliDate,
   Money,
@@ -23,6 +22,7 @@ import {
 /** Funnel selection handed over from the availability step via router state. */
 interface ConfirmSelection {
   serviceId: string;
+  serviceIds?: string[];
   startAt: string;
   /** Preferred stylist carried from the availability step (optional). */
   preferredStaffId?: string;
@@ -30,6 +30,51 @@ interface ConfirmSelection {
   locationAddress?: string;
   customerNote?: string;
   durationMinutes?: number;
+}
+
+type ConfirmPageState = ConfirmSelection & { autoConfirm?: boolean };
+
+/**
+ * Availability stores the current funnel selection so a refresh or deep link
+ * to the confirm step does not discard the customer's chosen slot.
+ */
+function readPersistedSelection(salonId?: string): ConfirmPageState | null {
+  if (!salonId || typeof window === 'undefined') return null;
+  try {
+    const raw = window.sessionStorage.getItem(`booking-selection:${salonId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const serviceId = typeof parsed.serviceId === 'string' ? parsed.serviceId.trim() : '';
+    const startAt = typeof parsed.startAt === 'string' ? parsed.startAt : '';
+    if (!serviceId || !startAt || Number.isNaN(new Date(startAt).getTime())) return null;
+
+    const serviceIds = Array.isArray(parsed.serviceIds)
+      ? parsed.serviceIds.filter((id): id is string => typeof id === 'string' && id.length > 0)
+      : [];
+    const durationMinutes =
+      typeof parsed.durationMinutes === 'number' &&
+      Number.isInteger(parsed.durationMinutes) &&
+      parsed.durationMinutes > 0
+        ? parsed.durationMinutes
+        : undefined;
+
+    return {
+      serviceId,
+      serviceIds: [...new Set([serviceId, ...serviceIds])],
+      startAt,
+      preferredStaffId:
+        typeof parsed.staffId === 'string' && parsed.staffId.length > 0
+          ? parsed.staffId
+          : undefined,
+      locationType:
+        parsed.locationType === 'salon' || parsed.locationType === 'customer'
+          ? parsed.locationType
+          : undefined,
+      durationMinutes,
+    };
+  } catch {
+    return null;
+  }
 }
 
 /** A bookable service as returned by the salon services endpoint (unchanged contract). */
@@ -108,9 +153,15 @@ export function BookingConfirmPage() {
   const navigate = useNavigate();
   const prefersReduced = useReducedMotion();
 
-  const state = location.state as (ConfirmSelection & { autoConfirm?: boolean }) | undefined;
+  const routeState = location.state as ConfirmPageState | undefined;
+  const persistedSelection = useMemo<ConfirmPageState | null>(
+    () => readPersistedSelection(salonId),
+    [salonId],
+  );
+  const state: ConfirmPageState | undefined = routeState ?? persistedSelection ?? undefined;
 
   const [service, setService] = useState<Service | null>(null);
+  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [detailsStatus, setDetailsStatus] = useState<DetailsStatus>('loading');
   const [confirmStatus, setConfirmStatus] = useState<ConfirmStatus>('idle');
   const [confirmError, setConfirmError] = useState('');
@@ -162,12 +213,17 @@ export function BookingConfirmPage() {
     salonApi
       .getServices(salonId)
       .then((res) => {
-        const found = res.services.find((s) => s.id === state.serviceId);
-        if (!found) {
+        const ids = [...new Set([state.serviceId, ...(state.serviceIds ?? [])])];
+        const foundServices = ids
+          .map((id) => res.services.find((s) => s.id === id))
+          .filter(Boolean) as Service[];
+        const found = foundServices[0];
+        if (!found || foundServices.length !== ids.length) {
           setDetailsStatus('error');
           return;
         }
         setService(found);
+        setSelectedServices(foundServices);
         if (found.durationMode === 'variable' && !requestedDuration) {
           setRequestedDuration(String(found.minDurationMinutes ?? found.durationMinutes));
         }
@@ -271,11 +327,12 @@ export function BookingConfirmPage() {
       return;
     }
     let durationMinutes: number | undefined;
+    let primaryDurationMinutes: number | undefined;
     if (service?.durationMode === 'variable') {
-      durationMinutes = Number(requestedDuration);
+      const primaryDuration = Number(requestedDuration);
       const min = service.minDurationMinutes ?? service.durationMinutes;
       const max = service.maxDurationMinutes ?? min;
-      if (!Number.isInteger(durationMinutes) || durationMinutes < min || durationMinutes > max) {
+      if (!Number.isInteger(primaryDuration) || primaryDuration < min || primaryDuration > max) {
         setDurationError(
           t('booking.durationError', {
             defaultValue: `مدت باید بین ${min} تا ${max} دقیقه باشد.`,
@@ -285,6 +342,14 @@ export function BookingConfirmPage() {
         );
         return;
       }
+      primaryDurationMinutes = primaryDuration;
+      durationMinutes = selectedServices.reduce(
+        (total, item, index) =>
+          total + (index === 0 ? primaryDuration : item.durationMode === 'variable'
+            ? item.minDurationMinutes ?? item.durationMinutes
+            : item.durationMinutes),
+        0,
+      );
     }
     if (customerNote.trim().length > 1000) {
       setConfirmError('توضیحات باید حداکثر ۱۰۰۰ کاراکتر باشد.');
@@ -301,6 +366,9 @@ export function BookingConfirmPage() {
       const result = await bookingApi.create({
         salonId,
         serviceId: state.serviceId,
+        ...(state.serviceIds && state.serviceIds.length > 1
+          ? { serviceIds: state.serviceIds }
+          : {}),
         startAt: state.startAt,
         preferredStaffId: state.preferredStaffId,
         ...(bookingLocation === 'customer'
@@ -337,7 +405,7 @@ export function BookingConfirmPage() {
         navigate('/booking/success', {
           state: {
             status: result.status,
-            serviceName: service?.name,
+            serviceName: selectedServices.map((item) => item.name).join('، ') || service?.name,
             startAt: state.startAt,
             salonName: readSalonName(salonId) ?? undefined,
             locationType: bookingLocation,
@@ -353,18 +421,23 @@ export function BookingConfirmPage() {
       if (isAuthFailure(err) && !state.autoConfirm && !redirectedToAuthRef.current) {
         redirectedToAuthRef.current = true;
         setConfirmStatus('idle');
-        navigate('/auth', {
+        navigate(`/salon/${salonId}/book/auth`, {
           state: {
             returnTo: location.pathname,
             returnState: {
               serviceId: state.serviceId,
+              serviceIds: state.serviceIds,
               startAt: state.startAt,
               preferredStaffId: state.preferredStaffId,
               locationType: bookingLocation,
               locationAddress:
                 bookingLocation === 'customer' ? locationAddress : undefined,
               customerNote: customerNote.trim() || undefined,
-              durationMinutes,
+              // `durationMinutes` is the aggregate occupancy for a combined
+              // booking. Auth resume must restore only the primary variable
+              // service value because the API validates that field against
+              // the primary service's min/max range.
+              durationMinutes: primaryDurationMinutes,
             },
           },
         });
@@ -379,31 +452,28 @@ export function BookingConfirmPage() {
 
   const salonName = useMemo(() => readSalonName(salonId ?? ''), [salonId]);
 
-  // Guard: arriving here without a selection (e.g. a direct deep link)
+  // A bare confirm URL has no service or time to confirm. Restart at the first
+  // booking step instead of leaving the customer on a dead-end confirmation.
   if (!state) {
-    return (
-      <FunnelShell currentStep="confirm" salonName={salonName ?? undefined} onBack={backToBooking}>
-        <div data-testid="booking-confirm">
-          <SeoHead title={t('seo.titles.confirm')} />
-          <h1 className="text-xl font-bold text-text">{t('booking.confirmHeading')}</h1>
-          <EmptyState
-            icon={<CalendarClock className="h-8 w-8" />}
-            title={t('booking.missingSelectionTitle')}
-            description={t('booking.missingSelectionBody')}
-            action={
-              <Button variant="secondary" onClick={backToBooking}>
-                {t('booking.backToBooking')}
-              </Button>
-            }
-          />
-        </div>
-      </FunnelShell>
-    );
+    return <Navigate to={`/salon/${salonId}/book`} replace />;
   }
 
   const time = toPersianDigits(timeLabel(state.startAt));
+  const summaryServices = selectedServices.length > 0 ? selectedServices : service ? [service] : [];
+  const totalPriceRial = summaryServices.reduce((total, item) => total + item.priceRial, 0);
+  const totalDurationMinutes = summaryServices.reduce((total, item, index) => {
+    if (index === 0 && item.durationMode === 'variable' && requestedDuration) {
+      return total + Number(requestedDuration);
+    }
+    return total + (item.durationMode === 'variable'
+      ? item.minDurationMinutes ?? item.durationMinutes
+      : item.durationMinutes);
+  }, 0);
+  // Older salon records may omit the additive deposit flag. Treat an omitted
+  // value as unknown (and keep the existing secure-gateway copy) while an
+  // explicit `false` is the only signal that no deposit is required.
   const depositNotice =
-    service?.requiresDeposit === false
+    !summaryServices.some((item) => item.requiresDeposit !== false)
       ? t('booking.noDepositNotice', { defaultValue: 'برای این خدمت بیعانه‌ای لازم نیست.' })
       : service?.depositMethod === 'cash'
         ? t('booking.cashDepositNotice', { defaultValue: 'بیعانه در محل سالن دریافت می‌شود.' })
@@ -489,7 +559,14 @@ export function BookingConfirmPage() {
                     <Scissors className="h-4 w-4 shrink-0" aria-hidden="true" />
                     {t('booking.serviceLabel')}
                   </dt>
-                  <dd className="max-w-full break-words text-sm font-semibold text-text sm:text-end">{service.name}</dd>
+                  <dd className="max-w-full break-words text-sm font-semibold text-text sm:text-end">
+                    <span>{summaryServices.map((item) => item.name).join('، ')}</span>
+                    {summaryServices.length > 0 && (
+                      <span className="mt-1 block text-xs font-normal text-muted">
+                        {toPersianDigits(String(totalDurationMinutes))} دقیقه
+                      </span>
+                    )}
+                  </dd>
                 </div>
 
                 {/* Dotted divider */}
@@ -530,7 +607,7 @@ export function BookingConfirmPage() {
                     {t('booking.priceLabel')}
                   </dt>
                   <dd className="text-base font-bold text-text">
-                    <Money amountRial={service.priceRial} unit="toman" />
+                    <Money amountRial={totalPriceRial} unit="toman" />
                   </dd>
                 </div>
 

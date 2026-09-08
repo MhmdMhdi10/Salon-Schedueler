@@ -4,6 +4,7 @@ import type { RequireRole } from '../../common/http/require-role.js';
 import { asyncRoute, validateRequired } from '../../common/http/route-helpers.js';
 import type { ServiceCatalog } from '../../catalog/service-catalog.js';
 import { normalizeDigits, type StaffRole } from '@salon/shared';
+import type { CancellationDetails, RefundProof } from '../../scheduling/cancellation.js';
 
 /**
  * Parse an ISO date string from a query param; respond 400 VALIDATION_ERROR and
@@ -37,6 +38,7 @@ const toCalendarDto = (a: any) => ({
   serviceName: a.service?.name ?? null,
   customerName: a.customer?.fullName ?? null,
   staffName: a.staffMember?.fullName ?? null,
+  timezone: a.salon?.timezone ?? null,
   locationType: a.locationType ?? 'salon',
   locationAddress: a.locationAddress ?? null,
   customerNote: a.customerNote ?? null,
@@ -327,7 +329,11 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
   const router = Router();
 
   /** Cancel active future bookings covered by a full-day salon closure. */
-  const cancelAppointmentsForFullDayClosure = async (salonId: string, onDate: string) => {
+  const cancelAppointmentsForFullDayClosure = async (
+    salonId: string,
+    onDate: string,
+    details?: CancellationDetails,
+  ) => {
     const from = new Date(`${onDate}T00:00:00.000Z`);
     const to = new Date(from);
     to.setUTCDate(to.getUTCDate() + 1);
@@ -341,8 +347,8 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     const results = await Promise.allSettled(
       cancellable.map((item) =>
         String(item.status) === 'pending'
-          ? services.bookingFlow.reject(item.id)
-          : services.cancellationFlow.cancel(item.id),
+          ? services.bookingFlow.reject(item.id, details?.reason)
+          : services.cancellationFlow.cancel(item.id, undefined, undefined, details),
       ),
     );
     const cancelledCount = results.filter((item) => item.status === 'fulfilled').length;
@@ -629,7 +635,11 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         res.status(502).json({ code: 'SMS_FAILED' });
         return;
       }
-      res.status(200).json({ status: 'sent' });
+      res.status(200).json({
+        status: 'sent',
+        providerId: result.providerId,
+        delivery: 'accepted',
+      });
     }),
   );
 
@@ -1878,9 +1888,43 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         return;
       }
 
+      const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
+      if (reason.length < 5 || reason.length > 1000) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'reason' });
+        return;
+      }
+      let refundProof: RefundProof | undefined;
+      const rawProof = req.body?.refundProof;
+      if (rawProof !== undefined) {
+        if (
+          !rawProof ||
+          typeof rawProof !== 'object' ||
+          typeof rawProof.fileName !== 'string' ||
+          typeof rawProof.mimeType !== 'string' ||
+          typeof rawProof.dataBase64 !== 'string' ||
+          !['image/jpeg', 'image/png', 'image/webp'].includes(rawProof.mimeType) ||
+          rawProof.fileName.length > 120 ||
+          rawProof.dataBase64.length > 7_200_000
+        ) {
+          res.status(400).json({ code: 'VALIDATION_ERROR', field: 'refundProof' });
+          return;
+        }
+        const data = Buffer.from(rawProof.dataBase64, 'base64');
+        if (!data.length || data.length > 5 * 1024 * 1024) {
+          res.status(400).json({ code: 'VALIDATION_ERROR', field: 'refundProof' });
+          return;
+        }
+        refundProof = {
+          fileName: rawProof.fileName,
+          mimeType: rawProof.mimeType,
+          data,
+        };
+      }
+
       const { cancelledCount, failedCount } = await cancelAppointmentsForFullDayClosure(
         req.params.id,
         onDate,
+        { actor: 'staff', kind: 'emergency', reason, refundProof },
       );
       res.status(200).json({
         ok: true,

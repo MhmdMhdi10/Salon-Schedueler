@@ -16,6 +16,18 @@
   scroll-margin-block: 1rem 8rem;
 }
 
+.register-step-progress__track {
+  width: min(64%, 18rem);
+}
+
+/* Reserve room for the logo and theme control on narrow phone headers. The
+ * track remains centered in the header without covering either control. */
+@media (max-width: 47.9375rem) {
+  .register-step-progress__track {
+    width: min(64%, calc(100% - 10.5rem));
+  }
+}
+
 .register-step-nav {
   position: relative;
 }

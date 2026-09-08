@@ -102,6 +102,23 @@ export interface NotificationRepository {
   registerDeviceToken(customerId: string, token: string, platform: string): Promise<void>;
 }
 
+export interface CustomerNotificationWriter {
+  create(input: {
+    customerId: string;
+    appointmentId?: string;
+    type: string;
+    title: string;
+    body: string;
+    payload?: Record<string, unknown>;
+  }): Promise<unknown>;
+}
+
+export interface CancellationNotice {
+  kind?: 'standard' | 'emergency' | 'rejected';
+  reason?: string;
+  refundDueHours?: number;
+}
+
 /**
  * Configuration options for the NotificationService.
  */
@@ -112,6 +129,7 @@ export interface NotificationServiceOptions {
   templateProvider?: SmsTemplateProvider;
   /** Optional overrides for approved shared-template body ids. */
   templateBodyIds?: Partial<Record<MelliPayamakNotificationTemplate, number>>;
+  customerNotification?: CustomerNotificationWriter;
 }
 
 /**
@@ -132,6 +150,7 @@ export class NotificationService {
   private readonly templateProvider?: SmsTemplateProvider;
   private readonly templateBodyIds: Record<MelliPayamakNotificationTemplate, number>;
   private readonly remindersInFlight = new Set<string>();
+  private readonly customerNotification?: CustomerNotificationWriter;
 
   constructor(
     smsProvider: SmsProvider,
@@ -145,6 +164,7 @@ export class NotificationService {
     this.defaultReminderLeadTimeMinutes =
       options?.defaultReminderLeadTimeMinutes ?? 60;
     this.templateProvider = options?.templateProvider;
+    this.customerNotification = options?.customerNotification;
     this.templateBodyIds = {
       confirmation: MELLI_PAYAMAK_TEMPLATE_BODY_IDS.confirmation,
       rejection: MELLI_PAYAMAK_TEMPLATE_BODY_IDS.rejection,
@@ -185,6 +205,12 @@ export class NotificationService {
       status: result.ok ? 'sent' : 'failed',
       error: result.ok ? null : result.error,
     });
+    await this.writeCustomerNotification(
+      appointment,
+      'booking.confirmed',
+      'تأیید نوبت',
+      `نوبت ${appointment.serviceName} در ${appointment.salonName} تأیید شد.`,
+    );
   }
 
   /**
@@ -234,7 +260,15 @@ export class NotificationService {
     const appointment = await this.repository.findAppointment(appointmentId);
     if (!appointment) return null;
 
-    const result = await this.smsProvider.send(appointment.customerPhone, message);
+    let result: SmsDeliveryResult;
+    try {
+      result = await this.smsProvider.send(appointment.customerPhone, message);
+    } catch (error) {
+      result = {
+        ok: false,
+        error: error instanceof Error ? error.message : 'SMS provider failed',
+      };
+    }
     await this.repository.logNotification({
       appointmentId,
       channel: 'sms',
@@ -291,7 +325,7 @@ export class NotificationService {
    * Sends via SMS only and logs success or failure. Best-effort, mirroring
    * {@link sendConfirmation}.
    */
-  async sendRejection(appointmentId: string): Promise<void> {
+  async sendRejection(appointmentId: string, reason?: string): Promise<void> {
     const appointment = await this.repository.findAppointment(appointmentId);
     if (!appointment) {
       return;
@@ -313,6 +347,12 @@ export class NotificationService {
       status: result.ok ? 'sent' : 'failed',
       error: result.ok ? null : result.error,
     });
+    await this.writeCustomerNotification(
+      appointment,
+      'booking.rejected',
+      'نوبت رد شد',
+      `درخواست نوبت ${appointment.serviceName} در ${appointment.salonName} توسط سالن رد شد.${reason?.trim() ? ` دلیل: ${reason.trim()}` : ''}`,
+    );
 
     await this.sendStaffNotice(
       appointment,
@@ -328,13 +368,16 @@ export class NotificationService {
    * it logs success/failure and never throws, so a notification failure can
    * never roll back the cancellation itself.
    */
-  async sendCancellation(appointmentId: string): Promise<void> {
+  async sendCancellation(
+    appointmentId: string,
+    notice?: CancellationNotice,
+  ): Promise<void> {
     const appointment = await this.repository.findAppointment(appointmentId);
     if (!appointment) {
       return;
     }
 
-    const message = this.buildCancellationMessage(appointment);
+    const message = this.buildCancellationMessage(appointment, notice);
     const { dateStr, timeStr } = this.getAppointmentDateTime(appointment);
     const result = await this.sendFixedSms(
       appointment.customerPhone,
@@ -350,12 +393,39 @@ export class NotificationService {
       status: result.ok ? 'sent' : 'failed',
       error: result.ok ? null : result.error,
     });
+    await this.writeCustomerNotification(
+      appointment,
+      'booking.cancelled',
+      'نوبت لغو شد',
+      this.buildCustomerCancellationNotification(appointment, notice),
+    );
 
     await this.sendStaffNotice(
       appointment,
       'cancellation',
       this.buildStaffCancellationMessage(appointment),
     );
+  }
+
+  private async writeCustomerNotification(
+    appointment: AppointmentInfo,
+    type: string,
+    title: string,
+    body: string,
+  ): Promise<void> {
+    if (!this.customerNotification) return;
+    try {
+      await this.customerNotification.create({
+        customerId: appointment.customerId,
+        appointmentId: appointment.id,
+        type,
+        title,
+        body,
+        payload: { appointmentId: appointment.id },
+      });
+    } catch {
+      // Notification persistence must never roll back the booking mutation.
+    }
   }
 
   /**
@@ -482,9 +552,27 @@ export class NotificationService {
     return `متأسفانه درخواست نوبت شما در ${appointment.salonName} برای ${appointment.serviceName} در تاریخ ${dateStr} ساعت ${timeStr} تأیید نشد. لطفاً زمان دیگری را انتخاب کنید.`;
   }
 
-  private buildCancellationMessage(appointment: AppointmentInfo): string {
+  private buildCancellationMessage(
+    appointment: AppointmentInfo,
+    notice?: CancellationNotice,
+  ): string {
     const { dateStr, timeStr } = this.getAppointmentDateTime(appointment);
-    return `نوبت شما در ${appointment.salonName} برای ${appointment.serviceName} در تاریخ ${dateStr} ساعت ${timeStr} لغو شد. برای رزرو زمانی دیگر می‌توانید دوباره اقدام کنید.`;
+    const reason = notice?.reason?.trim() ? ` دلیل: ${notice.reason.trim()}.` : '';
+    const refund = notice?.kind === 'emergency' && notice.refundDueHours
+      ? ` بازگشت وجه حداکثر ظرف ${notice.refundDueHours} ساعت انجام می‌شود.`
+      : '';
+    return `نوبت شما در ${appointment.salonName} برای ${appointment.serviceName} در تاریخ ${dateStr} ساعت ${timeStr} لغو شد.${reason}${refund} برای رزرو زمانی دیگر می‌توانید دوباره اقدام کنید.`;
+  }
+
+  private buildCustomerCancellationNotification(
+    appointment: AppointmentInfo,
+    notice?: CancellationNotice,
+  ): string {
+    const reason = notice?.reason?.trim() ? ` دلیل لغو: ${notice.reason.trim()}.` : '';
+    const refund = notice?.kind === 'emergency'
+      ? ` بازگشت وجه حداکثر ظرف ${notice.refundDueHours ?? 24} ساعت انجام می‌شود.`
+      : ' وضعیت بازگشت وجه در پنل نمایش داده می‌شود.';
+    return `نوبت ${appointment.serviceName} در ${appointment.salonName} لغو شد.${reason}${refund}`;
   }
 
   private buildReminderMessage(appointment: AppointmentInfo): string {

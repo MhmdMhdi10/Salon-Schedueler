@@ -197,6 +197,98 @@ export function platformAdminRouter(
     res.status(200).json(await platformAdminService.listAuditLogs(queryOf(req)));
   }));
 
+  router.get('/platform-admin/card-orders', readLimit, asyncRoute(async (req, res) => {
+    res.status(200).json(await services.cardOrderService.list({
+      status: queryOf(req).status,
+      page: queryOf(req).page,
+      limit: queryOf(req).limit,
+    }));
+  }));
+
+  router.patch('/platform-admin/card-orders/:id', mutationLimit, asyncRoute(async (req, res) => {
+    if (!validId(req.params.id) || typeof req.body?.status !== 'string') {
+      res.status(400).json({ code: 'VALIDATION_ERROR', field: 'status' });
+      return;
+    }
+    const allowed = new Set(['received', 'contacted', 'in_print', 'shipped', 'completed', 'cancelled']);
+    if (!allowed.has(req.body.status)) {
+      res.status(400).json({ code: 'VALIDATION_ERROR', field: 'status' });
+      return;
+    }
+    const order = await services.cardOrderService.updateStatus(
+      req.params.id,
+      req.body.status,
+      req.principal!.platformAdminId!,
+      typeof req.body.note === 'string' ? req.body.note.trim().slice(0, 1000) : undefined,
+    );
+    await platformAdminService.recordAudit(
+      req.principal!.platformAdminId!,
+      'card-order.status',
+      'card_order',
+      req.params.id,
+      { status: req.body.status },
+    );
+    res.status(200).json({ order });
+  }));
+
+  router.get('/platform-admin/support/tickets', readLimit, asyncRoute(async (req, res) => {
+    const query = queryOf(req);
+    res.status(200).json(await services.supportTicketService.listAll({
+      status: query.status,
+      page: query.page,
+      limit: query.limit,
+    }));
+  }));
+
+  router.get('/platform-admin/support/tickets/:id', readLimit, asyncRoute(async (req, res) => {
+    if (!validId(req.params.id)) {
+      res.status(400).json({ code: 'VALIDATION_ERROR', field: 'id' });
+      return;
+    }
+    const ticket = await services.supportTicketService.get(req.params.id, true);
+    if (!ticket) {
+      res.status(404).json({ code: 'NOT_FOUND' });
+      return;
+    }
+    res.status(200).json({ ticket });
+  }));
+
+  router.patch('/platform-admin/support/tickets/:id', mutationLimit, asyncRoute(async (req, res) => {
+    if (!validId(req.params.id)) {
+      res.status(400).json({ code: 'VALIDATION_ERROR', field: 'id' });
+      return;
+    }
+    const status = req.body?.status;
+    const priority = req.body?.priority;
+    if (status !== undefined && !['open', 'triaged', 'in_progress', 'resolved', 'closed'].includes(status)) {
+      res.status(400).json({ code: 'VALIDATION_ERROR', field: 'status' });
+      return;
+    }
+    if (priority !== undefined && !['low', 'normal', 'high', 'urgent'].includes(priority)) {
+      res.status(400).json({ code: 'VALIDATION_ERROR', field: 'priority' });
+      return;
+    }
+    const assignedAdminId = req.body?.assignedAdminId;
+    if (assignedAdminId !== undefined && assignedAdminId !== null && (typeof assignedAdminId !== 'string' || !validId(assignedAdminId))) {
+      res.status(400).json({ code: 'VALIDATION_ERROR', field: 'assignedAdminId' });
+      return;
+    }
+    const ticket = await services.supportTicketService.update(req.params.id, {
+      status,
+      priority,
+      resolution: typeof req.body?.resolution === 'string' ? req.body.resolution.trim().slice(0, 2000) : undefined,
+      assignedAdminId: assignedAdminId === null || typeof assignedAdminId === 'string' ? assignedAdminId : undefined,
+    });
+    await platformAdminService.recordAudit(
+      req.principal!.platformAdminId!,
+      'support-ticket.update',
+      'support_ticket',
+      req.params.id,
+      { status, priority },
+    );
+    res.status(200).json({ ticket });
+  }));
+
   return router;
 }
 

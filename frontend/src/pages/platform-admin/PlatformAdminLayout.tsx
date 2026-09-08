@@ -73,6 +73,7 @@ const NAV_GROUPS: NavGroup[] = [
       { key: '/platform-admin/appointments', label: 'نوبت‌ها', icon: <CalendarOutlined /> },
       { key: '/platform-admin/waitlist', label: 'صف انتظار', icon: <QuestionCircleOutlined /> },
       { key: '/platform-admin/qr-scans', label: 'اسکن‌های QR', icon: <QrcodeOutlined /> },
+      { key: '/platform-admin/card-orders', label: 'سفارش کارت چاپی', icon: <CreditCardOutlined /> },
     ],
   },
   {
@@ -97,7 +98,10 @@ const NAV_GROUPS: NavGroup[] = [
     key: 'platform',
     label: 'پلتفرم',
     icon: <SettingOutlined />,
-    children: [{ key: '/platform-admin/audit-logs', label: 'گزارش تغییرات', icon: <SafetyCertificateOutlined /> }],
+    children: [
+      { key: '/platform-admin/audit-logs', label: 'گزارش تغییرات', icon: <SafetyCertificateOutlined /> },
+      { key: '/platform-admin/support', label: 'پشتیبانی و خطاها', icon: <MessageOutlined /> },
+    ],
   },
 ];
 

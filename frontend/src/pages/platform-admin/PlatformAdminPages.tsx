@@ -6,6 +6,7 @@ import {
   Card,
   Empty,
   Input,
+  Modal,
   Select,
   Skeleton,
   Space,
@@ -26,6 +27,7 @@ import {
   ExclamationCircleOutlined,
   FireOutlined,
   ReloadOutlined,
+  PrinterOutlined,
   SearchOutlined,
   ShopOutlined,
   TeamOutlined,
@@ -35,6 +37,7 @@ import {
   platformAdminApi,
   type PlatformAppointmentRow,
   type PlatformAuditRow,
+  type PlatformCardOrderRow,
   type PlatformCustomerRow,
   type PlatformListOptions,
   type PlatformPage,
@@ -42,9 +45,11 @@ import {
   type PlatformQrScanRow,
   type PlatformSalonRow,
   type PlatformStaffRow,
+  type PlatformSupportTicketRow,
   type PlatformSubscriptionRow,
   type PlatformWaitlistRow,
 } from '../../api/client';
+import { useAuth } from '../../auth/AuthContext';
 import { formatToman } from '../../components/ui/Money';
 import { ErrorState } from '../../components/ui';
 import './platform-admin.css';
@@ -58,6 +63,9 @@ const dateTimeFormatter = new Intl.DateTimeFormat('fa-IR', { dateStyle: 'short',
 const STATUS_LABEL: Record<string, string> = {
   active: 'فعال', trial: 'آزمایشی', grace: 'مهلت تمدید', expired: 'منقضی', suspended: 'تعلیق‌شده', inactive: 'غیرفعال',
   pending: 'در انتظار', held: 'موقت', confirmed: 'تأییدشده', completed: 'انجام‌شده', cancelled: 'لغوشده', no_show: 'عدم مراجعه',
+  received: 'دریافت‌شده', contacted: 'تماس گرفته شد', in_print: 'در حال چاپ', shipped: 'ارسال‌شده',
+  open: 'باز', triaged: 'دسته‌بندی‌شده', in_progress: 'در حال پیگیری', resolved: 'حل‌شده', closed: 'بسته‌شده',
+  low: 'کم', normal: 'عادی', high: 'زیاد', urgent: 'فوری',
   paid: 'پرداخت‌شده', refunded: 'مستردشده', retained: 'نگه‌داشته‌شده', failed: 'ناموفق', waiting: 'در صف', notified: 'اطلاع داده‌شده', fulfilled: 'تکمیل‌شده',
   web: 'وب', mobile: 'موبایل', walkin: 'حضوری', bot: 'ربات', monthly: 'ماهانه', quarterly: 'سه‌ماهه', annual: 'سالانه', Owner: 'مالک', Admin: 'ادمین', Stylist: 'عضو تیم',
 };
@@ -69,8 +77,8 @@ function label(value: string | null | undefined): string {
 
 function tagColor(value: string | null | undefined): string {
   if (['active', 'paid', 'confirmed', 'completed', 'fulfilled'].includes(value ?? '')) return 'green';
-  if (['pending', 'trial', 'grace', 'held', 'waiting', 'notified'].includes(value ?? '')) return 'gold';
-  if (['expired', 'suspended', 'inactive', 'cancelled', 'no_show', 'failed'].includes(value ?? '')) return 'red';
+  if (['pending', 'trial', 'grace', 'held', 'waiting', 'notified', 'received', 'contacted', 'open', 'triaged', 'normal'].includes(value ?? '')) return 'gold';
+  if (['expired', 'suspended', 'inactive', 'cancelled', 'no_show', 'failed', 'urgent'].includes(value ?? '')) return 'red';
   if (['mobile', 'web', 'bot', 'annual', 'Owner'].includes(value ?? '')) return 'blue';
   return 'default';
 }
@@ -439,4 +447,348 @@ export function PlatformAuditPage() {
     { key: 'metadata', title: 'جزئیات', render: (row) => <Typography.Text ellipsis={{ tooltip: row.metadata ? JSON.stringify(row.metadata) : '—' }}>{row.metadata ? JSON.stringify(row.metadata) : '—'}</Typography.Text> },
     { key: 'date', title: 'زمان', render: (row) => dateLabel(row.createdAt, true) },
   ]} />;
+}
+
+const CARD_ORDER_STATUS_OPTIONS = [
+  'received',
+  'contacted',
+  'in_print',
+  'shipped',
+  'completed',
+  'cancelled',
+].map((value) => ({ value, label: label(value) }));
+
+function printSpecsLabel(specs: Record<string, unknown> | null): string {
+  if (!specs) return '—';
+  const labels: Record<string, string> = {
+    paper: 'جنس',
+    finish: 'روکش',
+    doubleSided: 'دوطرفه',
+  };
+  const entries = Object.entries(specs).filter(
+    ([, value]) => value !== undefined && value !== null && value !== '' && typeof value !== 'object',
+  );
+  return entries.length
+    ? entries.map(([key, value]) => `${labels[key] ?? key}: ${String(value)}`).join(' · ')
+    : '—';
+}
+
+function deliveryLocationLabel(specs: Record<string, unknown> | null): string | null {
+  const location = specs?.deliveryLocation;
+  if (!location || typeof location !== 'object' || Array.isArray(location)) return null;
+  const record = location as Record<string, unknown>;
+  const province = typeof record.province === 'string' ? record.province : '';
+  const city = typeof record.city === 'string' ? record.city : '';
+  return [province, city].filter(Boolean).join('، ') || null;
+}
+
+function deliveryPostalCode(specs: Record<string, unknown> | null): string | null {
+  const location = specs?.deliveryLocation;
+  if (!location || typeof location !== 'object' || Array.isArray(location)) return null;
+  const postalCode = (location as Record<string, unknown>).postalCode;
+  return typeof postalCode === 'string' && postalCode ? postalCode : null;
+}
+
+export function PlatformCardOrdersPage() {
+  const [rows, setRows] = useState<PlatformCardOrderRow[]>([]);
+  const [resultSummary, setResultSummary] = useState<{ orderCount: number; pieceCount: number } | undefined>();
+  const [pageInfo, setPageInfo] = useState({ page: 1, limit: 20, total: 0, pageCount: 1 });
+  const [statusFilter, setStatusFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const result = await platformAdminApi.listCardOrders({
+        page,
+        limit: 20,
+        status: statusFilter || undefined,
+      });
+      setRows(result.orders);
+      setResultSummary(result.summary);
+      setPageInfo(result.page);
+    } catch {
+      setError('دریافت سفارش‌های کارت انجام نشد.');
+    } finally {
+      setLoading(false);
+    }
+  }, [page, statusFilter]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const updateStatus = async (row: PlatformCardOrderRow, status: string) => {
+    setBusyId(row.id);
+    setError('');
+    try {
+      await platformAdminApi.updateCardOrder(row.id, status);
+      await load();
+    } catch {
+      setError('تغییر وضعیت سفارش انجام نشد.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const totalPieces = rows.reduce((sum, row) => sum + row.quantity, 0);
+  const columns: ColumnsType<PlatformCardOrderRow> = [
+    {
+      title: 'سفارش',
+      key: 'order',
+      render: (_value, row) => (
+        <div className="platform-admin-table-name">
+          <strong><Typography.Text copyable={{ text: row.orderNumber }}>{row.orderNumber}</Typography.Text></strong>
+          <span>{dateLabel(row.createdAt, true)}</span>
+        </div>
+      ),
+    },
+    {
+      title: 'سالن',
+      key: 'salon',
+      render: (_value, row) => <div className="platform-admin-table-name"><strong>{row.salon.name}</strong><span>{label(row.template)}</span></div>,
+    },
+    {
+      title: 'تولید',
+      key: 'production',
+      render: (_value, row) => <div className="platform-admin-table-name"><strong><Typography.Text>{faNumber.format(row.quantity)} عدد</Typography.Text></strong><span>{printSpecsLabel(row.printSpecs)}</span></div>,
+    },
+    {
+      title: 'تحویل',
+      key: 'contact',
+      render: (_value, row) => {
+        const location = deliveryLocationLabel(row.printSpecs);
+        const postalCode = deliveryPostalCode(row.printSpecs);
+        return (
+          <div className="platform-admin-table-name">
+            <strong>{row.contactName}</strong>
+            <span dir="ltr">{row.phone}</span>
+            {location && <span>{location}</span>}
+            <span>{row.address}</span>
+            {postalCode && <span dir="ltr">کد پستی: {postalCode}</span>}
+          </div>
+        );
+      },
+    },
+    {
+      title: 'یادداشت',
+      key: 'notes',
+      render: (_value, row) => <Typography.Text ellipsis={{ tooltip: row.notes ?? undefined }}>{row.notes || '—'}</Typography.Text>,
+    },
+    {
+      title: 'وضعیت',
+      key: 'status',
+      render: (_value, row) => <Select value={row.status} loading={busyId === row.id} options={CARD_ORDER_STATUS_OPTIONS} onChange={(value) => void updateStatus(row, value)} style={{ minWidth: 150 }} aria-label={`وضعیت سفارش ${row.orderNumber}`} />,
+    },
+  ];
+
+  return (
+    <div className="platform-admin-page">
+      <PageHeader title="سفارش کارت چاپی" subtitle="اطلاعات تماس، تعداد و مشخصات تولید در یک گزارش قابل چاپ؛ پیگیری ادامه کار از طریق inbox سالن انجام می‌شود." onRefresh={() => void load()} loading={loading} />
+      <div className="mb-4 flex flex-wrap justify-end gap-2">
+        <Button icon={<PrinterOutlined />} onClick={() => window.print()}>چاپ گزارش</Button>
+      </div>
+      <Card className="platform-admin-filter-card">
+        <div className="platform-admin-filter-row">
+          <Select allowClear value={statusFilter || undefined} onChange={(value) => { setStatusFilter(value ?? ''); setPage(1); }} placeholder="همه وضعیت‌ها" options={CARD_ORDER_STATUS_OPTIONS} style={{ minWidth: 220 }} aria-label="فیلتر وضعیت سفارش کارت" />
+        </div>
+      </Card>
+      <Card className="mb-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div><Typography.Text type="secondary">تعداد سفارش‌های فیلترشده</Typography.Text><div className="text-xl font-bold">{faNumber.format(pageInfo.total)}</div></div>
+          <div><Typography.Text type="secondary">تعداد کارت برای گزارش چاپ</Typography.Text><div className="text-xl font-bold">{faNumber.format(resultSummary?.pieceCount ?? totalPieces)}</div></div>
+        </div>
+      </Card>
+      {error && <Alert className="mb-4" type="error" showIcon message={error} />}
+      <Table<PlatformCardOrderRow>
+        rowKey="id"
+        loading={loading}
+        columns={columns}
+        dataSource={rows}
+        scroll={{ x: 1200 }}
+        locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="سفارشی برای نمایش وجود ندارد." /> }}
+        pagination={{ current: pageInfo.page, pageSize: pageInfo.limit, total: pageInfo.total, showSizeChanger: false, onChange: setPage, showTotal: (total) => `${faNumber.format(total)} سفارش` }}
+      />
+    </div>
+  );
+}
+
+const SUPPORT_STATUS_OPTIONS = ['open', 'triaged', 'in_progress', 'resolved', 'closed'].map((value) => ({ value, label: label(value) }));
+const SUPPORT_PRIORITY_OPTIONS = ['low', 'normal', 'high', 'urgent'].map((value) => ({ value, label: label(value) }));
+
+function SupportTicketActions({ row, onSaved }: { row: PlatformSupportTicketRow; onSaved: () => void }) {
+  const { principal } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [details, setDetails] = useState<PlatformSupportTicketRow | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsError, setDetailsError] = useState('');
+  const [status, setStatus] = useState(row.status);
+  const [priority, setPriority] = useState(row.priority);
+  const [resolution, setResolution] = useState(row.resolution ?? '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const save = async (assignedAdminId?: string | null) => {
+    setSaving(true);
+    setError('');
+    try {
+      await platformAdminApi.updateSupportTicket(row.id, {
+        status,
+        priority,
+        resolution,
+        ...(assignedAdminId !== undefined ? { assignedAdminId } : {}),
+      });
+      setOpen(false);
+      onSaved();
+    } catch {
+      setError('تغییر تیکت انجام نشد.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openDetails = async () => {
+    setDetailsOpen(true);
+    setDetails(null);
+    setDetailsError('');
+    setDetailsLoading(true);
+    try {
+      const result = await platformAdminApi.getSupportTicket(row.id);
+      setDetails(result.ticket);
+    } catch {
+      setDetailsError('دریافت جزئیات تیکت انجام نشد.');
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <Space size={4} wrap>
+        <Button size="small" icon={<EyeOutlined />} onClick={() => void openDetails()}>جزئیات</Button>
+        {principal?.platformAdminId && <Button size="small" disabled={saving} onClick={() => void save(principal.platformAdminId)}>واگذاری به من</Button>}
+        <Button size="small" onClick={() => { setStatus(row.status); setPriority(row.priority); setResolution(row.resolution ?? ''); setOpen(true); }}>ویرایش</Button>
+      </Space>
+      <Modal open={detailsOpen} title={`جزئیات ${row.ticketNumber}`} onCancel={() => !detailsLoading && setDetailsOpen(false)} footer={null} destroyOnHidden>
+        {detailsLoading ? <Skeleton active /> : detailsError ? <Alert type="error" showIcon message={detailsError} /> : details && (
+          <div className="flex flex-col gap-3 text-sm">
+            <div className="grid gap-2 rounded-lg bg-surface p-3 sm:grid-cols-2">
+              <span>مسیر: {details.page || '—'}</span>
+              <span>اقدام: {details.action || '—'}</span>
+              <span>کد خطا: {details.errorCode || '—'}</span>
+              <span>شناسه درخواست: {details.requestId || '—'}</span>
+              <span>مرورگر: {details.browser || '—'}</span>
+              <span>دستگاه: {details.device || '—'}</span>
+            </div>
+            <div className="rounded-lg border border-border p-3 whitespace-pre-wrap leading-7">{details.message}</div>
+            {details.screenshot?.dataBase64 ? (
+              <img
+                src={`data:${details.screenshot.mime};base64,${details.screenshot.dataBase64}`}
+                alt={`تصویر پیوست ${details.screenshot.name}`}
+                className="max-h-[28rem] w-full rounded-lg border border-border object-contain"
+              />
+            ) : details.screenshot ? (
+              <p className="m-0 text-muted">فایل پیوست: {details.screenshot.name}</p>
+            ) : null}
+            {details.resolution && <div className="rounded-lg bg-surface p-3 leading-7"><strong>نتیجه بررسی:</strong> {details.resolution}</div>}
+          </div>
+        )}
+      </Modal>
+      <Modal open={open} title={`پیگیری ${row.ticketNumber}`} onCancel={() => !saving && setOpen(false)} onOk={() => void save()} okText="ذخیره" cancelText="انصراف" confirmLoading={saving} destroyOnHidden>
+        <div className="flex flex-col gap-3">
+          <div className="rounded-lg bg-surface p-3 text-sm"><strong>گزارش:</strong> {row.message}</div>
+          <Select value={status} options={SUPPORT_STATUS_OPTIONS} onChange={setStatus} aria-label="وضعیت تیکت" />
+          <Select value={priority} options={SUPPORT_PRIORITY_OPTIONS} onChange={setPriority} aria-label="اولویت تیکت" />
+          <Input.TextArea value={resolution} onChange={(event) => setResolution(event.target.value)} maxLength={2000} rows={4} placeholder="نتیجه بررسی یا راه‌حل…" aria-label="نتیجه بررسی" />
+          {error && <Alert type="error" showIcon message={error} />}
+        </div>
+      </Modal>
+    </>
+  );
+}
+
+export function PlatformSupportPage() {
+  const [rows, setRows] = useState<PlatformSupportTicketRow[]>([]);
+  const [pageInfo, setPageInfo] = useState({ page: 1, limit: 20, total: 0, pageCount: 1 });
+  const [statusFilter, setStatusFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const result = await platformAdminApi.listSupportTickets({ page, limit: 20, status: statusFilter || undefined });
+      setRows(result.tickets);
+      setPageInfo(result.page);
+    } catch {
+      setError('دریافت گزارش‌های پشتیبانی انجام نشد.');
+    } finally {
+      setLoading(false);
+    }
+  }, [page, statusFilter]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const columns: ColumnsType<PlatformSupportTicketRow> = [
+    {
+      title: 'تیکت',
+      key: 'ticket',
+      render: (_value, row) => <div className="platform-admin-table-name"><strong><Typography.Text copyable={{ text: row.ticketNumber }}>{row.ticketNumber}</Typography.Text></strong><span>{dateLabel(row.createdAt, true)}</span></div>,
+    },
+    {
+      title: 'گزارش‌دهنده',
+      key: 'reporter',
+      render: (_value, row) => <div className="platform-admin-table-name"><strong>{personName(row.reporter?.fullName ?? row.reporterStaff?.fullName, row.reporter?.phone ?? row.reporterStaff?.phone)}</strong><span>{row.salon?.name ?? 'بدون سالن'} · {label(row.reporterRole)}</span></div>,
+    },
+    {
+      title: 'شرح',
+      key: 'message',
+      render: (_value, row) => <Typography.Paragraph ellipsis={{ rows: 2, tooltip: row.message }} className="!mb-0 !max-w-[22rem]">{row.message}</Typography.Paragraph>,
+    },
+    {
+      title: 'زمینه خطا',
+      key: 'context',
+      render: (_value, row) => <div className="platform-admin-table-name"><span>{row.page || '—'}{row.action ? ` · ${row.action}` : ''}</span><Typography.Text code>{row.errorCode || row.requestId || 'بدون کد'}</Typography.Text><span>{row.browser || '—'} · {row.device || '—'}</span></div>,
+    },
+    {
+      title: 'وضعیت',
+      key: 'state',
+      render: (_value, row) => <Space size={4}><StatusTag value={row.status} /><StatusTag value={row.priority} /></Space>,
+    },
+    {
+      title: 'اقدام',
+      key: 'actions',
+      render: (_value, row) => <SupportTicketActions row={row} onSaved={() => void load()} />,
+    },
+  ];
+
+  return (
+    <div className="platform-admin-page">
+      <PageHeader title="پشتیبانی و گزارش خطا" subtitle="هر گزارش با شناسه، کاربر، مسیر، اقدام، request ID و context دستگاه قابل پیگیری و resolve است." onRefresh={() => void load()} loading={loading} />
+      <Card className="platform-admin-filter-card">
+        <div className="platform-admin-filter-row">
+          <Select allowClear value={statusFilter || undefined} onChange={(value) => { setStatusFilter(value ?? ''); setPage(1); }} placeholder="همه وضعیت‌ها" options={SUPPORT_STATUS_OPTIONS} style={{ minWidth: 220 }} aria-label="فیلتر وضعیت تیکت" />
+        </div>
+      </Card>
+      {error && <Alert className="mb-4" type="error" showIcon message={error} />}
+      <Table<PlatformSupportTicketRow>
+        rowKey="id"
+        loading={loading}
+        columns={columns}
+        dataSource={rows}
+        scroll={{ x: 1300 }}
+        locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="گزارشی برای نمایش وجود ندارد." /> }}
+        pagination={{ current: pageInfo.page, pageSize: pageInfo.limit, total: pageInfo.total, showSizeChanger: false, onChange: setPage, showTotal: (total) => `${faNumber.format(total)} گزارش` }}
+      />
+    </div>
+  );
 }

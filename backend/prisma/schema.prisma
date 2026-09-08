@@ -150,6 +150,10 @@ model Salon {
   salonClients       SalonClient[]
   referrals          SalonReferral[]
   depositReceipts    DepositReceipt[]
+  cardOrders         CardOrder[]
+  supportTickets     SupportTicket[]
+  salonBlocks        CustomerSalonBlock[]
+  moderationReports  CustomerModerationReport[]
 
   @@map("salon")
 }
@@ -198,6 +202,7 @@ model StaffMember {
   customersPreferring Customer[]          @relation("PreferredStaff")
   botChats            BotChat[]
   salonNotifications  SalonNotification[]
+  reportedSupportTickets SupportTicket[] @relation("SupportTicketStaffReporter")
 
   @@map("staff_member")
   @@index([phone, active])
@@ -280,6 +285,7 @@ model Service {
   serviceStaff     ServiceStaff[]
   serviceEquipment ServiceEquipment[]
   appointments     Appointment[]
+  appointmentItems AppointmentService[]
   waitlistEntries  WaitlistEntry[]
 
   @@map("service")
@@ -394,6 +400,10 @@ model Customer {
   botChats        BotChat[]
   salonClients    SalonClient[]
   referrals       SalonReferral[]
+  notifications   CustomerNotification[]
+  supportTickets  SupportTicket[]
+  salonBlocks     CustomerSalonBlock[]
+  moderationReports CustomerModerationReport[]
 
   @@map("customer")
 }
@@ -462,8 +472,110 @@ model Appointment {
   payments         Payment[]
   depositReceipt   DepositReceipt?
   notificationLogs NotificationLog[]
+  serviceItems     AppointmentService[]
+  cancellation     AppointmentCancellation?
+  customerNotifications CustomerNotification[]
+  salonBlocks     CustomerSalonBlock[]
+  moderationReports CustomerModerationReport[]
 
   @@map("appointment")
+}
+
+// Snapshot of every service in a booking. Appointment.serviceId remains the
+// primary service for compatibility with existing reports and constraints.
+model AppointmentService {
+  id            String   @id @default(uuid()) @db.Uuid
+  appointmentId String   @map("appointment_id") @db.Uuid
+  serviceId     String   @map("service_id") @db.Uuid
+  position      Int
+  name          String
+  durationMin   Int      @map("duration_min")
+  bufferMin     Int      @map("buffer_min")
+  priceRial     BigInt   @map("price_rial")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  service     Service     @relation(fields: [serviceId], references: [id])
+
+  @@unique([appointmentId, position])
+  @@index([serviceId])
+  @@map("appointment_service")
+}
+
+// Durable cancellation record. Proof data is private and is only returned to
+// the customer/staff authorized for this appointment.
+model AppointmentCancellation {
+  id              String    @id @default(uuid()) @db.Uuid
+  appointmentId   String    @unique @map("appointment_id") @db.Uuid
+  cancelledBy     String    @map("cancelled_by")
+  kind            String    @default("standard")
+  reason          String
+  refundStatus    String    @default("not_required") @map("refund_status")
+  refundDueAt     DateTime? @map("refund_due_at") @db.Timestamptz
+  proofFileName   String?   @map("proof_file_name")
+  proofMimeType   String?   @map("proof_mime_type")
+  proofSizeBytes  Int?      @map("proof_size_bytes")
+  proofData       Bytes?    @map("proof_data")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([refundStatus, refundDueAt])
+  @@map("appointment_cancellation")
+}
+
+model CustomerNotification {
+  id            String    @id @default(uuid()) @db.Uuid
+  customerId    String    @map("customer_id") @db.Uuid
+  appointmentId String?   @map("appointment_id") @db.Uuid
+  type          String
+  title         String
+  body          String
+  payload       Json?
+  readAt        DateTime? @map("read_at") @db.Timestamptz
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  customer    Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@index([customerId, createdAt])
+  @@index([customerId, readAt])
+  @@map("customer_notification")
+}
+
+model CustomerSalonBlock {
+  id            String   @id @default(uuid()) @db.Uuid
+  salonId       String   @map("salon_id") @db.Uuid
+  customerId    String   @map("customer_id") @db.Uuid
+  appointmentId String?  @map("appointment_id") @db.Uuid
+  reason        String
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  salon       Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  customer    Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@unique([salonId, customerId])
+  @@index([salonId, active])
+  @@map("customer_salon_block")
+}
+
+model CustomerModerationReport {
+  id            String   @id @default(uuid()) @db.Uuid
+  salonId       String   @map("salon_id") @db.Uuid
+  customerId    String   @map("customer_id") @db.Uuid
+  appointmentId String?  @map("appointment_id") @db.Uuid
+  reason        String
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  salon       Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  customer    Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@index([salonId, createdAt])
+  @@map("customer_moderation_report")
 }
 
 // ─── Payment ───────────────────────────────────────────────────────────────────
@@ -756,8 +868,73 @@ model PlatformAdmin {
   lastLoginAt DateTime? @map("last_login_at") @db.Timestamptz
 
   auditLogs PlatformAuditLog[]
+  assignedSupportTickets SupportTicket[] @relation("SupportTicketAssignee")
+  handledCardOrders CardOrder[] @relation("CardOrderHandler")
 
   @@map("platform_admin")
+}
+
+model CardOrder {
+  id              String    @id @default(uuid()) @db.Uuid
+  orderNumber     String    @unique @map("order_number")
+  salonId         String    @map("salon_id") @db.Uuid
+  template        String
+  accent          String
+  quantity        Int
+  contactName     String    @map("contact_name")
+  phone           String
+  address         String
+  notes           String?
+  printSpecs      Json?     @map("print_specs")
+  status          String    @default("received")
+  handledByAdminId String?  @map("handled_by_admin_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  salon       Salon        @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  handledBy   PlatformAdmin? @relation("CardOrderHandler", fields: [handledByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([salonId, createdAt])
+  @@index([status, createdAt])
+  @@map("card_order")
+}
+
+model SupportTicket {
+  id             String    @id @default(uuid()) @db.Uuid
+  ticketNumber   String    @unique @map("ticket_number")
+  reporterId     String?   @map("reporter_id") @db.Uuid
+  reporterStaffId String?  @map("reporter_staff_id") @db.Uuid
+  reporterRole   String?   @map("reporter_role")
+  salonId        String?   @map("salon_id") @db.Uuid
+  page           String?
+  action         String?
+  message        String
+  errorCode      String?   @map("error_code")
+  requestId      String?   @map("request_id")
+  userAgent      String?   @map("user_agent")
+  browser        String?
+  device         String?
+  screenshotName String?   @map("screenshot_name")
+  screenshotMime String?   @map("screenshot_mime")
+  screenshotSize Int?      @map("screenshot_size")
+  screenshotData Bytes?    @map("screenshot_data")
+  status         String    @default("open")
+  priority       String    @default("normal")
+  assignedAdminId String?  @map("assigned_admin_id") @db.Uuid
+  resolution     String?
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  resolvedAt     DateTime? @map("resolved_at") @db.Timestamptz
+
+  salon       Salon?        @relation(fields: [salonId], references: [id], onDelete: SetNull)
+  reporter    Customer?     @relation(fields: [reporterId], references: [id], onDelete: SetNull)
+  reporterStaff StaffMember? @relation("SupportTicketStaffReporter", fields: [reporterStaffId], references: [id], onDelete: SetNull)
+  assignedAdmin PlatformAdmin? @relation("SupportTicketAssignee", fields: [assignedAdminId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([reporterId, createdAt])
+  @@index([salonId, createdAt])
+  @@map("support_ticket")
 }
 
 // Immutable operator trail for global state changes. Metadata is structured so

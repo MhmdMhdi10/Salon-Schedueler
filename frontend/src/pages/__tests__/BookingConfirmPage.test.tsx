@@ -56,7 +56,7 @@ function AvailabilityProbe() {
   return <div>availability-page:{location.pathname}</div>;
 }
 
-/** Probe standing in for the `/auth` screen; surfaces the carried router state. */
+/** Probe standing in for the booking-scoped auth screen; surfaces router state. */
 function AuthProbe() {
   const location = useLocation();
   return <div>auth-page:{JSON.stringify(location.state)}</div>;
@@ -78,7 +78,7 @@ function renderPage(state: unknown = SELECTION, salonId = 'salon-1') {
         <Routes>
           <Route path="/salon/:salonId/book/confirm" element={<BookingConfirmPage />} />
           <Route path="/salon/:salonId/book" element={<AvailabilityProbe />} />
-          <Route path="/auth" element={<AuthProbe />} />
+          <Route path="/salon/:salonId/book/auth" element={<AuthProbe />} />
           <Route path="/booking/success" element={<SuccessProbe />} />
         </Routes>
       </MemoryRouter>
@@ -88,6 +88,7 @@ function renderPage(state: unknown = SELECTION, salonId = 'salon-1') {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  window.sessionStorage.clear();
   getAccessToken.mockReturnValue(null);
   getProfile.mockReset();
   updateProfile.mockReset();
@@ -128,11 +129,25 @@ describe('BookingConfirmPage — summary', () => {
 });
 
 describe('BookingConfirmPage — missing selection guard', () => {
-  it('shows an empty state with a way back when no selection is present', async () => {
+  it('restores a saved selection when the confirm URL is opened directly', async () => {
+    window.sessionStorage.setItem(
+      'booking-selection:salon-1',
+      JSON.stringify({
+        serviceId: 'svc-1',
+        serviceIds: ['svc-1'],
+        date: '2999-03-15',
+        startAt: SELECTION.startAt,
+      }),
+    );
+
     renderPage(NO_STATE);
-    expect(await screen.findByTestId('booking-confirm')).toBeInTheDocument();
-    const back = screen.getByRole('button', { name: 'بازگشت به انتخاب زمان' });
-    back.click();
+
+    expect(await screen.findByText('کوتاهی مو')).toBeInTheDocument();
+    expect(screen.queryByText('اطلاعات رزرو ناقص است')).not.toBeInTheDocument();
+  });
+
+  it('restarts at availability when no selection is present', async () => {
+    renderPage(NO_STATE);
     expect(await screen.findByText(/availability-page:\/salon\/salon-1\/book/)).toBeInTheDocument();
   });
 });
@@ -216,7 +231,7 @@ describe('BookingConfirmPage — confirm states', () => {
 });
 
 describe('BookingConfirmPage — sign-in then resume', () => {
-  it('routes an unauthenticated confirm to /auth carrying the return intent + selection', async () => {
+  it('routes an unauthenticated confirm to booking auth carrying the return intent + selection', async () => {
     // A 401/UNAUTHORIZED-shaped rejection (the anonymous-customer case) must
     // bounce to the phone+OTP login rather than showing the generic error.
     createBooking.mockRejectedValueOnce({ status: 401, code: 'UNAUTHORIZED' });

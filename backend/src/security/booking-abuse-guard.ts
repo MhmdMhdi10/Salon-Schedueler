@@ -5,7 +5,8 @@ export type BookingAbuseCode =
   | 'BOT_DETECTED'
   | 'DUPLICATE_BOOKING'
   | 'BOOKING_LIMIT'
-  | 'INVALID_IDEMPOTENCY_KEY';
+  | 'INVALID_IDEMPOTENCY_KEY'
+  | 'CUSTOMER_BLOCKED';
 
 export class BookingAbuseError extends Error {
   constructor(
@@ -56,6 +57,16 @@ export class BookingAbuseGuard {
   constructor(private readonly prisma: PrismaClient) {}
 
   async check(input: BookingAbuseInput): Promise<void> {
+    const blockDelegate = (this.prisma as any).customerSalonBlock;
+    if (blockDelegate?.findUnique) {
+      const block = await blockDelegate.findUnique({
+        where: { salonId_customerId: { salonId: input.salonId, customerId: input.customerId } },
+        select: { active: true },
+      });
+      if (block?.active === true) {
+        throw new BookingAbuseError('CUSTOMER_BLOCKED', 'Customer is blocked by this salon');
+      }
+    }
     if (typeof input.honeypot === 'string' && input.honeypot.trim() !== '') {
       throw new BookingAbuseError('BOT_DETECTED', 'Automated booking rejected');
     }

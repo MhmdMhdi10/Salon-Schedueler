@@ -513,6 +513,22 @@ export class PrismaCustomerRepository implements CustomerRepository {
         staffMember: { select: { fullName: true } },
         depositReceipt: { select: { status: true } },
         payments: { orderBy: { createdAt: 'desc' }, take: 1, select: { status: true } },
+        serviceItems: {
+          orderBy: { position: 'asc' },
+          select: { serviceId: true, name: true, durationMin: true, priceRial: true },
+        },
+        cancellation: {
+          select: {
+            cancelledBy: true,
+            kind: true,
+            reason: true,
+            refundStatus: true,
+            refundDueAt: true,
+            proofFileName: true,
+            proofMimeType: true,
+            proofSizeBytes: true,
+          },
+        },
       },
       orderBy: { startAt: 'desc' },
     });
@@ -550,6 +566,28 @@ export class PrismaCustomerRepository implements CustomerRepository {
             startAt: appt.pendingRescheduleStartAt,
             endAt: appt.pendingRescheduleEndAt,
             requestedAt: appt.pendingRescheduleRequestedAt,
+          }
+        : null,
+      serviceItems: appt.serviceItems.map((item) => ({
+        serviceId: item.serviceId,
+        name: item.name,
+        durationMin: item.durationMin,
+        priceRial: Number(item.priceRial),
+      })),
+      cancellation: appt.cancellation
+        ? {
+            cancelledBy: appt.cancellation.cancelledBy,
+            kind: appt.cancellation.kind,
+            reason: appt.cancellation.reason,
+            refundStatus: appt.cancellation.refundStatus,
+            refundDueAt: appt.cancellation.refundDueAt,
+            proof: appt.cancellation.proofFileName
+              ? {
+                  fileName: appt.cancellation.proofFileName,
+                  mimeType: appt.cancellation.proofMimeType ?? 'image/jpeg',
+                  sizeBytes: appt.cancellation.proofSizeBytes ?? 0,
+                }
+              : null,
           }
         : null,
     }));

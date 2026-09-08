@@ -23,6 +23,9 @@ const API_ERROR_MESSAGES: Record<string, string> = {
   LAST_OWNER_REQUIRED: 'برای سالن باید حداقل یک مالک فعال باقی بماند.',
   BOOKING_SLOT_UNAVAILABLE: 'این زمان در همین لحظه توسط رزرو دیگری گرفته شد؛ زمان دیگری انتخاب کن.',
   BOOKING_NO_AVAILABILITY: 'برای این خدمت در تاریخ انتخاب‌شده زمان خالی وجود ندارد.',
+  REFUND_PROOF_REQUIRED: 'برای لغو اضطراریِ رزرو دارای بیعانه، دلیل و تصویر بازپرداخت را ثبت کن.',
+  CUSTOMER_BLOCKED: 'امکان ثبت رزرو در این سالن برای این حساب وجود ندارد.',
+  SMS_FAILED: 'ارسال پیامک ناموفق بود؛ دوباره تلاش کن.',
   RESCHEDULE_CONFLICT: 'زمان جدید دیگر خالی نیست؛ یک زمان تازه انتخاب کن.',
   RESCHEDULE_DEADLINE_PASSED: 'چون زمان نوبت رسیده یا گذشته، تغییر آن امکان‌پذیر نیست.',
   RESCHEDULE_PROPOSAL_PENDING: 'یک پیشنهاد تغییر زمان در انتظار پاسخ است.',
@@ -278,6 +281,31 @@ export interface CustomerAppointment {
     endAt?: string | null;
     requestedAt?: string | null;
   } | null;
+  serviceItems?: Array<{
+    serviceId: string;
+    name: string;
+    durationMin: number;
+    priceRial: number;
+  }>;
+  cancellation?: {
+    cancelledBy: string;
+    kind: string;
+    reason: string;
+    refundStatus: string;
+    refundDueAt: string | null;
+    proof?: { fileName: string; mimeType: string; sizeBytes: number } | null;
+  } | null;
+}
+
+export interface CustomerNotification {
+  id: string;
+  appointmentId: string | null;
+  type: string;
+  title: string;
+  body: string;
+  payload?: Record<string, unknown> | null;
+  readAt: string | null;
+  createdAt: string;
 }
 
 export interface CustomerWaitlistEntry {
@@ -309,11 +337,32 @@ export const customerApi = {
     request<{ appointments: CustomerAppointment[] }>('/customers/me/appointments'),
   getWaitlist: () =>
     request<{ waitlist: CustomerWaitlistEntry[] }>('/customers/me/waitlist'),
+  getNotifications: () =>
+    request<{ notifications: CustomerNotification[] }>('/customers/me/notifications'),
+  markNotificationRead: (id: string) =>
+    request<{ ok: boolean }>(`/customers/me/notifications/${encodeURIComponent(id)}/read`, {
+      method: 'PATCH',
+    }),
+  markAllNotificationsRead: () =>
+    request<{ ok: boolean }>('/customers/me/notifications/read-all', { method: 'POST' }),
   cancelAppointment: (appointmentId: string) =>
     request<{ status: string; appointment: unknown }>(
       `/appointments/${appointmentId}/cancel`,
       { method: 'POST' },
     ),
+  getCancellation: (appointmentId: string) =>
+    request<{ cancellation: CustomerAppointment['cancellation'] }>(
+      `/appointments/${appointmentId}/cancellation`,
+    ),
+  getCancellationRefundProof: (appointmentId: string) =>
+    request<{
+      proof: {
+        fileName: string;
+        mimeType: string;
+        sizeBytes: number;
+        dataBase64: string;
+      };
+    }>(`/appointments/${appointmentId}/cancellation/refund-proof`),
   rescheduleAppointment: (appointmentId: string, startAt: string, preferredStaffId?: string) =>
     request<{ status: string; appointment: unknown; previousAppointmentId: string }>(
       `/appointments/${appointmentId}/reschedule`,
@@ -511,12 +560,16 @@ export const salonApi = {
     staffId?: string,
     locationType?: 'salon' | 'customer',
     durationMinutes?: number,
+    serviceIds?: string[],
   ) =>
     request<{ slots: Array<{ startAt: string; endAt: string }> }>(
       `/salons/${salonId}/availability?serviceId=${serviceId}&date=${date}${
         staffId ? `&staffId=${encodeURIComponent(staffId)}` : ''
       }${locationType ? `&locationType=${locationType}` : ''}${
-        durationMinutes !== undefined ? `&durationMinutes=${durationMinutes}` : ''}`,
+        durationMinutes !== undefined ? `&durationMinutes=${durationMinutes}` : ''}${
+        serviceIds && serviceIds.length > 1
+          ? `&serviceIds=${encodeURIComponent(serviceIds.join(','))}`
+          : ''}`,
     ),
   getServices: (salonId: string) =>
     request<{
@@ -566,6 +619,7 @@ export const bookingApi = {
   create: (body: {
     salonId: string;
     serviceId: string;
+    serviceIds?: string[];
     startAt: string;
     preferredStaffId?: string;
     locationType?: 'salon' | 'customer';
@@ -741,10 +795,18 @@ export interface CardOrderInput {
   contactName: string;
   /** Contact phone (Iranian mobile). */
   phone: string;
-  /** Shipping address. */
+  /** Delivery province selected in the order form. */
+  province: string;
+  /** Delivery city selected in the order form. */
+  city: string;
+  /** Written delivery address. */
   address: string;
+  /** Ten digit Iranian postal code. */
+  postalCode: string;
   /** Optional free-text notes. */
   notes?: string;
+  /** Optional production details captured by the card-order form. */
+  printSpecs?: Record<string, unknown>;
 }
 
 /** Server acknowledgement of a received print order. */
@@ -761,6 +823,48 @@ export const cardOrderApi = {
       method: 'POST',
       body,
     }),
+};
+
+export interface SupportTicket {
+  id: string;
+  ticketNumber: string;
+  reporterRole: string | null;
+  page: string | null;
+  action: string | null;
+  message: string;
+  errorCode: string | null;
+  requestId: string | null;
+  userAgent?: string | null;
+  browser?: string | null;
+  device?: string | null;
+  reporter?: { id: string; fullName: string | null; phone: string } | null;
+  reporterStaff?: { id: string; fullName: string; phone: string | null } | null;
+  salon?: { id: string; name: string } | null;
+  assignedAdmin?: { id: string; fullName: string } | null;
+  status: string;
+  priority: string;
+  resolution: string | null;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt: string | null;
+  screenshot?: { name: string; mime: string; size: number; dataBase64?: string } | null;
+}
+
+export const supportApi = {
+  create: (input: {
+    message: string;
+    page?: string;
+    action?: string;
+    errorCode?: string;
+    browser?: string;
+    device?: string;
+    screenshot?: {
+      name: string;
+      mime: 'image/jpeg' | 'image/png' | 'image/webp';
+      dataBase64: string;
+    };
+  }) => request<{ ticket: SupportTicket }>('/support/tickets', { method: 'POST', body: input }),
+  listMine: () => request<{ tickets: SupportTicket[] }>('/support/tickets/mine'),
 };
 
 // Admin endpoints
@@ -948,9 +1052,10 @@ export const adminApi = {
       method: 'POST',
     }),
   /** Reject a pending appointment (manage_appointments — Owner/Admin). */
-  rejectAppointment: (appointmentId: string) =>
+  rejectAppointment: (appointmentId: string, reason?: string) =>
     request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/reject`, {
       method: 'POST',
+      ...(reason ? { body: { reason } } : {}),
     }),
   /**
    * Cancel a confirmed/held appointment from the calendar. The backend releases
@@ -959,9 +1064,22 @@ export const adminApi = {
    * a Stylist only their own) — the route also allows the owning customer for
    * self-service cancellation.
    */
-  cancelAppointment: (appointmentId: string) =>
+  cancelAppointment: (
+    appointmentId: string,
+    body?: {
+      kind?: 'standard' | 'emergency';
+      reason?: string;
+      refundProof?: { fileName: string; mimeType: 'image/jpeg' | 'image/png' | 'image/webp'; dataBase64: string };
+    },
+  ) =>
     request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/cancel`, {
       method: 'POST',
+      ...(body ? { body } : {}),
+    }),
+  reportCustomer: (appointmentId: string, reason: string, block: boolean) =>
+    request<{ ok: boolean }>(`/appointments/${appointmentId}/report-customer`, {
+      method: 'POST',
+      body: { reason, block },
     }),
   /**
    * Mark a confirmed appointment as a no-show (manage_appointments —
@@ -1023,7 +1141,7 @@ export const adminApi = {
       { method: 'POST', body: { body } },
     ),
   sendCustomerMessage: (appointmentId: string, message: string) =>
-    request<{ status: 'sent' }>('/appointments/' + appointmentId + '/message', {
+    request<{ status: 'sent'; providerId?: string; delivery?: 'accepted' }>('/appointments/' + appointmentId + '/message', {
       method: 'POST',
       body: { message },
     }),
@@ -1314,6 +1432,35 @@ export interface PlatformAuditRow {
   admin: { id: string; fullName: string; phone: string };
 }
 
+export interface PlatformCardOrderRow {
+  id: string;
+  orderNumber: string;
+  template: string;
+  accent: string | null;
+  quantity: number;
+  contactName: string;
+  phone: string;
+  address: string;
+  notes: string | null;
+  printSpecs: Record<string, unknown> | null;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  salon: { id: string; name: string };
+  handledByAdminId: string | null;
+}
+
+export interface PlatformSupportTicketRow extends SupportTicket {
+  reporter: { id: string; fullName: string | null; phone: string } | null;
+  reporterStaff: { id: string; fullName: string; phone: string | null } | null;
+  salon: { id: string; name: string } | null;
+  assignedAdmin: { id: string; fullName: string } | null;
+}
+
+export interface PlatformResultPage<T> {
+  page: { page: number; limit: number; total: number; pageCount: number };
+}
+
 export interface PlatformListOptions {
   page?: number;
   limit?: number;
@@ -1377,6 +1524,28 @@ export const platformAdminApi = {
     request<PlatformPage<PlatformQrScanRow>>(`/platform-admin/qr-scans${platformQuery(options)}`),
   listAuditLogs: (options?: PlatformListOptions) =>
     request<PlatformPage<PlatformAuditRow>>(`/platform-admin/audit-logs${platformQuery(options)}`),
+  listCardOrders: (options?: PlatformListOptions) =>
+    request<{
+      orders: PlatformCardOrderRow[];
+      summary?: { orderCount: number; pieceCount: number };
+    } & PlatformResultPage<PlatformCardOrderRow>>(`/platform-admin/card-orders${platformQuery(options)}`),
+  updateCardOrder: (id: string, status: string, note?: string) =>
+    request<{ order: PlatformCardOrderRow }>(`/platform-admin/card-orders/${id}`, {
+      method: 'PATCH',
+      body: { status, ...(note !== undefined ? { note } : {}) },
+    }),
+  listSupportTickets: (options?: PlatformListOptions) =>
+    request<{ tickets: PlatformSupportTicketRow[] } & PlatformResultPage<PlatformSupportTicketRow>>(`/platform-admin/support/tickets${platformQuery(options)}`),
+  getSupportTicket: (id: string) =>
+    request<{ ticket: PlatformSupportTicketRow }>(`/platform-admin/support/tickets/${id}`),
+  updateSupportTicket: (
+    id: string,
+    input: { status?: string; priority?: string; resolution?: string; assignedAdminId?: string | null },
+  ) =>
+    request<{ ticket: PlatformSupportTicketRow }>(`/platform-admin/support/tickets/${id}`, {
+      method: 'PATCH',
+      body: input,
+    }),
 };
 
 /** A single row in the owner-panel transactions ledger. */
@@ -1573,10 +1742,29 @@ export const bookingPolicyApi = {
 };
 
 export const emergencyScheduleApi = {
-  closeDay: (salonId: string, onDate: string, cancelAppointments: boolean) =>
+  closeDay: (
+    salonId: string,
+    onDate: string,
+    cancelAppointments: boolean,
+    details?: {
+      reason: string;
+      refundProof?: {
+        fileName: string;
+        mimeType: 'image/jpeg' | 'image/png' | 'image/webp';
+        dataBase64: string;
+      };
+    },
+  ) =>
     request<{ ok: boolean; cancelledCount: number; failedCount: number }>(
       `/salons/${salonId}/emergency-close`,
-      { method: 'POST', body: { onDate, cancelAppointments } },
+      {
+        method: 'POST',
+        body: {
+          onDate,
+          cancelAppointments,
+          ...(details ? { reason: details.reason, ...(details.refundProof ? { refundProof: details.refundProof } : {}) } : {}),
+        },
+      },
     ),
 };
 

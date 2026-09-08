@@ -24,6 +24,7 @@ import {
   Hourglass,
   Settings2,
   User,
+  UserX,
   Scissors,
   X,
   GripVertical,
@@ -77,6 +78,7 @@ import {
   SheetContent,
   SheetDescription,
   SheetTitle,
+  Textarea,
   TextField,
   toPersianDigits,
   cn,
@@ -115,6 +117,7 @@ interface Appointment {
   id: string;
   startAt?: string;
   endAt?: string;
+  timezone?: string;
   serviceId?: string;
   serviceName?: string;
   customerName?: string;
@@ -156,6 +159,39 @@ type ManualCustomerPrefill = {
 interface StaffCalendarBlock extends SalonClosure {
   staffId: string;
   staffName: string;
+}
+
+type RefundProofDraft = {
+  fileName: string;
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp';
+  dataBase64: string;
+};
+
+const REFUND_PROOF_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+function readRefundProof(file: File): Promise<RefundProofDraft> {
+  return new Promise((resolve, reject) => {
+    if (!REFUND_PROOF_TYPES.has(file.type) || file.size > 5 * 1024 * 1024) {
+      reject(new Error('INVALID_REFUND_PROOF'));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') {
+        reject(new Error('INVALID_REFUND_PROOF'));
+        return;
+      }
+      const comma = reader.result.indexOf(',');
+      const dataBase64 = comma >= 0 ? reader.result.slice(comma + 1) : reader.result;
+      resolve({
+        fileName: file.name,
+        mimeType: file.type as RefundProofDraft['mimeType'],
+        dataBase64,
+      });
+    };
+    reader.onerror = () => reject(reader.error ?? new Error('INVALID_REFUND_PROOF'));
+    reader.readAsDataURL(file);
+  });
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -228,11 +264,74 @@ function dateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-/** Local YYYY-MM-DD from an ISO datetime string. */
-function localDateKey(iso: string): string | null {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  return dateKey(d);
+type CalendarDateTimeParts = {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+};
+
+/** Read date/time fields in salon timezone, falling back to browser local time. */
+function calendarDateTimeParts(
+  value: Date | string,
+  timezone?: string,
+): CalendarDateTimeParts | null {
+  const date = typeof value === 'string' ? new Date(value) : value;
+  if (Number.isNaN(date.getTime())) return null;
+  if (!timezone) {
+    return {
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      day: date.getDate(),
+      hour: date.getHours(),
+      minute: date.getMinutes(),
+    };
+  }
+
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(date);
+    const valueFor = (type: Intl.DateTimeFormatPartTypes) =>
+      Number(parts.find((part) => part.type === type)?.value);
+    const result = {
+      year: valueFor('year'),
+      month: valueFor('month'),
+      day: valueFor('day'),
+      hour: valueFor('hour'),
+      minute: valueFor('minute'),
+    };
+    return Object.values(result).every(Number.isFinite) ? result : null;
+  } catch {
+    // A malformed legacy timezone must not make calendar appointments vanish.
+    return {
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      day: date.getDate(),
+      hour: date.getHours(),
+      minute: date.getMinutes(),
+    };
+  }
+}
+
+function dateKeyAt(value: Date, timezone?: string): string {
+  const parts = calendarDateTimeParts(value, timezone);
+  if (!parts) return dateKey(value);
+  return `${parts.year}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`;
+}
+
+/** Local or salon-timezone YYYY-MM-DD from an ISO datetime string. */
+function localDateKey(iso: string, timezone?: string): string | null {
+  const parts = calendarDateTimeParts(iso, timezone);
+  if (!parts) return null;
+  return `${parts.year}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`;
 }
 
 type ContactPickerContact = {
@@ -294,12 +393,12 @@ function parseVCard(text: string): { name?: string; phones: string[] } {
   return { name, phones };
 }
 
-/** Minutes since midnight from an ISO string. */
-function minutesOf(iso: string | undefined): number | null {
+/** Minutes since midnight in the salon timezone from an ISO string. */
+function minutesOf(iso: string | undefined, timezone?: string): number | null {
   if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.getHours() * 60 + d.getMinutes();
+  const parts = calendarDateTimeParts(iso, timezone);
+  if (!parts) return null;
+  return parts.hour * 60 + parts.minute;
 }
 
 /** Preserve appointment duration while moving its start time locally. */
@@ -330,12 +429,13 @@ interface PositionedAppointment {
 }
 
 /** Assign overlapping appointments to lanes so dense days never stack cards on top of each other. */
-function layoutAppointmentLanes(appointments: Appointment[]): PositionedAppointment[] {
+function layoutAppointmentLanes(appointments: Appointment[], timezone?: string): PositionedAppointment[] {
   const scheduled = appointments
     .map((appt, index) => {
-      const startMin = minutesOf(appt.startAt);
+      const appointmentTimezone = appt.timezone || timezone;
+      const startMin = minutesOf(appt.startAt, appointmentTimezone);
       if (startMin === null) return null;
-      const rawEnd = minutesOf(appt.endAt);
+      const rawEnd = minutesOf(appt.endAt, appointmentTimezone);
       return {
         appt,
         index,
@@ -381,12 +481,12 @@ function layoutAppointmentLanes(appointments: Appointment[]): PositionedAppointm
   });
 }
 
-/** Format HH:mm from ISO. */
-function clockTime(iso: string | undefined): string | null {
+/** Format HH:mm in the salon timezone from ISO. */
+function clockTime(iso: string | undefined, timezone?: string): string | null {
   if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const parts = calendarDateTimeParts(iso, timezone);
+  if (!parts) return null;
+  return `${String(parts.hour).padStart(2, '0')}:${String(parts.minute).padStart(2, '0')}`;
 }
 
 /** Format a Jalali day display from a Date. */
@@ -407,6 +507,7 @@ function toAppointment(appt: unknown, fallbackId: string): Appointment {
       id: str(rec.id) ?? fallbackId,
       startAt: str(rec.startAt),
       endAt: str(rec.endAt),
+      timezone: str(rec.timezone),
       serviceId: str(rec.serviceId),
       serviceName: str(rec.serviceName),
       customerName: str(rec.customerName),
@@ -459,7 +560,11 @@ function asCalendarAppointment(appt: Appointment): CalendarAppointmentLike {
 /** Compute fetch range based on view. */
 function rangeFor(view: CalendarView, anchor: Date): { from: string; to: string } {
   if (view === 'day') {
-    return { from: isoDate(anchor, 0), to: isoDate(anchor, 1) };
+    // Fetch a small buffer around the browser date. The API stores UTC instants,
+    // while DayView filters and positions them in the salon timezone; without a
+    // buffer, bookings near midnight in either timezone can be omitted before
+    // the client gets a chance to place them in the selected day.
+    return { from: isoDate(anchor, -2), to: isoDate(anchor, 3) };
   }
   if (view === 'list') {
     // List view: next 30 days from anchor (inclusive)
@@ -546,6 +651,8 @@ interface AppointmentBlockProps {
   laneCount?: number;
   /** Render as absolute-positioned within a time cell. */
   positioned?: boolean;
+  /** Optional display timezone for appointments from a salon calendar. */
+  timezone?: string;
 }
 
 /** Status icon + ARIA label for non-color status (Goal 14). */
@@ -597,6 +704,7 @@ function AppointmentBlock({
   lane = 0,
   laneCount = 1,
   positioned = false,
+  timezone,
 }: AppointmentBlockProps) {
   const draggableRef = useRef<HTMLDivElement>(null);
   const dragHandleRef = useRef<HTMLSpanElement>(null);
@@ -608,12 +716,16 @@ function AppointmentBlock({
     : isCancelled
       ? 'border-s-danger opacity-70'
       : serviceColorClass(appt.serviceName);
-  const start = clockTime(appt.startAt);
-  const end = clockTime(appt.endAt);
+  const appointmentTimezone = timezone || appt.timezone;
+  const start = clockTime(appt.startAt, appointmentTimezone);
+  const end = clockTime(appt.endAt, appointmentTimezone);
   const service = appt.serviceName ?? '—';
   const customer = appt.customerName;
   const { icon: statusIcon, label: statusLabel, ariaState } = statusIndicator(appt.status);
+  // Keep appointment content readable while collapsing only the actions when
+  // a short timeline block cannot accommodate two text labels.
   const compact = compactView || (positioned && (height ?? 0) < 70);
+  const compactActions = compactView || (positioned && (height ?? 0) < 180);
   const canDragAppointment = Boolean(draggableId) && !hasPendingReschedule;
   const canCancel = ['pending', 'held', 'confirmed', 'approved'].includes(appt.status ?? '');
   const canNoShow = appt.status === 'confirmed' && Boolean(onNoShow);
@@ -690,18 +802,37 @@ function AppointmentBlock({
             )}
           </span>
         )}
-        {compact && canCancel && onCancel && (
-          <button
-            type="button"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-danger hover:bg-danger/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
-            aria-label={`لغو نوبت ${customer ?? service}`}
-            onClick={(event) => {
-              event.stopPropagation();
-              onCancel(appt);
-            }}
-          >
-            <X className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
+        {compactActions && (canNoShow || canCancel) && (
+          <span className="flex shrink-0 items-center gap-0.5">
+            {canNoShow && onNoShow && (
+              <button
+                type="button"
+                className="flex h-9 w-9 items-center justify-center rounded-md text-warning hover:bg-warning/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+                aria-label={`ثبت عدم حضور ${customer ?? service}`}
+                title="ثبت عدم حضور"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onNoShow(appt);
+                }}
+              >
+                <UserX className="h-4 w-4" aria-hidden="true" />
+              </button>
+            )}
+            {canCancel && onCancel && (
+              <button
+                type="button"
+                className="flex h-9 w-9 items-center justify-center rounded-md text-danger hover:bg-danger/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+                aria-label={`لغو نوبت ${customer ?? service}`}
+                title="لغو نوبت"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onCancel(appt);
+                }}
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            )}
+          </span>
         )}
       </span>
       {customer && !compact && (
@@ -815,23 +946,31 @@ function DayView({
   const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [focusedRow, setFocusedRow] = useState<number | null>(null);
   const [dropTargetTime, setDropTargetTime] = useState<string | null>(null);
-  const anchorKey = dateKey(anchor);
+  const calendarTimezone = appointments.find((item) => item.timezone)?.timezone;
+  const anchorKey = dateKeyAt(anchor, calendarTimezone);
 
   const dayAppts = useMemo(
     () =>
       appointments
-        .filter((a) => a.startAt && localDateKey(a.startAt) === anchorKey)
+        .filter(
+          (a) =>
+            a.startAt &&
+            localDateKey(a.startAt, a.timezone || calendarTimezone) === anchorKey,
+        )
         .sort((a, b) => {
           const ta = a.startAt ? new Date(a.startAt).getTime() : 0;
           const tb = b.startAt ? new Date(b.startAt).getTime() : 0;
           return ta - tb;
         }),
-    [appointments, anchorKey],
+    [appointments, anchorKey, calendarTimezone],
   );
-  const positionedAppointments = useMemo(() => layoutAppointmentLanes(dayAppts), [dayAppts]);
+  const positionedAppointments = useMemo(
+    () => layoutAppointmentLanes(dayAppts, calendarTimezone),
+    [calendarTimezone, dayAppts],
+  );
   const nextAppointment = useMemo(() => {
     const now = Date.now();
-    const isCurrentDay = anchorKey === dateKey(new Date());
+    const isCurrentDay = anchorKey === dateKeyAt(new Date(), calendarTimezone);
     return dayAppts.find((item) => {
       if (['cancelled', 'rejected', 'no_show', 'completed'].includes(item.status ?? '')) {
         return false;
@@ -839,7 +978,7 @@ function DayView({
       if (!isCurrentDay) return true;
       return item.startAt ? new Date(item.startAt).getTime() >= now : false;
     });
-  }, [anchorKey, dayAppts]);
+  }, [anchorKey, calendarTimezone, dayAppts]);
 
   /** Grid starts at 07:00 = minute 420 */
   const gridStartMin = 7 * 60;
@@ -934,7 +1073,7 @@ function DayView({
               aria-label="مشاهده نوبت بعدی"
             >
               <Clock className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
-              <Num value={clockTime(nextAppointment.startAt) ?? '—'} />
+              <Num value={clockTime(nextAppointment.startAt, calendarTimezone) ?? '—'} />
               <span className="truncate text-muted">
                 · {nextAppointment.customerName || nextAppointment.serviceName || 'مشتری'}
               </span>
@@ -966,113 +1105,114 @@ function DayView({
         role="grid"
         aria-label={t('owner.calendar.dayGridLabel', { defaultValue: 'نمای روزانه' })}
         data-testid="owner-calendar-day"
-        className="owner-calendar-day-grid relative overflow-x-auto overflow-y-auto rounded-lg border border-border bg-surface"
+        className="owner-calendar-day-grid relative overflow-x-hidden overflow-y-auto rounded-lg border border-border bg-surface"
         onKeyDown={handleGridKeyDown}
       >
-      <div className="relative min-w-full sm:min-w-[20rem]">
-        {/* Time rows */}
-        {TIME_SLOTS.map((slot, idx) => {
-          const timeStr = `${String(slot.hour).padStart(2, '0')}:${String(slot.minute).padStart(2, '0')}`;
-          const isHour = slot.minute === 0;
-          const isFocused = focusedRow === idx;
-          const blocked = closures.some(
-            (item) =>
-              item.onDate === anchorKey &&
-              (item.startTime === null ||
-                (item.startTime <= timeStr && (item.endTime ?? '23:59') > timeStr)),
-          );
-          const absentStaff = staffBlocks.filter(
-            (item) =>
-              item.onDate === anchorKey &&
-              (item.startTime === null ||
-                (item.startTime <= timeStr && (item.endTime ?? '23:59') > timeStr)),
-          );
-          return (
-            <div
-              key={`slot-${idx}`}
-              ref={(el) => {
-                rowRefs.current[idx] = el;
-              }}
-              role="row"
-              tabIndex={isFocused || (focusedRow === null && idx === 0) ? 0 : -1}
-              aria-label={timeStr}
-              onFocus={() => setFocusedRow(idx)}
-              onClick={() => onSelectSlot(anchor, timeStr)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  onSelectSlot(anchor, timeStr);
-                }
-              }}
-              className={cn(
-                'relative flex items-start border-b border-border/50',
-                'transition-colors duration-fast ease-standard hover:bg-elevated/40',
-                'cursor-pointer',
-                dropTargetTime === timeStr && 'bg-primary/15 ring-2 ring-inset ring-primary/40',
-                blocked && 'bg-danger/10 hover:bg-danger/15',
-                'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-focus',
-              )}
-              style={{ height: `${SLOT_HEIGHT}px` }}
-            >
-              {/* Time label */}
+        <div className="relative min-w-full sm:min-w-[20rem]">
+          {/* Time rows */}
+          {TIME_SLOTS.map((slot, idx) => {
+            const timeStr = `${String(slot.hour).padStart(2, '0')}:${String(slot.minute).padStart(2, '0')}`;
+            const isHour = slot.minute === 0;
+            const isFocused = focusedRow === idx;
+            const blocked = closures.some(
+              (item) =>
+                item.onDate === anchorKey &&
+                (item.startTime === null ||
+                  (item.startTime <= timeStr && (item.endTime ?? '23:59') > timeStr)),
+            );
+            const absentStaff = staffBlocks.filter(
+              (item) =>
+                item.onDate === anchorKey &&
+                (item.startTime === null ||
+                  (item.startTime <= timeStr && (item.endTime ?? '23:59') > timeStr)),
+            );
+            return (
               <div
-                role="rowheader"
+                key={`slot-${idx}`}
+                ref={(el) => {
+                  rowRefs.current[idx] = el;
+                }}
+                role="row"
+                tabIndex={isFocused || (focusedRow === null && idx === 0) ? 0 : -1}
+                aria-label={timeStr}
+                onFocus={() => setFocusedRow(idx)}
+                onClick={() => onSelectSlot(anchor, timeStr)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onSelectSlot(anchor, timeStr);
+                  }
+                }}
                 className={cn(
-                  'sticky start-0 z-sticky flex w-16 shrink-0 items-start justify-end',
-                  'border-e border-border/30 bg-surface pe-2 pt-1',
-                  'text-xs tabular-nums',
-                  isHour ? 'font-medium text-text' : 'text-muted/60',
+                  'relative flex items-start border-b border-border/50',
+                  'transition-colors duration-fast ease-standard hover:bg-elevated/40',
+                  'cursor-pointer',
+                  dropTargetTime === timeStr && 'bg-primary/15 ring-2 ring-inset ring-primary/40',
+                  blocked && 'bg-danger/10 hover:bg-danger/15',
+                  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-focus',
                 )}
                 style={{ height: `${SLOT_HEIGHT}px` }}
               >
-                <Num value={timeStr} />
-              </div>
-              {/* Empty cell area — appointments overlay on top */}
-              <div className="relative flex-1" style={{ height: `${SLOT_HEIGHT}px` }} />
-              {blocked && (
-                <span className="pointer-events-none absolute end-3 mt-2 rounded-full bg-danger/15 px-2 py-1 text-[0.65rem] font-bold text-danger">
-                  بسته
-                </span>
-              )}
-              {!blocked && absentStaff.length > 0 && (
-                <span className="pointer-events-none absolute end-3 mt-2 max-w-[55%] truncate rounded-full bg-warning/15 px-2 py-1 text-[0.65rem] font-bold text-warning">
-                  {absentStaff.map((item) => item.staffName).join('، ')} حضور ندارد
-                </span>
-              )}
-            </div>
-          );
-        })}
-
-        {/* Positioned appointment blocks */}
-        <div className="pointer-events-none absolute inset-0" style={{ insetInlineStart: '4rem' }}>
-          {positionedAppointments.map(({ appt, lane, laneCount, startMin, endMin }) => {
-            const topPx = (startMin - gridStartMin) * PX_PER_MIN;
-            const duration = endMin - startMin;
-            const heightPx = Math.max(duration * PX_PER_MIN, 24);
-            if (topPx < 0) return null;
-            return (
-              <div
-                key={appt.id}
-                className="pointer-events-auto"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <AppointmentBlock
-                  appt={appt}
-                  positioned
-                  top={topPx}
-                  height={heightPx}
-                  lane={lane}
-                  laneCount={laneCount}
-                  onCancel={onCancel}
-                  onNoShow={onNoShow}
-                  onOpen={onOpenAppointment}
-                  draggableId={appt.id}
-                  onDragEnd={finishDrag}
-                />
+                {/* Time label */}
+                <div
+                  role="rowheader"
+                  className={cn(
+                    'sticky start-0 z-sticky flex w-16 shrink-0 items-start justify-end',
+                    'border-e border-border/30 bg-surface pe-2 pt-1',
+                    'text-xs tabular-nums',
+                    isHour ? 'font-medium text-text' : 'text-muted/60',
+                  )}
+                  style={{ height: `${SLOT_HEIGHT}px` }}
+                >
+                  <Num value={timeStr} />
+                </div>
+                {/* Empty cell area — appointments overlay on top */}
+                <div className="relative flex-1" style={{ height: `${SLOT_HEIGHT}px` }} />
+                {blocked && (
+                  <span className="pointer-events-none absolute end-3 mt-2 rounded-full bg-danger/15 px-2 py-1 text-[0.65rem] font-bold text-danger">
+                    بسته
+                  </span>
+                )}
+                {!blocked && absentStaff.length > 0 && (
+                  <span className="pointer-events-none absolute end-3 mt-2 max-w-[55%] truncate rounded-full bg-warning/15 px-2 py-1 text-[0.65rem] font-bold text-warning">
+                    {absentStaff.map((item) => item.staffName).join('، ')} حضور ندارد
+                  </span>
+                )}
               </div>
             );
           })}
-        </div>
+
+          {/* Positioned appointment blocks */}
+          <div className="pointer-events-none absolute inset-0" style={{ insetInlineStart: '4rem' }}>
+            {positionedAppointments.map(({ appt, lane, laneCount, startMin, endMin }) => {
+              const topPx = (startMin - gridStartMin) * PX_PER_MIN;
+              const duration = endMin - startMin;
+              const heightPx = Math.max(duration * PX_PER_MIN, 24);
+              if (topPx < 0) return null;
+              return (
+                <div
+                  key={appt.id}
+                  className="pointer-events-auto"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <AppointmentBlock
+                    appt={appt}
+                    positioned
+                    timezone={calendarTimezone}
+                    top={topPx}
+                    height={heightPx}
+                    lane={lane}
+                    laneCount={laneCount}
+                    onCancel={onCancel}
+                    onNoShow={onNoShow}
+                    onOpen={onOpenAppointment}
+                    draggableId={appt.id}
+                    onDragEnd={finishDrag}
+                  />
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
@@ -3329,11 +3469,13 @@ function ApprovalQueue({
   salonId,
   onResolved,
   refreshKey,
+  onOpen,
   className,
 }: {
   salonId: string;
   refreshKey?: number;
   onResolved: () => void;
+  onOpen?: (appointment: Appointment) => void;
   className?: string;
 }) {
   const { t } = useTranslation();
@@ -3343,6 +3485,9 @@ function ApprovalQueue({
   const [busy, setBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState('');
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+  const [rejectTarget, setRejectTarget] = useState<Appointment | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectError, setRejectError] = useState('');
   const pendingPagination = usePagination(pending, 3);
   const previewPending = pending.slice(0, 1);
 
@@ -3381,6 +3526,13 @@ function ApprovalQueue({
   const handleAction = useCallback(
     async (id: string, kind: 'approve' | 'reject') => {
       if (!canApproveOwnAppointments) return;
+      if (kind === 'reject') {
+        const target = pending.find((item) => item.id === id) ?? null;
+        setRejectTarget(target);
+        setRejectReason('');
+        setRejectError('');
+        return;
+      }
       setBusy(`${id}:${kind}`);
       setActionError('');
       try {
@@ -3409,8 +3561,29 @@ function ApprovalQueue({
         setBusy(null);
       }
     },
-    [canApproveOwnAppointments, load, onResolved],
+    [canApproveOwnAppointments, load, onResolved, pending],
   );
+
+  const confirmReject = async () => {
+    if (!rejectTarget) return;
+    const reason = rejectReason.trim();
+    if (reason.length < 5) {
+      setRejectError('دلیل رد درخواست را حداقل در ۵ حرف بنویسید.');
+      return;
+    }
+    setBusy(`${rejectTarget.id}:reject`);
+    setRejectError('');
+    try {
+      await adminApi.rejectAppointment(rejectTarget.id, reason);
+      setPending((list) => list.filter((item) => item.id !== rejectTarget.id));
+      setRejectTarget(null);
+      onResolved();
+    } catch (error) {
+      setRejectError(getApiErrorMessage(error, 'رد درخواست انجام نشد. دوباره تلاش کنید.'));
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const openApprovalDialog = () => {
     pendingPagination.resetPage();
@@ -3470,6 +3643,15 @@ function ApprovalQueue({
               </span>
             )}
           </div>
+          {onOpen && (
+            <button
+              type="button"
+              className="mt-2 min-h-10 rounded-md px-2 text-xs font-bold text-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+              onClick={() => onOpen(appt)}
+            >
+              بررسی جزئیات و رسید
+            </button>
+          )}
         </div>
         {canApproveOwnAppointments ? (
           <div className="flex shrink-0 items-center gap-2 border-t border-border/50 pt-1.5 sm:border-t-0 sm:pt-0">
@@ -3630,6 +3812,43 @@ function ApprovalQueue({
       </Dialog>
         </section>
       )}
+
+      <Dialog
+        open={Boolean(rejectTarget)}
+        onOpenChange={(next) => {
+          if (!next && !busy) {
+            setRejectTarget(null);
+            setRejectError('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogTitle>رد درخواست نوبت</DialogTitle>
+          <DialogDescription>
+            دلیل رد برای مشتری ارسال و در سابقه درخواست ذخیره می‌شود.
+          </DialogDescription>
+          <Textarea
+            label="دلیل رد درخواست"
+            value={rejectReason}
+            onChange={(event) => {
+              setRejectReason(event.target.value);
+              setRejectError('');
+            }}
+            maxLength={1000}
+            rows={3}
+            required
+            disabled={Boolean(busy)}
+            className="mt-4"
+          />
+          {rejectError && <p role="alert" className="mt-3 text-sm text-danger">{rejectError}</p>}
+          <div className="mt-5 flex justify-end gap-2">
+            <DialogClose asChild><Button variant="ghost" disabled={Boolean(busy)}>انصراف</Button></DialogClose>
+            <Button variant="danger" loading={Boolean(busy)} onClick={() => void confirmReject()}>
+              رد درخواست
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -4228,13 +4447,23 @@ export function OwnerCalendarPage() {
   const [manualStart, setManualStart] = useState<string | undefined>();
   const [manualCustomer, setManualCustomer] = useState<ManualCustomerPrefill>({});
   const [cancelAppointment, setCancelAppointment] = useState<Appointment | null>(null);
+  const [cancelKind, setCancelKind] = useState<'standard' | 'emergency'>('standard');
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelProof, setCancelProof] = useState<RefundProofDraft | null>(null);
   const [cancelBusy, setCancelBusy] = useState(false);
   const [cancelError, setCancelError] = useState('');
+  const [reportAppointment, setReportAppointment] = useState<Appointment | null>(null);
+  const [reportReason, setReportReason] = useState('');
+  const [reportBlock, setReportBlock] = useState(true);
+  const [reportBusy, setReportBusy] = useState(false);
+  const [reportError, setReportError] = useState('');
   const [noShowAppointment, setNoShowAppointment] = useState<Appointment | null>(null);
   const [noShowBusy, setNoShowBusy] = useState(false);
   const [noShowError, setNoShowError] = useState('');
   const [emergencyOpen, setEmergencyOpen] = useState(false);
   const [emergencyCancelAll, setEmergencyCancelAll] = useState(true);
+  const [emergencyReason, setEmergencyReason] = useState('');
+  const [emergencyProof, setEmergencyProof] = useState<RefundProofDraft | null>(null);
   const [emergencyBusy, setEmergencyBusy] = useState(false);
   const [emergencyError, setEmergencyError] = useState('');
   const [appointmentListDate, setAppointmentListDate] = useState<Date | null>(null);
@@ -4269,6 +4498,23 @@ export function OwnerCalendarPage() {
 
   const openAppointment = useCallback((appointment: Appointment) => {
     setSelectedAppointment(appointment);
+  }, []);
+
+  const openCancelAppointment = useCallback((appointment: Appointment) => {
+    setSelectedAppointment(null);
+    setCancelAppointment(appointment);
+    setCancelKind('standard');
+    setCancelReason('');
+    setCancelProof(null);
+    setCancelError('');
+  }, []);
+
+  const openReportCustomer = useCallback((appointment: Appointment) => {
+    setSelectedAppointment(null);
+    setReportAppointment(appointment);
+    setReportReason('');
+    setReportBlock(true);
+    setReportError('');
   }, []);
 
   const openRebookAppointment = useCallback((appointment: CalendarAppointmentLike) => {
@@ -4571,20 +4817,49 @@ export function OwnerCalendarPage() {
 
   const confirmCancelAppointment = async () => {
     if (!cancelAppointment) return;
+    const reason = cancelReason.trim();
+    if (reason.length < 5) {
+      setCancelError('دلیل لغو را حداقل در ۵ حرف بنویسید.');
+      return;
+    }
     setCancelBusy(true);
     setCancelError('');
     try {
       if (cancelAppointment.status === 'pending') {
-        await adminApi.rejectAppointment(cancelAppointment.id);
+        await adminApi.rejectAppointment(cancelAppointment.id, reason);
       } else {
-        await adminApi.cancelAppointment(cancelAppointment.id);
+        await adminApi.cancelAppointment(cancelAppointment.id, {
+          kind: cancelKind,
+          reason,
+          ...(cancelProof ? { refundProof: cancelProof } : {}),
+        });
       }
       setCancelAppointment(null);
       setReloadToken((value) => value + 1);
-    } catch {
-      setCancelError('لغو نوبت انجام نشد. دوباره تلاش کنید.');
+    } catch (error) {
+      setCancelError(getApiErrorMessage(error, 'لغو نوبت انجام نشد. دوباره تلاش کنید.'));
     } finally {
       setCancelBusy(false);
+    }
+  };
+
+  const confirmReportCustomer = async () => {
+    if (!reportAppointment) return;
+    const reason = reportReason.trim();
+    if (reason.length < 5) {
+      setReportError('دلیل گزارش را حداقل در ۵ حرف بنویسید.');
+      return;
+    }
+    setReportBusy(true);
+    setReportError('');
+    try {
+      await adminApi.reportCustomer(reportAppointment.id, reason, reportBlock);
+      setReportAppointment(null);
+      setReloadToken((value) => value + 1);
+    } catch (error) {
+      setReportError(getApiErrorMessage(error, 'گزارش مشتری ثبت نشد. دوباره تلاش کنید.'));
+    } finally {
+      setReportBusy(false);
     }
   };
 
@@ -4604,6 +4879,11 @@ export function OwnerCalendarPage() {
   };
 
   const confirmEmergencyClose = async () => {
+    const reason = emergencyReason.trim();
+    if (emergencyCancelAll && reason.length < 5) {
+      setEmergencyError('برای لغو نوبت‌ها، دلیل را حداقل در ۵ حرف بنویسید.');
+      return;
+    }
     setEmergencyBusy(true);
     setEmergencyError('');
     try {
@@ -4611,6 +4891,7 @@ export function OwnerCalendarPage() {
         salonId,
         dateKey(anchor),
         emergencyCancelAll,
+        emergencyCancelAll ? { reason, refundProof: emergencyProof ?? undefined } : undefined,
       );
       if (result.failedCount > 0) {
         setEmergencyError(
@@ -4630,6 +4911,9 @@ export function OwnerCalendarPage() {
 
   const openEmergencyClose = () => {
     setEmergencyError('');
+    setEmergencyReason('');
+    setEmergencyProof(null);
+    setEmergencyCancelAll(true);
     setEmergencyOpen(true);
   };
 
@@ -4758,6 +5042,7 @@ export function OwnerCalendarPage() {
         refreshKey={approvalReloadToken}
         salonId={salonId}
         onResolved={() => setReloadToken((n) => n + 1)}
+        onOpen={openAppointment}
         className="owner-calendar-pending-approval"
       />
 
@@ -4842,7 +5127,7 @@ export function OwnerCalendarPage() {
                       staffBlocks={staffCalendarBlocks}
                       onSelectSlot={(date, time) => openAvailability(date, time)}
                       onViewAppointments={openAppointmentList}
-                      onCancel={setCancelAppointment}
+                      onCancel={openCancelAppointment}
                       onNoShow={setNoShowAppointment}
                       onOpenAppointment={openAppointment}
                       onMove={handleGridMove}
@@ -4856,7 +5141,7 @@ export function OwnerCalendarPage() {
                       staffBlocks={staffCalendarBlocks}
                       onSelectDate={openDay}
                       onViewAppointments={openDay}
-                      onCancel={setCancelAppointment}
+                      onCancel={openCancelAppointment}
                       onNoShow={setNoShowAppointment}
                       onOpenAppointment={openAppointment}
                     />
@@ -4869,12 +5154,12 @@ export function OwnerCalendarPage() {
                       staffBlocks={staffCalendarBlocks}
                       onSelectDate={openDay}
                       onViewAppointments={openDay}
-                      onCancel={setCancelAppointment}
+                      onCancel={openCancelAppointment}
                       onNoShow={setNoShowAppointment}
                       onOpenAppointment={openAppointment}
                     />
                   )}
-                  {view === 'list' && <ListView appointments={filteredAppointments} anchor={anchor} onCancel={setCancelAppointment} onNoShow={setNoShowAppointment} />}
+                  {view === 'list' && <ListView appointments={filteredAppointments} anchor={anchor} onCancel={openCancelAppointment} onNoShow={setNoShowAppointment} />}
                 </motion.div>
               </AnimatePresence>
             </motion.div>
@@ -4910,7 +5195,7 @@ export function OwnerCalendarPage() {
         onOpenChange={(next) => {
           if (!next) setAppointmentListDate(null);
         }}
-        onCancel={setCancelAppointment}
+        onCancel={openCancelAppointment}
         onNoShow={setNoShowAppointment}
       />
       <AppointmentDetailsSheet
@@ -4927,6 +5212,8 @@ export function OwnerCalendarPage() {
             setReloadToken((value) => value + 1);
           }
         }}
+        onCancel={(appointment) => openCancelAppointment(appointment as Appointment)}
+        onReportCustomer={(appointment) => openReportCustomer(appointment as Appointment)}
       />
       <MoveAppointmentDialog
         open={Boolean(moveAppointment)}
@@ -4956,11 +5243,124 @@ export function OwnerCalendarPage() {
           <DialogDescription>
             نوبت {cancelAppointment?.customerName ?? 'مشتری'} لغو می‌شود، زمان آزاد خواهد شد و پیام اطلاع‌رسانی برای مشتری ارسال می‌شود.
           </DialogDescription>
+          {cancelAppointment?.status !== 'pending' && (
+            <div className="mt-4 grid gap-2" role="radiogroup" aria-label="نوع لغو نوبت">
+              <label className="flex cursor-pointer gap-3 rounded-lg border border-border p-3 text-sm text-text">
+                <input
+                  type="radio"
+                  name="appointment-cancel-kind"
+                  checked={cancelKind === 'standard'}
+                  onChange={() => setCancelKind('standard')}
+                  disabled={cancelBusy}
+                />
+                <span>
+                  <strong className="block">لغو عادی</strong>
+                  <span className="text-xs text-muted">قانون عادی بیعانه بر اساس زمان لغو اجرا می‌شود.</span>
+                </span>
+              </label>
+              <label className="flex cursor-pointer gap-3 rounded-lg border border-danger/40 bg-danger/5 p-3 text-sm text-text">
+                <input
+                  type="radio"
+                  name="appointment-cancel-kind"
+                  checked={cancelKind === 'emergency'}
+                  onChange={() => setCancelKind('emergency')}
+                  disabled={cancelBusy}
+                />
+                <span>
+                  <strong className="block">لغو اضطراری از طرف سالن</strong>
+                  <span className="text-xs text-muted">بیعانه این رزرو ظرف ۲۴ ساعت به مشتری برگردانده می‌شود.</span>
+                </span>
+              </label>
+            </div>
+          )}
+          <Textarea
+            label="دلیل لغو"
+            value={cancelReason}
+            onChange={(event) => {
+              setCancelReason(event.target.value);
+              setCancelError('');
+            }}
+            maxLength={1000}
+            rows={3}
+            required
+            disabled={cancelBusy}
+            helperText="این دلیل برای پیگیری و اطلاع‌رسانی ذخیره می‌شود."
+            className="mt-4"
+          />
+          {cancelKind === 'emergency' && cancelAppointment?.status !== 'pending' && (
+            <label className="mt-3 flex cursor-pointer flex-col gap-1.5 rounded-lg border border-dashed border-danger/40 bg-danger/5 p-3 text-sm text-text">
+              <span className="font-bold">تصویر مدرک بازپرداخت بیعانه</span>
+              <span className="text-xs text-muted">اختیاری؛ JPG، PNG یا WebP، حداکثر ۵ مگابایت. بدون تصویر هم لغو اضطراری انجام می‌شود و بازپرداخت پیگیری خواهد شد.</span>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={cancelBusy}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = '';
+                  if (!file) return;
+                  void readRefundProof(file)
+                    .then((proof) => {
+                      setCancelProof(proof);
+                      setCancelError('');
+                    })
+                    .catch(() => setCancelError('تصویر معتبر نیست یا حجم آن بیشتر از ۵ مگابایت است.'));
+                }}
+                className="mt-1 block min-h-11 w-full rounded-md border border-border bg-bg p-2 text-xs text-text"
+              />
+              {cancelProof && <span className="text-xs text-success">مدرک انتخاب شد: {cancelProof.fileName}</span>}
+            </label>
+          )}
           {cancelError && <p role="alert" className="mt-3 text-sm text-danger">{cancelError}</p>}
           <div className="mt-5 flex justify-end gap-2">
             <DialogClose asChild><Button variant="ghost" disabled={cancelBusy}>انصراف</Button></DialogClose>
             <Button variant="danger" loading={cancelBusy} onClick={() => void confirmCancelAppointment()}>
               بله، لغو شود
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={Boolean(reportAppointment)}
+        onOpenChange={(next) => {
+          if (!next && !reportBusy) {
+            setReportAppointment(null);
+            setReportError('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogTitle>گزارش مشتری</DialogTitle>
+          <DialogDescription>
+            اگر رسید یا مدرک نامرتبط ارسال شده، دلیل را ثبت کن. در صورت نیاز دسترسی مشتری به رزرو این سالن هم مسدود می‌شود.
+          </DialogDescription>
+          <Textarea
+            label="دلیل گزارش"
+            value={reportReason}
+            onChange={(event) => {
+              setReportReason(event.target.value);
+              setReportError('');
+            }}
+            maxLength={1000}
+            rows={4}
+            required
+            disabled={reportBusy}
+            className="mt-4"
+          />
+          <label className="mt-3 flex min-h-11 cursor-pointer items-center gap-2 text-sm text-text">
+            <input
+              type="checkbox"
+              checked={reportBlock}
+              onChange={(event) => setReportBlock(event.target.checked)}
+              disabled={reportBusy}
+            />
+            مسدود کردن این مشتری برای رزروهای بعدی این سالن
+          </label>
+          {reportError && <p role="alert" className="mt-3 text-sm text-danger">{reportError}</p>}
+          <div className="mt-5 flex justify-end gap-2">
+            <DialogClose asChild><Button variant="ghost" disabled={reportBusy}>انصراف</Button></DialogClose>
+            <Button variant="danger" loading={reportBusy} onClick={() => void confirmReportCustomer()}>
+              ثبت گزارش
             </Button>
           </div>
         </DialogContent>
@@ -5002,8 +5402,48 @@ export function OwnerCalendarPage() {
             <label className="flex cursor-pointer gap-3 rounded-lg border border-danger/40 bg-danger/5 p-3 text-sm text-text">
               <input type="radio" checked={emergencyCancelAll} onChange={() => setEmergencyCancelAll(true)} />
               <span><strong className="block">بستن روز و لغو همه نوبت‌ها</strong><span className="text-xs text-muted">مشتری‌ها مطلع می‌شوند و روند عادی بازپرداخت اجرا می‌شود.</span></span>
-            </label>
+              </label>
           </div>
+          {emergencyCancelAll && (
+            <>
+              <Textarea
+                label="دلیل لغو نوبت‌ها"
+                value={emergencyReason}
+                onChange={(event) => {
+                  setEmergencyReason(event.target.value);
+                  setEmergencyError('');
+                }}
+                maxLength={1000}
+                rows={3}
+                required
+                disabled={emergencyBusy}
+                helperText="این دلیل برای مشتری‌ها و سوابق سالن ثبت می‌شود."
+                className="mt-4"
+              />
+              <label className="mt-3 flex cursor-pointer flex-col gap-1.5 rounded-lg border border-dashed border-danger/40 bg-danger/5 p-3 text-sm text-text">
+                <span className="font-bold">مدرک بازگشت بیعانه</span>
+                <span className="text-xs text-muted">اختیاری؛ اگر در دسترس است تصویر بازپرداخت را انتخاب کن. لغو اضطراری بدون تصویر هم انجام می‌شود.</span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  disabled={emergencyBusy}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = '';
+                    if (!file) return;
+                    void readRefundProof(file)
+                      .then((proof) => {
+                        setEmergencyProof(proof);
+                        setEmergencyError('');
+                      })
+                      .catch(() => setEmergencyError('تصویر معتبر نیست یا حجم آن بیشتر از ۵ مگابایت است.'));
+                  }}
+                  className="mt-1 block min-h-11 w-full rounded-md border border-border bg-bg p-2 text-xs text-text"
+                />
+                {emergencyProof && <span className="text-xs text-success">مدرک انتخاب شد: {emergencyProof.fileName}</span>}
+              </label>
+            </>
+          )}
           {emergencyError && <p role="alert" className="mt-3 text-sm text-danger">{emergencyError}</p>}
           <div className="mt-5 flex justify-end gap-2">
             <DialogClose asChild><Button variant="ghost" disabled={emergencyBusy}>انصراف</Button></DialogClose>

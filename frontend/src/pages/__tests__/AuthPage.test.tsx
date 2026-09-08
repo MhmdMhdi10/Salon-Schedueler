@@ -44,6 +44,28 @@ function renderAuth() {
   );
 }
 
+function renderBookingAuth() {
+  return render(
+    <HelmetProvider>
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: '/salon/salon-1/book/auth',
+            state: {
+              returnTo: '/salon/salon-1/book/confirm',
+              returnState: { serviceId: 'svc-1', startAt: '2999-03-15T09:30:00.000Z' },
+            },
+          },
+        ]}
+      >
+        <ToastProvider>
+          <AuthPage bookingMode bookingSalonName="سالن رز" />
+        </ToastProvider>
+      </MemoryRouter>
+    </HelmetProvider>
+  );
+}
+
 const VALID_PHONE = '09123456789';
 
 beforeEach(() => {
@@ -112,6 +134,18 @@ describe('AuthPage — phone step', () => {
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(input.value).toBe(VALID_PHONE);
+  });
+});
+
+describe('AuthPage — booking mode', () => {
+  it('keeps customer auth inside the booking funnel and hides salon entry points', () => {
+    renderBookingAuth();
+
+    expect(screen.getByTestId('auth-page')).toBeInTheDocument();
+    expect(document.querySelector('[data-shell="funnel"]')).toBeInTheDocument();
+    expect(screen.getByText('برای ادامه رزرو وارد شوید')).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'ورود سالن و تیم' })).not.toBeInTheDocument();
+    expect(screen.queryByText('ثبت سالن')).not.toBeInTheDocument();
   });
 });
 
