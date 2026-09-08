@@ -170,9 +170,9 @@ const collapseVariants = {
 
 /** Item slide-in/out for add/remove animations. */
 const itemSlideVariants = {
-  initial: { opacity: 0, x: -16 },
-  animate: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: 16, transition: { duration: 0.2 } },
+  initial: { opacity: 0, y: -6 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: 6, transition: { duration: 0.18 } },
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -257,7 +257,6 @@ function CollapsibleSection({
     <Card
       as="section"
       id={id}
-      data-panel-guide={guideId}
       aria-labelledby={`${id}-title`}
       className="scroll-mt-24 overflow-hidden"
     >
@@ -266,6 +265,7 @@ function CollapsibleSection({
           type="button"
           aria-expanded={expanded}
           aria-controls={`${id}-content`}
+          data-panel-guide={guideId}
           onClick={() => setExpanded((v) => !v)}
           className={cn(
             'flex w-full items-center justify-between gap-3 p-4 sm:p-5',
@@ -295,10 +295,10 @@ function CollapsibleSection({
             id={`${id}-content`}
             role="region"
             aria-labelledby={`${id}-title`}
-            initial="collapsed"
-            animate="expanded"
-            exit="collapsed"
-            variants={prefersReduced ? {} : collapseVariants}
+            initial={prefersReduced ? false : 'collapsed'}
+            animate={prefersReduced ? undefined : 'expanded'}
+            exit={prefersReduced ? undefined : 'collapsed'}
+            variants={prefersReduced ? undefined : collapseVariants}
             transition={prefersReduced ? { duration: 0 } : { duration: 0.3, ease: [0.2, 0, 0, 1] }}
             style={{ overflow: 'hidden' }}
           >
@@ -317,17 +317,15 @@ function CollapsibleSection({
  * Each child must have a unique `key` prop.
  */
 function AnimatedList({ children, testId }: { children: React.ReactNode; testId: string }) {
-  const prefersReduced = useReducedMotion();
-
   return (
     <ul data-testid={testId} className="flex flex-col divide-y divide-border">
-      <AnimatePresence initial={false}>{prefersReduced ? children : children}</AnimatePresence>
+      <AnimatePresence initial={false}>{children}</AnimatePresence>
     </ul>
   );
 }
 
 /** Animated list item with slide-in/out transitions. */
-function AnimatedListItem({ id, children }: { id: string; children: React.ReactNode }) {
+function AnimatedListItem({ children }: { children: React.ReactNode }) {
   const prefersReduced = useReducedMotion();
 
   if (prefersReduced) {
@@ -336,7 +334,6 @@ function AnimatedListItem({ id, children }: { id: string; children: React.ReactN
 
   return (
     <motion.li
-      key={id}
       layout
       variants={itemSlideVariants}
       initial="initial"
@@ -372,6 +369,7 @@ function StaffSection({
 }) {
   const { t } = useTranslation();
   const { success, error: toastError } = useToast();
+  const prefersReduced = useReducedMotion();
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<StaffRole>('Stylist');
   const [phone, setPhone] = useState('');
@@ -499,7 +497,7 @@ function StaffSection({
   };
 
   return (
-    <CollapsibleSection id="staff" icon={Users} title={t('admin.staff')}>
+    <CollapsibleSection id="staff" icon={Users} title={t('admin.staff')} guideId="owner-team-members">
       {staff.length === 0 ? (
         <>
           <ul data-testid="staff-list" className="sr-only" aria-hidden="true" />
@@ -516,7 +514,7 @@ function StaffSection({
             const name = member.fullName ?? member.id;
             const isEditing = editingId === member.id;
             return (
-              <AnimatedListItem key={member.id} id={member.id}>
+              <AnimatedListItem key={member.id}>
                 <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <button
@@ -528,6 +526,8 @@ function StaffSection({
                         'hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus',
                       )}
                       aria-label={t('admin.config.staff.editLabel', { name })}
+                      aria-expanded={isEditing}
+                      aria-controls={`staff-edit-${member.id}`}
                     >
                       {name}
                     </button>
@@ -546,13 +546,20 @@ function StaffSection({
                     </span>
                   </div>
                   {/* Inline edit panel */}
-                  <AnimatePresence>
+                  <AnimatePresence initial={false} mode="wait">
                     {isEditing && (
                       <motion.div
-                        initial={{ opacity: 0, height: 0 }}
+                        key={`staff-edit-${member.id}`}
+                        layout
+                        initial={prefersReduced ? false : { opacity: 0, height: 0, y: -4 }}
                         animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+                        exit={prefersReduced ? undefined : { opacity: 0, height: 0, y: -4 }}
+                        transition={
+                          prefersReduced
+                            ? { duration: 0 }
+                            : { duration: 0.22, ease: [0.2, 0, 0, 1] }
+                        }
+                        id={`staff-edit-${member.id}`}
                         className="flex w-full flex-col gap-2 overflow-hidden sm:w-64 sm:shrink-0"
                       >
                         <Select
@@ -734,6 +741,7 @@ function ServicesSection({
   requestDelete: (state: DeleteState) => void;
 }) {
   const { t } = useTranslation();
+  const prefersReduced = useReducedMotion();
   const [name, setName] = useState('');
   const [duration, setDuration] = useState('');
   const [durationMode, setDurationMode] = useState<'fixed' | 'variable'>('fixed');
@@ -960,7 +968,7 @@ function ServicesSection({
         id="services"
         icon={Scissors}
         title={t('admin.services')}
-        guideId="owner-services"
+        guideId="owner-services-catalog"
       >
       <div className="flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/10 p-3">
         <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-contrast">
@@ -986,7 +994,7 @@ function ServicesSection({
         <>
           <AnimatedList testId="services-list">
             {pageItems.map((service) => (
-            <AnimatedListItem key={service.id} id={service.id}>
+            <AnimatedListItem key={service.id}>
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <button
                   type="button"
@@ -997,6 +1005,8 @@ function ServicesSection({
                     'hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus',
                   )}
                   aria-label={t('admin.config.services.editLabel', { name: service.name })}
+                  aria-expanded={editingId === service.id}
+                  aria-controls={`service-edit-${service.id}`}
                 >
                   {service.name}
                 </button>
@@ -1045,11 +1055,22 @@ function ServicesSection({
                       : 'انتخاب اعضای تیم'}
                   </button>
                 </div>
-                {editingId === service.id && (
-                  <div
-                    id={`service-edit-${service.id}`}
-                    className="mt-2 flex flex-col gap-2 rounded-lg border border-border bg-bg p-2"
-                  >
+                <AnimatePresence initial={false} mode="wait">
+                  {editingId === service.id && (
+                    <motion.div
+                      key={`service-edit-${service.id}`}
+                      layout
+                      initial={prefersReduced ? false : { opacity: 0, height: 0, y: -4 }}
+                      animate={{ opacity: 1, height: 'auto', y: 0 }}
+                      exit={prefersReduced ? undefined : { opacity: 0, height: 0, y: -4 }}
+                      transition={
+                        prefersReduced
+                          ? { duration: 0 }
+                          : { duration: 0.22, ease: [0.2, 0, 0, 1] }
+                      }
+                      id={`service-edit-${service.id}`}
+                      className="mt-2 flex flex-col gap-2 overflow-hidden rounded-lg border border-border bg-bg p-2"
+                    >
                     <div className="grid gap-3 sm:grid-cols-2">
                       <TextField
                         label="نام خدمت"
@@ -1160,8 +1181,9 @@ function ServicesSection({
                     >
                       ذخیره تغییرات خدمت
                     </Button>
-                  </div>
-                )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
               <IconButton
                 variant="danger"
@@ -1522,7 +1544,12 @@ function SmsSettingsSection({
   ];
 
   return (
-    <CollapsibleSection id="sms-settings" icon={BellRing} title="تنظیمات پیامک">
+    <CollapsibleSection
+      id="sms-settings"
+      icon={BellRing}
+      title="تنظیمات پیامک"
+      guideId="owner-configuration-messaging"
+    >
       <p className="m-0 text-sm leading-7 text-muted">
         برای کم‌شدن پیام‌های اضافی، به‌صورت پیش‌فرض پیامک‌های کاری فقط برای عضو تیم نوبت می‌رود.
         ارسال برای صاحب سالن را از هر بخش جداگانه فعال کن.
@@ -1603,7 +1630,12 @@ function DepositSettingsSection({
   };
 
   return (
-    <CollapsibleSection id="deposit-settings" icon={CreditCard} title="روش دریافت بیعانه">
+    <CollapsibleSection
+      id="deposit-settings"
+      icon={CreditCard}
+      title="روش دریافت بیعانه"
+      guideId="owner-configuration-deposit"
+    >
       <p className="m-0 text-sm leading-7 text-muted">
         مبلغ بیعانه برای هر خدمت جداگانه فعال می‌شود. این بخش فقط روش دریافت و اطلاعات کارت را تعیین می‌کند.
       </p>
@@ -1710,7 +1742,12 @@ function ChairsSection({
   };
 
   return (
-    <CollapsibleSection id="chairs" icon={Armchair} title={t('admin.chairs')}>
+    <CollapsibleSection
+      id="chairs"
+      icon={Armchair}
+      title={t('admin.chairs')}
+      guideId="owner-configuration-resources"
+    >
       {visibleChairs.length === 0 ? (
         <>
           <ul data-testid="chairs-list" className="sr-only" aria-hidden="true" />
@@ -1724,7 +1761,7 @@ function ChairsSection({
         <>
           <AnimatedList testId="chairs-list">
             {pageItems.map((entry) => (
-            <AnimatedListItem key={entry.id} id={entry.id}>
+              <AnimatedListItem key={entry.id}>
               {editingId === entry.id ? (
                 <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-end">
                   <TextField
@@ -1865,7 +1902,12 @@ function EquipmentSection({
   };
 
   return (
-    <CollapsibleSection id="equipment" icon={Package} title={t('admin.equipment')}>
+    <CollapsibleSection
+      id="equipment"
+      icon={Package}
+      title={t('admin.equipment')}
+      guideId="owner-configuration-equipment"
+    >
       {equipment.length === 0 ? (
         <>
           <ul data-testid="equipment-list" className="sr-only" aria-hidden="true" />
@@ -1879,7 +1921,7 @@ function EquipmentSection({
         <>
           <AnimatedList testId="equipment-list">
             {pageItems.map((item) => (
-              <AnimatedListItem key={item.id} id={item.id}>
+              <AnimatedListItem key={item.id}>
                 {editingId === item.id ? (
                   <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-end">
                     <TextField
@@ -2092,7 +2134,10 @@ function OwnerConfigPageContent({
       <SeoHead title={pageTitle} />
 
       {/* Page header */}
-      <header className="flex flex-col gap-1">
+      <header
+        data-panel-guide={isAllView ? 'owner-configuration' : isTeamView ? 'owner-team' : 'owner-services'}
+        className="flex flex-col gap-1"
+      >
         <h1 className="text-xl text-display text-text">
           {isAllView ? t('admin.configuration') : pageTitle}
         </h1>

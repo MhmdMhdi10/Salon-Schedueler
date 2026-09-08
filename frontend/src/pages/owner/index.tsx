@@ -97,7 +97,7 @@ export function OwnerMarketingPage() {
 export function OwnerAnalyticsPage() {
   return (
     <OwnerRoleGuard allow={['Owner', 'Admin']}>
-      <section data-testid="owner-analytics-page" data-panel-guide="owner-analytics">
+      <section data-testid="owner-analytics-page">
         <OwnerAnalyticsPageContent />
       </section>
     </OwnerRoleGuard>
@@ -120,7 +120,7 @@ export function OwnerAnalyticsPage() {
 export function OwnerConfigurationPage() {
   return (
     <OwnerRoleGuard allow={['Owner', 'Admin']}>
-      <section data-testid="owner-config-page" data-panel-guide="owner-configuration">
+      <section data-testid="owner-config-page">
         <OwnerConfigPage />
       </section>
     </OwnerRoleGuard>
@@ -135,7 +135,7 @@ export function OwnerConfigurationPage() {
 export function OwnerTeamPage() {
   return (
     <OwnerRoleGuard allow={['Owner', 'Admin']}>
-      <section data-testid="owner-team-page" data-panel-guide="owner-team">
+      <section data-testid="owner-team-page">
         <OwnerConfigPage view="team" />
       </section>
     </OwnerRoleGuard>
@@ -146,7 +146,7 @@ export function OwnerTeamPage() {
 export function OwnerServicesPage() {
   return (
     <OwnerRoleGuard allow={['Owner', 'Admin']}>
-      <section data-testid="owner-services-page" data-panel-guide="owner-services">
+      <section data-testid="owner-services-page">
         <OwnerConfigPage view="services" />
       </section>
     </OwnerRoleGuard>
@@ -175,7 +175,7 @@ export { OwnerQrPage } from './QrPage';
  */
 export function OwnerMyQrPage() {
   return (
-    <section data-testid="owner-my-qr-page" data-panel-guide="owner-my-qr">
+    <section data-testid="owner-my-qr-page">
       <MyQrPage />
     </section>
   );

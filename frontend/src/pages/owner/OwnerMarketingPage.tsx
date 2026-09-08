@@ -16,6 +16,7 @@ import { ApiError, qrApi, referralApi, type SalonQrResponse, type SalonReferral 
 import { useSalonId } from '../../auth/useSalonId';
 import { SeoHead } from '../../components/seo';
 import { Badge, Button, Card, ErrorState, Skeleton, useToast } from '../../components/ui';
+import { qrImageDataUri } from './marketing-assets';
 
 type CampaignSource = 'instagram_bio' | 'instagram_story' | 'whatsapp' | 'qr' | 'google';
 
@@ -119,6 +120,14 @@ export function OwnerMarketingPage() {
     }
   }, [data?.url]);
 
+  const bookingQrUri = useMemo(
+    () =>
+      data?.payload
+        ? qrImageDataUri(data.payload, `کد QR رزرو ${data.salonName}`)
+        : '',
+    [data?.payload, data?.salonName],
+  );
+
   const campaignUrl = useMemo(() => {
     if (!bookingUrl) return '';
     try {
@@ -172,12 +181,11 @@ export function OwnerMarketingPage() {
   return (
     <section
       data-testid="owner-marketing-page"
-      data-panel-guide="owner-marketing"
       className="flex flex-col gap-5"
     >
       <SeoHead title="بازاریابی" />
 
-      <header className="flex items-start gap-3">
+      <header data-panel-guide="owner-marketing" className="flex items-start gap-3">
         <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
           <Megaphone className="size-5" aria-hidden="true" />
         </span>
@@ -205,61 +213,83 @@ export function OwnerMarketingPage() {
       )}
 
       {status === 'ready' && data && (
-        <Card elevated className="overflow-hidden border-primary/25 bg-primary/5">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-bold text-primary">لینک رزرو {data.salonName}</p>
-                <h2 className="mt-1 text-xl font-black text-text">همین را در بیو بگذار</h2>
-                <p className="mt-1 max-w-xl text-sm leading-6 text-muted">
-                  مشتری خدمات و وقت‌های خالی را می‌بیند و بدون تماس رزرو می‌کند.
-                </p>
+        <Card
+          elevated
+          data-panel-guide="owner-marketing-booking"
+          className="overflow-hidden border-primary/25 bg-primary/5"
+        >
+          <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_11rem] md:items-start">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold text-primary">لینک رزرو {data.salonName}</p>
+                  <h2 className="mt-1 text-xl font-black text-text">همین را در بیو بگذار</h2>
+                  <p className="mt-1 max-w-xl text-sm leading-6 text-muted">
+                    مشتری خدمات و وقت‌های خالی را می‌بیند و بدون تماس رزرو می‌کند.
+                  </p>
+                </div>
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-contrast">
+                  <QrCode className="size-5" aria-hidden="true" />
+                </span>
               </div>
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-contrast">
-                <QrCode className="size-5" aria-hidden="true" />
-              </span>
-            </div>
-            <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3">
-              <span className="break-all text-sm text-text" dir="ltr">{bookingUrl}</span>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Button
-                  type="button"
-                  onClick={() => void copyLink()}
-                  startIcon={copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                  className="flex-1"
+              <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3">
+                <span className="break-all text-sm text-text" dir="ltr">{bookingUrl}</span>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button
+                    type="button"
+                    onClick={() => void copyLink()}
+                    startIcon={copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                    className="flex-1"
+                  >
+                    {copied ? 'کپی شد' : 'کپی لینک'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => void shareLink()}
+                    startIcon={<Share2 className="size-4" />}
+                    className="flex-1"
+                  >
+                    اشتراک‌گذاری
+                  </Button>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                <a
+                  href={bookingUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 font-medium text-primary no-underline hover:underline"
                 >
-                  {copied ? 'کپی شد' : 'کپی لینک'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => void shareLink()}
-                  startIcon={<Share2 className="size-4" />}
-                  className="flex-1"
-                >
-                  اشتراک‌گذاری
-                </Button>
+                  دیدن صفحه رزرو <ExternalLink className="size-4" aria-hidden="true" />
+                </a>
+                <a href="/owner/qr" className="inline-flex items-center gap-1 font-medium text-muted no-underline hover:text-primary">
+                  ساخت QR و استند <ArrowLeft className="size-4 rtl:-scale-x-100" aria-hidden="true" />
+                </a>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-              <a
-                href={bookingUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 font-medium text-primary no-underline hover:underline"
-              >
-                دیدن صفحه رزرو <ExternalLink className="size-4" aria-hidden="true" />
+            <aside className="flex flex-col items-center gap-2 rounded-xl border border-primary/20 bg-surface p-3">
+              <img
+                data-testid="owner-marketing-qr"
+                src={bookingQrUri}
+                alt={`کد QR رزرو ${data.salonName}`}
+                className="aspect-square w-full max-w-40 rounded-lg bg-white p-2"
+              />
+              <p className="text-center text-xs font-bold text-text">اسکن برای رزرو سریع</p>
+              <a href="/owner/qr" className="text-center text-xs font-bold text-primary no-underline hover:underline">
+                شخصی‌سازی و خروجی QR
               </a>
-              <a href="/owner/qr" className="inline-flex items-center gap-1 font-medium text-muted no-underline hover:text-primary">
-                ساخت QR و استند <ArrowLeft className="size-4 rtl:-scale-x-100" aria-hidden="true" />
-              </a>
-            </div>
+            </aside>
           </div>
         </Card>
       )}
 
       {status === 'ready' && data && (
-        <Card data-testid="owner-campaign-kit" className="flex flex-col gap-5 border-primary/20 bg-surface">
+        <Card
+          data-testid="owner-campaign-kit"
+          data-panel-guide="owner-marketing-campaign"
+          className="flex flex-col gap-5 border-primary/20 bg-surface"
+        >
           <div className="flex items-start gap-3">
             <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Link2 className="size-5" aria-hidden="true" />
@@ -310,7 +340,12 @@ export function OwnerMarketingPage() {
         </Card>
       )}
 
-      <Card as="section" data-testid="owner-referrals" className="border-success/20">
+      <Card
+        as="section"
+        data-testid="owner-referrals"
+        data-panel-guide="owner-marketing-referrals"
+        className="border-success/20"
+      >
         <div className="flex items-start gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
             <Users className="size-5" aria-hidden="true" />

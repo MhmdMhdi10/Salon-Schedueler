@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>گزارش تصویری راهنمای پنل آرا</title>
+    <style>
+      :root {
+        --ink: #102b31;
+        --muted: #60767b;
+        --teal: #078878;
+        --teal-dark: #05685e;
+        --mint: #e8f5f1;
+        --paper: #f8fbfa;
+        --card: #fff;
+        --line: #d8e5e2;
+        --shadow: 0 14px 34px rgba(16, 43, 49, .08);
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: var(--paper);
+        font-family: Vazirmatn, Tahoma, Arial, sans-serif;
+        line-height: 1.85;
+      }
+      a { color: var(--teal-dark); }
+      .wrap { width: min(1180px, calc(100% - 32px)); margin: auto; }
+      .hero {
+        color: #f5fffc;
+        background: linear-gradient(135deg, #0d363b, #075b57 58%, #078878);
+      }
+      .hero-inner { padding: 58px 0 50px; }
+      .eyebrow {
+        display: inline-flex;
+        padding: 4px 12px;
+        border: 1px solid rgba(255,255,255,.25);
+        border-radius: 999px;
+        color: #d5fff4;
+        background: rgba(255,255,255,.09);
+        font-size: 13px;
+        font-weight: 700;
+      }
+      h1, h2, h3, p { margin-top: 0; }
+      h1 { max-width: 760px; margin: 18px 0 12px; font-size: clamp(31px, 5vw, 57px); line-height: 1.25; letter-spacing: -.04em; }
+      .hero p { max-width: 760px; margin-bottom: 24px; color: #d4e9e5; font-size: 17px; }
+      .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; max-width: 900px; }
+      .metric { padding: 13px 15px; border: 1px solid rgba(255,255,255,.17); border-radius: 15px; background: rgba(255,255,255,.08); }
+      .metric strong { display: block; font-size: 23px; line-height: 1.25; }
+      .metric span { color: #c8e4df; font-size: 12px; }
+      nav { position: sticky; top: 0; z-index: 3; border-bottom: 1px solid var(--line); background: rgba(248,251,250,.94); backdrop-filter: blur(12px); }
+      nav .wrap { display: flex; gap: 8px; overflow-x: auto; padding: 10px 0; }
+      nav a { flex: 0 0 auto; padding: 6px 11px; border-radius: 999px; text-decoration: none; background: var(--mint); font-size: 13px; font-weight: 700; }
+      main { padding: 42px 0 70px; }
+      section { scroll-margin-top: 70px; margin-bottom: 52px; }
+      .section-head { display: flex; align-items: end; justify-content: space-between; gap: 18px; margin-bottom: 16px; }
+      h2 { margin-bottom: 4px; font-size: clamp(24px, 3vw, 34px); line-height: 1.35; }
+      h3 { margin-bottom: 5px; font-size: 18px; line-height: 1.45; }
+      .lead, .muted { color: var(--muted); }
+      .lead { max-width: 780px; margin-bottom: 0; }
+      .callout { margin-bottom: 30px; padding: 16px 18px; border-right: 4px solid var(--teal); border-radius: 14px; color: #21444a; background: var(--mint); }
+      .callout strong { color: var(--teal-dark); }
+      .page-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+      .page-card, .guide-card { overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--card); box-shadow: var(--shadow); }
+      .page-card-head, .guide-card-head { padding: 17px 18px 10px; }
+      .page-card-head h3, .guide-card-head h3 { margin-bottom: 2px; }
+      .route { direction: ltr; display: inline-block; color: var(--muted); font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; }
+      .shots { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 8px 8px; }
+      figure { margin: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #eef3f1; }
+      figure a { display: block; }
+      figure img { display: block; width: 100%; height: 270px; object-fit: contain; object-position: top center; background: #eef3f1; }
+      figcaption { padding: 6px 8px; color: var(--muted); background: #fff; font-size: 12px; }
+      .guide-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+      .guide-card-head { min-height: 138px; }
+      .guide-card-head h3 { font-size: 17px; }
+      .guide-card-head p { margin: 7px 0 0; color: var(--muted); font-size: 13px; }
+      .guide-number { display: inline-flex; align-items: center; justify-content: center; min-width: 27px; height: 27px; margin-left: 6px; border-radius: 9px; color: #fff; background: var(--teal); font-size: 13px; font-weight: 800; }
+      .guide-route { margin: 0 18px 10px; padding: 5px 8px; border-radius: 8px; color: var(--teal-dark); background: var(--mint); font-size: 12px; }
+      .guide-card .shots { padding-top: 0; }
+      .guide-card figure img { height: 300px; }
+      .footer { padding: 25px 0 42px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+
+      @media (max-width: 900px) {
+        .guide-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      }
+      @media (max-width: 650px) {
+        .wrap { width: min(100% - 22px, 1180px); }
+        .hero-inner { padding: 42px 0 38px; }
+        .hero p { font-size: 15px; }
+        .metrics, .page-grid, .guide-grid { grid-template-columns: 1fr; }
+        .shots { grid-template-columns: 1fr 1fr; }
+        figure img, .guide-card figure img { height: 300px; }
+        main { padding-top: 30px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="hero">
+      <div class="wrap hero-inner">
+        <span class="eyebrow">گزارش تصویری QA · localhost:5273</span>
+        <h1>راهنمای دقیق و نرم برای تمام سکشن‌های پنل</h1>
+        <p>هر مرحله به عنصر واقعی همان سکشن وصل است؛ مقصد قبل از نمایش مرحله آماده می‌شود، هدف روشن می‌ماند و بقیهٔ صفحه با لایهٔ ملایم بلور می‌شود.</p>
+        <div class="metrics">
+          <div class="metric"><strong>۳۳</strong><span>مرحلهٔ راهنمای Owner</span></div>
+          <div class="metric"><strong>۱۰</strong><span>مرحلهٔ راهنمای مدیریت سراسری</span></div>
+          <div class="metric"><strong>۲۴</strong><span>صفحهٔ واقعی در دسکتاپ و موبایل</span></div>
+          <div class="metric"><strong>۱۳۴</strong><span>تصویر تولید و بررسی‌شده</span></div>
+        </div>
+      </div>
+    </header>
+
+    <nav aria-label="بخش‌های گزارش">
+      <div class="wrap">
+        <a href="#behavior">رفتار راهنما</a>
+        <a href="#owner-pages">صفحات Owner</a>
+        <a href="#owner-guide">مراحل Owner</a>
+        <a href="#admin-pages">صفحات مدیریت سراسری</a>
+        <a href="#admin-guide">مراحل مدیریت سراسری</a>
+      </div>
+    </nav>
+
+    <main class="wrap">
+      <section id="behavior">
+        <div class="section-head">
+          <div>
+            <h2>چه چیزی اصلاح شد؟</h2>
+            <p class="lead">راهنما در اولین ورود خودکار باز می‌شود و فقط همان بار دیده می‌شود؛ بعد از آن از دکمهٔ «راهنما» در هدر قابل اجراست.</p>
+          </div>
+        </div>
+        <div class="callout"><strong>ترتیب و سوییچ:</strong> مرحله‌ها بر اساس مسیر واقعی پنل مرتب‌اند. هنگام رفتن به سکشن دیگر، مقصد آماده می‌شود، هدف قبلی موقتاً باقی می‌ماند، سپس فوکوس با انتقال نرم روی هدف جدید می‌نشیند؛ پرش کوتاه یا هایلایت سکشن اشتباه حذف شده است.</div>
+        <div class="callout"><strong>دسترسی و تمرکز:</strong> پس‌زمینه در زمان راهنما قابل کلیک نیست، هدف فعال پررنگ و واضح است، دکمه‌های قبلی/بعدی و بستن در دسترس‌اند و در حالت reduced-motion انیمیشن‌ها خاموش می‌شوند.</div>
+        <div class="callout"><strong>اعتبار تصاویر:</strong> تصاویر guide با هدف فعال گرفته شده‌اند؛ تصاویر pages بعد از بستن راهنما گرفته شده‌اند تا صفحهٔ واقعی بدون پوشش راهنما دیده شود.</div>
+      </section>
+
+      <section id="owner-pages">
+        <div class="section-head">
+          <div>
+            <h2>صفحه‌های واقعی Owner</h2>
+            <p class="lead">هر کارت مسیر واقعی، تصویر دسکتاپ و تصویر موبایل همان صفحه را نشان می‌دهد.</p>
+          </div>
+        </div>
+        <div id="owner-pages-grid" class="page-grid"></div>
+      </section>
+
+      <section id="owner-guide">
+        <div class="section-head">
+          <div>
+            <h2>۳۳ مرحلهٔ راهنمای Owner</h2>
+            <p class="lead">توضیح مرحله و سکشن هدف کنار تصویر همان مرحله قرار گرفته است.</p>
+          </div>
+        </div>
+        <div id="owner-guide-grid" class="guide-grid"></div>
+      </section>
+
+      <section id="admin-pages">
+        <div class="section-head">
+          <div>
+            <h2>صفحه‌های واقعی مدیریت سراسری</h2>
+            <p class="lead">برای ادمین هم تمام مسیرهای منو در دو اندازهٔ دسکتاپ و موبایل بررسی شده‌اند.</p>
+          </div>
+        </div>
+        <div id="admin-pages-grid" class="page-grid"></div>
+      </section>
+
+      <section id="admin-guide">
+        <div class="section-head">
+          <div>
+            <h2>۱۰ مرحلهٔ راهنمای مدیریت سراسری</h2>
+            <p class="lead">هدف هر مرحله روی هدر یا محتوای واقعی همان صفحه مشخص شده است.</p>
+          </div>
+        </div>
+        <div id="admin-guide-grid" class="guide-grid"></div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap">تصاویر در پوشهٔ <code>docs/guide-screenshots</code> ذخیره شده‌اند. برای بازاجرای QA تصویری: <code>node scripts/capture-panel-guide-screenshots.mjs</code></div>
+    </footer>
+
+    <script>
+      const root = './guide-screenshots';
+      const ownerPages = [
+        ['تقویم', '/owner/calendar', 'owner-calendar'],
+        ['ساعات کاری', '/owner/calendar/working-hours', 'owner-calendar-working-hours'],
+        ['تیم', '/owner/team', 'owner-team'],
+        ['مشتری‌ها', '/owner/clients', 'owner-clients'],
+        ['بازاریابی', '/owner/marketing', 'owner-marketing'],
+        ['آمار', '/owner/analytics', 'owner-analytics'],
+        ['بارکد سالن', '/owner/qr', 'owner-qr'],
+        ['تنظیمات سالن', '/owner/config', 'owner-config'],
+        ['خدمات', '/owner/services', 'owner-services'],
+        ['تراکنش‌ها', '/owner/transactions', 'owner-transactions'],
+        ['اعلان‌ها', '/owner/notifications', 'owner-notifications'],
+        ['اشتراک', '/owner/subscription', 'owner-subscription'],
+        ['بارکد من', '/owner/my-qr', 'owner-my-qr'],
+        ['پروفایل', '/owner/profile', 'owner-profile'],
+      ];
+
+      const ownerGuide = [
+        ['تقویم', 'مرکز برنامهٔ سالن', 'نوبت‌های آنلاین و حضوری، وضعیت تأیید و برنامهٔ روزهای آینده را از همین صفحه دنبال کنید.', '/owner/calendar', 'owner-calendar'],
+        ['تقویم · ابزارهای روز', 'ثبت نوبت و مدیریت روز', 'نما را بین روز، هفته، ماه و فهرست عوض کنید؛ نوبت حضوری بسازید یا ساعات کاری و بسته‌شدن روز را مدیریت کنید.', '/owner/calendar', 'owner-calendar-controls'],
+        ['تقویم · ساعات کاری', 'برنامهٔ هفتگی و تعطیلی‌ها', 'ساعات کاری هر روز و زمان‌های بسته‌بودن سالن را تنظیم کنید تا زمان‌های قابل رزرو با برنامهٔ واقعی هماهنگ باشند.', '/owner/calendar/working-hours', 'owner-calendar-hours'],
+        ['تقویم · پیدا کردن نوبت', 'جست‌وجو و فیلتر نوبت‌ها', 'با نام مشتری، شماره، خدمت، عضو تیم یا وضعیت، نوبت موردنظر را سریع پیدا کنید.', '/owner/calendar', 'owner-calendar-filters'],
+        ['تقویم · پیگیری‌ها', 'تأیید، رسید بیعانه و صف انتظار', 'رزروهای در انتظار تأیید، رسیدهای کارت‌به‌کارت و مشتری‌های صف انتظار در ابتدای تقویم جمع می‌شوند.', '/owner/calendar', 'owner-calendar-queues'],
+        ['تیم', 'مدیریت اعضای تیم', 'اعضای تیم را اضافه کنید و برای هر نفر نقش، ورود، وضعیت فعالیت و سطح دسترسی را مشخص کنید.', '/owner/team', 'owner-team'],
+        ['تیم · اعضای تیم', 'دسترسی و برنامهٔ هر عضو', 'اجازهٔ بستن وقت شخصی، تأیید نوبت، جایگاه کاری و فعال‌بودن هر عضو را تنظیم کنید.', '/owner/team', 'owner-team-members'],
+        ['مشتری‌ها', 'دفترچهٔ مشتری‌ها', 'اطلاعات مشتری‌های حضوری و آنلاین را در یک دفترچه نگه دارید تا ثبت نوبت بعدی سریع‌تر شود.', '/owner/clients', 'owner-clients'],
+        ['مشتری‌ها · دفترچه', 'جست‌وجو و افزودن مشتری', 'مشتری را با نام یا شماره پیدا کنید یا با نام و شمارهٔ معتبر به دفترچه اضافه کنید.', '/owner/clients', 'owner-clients-directory'],
+        ['بازاریابی', 'مسیرهای جذب مشتری', 'لینک رزرو، QR و دعوت مشتری را آماده کنید تا هر مراجعه از مسیر درست ثبت و قابل پیگیری باشد.', '/owner/marketing', 'owner-marketing'],
+        ['بازاریابی · لینک رزرو', 'لینک رزرو سالن', 'لینک اختصاصی را کپی یا share کنید و صفحهٔ رزرو را برای بررسی در تب جدید ببینید.', '/owner/marketing', 'owner-marketing-booking'],
+        ['بازاریابی · کمپین', 'لینک‌های قابل‌اندازه‌گیری', 'برای بیو، استوری، واتساپ و QR لینک جدا بسازید؛ نتیجهٔ هر کانال بعداً در آمار دیده می‌شود.', '/owner/marketing', 'owner-marketing-campaign'],
+        ['بازاریابی · معرفی', 'معرفی‌های مشتریان', 'پیشرفت معرفی‌های مشتری و اعتبار قابل‌مصرف را ببینید و مصرف اعتبار را ثبت کنید.', '/owner/marketing', 'owner-marketing-referrals'],
+        ['آمار', 'گزارش عملکرد سالن', 'درآمد، تعداد نوبت، ظرفیت استفاده‌شده، عملکرد تیم و رفتار مشتری‌ها را در نمای تحلیلی ببینید.', '/owner/analytics', 'owner-analytics'],
+        ['آمار · گزارش', 'بازه و جزئیات گزارش', 'بازهٔ ۷، ۳۰ یا ۹۰ روزه را انتخاب کنید و روند روزانه، خدمات، تیم، پرداخت‌ها و کانال‌ها را مقایسه کنید.', '/owner/analytics', 'owner-analytics-report'],
+        ['QR سالن', 'ساخت QR و استند سالن', 'برای ورودی، شبکه‌های اجتماعی یا آینهٔ سالن QR برندشده بسازید و خروجی چاپ یا اشتراک بگیرید.', '/owner/qr', 'owner-qr'],
+        ['QR سالن · استودیو', 'شخصی‌سازی و خروجی QR', 'قالب و رنگ را انتخاب کنید، پیش‌نمایش زنده را ببینید و PNG، SVG یا نسخهٔ چاپی بگیرید.', '/owner/qr', 'owner-qr-studio'],
+        ['QR سالن · سفارش چاپ', 'سفارش کارت و استند چاپی', 'تعداد، مشخصات ارسال و توضیحات سفارش را وارد کنید تا سفارش چاپی QR ثبت شود.', '/owner/qr', 'owner-qr-order'],
+        ['تنظیمات سالن', 'تنظیمات پایهٔ سالن', 'تنظیمات مشترک مثل پیامک، روش بیعانه، منابع کاری و تجهیزات را از اینجا کنترل کنید.', '/owner/config', 'owner-configuration'],
+        ['تنظیمات سالن · پیامک و بیعانه', 'پیامک‌ها و روش بیعانه', 'مشخص کنید پیامک رزرو، یادآوری و لغو برای چه کسی ارسال شود و اطلاعات کارت‌به‌کارت را ثبت کنید.', '/owner/config', 'owner-configuration-messaging'],
+        ['تنظیمات سالن · بیعانه', 'روش کارت‌به‌کارت', 'روش دریافت بیعانه فعلاً کارت‌به‌کارت است؛ شماره کارت، نام صاحب کارت و بانک را ثبت کنید.', '/owner/config', 'owner-configuration-deposit'],
+        ['تنظیمات سالن · منابع', 'صندلی و تجهیزات', 'منابع لازم برای برنامه‌ریزی سالن را اضافه، ویرایش یا غیرفعال کنید تا ظرفیت رزرو دقیق بماند.', '/owner/config', 'owner-configuration-resources'],
+        ['تنظیمات سالن · تجهیزات', 'مدیریت تجهیزات', 'تجهیزات سالن را جداگانه ثبت، ویرایش یا غیرفعال کنید تا فهرست منابع به‌روز بماند.', '/owner/config', 'owner-configuration-equipment'],
+        ['خدمات', 'مدیریت کاتالوگ خدمات', 'خدمات سالن را از تنظیمات جداگانه مدیریت کنید تا نام، قیمت و زمان هر خدمت دقیق باشد.', '/owner/services', 'owner-services'],
+        ['خدمات · کاتالوگ', 'خدمت، زمان، قیمت و تیم ارائه‌دهنده', 'خدمت جدید یا سفارشی اضافه کنید، مدت ثابت یا متغیر و بیعانه را تنظیم کنید و تیم ارائه‌دهنده را تیک بزنید.', '/owner/services', 'owner-services-catalog'],
+        ['تراکنش‌ها', 'دفتر مالی سالن', 'پرداخت‌های نوبت و اشتراک را با مبلغ، وضعیت، تاریخ و شناسهٔ پیگیری ببینید.', '/owner/transactions', 'owner-transactions'],
+        ['اعلان‌ها', 'صندوق پیام‌های کاری', 'رویدادهای رزرو، تغییر زمان، پرداخت و پیام‌های کاری سالن را در یک صندوق دنبال کنید.', '/owner/notifications', 'owner-notifications'],
+        ['اعلان‌ها · صندوق ورودی', 'فیلتر و خواندن اعلان‌ها', 'بین همه و خوانده‌نشده‌ها فیلتر کنید؛ پیام را باز کنید یا همه را یک‌جا بخوانید.', '/owner/notifications', 'owner-notifications-inbox'],
+        ['اشتراک', 'وضعیت اشتراک سالن', 'وضعیت فعلی، تاریخ انقضا و زمان باقی‌ماندهٔ اشتراک را بررسی کنید.', '/owner/subscription', 'owner-subscription'],
+        ['اشتراک · تمدید', 'انتخاب پلن تمدید', 'پلن ماهانه یا سه‌ماهه را در محدودهٔ مجاز انتخاب کنید؛ بیشتر از سه ماه جلوتر ممکن نیست.', '/owner/subscription', 'owner-subscription-plans'],
+        ['بارکد من', 'QR شخصی عضو تیم', 'QR شخصی خودت را برای دریافت رزرو مستقیم نشان بده، share کن یا دانلود بگیر.', '/owner/my-qr', 'owner-my-qr'],
+        ['پروفایل', 'پروفایل و حساب کاربری', 'اطلاعات حساب، نقش و وضعیت دسترسی را ببینید؛ برای مدیریت بخش‌های کاری از سایدبار استفاده کنید.', '/owner/profile', 'owner-profile'],
+        ['پروفایل · دسترسی سریع', 'تیم و خدمات جدا از هم', '«تیم» برای کنترل اعضا و دسترسی‌هاست و «خدمات» برای کنترل کاتالوگ؛ هرکدام کارت مستقل دارد.', '/owner/profile', 'owner-profile-tools'],
+      ];
+
+      const adminPages = [
+        ['مرکز مدیریت', '/platform-admin', 'platform-admin'],
+        ['سالن‌ها', '/platform-admin/salons', 'platform-admin-salons'],
+        ['نوبت‌ها', '/platform-admin/appointments', 'platform-admin-appointments'],
+        ['صف انتظار', '/platform-admin/waitlist', 'platform-admin-waitlist'],
+        ['اسکن‌های QR', '/platform-admin/qr-scans', 'platform-admin-qr-scans'],
+        ['مشتری‌ها', '/platform-admin/customers', 'platform-admin-customers'],
+        ['تیم سالن‌ها', '/platform-admin/staff', 'platform-admin-staff'],
+        ['اشتراک‌ها', '/platform-admin/subscriptions', 'platform-admin-subscriptions'],
+        ['پرداخت‌ها', '/platform-admin/payments', 'platform-admin-payments'],
+        ['گزارش تغییرات', '/platform-admin/audit-logs', 'platform-admin-audit-logs'],
+      ];
+
+      const ownerGuideOrder = [
+        'owner-team', 'owner-team-members', 'owner-services', 'owner-services-catalog',
+        'owner-profile', 'owner-profile-tools', 'owner-calendar', 'owner-calendar-controls',
+        'owner-calendar-hours', 'owner-calendar-filters', 'owner-calendar-queues',
+        'owner-clients', 'owner-clients-directory', 'owner-marketing', 'owner-marketing-booking',
+        'owner-marketing-campaign', 'owner-marketing-referrals', 'owner-analytics',
+        'owner-analytics-report', 'owner-qr', 'owner-qr-studio', 'owner-qr-order',
+        'owner-configuration', 'owner-configuration-messaging', 'owner-configuration-deposit',
+        'owner-configuration-resources', 'owner-configuration-equipment', 'owner-transactions',
+        'owner-notifications', 'owner-notifications-inbox', 'owner-subscription',
+        'owner-subscription-plans', 'owner-my-qr',
+      ];
+
+      const adminGuide = [
+        ['داشبورد ادمین', 'نمای کلی پلتفرم', 'وضعیت سالن‌ها و شاخص‌های مهم را از داشبورد بررسی کنید.', '/platform-admin', 'platform-admin-dashboard'],
+        ['سالن‌ها', 'مدیریت سالن‌ها', 'سالن‌ها را جست‌وجو کنید، جزئیاتشان را ببینید و وضعیت هر سالن را مدیریت کنید.', '/platform-admin/salons', 'platform-admin-salons'],
+        ['نوبت‌ها', 'بررسی نوبت‌ها', 'نوبت‌های ثبت‌شده در پلتفرم را برای پیگیری و بررسی جزئیات ببینید.', '/platform-admin/appointments', 'platform-admin-appointments'],
+        ['صف انتظار', 'مدیریت صف انتظار', 'درخواست‌های صف انتظار را بررسی و وضعیت آن‌ها را مدیریت کنید.', '/platform-admin/waitlist', 'platform-admin-waitlist'],
+        ['اسکن‌های QR', 'تحلیل اسکن‌های QR', 'عملکرد کدهای QR و مسیر ورود مشتری‌ها به رزرو را بررسی کنید.', '/platform-admin/qr-scans', 'platform-admin-qr-scans'],
+        ['مشتری‌ها', 'مدیریت مشتری‌ها', 'حساب‌های مشتری و سابقهٔ استفاده را برای پشتیبانی ببینید.', '/platform-admin/customers', 'platform-admin-customers'],
+        ['تیم سالن‌ها', 'مدیریت تیم سالن‌ها', 'اعضای تیم سالن‌ها و ارتباط آن‌ها با سالن‌های ثبت‌شده را مدیریت کنید.', '/platform-admin/staff', 'platform-admin-staff'],
+        ['اشتراک‌ها', 'پیگیری اشتراک‌ها', 'پلن‌ها، وضعیت اشتراک و تمدید سالن‌ها را پیگیری کنید.', '/platform-admin/subscriptions', 'platform-admin-subscriptions'],
+        ['پرداخت‌ها', 'بررسی پرداخت‌ها', 'پرداخت‌ها و وضعیت مالی ثبت‌شده در پلتفرم را بررسی کنید.', '/platform-admin/payments', 'platform-admin-payments'],
+        ['گزارش تغییرات', 'کنترل رویدادها', 'تغییرات حساس و رویدادهای مدیریتی را برای پاسخ‌گویی دنبال کنید.', '/platform-admin/audit-logs', 'platform-admin-audit-logs'],
+      ];
+
+      const esc = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
+      const image = (path, alt) => `<a href="${path}" target="_blank" rel="noreferrer"><img loading="lazy" src="${path}" alt="${esc(alt)}" /></a>`;
+
+      function renderPages(id, surface, items) {
+        document.getElementById(id).innerHTML = items.map(([title, route, slug]) => {
+          const desktop = `${root}/${surface}/desktop/pages/${slug}.png`;
+          const mobile = `${root}/${surface}/mobile/pages/${slug}.png`;
+          return `<article class="page-card"><div class="page-card-head"><h3>${esc(title)}</h3><span class="route">${esc(route)}</span></div><div class="shots"><figure>${image(desktop, `${title} دسکتاپ`)}<figcaption>دسکتاپ · ۱۴۴۰×۹۰۰</figcaption></figure><figure>${image(mobile, `${title} موبایل`)}<figcaption>موبایل · ۳۹۰×۸۴۴</figcaption></figure></div></article>`;
+        }).join('');
+      }
+
+      function renderGuide(id, surface, items) {
+        document.getElementById(id).innerHTML = items.map(([section, title, body, route, guideId], index) => {
+          const desktop = `${root}/${surface}/desktop/guide/${String(index + 1).padStart(2, '0')}-${guideId}.png`;
+          const mobile = `${root}/${surface}/mobile/guide/${String(index + 1).padStart(2, '0')}-${guideId}.png`;
+          return `<article class="guide-card"><div class="guide-card-head"><h3><span class="guide-number">${index + 1}</span>${esc(title)}</h3><p><strong>${esc(section)}</strong> · ${esc(body)}</p></div><div class="guide-route"><span class="route">${esc(route)}</span> · هدف واقعی همین سکشن</div><div class="shots"><figure>${image(desktop, `${title} راهنمای دسکتاپ`)}<figcaption>هدف دقیق · دسکتاپ</figcaption></figure><figure>${image(mobile, `${title} راهنمای موبایل`)}<figcaption>هدف دقیق · موبایل</figcaption></figure></div></article>`;
+        }).join('');
+      }
+
+      renderPages('owner-pages-grid', 'owner', ownerPages);
+      renderGuide(
+        'owner-guide-grid',
+        'owner',
+        ownerGuideOrder.map((id) => ownerGuide.find((item) => item[4] === id)).filter(Boolean),
+      );
+      renderPages('admin-pages-grid', 'platform-admin', adminPages);
+      renderGuide('admin-guide-grid', 'platform-admin', adminGuide);
+    </script>
+  </body>
+</html>

@@ -169,10 +169,6 @@ const PLATFORM_ADMIN_GUIDE_STEPS: readonly PanelGuideStep[] = [
   },
 ] as const;
 
-function platformAdminGuideId(pathname: string): string | undefined {
-  return PLATFORM_ADMIN_GUIDE_STEPS.find((step) => step.to === pathname)?.id;
-}
-
 const routeLabel = (pathname: string) =>
   ALL_ENTRIES.find((entry) => entry.key === pathname)?.label ??
   (pathname.includes('/details') ? 'جزئیات رکورد' : 'مرکز مدیریت');
@@ -361,7 +357,7 @@ export function PlatformAdminShell({ children, onSignOut }: { children: ReactNod
               <Layout.Header>
                 <PlatformHeader mobile={mobile} collapsed={collapsed} onToggleCollapsed={() => mobile ? setMobileOpen(true) : setCollapsed((value) => !value)} onSignOut={onSignOut} onHelp={platformGuide.replay} />
               </Layout.Header>
-              <Layout.Content id={PLATFORM_ADMIN_CONTENT_ID} tabIndex={-1} data-panel-guide={platformAdminGuideId(location.pathname)}>
+              <Layout.Content id={PLATFORM_ADMIN_CONTENT_ID} tabIndex={-1}>
                 <PlatformBreadcrumb />
                 <a href={`#${PLATFORM_ADMIN_CONTENT_ID}`} className="sr-only">رفتن به محتوای اصلی</a>
                 {children}

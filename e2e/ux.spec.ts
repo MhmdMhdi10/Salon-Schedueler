@@ -24,13 +24,18 @@ const PUBLIC_ROUTES = [
 const OWNER_ROUTES = [
   '/owner/calendar',
   '/owner/calendar/working-hours',
+  '/owner/team',
+  '/owner/clients',
+  '/owner/marketing',
   '/owner/analytics',
+  '/owner/qr',
   '/owner/config',
-  '/owner/subscription',
+  '/owner/services',
   '/owner/transactions',
   '/owner/notifications',
-  '/owner/qr',
+  '/owner/subscription',
   '/owner/my-qr',
+  '/owner/profile',
 ] as const;
 
 type AxeViolation = {

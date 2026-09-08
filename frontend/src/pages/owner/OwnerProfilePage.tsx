@@ -186,10 +186,9 @@ export function OwnerProfilePage() {
     <section
       className="owner-profile-page mx-auto w-full max-w-3xl"
       data-testid="owner-profile-page"
-      data-panel-guide="owner-profile"
       aria-busy={identityLoading}
     >
-      <header className="owner-profile-page__intro mb-5">
+      <header data-panel-guide="owner-profile" className="owner-profile-page__intro mb-5">
         <p className="owner-profile-page__eyebrow">{t('owner.profile.eyebrow')}</p>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
@@ -295,10 +294,13 @@ export function OwnerProfilePage() {
         </dl>
       </section>
 
-      <div className="space-y-5">
+      <div className="owner-profile-page__tools space-y-5">
         {sections.map((section) => (
           <section key={section.key} aria-labelledby={'owner-profile-section-' + section.key}>
-            <div className="mb-3 flex items-end justify-between gap-3">
+            <div
+              data-panel-guide={section.key === 'operations' ? 'owner-profile-tools' : undefined}
+              className="mb-3 flex items-end justify-between gap-3"
+            >
               <div>
                 <h2
                   id={'owner-profile-section-' + section.key}
@@ -324,8 +326,16 @@ export function OwnerProfilePage() {
         ))}
       </div>
 
+      <p
+        data-panel-guide="owner-profile-tools"
+        className="owner-profile-page__desktop-nav-note"
+        role="note"
+      >
+        برای مدیریت تیم، خدمات و سایر بخش‌ها از سایدبار استفاده کنید.
+      </p>
+
       {onSignOut && (
-        <div className="mt-7 border-t border-border pt-4">
+        <div className="owner-profile-page__sign-out mt-7 border-t border-border pt-4">
           <button
             type="button"
             data-testid="owner-profile-sign-out"

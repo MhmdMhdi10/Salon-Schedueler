@@ -2,7 +2,7 @@
   position: fixed;
   inset: 0;
   isolation: isolate;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .panel-onboarding-guide__scrim--full {
@@ -12,7 +12,7 @@
   background: rgb(5 12 16 / 48%);
   backdrop-filter: blur(0.25rem) saturate(0.82);
   -webkit-backdrop-filter: blur(0.25rem) saturate(0.82);
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .panel-onboarding-guide__spotlight {
@@ -29,7 +29,12 @@
     top 0.22s cubic-bezier(0.23, 1, 0.32, 1),
     left 0.22s cubic-bezier(0.23, 1, 0.32, 1),
     width 0.22s cubic-bezier(0.23, 1, 0.32, 1),
-    height 0.22s cubic-bezier(0.23, 1, 0.32, 1);
+    height 0.22s cubic-bezier(0.23, 1, 0.32, 1),
+    opacity 0.2s ease;
+}
+
+.panel-onboarding-guide[data-transitioning='true'] .panel-onboarding-guide__spotlight {
+  opacity: 0.52;
 }
 
 .panel-onboarding-guide__card {
@@ -47,7 +52,20 @@
   color: var(--color-text);
   box-shadow: 0 1.5rem 3.5rem rgb(0 0 0 / 28%);
   pointer-events: auto;
-  animation: panel-onboarding-guide-enter 0.18s cubic-bezier(0.23, 1, 0.32, 1);
+  will-change: top, left, width;
+  transition:
+    top 0.3s cubic-bezier(0.23, 1, 0.32, 1),
+    left 0.3s cubic-bezier(0.23, 1, 0.32, 1),
+    width 0.3s cubic-bezier(0.23, 1, 0.32, 1),
+    opacity 0.2s ease;
+  animation: panel-onboarding-guide-enter 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.panel-onboarding-guide__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  animation: panel-onboarding-guide-step 0.24s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .panel-onboarding-guide__card-head,
@@ -211,11 +229,14 @@
 
 [data-panel-guide-active] {
   position: relative;
+  z-index: 0;
+  font-weight: 850;
 }
 
-a[data-panel-guide-active],
-button[data-panel-guide-active] {
-  font-weight: 850 !important;
+[data-panel-guide-active] h1,
+[data-panel-guide-active] h2,
+[data-panel-guide-active] h3 {
+  font-weight: 900 !important;
 }
 
 [data-panel-guide-active]:focus-visible {
@@ -238,13 +259,25 @@ button[data-panel-guide-active] {
   }
 }
 
+@keyframes panel-onboarding-guide-step {
+  from {
+    opacity: 0;
+    transform: translateY(0.4rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .panel-onboarding-guide__close,
   .panel-onboarding-guide__secondary,
   .panel-onboarding-guide__primary,
   .panel-onboarding-guide__disable,
   .panel-onboarding-guide__card,
-  .panel-onboarding-guide__spotlight {
+  .panel-onboarding-guide__spotlight,
+  .panel-onboarding-guide__content {
     transition: none;
     animation: none;
   }

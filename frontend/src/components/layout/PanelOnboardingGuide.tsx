@@ -13,6 +13,7 @@ export interface PanelGuideStep {
   eyebrow?: string;
   title: string;
   body: string;
+  /** Route that owns this target. Multiple steps may share one route. */
   to?: string;
 }
 
@@ -30,14 +31,24 @@ interface PanelOnboardingGuideProps {
   onClose: () => void;
   /** Ordered sections shown by the walkthrough. */
   steps: readonly PanelGuideStep[];
+  /** Start at first catalogue item even when opened from another route. */
+  startAtFirst?: boolean;
   /** Optional heading override for a surface-specific panel. */
   title?: string;
+}
+
+function stepPath(step: PanelGuideStep): string | null {
+  if (!step.to) return null;
+  return step.to.split(/[?#]/, 1)[0] ?? null;
 }
 
 function stepMatchesLocation(step: PanelGuideStep, pathname: string, hash: string): boolean {
   if (!step.to) return false;
   const [path, stepHash] = step.to.split('#');
-  return pathname === path && hash === (stepHash ? `#${stepHash}` : '');
+  // A route-only step remains the active guide context even when a page adds
+  // its own hash for an internal interaction. Hashes are only strict when a
+  // step explicitly owns one.
+  return pathname === path && (!stepHash || hash === `#${stepHash}`);
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -121,25 +132,28 @@ export function useFirstVisitPanelGuide(storageKey: string | null) {
  *
  * Each step navigates to its section, scrolls the matching
  * `[data-panel-guide="..."]` element into view, keeps that element sharp and
- * bold, and dims the rest of the viewport with a non-blocking spotlight. The
- * panel remains usable while the guide is open, so navigation can be explored
- * without the tour fighting the user's route choice.
+ * bold, and dims the rest of the viewport with a blocking spotlight. The
+ * walkthrough controls remain the only active controls until the guide closes,
+ * which keeps its ordered route/section sequence intact.
  */
 export function PanelOnboardingGuide({
   open,
   onClose,
   steps,
+  startAtFirst = false,
   title = 'راهنمای کامل پنل',
 }: PanelOnboardingGuideProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [index, setIndex] = useState(0);
   const [targetRect, setTargetRect] = useState<GuideRect | null>(null);
+  const [targetResolving, setTargetResolving] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const dialogRef = useRef<HTMLElement | null>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
   const activeTargetRef = useRef<HTMLElement | null>(null);
-  const pendingStepRef = useRef<number | null>(null);
+  const pendingStepRef = useRef<PanelGuideStep | null>(null);
+  const openedRef = useRef(false);
 
   const current = steps[index] ?? steps[0];
   const isLast = index >= steps.length - 1;
@@ -165,28 +179,18 @@ export function PanelOnboardingGuide({
         (rect.width > 0 || rect.height > 0)
       );
     });
-    const visible = visibleCandidates[0];
-
-    // When the current route owns a matching page section, prefer it over the
-    // duplicate sidebar/tab link. On other routes the navigation item is the
-    // useful target while the guide is moving to the next section.
-    const routeTarget = visibleCandidates.find((element) => element.closest('main'));
-    const target = routeTarget ?? visible ?? candidates[0] ?? null;
+    // When the current route owns multiple matching anchors (for example a
+    // page header and its section card), choose the smallest visible anchor.
+    // This avoids spotlighting an entire page-sized wrapper and keeps the
+    // explanation attached to the exact control/section it describes.
+    const routeCandidates = visibleCandidates.filter((element) => element.closest('main'));
+    const targetCandidates = routeCandidates.length > 0 ? routeCandidates : visibleCandidates;
+    const target = [...targetCandidates].sort((left, right) => {
+      const leftRect = left.getBoundingClientRect();
+      const rightRect = right.getBoundingClientRect();
+      return leftRect.width * leftRect.height - rightRect.width * rightRect.height;
+    })[0] ?? candidates[0] ?? null;
     if (!target) return null;
-
-    // Page roots can be several viewport-heights tall. Coach marks are more
-    // useful beside their page header than as a spotlight around the whole
-    // scroll pane, so focus the first visible header when available.
-    const targetRect = target.getBoundingClientRect();
-    const viewportHeight = Math.max(window.innerHeight || 640, 480);
-    if (target.closest('main') && targetRect.height > viewportHeight * 1.5) {
-      const header = target.querySelector<HTMLElement>('header');
-      if (header) {
-        const headerRect = header.getBoundingClientRect();
-        if (headerRect.width > 0 && headerRect.height > 0) return header;
-      }
-    }
-
     return target;
   }, [current]);
 
@@ -216,20 +220,28 @@ export function PanelOnboardingGuide({
     return { top, left, width, height };
   }, []);
 
-  // If the user opened a deep panel link, start at that section so the guide
-  // never unexpectedly changes the active route. Root-panel visits start at
-  // the first section as usual.
+  // A shell can opt into a consistent catalogue start. Standalone consumers
+  // retain route-aware entry so opening help on a deep page stays contextual.
   useEffect(() => {
     if (!open) {
       pendingStepRef.current = null;
+      openedRef.current = false;
       return;
     }
+
+    if (openedRef.current) return;
+    openedRef.current = true;
 
     const currentStepIndex = steps.findIndex((step) =>
       stepMatchesLocation(step, location.pathname, location.hash),
     );
-    setIndex(currentStepIndex >= 0 ? currentStepIndex : 0);
-  }, [open]);
+    const firstStep = steps[0];
+    setIndex(startAtFirst ? 0 : currentStepIndex >= 0 ? currentStepIndex : 0);
+    if (startAtFirst && firstStep?.to && stepPath(firstStep) !== location.pathname) {
+      pendingStepRef.current = firstStep;
+      navigate(firstStep.to);
+    }
+  }, [location.hash, location.pathname, navigate, open, startAtFirst, steps]);
 
   const goToStep = useCallback(
     (nextIndex: number) => {
@@ -240,40 +252,57 @@ export function PanelOnboardingGuide({
         return;
       }
 
-      pendingStepRef.current = nextIndex;
       setIndex(nextIndex);
-      if (nextStep.to && !stepMatchesLocation(nextStep, location.pathname, location.hash)) {
+      if (nextStep.to && stepPath(nextStep) !== location.pathname) {
+        // React Router publishes the new location after this render. Keep the
+        // requested step pinned during that short intermediate render so the
+        // route-sync effect cannot snap back to the old route's first step.
+        pendingStepRef.current = nextStep;
         navigate(nextStep.to);
+      } else {
+        pendingStepRef.current = null;
       }
     },
     [location.hash, location.pathname, navigate, onClose, steps],
   );
 
-  // Keep the active step in sync when someone uses the panel navigation while
-  // the coach mark is open. The tour's own navigation sets a pending index so
-  // this effect does not briefly snap back to the old route during transition.
+  // Keep the active step in sync when someone uses panel navigation while the
+  // coach mark is open. Same-route feature steps are intentionally preserved;
+  // only a route change selects that route's first guide step.
   useEffect(() => {
     if (!open) return;
+    const pendingStep = pendingStepRef.current;
+    if (pendingStep) {
+      if (stepPath(pendingStep) === location.pathname) {
+        pendingStepRef.current = null;
+      } else {
+        return;
+      }
+    }
+
+    const currentRoute = current ? stepPath(current) : null;
+    if (currentRoute === location.pathname) return;
+
     const routeStepIndex = steps.findIndex((step) =>
       stepMatchesLocation(step, location.pathname, location.hash),
     );
-    if (pendingStepRef.current !== null) {
-      if (pendingStepRef.current === routeStepIndex) {
-        pendingStepRef.current = null;
-      }
-      return;
-    }
-    if (routeStepIndex >= 0 && routeStepIndex !== index) {
-      setIndex(routeStepIndex);
-    }
-  }, [index, location.hash, location.pathname, open, steps]);
+    if (routeStepIndex >= 0 && routeStepIndex !== index) setIndex(routeStepIndex);
+  }, [current, index, location.hash, location.pathname, open, steps]);
 
   // Find the target after route content has committed. A short bounded retry
   // covers lazy route chunks and data-dependent section rendering.
   useLayoutEffect(() => {
     clearActiveTarget();
-    setTargetRect(null);
-    if (!open || !current) return undefined;
+    if (!open || !current) {
+      setTargetRect(null);
+      setTargetResolving(false);
+      return undefined;
+    }
+
+    // Keep previous spotlight geometry while the next route/section mounts.
+    // The CSS transition then carries the coach mark to its new target instead
+    // of flashing through the center of the viewport.
+    setTargetResolving(true);
 
     let cancelled = false;
     let frame = 0;
@@ -288,6 +317,7 @@ export function PanelOnboardingGuide({
         target.setAttribute('data-panel-guide-active', 'true');
         observer?.observe(target);
       }
+      setTargetResolving(false);
       frame = window.requestAnimationFrame(() => {
         if (!cancelled) setTargetRect(readTargetRect(target));
       });
@@ -300,6 +330,9 @@ export function PanelOnboardingGuide({
         if (attempts < 20) {
           attempts += 1;
           retryTimer = window.setTimeout(() => measure(false), 80);
+        } else {
+          setTargetRect(null);
+          setTargetResolving(false);
         }
         return;
       }
@@ -431,9 +464,14 @@ export function PanelOnboardingGuide({
     <div
       className="panel-onboarding-guide fixed inset-0 z-dialog"
       data-testid="panel-onboarding-guide"
+      data-transitioning={targetResolving ? 'true' : undefined}
     >
       {targetRect ? (
-        <div aria-hidden="true" className="panel-onboarding-guide__spotlight" style={targetStyle} />
+        <div
+          aria-hidden="true"
+          className="panel-onboarding-guide__spotlight"
+          style={targetStyle}
+        />
       ) : (
         <div
           aria-hidden="true"
@@ -443,7 +481,7 @@ export function PanelOnboardingGuide({
 
       <section
         role="dialog"
-        aria-modal="false"
+        aria-modal="true"
         aria-labelledby="panel-guide-title"
         aria-describedby="panel-guide-body"
         ref={dialogRef}
@@ -489,46 +527,50 @@ export function PanelOnboardingGuide({
           ))}
         </div>
 
-        <p className="panel-onboarding-guide__step-label">{current.eyebrow ?? 'راهنمای بخش'}</p>
-        <h2 id="panel-guide-title" className="panel-onboarding-guide__title">
-          {current.title}
-        </h2>
-        <p id="panel-guide-body" className="panel-onboarding-guide__body">
-          {current.body}
-        </p>
+        <div key={current.id} className="panel-onboarding-guide__content">
+          <p className="panel-onboarding-guide__step-label">
+            {current.eyebrow ?? 'راهنمای بخش'}
+          </p>
+          <h2 id="panel-guide-title" className="panel-onboarding-guide__title">
+            {current.title}
+          </h2>
+          <p id="panel-guide-body" className="panel-onboarding-guide__body">
+            {current.body}
+          </p>
 
-        <div className="panel-onboarding-guide__actions">
+          <div className="panel-onboarding-guide__actions">
+            <button
+              type="button"
+              onClick={() => {
+                if (index > 0) goToStep(index - 1);
+              }}
+              disabled={index === 0}
+              className="panel-onboarding-guide__secondary"
+              data-testid="panel-guide-previous"
+            >
+              <ArrowRight className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />
+              قبلی
+            </button>
+            <button
+              type="button"
+              onClick={() => (isLast ? onClose() : goToStep(index + 1))}
+              className="panel-onboarding-guide__primary"
+              data-testid="panel-guide-next"
+            >
+              {isLast ? 'شروع کار' : 'بخش بعدی'}
+              {!isLast && <ArrowLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
+            </button>
+          </div>
+
           <button
             type="button"
-            onClick={() => {
-              if (index > 0) goToStep(index - 1);
-            }}
-            disabled={index === 0}
-            className="panel-onboarding-guide__secondary"
-            data-testid="panel-guide-previous"
+            onClick={onClose}
+            className="panel-onboarding-guide__disable"
+            data-testid="panel-guide-disable-auto-start"
           >
-            <ArrowRight className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />
-            قبلی
-          </button>
-          <button
-            type="button"
-            onClick={() => (isLast ? onClose() : goToStep(index + 1))}
-            className="panel-onboarding-guide__primary"
-            data-testid="panel-guide-next"
-          >
-            {isLast ? 'شروع کار' : 'بخش بعدی'}
-            {!isLast && <ArrowLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
+            دیگر خودکار نمایش نده
           </button>
         </div>
-
-        <button
-          type="button"
-          onClick={onClose}
-          className="panel-onboarding-guide__disable"
-          data-testid="panel-guide-disable-auto-start"
-        >
-          دیگر خودکار نمایش نده
-        </button>
       </section>
     </div>
   );

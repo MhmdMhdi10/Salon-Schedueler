@@ -173,7 +173,14 @@ export function OwnerLayout() {
 
   return (
     <TooltipProvider>
-      <OwnerShell role={role} salonId={state.salonId} onSignOut={handleSignOut}>
+      <OwnerShell
+        role={role}
+        salonId={state.salonId}
+        onSignOut={handleSignOut}
+        guideStartAtFirst={
+          location.pathname === '/owner' || location.pathname === '/owner/calendar'
+        }
+      >
         <SeoHead title={t('owner.title')} />
         <Outlet context={outletContext} />
       </OwnerShell>

@@ -958,7 +958,7 @@ export function OwnerAnalyticsPageContent({ salonId: salonIdProp }: { salonId?: 
     <div data-testid="admin-analytics" className="flex min-w-0 flex-col gap-5 pb-4">
       <SeoHead title={t('seo.titles.adminAnalytics')} />
 
-      <header className="flex min-w-0 flex-col gap-1">
+      <header data-panel-guide="owner-analytics" className="flex min-w-0 flex-col gap-1">
         <h1 className="text-xl font-bold text-text text-display">{t('admin.analytics')}</h1>
         <p className="max-w-[65ch] text-sm text-muted">
           {t('admin.analyticsPage.subtitle', {
@@ -967,7 +967,12 @@ export function OwnerAnalyticsPageContent({ salonId: salonIdProp }: { salonId?: 
         </p>
       </header>
 
-      <Card as="section" data-testid="analytics-range" className="min-w-0 p-3 sm:p-4">
+      <Card
+        as="section"
+        data-testid="analytics-range"
+        data-panel-guide="owner-analytics-report"
+        className="min-w-0 p-3 sm:p-4"
+      >
         <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="text-xs text-muted">

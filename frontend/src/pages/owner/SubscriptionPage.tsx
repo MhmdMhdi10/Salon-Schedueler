@@ -291,12 +291,11 @@ function SubscriptionManagementPage() {
   return (
     <section
       data-testid="owner-subscription-page"
-      data-panel-guide="owner-subscription"
       className="flex flex-col gap-6"
     >
       <SeoHead title={t('owner.subscription.title')} />
 
-      <header className="flex flex-col gap-2">
+      <header data-panel-guide="owner-subscription" className="flex flex-col gap-2">
         <h1 className="text-xl text-display text-text">{t('owner.subscription.title')}</h1>
         <p className="max-w-[60ch] text-sm text-muted">{t('owner.subscription.subtitle')}</p>
       </header>
@@ -387,7 +386,7 @@ function SubscriptionManagementPage() {
           )}
 
           {/* Plan selection + purchase/renew (R3.1, R3.2, R3.6). */}
-          <Card as="section" className="flex flex-col gap-4">
+          <Card as="section" data-panel-guide="owner-subscription-plans" className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
               <CardTitle as="h2" className="text-lg font-medium text-text">
                 {t('owner.subscription.plansTitle')}

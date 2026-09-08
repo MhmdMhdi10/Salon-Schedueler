@@ -112,12 +112,14 @@ export function OwnerClientsPage() {
   return (
     <section
       data-testid="owner-clients-page"
-      data-panel-guide="owner-clients"
       className="flex flex-col gap-5"
     >
       <SeoHead title="مشتری‌ها" />
 
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <header
+        data-panel-guide="owner-clients"
+        className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      >
         <div className="flex min-w-0 items-start gap-3">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <Users className="size-5" aria-hidden="true" />
@@ -140,7 +142,7 @@ export function OwnerClientsPage() {
         </Button>
       </header>
 
-      <Card className="flex flex-col gap-4">
+      <Card data-panel-guide="owner-clients-directory" className="flex flex-col gap-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <TextField
             id="owner-client-search"

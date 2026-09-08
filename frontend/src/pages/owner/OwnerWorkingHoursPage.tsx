@@ -30,7 +30,7 @@ export function OwnerWorkingHoursPage() {
 
   return (
     <section data-testid="owner-working-hours-page" className="flex flex-col gap-4 sm:gap-5">
-      <header className="flex items-center justify-between gap-3">
+      <header data-panel-guide="owner-calendar-hours" className="flex items-center justify-between gap-3">
         <Link
           to="/owner/calendar"
           className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm font-bold text-text no-underline transition-colors hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"

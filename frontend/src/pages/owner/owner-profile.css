@@ -112,6 +112,29 @@
   background: color-mix(in srgb, var(--color-danger) 13%, var(--color-surface));
 }
 
+.owner-profile-page__desktop-nav-note {
+  display: none;
+}
+
+@media (min-width: 64rem) {
+  .owner-profile-page__tools,
+  .owner-profile-page__sign-out {
+    display: none;
+  }
+
+  .owner-profile-page__desktop-nav-note {
+    display: block;
+    margin: 0;
+    border: 0.0625rem solid color-mix(in srgb, var(--color-border) 76%, transparent);
+    border-radius: var(--radius-lg);
+    padding: 0.8rem 1rem;
+    color: var(--color-muted);
+    background: color-mix(in srgb, var(--color-surface) 78%, var(--color-bg));
+    font-size: 0.78rem;
+    line-height: 1.8;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .owner-profile-tool {
     transition: none;

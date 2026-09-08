@@ -1696,6 +1696,7 @@ function CalendarFilters({
     <section
       aria-label="فیلتر نوبت‌ها"
       data-testid="owner-calendar-filters"
+      data-panel-guide="owner-calendar-filters"
       className="owner-calendar-filters rounded-xl border border-border bg-surface p-3 shadow-1"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -3514,6 +3515,7 @@ function ApprovalQueue({
           onClick={openApprovalDialog}
           aria-haspopup="dialog"
           aria-expanded={approvalDialogOpen}
+          data-panel-guide="owner-calendar-queues"
           data-testid="owner-approval-queue-fab"
           className="owner-calendar-pending-fab"
         >
@@ -4636,11 +4638,13 @@ export function OwnerCalendarPage() {
   return (
     <section
       data-testid="owner-calendar-page"
-      data-panel-guide="owner-calendar"
       className="owner-calendar-page flex flex-col gap-4 sm:gap-5"
     >
       {/* Header */}
-      <header className="owner-calendar-header flex flex-col gap-1">
+      <header
+        data-panel-guide="owner-calendar"
+        className="owner-calendar-header flex flex-col gap-1"
+      >
         <h1 className="text-xl text-display text-text">
           {t('owner.calendar.title', { defaultValue: 'تقویم' })}
         </h1>
@@ -4656,7 +4660,10 @@ export function OwnerCalendarPage() {
       )}
 
       {/* Toolbar: view toggle + date nav */}
-      <div className="owner-calendar-toolbar flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <div
+        data-panel-guide="owner-calendar-controls"
+        className="owner-calendar-toolbar flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
+      >
         <div className="owner-calendar-view-toggle">
           <ViewToggle view={view} onViewChange={handleViewChange} />
         </div>

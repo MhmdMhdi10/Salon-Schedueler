@@ -437,13 +437,12 @@ export function OwnerQrPage() {
   return (
     <section
       data-testid="owner-qr-page"
-      data-panel-guide="owner-qr"
       data-print-kind={kind}
       className="owner-qr-page flex flex-col gap-6"
     >
       <SeoHead title={t('owner.qr.title')} />
 
-      <header className="flex flex-col gap-2 owner-qr-screen-only">
+      <header data-panel-guide="owner-qr" className="flex flex-col gap-2 owner-qr-screen-only">
         <h1 className="text-xl text-display text-text">{t('owner.qr.title')}</h1>
         <p className="max-w-[60ch] text-sm text-muted">{t('owner.qr.subtitle')}</p>
       </header>
@@ -466,6 +465,7 @@ export function OwnerQrPage() {
           <Card
             as="section"
             data-testid="qr-studio"
+            data-panel-guide="owner-qr-studio"
             className="owner-qr-studio-card owner-qr-screen-only flex flex-col gap-5"
           >
             <div className="owner-qr-studio-head">
@@ -787,6 +787,7 @@ export function OwnerQrPage() {
           as="section"
           id="qr-order-card"
           data-testid="qr-order-card"
+          data-panel-guide="owner-qr-order"
           className="owner-qr-screen-only scroll-mt-24 flex flex-col gap-4"
         >
           <div className="flex items-center gap-2">

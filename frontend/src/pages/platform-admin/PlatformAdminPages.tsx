@@ -93,9 +93,21 @@ function idLabel(id: string | null | undefined): string {
   return id ? `${id.slice(0, 8)}…${id.slice(-4)}` : '—';
 }
 
-function PageHeader({ title, subtitle, onRefresh, loading }: { title: string; subtitle: string; onRefresh?: () => void; loading?: boolean }) {
+function PageHeader({
+  title,
+  subtitle,
+  onRefresh,
+  loading,
+  guideId,
+}: {
+  title: string;
+  subtitle: string;
+  onRefresh?: () => void;
+  loading?: boolean;
+  guideId?: string;
+}) {
   return (
-    <header className="platform-admin-page-header">
+    <header data-panel-guide={guideId} className="platform-admin-page-header">
       <div className="platform-admin-page-header__copy">
         <span className="platform-admin-page-header__eyebrow">مرکز مدیریت سراسری آرا</span>
         <h1>{title}</h1>
@@ -219,7 +231,13 @@ function ResourceListPage<T extends { id: string }>({
 
   return (
     <div className="platform-admin-page">
-      <PageHeader title={title} subtitle={subtitle} onRefresh={reload} loading={status === 'loading'} />
+      <PageHeader
+        title={title}
+        subtitle={subtitle}
+        onRefresh={reload}
+        loading={status === 'loading'}
+        guideId={`platform-admin-${resource}`}
+      />
       <Card className="platform-admin-filter-card">
         <div className="platform-admin-filter-row">
           <Input allowClear prefix={<SearchOutlined />} value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="جستجو در رکوردها…" aria-label="جستجو در رکوردها" />
@@ -268,7 +286,13 @@ export function PlatformDashboardPage() {
 
   return (
     <div className="platform-admin-page">
-      <PageHeader title="مرکز عملیات" subtitle="وضعیت لحظه‌ای سالن‌ها، رزروها، درآمد و نقاط نیازمند پیگیری در کل آرا." onRefresh={load} loading={status === 'loading'} />
+      <PageHeader
+        title="مرکز عملیات"
+        subtitle="وضعیت لحظه‌ای سالن‌ها، رزروها، درآمد و نقاط نیازمند پیگیری در کل آرا."
+        onRefresh={load}
+        loading={status === 'loading'}
+        guideId="platform-admin-dashboard"
+      />
       <div className="platform-admin-dashboard-grid">
         <StatCard title="سالن‌های فعال" value={faNumber.format(metrics.activeSalons)} detail={`${faNumber.format(metrics.suspendedSalons)} تعلیق‌شده`} icon={<ShopOutlined />} />
         <StatCard title="مشتری‌ها" value={faNumber.format(metrics.totalCustomers)} detail={`${faNumber.format(metrics.totalStaff)} عضو تیم فعال`} icon={<TeamOutlined />} color="#4168c5" />

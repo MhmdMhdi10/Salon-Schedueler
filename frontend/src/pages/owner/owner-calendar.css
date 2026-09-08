@@ -138,8 +138,9 @@
     padding-block-end: calc(7rem + env(safe-area-inset-bottom));
     scroll-padding-block-end: calc(7rem + env(safe-area-inset-bottom));
     /* OwnerBottomTabs is ~66px tall and sits 12px above the viewport edge.
-       Keep calendar CTAs above its upper edge with a stable breathing gap. */
-    --owner-calendar-actions-bottom: calc(5.75rem + env(safe-area-inset-bottom));
+       Keep calendar CTAs above its upper edge with a visible 24px breathing
+       gap, including devices with a bottom safe area. */
+    --owner-calendar-actions-bottom: calc(6.5rem + env(safe-area-inset-bottom));
   }
 
   .owner-calendar-actions {

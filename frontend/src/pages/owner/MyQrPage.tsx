@@ -118,12 +118,11 @@ export function MyQrPage() {
   return (
     <section
       data-testid="owner-my-qr-page"
-      data-panel-guide="owner-my-qr"
       className="flex flex-col gap-6"
     >
       <SeoHead title={t('owner.myQr.title')} />
 
-      <header className="flex flex-col gap-2">
+      <header data-panel-guide="owner-my-qr" className="flex flex-col gap-2">
         <h1 className="text-xl text-display text-text">{t('owner.myQr.title')}</h1>
         <p className="max-w-[60ch] text-sm text-muted">{t('owner.myQr.subtitle')}</p>
       </header>

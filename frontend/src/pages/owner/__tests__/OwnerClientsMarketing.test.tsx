@@ -35,6 +35,7 @@ vi.mock('../../../api/client', () => {
     qrApi: {
       getSalonQr: (...args: unknown[]) => getSalonQr(...args),
     },
+    qrImageDataUri: (payload: string) => `data:image/svg+xml,${payload}`,
   };
 });
 
@@ -129,6 +130,10 @@ describe('OwnerMarketingPage', () => {
     expect(await screen.findByText('همین را در بیو بگذار')).toBeInTheDocument();
     expect(screen.getByText('https://book.salon.app/s/salon-1?utm_source=qr')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /ساخت QR و استند/ })).toHaveAttribute('href', '/owner/qr');
+    expect(screen.getByTestId('owner-marketing-qr')).toHaveAttribute(
+      'alt',
+      'کد QR رزرو سالن آرا',
+    );
     expect(getSalonQr).toHaveBeenCalledWith('salon-1');
   });
 });

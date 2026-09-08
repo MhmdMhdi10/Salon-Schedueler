@@ -12,6 +12,11 @@ const STEPS: readonly PanelGuideStep[] = [
   { id: 'second', title: 'سکشن دوم', body: 'توضیح سکشن دوم', to: '/second' },
 ];
 
+const SAME_ROUTE_STEPS: readonly PanelGuideStep[] = [
+  { id: 'calendar', title: 'تقویم', body: 'نمای تقویم', to: '/calendar' },
+  { id: 'filters', title: 'فیلترها', body: 'فیلتر نوبت‌ها', to: '/calendar' },
+];
+
 function LocationProbe() {
   const location = useLocation();
   return <output data-testid="guide-location">{location.pathname}</output>;
@@ -49,7 +54,7 @@ describe('PanelOnboardingGuide', () => {
       expect(document.querySelector('[data-panel-guide-active="true"]')).toBeInTheDocument();
       expect(document.querySelector('.panel-onboarding-guide__spotlight')).toBeInTheDocument();
     });
-    expect(screen.getByTestId('panel-guide-dialog')).toHaveAttribute('aria-modal', 'false');
+    expect(screen.getByTestId('panel-guide-dialog')).toHaveAttribute('aria-modal', 'true');
 
     fireEvent.click(screen.getByTestId('panel-guide-close'));
     await waitFor(() => {
@@ -91,6 +96,30 @@ describe('PanelOnboardingGuide', () => {
       expect(screen.getByTestId('guide-location')).toHaveTextContent('/second');
       expect(document.querySelector('[data-panel-guide-active="true"]')).toHaveTextContent(
         'سکشن دوم صفحه',
+      );
+    });
+  });
+
+  it('switches between multiple feature targets on one route without changing route', async () => {
+    render(
+      <MemoryRouter initialEntries={['/calendar']}>
+        <LocationProbe />
+        <main>
+          <div data-panel-guide="calendar">نمای تقویم</div>
+          <div data-panel-guide="filters">فیلترهای تقویم</div>
+        </main>
+        <PanelOnboardingGuide open onClose={() => {}} steps={SAME_ROUTE_STEPS} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('heading', { name: 'تقویم' })).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('panel-guide-next'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'فیلترها' })).toBeInTheDocument();
+      expect(screen.getByTestId('guide-location')).toHaveTextContent('/calendar');
+      expect(document.querySelector('[data-panel-guide-active="true"]')).toHaveTextContent(
+        'فیلترهای تقویم',
       );
     });
   });
