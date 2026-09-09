@@ -548,7 +548,7 @@ export function PanelOnboardingGuide({
               className="panel-onboarding-guide__secondary"
               data-testid="panel-guide-previous"
             >
-              <ArrowRight className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
               قبلی
             </button>
             <button
@@ -558,7 +558,7 @@ export function PanelOnboardingGuide({
               data-testid="panel-guide-next"
             >
               {isLast ? 'شروع کار' : 'بخش بعدی'}
-              {!isLast && <ArrowLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
+              {!isLast && <ArrowLeft className="h-4 w-4" aria-hidden="true" />}
             </button>
           </div>
 

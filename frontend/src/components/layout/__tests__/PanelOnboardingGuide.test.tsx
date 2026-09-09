@@ -100,6 +100,22 @@ describe('PanelOnboardingGuide', () => {
     });
   });
 
+  it('keeps navigation arrows pointing in the correct RTL direction', () => {
+    render(
+      <MemoryRouter initialEntries={['/first']}>
+        <PanelOnboardingGuide open onClose={() => {}} steps={STEPS} />
+      </MemoryRouter>,
+    );
+
+    const nextIcon = screen.getByTestId('panel-guide-next').querySelector('svg');
+    const previousIcon = screen.getByTestId('panel-guide-previous').querySelector('svg');
+
+    expect(nextIcon).toBeInTheDocument();
+    expect(previousIcon).toBeInTheDocument();
+    expect(nextIcon?.getAttribute('class') ?? '').not.toContain('rtl:-scale-x-100');
+    expect(previousIcon?.getAttribute('class') ?? '').not.toContain('rtl:-scale-x-100');
+  });
+
   it('switches between multiple feature targets on one route without changing route', async () => {
     render(
       <MemoryRouter initialEntries={['/calendar']}>
