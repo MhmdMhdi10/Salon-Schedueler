@@ -188,7 +188,7 @@ function PlatformSider({ collapsed, onNavigate }: { collapsed: boolean; onNaviga
   );
 }
 
-function PlatformHeader({ collapsed, mobile, onToggleCollapsed, onSignOut }: { collapsed: boolean; mobile: boolean; onToggleCollapsed: () => void; onSignOut: () => void }) {
+function PlatformHeader({ collapsed, mobile, mobileOpen, onToggleCollapsed, onSignOut }: { collapsed: boolean; mobile: boolean; mobileOpen: boolean; onToggleCollapsed: () => void; onSignOut: () => void }) {
   const { theme, toggleTheme } = useTheme();
   const { pathname } = useLocation();
   const [commandOpen, setCommandOpen] = useState(false);
@@ -215,7 +215,16 @@ function PlatformHeader({ collapsed, mobile, onToggleCollapsed, onSignOut }: { c
       <div className="platform-admin-header">
         <div className="platform-admin-header__context">
           <Tooltip title={mobile ? 'باز کردن منو' : collapsed ? 'باز کردن منو' : 'جمع کردن منو'}>
-            <Button type="text" aria-label={mobile ? 'باز کردن منو' : collapsed ? 'باز کردن منو' : 'جمع کردن منو'} icon={mobile ? <MenuOutlined /> : collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />} onClick={onToggleCollapsed} />
+            <Button
+              type="text"
+              className="platform-admin-header__menu-trigger"
+              aria-label={mobile ? 'باز کردن منوی مدیریت' : collapsed ? 'باز کردن منو' : 'جمع کردن منو'}
+              aria-expanded={mobile ? mobileOpen : undefined}
+              icon={mobile ? <MenuOutlined /> : collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              onClick={onToggleCollapsed}
+            >
+              {mobile && <span>منو</span>}
+            </Button>
           </Tooltip>
           <span className="platform-admin-header__context-icon"><SafetyCertificateOutlined /></span>
           <span className="platform-admin-header__context-copy">
@@ -275,7 +284,7 @@ export function PlatformAdminShell({ children, onSignOut }: { children: ReactNod
         <AntdApp>
           <Layout hasSider={!mobile}>
             {mobile ? (
-              <Drawer className="platform-admin-mobile-drawer" placement="right" open={mobileOpen} onClose={() => setMobileOpen(false)} closable={false} width={280} title={null}>
+              <Drawer className="platform-admin-mobile-drawer" placement="right" open={mobileOpen} onClose={() => setMobileOpen(false)} closable width={280} title="منوی مدیریت">
                 <PlatformSider collapsed={false} onNavigate={(key) => { setMobileOpen(false); navigate(key); }} />
               </Drawer>
             ) : (
@@ -285,7 +294,7 @@ export function PlatformAdminShell({ children, onSignOut }: { children: ReactNod
             )}
             <Layout>
               <Layout.Header>
-                <PlatformHeader mobile={mobile} collapsed={collapsed} onToggleCollapsed={() => mobile ? setMobileOpen(true) : setCollapsed((value) => !value)} onSignOut={onSignOut} />
+                <PlatformHeader mobile={mobile} mobileOpen={mobileOpen} collapsed={collapsed} onToggleCollapsed={() => mobile ? setMobileOpen(true) : setCollapsed((value) => !value)} onSignOut={onSignOut} />
               </Layout.Header>
               <Layout.Content id={PLATFORM_ADMIN_CONTENT_ID} tabIndex={-1}>
                 <PlatformBreadcrumb />

@@ -20,11 +20,31 @@
   background: var(--platform-surface);
 }
 
+.platform-admin-mobile-drawer .ant-drawer-content-wrapper {
+  width: min(var(--platform-size-280), calc(100vw - var(--space-4))) !important;
+}
+
+.platform-admin-mobile-drawer .ant-drawer-header {
+  border-bottom-color: var(--platform-border);
+  background: var(--platform-surface);
+}
+
+.platform-admin-mobile-drawer .ant-drawer-title {
+  color: var(--platform-text);
+  font-size: var(--platform-font-small);
+  font-weight: 800;
+}
+
+.platform-admin-mobile-drawer .ant-drawer-close {
+  color: var(--platform-text-secondary);
+}
+
 .platform-admin-mobile-drawer .ant-drawer-content {
   background: var(--platform-surface);
 }
 
 .platform-admin-root .ant-layout-header {
+  min-width: 0;
   z-index: 10;
   height: var(--platform-size-72);
   line-height: normal;
@@ -136,6 +156,7 @@
 
 .platform-admin-header {
   display: flex;
+  min-width: 0;
   height: var(--platform-size-72);
   align-items: center;
   justify-content: space-between;
@@ -148,6 +169,14 @@
   min-width: 0;
   align-items: center;
   gap: var(--platform-size-10);
+}
+
+.platform-admin-header__context {
+  flex: 0 1 auto;
+}
+
+.platform-admin-header__menu-trigger {
+  flex: 0 0 auto;
 }
 
 .platform-admin-header__context-icon {
@@ -201,7 +230,10 @@
 
 .platform-admin-header__tools {
   display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--space-2);
 }
 
@@ -848,6 +880,63 @@
 @media (max-width: 47.5rem) {
   .platform-admin-root .ant-layout-header {
     padding-inline: var(--space-4);
+  }
+
+  .platform-admin-root .platform-admin-header {
+    gap: var(--space-2);
+    overflow: hidden;
+  }
+
+  .platform-admin-root .platform-admin-header__context {
+    flex: 0 0 auto;
+    gap: var(--space-1);
+  }
+
+  /* The active platform link already carries the shield affordance. Keep the
+     context mark out of the narrow header so the menu trigger never clips. */
+  .platform-admin-root .platform-admin-header__context-icon {
+    display: none;
+  }
+
+  .platform-admin-root .platform-admin-header__menu-trigger {
+    min-width: var(--platform-size-58);
+    padding-inline: var(--space-2);
+    border: var(--platform-size-1) solid color-mix(in srgb, var(--platform-primary) 34%, var(--platform-border));
+    border-radius: var(--platform-size-10);
+    background: var(--platform-primary-soft);
+    color: var(--platform-primary);
+    font-size: var(--platform-font-micro);
+    font-weight: 800;
+  }
+
+  .platform-admin-root .platform-admin-header__tools {
+    flex: 1 1 auto;
+    justify-content: flex-start;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  .platform-admin-root .platform-admin-header__search {
+    width: var(--platform-size-40);
+    min-width: var(--platform-size-40);
+    padding-inline: 0;
+  }
+
+  .platform-admin-root .platform-admin-header__search kbd {
+    display: none;
+  }
+
+  .platform-admin-root .platform-admin-header__profile {
+    width: var(--platform-size-40);
+    min-width: var(--platform-size-40);
+    height: var(--platform-size-40);
+    justify-content: center;
+    gap: 0;
+    padding: 0;
+  }
+
+  .platform-admin-root .platform-admin-header__profile > .anticon:last-child {
+    display: none;
   }
 
   .platform-admin-root .ant-layout-content {
