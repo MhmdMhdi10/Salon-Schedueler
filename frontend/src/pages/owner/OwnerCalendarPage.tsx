@@ -1189,13 +1189,13 @@ function DayView({
       )}
       <div
         ref={gridRef}
-        className="owner-calendar-day-grid relative overflow-x-hidden overflow-y-auto rounded-lg border border-border bg-surface"
+        className="owner-calendar-day-grid relative rounded-lg border border-border bg-surface"
       >
         <div
           data-testid="owner-calendar-day"
           role="grid"
           aria-label={t('owner.calendar.dayGridLabel', { defaultValue: 'نمای روزانه' })}
-          className="relative min-w-full overflow-y-auto sm:min-w-[20rem]"
+          className="relative min-w-full sm:min-w-[20rem]"
           onKeyDown={handleGridKeyDown}
         >
           {/* Time rows */}

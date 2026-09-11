@@ -940,7 +940,7 @@ describe('Responsive layout', () => {
       expect(weekGrid.className).toContain('lg:grid-cols-7');
     });
 
-    it('day view is scrollable', async () => {
+    it('keeps vertical scrolling on the owner content pane', async () => {
       renderCalendarPage();
       fireEvent.click(screen.getByRole('tab', { name: /روز/ }));
       await waitFor(() => {
@@ -948,8 +948,11 @@ describe('Responsive layout', () => {
       });
 
       const dayGrid = screen.getByTestId('owner-calendar-day');
-      // Day view should have overflow-y-auto for scrollability
-      expect(dayGrid.className).toContain('overflow-y-auto');
+      // The time grid must not create a nested scroll surface on touch devices;
+      // the OwnerShell content pane owns the vertical scroll instead.
+      expect(dayGrid.className).not.toContain('overflow-y-auto');
+      expect(dayGrid.parentElement?.className).toContain('owner-calendar-day-grid');
+      expect(dayGrid.parentElement?.className).not.toContain('overflow-y-auto');
     });
   });
 
