@@ -158,6 +158,26 @@ describe('OwnerBottomTabs', () => {
     }
   });
 
+  it('adds a fallback inset for Android browsers that expose no system inset', () => {
+    const originalUserAgent = navigator.userAgent;
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/143.0.0.0 Mobile',
+    });
+
+    try {
+      renderTabs();
+      expect(document.documentElement.style.getPropertyValue('--android-navigation-inset')).toBe(
+        '3.5rem',
+      );
+    } finally {
+      Object.defineProperty(navigator, 'userAgent', {
+        configurable: true,
+        value: originalUserAgent,
+      });
+    }
+  });
+
   it('applies custom className to the nav element', () => {
     render(
       <MemoryRouter initialEntries={['/owner/calendar']}>
