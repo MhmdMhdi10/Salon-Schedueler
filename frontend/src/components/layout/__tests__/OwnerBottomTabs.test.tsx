@@ -122,6 +122,42 @@ describe('OwnerBottomTabs', () => {
     expect(nav.className).toContain('pb-[env(safe-area-inset-bottom)]');
   });
 
+  it('tracks Android visual viewport bottom inset for the fixed dock', () => {
+    const listeners = new Map<string, EventListener>();
+    const visualViewport = {
+      height: 600,
+      offsetTop: 0,
+      addEventListener: (type: string, listener: EventListener) => listeners.set(type, listener),
+      removeEventListener: (type: string) => listeners.delete(type),
+    } as unknown as VisualViewport;
+    const originalVisualViewport = window.visualViewport;
+    const originalInnerHeight = window.innerHeight;
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: visualViewport,
+    });
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      value: 680,
+    });
+
+    try {
+      renderTabs();
+      expect(document.documentElement.style.getPropertyValue('--visual-viewport-bottom-inset')).toBe('80px');
+      expect(listeners.has('resize')).toBe(true);
+      expect(listeners.has('scroll')).toBe(true);
+    } finally {
+      Object.defineProperty(window, 'visualViewport', {
+        configurable: true,
+        value: originalVisualViewport,
+      });
+      Object.defineProperty(window, 'innerHeight', {
+        configurable: true,
+        value: originalInnerHeight,
+      });
+    }
+  });
+
   it('applies custom className to the nav element', () => {
     render(
       <MemoryRouter initialEntries={['/owner/calendar']}>

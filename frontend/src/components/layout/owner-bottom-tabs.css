@@ -1,7 +1,11 @@
 /* Floating mobile dock: four explicit destinations, including profile. */
 .owner-bottom-tabs {
   inset-inline: 1rem;
-  bottom: max(var(--space-3), env(safe-area-inset-bottom));
+  bottom: max(
+    var(--space-3),
+    env(safe-area-inset-bottom),
+    var(--visual-viewport-bottom-inset, 0rem)
+  );
   max-inline-size: 32rem;
   margin-inline: auto;
   overflow: hidden;

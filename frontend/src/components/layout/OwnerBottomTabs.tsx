@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, useReducedMotion } from 'framer-motion';
@@ -70,7 +71,9 @@ export interface OwnerBottomTabsProps {
  *
  * Accessibility: nav landmark with Persian aria-label, aria-current on the
  * active tab, visible Persian labels, and touch targets ≥ 56×44px.
- * Safe-area: respects env(safe-area-inset-bottom).
+ * Safe-area: respects env(safe-area-inset-bottom) and the visual viewport
+ * bottom inset reported by Android Chrome when system navigation overlays the
+ * layout viewport.
  */
 export function OwnerBottomTabs({ className, role = 'Owner' }: OwnerBottomTabsProps) {
   const { t } = useTranslation();
@@ -78,6 +81,31 @@ export function OwnerBottomTabs({ className, role = 'Owner' }: OwnerBottomTabsPr
   const prefersReduced = useReducedMotion();
   const visibleTabs = TABS.filter((tab) => tab.roles.includes(role));
   const activeIndex = visibleTabs.findIndex((tab) => pathname.startsWith(tab.to));
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return undefined;
+
+    const root = document.documentElement;
+    const updateBottomInset = () => {
+      const layoutHeight = Math.max(window.innerHeight, root.clientHeight);
+      const visualViewportBottom = viewport.offsetTop + viewport.height;
+      const bottomInset = Math.max(0, layoutHeight - visualViewportBottom);
+      root.style.setProperty('--visual-viewport-bottom-inset', `${Math.round(bottomInset)}px`);
+    };
+
+    updateBottomInset();
+    viewport.addEventListener('resize', updateBottomInset);
+    viewport.addEventListener('scroll', updateBottomInset);
+    window.addEventListener('resize', updateBottomInset);
+
+    return () => {
+      viewport.removeEventListener('resize', updateBottomInset);
+      viewport.removeEventListener('scroll', updateBottomInset);
+      window.removeEventListener('resize', updateBottomInset);
+      root.style.removeProperty('--visual-viewport-bottom-inset');
+    };
+  }, []);
 
   return (
     <nav
