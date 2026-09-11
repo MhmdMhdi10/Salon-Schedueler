@@ -73,13 +73,15 @@ export function WaitlistPage() {
 
   if (!salonId || !state?.serviceId || !dayWindow) {
     return (
-      <main className="mx-auto max-w-xl px-4 py-10">
-      <ErrorState
+      <section className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 py-10">
+        <SeoHead title="لیست انتظار" />
+        <h1 className="text-2xl font-bold text-text">لیست انتظار</h1>
+        <ErrorState
           title="اطلاعات انتظار ناقص است"
           description="از صفحه انتخاب زمان دوباره اقدام کن."
         />
         <Button onClick={() => navigate(-1)}>بازگشت</Button>
-      </main>
+      </section>
     );
   }
 

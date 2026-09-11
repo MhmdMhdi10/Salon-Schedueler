@@ -171,9 +171,6 @@ const OwnerSubscriptionPage = lazy(() =>
   import('./pages/owner').then((m) => ({ default: m.OwnerSubscriptionPage })),
 );
 const OwnerQrPage = lazy(() => import('./pages/owner').then((m) => ({ default: m.OwnerQrPage })));
-const OwnerMyQrPage = lazy(() =>
-  import('./pages/owner').then((m) => ({ default: m.OwnerMyQrPage })),
-);
 const OwnerTransactionsPage = lazy(() =>
   import('./pages/owner').then((m) => ({ default: m.OwnerTransactionsPage })),
 );
@@ -200,6 +197,18 @@ const PlatformCustomersPage = lazy(() =>
 );
 const PlatformStaffPage = lazy(() =>
   import('./pages/platform-admin/PlatformAdminPages').then((m) => ({ default: m.PlatformStaffPage })),
+);
+const PlatformAdminsPage = lazy(() =>
+  import('./pages/platform-admin/PlatformAdminPages').then((m) => ({ default: m.PlatformAdminsPage })),
+);
+const PlatformServicesPage = lazy(() =>
+  import('./pages/platform-admin/PlatformAdminPages').then((m) => ({ default: m.PlatformServicesPage })),
+);
+const PlatformChairsPage = lazy(() =>
+  import('./pages/platform-admin/PlatformAdminPages').then((m) => ({ default: m.PlatformChairsPage })),
+);
+const PlatformEquipmentPage = lazy(() =>
+  import('./pages/platform-admin/PlatformAdminPages').then((m) => ({ default: m.PlatformEquipmentPage })),
 );
 const PlatformAppointmentsPage = lazy(() =>
   import('./pages/platform-admin/PlatformAdminPages').then((m) => ({ default: m.PlatformAppointmentsPage })),
@@ -301,6 +310,10 @@ export function App() {
                       <Route path="salons" element={<PlatformSalonsPage />} />
                       <Route path="customers" element={<PlatformCustomersPage />} />
                       <Route path="staff" element={<PlatformStaffPage />} />
+                      <Route path="platform-admins" element={<PlatformAdminsPage />} />
+                      <Route path="services" element={<PlatformServicesPage />} />
+                      <Route path="chairs" element={<PlatformChairsPage />} />
+                      <Route path="equipment" element={<PlatformEquipmentPage />} />
                       <Route path="appointments" element={<PlatformAppointmentsPage />} />
                       <Route path="subscriptions" element={<PlatformSubscriptionsPage />} />
                       <Route path="payments" element={<PlatformPaymentsPage />} />
@@ -333,7 +346,7 @@ export function App() {
                       <Route path="transactions" element={<OwnerTransactionsPage />} />
                       <Route path="notifications" element={<OwnerNotificationsPage />} />
                       <Route path="qr" element={<OwnerQrPage />} />
-                      <Route path="my-qr" element={<OwnerMyQrPage />} />
+                      <Route path="*" element={<Navigate to="/owner/calendar" replace />} />
                     </Route>
 
                     {/*

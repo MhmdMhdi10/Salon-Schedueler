@@ -10,7 +10,6 @@ import {
   ChevronDown,
   Clock,
   CreditCard,
-  Package,
   Plus,
   Search,
   Scissors,
@@ -30,7 +29,6 @@ import {
   type SalonStaff,
   type DepositSettings,
   type SmsSettings,
-  type SalonEquipment,
   type StaffRole,
   type StaffUpdateInput,
 } from '../../api/client';
@@ -68,9 +66,9 @@ import {
  * Redesigned Owner Configuration Page (Task 7.6; Req 8.4, 8.6, 8.7, 3.5, 11.4, 11.5).
  *
  * Card-based sections for Staff, Services, Chairs/Resources with:
- * - Expand/collapse via AnimatePresence + motion.div height animation
- * - Rotate-chevron expand indicator
- * - Inline edit affordances
+ * - Static team/service surfaces with dialog-based record editing
+ * - Expand/collapse via AnimatePresence + motion.div for secondary settings
+ * - Rotate-chevron expand indicator for collapsible settings
  * - Add/remove item animations (slide in/out)
  * - Skeleton loading + error+retry states
  * - Persian text and Persian numerals
@@ -108,7 +106,6 @@ interface ServiceItem {
   approvalStaffId?: string | null;
   staffIds?: string[];
 }
-
 interface ServiceDraft {
   name: string;
   durationMinutes: string;
@@ -233,26 +230,34 @@ interface CollapsibleSectionProps {
   id: string;
   icon: LucideIcon;
   title: string;
-  guideId?: string;
+  collapsible?: boolean;
   defaultExpanded?: boolean;
   children: React.ReactNode;
 }
 
 /**
- * A card section with expand/collapse animation. The chevron rotates on toggle.
- * Uses AnimatePresence + motion.div for smooth height transitions.
+ * A card section with optional expand/collapse animation. The team and service
+ * sections stay open so their existing records can open in a dialog instead.
  * Respects prefers-reduced-motion by skipping transform animations.
  */
 function CollapsibleSection({
   id,
   icon: Icon,
   title,
-  guideId,
+  collapsible = true,
   defaultExpanded = true,
   children,
 }: CollapsibleSectionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const prefersReduced = useReducedMotion();
+  const isExpanded = !collapsible || expanded;
+
+  const sectionHeading = (
+    <span className="flex min-w-0 items-center gap-3">
+      <Icon className="h-5 w-5 shrink-0 text-muted" aria-hidden="true" />
+      <span className="min-w-0 break-words text-lg font-medium text-text">{title}</span>
+    </span>
+  );
 
   return (
     <Card
@@ -262,36 +267,36 @@ function CollapsibleSection({
       className="scroll-mt-24 overflow-hidden"
     >
       <h2 id={`${id}-title`} className="m-0">
-        <button
-          type="button"
-          aria-expanded={expanded}
-          aria-controls={`${id}-content`}
-          data-panel-guide={guideId}
-          onClick={() => setExpanded((v) => !v)}
-          className={cn(
-            'flex w-full items-center justify-between gap-3 p-4 sm:p-5',
-            'outline-none focus-visible:outline focus-visible:outline-2',
-            'focus-visible:outline-offset-[-2px] focus-visible:outline-focus',
-            'min-h-[44px] cursor-pointer rounded-lg',
-            'transition-colors duration-fast ease-standard hover:bg-elevated',
-          )}
-        >
-          <span className="flex min-w-0 items-center gap-3">
-            <Icon className="h-5 w-5 shrink-0 text-muted" aria-hidden="true" />
-            <span className="min-w-0 break-words text-lg font-medium text-text">{title}</span>
-          </span>
-          <motion.span
-            animate={{ rotate: expanded ? 180 : 0 }}
-            transition={prefersReduced ? { duration: 0 } : { duration: 0.25, ease: [0.2, 0, 0, 1] }}
-            className="shrink-0 text-muted"
+        {collapsible ? (
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-controls={`${id}-content`}
+            onClick={() => setExpanded((v) => !v)}
+            className={cn(
+              'flex w-full items-center justify-between gap-3 p-4 sm:p-5',
+              'outline-none focus-visible:outline focus-visible:outline-2',
+              'focus-visible:outline-offset-[-2px] focus-visible:outline-focus',
+              'min-h-[44px] cursor-pointer rounded-lg',
+              'transition-colors duration-fast ease-standard hover:bg-elevated',
+            )}
           >
-            <ChevronDown className="h-5 w-5" aria-hidden="true" />
-          </motion.span>
-        </button>
+            {sectionHeading}
+            <motion.span
+              animate={{ rotate: expanded ? 180 : 0 }}
+              transition={prefersReduced ? { duration: 0 } : { duration: 0.25, ease: [0.2, 0, 0, 1] }}
+              className="shrink-0 text-muted"
+            >
+              <ChevronDown className="h-5 w-5" aria-hidden="true" />
+            </motion.span>
+          </button>
+        ) : (
+          <div className="flex w-full items-center gap-3 p-4 sm:p-5">{sectionHeading}</div>
+        )}
       </h2>
 
       <AnimatePresence initial={false}>
-        {expanded && (
+        {isExpanded && (
           <motion.div
             id={`${id}-content`}
             role="region"
@@ -317,20 +322,29 @@ function CollapsibleSection({
  * Wraps a list with AnimatePresence so items animate in/out.
  * Each child must have a unique `key` prop.
  */
-function AnimatedList({ children, testId }: { children: React.ReactNode; testId: string }) {
+function AnimatedList({
+  children,
+  testId,
+  className,
+}: {
+  children: React.ReactNode;
+  testId: string;
+  className?: string;
+}) {
   return (
-    <ul data-testid={testId} className="flex flex-col divide-y divide-border">
+    <ul data-testid={testId} className={cn('flex flex-col', className ?? 'divide-y divide-border')}>
       <AnimatePresence initial={false}>{children}</AnimatePresence>
     </ul>
   );
 }
 
 /** Animated list item with slide-in/out transitions. */
-function AnimatedListItem({ children }: { children: React.ReactNode }) {
+function AnimatedListItem({ children, className }: { children: React.ReactNode; className?: string }) {
   const prefersReduced = useReducedMotion();
+  const itemClassName = cn('flex items-center justify-between gap-3 py-3', className);
 
   if (prefersReduced) {
-    return <li className="flex items-center justify-between gap-3 py-3">{children}</li>;
+    return <li className={itemClassName}>{children}</li>;
   }
 
   return (
@@ -341,7 +355,7 @@ function AnimatedListItem({ children }: { children: React.ReactNode }) {
       animate="animate"
       exit="exit"
       transition={{ duration: 0.25, ease: [0.2, 0, 0, 1] }}
-      className="flex items-center justify-between gap-3 py-3"
+      className={itemClassName}
     >
       {children}
     </motion.li>
@@ -370,7 +384,6 @@ function StaffSection({
 }) {
   const { t } = useTranslation();
   const { success, error: toastError } = useToast();
-  const prefersReduced = useReducedMotion();
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<StaffRole>('Stylist');
   const [phone, setPhone] = useState('');
@@ -497,8 +510,11 @@ function StaffSection({
     window.dispatchEvent(new Event('salon-config-changed'));
   };
 
+  const editingMember = staff.find((member) => member.id === editingId) ?? null;
+
   return (
-    <CollapsibleSection id="staff" icon={Users} title={t('admin.staff')} guideId="owner-team-members">
+    <>
+      <CollapsibleSection id="staff" icon={Users} title={t('admin.staff')} collapsible={false}>
       {staff.length === 0 ? (
         <>
           <ul data-testid="staff-list" className="sr-only" aria-hidden="true" />
@@ -510,28 +526,28 @@ function StaffSection({
         </>
       ) : (
         <>
-          <AnimatedList testId="staff-list">
+          <AnimatedList testId="staff-list" className="gap-2">
             {pageItems.map((member) => {
             const name = member.fullName ?? member.id;
             const isEditing = editingId === member.id;
             return (
-              <AnimatedListItem key={member.id}>
-                <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <AnimatedListItem
+                key={member.id}
+                className="relative overflow-hidden rounded-xl border border-border bg-elevated px-3 py-3 shadow-1 transition-colors duration-fast hover:border-primary/50 sm:px-4"
+              >
+                <button
+                  type="button"
+                  onClick={() => setEditingId(isEditing ? null : member.id)}
+                  className="absolute inset-0 z-0 cursor-pointer rounded-xl bg-transparent text-transparent transition-colors duration-fast hover:bg-primary/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-focus"
+                  aria-label={t('admin.config.staff.editLabel', { name })}
+                  aria-haspopup="dialog"
+                  aria-expanded={isEditing}
+                />
+                <div className="pointer-events-none relative z-10 flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex min-w-0 flex-col gap-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setEditingId(isEditing ? null : member.id)}
-                      className={cn(
-                        'inline-flex min-h-10 items-center text-start text-sm font-medium text-text',
-                        'rounded px-1 -mx-1 transition-colors duration-fast',
-                        'hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus',
-                      )}
-                      aria-label={t('admin.config.staff.editLabel', { name })}
-                      aria-expanded={isEditing}
-                      aria-controls={`staff-edit-${member.id}`}
-                    >
+                    <span className="inline-flex min-h-10 items-center text-start text-sm font-medium text-text">
                       {name}
-                    </button>
+                    </span>
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted">
                       <span>{t(`app.role.${member.role}`)}</span>
                       {member.phone ? (
@@ -546,79 +562,6 @@ function StaffSection({
                       )}
                     </span>
                   </div>
-                  {/* Inline edit panel */}
-                  <AnimatePresence initial={false} mode="wait">
-                    {isEditing && (
-                      <motion.div
-                        key={`staff-edit-${member.id}`}
-                        layout
-                        initial={prefersReduced ? false : { opacity: 0, height: 0, y: -4 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={prefersReduced ? undefined : { opacity: 0, height: 0, y: -4 }}
-                        transition={
-                          prefersReduced
-                            ? { duration: 0 }
-                            : { duration: 0.22, ease: [0.2, 0, 0, 1] }
-                        }
-                        id={`staff-edit-${member.id}`}
-                        className="flex w-full flex-col gap-2 overflow-hidden sm:w-64 sm:shrink-0"
-                      >
-                        <Select
-                          label={t('admin.config.staff.roleSelectLabel', { name })}
-                          labelHidden
-                          value={member.role}
-                          onValueChange={(v) => patchStaff(member.id, { role: v as StaffRole })}
-                          options={roleOptions}
-                          containerClassName="w-full"
-                        />
-                        <Switch
-                          checked={member.active}
-                          onCheckedChange={(v) => patchStaff(member.id, { active: v })}
-                          label={t('admin.config.staff.activeLabel')}
-                        />
-                        {member.role !== 'Admin' && (
-                          <Switch
-                            checked={member.manageOwnAvailability}
-                            onCheckedChange={(v) => void patchOwnAvailability(member.id, v)}
-                            label={t('admin.config.staff.availabilityLabel')}
-                            helperText={t('admin.config.staff.availabilityHelper')}
-                          />
-                        )}
-                        {member.role === 'Stylist' && (
-                          <Switch
-                            checked={member.canApproveOwnAppointments === true}
-                            onCheckedChange={(v) => void patchOwnApproval(member.id, v)}
-                            label={t('admin.config.staff.approvalLabel')}
-                            helperText={t('admin.config.staff.approvalHelper')}
-                          />
-                        )}
-                        {member.role !== 'Admin' &&
-                          chairs.some((chair) => chair.kind !== 'mobile') && (
-                            <Select
-                              label={t('admin.config.staff.chairLabel')}
-                              labelHidden={false}
-                              value={member.assignedChairId ?? 'none'}
-                              onValueChange={(value) =>
-                                void patchStaff(member.id, {
-                                  assignedChairId: value === 'none' ? null : value,
-                                })
-                              }
-                              options={[
-                                {
-                                  value: 'none',
-                                  label: t('admin.config.staff.chairShared'),
-                                },
-                                ...chairs
-                                  .filter((chair) => chair.kind !== 'mobile')
-                                  .map((chair) => ({ value: chair.id, label: chair.label })),
-                              ]}
-                              helperText={t('admin.config.staff.chairHelper')}
-                              containerClassName="w-full"
-                            />
-                          )}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </div>
                 {member.active ? (
                   <IconButton
@@ -632,7 +575,7 @@ function StaffSection({
                         onConfirm: () => void deactivateStaff(member.id, name),
                       })
                     }
-                    className="h-9 min-h-0 w-9 min-w-0 shrink-0"
+                    className="relative z-10 h-9 min-h-0 w-9 min-w-0 shrink-0"
                   >
                     <Trash2 className="h-4 w-4" />
                   </IconButton>
@@ -641,7 +584,7 @@ function StaffSection({
                     variant="secondary"
                     aria-label={`فعال‌سازی ${name}`}
                     onClick={() => void reactivateStaff(member.id)}
-                    className="h-9 min-h-0 w-9 min-w-0 shrink-0"
+                    className="relative z-10 h-9 min-h-0 w-9 min-w-0 shrink-0"
                   >
                     <CheckCircle2 className="h-4 w-4" />
                   </IconButton>
@@ -705,7 +648,77 @@ function StaffSection({
           {t('admin.config.staff.addCta')}
         </Button>
       </form>
-    </CollapsibleSection>
+      </CollapsibleSection>
+
+    <Dialog
+      open={editingMember !== null}
+      onOpenChange={(open) => {
+        if (!open) setEditingId(null);
+      }}
+    >
+      {editingMember && (
+        <DialogContent className="max-w-lg" closeLabel={t('common.cancel')}>
+          <DialogTitle>ویرایش عضو تیم</DialogTitle>
+          <DialogDescription>
+            تنظیمات «{editingMember.fullName ?? editingMember.id}» را از این پنجره مدیریت کن.
+            تغییرات هر گزینه بلافاصله ذخیره می‌شود.
+          </DialogDescription>
+          <div className="mt-5 flex flex-col gap-3">
+            <Select
+              label={t('admin.config.staff.roleSelectLabel', { name: editingMember.fullName ?? editingMember.id })}
+              value={editingMember.role}
+              onValueChange={(value) => void patchStaff(editingMember.id, { role: value as StaffRole })}
+              options={roleOptions}
+            />
+            <Switch
+              checked={editingMember.active}
+              onCheckedChange={(value) => void patchStaff(editingMember.id, { active: value })}
+              label={t('admin.config.staff.activeLabel')}
+            />
+            {editingMember.role !== 'Admin' && (
+              <Switch
+                checked={editingMember.manageOwnAvailability}
+                onCheckedChange={(value) => void patchOwnAvailability(editingMember.id, value)}
+                label={t('admin.config.staff.availabilityLabel')}
+                helperText={t('admin.config.staff.availabilityHelper')}
+              />
+            )}
+            {editingMember.role === 'Stylist' && (
+              <Switch
+                checked={editingMember.canApproveOwnAppointments === true}
+                onCheckedChange={(value) => void patchOwnApproval(editingMember.id, value)}
+                label={t('admin.config.staff.approvalLabel')}
+                helperText={t('admin.config.staff.approvalHelper')}
+              />
+            )}
+            {editingMember.role !== 'Admin' && chairs.some((chair) => chair.kind !== 'mobile') && (
+              <Select
+                label={t('admin.config.staff.chairLabel')}
+                value={editingMember.assignedChairId ?? 'none'}
+                onValueChange={(value) =>
+                  void patchStaff(editingMember.id, {
+                    assignedChairId: value === 'none' ? null : value,
+                  })
+                }
+                options={[
+                  { value: 'none', label: t('admin.config.staff.chairShared') },
+                  ...chairs
+                    .filter((chair) => chair.kind !== 'mobile')
+                    .map((chair) => ({ value: chair.id, label: chair.label })),
+                ]}
+                helperText={t('admin.config.staff.chairHelper')}
+              />
+            )}
+            <div className="mt-2 flex justify-end">
+              <DialogClose asChild>
+                <Button variant="secondary">بستن</Button>
+              </DialogClose>
+            </div>
+          </div>
+        </DialogContent>
+      )}
+      </Dialog>
+    </>
   );
 }
 
@@ -742,7 +755,6 @@ function ServicesSection({
   requestDelete: (state: DeleteState) => void;
 }) {
   const { t } = useTranslation();
-  const prefersReduced = useReducedMotion();
   const [name, setName] = useState('');
   const [duration, setDuration] = useState('30');
   const [durationMode, setDurationMode] = useState<'fixed' | 'variable'>('fixed');
@@ -896,6 +908,7 @@ function ServicesSection({
       ...current,
       [service.id]: current[service.id] ?? serviceDraftFrom(service),
     }));
+    setFormError('');
   };
 
   const updateDraft = (serviceId: string, patch: Partial<ServiceDraft>) => {
@@ -963,13 +976,15 @@ function ServicesSection({
     }
   };
 
+  const editingService = services.find((service) => service.id === editingId) ?? null;
+
   return (
     <>
       <CollapsibleSection
         id="services"
         icon={Scissors}
         title={t('admin.services')}
-        guideId="owner-services-catalog"
+        collapsible={false}
       >
       <div className="flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/10 p-3">
         <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-contrast">
@@ -993,24 +1008,24 @@ function ServicesSection({
         </>
       ) : (
         <>
-          <AnimatedList testId="services-list">
+          <AnimatedList testId="services-list" className="gap-2">
             {pageItems.map((service) => (
-            <AnimatedListItem key={service.id}>
-              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <button
-                  type="button"
-                  onClick={() => toggleEditing(service)}
-                  className={cn(
-                    'inline-flex min-h-10 items-center text-start text-sm font-medium text-text',
-                    'rounded px-1 -mx-1 transition-colors duration-fast',
-                    'hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus',
-                  )}
-                  aria-label={t('admin.config.services.editLabel', { name: service.name })}
-                  aria-expanded={editingId === service.id}
-                  aria-controls={`service-edit-${service.id}`}
-                >
+            <AnimatedListItem
+              key={service.id}
+              className="relative overflow-hidden rounded-xl border border-border bg-elevated px-3 py-3 shadow-1 transition-colors duration-fast hover:border-primary/50 sm:px-4"
+            >
+              <button
+                type="button"
+                onClick={() => toggleEditing(service)}
+                className="absolute inset-0 z-0 cursor-pointer rounded-xl bg-transparent text-transparent transition-colors duration-fast hover:bg-primary/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-focus"
+                aria-label={t('admin.config.services.editLabel', { name: service.name })}
+                aria-haspopup="dialog"
+                aria-expanded={editingId === service.id}
+              />
+              <div className="pointer-events-none relative z-10 flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="inline-flex min-h-10 items-center text-start text-sm font-medium text-text">
                   {service.name}
-                </button>
+                </span>
                 <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted">
                   <span className="inline-flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1045,7 +1060,7 @@ function ServicesSection({
                     className={cn(
                       'inline-flex min-h-10 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold text-primary',
                       'border-primary/40 bg-primary/10 transition-colors duration-fast hover:bg-primary/20',
-                      'focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus',
+                      'pointer-events-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus',
                     )}
                   >
                     <Users className="h-4 w-4" aria-hidden="true" />
@@ -1056,134 +1071,6 @@ function ServicesSection({
                       : 'انتخاب اعضای تیم'}
                   </button>
                 </div>
-                <AnimatePresence initial={false} mode="wait">
-                  {editingId === service.id && (
-                    <motion.div
-                      key={`service-edit-${service.id}`}
-                      layout
-                      initial={prefersReduced ? false : { opacity: 0, height: 0, y: -4 }}
-                      animate={{ opacity: 1, height: 'auto', y: 0 }}
-                      exit={prefersReduced ? undefined : { opacity: 0, height: 0, y: -4 }}
-                      transition={
-                        prefersReduced
-                          ? { duration: 0 }
-                          : { duration: 0.22, ease: [0.2, 0, 0, 1] }
-                      }
-                      id={`service-edit-${service.id}`}
-                      className="mt-2 flex flex-col gap-2 overflow-hidden rounded-lg border border-border bg-bg p-2"
-                    >
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <TextField
-                        label="نام خدمت"
-                        value={drafts[service.id]?.name ?? service.name}
-                        onChange={(event) => updateDraft(service.id, { name: event.target.value })}
-                      />
-                      <DurationStepper
-                        label="مدت (دقیقه)"
-                        ariaLabel="مدت (دقیقه)"
-                        value={drafts[service.id]?.durationMinutes ?? String(service.durationMinutes)}
-                        onChange={(value) => updateDraft(service.id, { durationMinutes: value })}
-                      />
-                      <TextField
-                        label="فاصله بین نوبت‌ها (دقیقه)"
-                        inputMode="numeric"
-                        dir="ltr"
-                        value={drafts[service.id]?.bufferMinutes ?? String(service.bufferMinutes ?? 0)}
-                        onChange={(event) => updateDraft(service.id, { bufferMinutes: event.target.value })}
-                      />
-                      <TextField
-                        label="قیمت (تومان)"
-                        inputMode="numeric"
-                        dir="ltr"
-                        value={drafts[service.id]?.priceRial ?? String(Math.floor(service.priceRial / 10))}
-                        onChange={(event) => updateDraft(service.id, { priceRial: event.target.value })}
-                      />
-                    </div>
-                    <Select
-                      label="نوع زمان‌بندی"
-                      value={drafts[service.id]?.durationMode ?? service.durationMode ?? 'fixed'}
-                      onValueChange={(value) => updateDraft(service.id, { durationMode: value as ServiceDraft['durationMode'] })}
-                      options={[
-                        { value: 'fixed', label: 'زمان ثابت' },
-                        { value: 'variable', label: 'زمان متغیر' },
-                      ]}
-                    />
-                    {(drafts[service.id]?.durationMode ?? service.durationMode ?? 'fixed') === 'variable' && (
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <TextField
-                          label="حداقل زمان (دقیقه)"
-                          inputMode="numeric"
-                          dir="ltr"
-                          value={drafts[service.id]?.minDurationMinutes ?? String(service.minDurationMinutes ?? service.durationMinutes)}
-                          onChange={(event) => updateDraft(service.id, { minDurationMinutes: event.target.value })}
-                        />
-                        <TextField
-                          label="حداکثر زمان (دقیقه)"
-                          inputMode="numeric"
-                          dir="ltr"
-                          value={drafts[service.id]?.maxDurationMinutes ?? String(service.maxDurationMinutes ?? service.durationMinutes)}
-                          onChange={(event) => updateDraft(service.id, { maxDurationMinutes: event.target.value })}
-                        />
-                      </div>
-                    )}
-                    <Switch
-                      checked={drafts[service.id]?.requiresDeposit ?? service.requiresDeposit === true}
-                      onCheckedChange={(value) => updateDraft(service.id, { requiresDeposit: value })}
-                      label="دریافت بیعانه"
-                    />
-                    {(drafts[service.id]?.requiresDeposit ?? service.requiresDeposit === true) && (
-                      <>
-                        <Select
-                          label="نوع بیعانه"
-                          value={drafts[service.id]?.depositType ?? service.depositType ?? 'fixed'}
-                          onValueChange={(value) => updateDraft(service.id, { depositType: value as ServiceDraft['depositType'] })}
-                          options={[
-                            { value: 'fixed', label: 'مبلغ ثابت (تومان)' },
-                            { value: 'percentage', label: 'درصدی از هزینه' },
-                          ]}
-                        />
-                        {(drafts[service.id]?.depositType ?? service.depositType ?? 'fixed') === 'percentage' ? (
-                          <TextField
-                            label="درصد بیعانه"
-                            inputMode="numeric"
-                            dir="ltr"
-                            value={drafts[service.id]?.depositPercent ?? String(service.depositPercent ?? '')}
-                            onChange={(event) => updateDraft(service.id, { depositPercent: event.target.value })}
-                            helperText="بین ۱ تا ۱۰۰ درصد"
-                          />
-                        ) : (
-                          <TextField
-                            label="مبلغ بیعانه (تومان)"
-                            inputMode="numeric"
-                            dir="ltr"
-                            value={drafts[service.id]?.depositRial ?? String(service.depositRial == null ? '' : Math.floor(service.depositRial / 10))}
-                            onChange={(event) => updateDraft(service.id, { depositRial: event.target.value })}
-                          />
-                        )}
-                      </>
-                    )}
-                    <Select
-                      label="مسئول تأیید رزرو این خدمت"
-                      value={drafts[service.id]?.approvalStaffId ?? service.approvalStaffId ?? 'auto'}
-                      onValueChange={(value) => updateDraft(service.id, { approvalStaffId: value })}
-                      options={approvalOptions}
-                      helperText="این عضو تیم پیامک رزروهای در انتظار را می‌گیرد و در صورت داشتن دسترسی می‌تواند آن‌ها را تأیید یا رد کند."
-                    />
-                    {formError && <p className="m-0 text-sm text-danger" role="alert">{formError}</p>}
-                    <Button
-                      type="button"
-                      size="md"
-                      loading={savingId === service.id}
-                      disabled={savingId !== null}
-                      startIcon={<CheckCircle2 className="h-4 w-4" />}
-                      onClick={() => void saveService(service)}
-                      className="self-start"
-                    >
-                      ذخیره تغییرات خدمت
-                    </Button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </div>
               <IconButton
                 variant="danger"
@@ -1195,7 +1082,7 @@ function ServicesSection({
                     onConfirm: () => onRemove(service.id),
                   })
                 }
-                className="h-9 min-h-0 w-9 min-w-0 shrink-0"
+                className="relative z-10 h-9 min-h-0 w-9 min-w-0 shrink-0"
               >
                 <Trash2 className="h-4 w-4" />
               </IconButton>
@@ -1235,6 +1122,7 @@ function ServicesSection({
             dir="ltr"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
+            className="min-h-14"
             containerClassName="sm:flex-1"
           />
         </div>
@@ -1321,6 +1209,143 @@ function ServicesSection({
         </Button>
       </form>
       </CollapsibleSection>
+
+      <Dialog
+        open={editingService !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditingId(null);
+        }}
+      >
+        {editingService && (
+          <DialogContent className="max-w-2xl" closeLabel={t('common.cancel')}>
+            <DialogTitle>ویرایش خدمت «{editingService.name}»</DialogTitle>
+            <DialogDescription>
+              مشخصات خدمت را تغییر بده و سپس ذخیره کن. این فرم دیگر داخل فهرست باز نمی‌شود.
+            </DialogDescription>
+            <div className="mt-5 flex flex-col gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <TextField
+                  label="نام خدمت"
+                  value={drafts[editingService.id]?.name ?? editingService.name}
+                  onChange={(event) => updateDraft(editingService.id, { name: event.target.value })}
+                />
+                <DurationStepper
+                  label="مدت (دقیقه)"
+                  ariaLabel="مدت (دقیقه)"
+                  value={drafts[editingService.id]?.durationMinutes ?? String(editingService.durationMinutes)}
+                  onChange={(value) => updateDraft(editingService.id, { durationMinutes: value })}
+                />
+                <TextField
+                  label="فاصله بین نوبت‌ها (دقیقه)"
+                  inputMode="numeric"
+                  dir="ltr"
+                  value={drafts[editingService.id]?.bufferMinutes ?? String(editingService.bufferMinutes ?? 0)}
+                  onChange={(event) => updateDraft(editingService.id, { bufferMinutes: event.target.value })}
+                />
+                <TextField
+                  label="قیمت (تومان)"
+                  inputMode="numeric"
+                  dir="ltr"
+                  className="min-h-14"
+                  value={drafts[editingService.id]?.priceRial ?? String(Math.floor(editingService.priceRial / 10))}
+                  onChange={(event) => updateDraft(editingService.id, { priceRial: event.target.value })}
+                />
+              </div>
+              <Select
+                label="نوع زمان‌بندی"
+                value={drafts[editingService.id]?.durationMode ?? editingService.durationMode ?? 'fixed'}
+                onValueChange={(value) =>
+                  updateDraft(editingService.id, { durationMode: value as ServiceDraft['durationMode'] })
+                }
+                options={[
+                  { value: 'fixed', label: 'زمان ثابت' },
+                  { value: 'variable', label: 'زمان متغیر' },
+                ]}
+              />
+              {(drafts[editingService.id]?.durationMode ?? editingService.durationMode ?? 'fixed') === 'variable' && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <TextField
+                    label="حداقل زمان (دقیقه)"
+                    inputMode="numeric"
+                    dir="ltr"
+                    value={drafts[editingService.id]?.minDurationMinutes ?? String(editingService.minDurationMinutes ?? editingService.durationMinutes)}
+                    onChange={(event) => updateDraft(editingService.id, { minDurationMinutes: event.target.value })}
+                  />
+                  <TextField
+                    label="حداکثر زمان (دقیقه)"
+                    inputMode="numeric"
+                    dir="ltr"
+                    value={drafts[editingService.id]?.maxDurationMinutes ?? String(editingService.maxDurationMinutes ?? editingService.durationMinutes)}
+                    onChange={(event) => updateDraft(editingService.id, { maxDurationMinutes: event.target.value })}
+                  />
+                </div>
+              )}
+              <Switch
+                checked={drafts[editingService.id]?.requiresDeposit ?? editingService.requiresDeposit === true}
+                onCheckedChange={(value) => updateDraft(editingService.id, { requiresDeposit: value })}
+                label="دریافت بیعانه"
+              />
+              {(drafts[editingService.id]?.requiresDeposit ?? editingService.requiresDeposit === true) && (
+                <>
+                  <Select
+                    label="نوع بیعانه"
+                    value={drafts[editingService.id]?.depositType ?? editingService.depositType ?? 'fixed'}
+                    onValueChange={(value) =>
+                      updateDraft(editingService.id, { depositType: value as ServiceDraft['depositType'] })
+                    }
+                    options={[
+                      { value: 'fixed', label: 'مبلغ ثابت (تومان)' },
+                      { value: 'percentage', label: 'درصدی از هزینه' },
+                    ]}
+                  />
+                  {(drafts[editingService.id]?.depositType ?? editingService.depositType ?? 'fixed') === 'percentage' ? (
+                    <TextField
+                      label="درصد بیعانه"
+                      inputMode="numeric"
+                      dir="ltr"
+                      value={drafts[editingService.id]?.depositPercent ?? String(editingService.depositPercent ?? '')}
+                      onChange={(event) => updateDraft(editingService.id, { depositPercent: event.target.value })}
+                      helperText="بین ۱ تا ۱۰۰ درصد"
+                    />
+                  ) : (
+                    <TextField
+                      label="مبلغ بیعانه (تومان)"
+                      inputMode="numeric"
+                      dir="ltr"
+                      value={drafts[editingService.id]?.depositRial ?? String(editingService.depositRial == null ? '' : Math.floor(editingService.depositRial / 10))}
+                      onChange={(event) => updateDraft(editingService.id, { depositRial: event.target.value })}
+                    />
+                  )}
+                </>
+              )}
+              <Select
+                label="مسئول تأیید رزرو این خدمت"
+                value={drafts[editingService.id]?.approvalStaffId ?? editingService.approvalStaffId ?? 'auto'}
+                onValueChange={(value) => updateDraft(editingService.id, { approvalStaffId: value })}
+                options={approvalOptions}
+                helperText="این عضو تیم پیامک رزروهای در انتظار را می‌گیرد و در صورت داشتن دسترسی می‌تواند آن‌ها را تأیید یا رد کند."
+              />
+              {formError && <p className="m-0 text-sm text-danger" role="alert">{formError}</p>}
+              <div className="mt-2 flex flex-wrap justify-end gap-2">
+                <DialogClose asChild>
+                  <Button type="button" variant="secondary" disabled={savingId !== null}>
+                    انصراف
+                  </Button>
+                </DialogClose>
+                <Button
+                  type="button"
+                  loading={savingId === editingService.id}
+                  disabled={savingId !== null}
+                  startIcon={<CheckCircle2 className="h-4 w-4" />}
+                  onClick={() => void saveService(editingService)}
+                >
+                  ذخیره تغییرات خدمت
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        )}
+      </Dialog>
 
       <Sheet
         open={Boolean(staffPickerService)}
@@ -1546,7 +1571,6 @@ function SmsSettingsSection({
       id="sms-settings"
       icon={BellRing}
       title="تنظیمات پیامک"
-      guideId="owner-configuration-messaging"
     >
       <p className="m-0 text-sm leading-7 text-muted">
         برای کم‌شدن پیام‌های اضافی، به‌صورت پیش‌فرض پیامک‌های کاری فقط برای عضو تیم نوبت می‌رود.
@@ -1632,7 +1656,6 @@ function DepositSettingsSection({
       id="deposit-settings"
       icon={CreditCard}
       title="روش دریافت بیعانه"
-      guideId="owner-configuration-deposit"
     >
       <p className="m-0 text-sm leading-7 text-muted">
         مبلغ بیعانه برای هر خدمت جداگانه فعال می‌شود. این بخش فقط روش دریافت و اطلاعات کارت را تعیین می‌کند.
@@ -1702,6 +1725,7 @@ function ChairsSection({
     () => chairs.filter((chair) => chair.kind !== 'mobile'),
     [chairs],
   );
+  const editingChair = visibleChairs.find((chair) => chair.id === editingId) ?? null;
   const {
     page,
     pageItems,
@@ -1744,7 +1768,7 @@ function ChairsSection({
       id="chairs"
       icon={Armchair}
       title={t('admin.chairs')}
-      guideId="owner-configuration-resources"
+      collapsible={false}
     >
       {visibleChairs.length === 0 ? (
         <>
@@ -1757,61 +1781,43 @@ function ChairsSection({
         </>
       ) : (
         <>
-          <AnimatedList testId="chairs-list">
+          <AnimatedList testId="chairs-list" className="gap-2">
             {pageItems.map((entry) => (
-              <AnimatedListItem key={entry.id}>
-              {editingId === entry.id ? (
-                <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-end">
-                  <TextField
-                    label="نام صندلی"
-                    labelHidden
-                    value={editingValue}
-                    onChange={(event) => setEditingValue(event.target.value)}
-                    containerClassName="min-w-0 flex-1"
-                  />
-                  <Button
-                    type="button"
-                    size="md"
-                    loading={savingId === entry.id}
-                    disabled={savingId !== null}
-                    onClick={() => void saveEdit(entry)}
-                    startIcon={<CheckCircle2 className="h-4 w-4" />}
-                  >
-                    ذخیره
-                  </Button>
-                </div>
-              ) : (
+              <AnimatedListItem
+                key={entry.id}
+                className="rounded-xl border border-border bg-elevated px-3 py-3 shadow-1 sm:px-4"
+              >
                 <button
                   type="button"
-                  className="min-h-10 min-w-0 break-words rounded px-1 text-start text-sm text-text hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+                  className="min-h-10 min-w-0 flex-1 break-words rounded px-1 text-start text-sm font-medium text-text transition-colors duration-fast hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
                   onClick={() => {
                     setEditingId(entry.id);
                     setEditingValue(entry.label);
                     setFormError('');
                   }}
                   aria-label={`ویرایش ${entry.label}`}
+                  aria-haspopup="dialog"
+                  aria-expanded={editingId === entry.id}
                 >
                   {entry.label}
                 </button>
-              )}
-              <IconButton
-                variant="danger"
-                aria-label={t('admin.config.removeItem', { name: entry.label })}
-                onClick={() =>
-                  requestDelete({
-                    id: entry.id,
-                    label: entry.label,
-                    onConfirm: () => onRemove(entry.id),
-                  })
-                }
-                className="h-9 min-h-0 w-9 min-w-0 shrink-0"
-              >
-                <Trash2 className="h-4 w-4" />
-              </IconButton>
-            </AnimatedListItem>
+                <IconButton
+                  variant="danger"
+                  aria-label={t('admin.config.removeItem', { name: entry.label })}
+                  onClick={() =>
+                    requestDelete({
+                      id: entry.id,
+                      label: entry.label,
+                      onConfirm: () => onRemove(entry.id),
+                    })
+                  }
+                  className="h-9 min-h-0 w-9 min-w-0 shrink-0"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </IconButton>
+              </AnimatedListItem>
             ))}
           </AnimatedList>
-          {formError && <p className="m-0 text-sm text-danger" role="alert">{formError}</p>}
           <Pagination
             page={page}
             pageSize={chairsPageSize}
@@ -1821,6 +1827,52 @@ function ChairsSection({
           />
         </>
       )}
+
+      <Dialog
+        open={editingChair !== null}
+        onOpenChange={(open) => {
+          if (!open && savingId === null) {
+            setEditingId(null);
+            setFormError('');
+          }
+        }}
+      >
+        {editingChair && (
+          <DialogContent closeLabel={t('common.cancel')}>
+            <DialogTitle>ویرایش صندلی «{editingChair.label}»</DialogTitle>
+            <DialogDescription>
+              نام صندلی را تغییر بده و ذخیره کن.
+            </DialogDescription>
+            <div className="mt-5 flex flex-col gap-3">
+              <TextField
+                label="نام صندلی"
+                value={editingValue}
+                error={formError}
+                onChange={(event) => {
+                  setEditingValue(event.target.value);
+                  if (formError) setFormError('');
+                }}
+              />
+              <div className="mt-2 flex flex-wrap justify-end gap-2">
+                <DialogClose asChild>
+                  <Button type="button" variant="secondary" disabled={savingId !== null}>
+                    انصراف
+                  </Button>
+                </DialogClose>
+                <Button
+                  type="button"
+                  loading={savingId === editingChair.id}
+                  disabled={savingId !== null}
+                  startIcon={<CheckCircle2 className="h-4 w-4" />}
+                  onClick={() => void saveEdit(editingChair)}
+                >
+                  ذخیره تغییرات صندلی
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        )}
+      </Dialog>
 
       {/* Add form */}
       <form
@@ -1836,165 +1888,6 @@ function ChairsSection({
         />
         <Button type="submit" startIcon={<Plus className="h-4 w-4" />} className="shrink-0">
           {t('admin.config.chairs.addCta')}
-        </Button>
-      </form>
-    </CollapsibleSection>
-  );
-}
-
-// ─── Equipment Section ──────────────────────────────────────────────────────
-
-function EquipmentSection({
-  equipment,
-  onAdd,
-  onUpdate,
-  onRemove,
-  requestDelete,
-}: {
-  equipment: SalonEquipment[];
-  onAdd: (name: string) => Promise<void>;
-  onUpdate: (id: string, name: string) => Promise<void>;
-  onRemove: (id: string) => void;
-  requestDelete: (state: DeleteState) => void;
-}) {
-  const { t } = useTranslation();
-  const [value, setValue] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingValue, setEditingValue] = useState('');
-  const [savingId, setSavingId] = useState<string | null>(null);
-  const [formError, setFormError] = useState('');
-  const {
-    page,
-    pageItems,
-    total: equipmentTotal,
-    pageSize: equipmentPageSize,
-    goToPage,
-  } = usePagination(equipment, 6);
-
-  const handleSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-    const name = value.trim();
-    if (!name) return;
-    try {
-      await onAdd(name);
-      setValue('');
-    } catch {
-      // Parent owns the error toast; keep the value so retry is possible.
-    }
-  };
-
-  const saveEdit = async (item: SalonEquipment) => {
-    const name = editingValue.trim();
-    if (!name) {
-      setFormError('نام تجهیز را وارد کنید.');
-      return;
-    }
-    setFormError('');
-    setSavingId(item.id);
-    try {
-      await onUpdate(item.id, name);
-      setEditingId(null);
-    } finally {
-      setSavingId(null);
-    }
-  };
-
-  return (
-    <CollapsibleSection
-      id="equipment"
-      icon={Package}
-      title={t('admin.equipment')}
-      guideId="owner-configuration-equipment"
-    >
-      {equipment.length === 0 ? (
-        <>
-          <ul data-testid="equipment-list" className="sr-only" aria-hidden="true" />
-          <EmptyState
-            icon={<Package className="h-8 w-8" />}
-            title={t('admin.config.equipment.emptyTitle')}
-            description={t('admin.config.equipment.emptyBody')}
-          />
-        </>
-      ) : (
-        <>
-          <AnimatedList testId="equipment-list">
-            {pageItems.map((item) => (
-              <AnimatedListItem key={item.id}>
-                {editingId === item.id ? (
-                  <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-end">
-                    <TextField
-                      label="نام تجهیز"
-                      labelHidden
-                      value={editingValue}
-                      onChange={(event) => setEditingValue(event.target.value)}
-                      containerClassName="min-w-0 flex-1"
-                    />
-                    <Button
-                      type="button"
-                      size="md"
-                      loading={savingId === item.id}
-                      disabled={savingId !== null}
-                      onClick={() => void saveEdit(item)}
-                      startIcon={<CheckCircle2 className="h-4 w-4" />}
-                    >
-                      ذخیره
-                    </Button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    className="min-h-10 min-w-0 break-words rounded px-1 text-start text-sm text-text hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
-                    onClick={() => {
-                      setEditingId(item.id);
-                      setEditingValue(item.name);
-                      setFormError('');
-                    }}
-                    aria-label={`ویرایش ${item.name}`}
-                  >
-                    {item.name}
-                  </button>
-                )}
-                <IconButton
-                  variant="danger"
-                  aria-label={t('admin.config.removeItem', { name: item.name })}
-                  onClick={() =>
-                    requestDelete({
-                      id: item.id,
-                      label: item.name,
-                      onConfirm: () => onRemove(item.id),
-                    })
-                  }
-                  className="h-9 min-h-0 w-9 min-w-0 shrink-0"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </IconButton>
-              </AnimatedListItem>
-            ))}
-          </AnimatedList>
-          {formError && <p className="m-0 text-sm text-danger" role="alert">{formError}</p>}
-          <Pagination
-            page={page}
-            pageSize={equipmentPageSize}
-            total={equipmentTotal}
-            onPageChange={goToPage}
-            testId="equipment-pagination"
-          />
-        </>
-      )}
-
-      <form
-        onSubmit={handleSubmit}
-        className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-end"
-      >
-        <TextField
-          label={t('admin.config.equipment.addLabel')}
-          placeholder={t('admin.config.equipment.addPlaceholder')}
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-          containerClassName="sm:flex-1"
-        />
-        <Button type="submit" startIcon={<Plus className="h-4 w-4" />} className="shrink-0">
-          {t('admin.config.equipment.addCta')}
         </Button>
       </form>
     </CollapsibleSection>
@@ -2048,7 +1941,6 @@ function OwnerConfigPageContent({
   const [error, setError] = useState('');
   const [staff, setStaff] = useState<SalonStaff[]>([]);
   const [chairs, setChairs] = useState<Entry[]>([]);
-  const [equipment, setEquipment] = useState<SalonEquipment[]>([]);
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [smsSettings, setSmsSettings] = useState<SmsSettings>(DEFAULT_SMS_SETTINGS);
   const [depositSettings, setDepositSettings] = useState<DepositSettings>(DEFAULT_DEPOSIT_SETTINGS);
@@ -2067,26 +1959,20 @@ function OwnerConfigPageContent({
       typeof adminApi.getDepositSettings === 'function'
         ? adminApi.getDepositSettings(salonId).catch(() => DEFAULT_DEPOSIT_SETTINGS)
         : Promise.resolve(DEFAULT_DEPOSIT_SETTINGS);
-    const equipmentRequest: Promise<{ equipment: SalonEquipment[] }> =
-      typeof adminApi.getEquipment === 'function'
-        ? adminApi.getEquipment(salonId)
-        : Promise.resolve({ equipment: [] });
     Promise.all([
       adminApi.getStaff(salonId),
       adminApi.getChairs(salonId),
       salonApi.getServices(salonId),
       smsSettingsRequest,
       depositSettingsRequest,
-      equipmentRequest,
     ])
-      .then(([staffRes, chairsRes, servicesRes, smsSettingsRes, depositSettingsRes, equipmentRes]) => {
+      .then(([staffRes, chairsRes, servicesRes, smsSettingsRes, depositSettingsRes]) => {
         if (!active) return;
         setStaff(staffRes.staff);
         setChairs(chairsRes.chairs.map((c, i) => toEntry(c, `chair-${i + 1}`)));
         setServices(servicesRes.services);
         setSmsSettings(smsSettingsRes);
         setDepositSettings(depositSettingsRes);
-        setEquipment(equipmentRes.equipment);
         setStatus('success');
       })
       .catch((err: unknown) => {
@@ -2132,10 +2018,7 @@ function OwnerConfigPageContent({
       <SeoHead title={pageTitle} />
 
       {/* Page header */}
-      <header
-        data-panel-guide={isAllView ? 'owner-configuration' : isTeamView ? 'owner-team' : 'owner-services'}
-        className="flex flex-col gap-1"
-      >
+      <header className="flex flex-col gap-1">
         <h1 className="text-xl text-display text-text">
           {isAllView ? t('admin.configuration') : pageTitle}
         </h1>
@@ -2392,73 +2275,6 @@ function OwnerConfigPageContent({
             />
           )}
 
-          {isAllView && (
-            <EquipmentSection
-              equipment={equipment}
-              onAdd={(name) => {
-                return adminApi.createEquipment(salonId, { name }).then((res) => {
-                  setEquipment((prev) => [...prev, res.equipment]);
-                  window.dispatchEvent(new Event('salon-config-changed'));
-                }).catch((reason) => {
-                  toastError({
-                    title: getApiErrorMessage(reason, 'افزودن تجهیزات انجام نشد'),
-                  });
-                  throw reason;
-                });
-              }}
-              onUpdate={async (id, name) => {
-                const previous = equipment;
-                setEquipment((current) =>
-                  current.map((item) => (item.id === id ? { ...item, name } : item)),
-                );
-                try {
-                  const result = await adminApi.updateEquipment(salonId, id, name);
-                  setEquipment((current) =>
-                    current.map((item) => (item.id === id ? result.equipment : item)),
-                  );
-                  window.dispatchEvent(new Event('salon-config-changed'));
-                  success({ title: 'نام تجهیز به‌روزرسانی شد' });
-                } catch (reason) {
-                  setEquipment(previous);
-                  toastError({
-                    title: getApiErrorMessage(reason, 'به‌روزرسانی تجهیز انجام نشد'),
-                  });
-                  throw reason;
-                }
-              }}
-              onRemove={(id) => {
-                const removed = equipment.find((item) => item.id === id);
-                const previous = equipment;
-                const index = removed ? equipment.findIndex((item) => item.id === id) : -1;
-                setEquipment((prev) => prev.filter((item) => item.id !== id));
-                adminApi.deleteEquipment(salonId, id).then(() => {
-                  window.dispatchEvent(new Event('salon-config-changed'));
-                  if (!removed) return;
-                  undoToast(removed.name, () => {
-                    void adminApi.setEquipmentActive(salonId, id, true).then(({ equipment: restored }) => {
-                      setEquipment((prev) => {
-                        const next = prev.filter((item) => item.id !== id);
-                        next.splice(Math.min(index, next.length), 0, restored);
-                        return next;
-                      });
-                      window.dispatchEvent(new Event('salon-config-changed'));
-                    }).catch((reason) => {
-                      toastError({
-                        title: getApiErrorMessage(reason, 'بازگردانی تجهیزات انجام نشد'),
-                      });
-                    });
-                  });
-                }).catch((reason) => {
-                  setEquipment(previous);
-                  toastError({
-                    title: getApiErrorMessage(reason, 'حذف تجهیزات انجام نشد'),
-                  });
-                });
-              }}
-              requestDelete={setPendingDelete}
-            />
-          )}
-
         </div>
       )}
 
@@ -2510,8 +2326,8 @@ function OwnerConfigPageContent({
  * Redesigned Owner Configuration Page (Task 7.6).
  *
  * Card-based sections for Staff, Services, Chairs/Resources with
- * expand/collapse animations (AnimatePresence + motion.div), inline edit
- * affordances (click field name to expand edit panel), add/remove item
+ * static team/service surfaces, dialog-based record editing, collapsible
+ * secondary settings, add/remove item
  * animations (slide in/out), skeleton loading, error+retry, Persian text,
  * responsive layout, tokens-only styling, logical
  * properties for RTL, and prefers-reduced-motion handling.

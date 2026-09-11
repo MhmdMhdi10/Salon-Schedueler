@@ -43,6 +43,8 @@ function idForTemplate(world: BackendWorld, template: string): string {
   if (template.startsWith('/platform-admin/details/')) return world.vars.salonId ?? FAKE_ID;
   if (template.startsWith('/platform-admin/appointments/'))
     return world.vars.appointmentId ?? FAKE_ID;
+  if (template.startsWith('/platform-admin/support/tickets/'))
+    return world.vars.supportTicketId ?? FAKE_ID;
   if (template.startsWith('/platform-admin/staff/')) return world.vars.stylistId ?? FAKE_ID;
   if (template.startsWith('/platform-admin/salons/')) return world.vars.salonId ?? FAKE_ID;
   if (template.startsWith('/appointments/')) {
@@ -162,7 +164,9 @@ function bodyForRoute(world: BackendWorld, method: string, template: string): un
       ? { hours: [{ weekday: 1, startTime: '09:00', endTime: '20:00' }] }
       : {};
   }
-  if (template === '/salons/:id/booking-policy') return { bookingWindowDays: 14 };
+  if (template === '/salons/:id/booking-policy') {
+    return { bookingWindowDays: 14, bookingStartOffsetDays: 0 };
+  }
   if (template === '/salons/:id/chairs') return { name: 'Controller chair' };
   if (template.includes('/chairs/:chairId')) return { active: true };
   if (template === '/salons/:id/services')
@@ -220,6 +224,8 @@ function bodyForRoute(world: BackendWorld, method: string, template: string): un
   )
     return { active: true };
   if (template === '/platform-admin/appointments/:id/action') return { action: 'approve' };
+  if (template === '/platform-admin/support/tickets/:id')
+    return { status: 'in_progress', priority: 'high' };
   if (template.startsWith('/bots/') || template === '/register/salon') return {};
   return {};
 }
@@ -291,6 +297,19 @@ async function exercise(world: BackendWorld, method: string, template: string): 
     (method === 'PATCH' && template === '/appointments/:id/reschedule')
   ) {
     concrete = template.replace(':id', world.vars.appointmentId ?? FAKE_ID);
+  }
+
+  if (template.startsWith('/platform-admin/support/tickets/') && !world.vars.supportTicketId) {
+    const createdTicket = await world.rawRequest(
+      'POST',
+      '/api/support/tickets',
+      { message: 'Controller platform-admin support ticket' },
+      'owner',
+    );
+    if (createdTicket.body?.ticket?.id) {
+      world.vars.supportTicketId = String(createdTicket.body.ticket.id);
+      concrete = template.replace(':id', world.vars.supportTicketId);
+    }
   }
   const path = appendQuery(world, template, concrete);
   const actor = actorForRoute(template);

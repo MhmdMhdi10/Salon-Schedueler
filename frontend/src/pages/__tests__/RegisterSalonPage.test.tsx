@@ -148,4 +148,21 @@ describe('RegisterSalonPage services step', () => {
     expect(preset).toBeChecked();
     expect(screen.getByRole('button', { name: 'ویرایش کوتاهی VIP' })).toBeInTheDocument();
   });
+
+  it('keeps suggested services in a fixed scroll area and filters them by search', async () => {
+    const step = await reachServicesStep();
+    const search = within(step).getByRole('searchbox', {
+      name: 'جست‌وجوی خدمت پیشنهادی',
+    });
+    const list = within(step).getByTestId('suggested-services-list');
+
+    expect(list).toHaveClass('overflow-y-auto');
+    expect(list.parentElement).toHaveClass('h-[18rem]');
+    expect(within(list).getByRole('checkbox', { name: 'کراتین مو' })).toBeInTheDocument();
+
+    fireEvent.change(search, { target: { value: 'کراتین' } });
+
+    expect(within(list).getByRole('checkbox', { name: 'کراتین مو' })).toBeInTheDocument();
+    expect(within(list).queryByRole('checkbox', { name: 'کوتاهی مو' })).not.toBeInTheDocument();
+  });
 });

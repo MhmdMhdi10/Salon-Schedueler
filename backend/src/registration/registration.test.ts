@@ -42,11 +42,23 @@ function createMockPrisma() {
           salonId: data.salonId,
           fullName: data.fullName,
           role: data.role,
+          phone: data.phone ?? null,
           active: true,
         };
         staffMembers.push(member);
         return member;
       }),
+      findFirst: jest.fn(async ({ where }: any) =>
+        staffMembers.find((member) => {
+          const idMatches =
+            where.id === undefined ||
+            (typeof where.id === 'string' ? member.id === where.id : member.id !== where.id.not);
+          return member.salonId === where.salonId && member.phone === where.phone && idMatches;
+        }) ?? null,
+      ),
+      findUnique: jest.fn(async ({ where }: any) =>
+        staffMembers.find((member) => member.id === where.id) ?? null,
+      ),
     },
     chair: {
       create: jest.fn(async ({ data }: any) => {
@@ -98,6 +110,12 @@ describe('SalonRegistration', () => {
       expect(salon.qrToken).toBeDefined();
       expect(salon.qrToken.length).toBeGreaterThan(0);
       expect(salon.timezone).toBe('Asia/Tehran');
+      expect(prisma.salon.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          bookingWindowDays: 1,
+          bookingStartOffsetDays: 0,
+        }),
+      });
     });
 
     it('uses provided timezone when specified', async () => {
@@ -248,6 +266,14 @@ describe('ResourceRegistration', () => {
       expect(owner.role).toBe('Owner');
       expect(admin.role).toBe('Admin');
       expect(stylist.role).toBe('Stylist');
+    });
+
+    it('rejects a duplicate login phone inside the same salon', async () => {
+      await resourceReg.registerStaffMember(salonId, 'First', 'Stylist', '09121111111');
+
+      await expect(
+        resourceReg.registerStaffMember(salonId, 'Second', 'Stylist', '09121111111'),
+      ).rejects.toMatchObject({ code: 'PHONE_TAKEN' });
     });
   });
 

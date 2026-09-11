@@ -182,8 +182,11 @@ describe('ConfigurationPage', () => {
 
     await waitFor(() => expect(screen.getByTestId('staff-list')).toBeTruthy());
 
-    // Empty-state copy from the catalog is shown for each section.
-    expect(screen.getAllByText('هنوز عضوی از تیم ثبت نشده')).toHaveLength(2);
+    // Approval-policy data loads independently from the catalog lists; wait for
+    // both sections before asserting their shared empty-state copy.
+    await waitFor(() =>
+      expect(screen.getAllByText('هنوز عضوی از تیم ثبت نشده')).toHaveLength(2),
+    );
     expect(screen.getByText('هنوز صندلی‌ای ثبت نشده')).toBeTruthy();
 
     // Inline add: typing a staff name and submitting appends a list item.

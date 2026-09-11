@@ -138,7 +138,7 @@ const PERSIAN_WEEKDAY_SHORT: Record<number, string> = {
 
 /**
  * Builds the next `count` days as Booksy-style scroller items — Persian weekday
- * + day-of-month + month — starting today. Each item's `iso` is a local
+ * + day-of-month + month — starting at the policy's allowed lower bound. Each item's `iso` is a local
  * `YYYY-MM-DD` the availability API understands.
  */
 function buildUpcomingDays(count: number, startISO = todayISO()): DayScrollerItem[] {
@@ -168,7 +168,7 @@ function buildUpcomingDays(count: number, startISO = todayISO()): DayScrollerIte
   return out;
 }
 
-/** Today as a `YYYY-MM-DD` local date — the inclusive lower bound for the picker. */
+/** Today as a `YYYY-MM-DD` local date — base date for booking-policy bounds. */
 function todayISO(): string {
   const now = new Date();
   const y = now.getFullYear();
@@ -246,20 +246,28 @@ export function AvailabilityPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isMobile = useIsMobile();
-  const minDate = useMemo(() => todayISO(), []);
-  const [bookingWindowDays, setBookingWindowDays] = useState(14);
+  const today = useMemo(() => todayISO(), []);
+  const [bookingWindowDays, setBookingWindowDays] = useState(1);
+  const [bookingStartOffsetDays, setBookingStartOffsetDays] = useState(0);
+  const minDate = useMemo(
+    () => addDaysISO(today, bookingStartOffsetDays),
+    [bookingStartOffsetDays, today],
+  );
   const maxDate = useMemo(
-    () => addDaysISO(minDate, bookingWindowDays),
-    [minDate, bookingWindowDays],
+    () => addDaysISO(today, bookingWindowDays),
+    [bookingWindowDays, today],
   );
   const [weekOffset, setWeekOffset] = useState(0);
   const upcomingDays = useMemo(
     () =>
       buildUpcomingDays(
-        Math.min(7, Math.max(0, bookingWindowDays - weekOffset * 7 + 1)),
+        Math.min(
+          7,
+          Math.max(0, bookingWindowDays - bookingStartOffsetDays - weekOffset * 7 + 1),
+        ),
         addDaysISO(minDate, weekOffset * 7),
       ),
-    [bookingWindowDays, minDate, weekOffset],
+    [bookingStartOffsetDays, bookingWindowDays, minDate, weekOffset],
   );
 
   // Restore any persisted selection so back-navigation keeps the user's place.
@@ -295,6 +303,10 @@ export function AvailabilityPage() {
   );
   const [durationError, setDurationError] = useState('');
   const [workMode, setWorkMode] = useState<BookingWorkMode>('not_decided');
+  // Do not use a stale sessionStorage date until the salon's current booking
+  // policy has arrived. Otherwise a changed lower/upper bound can trigger a
+  // guaranteed 400 from availability before the picker is corrected.
+  const [bookingPolicyLoaded, setBookingPolicyLoaded] = useState(false);
 
   const selectedServiceDetails = useMemo(
     () => services.find((service) => service.id === selectedService),
@@ -394,30 +406,64 @@ export function AvailabilityPage() {
   }, [loadStylists]);
 
   useEffect(() => {
-    if (!salonId || typeof salonApi.getBookingPolicy !== 'function') return;
+    if (!salonId || typeof salonApi.getBookingPolicy !== 'function') {
+      // Older API deployments do not expose this optional endpoint. Preserve
+      // their legacy availability behavior instead of discarding a valid
+      // deep-link/session selection.
+      setBookingPolicyLoaded(true);
+      return;
+    }
+    let active = true;
+    setBookingPolicyLoaded(false);
     salonApi
       .getBookingPolicy(salonId)
-      .then(({ bookingWindowDays: value, workMode: mode, locationTypes: supported }) => {
-        setBookingWindowDays(value);
-        if (mode) setWorkMode(mode);
-        const nextTypes =
-          supported?.filter((item): item is 'salon' | 'customer' =>
-            item === 'salon' || item === 'customer',
-          ) ?? ['salon'];
-        setLocationTypes(nextTypes.length > 0 ? nextTypes : ['salon']);
-        setLocationType((current) =>
-          nextTypes.includes(current) ? current : (nextTypes[0] ?? 'salon'),
+      .then(
+        ({
+          bookingWindowDays: value,
+          bookingStartOffsetDays: startOffset = 0,
+          workMode: mode,
+          locationTypes: supported,
+        }) => {
+          setBookingWindowDays(value);
+          setBookingStartOffsetDays(startOffset);
+          if (mode) setWorkMode(mode);
+          const nextTypes =
+            supported?.filter((item): item is 'salon' | 'customer' =>
+              item === 'salon' || item === 'customer',
+            ) ?? ['salon'];
+          setLocationTypes(nextTypes.length > 0 ? nextTypes : ['salon']);
+          setLocationType((current) =>
+            nextTypes.includes(current) ? current : (nextTypes[0] ?? 'salon'),
+          );
+          const upperBound = addDaysISO(today, value);
+          const lowerBound = addDaysISO(today, startOffset);
+          setDate((current) =>
+            current && current >= lowerBound && current <= upperBound ? current : '',
+          );
+          setWeekOffset(0);
+        },
+      )
+      .catch(() => {
+        // Keep the safe defaults when an older deployment has no policy route,
+        // but never replay a persisted date outside that fallback range.
+        if (!active) return;
+        const fallbackUpperBound = addDaysISO(today, 1);
+        setDate((current) =>
+          current && current >= today && current <= fallbackUpperBound ? current : '',
         );
-        const upperBound = addDaysISO(minDate, value);
-        setDate((current) => (current && current <= upperBound ? current : ''));
       })
-      .catch(() => undefined);
-  }, [salonId, minDate]);
+      .finally(() => {
+        if (active) setBookingPolicyLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [salonId, today]);
 
   // Load availability whenever selected services + date are both chosen. The
   // API returns only starts that fit the whole appointment duration.
   const loadSlots = useCallback(() => {
-    if (!salonId || !selectedService || !date) {
+    if (!bookingPolicyLoaded || !salonId || !selectedService || !date) {
       setSlotsStatus('idle');
       setSlots([]);
       return;
@@ -464,6 +510,7 @@ export function AvailabilityPage() {
     selectedStaff,
     locationType,
     durationMinutes,
+    bookingPolicyLoaded,
   ]);
 
   useEffect(() => {
@@ -844,10 +891,19 @@ export function AvailabilityPage() {
               type="button"
               variant="secondary"
               size="md"
-              disabled={weekOffset >= Math.max(0, Math.ceil((bookingWindowDays + 1) / 7) - 1)}
+              disabled={
+                weekOffset >=
+                Math.max(0, Math.ceil((bookingWindowDays - bookingStartOffsetDays + 1) / 7) - 1)
+              }
               onClick={() =>
                 setWeekOffset((current) =>
-                  Math.min(Math.max(0, Math.ceil((bookingWindowDays + 1) / 7) - 1), current + 1),
+                  Math.min(
+                    Math.max(
+                      0,
+                      Math.ceil((bookingWindowDays - bookingStartOffsetDays + 1) / 7) - 1,
+                    ),
+                    current + 1,
+                  ),
                 )
               }
             >

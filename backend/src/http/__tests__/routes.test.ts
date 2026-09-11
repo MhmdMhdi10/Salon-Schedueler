@@ -83,6 +83,8 @@ function makeServices() {
       setWorkingHours: jest.fn().mockResolvedValue([]),
       getBookingWindowDays: jest.fn().mockResolvedValue(14),
       setBookingWindowDays: jest.fn().mockResolvedValue(undefined),
+      getBookingStartOffsetDays: jest.fn().mockResolvedValue(0),
+      setBookingStartOffsetDays: jest.fn().mockResolvedValue(undefined),
       getHolidays: jest.fn().mockResolvedValue([]),
       addHoliday: jest.fn().mockResolvedValue({ id: 'holiday-1', onDate: new Date('2026-07-15') }),
       setSalonBrandAccent: jest.fn().mockResolvedValue(undefined),
@@ -318,11 +320,11 @@ describe('HTTP routes', () => {
       );
     });
 
-    it('rejects a web refresh request without its HttpOnly cookie', async () => {
+    it('treats a web refresh request without its HttpOnly cookie as anonymous', async () => {
       const res = await request(app).post('/api/auth/refresh').set('X-Auth-Client', 'web').send({});
 
-      expect(res.status).toBe(400);
-      expect(res.body.code).toBe('VALIDATION_ERROR');
+      expect(res.status).toBe(204);
+      expect(res.body).toEqual({});
       expect(fake.authService.refresh).not.toHaveBeenCalled();
     });
   });
@@ -837,6 +839,17 @@ describe('HTTP routes', () => {
         .send({ bookingWindowDays: 0 });
       expect(res.status).toBe(200);
       expect(fake.availabilityConfig.setBookingWindowDays).toHaveBeenCalledWith('salon-1', 0);
+    });
+
+    it('stores a tomorrow-only booking policy', async () => {
+      const res = await request(app)
+        .put('/api/salons/salon-1/booking-policy')
+        .set('Authorization', `Bearer ${staffToken('Owner')}`)
+        .send({ bookingWindowDays: 1, bookingStartOffsetDays: 1 });
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ bookingWindowDays: 1, bookingStartOffsetDays: 1 });
+      expect(fake.availabilityConfig.setBookingWindowDays).toHaveBeenCalledWith('salon-1', 1);
+      expect(fake.availabilityConfig.setBookingStartOffsetDays).toHaveBeenCalledWith('salon-1', 1);
     });
 
     it('closes an interrupted day and cancels its active appointments', async () => {

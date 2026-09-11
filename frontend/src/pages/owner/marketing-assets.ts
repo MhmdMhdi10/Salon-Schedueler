@@ -65,7 +65,7 @@ function clickDownload(url: string, filename: string): void {
 }
 
 function escapeXml(value: string): string {
-  return value.replace(/[<>&'\"]/g, (character) => {
+  return value.replace(/[<>&'"]/g, (character) => {
     const entities: Record<string, string> = {
       '<': '&lt;',
       '>': '&gt;',

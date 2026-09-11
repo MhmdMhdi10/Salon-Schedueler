@@ -12,7 +12,10 @@ import { stepVariants, stepTransition } from '../../lib/motion-variants';
  */
 function stepIndexFromPath(pathname: string): number {
   if (pathname.includes('/booking/success')) return 2;
-  if (pathname.endsWith('/confirm')) return 1;
+  // OTP auth is a substep of confirmation. Treating it as step 0 makes the
+  // confirm → auth navigation play a backward transition and can remount the
+  // form while a customer is already entering their phone.
+  if (pathname.endsWith('/confirm') || pathname.endsWith('/auth')) return 1;
   return 0;
 }
 

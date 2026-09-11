@@ -262,7 +262,7 @@ export class AuthService {
     const platformAdmin = await this.findPlatformAdminByPhone(phone);
     if (platformAdmin) {
       await this.updatePlatformAdminLogin(platformAdmin.id);
-      const customer = await this.findOrCreateCustomer(phone);
+      const customer = await this.findOrCreateCustomer(phone, true);
       const staffContexts = await this.findStaffContextsByPhone(phone);
       const staff = staffContexts[0];
       const tokens = this.issueTokens(customer.id, {
@@ -380,7 +380,7 @@ export class AuthService {
       if (!admin) {
         throw new AuthError('INVALID_TOKEN', 'Invalid or inactive refresh identity');
       }
-      const customer = await this.findOrCreateCustomer(admin.phone);
+      const customer = await this.findOrCreateCustomer(admin.phone, true);
       const staffContexts = await this.findStaffContextsByPhone(admin.phone);
       const staff = staffContexts[0];
       const tokens = this.issueTokens(customer.id, {
@@ -407,10 +407,18 @@ export class AuthService {
   /**
    * Find an existing customer by phone or create a new one.
    */
-  private async findOrCreateCustomer(phone: string) {
+  private async findOrCreateCustomer(phone: string, allowInactive = false) {
     let customer = await this.prisma.customer.findUnique({
       where: { phone },
     });
+
+    // Platform operators have a separate identity and must remain able to
+    // reach their global panel even when their mirrored customer row is
+    // moderated. Regular users cannot create a fresh session after block or
+    // soft-delete.
+    if (!allowInactive && customer && ((customer as { active?: boolean }).active === false || (customer as { deletedAt?: Date | null }).deletedAt)) {
+      throw new AuthError('CUSTOMER_BLOCKED', 'Customer account is blocked');
+    }
 
     if (!customer) {
       customer = await this.prisma.customer.create({
@@ -422,10 +430,12 @@ export class AuthService {
   }
 
   private async findCustomerById(id: string): Promise<{ id: string; phone: string } | null> {
-    return this.prisma.customer.findUnique({
+    const customer = await this.prisma.customer.findUnique({
       where: { id },
-      select: { id: true, phone: true },
+      select: { id: true, phone: true, active: true, deletedAt: true },
     });
+    if (!customer || (customer as { active?: boolean }).active === false || (customer as { deletedAt?: Date | null }).deletedAt) return null;
+    return customer;
   }
 
   /**
@@ -591,6 +601,7 @@ export class AuthError extends Error {
       | 'OTP_EXPIRED'
       | 'OTP_MISMATCH'
       | 'OTP_DELIVERY_FAILED'
+      | 'CUSTOMER_BLOCKED'
       | 'INVALID_TOKEN',
     message: string,
   ) {

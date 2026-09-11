@@ -137,7 +137,16 @@ describe('private routes emit noindex,follow (R8.7)', () => {
   });
 
   it('`/salon/:salonId/book/confirm` is noindex', async () => {
-    renderAt('/salon/salon-1/book/confirm', <BookingConfirmPage />, '/salon/:salonId/book/confirm');
+    render(
+      <HelmetProvider>
+        <MemoryRouter initialEntries={['/salon/salon-1/book/confirm']}>
+          <Routes>
+            <Route path="/salon/:salonId/book/confirm" element={<BookingConfirmPage />} />
+            <Route path="/salon/:salonId/book" element={<AvailabilityPage />} />
+          </Routes>
+        </MemoryRouter>
+      </HelmetProvider>,
+    );
     await waitFor(() => expect(robotsContent()).toBe('noindex,follow'));
   });
 

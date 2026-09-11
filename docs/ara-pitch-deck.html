@@ -1,0 +1,1104 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b2530" />
+    <meta name="description" content="Ara investor pitch deck — Persian and English interactive presentation." />
+    <title>آرا | Investor Pitch Deck</title>
+    <style>
+      @font-face {
+        font-family: AraSans;
+        src: url("../frontend/public/fonts/vazirmatn-arabic-wght-normal.woff2") format("woff2");
+        font-weight: 100 900;
+        font-style: normal;
+        font-display: swap;
+        unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
+      }
+      @font-face {
+        font-family: AraSans;
+        src: url("../frontend/public/fonts/vazirmatn-latin-wght-normal.woff2") format("woff2");
+        font-weight: 100 900;
+        font-style: normal;
+        font-display: swap;
+        unicode-range: U+0000-024F, U+1E00-1EFF;
+      }
+
+      :root {
+        --bg: #f4f7f3;
+        --surface: #ffffff;
+        --surface-2: #eef5f1;
+        --ink: #0b2530;
+        --muted: #65757d;
+        --line: #d8e3de;
+        --teal: #0b806d;
+        --teal-2: #d9efe9;
+        --blue: #2c5fe0;
+        --blue-2: #e7edff;
+        --coral: #de705e;
+        --coral-2: #fae6e0;
+        --gold: #c98b28;
+        --gold-2: #f4ead5;
+        --navy: #0b2530;
+        --shadow: 0 24px 70px rgba(21, 46, 52, 0.1);
+        --radius-xl: 28px;
+        --radius-lg: 20px;
+        --radius-md: 14px;
+      }
+
+      * { box-sizing: border-box; }
+      html { min-width: 320px; background: var(--bg); }
+      body {
+        min-height: 100vh;
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 85% -10%, rgba(11, 128, 109, 0.11), transparent 32rem),
+          radial-gradient(circle at 8% 96%, rgba(44, 95, 224, 0.07), transparent 28rem),
+          var(--bg);
+        font-family: AraSans, Vazirmatn, system-ui, -apple-system, "Segoe UI", sans-serif;
+        font-size: 16px;
+        line-height: 1.55;
+        font-variant-numeric: tabular-nums;
+      }
+      button, a { font: inherit; }
+      button { border: 0; cursor: pointer; }
+      a { color: inherit; }
+      :focus-visible {
+        outline: 3px solid rgba(44, 95, 224, 0.55);
+        outline-offset: 4px;
+      }
+      .skip-link {
+        position: fixed;
+        z-index: 20;
+        top: 12px;
+        left: 12px;
+        padding: 9px 13px;
+        border-radius: 10px;
+        color: white;
+        background: var(--navy);
+        transform: translateY(-150%);
+      }
+      .skip-link:focus { transform: translateY(0); }
+
+      .app-shell {
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+      .rail {
+        position: sticky;
+        top: 0;
+        display: flex;
+        flex-direction: column;
+        align-self: start;
+        height: 100vh;
+        padding: 26px 20px 20px;
+        color: #eef8f3;
+        background: linear-gradient(160deg, #0a222d 0%, #123540 100%);
+        overflow: hidden;
+      }
+      .rail::after {
+        position: absolute;
+        right: -84px;
+        bottom: -94px;
+        width: 230px;
+        height: 230px;
+        border: 1px solid rgba(158, 216, 202, 0.18);
+        border-radius: 50%;
+        box-shadow: 0 0 0 28px rgba(158, 216, 202, 0.04), 0 0 0 58px rgba(158, 216, 202, 0.03);
+        content: "";
+        pointer-events: none;
+      }
+      .brand-lockup {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        gap: 11px;
+        align-items: center;
+        margin-bottom: 28px;
+      }
+      .brand-lockup img { width: 55px; height: 55px; object-fit: contain; }
+      .brand-lockup strong { display: block; font-size: 18px; letter-spacing: -0.02em; }
+      .brand-lockup span { display: block; margin-top: 2px; color: #9fd8cb; font-size: 12px; }
+      .rail-label {
+        position: relative;
+        z-index: 1;
+        margin: 0 8px 12px;
+        color: #8fb7b1;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      .slide-nav {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        gap: 4px;
+        overflow: auto;
+        padding: 0 0 10px;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(159, 216, 203, 0.35) transparent;
+      }
+      .nav-item {
+        display: grid;
+        grid-template-columns: 30px minmax(0, 1fr);
+        gap: 8px;
+        align-items: center;
+        min-height: 36px;
+        padding: 7px 8px;
+        border-radius: 11px;
+        color: #b7cbc7;
+        background: transparent;
+        text-align: start;
+        transition: 160ms ease;
+      }
+      .nav-item:hover { color: white; background: rgba(255,255,255,0.07); }
+      .nav-item.is-active {
+        color: var(--ink);
+        background: #e3f2ed;
+        box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+      }
+      .nav-number { color: #76a59e; font-size: 11px; font-weight: 800; }
+      .nav-item.is-active .nav-number { color: var(--teal); }
+      .nav-title { overflow: hidden; font-size: 12px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+      .rail-footer {
+        position: relative;
+        z-index: 1;
+        margin-top: auto;
+        padding: 15px 8px 2px;
+        border-top: 1px solid rgba(190, 230, 220, 0.16);
+        color: #8fb7b1;
+        font-size: 11px;
+      }
+
+      .workspace { min-width: 0; }
+      .topbar {
+        position: sticky;
+        z-index: 5;
+        top: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 78px;
+        padding: 16px clamp(18px, 4vw, 58px);
+        border-bottom: 1px solid rgba(216, 227, 222, 0.75);
+        background: rgba(244, 247, 243, 0.84);
+        backdrop-filter: blur(18px);
+      }
+      .topbar-intro { display: flex; gap: 12px; align-items: center; min-width: 0; }
+      .topbar-intro .mini-logo { width: 35px; height: 35px; object-fit: contain; }
+      .topbar-intro strong { display: block; font-size: 15px; }
+      .topbar-intro span { display: block; color: var(--muted); font-size: 11px; }
+      .topbar-actions { display: flex; gap: 8px; align-items: center; }
+      .lang-toggle {
+        display: inline-flex;
+        padding: 3px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--surface);
+      }
+      .lang-toggle button {
+        min-width: 62px;
+        padding: 6px 10px;
+        border-radius: 9px;
+        color: var(--muted);
+        background: transparent;
+        font-size: 12px;
+        font-weight: 800;
+      }
+      .lang-toggle button.is-active { color: white; background: var(--teal); }
+      .icon-button {
+        display: inline-grid;
+        place-items: center;
+        width: 37px;
+        height: 37px;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        color: var(--ink);
+        background: var(--surface);
+        transition: 160ms ease;
+      }
+      .icon-button:hover { color: white; background: var(--ink); transform: translateY(-1px); }
+      .icon-button svg { width: 17px; height: 17px; }
+
+      .deck-stage { padding: clamp(24px, 4vw, 50px) clamp(18px, 4vw, 58px) 38px; }
+      .stage-meta {
+        display: flex;
+        gap: 18px;
+        align-items: center;
+        justify-content: space-between;
+        max-width: 1380px;
+        margin: 0 auto 16px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .stage-meta strong { color: var(--ink); }
+      .progress-track { flex: 1; max-width: 340px; height: 5px; border-radius: 999px; background: #dde8e3; overflow: hidden; }
+      .progress-value { width: 5.55%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--teal), var(--blue)); transition: width 220ms ease; }
+      .slides { max-width: 1380px; margin: 0 auto; }
+      .slide { display: none; scroll-margin-top: 104px; animation: slide-in 260ms ease both; }
+      .slide.is-active { display: block; }
+      @keyframes slide-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+      .slide-shell {
+        position: relative;
+        min-height: min(720px, calc(100vh - 166px));
+        padding: clamp(24px, 4vw, 48px);
+        border: 1px solid rgba(216, 227, 222, 0.92);
+        border-radius: var(--radius-xl);
+        background: rgba(255,255,255,0.75);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+      .slide-shell.dark { color: #edf8f3; border-color: rgba(159, 216, 203, 0.12); background: linear-gradient(145deg, #0b2530, #123744); }
+      .slide-head { max-width: 920px; margin-bottom: 34px; }
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+        color: var(--teal);
+        font-size: 12px;
+        font-weight: 850;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .eyebrow::before { display: block; width: 26px; height: 3px; border-radius: 999px; background: currentColor; content: ""; }
+      .dark .eyebrow { color: #9fd8cb; }
+      h1, h2, h3, p { margin-top: 0; }
+      .slide-head h1 { max-width: 960px; margin-bottom: 8px; font-size: clamp(30px, 4vw, 51px); line-height: 1.12; letter-spacing: -0.04em; }
+      .slide-head p { max-width: 900px; margin-bottom: 0; color: var(--muted); font-size: clamp(14px, 1.6vw, 18px); }
+      .dark .slide-head p { color: #b7cec8; }
+      .slide-number { position: absolute; inset-inline-end: 42px; bottom: 26px; color: var(--muted); font-size: 11px; }
+      .dark .slide-number { color: #91b5ae; }
+
+      .cover-shell { min-height: min(720px, calc(100vh - 166px)); padding: 0; background: var(--surface); }
+      .cover-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(350px, 0.83fr); min-height: min(720px, calc(100vh - 166px)); }
+      html[dir="rtl"] .cover-grid { grid-template-columns: minmax(350px, 0.83fr) minmax(0, 1fr); }
+      .cover-copy { display: flex; flex-direction: column; justify-content: center; padding: clamp(30px, 6vw, 76px); }
+      .cover-copy .eyebrow { color: var(--teal); }
+      .cover-kicker { margin-bottom: 20px; color: var(--muted); font-size: 13px; font-weight: 700; }
+      .cover-copy h1 { margin-bottom: 16px; font-size: clamp(50px, 7vw, 92px); letter-spacing: -0.06em; line-height: 0.95; }
+      .cover-copy h2 { max-width: 640px; margin-bottom: 18px; color: var(--teal); font-size: clamp(22px, 3vw, 38px); line-height: 1.2; letter-spacing: -0.04em; }
+      .cover-copy p { max-width: 590px; margin-bottom: 28px; color: var(--muted); font-size: clamp(15px, 1.6vw, 19px); }
+      .cover-media { position: relative; min-height: 470px; overflow: hidden; background: #dfeee8; }
+      .cover-media::after { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(11,37,48,0.02), rgba(11,37,48,0.2)); content: ""; }
+      html[dir="rtl"] .cover-media::after { background: linear-gradient(270deg, rgba(11,37,48,0.02), rgba(11,37,48,0.2)); }
+      .cover-media img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+      .cover-badge, .raise-badge {
+        display: inline-flex;
+        align-items: center;
+        align-self: flex-start;
+        gap: 8px;
+        padding: 13px 18px;
+        border-radius: 14px;
+        color: white;
+        background: var(--navy);
+        font-weight: 850;
+        box-shadow: 0 14px 28px rgba(11,37,48,0.14);
+      }
+      .cover-badge::before { width: 7px; height: 7px; border-radius: 50%; background: #9fd8cb; content: ""; }
+      .source-line { margin-top: 34px; color: var(--muted); font-size: 11px; }
+
+      .lead-statement { max-width: 800px; margin-bottom: 32px; color: var(--teal); font-size: clamp(26px, 3.5vw, 44px); font-weight: 850; line-height: 1.16; letter-spacing: -0.05em; }
+      .metric-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 26px; }
+      .metric-card { padding: 18px 20px; border: 1px solid var(--line); border-radius: var(--radius-md); background: rgba(255,255,255,0.85); }
+      .metric-value { margin-bottom: 3px; color: var(--teal); font-size: 30px; font-weight: 900; line-height: 1; }
+      .metric-card:nth-child(1) .metric-value { color: var(--blue); }
+      .metric-card:nth-child(3) .metric-value { color: var(--coral); }
+      .metric-label { color: var(--muted); font-size: 12px; }
+      .dark .metric-card { border-color: rgba(159,216,203,0.16); background: rgba(255,255,255,0.06); }
+      .dark .metric-label { color: #b7cec8; }
+
+      .two-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: stretch; }
+      .customer-grid, .why-now-grid, .team-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+      .customer-card, .why-now-card, .team-card { padding: 22px; border-radius: var(--radius-lg); background: var(--surface-2); }
+      .customer-card:nth-child(1) { background: var(--teal-2); }
+      .customer-card:nth-child(2) { background: var(--blue-2); }
+      .customer-card:nth-child(3) { background: var(--coral-2); }
+      .customer-card small, .why-now-card small, .team-card small { display: block; margin-bottom: 10px; color: var(--teal); font-size: 11px; font-weight: 900; }
+      .customer-card:nth-child(2) small { color: var(--blue); }
+      .customer-card:nth-child(3) small { color: var(--coral); }
+      .customer-card strong, .why-now-card strong, .team-card h3 { display: block; margin-bottom: 8px; font-size: 19px; line-height: 1.2; }
+      .customer-card p, .why-now-card p, .team-card p { margin: 0; color: var(--muted); font-size: 13px; }
+      .customer-icp, .why-now-callout, .team-note { margin-top: 22px; padding: 16px 19px; border-radius: 14px; color: var(--teal); background: var(--teal-2); font-size: 13px; font-weight: 800; }
+      .dark .why-now-card { color: #edf8f3; border: 1px solid rgba(159,216,203,0.12); background: rgba(255,255,255,0.07); }
+      .dark .why-now-card small { color: #9fd8cb; }
+      .dark .why-now-card p { color: #b7cec8; }
+      .dark .why-now-callout { color: #edf8f3; background: rgba(159,216,203,0.13); }
+      .team-card:nth-child(1) { background: var(--teal-2); }
+      .team-card:nth-child(2) { background: var(--blue-2); }
+      .team-card:nth-child(3) { background: var(--gold-2); }
+      .team-card:nth-child(2) h3 { color: var(--blue); }
+      .team-card:nth-child(3) h3 { color: var(--gold); }
+      .team-card h3 { color: var(--teal); }
+      .split-with-media { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 32px; align-items: center; }
+      html[dir="rtl"] .split-with-media { grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); }
+      .info-card { padding: 24px; border: 1px solid transparent; border-radius: var(--radius-lg); }
+      .info-card h3 { margin-bottom: 14px; font-size: 21px; }
+      .info-card.owner { background: var(--coral-2); }
+      .info-card.owner h3 { color: var(--coral); }
+      .info-card.customer { background: var(--blue-2); }
+      .info-card.customer h3 { color: var(--blue); }
+      .bullet-list { display: grid; gap: 11px; padding: 0; margin: 0; list-style: none; }
+      .bullet-list li { position: relative; padding-inline-start: 19px; color: var(--ink); font-size: 14px; }
+      .bullet-list li::before { position: absolute; inset-inline-start: 0; top: 0.72em; width: 6px; height: 6px; border-radius: 50%; background: currentColor; content: ""; transform: translateY(-50%); }
+      .dark .bullet-list li { color: #e6f1ed; }
+      .bottom-callout { padding: 16px 20px; border-radius: 15px; color: var(--teal); background: var(--teal-2); font-weight: 850; }
+      .callout-row { margin-top: 24px; }
+      .feature-list { display: grid; gap: 15px; }
+      .feature-item { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; align-items: start; }
+      .feature-dot { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: white; background: var(--teal); font-size: 12px; font-weight: 800; }
+      .feature-item:nth-child(2) .feature-dot { background: var(--blue); }
+      .feature-item:nth-child(3) .feature-dot { background: var(--coral); }
+      .feature-item strong { display: block; margin-bottom: 2px; font-size: 16px; }
+      .feature-item span { display: block; color: var(--muted); font-size: 13px; }
+      .image-panel { position: relative; min-height: 355px; padding: 24px; border-radius: var(--radius-lg); background: var(--surface-2); overflow: hidden; }
+      .image-panel img { display: block; width: 100%; height: 320px; border-radius: 18px; object-fit: cover; box-shadow: 0 14px 34px rgba(11,37,48,0.15); }
+      .device-pair { display: flex; gap: 18px; justify-content: center; align-items: end; min-height: 350px; padding: 12px 0 0; }
+      .device { width: min(180px, 35%); padding: 8px; border: 6px solid #122b36; border-radius: 25px; background: #122b36; box-shadow: 0 22px 34px rgba(11,37,48,0.17); }
+      .device:nth-child(2) { transform: translateY(22px); }
+      .device img { display: block; width: 100%; height: 305px; border-radius: 15px; object-fit: cover; }
+
+      .phase-card { position: relative; padding: 26px; border-radius: var(--radius-xl); min-height: 290px; }
+      .phase-card.today { background: var(--teal-2); }
+      .phase-card.next { background: var(--blue-2); }
+      .phase-card .tag { margin-bottom: 18px; font-size: 12px; font-weight: 900; }
+      .phase-card.today .tag { color: var(--teal); }
+      .phase-card.next .tag { color: var(--blue); }
+      .phase-card h3 { max-width: 370px; margin-bottom: 18px; font-size: clamp(22px, 2.5vw, 32px); line-height: 1.15; }
+      .phase-card ul { margin: 0; padding-inline-start: 18px; color: var(--muted); font-size: 14px; }
+      .phase-arrow { display: grid; place-items: center; align-self: center; color: white; }
+      .phase-arrow span { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; color: white; background: var(--coral); font-size: 25px; }
+      .phase-caption { margin-top: 18px; color: var(--coral); font-size: 13px; font-weight: 900; }
+      .roadmap-track { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 24px; }
+      .roadmap-step { position: relative; padding: 13px 14px 12px; border-radius: 13px; background: var(--surface-2); }
+      .roadmap-step::before { position: absolute; inset-inline-start: 0; top: 0; width: 100%; height: 3px; border-radius: 999px; background: var(--teal); content: ""; }
+      .roadmap-step:nth-child(2)::before { background: var(--blue); }
+      .roadmap-step:nth-child(3)::before { background: var(--gold); }
+      .roadmap-step:nth-child(4)::before { background: var(--coral); }
+      .roadmap-step small { display: block; margin-bottom: 4px; color: var(--muted); font-size: 10px; font-weight: 850; }
+      .roadmap-step strong { display: block; color: var(--ink); font-size: 14px; line-height: 1.25; }
+      .journey-layout { display: grid; grid-template-columns: minmax(230px, 0.45fr) minmax(0, 1fr); gap: clamp(28px, 6vw, 74px); align-items: center; }
+      html[dir="rtl"] .journey-layout { grid-template-columns: minmax(0, 1fr) minmax(230px, 0.45fr); }
+      .phone-shot { justify-self: center; width: min(255px, 100%); padding: 8px; border: 7px solid #102833; border-radius: 30px; background: #102833; box-shadow: 0 24px 50px rgba(11,37,48,0.18); }
+      .phone-shot img { display: block; width: 100%; height: 410px; border-radius: 19px; object-fit: cover; }
+      .phone-note { margin-top: 10px; color: var(--muted); font-size: 11px; text-align: center; }
+      .journey-steps { position: relative; display: grid; gap: 10px; }
+      .journey-steps::before { position: absolute; inset-inline-start: 18px; top: 25px; bottom: 25px; width: 2px; background: repeating-linear-gradient(to bottom, #cfdfda 0 8px, transparent 8px 15px); content: ""; }
+      .journey-step { position: relative; display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 15px; align-items: start; padding: 8px 0; }
+      .step-number { display: grid; place-items: center; width: 37px; height: 37px; border-radius: 50%; color: white; background: var(--teal); font-weight: 900; }
+      .journey-step:nth-child(2) .step-number { background: var(--blue); }
+      .journey-step:nth-child(3) .step-number { background: var(--coral); }
+      .journey-step strong { display: block; margin: 4px 0 3px; font-size: 18px; }
+      .journey-step span { color: var(--muted); font-size: 13px; }
+
+      .table-wrap { width: 100%; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
+      table { width: 100%; border-collapse: collapse; min-width: 650px; }
+      th, td { padding: 13px 15px; border-bottom: 1px solid var(--line); text-align: start; vertical-align: top; font-size: 13px; }
+      th { color: white; background: var(--navy); font-size: 12px; font-weight: 850; }
+      tr:last-child td { border-bottom: 0; }
+      tbody tr:nth-child(even) td { background: #fbfdfb; }
+      .highlight-row td { background: var(--teal-2) !important; font-weight: 750; }
+      .table-note { margin-top: 12px; color: var(--muted); font-size: 11px; }
+      .table-link { color: var(--teal); font-weight: 850; text-decoration: none; }
+      .table-link:hover { text-decoration: underline; }
+      .local-competition-table td:first-child { white-space: nowrap; font-weight: 850; }
+      .local-competition-table td:nth-child(2) { color: var(--teal); font-weight: 750; }
+      .local-competition-table td:nth-child(4) { color: var(--ink); font-weight: 700; }
+      .feature-matrix-wrap { width: 100%; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
+      .feature-matrix { min-width: 1080px; table-layout: fixed; }
+      .feature-matrix th, .feature-matrix td { padding: 10px 8px; text-align: center; font-size: 11px; }
+      .feature-matrix th:first-child, .feature-matrix td:first-child { width: 145px; text-align: start; }
+      .feature-matrix td:first-child { font-weight: 850; }
+      .feature-matrix .highlight-row td:first-child { color: var(--teal); }
+      .feature-status { display: inline-grid; place-items: center; width: 25px; height: 25px; margin: auto; border-radius: 8px; font-size: 15px; font-weight: 900; }
+      .feature-status.full { color: #08705f; background: var(--teal-2); }
+      .feature-status.partial { color: #98620d; background: var(--gold-2); }
+      .feature-status.planned { color: #2450ba; background: var(--blue-2); }
+      .feature-status.unclear { color: #708087; background: #edf1ef; }
+      .matrix-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 13px; color: var(--muted); font-size: 11px; }
+      .matrix-legend span { display: inline-flex; gap: 6px; align-items: center; }
+      .matrix-legend .feature-status { width: 20px; height: 20px; font-size: 13px; }
+      .why-ara-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 11px; margin-top: 16px; }
+      .why-ara-card { padding: 13px 15px; border-radius: 14px; background: var(--surface-2); }
+      .why-ara-card strong { display: block; margin-bottom: 3px; color: var(--teal); font-size: 13px; }
+      .why-ara-card span { color: var(--muted); font-size: 11px; }
+
+      .market-layout { display: grid; grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.2fr); gap: 28px; align-items: stretch; }
+      html[dir="rtl"] .market-layout { grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr); }
+      .market-card { display: flex; flex-direction: column; justify-content: space-between; min-height: 340px; padding: 28px; border-radius: var(--radius-xl); color: white; background: var(--navy); }
+      .market-card small { color: #9fd8cb; font-weight: 850; }
+      .market-number { margin: 18px 0 8px; font-size: clamp(52px, 7vw, 86px); font-weight: 900; line-height: 0.9; letter-spacing: -0.06em; }
+      .market-card p { color: #c6d9d3; font-size: 13px; }
+      .market-card strong { color: #9fd8cb; font-size: 14px; }
+      .expansion-list { display: grid; gap: 22px; align-content: center; }
+      .expansion-item { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 13px; align-items: start; }
+      .expansion-marker { width: 34px; height: 4px; margin-top: 9px; border-radius: 999px; background: var(--teal); }
+      .expansion-item:nth-child(2) .expansion-marker { background: var(--blue); }
+      .expansion-item:nth-child(3) .expansion-marker { background: var(--coral); }
+      .expansion-item small { display: block; margin-bottom: 4px; color: var(--teal); font-weight: 900; }
+      .expansion-item:nth-child(2) small { color: var(--blue); }
+      .expansion-item:nth-child(3) small { color: var(--coral); }
+      .expansion-item strong { display: block; margin-bottom: 3px; font-size: 18px; }
+      .expansion-item span { color: var(--muted); font-size: 13px; }
+      .market-size-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 11px; margin-top: 22px; }
+      .market-size-card { padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); }
+      .market-size-card small { display: block; margin-bottom: 5px; color: var(--teal); font-size: 11px; font-weight: 900; }
+      .market-size-card strong { display: block; margin-bottom: 3px; color: var(--ink); font-size: 20px; }
+      .market-size-card span { color: var(--muted); font-size: 11px; }
+
+      .moat-flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
+      .moat-card { position: relative; min-height: 166px; padding: 22px 18px; border-radius: var(--radius-lg); }
+      .moat-card:nth-child(1) { background: var(--teal-2); }
+      .moat-card:nth-child(2) { background: var(--blue-2); }
+      .moat-card:nth-child(3) { background: var(--coral-2); }
+      .moat-card:nth-child(4) { background: var(--gold-2); }
+      .moat-card:not(:last-child)::after { position: absolute; inset-inline-end: -23px; top: 68px; z-index: 2; color: var(--coral); font-size: 31px; content: "→"; }
+      html[dir="rtl"] .moat-card:not(:last-child)::after { content: "←"; }
+      .moat-card h3 { margin-bottom: 22px; font-size: 18px; }
+      .moat-card:nth-child(1) h3 { color: var(--teal); }
+      .moat-card:nth-child(2) h3 { color: var(--blue); }
+      .moat-card:nth-child(3) h3 { color: var(--coral); }
+      .moat-card:nth-child(4) h3 { color: var(--gold); }
+      .moat-card p { margin: 0; color: var(--muted); font-size: 12px; }
+      .moat-claim { margin: 30px 0 20px; font-size: clamp(22px, 3vw, 34px); font-weight: 850; line-height: 1.2; letter-spacing: -0.04em; }
+
+      .revenue-layout { display: grid; grid-template-columns: minmax(0, 0.92fr) minmax(380px, 1.08fr); gap: 30px; align-items: start; }
+      html[dir="rtl"] .revenue-layout { grid-template-columns: minmax(380px, 1.08fr) minmax(0, 0.92fr); }
+      .revenue-layers { display: grid; gap: 21px; }
+      .revenue-layer { display: grid; grid-template-columns: 30px minmax(0,1fr); gap: 13px; align-items: start; }
+      .layer-line { width: 30px; height: 4px; margin-top: 9px; border-radius: 999px; background: var(--teal); }
+      .revenue-layer:nth-child(2) .layer-line { background: var(--blue); }
+      .revenue-layer:nth-child(3) .layer-line { background: var(--coral); }
+      .revenue-layer small { display: block; margin-bottom: 2px; color: var(--teal); font-weight: 900; }
+      .revenue-layer:nth-child(2) small { color: var(--blue); }
+      .revenue-layer:nth-child(3) small { color: var(--coral); }
+      .revenue-layer strong { display: block; font-size: 18px; }
+      .revenue-layer span { display: block; color: var(--muted); font-size: 13px; }
+      .pricing-table th, .pricing-table td { padding: 11px 13px; }
+      .pricing-table td { font-size: 12px; }
+      .pricing-table th { font-size: 11px; }
+      .revenue-layout .pricing-table, .funding-layout .pricing-table { min-width: 0; table-layout: fixed; }
+      .revenue-layout .pricing-table th, .revenue-layout .pricing-table td, .funding-layout .pricing-table th, .funding-layout .pricing-table td { padding-inline: 9px; overflow-wrap: anywhere; }
+      .revenue-layout .pricing-table th:nth-child(1), .revenue-layout .pricing-table td:nth-child(1) { width: 28%; }
+      .revenue-layout .pricing-table th:nth-child(2), .revenue-layout .pricing-table td:nth-child(2) { width: 34%; }
+      .revenue-layout .pricing-table th:nth-child(3), .revenue-layout .pricing-table td:nth-child(3) { width: 38%; }
+      .funding-layout .pricing-table th:nth-child(1), .funding-layout .pricing-table td:nth-child(1) { width: 46%; }
+      .funding-layout .pricing-table th:nth-child(2), .funding-layout .pricing-table td:nth-child(2) { width: 18%; }
+      .funding-layout .pricing-table th:nth-child(3), .funding-layout .pricing-table td:nth-child(3) { width: 36%; }
+      .pricing-note { margin-top: 12px; padding: 13px 16px; border-radius: 13px; color: var(--ink); background: var(--gold-2); font-size: 11px; font-weight: 750; }
+
+      .gtm-layout { display: grid; grid-template-columns: minmax(300px, 0.82fr) minmax(0, 1.18fr); gap: 30px; align-items: center; }
+      html[dir="rtl"] .gtm-layout { grid-template-columns: minmax(0, 1.18fr) minmax(300px, 0.82fr); }
+      .channel-list { display: grid; gap: 16px; }
+      .channel { display: grid; grid-template-columns: 30px minmax(0,1fr); gap: 13px; align-items: start; }
+      .channel-line { width: 30px; height: 4px; margin-top: 9px; border-radius: 999px; background: var(--teal); }
+      .channel:nth-child(2) .channel-line { background: var(--blue); }
+      .channel:nth-child(3) .channel-line { background: var(--coral); }
+      .channel:nth-child(4) .channel-line { background: var(--gold); }
+      .channel strong { display:block; margin-bottom: 2px; font-size: 17px; }
+      .channel span { color: var(--muted); font-size: 13px; }
+      .chart-card { padding: 18px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); }
+      .chart-card svg { display: block; width: 100%; height: auto; overflow: visible; }
+      .chart-caption { margin: 8px 2px 0; color: var(--muted); font-size: 11px; }
+
+      .readiness-layout { display: grid; grid-template-columns: minmax(300px, 0.8fr) minmax(0, 1.2fr); gap: 34px; align-items: center; }
+      html[dir="rtl"] .readiness-layout { grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr); }
+      .readiness-image { width: 100%; max-height: 390px; border: 8px solid rgba(255,255,255,0.08); border-radius: 24px; object-fit: cover; }
+      .readiness-copy h2 { margin-bottom: 20px; color: #9fd8cb; font-size: clamp(24px, 3vw, 37px); line-height: 1.15; }
+      .readiness-callout { margin-top: 24px; padding: 16px 18px; border-radius: 14px; color: white; background: rgba(159,216,203,0.12); font-weight: 800; }
+      .validation-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 22px; }
+      .validation-card { padding: 13px 15px; border: 1px solid rgba(159,216,203,0.13); border-radius: 13px; background: rgba(255,255,255,0.06); }
+      .validation-card strong { display: block; margin-bottom: 3px; color: #9fd8cb; font-size: 17px; }
+      .validation-card span { color: #b7cec8; font-size: 11px; }
+
+      .finance-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(270px, 0.85fr); gap: 22px; align-items: start; }
+      html[dir="rtl"] .finance-layout { grid-template-columns: minmax(270px, 0.85fr) minmax(0, 1.15fr); }
+      .assumption-card { padding: 22px; border-radius: var(--radius-lg); background: var(--surface); border: 1px solid var(--line); }
+      .assumption-card h3 { margin-bottom: 14px; color: var(--teal); font-size: 22px; }
+      .assumption-card .bullet-list { gap: 10px; }
+      .assumption-card .bullet-list li { color: var(--muted); font-size: 12px; }
+      .financial-table td, .financial-table th { font-size: 12px; }
+      .financial-table td:first-child { font-weight: 750; }
+
+      .economics-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; }
+      .economics-card { padding: 18px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-2); }
+      .economics-card small { display: block; margin-bottom: 8px; color: var(--teal); font-size: 11px; font-weight: 900; }
+      .economics-card strong { display: block; margin-bottom: 5px; color: var(--ink); font-size: 25px; line-height: 1; }
+      .economics-card span { color: var(--muted); font-size: 11px; }
+      .economics-card:nth-child(2) strong, .economics-card:nth-child(5) strong { color: var(--blue); }
+      .economics-card:nth-child(3) strong, .economics-card:nth-child(6) strong { color: var(--coral); }
+      .economics-foot { margin-top: 20px; padding: 15px 18px; border-radius: 14px; color: var(--ink); background: var(--gold-2); font-size: 12px; font-weight: 800; }
+
+      .funding-layout { display: grid; grid-template-columns: minmax(250px, 0.8fr) minmax(0, 1.2fr); gap: 34px; align-items: center; }
+      html[dir="rtl"] .funding-layout { grid-template-columns: minmax(0, 1.2fr) minmax(250px, 0.8fr); }
+      .donut-wrap { display: grid; place-items: center; }
+      .donut {
+        position: relative;
+        width: min(275px, 100%);
+        aspect-ratio: 1;
+        border-radius: 50%;
+        background: conic-gradient(#236d8c 0 45%, #ef7331 45% 70%, #1b7b2c 70% 85%, #11a4d5 85% 95%, #a9299a 95% 100%);
+        box-shadow: 0 18px 40px rgba(11,37,48,0.13);
+      }
+      .donut::after { position: absolute; inset: 28%; border-radius: 50%; background: var(--surface); content: ""; }
+      .donut-label { position: absolute; z-index: 1; inset: 0; display: grid; place-items: center; color: var(--ink); font-size: 18px; font-weight: 900; }
+      .funding-list { display: grid; gap: 8px; margin-top: 18px; }
+      .funding-item { display: flex; gap: 10px; align-items: center; color: var(--muted); font-size: 12px; }
+      .funding-swatch { width: 10px; height: 10px; border-radius: 3px; background: var(--teal); }
+      .funding-item:nth-child(2) .funding-swatch { background: #ef7331; }
+      .funding-item:nth-child(3) .funding-swatch { background: #1b7b2c; }
+      .funding-item:nth-child(4) .funding-swatch { background: #11a4d5; }
+      .funding-item:nth-child(5) .funding-swatch { background: #a9299a; }
+
+      .terms-layout { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 20px; align-items: stretch; }
+      .terms-card { padding: 27px; border-radius: var(--radius-lg); }
+      .terms-card.ask { color: #edf8f3; background: var(--navy); }
+      .terms-card.return { background: var(--teal-2); }
+      .terms-card small { display: block; margin-bottom: 20px; color: #9fd8cb; font-weight: 900; }
+      .terms-card.return small { color: var(--teal); }
+      .terms-card h2 { margin-bottom: 20px; font-size: clamp(34px, 4vw, 58px); line-height: 1; }
+      .terms-card p { color: inherit; font-size: 14px; }
+      .terms-card.return p { color: var(--ink); }
+      .terms-card .bullet-list li { color: #e6f1ed; font-size: 13px; }
+      .terms-card .bullet-list li::before { color: #9fd8cb; }
+      .return-warning { margin-top: 23px; padding: 12px 14px; border-radius: 12px; color: var(--coral); background: white; font-size: 12px; font-weight: 900; }
+      .terms-footnote { margin-top: 18px; color: var(--muted); font-size: 11px; }
+
+      .risk-table td { font-size: 12px; }
+      .risk-table td:first-child { font-weight: 800; }
+      .risk-footer { margin-top: 16px; color: var(--coral); font-size: 13px; font-weight: 900; }
+      .close-shell { display: flex; flex-direction: column; justify-content: center; }
+      .close-shell .lead-statement { max-width: 980px; }
+      .milestone-row { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-top: 38px; }
+      .milestone { position: relative; padding-top: 42px; color: var(--muted); font-size: 12px; font-weight: 850; }
+      .milestone::before { position: absolute; inset-inline-start: 0; top: 15px; width: 100%; height: 3px; background: var(--teal); content: ""; }
+      .milestone::after { position: absolute; inset-inline-start: 0; top: 0; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; color: white; background: var(--teal); content: attr(data-step); font-size: 11px; }
+      .milestone:last-child::before, .milestone:last-child::after { background: var(--coral); }
+      .close-cta { margin-top: 42px; }
+
+      .bottom-controls { display: flex; align-items: center; justify-content: space-between; max-width: 1380px; margin: 16px auto 0; }
+      .bottom-controls small { color: var(--muted); font-size: 11px; }
+      .pager { display: flex; gap: 8px; }
+      .pager button { display: inline-flex; gap: 7px; align-items: center; padding: 9px 13px; border: 1px solid var(--line); border-radius: 11px; color: var(--ink); background: var(--surface); font-size: 12px; font-weight: 800; }
+      .pager button:hover { color: white; background: var(--ink); }
+      .pager svg { width: 15px; height: 15px; }
+      .mobile-nav { display: none; }
+
+      @media (max-width: 1120px) {
+        .app-shell { grid-template-columns: 230px minmax(0, 1fr); }
+        .slide-shell { padding: 32px; }
+        .cover-copy { padding: 42px; }
+        .cover-copy h2 { font-size: 28px; }
+        .moat-card:not(:last-child)::after { inset-inline-end: -21px; }
+      }
+      @media (max-width: 900px) {
+        .app-shell { display: block; }
+        .rail { position: sticky; z-index: 6; top: 0; display: block; width: 100%; height: auto; padding: 12px 16px 9px; }
+        .brand-lockup { display: inline-flex; margin: 0; }
+        .brand-lockup img { width: 38px; height: 38px; }
+        .brand-lockup strong { font-size: 14px; }
+        .brand-lockup span { font-size: 10px; }
+        .rail-label, .rail-footer { display: none; }
+        .slide-nav { display: flex; gap: 6px; margin-top: 9px; overflow-x: auto; }
+        .nav-item { flex: 0 0 auto; grid-template-columns: 23px auto; min-height: 30px; padding: 5px 8px; }
+        .nav-title { max-width: 130px; }
+        .topbar { top: 67px; min-height: 66px; padding: 12px 16px; }
+        .topbar-intro > div { display: none; }
+        .deck-stage { padding: 20px 14px 28px; }
+        .stage-meta { margin-bottom: 11px; }
+        .stage-meta .progress-track { max-width: 190px; }
+        .slide { scroll-margin-top: 146px; }
+        .slide-shell, .cover-shell { min-height: 0; }
+        .cover-grid, html[dir="rtl"] .cover-grid { grid-template-columns: 1fr; }
+        .cover-media { order: -1; min-height: 250px; max-height: 320px; }
+        .cover-copy { padding: 34px 26px 40px; }
+        .cover-copy h1 { font-size: 64px; }
+        .cover-copy h2 { font-size: 26px; }
+        .two-col, .customer-grid, .why-now-grid, .team-grid, .market-size-strip, .validation-strip, .economics-grid, .split-with-media, html[dir="rtl"] .split-with-media, .journey-layout, html[dir="rtl"] .journey-layout, .market-layout, html[dir="rtl"] .market-layout, .revenue-layout, html[dir="rtl"] .revenue-layout, .gtm-layout, html[dir="rtl"] .gtm-layout, .readiness-layout, html[dir="rtl"] .readiness-layout, .finance-layout, html[dir="rtl"] .finance-layout, .funding-layout, html[dir="rtl"] .funding-layout { grid-template-columns: 1fr; }
+        .roadmap-track { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .why-ara-grid { grid-template-columns: 1fr; }
+        .image-panel { order: -1; min-height: 270px; }
+        .image-panel img { height: 230px; }
+        .device-pair { min-height: 290px; }
+        .device img { height: 250px; }
+        .journey-layout .phone-shot { order: -1; }
+        .market-card { min-height: 280px; }
+        .moat-flow { grid-template-columns: repeat(2, minmax(0,1fr)); }
+        .moat-card:not(:last-child)::after { display: none; }
+        .milestone-row { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      }
+      @media (max-width: 560px) {
+        .topbar { align-items: flex-start; }
+        .topbar-actions { gap: 5px; }
+        .lang-toggle button { min-width: 48px; padding-inline: 7px; }
+        .icon-button { width: 33px; height: 33px; }
+        .stage-meta { gap: 8px; font-size: 10px; }
+        .stage-meta .progress-track { max-width: 120px; height: 4px; }
+        .slide-shell { padding: 23px 18px 40px; border-radius: 20px; }
+        .slide-head { margin-bottom: 24px; }
+        .slide-head h1 { font-size: 29px; }
+        .slide-head p { font-size: 13px; }
+        .lead-statement { font-size: 28px; }
+        .metric-grid { grid-template-columns: 1fr; }
+        .moat-flow { grid-template-columns: 1fr; }
+        .phase-card { min-height: 0; }
+        .phase-arrow { margin: -4px 0; transform: rotate(90deg); }
+        html[dir="rtl"] .phase-arrow { transform: rotate(90deg); }
+        .terms-layout { grid-template-columns: 1fr; }
+        .terms-card { padding: 22px; }
+        .milestone-row { grid-template-columns: 1fr; }
+        .bottom-controls { align-items: flex-start; gap: 10px; }
+        .bottom-controls small { max-width: 45%; }
+        .pager button { padding: 8px 10px; }
+        .pager button span { display: none; }
+      }
+      @media print {
+        body { background: white; }
+        .rail, .topbar, .stage-meta, .bottom-controls { display: none !important; }
+        .app-shell, .workspace, .deck-stage, .slides { display: block; padding: 0; }
+        .slide { display: block !important; page-break-after: always; break-after: page; animation: none !important; opacity: 1 !important; transform: none !important; }
+        .slide:last-child { page-break-after: auto; break-after: auto; }
+        .slide-shell, .cover-shell { min-height: 100vh; border: 0; border-radius: 0; box-shadow: none; }
+        .slide-number { bottom: 16px; }
+        .market-size-strip { margin-top: 10px; }
+        .market-size-card { padding: 9px 11px; }
+        .market-size-card small { margin-bottom: 3px; font-size: 9px; }
+        .market-size-card strong { font-size: 16px; }
+        .market-size-card span { font-size: 9px; }
+        .slide[data-key="market"] .table-note { display: none; }
+        .readiness-layout { gap: 22px; }
+        .readiness-image { max-height: 275px; }
+        .readiness-copy .slide-head { margin-bottom: 17px; }
+        .readiness-copy .bullet-list { gap: 6px; }
+        .readiness-copy .bullet-list li { font-size: 12px; }
+        .readiness-callout { margin-top: 13px; padding: 11px 14px; }
+        .validation-strip { margin-top: 12px; break-inside: avoid; page-break-inside: avoid; }
+        .validation-card { padding: 9px 11px; }
+        .validation-card strong { font-size: 15px; }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#deck">رفتن به محتوای ارائه</a>
+    <div class="app-shell">
+      <aside class="rail" aria-label="ناوبری ارائه">
+        <div class="brand-lockup">
+          <img src="../frontend/public/brand/ara-logo.png" alt="لوگوی آرا" />
+          <div>
+            <strong>آرا / Ara</strong>
+            <span id="railSubtitle">Investor pitch deck</span>
+          </div>
+        </div>
+        <p class="rail-label" id="railLabel">اسلایدها</p>
+        <nav id="slideNav" class="slide-nav" aria-label="فهرست اسلایدها"></nav>
+        <div class="rail-footer" id="railFooter">محرمانه · شهریور ۱۴۰۵</div>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div class="topbar-intro">
+            <img class="mini-logo" src="../frontend/public/brand/ara-logo.png" alt="" aria-hidden="true" />
+            <div>
+              <strong id="topbarTitle">نسخهٔ سرمایه‌گذاری آرا</strong>
+              <span id="topbarSubtitle">SaaS سالن امروز؛ Discovery محلی فردا</span>
+            </div>
+          </div>
+          <div class="topbar-actions">
+            <div class="lang-toggle" aria-label="انتخاب زبان">
+              <button type="button" data-lang="fa" class="is-active">فارسی</button>
+              <button type="button" data-lang="en">English</button>
+            </div>
+            <button type="button" class="icon-button" id="printButton" title="چاپ یا ذخیره به PDF" aria-label="چاپ یا ذخیره به PDF">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/></svg>
+            </button>
+            <button type="button" class="icon-button" id="fullscreenButton" title="تمام‌صفحه" aria-label="نمایش تمام‌صفحه">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M21 16v5h-5"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <main id="deck" class="deck-stage" tabindex="-1">
+          <div class="stage-meta">
+            <span><strong id="currentSlideLabel">۰۱</strong> <span id="ofLabel">از</span> <strong id="totalSlideLabel">۲۴</strong></span>
+            <div class="progress-track" aria-hidden="true"><div id="progressValue" class="progress-value"></div></div>
+        <span id="modeLabel">نسخهٔ سرمایه‌گذاری</span>
+          </div>
+          <div id="slides" class="slides" aria-live="polite"></div>
+          <div class="bottom-controls">
+            <small id="keyboardHint">برای جابه‌جایی از کلیدهای ← و → استفاده کنید</small>
+            <div class="pager">
+              <button type="button" id="prevButton" aria-label="اسلاید قبلی">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg><span id="prevLabel">قبلی</span>
+              </button>
+              <button type="button" id="nextButton" aria-label="اسلاید بعدی">
+                <span id="nextLabel">بعدی</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+              </button>
+            </div>
+          </div>
+        </main>
+      </section>
+    </div>
+
+    <script>
+      const T = (fa, en) => ({ fa, en });
+      const assets = {
+        logo: "../frontend/public/brand/ara-logo.png",
+        cover: { fa: "../frontend/public/images/app/business-app-iran.webp", en: "../frontend/public/images/app/customer-app-en.webp" },
+        problem: { fa: "../frontend/public/images/hero/feature-booking-hairstylist.png", en: "../frontend/public/images/hero/feature-calendar-barber.png" },
+        onboarding: "assets/onboarding-mobile.png",
+        booking: "assets/booking-mobile.png",
+        marketplace: "assets/marketplace-mobile.png",
+        profile: "assets/salon-profile-desktop.png",
+      };
+
+      const slides = [
+        {
+          key: "cover",
+          nav: T("شروع", "Start"),
+          kind: "cover",
+          kicker: T("نسخهٔ سرمایه‌گذاری · شهریور ۱۴۰۵", "Investor edition · September 2026"),
+          title: T("آرا", "Ara"),
+          headline: T("زیرساخت رزرو و رشد سالن‌های زیبایی ایران", "The booking and growth layer for Iran's beauty salons"),
+          body: T("از مدیریت سالن و رزرو مستقیم شروع می‌کنیم؛ با افزایش تراکم داده، به موتور کشف نزدیک‌ترین سالن‌ها تبدیل می‌شویم.", "Start with salon operations and direct booking. Turn supply density into local salon discovery."),
+          raise: T("هدف جذب سرمایه: ۲۰۰٬۰۰۰ دلار", "Target raise: $200,000"),
+          alt: T("نمونهٔ تجربهٔ سالن در آرا", "Ara salon experience"),
+        },
+        {
+          key: "thesis", nav: T("تز سرمایه‌گذاری", "Investment thesis"), kind: "thesis",
+          title: T("تز سرمایه‌گذاری", "Investment thesis"),
+          subtitle: T("آرا با یک wedge روشن شروع می‌کند و با داده و تراکم عرضه، ارزش شبکه‌ای می‌سازد", "Ara starts with a clear wedge and compounds value through supply density and local data"),
+          lead: T("یک SaaS واقعی برای سالن‌ها امروز؛ یک موتور کشف محلی برای مشتریان فردا.", "A working salon SaaS today. A local discovery marketplace tomorrow."),
+          cards: [
+            [T("ورود از سمت سالن", "Enter through the salon"), T("ثبت سالن، تقویم، خدمات، تیم و رزرو مستقیم؛ بدون نیاز به نصب اپ.", "Onboarding, calendar, services, team and direct booking without an app download.")],
+            [T("هر سالن یک عرضهٔ قابل رزرو", "Every salon becomes bookable supply"), T("هر مشتری، خدمت و زمان آزاد، داده‌ای می‌سازد که بعداً برای Discovery ارزش دارد.", "Each client, service and open slot creates data that later powers discovery.")],
+            [T("اختیار رشد به Marketplace", "Turn density into marketplace demand"), T("وقتی در یک محدوده عرضه کافی شد، کاربر نزدیک‌ترین سالن‌های قابل رزرو را می‌بیند.", "When a neighborhood has enough supply, users see nearby salons they can actually book.")],
+          ],
+          metrics: [[T("امروز", "Today"), T("MVP وب/PWA و مسیر ثبت سالن", "Web/PWA MVP and salon onboarding")], [T("۵۰۰", "500"), T("هدف سالن فعال در پایان سال اول", "Year-one active-salon target")], [T("۱۸ ماه", "18 mo"), T("فرض runway راند هدف", "Runway assumption for the raise")]],
+        },
+        {
+          key: "problem", nav: T("شکاف عملیاتی", "Operating gap"), kind: "problem",
+          title: T("شکاف عملیاتی بازار", "The operating gap"),
+          subtitle: T("رزرو سالن برای هر دو طرف پراکنده، دستی و کم‌قابل‌مشاهده است", "Salon booking remains fragmented, manual and hard to discover for both sides"),
+          owner: [T("برای صاحب سالن", "For the salon owner"), [T("نوبت‌ها بین تلفن، دایرکت، واتساپ و دفتر پخش می‌شوند.", "Bookings live across phone, DMs, WhatsApp and paper."), T("زمان پاسخ‌گویی و خطای رزرو، ظرفیت قابل‌فروش را کم می‌کند.", "Response time and booking errors reduce sellable capacity."), T("پیگیری مشتری و یادآوری نوبت، دستی و ناپایدار است.", "Client follow-up and reminders remain manual.")]],
+          customer: [T("برای مشتری", "For the customer"), [T("مقایسهٔ سالن‌های نزدیک بر اساس خدمت، قیمت و زمان آسان نیست.", "Comparing nearby salons by service, price and time is hard."), T("کاربر معمولاً از اینستاگرام یا معرفی شروع می‌کند، نه از نیت محلی.", "Discovery usually starts from social referrals, not local intent."), T("نوبت خالی واقعی قبل از تماس قابل‌مشاهده نیست.", "Real availability is invisible before the phone call.")]],
+          claim: T("یک جریان پراکنده، هم هزینهٔ سالن را بالا می‌برد و هم انتخاب مشتری را کند می‌کند.", "One fragmented workflow raises salon cost and slows customer choice."),
+        },
+        {
+          key: "customer", nav: T("مشتری هدف", "Target customer"), kind: "customer",
+          title: T("چه کسی پول می‌دهد و چه کسی استفاده می‌کند؟", "Who pays, who uses, who creates demand?"),
+          subtitle: T("ورود آرا از یک ICP مشخص شروع می‌شود؛ سپس هر سالن به عرضهٔ قابل‌کشف برای مشتری محلی تبدیل می‌شود.", "Ara starts with a focused ICP, then turns each salon into bookable local supply."),
+          segments: [[T("خریدار اقتصادی", "Economic buyer"), T("مالک یا مدیر سالن", "Salon owner or manager"), T("برای تقویم، رزرو، مشتری، تیم و گزارش اشتراک می‌خرد.", "Pays for calendar, bookings, clients, team and reporting.")], [T("کاربر روزانه", "Daily user"), T("مالک، منشی و اعضای تیم", "Owner, front desk and staff"), T("نوبت‌ها را مدیریت می‌کنند؛ خدمت، عضو تیم و ظرفیت را به‌روز نگه می‌دارند.", "Manage appointments and keep services, staff and capacity current.")], [T("تقاضای نهایی", "End demand"), T("مشتری محلی با نیت رزرو", "Local customer with booking intent"), T("خدمت، قیمت، امتیاز، زمان آزاد و فاصله را مقایسه می‌کند.", "Compares service, price, rating, availability and distance.")]],
+          icp: T("ICP فاز اول: سالن مستقل زیبایی زنانه در تهران، با ۲ تا ۱۰ عضو تیم و رزروهای پراکنده بین تلفن، دایرکت و پیام‌رسان.", "Phase-one ICP: an independent women’s beauty salon in Tehran, with 2–10 staff and bookings scattered across calls, DMs and messaging apps."),
+        },
+        {
+          key: "whyNow", nav: T("چرا اکنون؟", "Why now?"), kind: "whyNow",
+          title: T("چرا اکنون زمان ساخت آراست؟", "Why is now the right time for Ara?"),
+          subtitle: T("سه تغییر، پنجرهٔ ورود آرا را باز می‌کنند: پذیرش وب/PWA، نیاز عملیاتی سالن و امکان ساخت Marketplace از عرضهٔ واقعی.", "Three shifts open the window: web/PWA adoption, salon operating pain and the ability to build marketplace demand from real supply."),
+          reasons: [[T("وب و PWA اصطکاک را کم کرده‌اند", "Web and PWA reduce friction"), T("کاربر برای رزرو لازم نیست اپ نصب کند؛ لینک و QR از کانال‌های فعلی سالن وارد می‌شود.", "Customers do not need an app download; links and QR work through existing salon channels.")], [T("عملیات سالن هنوز پراکنده است", "Salon operations remain fragmented"), T("تقویم، ظرفیت، پرداخت و یادآوری در یک هسته، ارزش فوری B2B ایجاد می‌کند.", "A shared calendar, capacity, payment and reminder core creates immediate B2B value.")], [T("Marketplace باید از عرضه شروع شود", "Marketplace should start with supply"), T("با تراکم محله‌ای و زمان‌های واقعی، Discovery از روز اول با صفحهٔ خالی روبه‌رو نمی‌شود.", "With neighborhood density and real availability, discovery avoids a day-one empty marketplace.")]],
+          callout: T("سرمایه، فاصلهٔ بین MVP و evidence را پر می‌کند: سالن‌های فعال، رزرو واقعی و اولین محلهٔ قابل‌کشف.", "Capital closes the gap between MVP and evidence: active salons, real bookings and the first bookable neighborhood."),
+        },
+        {
+          key: "product", nav: T("محصول امروز", "Product today"), kind: "product",
+          title: T("محصول امروز: سیستم‌عامل سالن", "Product today: salon operating system"),
+          subtitle: T("آرا کل مسیر عملیات و رزرو را به یک هستهٔ مشترک متصل می‌کند", "Ara connects the operating workflow around the booking calendar"),
+          lead: T("سه نقطهٔ تماس، یک هستهٔ مشترک", "Three touchpoints, one shared core"),
+          bullets: [T("ثبت سالن: ورود کوتاه و مرحله‌ای برای مالک یا مدیر سالن.", "Salon onboarding: a short guided setup for the owner or manager."), T("پنل سالن: تقویم شمسی، خدمات، تیم، مشتری، اعلان، پرداخت و اشتراک.", "Salon console: Jalali calendar, services, team, clients, notifications, payments and subscription."), T("رزرو مشتری: لینک یا QR؛ انتخاب خدمت، عضو تیم، تاریخ و زمان.", "Customer booking: link or QR, then service, team member, date and time.")],
+          callout: T("مزیت ورود: مشتری بدون نصب اپ می‌تواند رزرو کند.", "Entry advantage: customers can book without installing an app."),
+        },
+        {
+          key: "sequence", nav: T("Roadmap رشد", "Growth roadmap"), kind: "sequence",
+          title: T("Roadmap رشد: اول عرضه، بعد Marketplace", "Growth roadmap: supply first, marketplace second"),
+          subtitle: T("ترتیب رشد آرا عمداً cold-start بازار دوطرفه را کنترل می‌کند", "Ara sequences growth to manage the cold start of a two-sided marketplace"),
+          phases: [[T("فاز ۱ · امروز", "Phase 1 · today"), T("رزروپذیر کردن هر سالن", "Make every salon bookable"), [T("ثبت سالن و صفحهٔ رزرو", "Salon registration and booking page"), T("لینک مستقیم و QR برای اینستاگرام و داخل سالن", "Direct link and QR for Instagram and in-salon use"), T("تقویم و دادهٔ واقعی رزرو", "Real calendar and booking data")]], [T("فاز ۲ · بعد از تراکم", "Phase 2 · after density"), T("کاربر نزدیک‌ترین سالن‌های قابل رزرو را می‌بیند", "Nearby salons users can actually book"), [T("مکان، خدمت، قیمت، امتیاز و زمان آزاد", "Location, service, price, rating and availability"), T("رتبه‌بندی بر اساس نزدیکی و رزروپذیری", "Ranking by proximity and bookability"), T("دادهٔ جست‌وجو برای رشد محلی", "Search data for local growth and promotion")]]],
+          milestones: [[T("ماه ۳", "M3"), T("۵۰ سالن فعال", "50 active salons")], [T("ماه ۶", "M6"), T("۲۰۰ سالن فعال", "200 active salons")], [T("ماه ۱۲", "M12"), T("۵۰۰ سالن فعال", "500 active salons")], [T("ماه ۱۸", "M18"), T("۱٬۰۰۰ سالن + Discovery محله‌ای", "1,000 salons + neighborhood discovery")]],
+          gate: T("دروازهٔ فعال‌سازی: ۵۰ سالن فعال در یک محدودهٔ متراکم", "Activation gate: 50 active salons in a dense area"),
+          footer: T("Discovery را فقط وقتی روشن می‌کنیم که موجودی واقعی تجربه‌ای مفید بسازد.", "We activate marketplace discovery only when real inventory can support a useful experience."),
+        },
+        {
+          key: "nearest", nav: T("نزدیک‌ترین سالن", "Nearest salon"), kind: "journey",
+          title: T("تجربهٔ انتخاب نزدیک‌ترین سالن", "The nearest-salon experience"),
+          subtitle: T("هدف Discovery: کاربر با ورود به آرا سریعاً عرضهٔ واقعی اطراف خود را ببیند", "Discovery should show real, bookable supply around the user as soon as they enter Ara"),
+          steps: [[T("ورود به آرا", "Open Ara"), T("کاربر وارد صفحهٔ رزرو یا جست‌وجو می‌شود.", "The user opens booking or search.")], [T("مکان را مشخص می‌کند", "Set location"), T("اجازهٔ مکان یا انتخاب محله و شهر.", "Location permission or area selection.")], [T("گزینه‌های نزدیک را می‌بیند", "See nearby bookable options"), T("خدمت، قیمت، امتیاز و زمان‌های آزاد در یک نگاه.", "Service, price, rating and available times in one view.")], [T("انتخاب و رزرو", "Choose and book"), T("کاربر بدون تماس تلفنی رزرو را قطعی می‌کند.", "The user books without a phone call.")]],
+          note: T("صفحهٔ Discovery فعلی عمداً تا آماده‌شدن موجودی عمومی محدود شده است.", "The current Discovery surface is intentionally gated until public inventory is ready."),
+        },
+        {
+          key: "localization", nav: T("بومی‌سازی ایران", "Iranian workflow"), kind: "table",
+          title: T("طراحی‌شده برای گردش‌کار ایران", "Built for the Iranian workflow"),
+          subtitle: T("مزیت آرا در بومی‌سازی جزئیات کوچک اما حیاتی عملیات روزمره است", "Ara localizes the small but critical details of everyday operations"),
+          headers: [T("نیاز بازار ایران", "Iran-specific need"), T("پاسخ آرا", "Ara implementation"), T("اثر تجاری", "Business effect")],
+          rows: [[T("فارسی، RTL و ارقام فارسی", "Persian, RTL and local numerals"), T("رابط RTL، فارسی و اعداد فارسی", "RTL interface and Persian numerals"), T("کاهش اصطکاک پذیرش", "Lower adoption friction")], [T("تقویم جلالی", "Jalali calendar"), T("تقویم روز، هفته و ماه شمسی", "Jalali day/week/month views"), T("هماهنگی با کار روزانهٔ سالن", "Fits salon routines")], [T("پرداخت ریالی", "Rial payments"), T("درگاه‌های ایرانی؛ زرین‌پال و IDPay", "Zarinpal and IDPay adapters"), T("قابل‌استفاده در زیرساخت محلی", "Works with local rails")], [T("یادآوری و OTP", "OTP and reminders"), T("پیامک ورود و یادآوری رزرو", "SMS login and booking reminders"), T("کاهش عدم‌حضور و تماس دستی", "Fewer no-shows and manual calls")], [T("کانال‌های محبوب", "Local distribution channels"), T("لینک، QR، تلگرام و بله", "Link, QR and messenger sharing"), T("توزیع کم‌هزینه", "Low-cost distribution")], [T("اینترنت ناپایدار و نصب‌گریزی", "Unreliable connectivity and app fatigue"), T("PWA سبک و قابل نصب", "Lightweight installable PWA"), T("شروع سریع‌تر مشتری", "Faster customer start")]],
+          note: T("بومی‌سازی هم مزیت محصول است و هم ملاحظهٔ عملیاتی؛ همین ترکیب، ورود نسخه‌های خارجی را دشوار می‌کند.", "Localization is both a product advantage and an operating constraint, which raises the bar for foreign entrants."),
+        },
+        {
+          key: "market", nav: T("بازار اولیه", "Beachhead market"), kind: "market",
+          title: T("بازار اولیه و مسیر توسعه", "Beachhead market and expansion"),
+          subtitle: T("بازار با تهران و سالن‌های زیبایی زنانه شروع می‌شود و به عمودی‌های مجاور گسترش می‌یابد", "Start with Tehran beauty salons, then expand into adjacent verticals and multi-location operators"),
+          number: T("۱۵٬۰۰۰+", "15,000+"),
+          marketNote: T("سالن فعال در تهران · برآورد کاری داخلی، نیازمند اعتبارسنجی در Due Diligence", "Active salons in Tehran · internal working estimate, to be validated in diligence"),
+          anchor: T("لنگر قیمت ماهانه: حدود ۲۹۰٬۰۰۰ تومان", "Monthly plan anchor: approximately 290,000 toman"),
+          expansion: [[T("فاز ۱", "Phase 1"), T("سالن‌های زیبایی زنانه در تهران", "Women’s beauty salons in Tehran"), T("هدف: ۵۰۰ سالن فعال در سال اول", "Target: 500 active salons in year one")], [T("فاز ۲", "Phase 2"), T("آرایشگاه مردانه، ناخن، ابرو و اسپا", "Barbers, nails, brows and spa"), T("گسترش در همان موتور عملیاتی", "Expand through the same operating core")], [T("فاز ۳", "Phase 3"), T("زنجیره‌ها و Marketplace محلی", "Chains and local marketplace"), T("دادهٔ بیشتر، Discovery بهتر، درآمد افزوده", "More data, better discovery, additional revenue")]],
+          marketSizes: [[T("TAM اشتراکی", "Subscription TAM"), T("۵۲٫۲ میلیارد تومان", "52.2B toman"), T("۱۵٬۰۰۰ سالن × ۲۹۰هزار × ۱۲ ماه", "15,000 salons × 290k × 12 months")], [T("SAM اولیه", "Initial SAM"), T("۱۰٫۴ میلیارد تومان", "10.4B toman"), T("۳٬۰۰۰ سالن هدف در تهران × قیمت سالانه", "3,000 target Tehran salons × annual price")], [T("SOM هدف ۳۶ماهه", "36-month SOM"), T("۱٫۷۴ میلیارد تومان ARR", "1.74B toman ARR"), T("۵۰۰ سالن فعال × قیمت سالانه؛ بدون Marketplace", "500 active salons × annual price; before marketplace")]],
+          note: T("این اسلاید market sizing خارجی را جعل نمی‌کند؛ عدد اولیه عمداً به‌عنوان فرضیهٔ bottom-up ارائه شده است.", "This is a bottom-up planning hypothesis, not a third-party market-size claim."),
+        },
+        {
+          key: "competition", nav: T("رقبا و اعتبارسنجی", "Global comparables"), kind: "competition",
+          title: T("رقبا و اعتبارسنجی جهانی دسته", "Global category validation"),
+          subtitle: T("مدل «نرم‌افزار عملیات + Marketplace» در بازارهای خارجی اثبات شده است؛ آرا آن را برای ایران بومی می‌کند.", "The operations-software plus marketplace model is validated abroad; Ara localizes it for Iran."),
+          headers: [T("رقیب خارجی", "Foreign comparable"), T("چه چیزی را اثبات می‌کند", "What it validates"), T("جایگاه آرا", "Ara’s position")],
+          rows: [["Fresha", "https://www.fresha.com/pricing", T("نرم‌افزار سالن + Marketplace؛ اشتراک، پرداخت و مشتری جدید", "Salon software + marketplace; subscription, payments and new clients"), T("Benchmark برای Discovery و درآمد", "Discovery and monetization benchmark")], ["Booksy", "https://biz.booksy.com/", T("رزرو، پرداخت، بازاریابی و Marketplace محلی", "Booking, payments, marketing and local marketplace"), T("Benchmark برای جست‌وجوی محلی", "Local search benchmark")], ["Treatwell", "https://www.treatwell.co.uk/partners/", T("Marketplace اروپایی + دفتر نرم‌افزاری سالن", "European marketplace + salon software diary"), T("Benchmark برای جذب سالن", "Supply acquisition benchmark")], ["Mindbody", "https://www.mindbodyonline.com/business/beauty", T("مدیریت کسب‌وکار + کشف خدمات beauty/wellness", "Business management + beauty/wellness discovery"), T("Benchmark برای توسعهٔ پلتفرم", "Platform expansion benchmark")], ["Vagaro", "https://www.vagaro.com/en-ca/pro/marketplace", T("رزرو، تقویم، پرداخت و کشف محلی", "Booking, calendar, payments + local discovery"), T("Benchmark برای یکپارچگی workflow", "Workflow integration benchmark")], ["آرا", "", T("SaaS محلی امروز؛ Marketplace پس از تراکم عرضه", "Local SaaS now; marketplace after supply density"), T("فارسی، جلالی، ریال، پیامک و توزیع QR", "Persian, Jalali, Rial, SMS and QR distribution")]],
+          note: T("رقبا comparables هستند، نه ادعای برابری در مقیاس. لینک هر رقیب به صفحهٔ رسمی محصول یا شریک آن وصل است.", "These are comparables, not claims that Ara matches their scale. Each link points to an official product or partner page."),
+        },
+        {
+          key: "localCompetition", nav: T("رقبای ایرانی", "Iranian competitors"), kind: "localCompetition",
+          title: T("رقبای ایرانی: بازار خالی نیست؛ زاویهٔ آرا متفاوت است", "Iranian competitors: the market is active, Ara’s wedge is different"),
+          subtitle: T("در ایران، بازیگران در دو سمت بازار پخش‌اند: ابزار مدیریت سالن یا کشف و رزرو مصرف‌کننده. آرا این دو را مرحله‌ای به هم وصل می‌کند.", "In Iran, players are split between salon-management software and consumer discovery. Ara connects both sides in sequence."),
+          headers: [T("رقیب ایرانی", "Iranian comparable"), T("مدل", "Model"), T("قابلیت/جایگاه اعلام‌شده", "Publicly stated position"), T("فرصت تمایز آرا", "Ara’s differentiation")],
+          rows: [
+            [T("نُکسار", "Noxar"), "https://noxar.ir/products/beauty", T("B2B SaaS تخصصی سالن", "Salon-focused B2B SaaS"), T("رزرو، تقویم شمسی، CRM، صندوق، انبار و نقش‌ها", "Booking, Jalali calendar, CRM, cash desk, inventory and roles"), T("لایهٔ تقاضای محلی و ورود سبک با لینک/QR", "Local demand layer plus lightweight link/QR entry")],
+            [T("نوبیتا", "Nobyta"), "https://www.nobyta.ir/about", T("SaaS افقی خدماتی", "Horizontal services SaaS"), T("رزرو، پرونده، پیامک، کمپین و گزارش برای چند صنف", "Booking, client files, SMS, campaigns and reports across verticals"), T("عمق workflow زیبایی + نقشهٔ رشد supply-to-demand", "Beauty workflow depth plus a supply-to-demand growth path")],
+            [T("نوبتان", "Nobatan"), "https://nobatan.com/", T("Marketplace زیبایی و کلینیک", "Beauty and clinic marketplace"), T("جست‌وجوی شهر/محله، نظر، مشاوره و رزرو آنلاین", "City/area search, reviews, consultation and online booking"), T("سیستم‌عامل سالن و موجودی زمانِ واقعاً قابل رزرو", "Salon operating system and truly bookable inventory")],
+            [T("نوبات", "Nobat"), "https://salibook.com/", T("Marketplace خدمات زیبایی", "Beauty-services marketplace"), T("کشف نزدیک، زمان خالی واقعی، یادآوری و ثبت مجموعه", "Nearby discovery, real slots, reminders and business onboarding"), T("بومی‌سازی هسته و فعال‌سازی Discovery فقط پس از تراکم", "Local operating core and density-gated discovery")],
+            [T("پاهو", "Paho"), "https://www.paho.ir/", T("دایرکتوری و lead generation", "Directory and lead generation"), T("پروفایل، نمونه‌کار، نظر، شهرها و تماس مستقیم با سالن", "Profiles, portfolio, reviews, cities and direct salon contact"), T("رزرو native، پرداخت، تقویم و دادهٔ ظرفیت", "Native booking, payments, calendar and capacity data")],
+            [T("زمانو", "Zamano"), "https://www.zamanoo.ir/", T("SaaS عمومی زمان‌بندی", "Horizontal scheduling SaaS"), T("رزرو، پرسنل، پرداخت، یادآوری و گزارش برای چند عمودی", "Booking, staff, payments, reminders and reports across verticals"), T("تمرکز عمیق بر زیبایی ایران و مسیر Marketplace محله‌ای", "Deeper beauty focus for Iran and a neighborhood-marketplace path")],
+          ],
+          note: T("مقایسه بر اساس جایگاه عمومی و قابلیت‌های اعلام‌شده در صفحات رسمی انجام شده است؛ «در منبع عمومی روشن نیست» به معنی نبود قطعی قابلیت نیست.", "Comparison is based on public positioning and stated capabilities on official pages; “not publicly clear” does not mean the feature cannot exist."),
+        },
+        {
+          key: "featureMatrix", nav: T("ماتریس فیچرها", "Feature matrix"), kind: "featureMatrix",
+          title: T("ماتریس دقیق فیچرها و جایگاه آرا", "Detailed feature matrix and Ara’s position"),
+          subtitle: T("آرا با تعداد فیچر برنده نیست؛ با ترکیب عملیات سالن، ریل‌های ایران و Discovery مرحله‌ای برنده می‌شود.", "Ara does not win by feature count; it wins by combining salon operations, Iranian rails and staged discovery."),
+          features: [T("رزرو و تقویم", "Booking & calendar"), T("صفحهٔ مستقیم", "Direct page"), T("کشف محلی", "Local discovery"), T("Rails ایران", "Iranian rails"), T("SMS / OTP", "SMS / OTP"), T("تیم و نقش", "Team & roles"), T("پرداخت / بیعانه", "Payments / deposit"), T("داده برای Demand", "Demand data")],
+          rows: [
+            { name: T("آرا", "Ara"), url: "", values: ["full", "full", "planned", "full", "full", "full", "full", "full"] },
+            { name: T("نُکسار", "Noxar"), url: "https://noxar.ir/products/beauty", values: ["full", "full", "unclear", "full", "partial", "full", "full", "unclear"] },
+            { name: T("نوبیتا", "Nobyta"), url: "https://www.nobyta.ir/about", values: ["full", "full", "unclear", "partial", "full", "partial", "partial", "unclear"] },
+            { name: T("نوبتان", "Nobatan"), url: "https://nobatan.com/", values: ["full", "partial", "full", "partial", "unclear", "partial", "unclear", "full"] },
+            { name: T("نوبات", "Nobat"), url: "https://salibook.com/", values: ["full", "partial", "full", "partial", "full", "partial", "unclear", "full"] },
+            { name: T("پاهو", "Paho"), url: "https://www.paho.ir/", values: ["partial", "partial", "full", "partial", "unclear", "unclear", "unclear", "partial"] },
+            { name: "Fresha", url: "https://www.fresha.com/pricing", values: ["full", "full", "full", "unclear", "full", "full", "full", "full"] },
+            { name: "Booksy", url: "https://biz.booksy.com/", values: ["full", "full", "full", "unclear", "full", "full", "full", "full"] },
+            { name: "Mindbody", url: "https://www.mindbodyonline.com/business/beauty", values: ["full", "full", "full", "unclear", "full", "full", "full", "full"] },
+          ],
+          why: [
+            [T("۱ · یک حلقهٔ ارزش", "1 · One value loop"), T("هر رزرو، دادهٔ ظرفیت و تقاضا برای Discovery آینده می‌سازد.", "Every booking creates capacity and demand data for future discovery.")],
+            [T("۲ · بومی از هسته", "2 · Local by design"), T("جلالی، ریال، پیامک، RTL و QR بخشی از مسیر اصلی‌اند؛ نه وصلهٔ بعدی.", "Jalali, Rial, SMS, RTL and QR are core flows, not later patches.")],
+            [T("۳ · بازار خالی نمی‌سازیم", "3 · Avoid empty-market failure"), T("Discovery با gate تراکم روشن می‌شود تا کاربر فقط گزینهٔ نزدیک و قابل رزرو ببیند.", "Discovery turns on behind a density gate so users see nearby, bookable supply.")],
+          ],
+          note: T("● کامل/اعلام‌شده · ◐ بخشی یا غیرمحوری · ↗ نقشهٔ راه آرا · — در صفحات عمومی بررسی‌شده روشن نیست. این ماتریس تحلیل positioning است، نه audit فنی رقبا.", "● Documented/core · ◐ Partial or non-core · ↗ Ara roadmap · — Not clear in reviewed public pages. This is a positioning analysis, not a technical audit."),
+        },
+        {
+          key: "moat", nav: T("مزیت محلی", "Local moat"), kind: "moat",
+          title: T("چرا آرا می‌تواند محلی برنده شود", "Why Ara can win locally"),
+          subtitle: T("مزیت دفاع‌پذیر از تعداد featureها نمی‌آید؛ از اجرای بومی و تراکم داده می‌آید", "Defensibility comes from local execution and data density, not from feature count"),
+          flow: [[T("Rails بومی", "Local rails"), T("RTL، جلالی، ریال و پیامک", "RTL, Jalali, Rial and SMS")], [T("ورود کم‌اصطکاک عرضه", "Low-friction supply entry"), T("ثبت سالن، لینک و QR", "Onboarding, link and QR")], [T("موجودی قابل رزرو", "Bookable inventory"), T("خدمت، زمان، قیمت و تیم", "Service, time, price and team")], [T("دادهٔ تقاضای محلی", "Local demand data"), T("نزدیکی، انتخاب و تکرار رزرو", "Proximity, choice and rebooking")]],
+          claim: T("دادهٔ عملیاتی به‌علاوهٔ intent محلی، با هر سالن جدید ارزشمندتر می‌شود.", "Operational data plus local intent becomes more valuable with every new salon."),
+          bullets: [T("اشتراک SaaS اقتصاد اولیه را قبل از فعال‌سازی Marketplace قابل‌کنترل می‌کند.", "Subscription SaaS makes early economics controllable before marketplace activation."), T("لینک و QR به سالن اجازه می‌دهد مشتری فعلی را از کانال‌های موجود وارد کند.", "Links and QR let salons bring existing customers from current channels."), T("Discovery نزدیک، دادهٔ محلی را به لایهٔ درآمد افزوده تبدیل می‌کند.", "Nearby discovery turns local data into an incremental revenue layer.")],
+        },
+        {
+          key: "revenue", nav: T("مدل درآمدی", "Revenue model"), kind: "revenue",
+          title: T("مدل درآمدی", "Revenue model"),
+          subtitle: T("B2B SaaS هزینهٔ ورود را تأمین می‌کند؛ Marketplace بعداً درآمد متغیر و demand را اضافه می‌کند.", "B2B SaaS funds the entry motion; marketplace adds variable demand revenue later."),
+          layers: [[T("اکنون", "Now"), T("اشتراک سالن", "Salon subscription"), T("پلن ماهانه برای تقویم، رزرو، مشتری و ابزارهای عملیات", "Monthly plan for calendar, bookings, clients and operations")], [T("بعدی", "Next"), T("افزونه و چندشعبه‌ای", "Add-ons and multi-location"), T("پیامک، پرداخت، گزارش و مدیریت زنجیره‌ای با قیمت‌گذاری بالاتر", "SMS, payments, reporting and chain management at higher tiers")], [T("بعد", "After"), T("Marketplace", "Marketplace"), T("کارمزد lead/booking برای مشتری جدید؛ فقط بعد از فعال‌شدن Discovery", "Lead or booking fee on new clients after discovery is active")]],
+          headers: [T("پلن", "Plan"), T("قیمت ماهانه", "Monthly price"), T("کاربرد", "Use case")],
+          prices: [[T("ماهانه", "Monthly"), T("≈ ۲۹۰٬۰۰۰ تومان", "≈ 290,000 toman"), T("سالن‌های کوچک", "Small salons")], [T("سه‌ماهه", "Quarterly"), T("≈ ۲۴۰٬۰۰۰ تومان", "≈ 240,000 toman"), T("تخفیف تعهد کوتاه‌تر", "Short-term discount")], [T("سالانه", "Annual"), T("≈ ۱۹۰٬۰۰۰ تومان", "≈ 190,000 toman"), T("Retention و جریان نقد", "Retention + cash flow")], [T("Marketplace", "Marketplace"), T("۸٪ تا ۱۲٪ فرضیهٔ take rate", "8%–12% take-rate hypothesis"), T("فقط demand جدید", "New demand only")]],
+          note: T("قیمت‌های اشتراک در پیاده‌سازی قابل تنظیم‌اند؛ feeهای Marketplace هنوز فرضیه‌اند.", "Subscription prices are configurable in the build; marketplace fees remain hypotheses."),
+        },
+        {
+          key: "unitEconomics", nav: T("اقتصاد واحد", "Unit economics"), kind: "unitEconomics",
+          title: T("اقتصاد واحد: گیت‌های قابل‌اندازه‌گیری", "Unit economics: measurable gates"),
+          subtitle: T("این اسلاید target model است؛ عددهای واقعی CAC، retention و margin در پایلوت‌های پولی سنجیده می‌شوند.", "This is a target model; actual CAC, retention and margin will be measured in paid pilots."),
+          metrics: [[T("ARPA مبنا", "Model ARPA"), T("$۱۲ / ماه", "$12 / month"), T("معادل نرمال‌شده؛ تبدیل نرخ ارز نیست", "Normalized planning equivalent; not FX conversion")], [T("سقف CAC", "CAC ceiling"), T("≤ $۶۰", "≤ $60"), T("هدف فروش مستقیم و referral", "Target for founder-led sales and referral")], [T("بازگشت CAC", "CAC payback"), T("≤ ۶ ماه", "≤ 6 months"), T("گیت پیش از scale کردن جذب", "Gate before scaling acquisition")], [T("حاشیهٔ ناخالص", "Gross margin"), T("≥ ۷۵٪", "≥ 75%"), T("هدف پس از هزینهٔ پرداخت و پیامک", "Target after payment and SMS costs")], [T("فعال‌سازی", "Activation"), T("≥ ۶۰٪", "≥ 60%"), T("اولین رزرو طی ۱۴ روز از ثبت سالن", "First booking within 14 days of onboarding")], [T("ماندگاری", "Retention"), T("churn < ۳٪", "churn < 3%"), T("پس از شکل‌گیری cohort ۹۰روزه", "After a 90-day cohort forms")]],
+          formula: T("منطق اقتصادی: جذب سالن ← فعال‌سازی ← اشتراک ← رزرو مجدد ← تقاضای Marketplace. همهٔ KPIها target هستند و باید در Data Room با cohort واقعی جایگزین شوند.", "Economic loop: acquire salon → activate → subscribe → rebook → marketplace demand. All KPIs are targets and must be replaced by real cohorts in the data room."),
+        },
+        {
+          key: "gtm", nav: T("Go-to-Market", "Go-to-market"), kind: "gtm",
+          title: T("Go-to-Market عرضه‌محور", "Supply-first go-to-market"),
+          subtitle: T("ابتدا در چند محله، عرضهٔ کافی و عادت رزرو می‌سازیم؛ سپس Discovery را روشن می‌کنیم.", "Build density and booking habits in focused neighborhoods before turning on discovery."),
+          channels: [[T("فروش مستقیم", "Founder-led sales"), T("دموی حضوری برای ۱۰۰ سالن تهران؛ نصب QR و آموزش کوتاه", "In-person demos for 100 Tehran salons; QR setup and short training")], [T("Referral", "Referral"), T("هر سالن معرف، یک ماه رایگان و مسیر رشد کم‌هزینه", "One free month for a referring salon")], [T("شرکای صنفی", "Trade partners"), T("مدرسان، تأمین‌کنندگان و شبکه‌های حرفه‌ای زیبایی", "Beauty educators, suppliers and professional networks")], [T("محتوا و SEO محلی", "Content and local SEO"), T("پس از تراکم؛ صفحات خدمات و محله برای جذب تقاضا", "After density; service and neighborhood pages for demand")]],
+          values: [50, 200, 500, 1000], labels: [T("ماه ۳", "M3"), T("ماه ۶", "M6"), T("ماه ۱۲", "M12"), T("ماه ۱۸", "M18")],
+          chartNote: T("هدف عملیاتی، نه عملکرد تاریخی", "Operating target, not historical performance"),
+        },
+        {
+          key: "readiness", nav: T("MVP و traction", "MVP & traction"), kind: "readiness",
+          title: T("از MVP به traction قابل‌سنجش", "From MVP to measurable traction"),
+          subtitle: T("MVP ساخته شده؛ این راند برای تبدیل آمادگی محصول به validation عملیاتی و traction تجاری است.", "The MVP is built; this round converts product readiness into operational validation and commercial traction."),
+          lead: T("MVP ساخته شده؛ validation عملیاتی مانده است.", "MVP built; operational validation remains."),
+          bullets: [T("۲۵+ صفحه، ۴۵+ کامپوننت و PWA وب فارسی", "25+ pages, 45+ components and a Persian web PWA"), T("۱۷+ سرویس دامنه برای رزرو، پرداخت، اعلان، اشتراک و تحلیل", "17+ domain services for booking, payments, notifications, subscriptions and analytics"), T("مسیر ثبت سالن در /business/register و جریان رزرو مشتری", "Salon registration at /business/register and customer booking flow"), T("آداپتر پرداخت و پیامک در کد؛ تست واقعی تولید هنوز لازم است", "Payment and SMS adapters exist in code; live production validation remains"), T("Discovery/Search ساخته شده اما برای تراکم ناکافی فعلاً محدود است", "Discovery/Search exists but is intentionally gated while supply is thin")],
+          callout: T("این‌ها شاخص آمادگی محصول‌اند، نه traction مشتری.", "These are product-readiness indicators, not customer traction."),
+          validationPlan: [[T("۱۰", "10"), T("design partner در ۹۰ روز", "design partners in 90 days")], [T("۵", "5"), T("پایلوت پولی", "paid pilots")], [T("۱۰۰", "100"), T("رزرو تجمعی در پایلوت", "cumulative pilot bookings")]],
+        },
+        {
+          key: "team", nav: T("تیم و استخدام", "Team & hiring"), kind: "team",
+          title: T("تیم و برنامهٔ تکمیل ظرفیت", "Team and capacity plan"),
+          subtitle: T("سرمایه‌گذار روی تیمی سرمایه‌گذاری می‌کند که این wedge را بهتر از دیگران اجرا می‌کند؛ این صفحه باید با هویت و سابقهٔ واقعی بنیان‌گذاران نهایی شود.", "Investors back the team that can execute this wedge; this slide must be finalized with the founders’ real identities and track records."),
+          members: [[T("بنیان‌گذار / CEO", "Founder / CEO"), T("محصول، شناخت بازار، فروش اولیه و رابطه با سرمایه‌گذار", "Product, market insight, early sales and investor relationship"), T("نام، عکس، سابقه و LinkedIn بنیان‌گذار باید اضافه شود.", "Add founder name, photo, track record and LinkedIn.")], [T("محصول و مهندسی", "Product & engineering"), T("MVP وب/PWA، معماری رزرو و مسیرهای بومی در محصول موجود است.", "Web/PWA MVP, booking architecture and local flows exist in the product."), T("مالکیت فنی، cadence تحویل و نمونه‌های shipped در Data Room ارائه شود.", "Show technical ownership, delivery cadence and shipped work in the data room.")], [T("GTM و عملیات سالن", "Salon GTM & operations"), T("نقش کلیدی برای فروش مستقیم، آموزش، فعال‌سازی و پشتیبانی ۵۰۰ سالن اول.", "Critical role for direct sales, training, activation and support for the first 500 salons."), T("استخدام/همکار عملیاتی پس از بسته‌شدن راند، بر اساس pipeline پایلوت.", "Hire or contract after close, based on the pilot pipeline.")]],
+          note: T("مورد تکمیل پیش از ارسال: نام و عنوان دقیق، عکس، LinkedIn، سهم/vesting و تفکیک مسئولیت‌ها.", "Complete before sending: names and titles, photos, LinkedIn, ownership/vesting and responsibility split."),
+        },
+        {
+          key: "financials", nav: T("برنامهٔ مالی", "Financial plan"), kind: "financials",
+          title: T("برنامهٔ مالی: سناریوی مدیریتی", "Financial plan: illustrative management case"),
+          subtitle: T("عددهای این اسلاید forecast هستند، نه نتایج تاریخی؛ فرض‌ها عمداً کنار آن‌ها آمده‌اند.", "These are forecasts, not historical results; assumptions are shown beside the numbers."),
+          headers: [T("شاخص", "Metric"), T("سال ۱", "Year 1"), T("سال ۲", "Year 2"), T("سال ۳", "Year 3")],
+          rows: [[T("سالن فعال در پایان سال", "Active salons at year end"), "۵۰۰", "۱٬۸۰۰", "۵٬۰۰۰"], [T("سالن پرداخت‌کنندهٔ متوسط", "Average paying salons"), "۳۰۰", "۱٬۲۰۰", "۳٬۲۰۰"], [T("درآمد اشتراک*", "Subscription revenue*"), "$43k", "$173k", "$461k"], [T("درآمد Marketplace*", "Marketplace revenue*"), "$0", "$33k", "$200k"], [T("درآمد کل*", "Total revenue*"), "$43k", "$206k", "$661k"], [T("EBITDA هدف*", "Target EBITDA*"), "($130k)", "($10k)", "$140k"]],
+          assumptions: [T("ARPA مدل: ۱۲ دلار معادل برای خوانایی سرمایه‌گذار؛ تبدیل نرخ ارز نیست.", "Model ARPA: $12 normalized for investor readability; not an FX conversion."), T("Marketplace take rate: نقطهٔ میانی ۱۰٪ پس از فعال‌شدن Discovery.", "Marketplace take rate: 10% midpoint after discovery activation."), T("درآمد بر مبنای ramp داخل هر سال محاسبه شده است.", "Revenue ramps within each year."), T("هیچ درآمد تاریخی در forecast وارد نشده است.", "No historical revenue is included."), T("هدف: رسیدن به cash-flow break-even در سال سوم.", "Goal: reach cash-flow break-even during Year 3.")],
+          note: T("*سناریوی پایه؛ نیازمند تست قیمت، تبدیل trial و نرخ بازگشت مشتری.", "*Base case; requires validation of pricing, trial conversion and rebooking."),
+        },
+        {
+          key: "funding", nav: T("راند ۲۰۰هزار دلاری", "$200k round"), kind: "funding",
+          title: T("راند ۲۰۰٬۰۰۰ دلاری", "$200,000 round"),
+          subtitle: T("این سرمایه برای ۱۸ ماه runway و رسیدن به milestones قابل‌اندازه‌گیری تخصیص می‌یابد.", "The round funds an 18-month runway toward measurable milestones."),
+          funds: [[T("محصول و مهندسی", "Product & engineering"), 45, "$90k"], [T("جذب سالن و رشد", "Salon acquisition & growth"), 25, "$50k"], [T("زیرساخت و عملیات", "Infrastructure & ops"), 15, "$30k"], [T("حقوقی و ذخیره", "Legal & contingency"), 10, "$20k"], [T("تحقیق و تحلیل", "Research & analytics"), 5, "$10k"]],
+          objective: T("هدف سرمایه: ۱۸ ماه runway", "Funding objective: 18-month runway"),
+        },
+        {
+          key: "terms", nav: T("ساختار سرمایه‌گذاری", "Investment terms"), kind: "terms",
+          title: T("ساختار سرمایه‌گذاری و هدف بازگشت", "Investment structure and return objective"),
+          subtitle: T("درخواست آرا باید با زبان شفاف، قابل‌بررسی و منطبق با اسناد حقوقی ارائه شود.", "The ask is framed in clear, diligence-ready and legally documentable terms."),
+          askTitle: T("درخواست راند", "Round ask"), askAmount: T("$۲۰۰٬۰۰۰", "$200,000"),
+          askBullets: [T("مرحله: Seed / early growth", "Stage: seed / early growth"), T("ابزار پیشنهادی: Preferred Equity یا Convertible Note", "Proposed instrument: preferred equity or convertible note"), T("ارزش‌گذاری و درصد مالکیت: پس از traction و Due Diligence توافق می‌شود", "Valuation and ownership: agreed after traction and diligence"), T("Runway هدف: ۱۸ ماه", "Target runway: 18 months")],
+          returnTitle: T("هدف بازگشت سرمایه", "Return objective"), returnAmount: T("سال سوم", "Year 3"),
+          returnBody: T("هدف مدیریت: بازپرداخت اصل سرمایه در سال سوم از محل جریان نقد عملیاتی یا buyback توافق‌شده، مشروط به تحقق KPIها، ذخایر نقدی و اسناد حقوقی.", "Management target: recover principal in Year 3 through operating cash flow or an agreed company/founder buyback, subject to KPI delivery, cash reserves and legal documents."),
+          warning: T("بازده تضمین‌شده نیست؛ return objective است.", "No guaranteed return; this is a return objective."),
+          footnote: T("برای equity، سرمایه‌گذار از upside، buyback یا exit منتفع می‌شود. وعدهٔ بازپرداخت قطعی باید در ساختار بدهی یا revenue-based financing مستند شود.", "For equity, investors participate through upside, buyback or exit. A fixed repayment promise belongs in a debt or revenue-based structure, not as an unsupported equity guarantee."),
+        },
+        {
+          key: "risks", nav: T("ریسک‌ها و کاهش آن‌ها", "Risks & mitigations"), kind: "risks",
+          title: T("ریسک‌ها و برنامهٔ کاهش آن‌ها", "Risks and mitigations"),
+          subtitle: T("مهم‌ترین ریسک‌های آرا شناخته شده و به milestone تبدیل شده‌اند.", "The key risks are known and converted into measurable milestones."),
+          headers: [T("ریسک", "Risk"), T("نشانهٔ هشدار", "Warning signal"), T("راهکار", "Mitigation")],
+          rows: [[T("جذب عرضه", "Supply acquisition"), T("ثبت سالن بدون استفادهٔ مستمر", "Salons register but do not stay active"), T("فروش مستقیم، آموزش، QR و referral؛ اندازه‌گیری activation و churn", "Founder-led sales, training, QR and referral; measure activation and churn")], [T("Cold start Marketplace", "Marketplace cold start"), T("جست‌وجوی خالی یا زمان‌های غیرقابل رزرو", "Empty search or unavailable times"), T("فعال‌سازی محله‌به‌محله بعد از تراکم واقعی موجودی", "Activate neighborhood by neighborhood after real inventory density")], [T("اعتماد و عدم‌حضور", "Trust and no-shows"), T("لغو، شکایت یا رزرو اشتباه", "Cancellations, complaints or booking errors"), T("تأیید هویت، review، deposit و یادآوری پیامکی", "Identity, reviews, deposits and SMS reminders")], [T("پرداخت و عملیات محلی", "Local payments and ops"), T("شکست درگاه یا SMS", "Gateway or SMS failure"), T("تست sandbox و واقعی، fallback، backup و monitoring", "Sandbox and live tests, fallback, backup and monitoring")], [T("رقابت", "Competition"), T("کپی ویژگی یا ورود پلتفرم بزرگ", "Feature copy or large-platform entry"), T("تمرکز بر workflow بومی، قیمت شفاف و دادهٔ محلی", "Win on local workflow, transparent pricing and local data")]],
+          footer: T("ریسک اصلی کسب‌وکار: جذب و فعال‌سازی سالن‌ها؛ هدف راند دقیقاً همین bottleneck را حل می‌کند.", "Primary business risk: salon acquisition and activation. The round directly funds that bottleneck."),
+        },
+        {
+          key: "close", nav: T("گام بعدی", "Next step"), kind: "close",
+          title: T("آرا یک لایهٔ رزرو محلی می‌سازد که با هر سالن، ارزشمندتر می‌شود", "Ara builds a local booking layer that gets more valuable with every salon"),
+          subtitle: T("از عملیات سالن شروع می‌کنیم؛ با تراکم داده به انتخاب اول مشتری برای نزدیک‌ترین سالن قابل رزرو تبدیل می‌شویم.", "Start with salon operations. With enough density, become the first choice for nearby, bookable salons."),
+          milestones: [T("MVP موجود", "MVP exists"), T("۵۰ سالن برای تراکم اولیه", "50 salons for initial density"), T("۵۰۰ سالن در سال اول", "500 salons in Year 1"), T("Marketplace محله‌ای", "Neighborhood marketplace")],
+          raise: T("هدف جذب سرمایه: ۲۰۰٬۰۰۰ دلار", "Target raise: $200,000"),
+          next: T("گام بعدی: جلسهٔ سرمایه‌گذاری، بررسی Data Room و اجرای پایلوت با سالن‌های منتخب.", "Next step: investment discussion, data-room review and a pilot with selected salons."),
+        },
+      ];
+
+      let state = { lang: "fa", index: 0 };
+      const $ = (selector) => document.querySelector(selector);
+      const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+      const value = (item) => (item && typeof item === "object" && Object.prototype.hasOwnProperty.call(item, state.lang)) ? item[state.lang] : (item ?? "");
+      const escapeHtml = (text) => String(text).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[char]));
+      const num = (n) => state.lang === "fa" ? String(n).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]) : String(n);
+      const image = (src, alt, className = "") => `<img class="${className}" src="${src}" alt="${escapeHtml(value(alt))}" />`;
+      const bullets = (items, className = "bullet-list") => `<ul class="${className}">${items.map((item) => `<li>${escapeHtml(value(item))}</li>`).join("")}</ul>`;
+      const header = (slide) => `<div class="slide-head"><div class="eyebrow">${escapeHtml(value(slide.nav))}</div><h1>${escapeHtml(value(slide.title))}</h1>${slide.subtitle ? `<p>${escapeHtml(value(slide.subtitle))}</p>` : ""}</div>`;
+      const frame = (slide, body, extra = "") => `<article class="slide" data-key="${slide.key}"><div class="slide-shell ${extra}">${header(slide)}${body}<span class="slide-number">${num(slides.indexOf(slide) + 1).padStart(2, state.lang === "fa" ? "۰" : "0")} / ${num(slides.length)}</span></div></article>`;
+
+      function renderTable(headers, rows, className = "") {
+        return `<div class="table-wrap"><table class="${className}"><thead><tr>${headers.map((h) => `<th>${escapeHtml(value(h))}</th>`).join("")}</tr></thead><tbody>${rows.map((row, rowIndex) => `<tr class="${rowIndex === rows.length - 1 && className.includes("competition") ? "highlight-row" : ""}">${row.map((cell) => `<td>${escapeHtml(value(cell))}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+      }
+
+      const statusMeta = {
+        full: T("قابلیت کامل یا صراحتاً اعلام‌شده", "Documented or core capability"),
+        partial: T("قابلیت بخشی یا غیرمحوری", "Partial or non-core capability"),
+        planned: T("در نقشهٔ راه آرا", "Ara roadmap capability"),
+        unclear: T("در صفحات عمومی بررسی‌شده روشن نیست", "Not clear in reviewed public pages"),
+      };
+      const statusMarks = { full: "●", partial: "◐", planned: "↗", unclear: "—" };
+      const statusCell = (code) => {
+        const safeCode = statusMeta[code] ? code : "unclear";
+        return `<span class="feature-status ${safeCode}" role="img" aria-label="${escapeHtml(value(statusMeta[safeCode]))}" title="${escapeHtml(value(statusMeta[safeCode]))}">${statusMarks[safeCode]}</span>`;
+      };
+
+      function renderSlide(slide) {
+        if (slide.kind === "cover") return `<article class="slide" data-key="${slide.key}"><div class="slide-shell cover-shell"><div class="cover-grid"><div class="cover-copy"><div class="cover-kicker">${escapeHtml(value(slide.kicker))}</div><h1>${escapeHtml(value(slide.title))}</h1><h2>${escapeHtml(value(slide.headline))}</h2><p>${escapeHtml(value(slide.body))}</p><span class="cover-badge">${escapeHtml(value(slide.raise))}</span><small class="source-line">Ara · ${state.lang === "fa" ? "محرمانه · شهریور ۱۴۰۵" : "Confidential · September 2026"}</small></div><div class="cover-media">${image(assets.cover[state.lang], slide.alt, "cover-image")}</div></div><span class="slide-number">${num(1).padStart(2, state.lang === "fa" ? "۰" : "0")} / ${num(slides.length)}</span></div></article>`;
+        if (slide.kind === "thesis") return frame(slide, `<p class="lead-statement">${escapeHtml(value(slide.lead))}</p><div class="feature-list">${slide.cards.map((card, i) => `<div class="feature-item"><span class="feature-dot">${num(i + 1)}</span><div><strong>${escapeHtml(value(card[0]))}</strong><span>${escapeHtml(value(card[1]))}</span></div></div>`).join("")}</div><div class="metric-grid">${slide.metrics.map((metric) => `<div class="metric-card"><div class="metric-value">${escapeHtml(value(metric[0]))}</div><div class="metric-label">${escapeHtml(value(metric[1]))}</div></div>`).join("")}</div>`);
+        if (slide.kind === "problem") return frame(slide, `<div class="split-with-media"><div><div class="two-col"><div class="info-card owner"><h3>${escapeHtml(value(slide.owner[0]))}</h3>${bullets(slide.owner[1])}</div><div class="info-card customer"><h3>${escapeHtml(value(slide.customer[0]))}</h3>${bullets(slide.customer[1])}</div></div><div class="callout-row"><div class="bottom-callout">${escapeHtml(value(slide.claim))}</div></div></div><div class="image-panel">${image(assets.problem[state.lang], T("تصویر مسئلهٔ رزرو سالن", "Illustrative salon booking problem"))}</div></div>`);
+        if (slide.kind === "customer") return frame(slide, `<div class="customer-grid">${slide.segments.map((segment) => `<div class="customer-card"><small>${escapeHtml(value(segment[0]))}</small><strong>${escapeHtml(value(segment[1]))}</strong><p>${escapeHtml(value(segment[2]))}</p></div>`).join("")}</div><div class="customer-icp">${escapeHtml(value(slide.icp))}</div>`);
+        if (slide.kind === "whyNow") return frame(slide, `<div class="why-now-grid">${slide.reasons.map((reason, i) => `<div class="why-now-card"><small>${num(i + 1)}</small><strong>${escapeHtml(value(reason[0]))}</strong><p>${escapeHtml(value(reason[1]))}</p></div>`).join("")}</div><div class="why-now-callout">${escapeHtml(value(slide.callout))}</div>`, "dark");
+        if (slide.kind === "product") return frame(slide, `<div class="split-with-media"><div><h2 class="lead-statement" style="font-size:clamp(25px,3vw,39px);margin-bottom:20px;">${escapeHtml(value(slide.lead))}</h2>${bullets(slide.bullets)}<div class="callout-row"><div class="bottom-callout">${escapeHtml(value(slide.callout))}</div></div></div><div class="device-pair"><div class="device">${image(assets.onboarding, T("صفحهٔ ثبت سالن", "Salon onboarding screen"))}</div><div class="device">${image(assets.booking, T("صفحهٔ رزرو مشتری", "Customer booking screen"))}</div></div></div><p class="table-note">${escapeHtml(state.lang === "fa" ? "اسکرین‌شات‌ها از نمونهٔ فعلی محصول آرا هستند." : "Screens shown are from the current Ara product build.")}</p>`);
+        if (slide.kind === "sequence") return frame(slide, `<div class="two-col">${slide.phases.map((phase) => `<div class="phase-card ${slide.phases.indexOf(phase) === 0 ? "today" : "next"}"><div class="tag">${escapeHtml(value(phase[0]))}</div><h3>${escapeHtml(value(phase[1]))}</h3>${bullets(phase[2])}</div>`).join("")}</div><div class="roadmap-track">${slide.milestones.map((milestone) => `<div class="roadmap-step"><small>${escapeHtml(value(milestone[0]))}</small><strong>${escapeHtml(value(milestone[1]))}</strong></div>`).join("")}</div><div class="phase-caption">${escapeHtml(value(slide.gate))}</div><div class="callout-row"><div class="bottom-callout">${escapeHtml(value(slide.footer))}</div></div>`);
+        if (slide.kind === "journey") return frame(slide, `<div class="journey-layout"><div class="journey-steps">${slide.steps.map((step, i) => `<div class="journey-step"><span class="step-number">${num(i + 1)}</span><div><strong>${escapeHtml(value(step[0]))}</strong><span>${escapeHtml(value(step[1]))}</span></div></div>`).join("")}</div><div><div class="phone-shot">${image(assets.marketplace, T("نمونهٔ صفحهٔ Discovery آرا", "Ara Discovery surface"))}</div><p class="phone-note">${escapeHtml(value(slide.note))}</p></div></div>`);
+        if (slide.kind === "table") return frame(slide, `${renderTable(slide.headers, slide.rows)}<p class="table-note">${escapeHtml(value(slide.note))}</p>`);
+        if (slide.kind === "market") return frame(slide, `<div class="market-layout"><div class="market-card"><small>${escapeHtml(value(T("فرضیهٔ بازار اولیه", "Beachhead hypothesis")))}</small><div class="market-number">${escapeHtml(value(slide.number))}</div><p>${escapeHtml(value(slide.marketNote))}</p><strong>${escapeHtml(value(slide.anchor))}</strong></div><div class="expansion-list">${slide.expansion.map((item) => `<div class="expansion-item"><span class="expansion-marker"></span><div><small>${escapeHtml(value(item[0]))}</small><strong>${escapeHtml(value(item[1]))}</strong><span>${escapeHtml(value(item[2]))}</span></div></div>`).join("")}</div></div><div class="market-size-strip">${slide.marketSizes.map((size) => `<div class="market-size-card"><small>${escapeHtml(value(size[0]))}</small><strong>${escapeHtml(value(size[1]))}</strong><span>${escapeHtml(value(size[2]))}</span></div>`).join("")}</div><p class="table-note">${escapeHtml(value(slide.note))}</p>`);
+        if (slide.kind === "competition") return frame(slide, `<div class="table-wrap"><table class="competition-table"><thead><tr>${slide.headers.map((h) => `<th>${escapeHtml(value(h))}</th>`).join("")}</tr></thead><tbody>${slide.rows.map((row, i) => `<tr class="${i === slide.rows.length - 1 ? "highlight-row" : ""}"><td>${row[1] ? `<a class="table-link" href="${row[1]}" target="_blank" rel="noreferrer">${escapeHtml(row[0])}</a>` : `<strong>${escapeHtml(row[0])}</strong>`}</td><td>${escapeHtml(value(row[2]))}</td><td>${escapeHtml(value(row[3]))}</td></tr>`).join("")}</tbody></table></div><p class="table-note">${escapeHtml(value(slide.note))}</p>`);
+        if (slide.kind === "localCompetition") return frame(slide, `<div class="table-wrap"><table class="local-competition-table"><thead><tr>${slide.headers.map((h) => `<th>${escapeHtml(value(h))}</th>`).join("")}</tr></thead><tbody>${slide.rows.map((row) => `<tr><td><a class="table-link" href="${row[1]}" target="_blank" rel="noreferrer">${escapeHtml(value(row[0]))}</a></td><td>${escapeHtml(value(row[2]))}</td><td>${escapeHtml(value(row[3]))}</td><td>${escapeHtml(value(row[4]))}</td></tr>`).join("")}</tbody></table></div><p class="table-note">${escapeHtml(value(slide.note))}</p>`);
+        if (slide.kind === "featureMatrix") return frame(slide, `<div class="feature-matrix-wrap"><table class="feature-matrix"><thead><tr><th>${escapeHtml(value(T("پلتفرم", "Platform")))}</th>${slide.features.map((feature) => `<th>${escapeHtml(value(feature))}</th>`).join("")}</tr></thead><tbody>${slide.rows.map((row, index) => `<tr class="${index === 0 ? "highlight-row" : ""}"><td>${row.url ? `<a class="table-link" href="${row.url}" target="_blank" rel="noreferrer">${escapeHtml(value(row.name))}</a>` : `<strong>${escapeHtml(value(row.name))}</strong>`}</td>${row.values.map((code) => `<td>${statusCell(code)}</td>`).join("")}</tr>`).join("")}</tbody></table></div><div class="matrix-legend"><span>${statusCell("full")} ${escapeHtml(value(T("کامل/اعلام‌شده", "Documented/core")))}</span><span>${statusCell("partial")} ${escapeHtml(value(T("بخشی/غیرمحوری", "Partial/non-core")))}</span><span>${statusCell("planned")} ${escapeHtml(value(T("نقشهٔ راه آرا", "Ara roadmap")))}</span><span>${statusCell("unclear")} ${escapeHtml(value(T("در منبع عمومی روشن نیست", "Not publicly clear")))}</span></div><div class="why-ara-grid">${slide.why.map((item) => `<div class="why-ara-card"><strong>${escapeHtml(value(item[0]))}</strong><span>${escapeHtml(value(item[1]))}</span></div>`).join("")}</div><p class="table-note">${escapeHtml(value(slide.note))}</p>`);
+        if (slide.kind === "moat") return frame(slide, `<div class="moat-flow">${slide.flow.map((item) => `<div class="moat-card"><h3>${escapeHtml(value(item[0]))}</h3><p>${escapeHtml(value(item[1]))}</p></div>`).join("")}</div><p class="moat-claim">${escapeHtml(value(slide.claim))}</p>${bullets(slide.bullets)}`);
+        if (slide.kind === "revenue") return frame(slide, `<div class="revenue-layout"><div><h2 class="lead-statement" style="font-size:clamp(25px,3vw,39px);margin-bottom:24px;">${escapeHtml(value(T("سه لایهٔ درآمد", "Three revenue layers")))}</h2><div class="revenue-layers">${slide.layers.map((layer) => `<div class="revenue-layer"><span class="layer-line"></span><div><small>${escapeHtml(value(layer[0]))}</small><strong>${escapeHtml(value(layer[1]))}</strong><span>${escapeHtml(value(layer[2]))}</span></div></div>`).join("")}</div></div><div><div class="table-wrap">${renderTable(slide.headers, slide.prices, "pricing-table").replace('<div class="table-wrap">','').replace('</div>','')}</div><p class="pricing-note">${escapeHtml(value(slide.note))}</p></div></div>`);
+        if (slide.kind === "gtm") return frame(slide, `<div class="gtm-layout"><div class="channel-list">${slide.channels.map((channel) => `<div class="channel"><span class="channel-line"></span><div><strong>${escapeHtml(value(channel[0]))}</strong><span>${escapeHtml(value(channel[1]))}</span></div></div>`).join("")}</div><div><div class="chart-card"><svg viewBox="0 0 620 340" role="img" aria-label="${escapeHtml(state.lang === "fa" ? "هدف سالن فعال: ۵۰، ۲۰۰، ۵۰۰ و ۱۰۰۰" : "Target active salons: 50, 200, 500 and 1000")}"><rect x="38" y="18" width="548" height="274" rx="12" fill="#fbfdfb" stroke="#d8e3de"/><g stroke="#e6efeb" stroke-width="1">${[0,1,2,3,4].map((i) => `<line x1="60" x2="568" y1="${270 - i*58}" y2="${270 - i*58}"/>`).join("")}</g><g fill="#65757d" font-size="14" text-anchor="end"><text x="53" y="276">0</text><text x="53" y="218">250</text><text x="53" y="160">500</text><text x="53" y="102">750</text><text x="53" y="44">1k</text></g><polyline points="${[50,200,500,1000].map((v,i)=>`${110+i*150},${270-(v/1000)*232}`).join(" ")}" fill="none" stroke="#0b806d" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>${[50,200,500,1000].map((v,i)=>`<circle cx="${110+i*150}" cy="${270-(v/1000)*232}" r="6" fill="#0b806d"/><text x="${110+i*150}" y="${258-(v/1000)*232}" text-anchor="middle" font-size="14" font-weight="800" fill="#0b2530">${v >= 1000 ? "1k" : v}</text><text x="${110+i*150}" y="315" text-anchor="middle" font-size="13" fill="#65757d">${escapeHtml(value(slide.labels[i]))}</text>`).join("")}</svg></div><p class="chart-caption">${escapeHtml(value(slide.chartNote))}</p></div></div>`);
+        if (slide.kind === "readiness") return `<article class="slide" data-key="${slide.key}"><div class="slide-shell dark"><div class="readiness-layout"><div class="readiness-copy">${header(slide)}${bullets(slide.bullets)}<div class="readiness-callout">${escapeHtml(value(slide.callout))}</div></div><div>${image(assets.profile, T("صفحهٔ پروفایل و رزرو سالن آرا", "Ara salon profile and booking page"), "readiness-image")}</div></div><div class="validation-strip">${slide.validationPlan.map((item) => `<div class="validation-card"><strong>${escapeHtml(value(item[0]))}</strong><span>${escapeHtml(value(item[1]))}</span></div>`).join("")}</div><span class="slide-number">${num(slides.indexOf(slide) + 1)} / ${num(slides.length)}</span></div></article>`;
+        if (slide.kind === "unitEconomics") return frame(slide, `<div class="economics-grid">${slide.metrics.map((metric) => `<div class="economics-card"><small>${escapeHtml(value(metric[0]))}</small><strong>${escapeHtml(value(metric[1]))}</strong><span>${escapeHtml(value(metric[2]))}</span></div>`).join("")}</div><div class="economics-foot">${escapeHtml(value(slide.formula))}</div>`);
+        if (slide.kind === "team") return frame(slide, `<div class="team-grid">${slide.members.map((member) => `<div class="team-card"><small>${escapeHtml(value(member[0]))}</small><h3>${escapeHtml(value(member[1]))}</h3><p>${escapeHtml(value(member[2]))}</p></div>`).join("")}</div><div class="team-note">${escapeHtml(value(slide.note))}</div>`);
+        if (slide.kind === "financials") return frame(slide, `<div class="finance-layout"><div>${renderTable(slide.headers, slide.rows, "financial-table")}<p class="table-note">${escapeHtml(value(slide.note))}</p></div><div class="assumption-card"><h3>${escapeHtml(value(T("فرض‌های مدل", "Model assumptions")))}</h3>${bullets(slide.assumptions)}</div></div>`);
+        if (slide.kind === "funding") return frame(slide, `<div class="funding-layout"><div class="donut-wrap"><div class="donut" role="img" aria-label="${escapeHtml(state.lang === "fa" ? "مصرف سرمایه: ۴۵، ۲۵، ۱۵، ۱۰ و ۵ درصد" : "Use of funds: 45, 25, 15, 10 and 5 percent")}"><span class="donut-label">$200k</span></div><div class="funding-list">${slide.funds.map((fund) => `<div class="funding-item"><span class="funding-swatch"></span><span>${escapeHtml(value(fund[0]))} · ${fund[1]}% · ${fund[2]}</span></div>`).join("")}</div></div><div><div class="table-wrap"><table class="pricing-table"><thead><tr><th>${escapeHtml(value(T("مصرف", "Use of funds")))}</th><th>${escapeHtml(value(T("سهم", "Share")))}</th><th>${escapeHtml(value(T("مبلغ", "Amount")))}</th></tr></thead><tbody>${slide.funds.map((fund) => `<tr><td>${escapeHtml(value(fund[0]))}</td><td>${fund[1]}%</td><td>${fund[2]}</td></tr>`).join("")}</tbody></table></div><div class="callout-row"><div class="bottom-callout">${escapeHtml(value(slide.objective))}</div></div></div></div>`);
+        if (slide.kind === "terms") return frame(slide, `<div class="terms-layout"><div class="terms-card ask"><small>${escapeHtml(value(slide.askTitle))}</small><h2>${escapeHtml(value(slide.askAmount))}</h2>${bullets(slide.askBullets)}</div><div class="terms-card return"><small>${escapeHtml(value(slide.returnTitle))}</small><h2>${escapeHtml(value(slide.returnAmount))}</h2><p>${escapeHtml(value(slide.returnBody))}</p><div class="return-warning">${escapeHtml(value(slide.warning))}</div></div></div><p class="terms-footnote">${escapeHtml(value(slide.footnote))}</p>`);
+        if (slide.kind === "risks") return frame(slide, `${renderTable(slide.headers, slide.rows, "risk-table")}<p class="risk-footer">${escapeHtml(value(slide.footer))}</p>`);
+        if (slide.kind === "close") return frame(slide, `<p class="lead-statement">${escapeHtml(value(slide.title))}</p><p style="max-width:850px;color:var(--muted);font-size:18px;">${escapeHtml(value(slide.subtitle))}</p><div class="milestone-row">${slide.milestones.map((milestone, i) => `<div class="milestone" data-step="${num(i + 1)}">${escapeHtml(value(milestone))}</div>`).join("")}</div><div class="close-cta"><span class="raise-badge">${escapeHtml(value(slide.raise))}</span></div><p class="source-line">${escapeHtml(value(slide.next))}</p>`);
+        return frame(slide, "");
+      }
+
+      function renderNav() {
+        $("#slideNav").innerHTML = slides.map((slide, index) => `<button type="button" class="nav-item ${index === state.index ? "is-active" : ""}" data-go="${index}" aria-label="${escapeHtml(value(slide.nav))}"><span class="nav-number">${num(index + 1).padStart(2, state.lang === "fa" ? "۰" : "0")}</span><span class="nav-title">${escapeHtml(value(slide.nav))}</span></button>`).join("");
+        $$("[data-go]").forEach((button) => button.addEventListener("click", () => showSlide(Number(button.dataset.go))));
+      }
+
+      function renderDeck() {
+        document.documentElement.lang = state.lang === "fa" ? "fa" : "en";
+        document.documentElement.dir = state.lang === "fa" ? "rtl" : "ltr";
+        $("#slides").innerHTML = slides.map(renderSlide).join("");
+        $$(".slide").forEach((slide, index) => slide.classList.toggle("is-active", index === state.index));
+        renderNav();
+        $("#totalSlideLabel").textContent = num(slides.length);
+        $("#currentSlideLabel").textContent = num(state.index + 1).padStart(2, state.lang === "fa" ? "۰" : "0");
+        $("#ofLabel").textContent = state.lang === "fa" ? "از" : "of";
+        $("#modeLabel").textContent = state.lang === "fa" ? "نسخهٔ سرمایه‌گذاری" : "Investor edition";
+        $("#railLabel").textContent = state.lang === "fa" ? "اسلایدها" : "Slides";
+        $("#railSubtitle").textContent = state.lang === "fa" ? "نسخهٔ سرمایه‌گذاری" : "Investor pitch deck";
+        $("#railFooter").textContent = state.lang === "fa" ? "محرمانه · شهریور ۱۴۰۵" : "Confidential · September 2026";
+        $("#topbarTitle").textContent = state.lang === "fa" ? "نسخهٔ سرمایه‌گذاری آرا" : "Ara investor edition";
+        $("#topbarSubtitle").textContent = state.lang === "fa" ? "SaaS سالن امروز؛ Discovery محلی فردا" : "Salon SaaS today; local discovery tomorrow";
+        $("#keyboardHint").textContent = state.lang === "fa" ? "برای جابه‌جایی از کلیدهای ← و → استفاده کنید" : "Use ← and → to navigate";
+        $("#prevLabel").textContent = state.lang === "fa" ? "قبلی" : "Previous";
+        $("#nextLabel").textContent = state.lang === "fa" ? "بعدی" : "Next";
+        $("#prevButton").setAttribute("aria-label", state.lang === "fa" ? "اسلاید قبلی" : "Previous slide");
+        $("#nextButton").setAttribute("aria-label", state.lang === "fa" ? "اسلاید بعدی" : "Next slide");
+        $$("[data-lang]").forEach((button) => button.classList.toggle("is-active", button.dataset.lang === state.lang));
+        $("#progressValue").style.width = `${((state.index + 1) / slides.length) * 100}%`;
+        document.title = state.lang === "fa" ? "آرا | Pitch Deck سرمایه‌گذاری" : "Ara | Investor Pitch Deck";
+      }
+
+      function showSlide(index) {
+        state.index = Math.max(0, Math.min(slides.length - 1, index));
+        renderDeck();
+        const active = $(".slide.is-active");
+        if (active) active.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      $$("[data-lang]").forEach((button) => button.addEventListener("click", () => { state.lang = button.dataset.lang; renderDeck(); }));
+      $("#prevButton").addEventListener("click", () => showSlide(state.index - 1));
+      $("#nextButton").addEventListener("click", () => showSlide(state.index + 1));
+      $("#printButton").addEventListener("click", () => window.print());
+      $("#fullscreenButton").addEventListener("click", async () => {
+        if (!document.fullscreenElement) await document.documentElement.requestFullscreen?.();
+        else await document.exitFullscreen?.();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) return;
+        if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") { event.preventDefault(); showSlide(state.index + 1); }
+        if (event.key === "ArrowLeft" || event.key === "PageUp") { event.preventDefault(); showSlide(state.index - 1); }
+        if (event.key === "Home") { event.preventDefault(); showSlide(0); }
+        if (event.key === "End") { event.preventDefault(); showSlide(slides.length - 1); }
+      });
+      let touchStartX = null;
+      document.addEventListener("touchstart", (event) => { touchStartX = event.changedTouches[0].clientX; }, { passive: true });
+      document.addEventListener("touchend", (event) => {
+        if (touchStartX === null) return;
+        const delta = event.changedTouches[0].clientX - touchStartX;
+        if (Math.abs(delta) > 55) showSlide(state.index + (delta < 0 ? 1 : -1));
+        touchStartX = null;
+      }, { passive: true });
+      renderDeck();
+      window.__ARA_DECK_READY__ = true;
+    </script>
+  </body>
+</html>

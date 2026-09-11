@@ -150,7 +150,7 @@ describe('OwnerShell — mobile (<lg)', () => {
     renderOwner({ role: 'Owner' });
     const main = screen.getByRole('main');
     expect(main.className).toContain(
-      'pb-[calc(var(--space-10)+var(--space-6)+env(safe-area-inset-bottom))]',
+      'pb-[calc(8rem+env(safe-area-inset-bottom))]',
     );
   });
 });
@@ -242,16 +242,15 @@ describe('ownerNavForRole (RBAC matrix)', () => {
     expect(nav.map((i) => i.to)).toEqual([
       '/owner/calendar',
       '/owner/team',
+      '/owner/services',
       '/owner/clients',
       '/owner/marketing',
       '/owner/analytics',
       '/owner/qr',
       '/owner/config',
-      '/owner/services',
       '/owner/transactions',
       '/owner/notifications',
       '/owner/subscription',
-      '/owner/my-qr',
       '/owner/profile',
     ]);
   });
@@ -265,13 +264,12 @@ describe('ownerNavForRole (RBAC matrix)', () => {
     expect(paths).toHaveLength(ownerNavForRole('Owner').length);
   });
 
-  it('limits Stylist to calendar, client book, notifications, and personal QR', () => {
+  it('limits Stylist to calendar, client book, and notifications', () => {
     const nav = ownerNavForRole('Stylist');
     expect(nav.map((i) => i.to)).toEqual([
       '/owner/calendar',
       '/owner/clients',
       '/owner/notifications',
-      '/owner/my-qr',
       '/owner/profile',
     ]);
   });

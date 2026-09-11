@@ -269,13 +269,23 @@ export class SchedulingEngine {
     const salon = salonDelegate?.findUnique
       ? ((await salonDelegate.findUnique({
           where: { id: salonId },
-          select: { timezone: true, bookingWindowDays: true, active: true, workMode: true },
-        })) as { timezone: string; bookingWindowDays: number } | null)
+          select: {
+            timezone: true,
+            bookingWindowDays: true,
+            bookingStartOffsetDays: true,
+            active: true,
+            workMode: true,
+          },
+        })) as { timezone: string; bookingWindowDays: number; bookingStartOffsetDays?: number } | null)
       : null;
     if (salon && (salon as { active?: boolean }).active === false) return [];
     if (salon) {
       const today = dateInTimeZone(new Date(), salon.timezone);
-      if (date < today || date > addIsoDays(today, salon.bookingWindowDays)) return [];
+      // `bookingStartOffsetDays=1` is the tomorrow-only policy. Keep the
+      // horizon inclusive so `bookingWindowDays=1` still means today+tomorrow
+      // when the offset is zero.
+      const bookingStartDate = addIsoDays(today, salon.bookingStartOffsetDays ?? 0);
+      if (date < bookingStartDate || date > addIsoDays(today, salon.bookingWindowDays)) return [];
     }
 
     // 1. Fetch service details. A multi-service appointment uses the same staff
@@ -735,8 +745,19 @@ export class SchedulingEngine {
     const salonPolicy = salonDelegate?.findUnique
       ? ((await salonDelegate.findUnique({
           where: { id: salonId },
-          select: { timezone: true, bookingWindowDays: true, active: true, workMode: true },
-        })) as { timezone: string; bookingWindowDays: number; workMode?: string } | null)
+          select: {
+            timezone: true,
+            bookingWindowDays: true,
+            bookingStartOffsetDays: true,
+            active: true,
+            workMode: true,
+          },
+        })) as {
+          timezone: string;
+          bookingWindowDays: number;
+          bookingStartOffsetDays?: number;
+          workMode?: string;
+        } | null)
       : null;
     if (salonPolicy && (salonPolicy as { active?: boolean }).active === false) {
       return { status: 'rejected', reason: 'no_availability' };
@@ -744,8 +765,9 @@ export class SchedulingEngine {
     if (salonPolicy) {
       const requestedDate = dateInTimeZone(new Date(startAtISO), salonPolicy.timezone);
       const today = dateInTimeZone(new Date(), salonPolicy.timezone);
+      const bookingStartDate = addIsoDays(today, salonPolicy.bookingStartOffsetDays ?? 0);
       if (
-        requestedDate < today ||
+        requestedDate < bookingStartDate ||
         requestedDate > addIsoDays(today, salonPolicy.bookingWindowDays)
       ) {
         return { status: 'rejected', reason: 'no_availability' };

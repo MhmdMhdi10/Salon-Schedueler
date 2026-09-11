@@ -63,6 +63,7 @@ function createMockPrisma() {
     chairUnavailable,
     holiday,
     salon: {
+      findUnique: jest.fn().mockResolvedValue(null),
       update: jest.fn().mockResolvedValue({}),
     },
     $transaction: jest.fn().mockImplementation(async (fn: (tx: any) => Promise<any>) => {
@@ -80,6 +81,27 @@ describe('AvailabilityConfig', () => {
   beforeEach(() => {
     prisma = createMockPrisma();
     config = new AvailabilityConfig(prisma);
+  });
+
+  describe('booking date policy', () => {
+    it('reads the booking start offset', async () => {
+      prisma.salon.findUnique.mockResolvedValue({ bookingStartOffsetDays: 1 });
+
+      await expect(config.getBookingStartOffsetDays('salon-1')).resolves.toBe(1);
+      expect(prisma.salon.findUnique).toHaveBeenCalledWith({
+        where: { id: 'salon-1' },
+        select: { bookingStartOffsetDays: true },
+      });
+    });
+
+    it('writes the booking start offset', async () => {
+      await config.setBookingStartOffsetDays('salon-1', 1);
+
+      expect(prisma.salon.update).toHaveBeenCalledWith({
+        where: { id: 'salon-1' },
+        data: { bookingStartOffsetDays: 1 },
+      });
+    });
   });
 
   describe('setWorkingHours (R4.1, R4.2)', () => {

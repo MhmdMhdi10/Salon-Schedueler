@@ -36,6 +36,8 @@ const getSalonWorkingHours = vi.fn();
 const setSalonWorkingHours = vi.fn();
 const getBookingPolicy = vi.fn();
 const setBookingPolicy = vi.fn();
+const getHolidays = vi.fn();
+const removeHoliday = vi.fn();
 const getAdminStaff = vi.fn();
 const updateStaff = vi.fn();
 const getSalonServices = vi.fn();
@@ -84,9 +86,9 @@ vi.mock('../../../api/client', () => {
       set: vi.fn().mockResolvedValue({ ok: true, brandAccent: null }),
     },
     holidaysApi: {
-      list: vi.fn().mockResolvedValue({ holidays: [] }),
+      list: (...args: unknown[]) => getHolidays(...args),
       add: vi.fn().mockResolvedValue({ holiday: {} }),
-      remove: vi.fn().mockResolvedValue({ ok: true }),
+      remove: (...args: unknown[]) => removeHoliday(...args),
     },
     workingHoursApi: {
       getSalon: (...args: unknown[]) => getSalonWorkingHours(...args),
@@ -97,9 +99,6 @@ vi.mock('../../../api/client', () => {
     bookingPolicyApi: {
       get: (...args: unknown[]) => getBookingPolicy(...args),
       set: (...args: unknown[]) => setBookingPolicy(...args),
-    },
-    emergencyScheduleApi: {
-      closeDay: vi.fn().mockResolvedValue({ ok: true, cancelledCount: 0, failedCount: 0 }),
     },
     staffApi: {
       create: vi.fn().mockResolvedValue({ staff: {} }),
@@ -161,14 +160,14 @@ function renderOwnerApp(role: OwnerRole, initialPath: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // This suite exercises routed sections, not the first-visit panel guide.
-  localStorage.setItem('ara:owner-guide:v1:Owner:11111111-1111-1111-1111-111111111111', 'done');
   getSalonWorkingHours.mockResolvedValue({
     hours: [{ weekday: 6, startTime: '09:00', endTime: '20:00' }],
   });
   setSalonWorkingHours.mockResolvedValue({ ok: true, hours: [] });
   getBookingPolicy.mockResolvedValue({ bookingWindowDays: 14 });
   setBookingPolicy.mockResolvedValue({ ok: true, bookingWindowDays: 14 });
+  getHolidays.mockResolvedValue({ holidays: [] });
+  removeHoliday.mockResolvedValue({ ok: true });
   getAdminStaff.mockResolvedValue({ staff: [] });
   updateStaff.mockResolvedValue({ staff: {} });
   getSalonServices.mockResolvedValue({ services: [] });
@@ -215,7 +214,25 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
     expect(
       within(sheet).getByRole('button', { name: 'تعطیلی‌ها و محدودیت‌ها' }),
     ).toBeInTheDocument();
-    expect(within(sheet).getByRole('button', { name: 'بستن فوری امروز' })).toBeInTheDocument();
+    expect(within(sheet).queryByRole('button', { name: 'بستن فوری امروز' })).not.toBeInTheDocument();
+  });
+
+  it('closes availability after reopening a day instead of re-adding the closure', async () => {
+    const today = new Date();
+    const onDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    getHolidays.mockResolvedValue({
+      holidays: [{ id: 'holiday-1', onDate, startTime: null, endTime: null }],
+    });
+
+    renderOwnerApp('Owner', '/owner/calendar');
+    fireEvent.click(await screen.findByTestId('owner-calendar-manage-trigger'));
+    const sheet = await screen.findByTestId('owner-calendar-action-sheet');
+    fireEvent.click(within(sheet).getByRole('button', { name: 'تعطیلی‌ها و محدودیت‌ها' }));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'باز کردن دوباره' }));
+
+    await waitFor(() => expect(removeHoliday).toHaveBeenCalledWith(expect.any(String), 'holiday-1'));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'اعمال در تقویم' })).not.toBeInTheDocument());
   });
 
   it('opens recurring weekly hours on a separate page with back navigation', async () => {
@@ -244,7 +261,18 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
         { weekday: 6, startTime: '14:00', endTime: '20:00' },
       ]),
     );
-    expect(setBookingPolicy).toHaveBeenCalledWith(expect.any(String), 14);
+    expect(setBookingPolicy).toHaveBeenCalledWith(expect.any(String), 14, undefined, 0);
+  });
+
+  it('offers a tomorrow-only booking policy', async () => {
+    renderOwnerApp('Owner', '/owner/calendar');
+    fireEvent.click(await screen.findByRole('button', { name: 'ساعات کاری هفتگی' }));
+
+    const policy = await screen.findByRole('combobox', {
+      name: 'مشتری تا چه زمانی بتواند رزرو کند؟',
+    });
+    fireEvent.click(policy);
+    expect(await screen.findByRole('option', { name: 'فقط فردا' })).toBeInTheDocument();
   });
 
   it('selects working time from scrollable hour and minute wheels', async () => {

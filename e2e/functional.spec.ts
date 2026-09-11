@@ -63,13 +63,13 @@ test.describe('owner onboarding and configuration journey', () => {
     expect(services.services.some((service) => service.name === salon.serviceName)).toBe(true);
     expect(chairs.chairs.length).toBeGreaterThanOrEqual(1);
 
-    await page.goto('/owner/config');
-    await expect(page.getByTestId('owner-config-page')).toBeVisible();
+    await page.goto('/owner/team');
+    await expect(page.getByTestId('owner-team-page')).toBeVisible();
     const stylistName = `E2E آرایشگر ${Date.now()}`;
     const stylistPhone = uniquePhone('6');
-    await page.getByLabel('نام کارمند').fill(stylistName);
+    await page.getByLabel('نام عضو تیم').fill(stylistName);
     await page.getByLabel('شماره ورود (اختیاری)').fill(stylistPhone);
-    await page.getByRole('button', { name: 'افزودن کارمند', exact: true }).click();
+    await page.getByRole('button', { name: 'افزودن عضو تیم', exact: true }).click();
     await expect(page.getByText(stylistName, { exact: true })).toBeVisible();
 
     const staffAfterCreate = await apiJson<{
@@ -136,7 +136,7 @@ test.describe('owner onboarding and configuration journey', () => {
     expect(removed.response.status()).toBe(200);
 
     await page.reload();
-    await expect(page).toHaveURL(/\/owner\/config(?:\?|$)/);
+    await expect(page).toHaveURL(/\/owner\/team(?:\?|$)/);
   });
 });
 
@@ -221,7 +221,7 @@ test.describe('RBAC and protected resource matrix', () => {
     expect(stylistAnalytics.response.status()).toBe(403);
     expect(stylistStaffWrite.response.status()).toBe(403);
     expect(adminAnalytics.response.status()).toBe(200);
-    expect(adminConfigWrite.response.status()).toBe(403);
+    expect(adminConfigWrite.response.status()).toBe(201);
 
     await restoreSession(page, stylistTokens.refreshToken, /\/owner/);
     await page.goto('/owner/analytics');
@@ -234,7 +234,7 @@ test.describe('RBAC and protected resource matrix', () => {
     await page.goto('/owner/analytics');
     await expect(page).toHaveURL(/\/owner\/analytics(?:\?|$)/);
     await page.goto('/owner/config');
-    await expect(page).toHaveURL(/\/owner\/calendar(?:\?|$)/);
+    await expect(page).toHaveURL(/\/owner\/config(?:\?|$)/);
   });
 });
 
@@ -270,10 +270,28 @@ test.describe('booking, QR, and failure-state journeys', () => {
     await page.getByRole('button', { name: 'تایید رزرو', exact: true }).click();
     await expect(page).toHaveURL(/\/auth(?:\?|$)/);
 
-    const customerPhone = uniquePhone('1');
-    await page.getByLabel('شماره موبایل').fill(customerPhone);
+    const customerPhone = uniquePhone();
+    const bookingPhone = page.getByLabel('شماره موبایل');
+    await bookingPhone.fill(customerPhone);
+    await expect(bookingPhone).toHaveValue(customerPhone);
+    // Blur commits the controlled field before the submit handler reads it.
+    await bookingPhone.press('Tab');
     await page.getByRole('button', { name: 'دریافت کد', exact: true }).click();
-    await page.getByRole('button', { name: /تایید و ورود/ }).click();
+    await expect(page).toHaveURL(/\/salon\/.*\/book\/confirm|\/booking\/success/, {
+      timeout: 15_000,
+    }).catch(async () => {
+      const otpInput = page.locator('input[aria-label*="کد تایید"]').first();
+      await expect(otpInput).toBeVisible();
+      await page.getByRole('button', { name: /تایید و ورود/ }).click();
+    });
+
+    // Browser OTP autofill can return directly to the confirm step. The first
+    // booking also asks for the customer's display name before creating it.
+    const nameInput = page.getByLabel('نام و نام خانوادگی');
+    if (await nameInput.count()) {
+      await nameInput.fill('مشتری تست');
+      await page.getByRole('button', { name: 'تایید رزرو', exact: true }).click();
+    }
     await expect(page).toHaveURL(/\/booking\/success(?:\?|$)/);
     await expect(page.locator('h1').first()).toBeVisible();
 

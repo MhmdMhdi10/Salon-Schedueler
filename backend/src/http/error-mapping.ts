@@ -4,6 +4,7 @@ import { RegistrationError } from '../registration/index.js';
 import { ValidationError } from '../catalog/validation-error.js';
 import { BookingAbuseError } from '../security/booking-abuse-guard.js';
 import { BookingConflictError } from '../app/appointment-management.js';
+import { AppointmentNotStartedError } from '../scheduling/cancellation.js';
 import { AppointmentStateError, RescheduleError } from '../scheduling/scheduling-engine.js';
 import { PlatformAdminError } from '../platform-admin/services/index.js';
 import { ReferralConflictError } from '../referral/services/index.js';
@@ -85,6 +86,10 @@ export function mapDomainError(err: unknown): MappedError {
     return { status: 409, code: 'APPOINTMENT_NOT_PENDING' };
   }
 
+  if (err instanceof AppointmentNotStartedError) {
+    return { status: 409, code: 'APPOINTMENT_NOT_STARTED' };
+  }
+
   if (err instanceof RescheduleError) {
     const status =
       err.code === 'APPOINTMENT_NOT_FOUND'
@@ -104,6 +109,8 @@ export function mapDomainError(err: unknown): MappedError {
         return { status: 401, code: 'OTP_INVALID' };
       case 'OTP_DELIVERY_FAILED':
         return { status: 502, code: 'OTP_DELIVERY_FAILED' };
+      case 'CUSTOMER_BLOCKED':
+        return { status: 403, code: 'CUSTOMER_BLOCKED' };
       case 'INVALID_TOKEN':
         return { status: 401, code: 'INVALID_TOKEN' };
       default:
@@ -123,9 +130,10 @@ export function mapDomainError(err: unknown): MappedError {
   }
 
   if (err instanceof PlatformAdminError) {
+    const stableReason = /^[A-Z][A-Z0-9_]+$/.test(err.message) ? err.message : undefined;
     return {
       status: err.code === 'NOT_FOUND' ? 404 : 409,
-      code: err.code,
+      code: stableReason ?? err.code,
     };
   }
 

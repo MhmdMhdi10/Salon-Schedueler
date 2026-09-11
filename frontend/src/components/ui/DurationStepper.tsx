@@ -65,7 +65,7 @@ export function DurationStepper({
   };
 
   return (
-    <div className={cn('flex min-w-0 flex-col gap-2', className)}>
+    <div className={cn('flex min-w-0 flex-col gap-1', className)}>
       <span className="text-xs font-medium text-text">{label}</span>
       <div
         role="group"

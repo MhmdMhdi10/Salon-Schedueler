@@ -113,15 +113,17 @@ export function AuthPage({
   const [verified, setVerified] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [audience, setAudience] = useState<'customer' | 'salon'>(() =>
-    new URLSearchParams(window.location.search).get('intent') === 'salon' ? 'salon' : 'customer',
+    new URLSearchParams(window.location.search).get('intent') === 'customer' ? 'customer' : 'salon',
   );
 
   const otpRef = useRef<OtpInputHandle | null>(null);
+  const phoneInputRef = useRef<HTMLInputElement | null>(null);
+  const phoneValueRef = useRef('');
   const redirectTimer = useRef<number | undefined>(undefined);
   const lastAccessToken = useRef('');
+  const submittedPhone = useRef('');
   const autoSubmittedCode = useRef('');
   const normalizedPhone = useMemo(() => normalizePhone(phone), [phone]);
-  const phoneIsValid = PHONE_PATTERN.test(normalizedPhone);
   const codeValue = code.join('');
   const codeIsComplete = codeValue.length === otpLength;
 
@@ -168,17 +170,6 @@ export function AuthPage({
 
   useEffect(() => () => window.clearTimeout(redirectTimer.current), []);
 
-  // Signed-in users have nothing to do here: route them to their surface
-  // instead of re-showing the login form. Suppressed while the just-verified
-  // success beat plays (its own timer performs the same navigation).
-  if (status === 'authenticated' && !verified) {
-    return hasBookingReturnIntent ? (
-      <Navigate to={returnTo!} state={{ ...returnState, autoConfirm: true }} replace />
-    ) : (
-      <Navigate to={panelPath(role)} replace />
-    );
-  }
-
   const goToDestination = () => {
     if (hasBookingReturnIntent) {
       navigate(returnTo!, { state: { ...returnState, autoConfirm: true }, replace: true });
@@ -189,11 +180,11 @@ export function AuthPage({
     }
   };
 
-  const sendOtp = async () => {
+  const sendOtp = async (phoneToUse = normalizedPhone) => {
     setLoading(true);
     setError('');
     try {
-      const response = await authApi.requestOtp(normalizedPhone);
+      const response = await authApi.requestOtp(phoneToUse);
       applyOtpResponse(response);
       setDirection(1);
       setStep('otp');
@@ -207,12 +198,18 @@ export function AuthPage({
   };
 
   const handleRequestOtp = () => {
-    if (!phoneIsValid) {
+    // Read the live control as well as React state. This closes a small race
+    // for paste/automation followed immediately by submit, where the DOM has
+    // the complete phone but a concurrent render still exposes the prior
+    // closure to the click handler.
+    const enteredPhone = normalizePhone(phoneValueRef.current || phoneInputRef.current?.value || phone);
+    if (!PHONE_PATTERN.test(enteredPhone)) {
       setPhoneError(t('auth.invalidPhone'));
       return;
     }
     setPhoneError('');
-    void sendOtp();
+    submittedPhone.current = enteredPhone;
+    void sendOtp(enteredPhone);
   };
 
   const handleResend = () => {
@@ -227,7 +224,7 @@ export function AuthPage({
     setLoading(true);
     setError('');
     try {
-      const result = await authApi.verifyOtp(normalizedPhone, codeValue);
+      const result = await authApi.verifyOtp(submittedPhone.current || normalizedPhone, codeValue);
       setAccessToken(result.accessToken);
       lastAccessToken.current = result.accessToken;
       // Resolve the app-wide session before navigating. This prevents the
@@ -275,10 +272,24 @@ export function AuthPage({
     }
   }, [codeIsComplete, codeValue, loading, step, verified]);
 
+  // Signed-in users have nothing to do here: route them to their surface
+  // instead of re-showing the login form. Keep this return after every hook so
+  // auth bootstrap can change status without changing AuthPage's hook order.
+  // Suppressed while the just-verified success beat plays (its own timer
+  // performs the same navigation).
+  if (status === 'authenticated' && !verified) {
+    return hasBookingReturnIntent ? (
+      <Navigate to={returnTo!} state={{ ...returnState, autoConfirm: true }} replace />
+    ) : (
+      <Navigate to={panelPath(role)} replace />
+    );
+  }
+
   const backToPhone = () => {
     setDirection(-1);
     setStep('phone');
     setError('');
+    submittedPhone.current = '';
     setCode(Array(otpLength).fill(''));
     autoSubmittedCode.current = '';
   };
@@ -381,6 +392,7 @@ export function AuthPage({
               >
                 <TextField
                   id="phone"
+                  ref={phoneInputRef}
                   label={t('auth.phoneLabel')}
                   helperText={t('auth.phoneHelper')}
                   error={phoneError}
@@ -393,7 +405,9 @@ export function AuthPage({
                   value={phone}
                   style={{ unicodeBidi: 'isolate' }}
                   onChange={(e) => {
-                    setPhone(filterPhoneInput(e.target.value));
+                    const nextPhone = filterPhoneInput(e.target.value);
+                    phoneValueRef.current = nextPhone;
+                    setPhone(nextPhone);
                     if (phoneError) setPhoneError('');
                   }}
                 />
@@ -418,6 +432,23 @@ export function AuthPage({
                   }}
                 />
               </p>
+              {!bookingMode && (
+                <section
+                  aria-labelledby="auth-register-salon-title"
+                  className="mt-5 rounded-xl border border-primary/25 bg-primary/5 p-3 text-center sm:p-4"
+                >
+                  <p id="auth-register-salon-title" className="m-0 text-sm text-muted">
+                    صاحب سالن هستید؟
+                  </p>
+                  <Link
+                    to="/business/register"
+                    data-testid="auth-register-salon"
+                    className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-pill bg-primary px-4 py-2 text-sm font-bold text-primary-contrast no-underline transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                  >
+                    {t('app.workspace.registerSalon')}
+                  </Link>
+                </section>
+              )}
             </motion.div>
           ) : (
             <motion.div

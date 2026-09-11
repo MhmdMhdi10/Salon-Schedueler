@@ -26,7 +26,7 @@ function isMobileClient(req: { get(name: string): string | undefined }): boolean
  *
  * - POST /auth/otp/request  { phone }            -> 200 { ok: true, otpLength, devOtp? }
  * - POST /auth/otp/verify   { phone, code }      -> 200 cookie/body tokens
- * - POST /auth/refresh      cookie/body         -> 200 access token(s)
+ * - POST /auth/refresh      cookie/body         -> 200 access token(s), 204 anonymous browser
  * - POST /auth/logout                            -> 204
  *
  * Error mapping (via mapDomainError): OTP_EXPIRED -> 401 OTP_EXPIRED;
@@ -76,7 +76,10 @@ export function authRouter(services: Services): Router {
   });
   const refreshLimit = createRateLimit({
     name: 'auth-refresh-ip',
-    max: 30,
+    // Page bootstrap can refresh once per private/public app mount during the
+    // local QA matrix. Keep the production cap at 30 while allowing the dev
+    // container to use its isolated test bucket.
+    max: devLimit('E2E_AUTH_REFRESH_IP_LIMIT', 30),
     windowMs: 60_000,
   });
 
@@ -124,15 +127,24 @@ export function authRouter(services: Services): Router {
     '/auth/refresh',
     refreshLimit,
     asyncRoute(async (req, res) => {
-      const refreshToken = isMobileClient(req)
+      const mobileClient = isMobileClient(req);
+      const refreshToken = mobileClient
         ? req.body?.refreshToken
         : readRefreshCookie(req);
       if (typeof refreshToken !== 'string' || refreshToken.trim().length === 0) {
+        // Public pages bootstrap auth too. Missing browser cookie means a
+        // normal anonymous session, not malformed user input; keep it out of
+        // the browser console as a failed data request. Native clients still
+        // receive validation feedback because they must send the token body.
+        if (!mobileClient) {
+          res.status(204).end();
+          return;
+        }
         res.status(400).json({ code: 'VALIDATION_ERROR' });
         return;
       }
       const tokens = await services.authService.refresh(refreshToken);
-      if (isMobileClient(req)) {
+      if (mobileClient) {
         res.status(200).json(tokens);
         return;
       }

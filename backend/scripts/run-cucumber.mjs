@@ -1,9 +1,13 @@
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, rmSync } from 'node:fs';
 import { execFileSync, spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 
-mkdirSync('artifacts', { recursive: true });
+const artifactsDir = join(process.cwd(), 'artifacts');
+mkdirSync(artifactsDir, { recursive: true });
+for (const file of ['cucumber-results.json', 'cucumber-report.html']) {
+  rmSync(join(artifactsDir, file), { force: true });
+}
 
 const require = createRequire(import.meta.url);
 const cucumberBin = join(

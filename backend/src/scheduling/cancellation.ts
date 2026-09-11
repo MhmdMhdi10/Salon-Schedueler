@@ -33,6 +33,14 @@ export interface CancellationDetails {
   refundDueHours?: number;
 }
 
+/** A future appointment cannot be recorded as a customer no-show. */
+export class AppointmentNotStartedError extends Error {
+  constructor() {
+    super('APPOINTMENT_NOT_STARTED');
+    this.name = 'AppointmentNotStartedError';
+  }
+}
+
 export class CancellationService {
   private readonly prisma: PrismaClient;
   private readonly paymentService: PaymentService;
@@ -205,7 +213,7 @@ export class CancellationService {
    * @param appointmentId - The ID of the appointment to mark as no-show
    * @returns The updated appointment
    */
-  async markNoShow(appointmentId: string): Promise<Appointment> {
+  async markNoShow(appointmentId: string, now: Date = new Date()): Promise<Appointment> {
     // Fetch the appointment
     const appointment = await this.prisma.appointment.findUnique({
       where: { id: appointmentId },
@@ -219,6 +227,10 @@ export class CancellationService {
       throw new Error(
         `Appointment ${appointmentId} cannot be marked as no-show: current status is '${appointment.status}', expected 'confirmed'`,
       );
+    }
+
+    if (appointment.startAt.getTime() > now.getTime()) {
+      throw new AppointmentNotStartedError();
     }
 
     // R11.4: Change status to 'no_show' — releases staff and chair

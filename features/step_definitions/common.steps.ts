@@ -221,7 +221,12 @@ When('I browse to {string}', async function (this: SalonWorld, path: string) {
 });
 
 Then('the response status should be {int}', function (this: SalonWorld, status: number) {
-  expect(this.lastResponse?.status).toBe(status);
+  const actual = this.lastResponse?.status;
+  if (actual !== status) {
+    throw new Error(
+      `Expected response status ${status}, received ${actual}: ${JSON.stringify(this.lastResponse?.body)}`,
+    );
+  }
 });
 
 Then('the response field {string} should equal {string}', function (this: SalonWorld, path: string, value: string) {

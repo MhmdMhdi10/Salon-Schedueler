@@ -360,6 +360,32 @@ export class AvailabilityConfig {
     });
   }
 
+  /** Lower bound for public booking dates; 0 = today, 1 = tomorrow. */
+  async getBookingStartOffsetDays(salonId: string): Promise<number> {
+    const salon = (await this.prisma.salon.findUnique({
+      where: { id: salonId },
+      select: { bookingStartOffsetDays: true } as never,
+    })) as unknown as { bookingStartOffsetDays: number } | null;
+    if (!salon) throw new Error('Salon not found');
+    return salon.bookingStartOffsetDays;
+  }
+
+  async setBookingStartOffsetDays(salonId: string, bookingStartOffsetDays: number): Promise<void> {
+    await this.prisma.salon.update({
+      where: { id: salonId },
+      data: { bookingStartOffsetDays } as never,
+    });
+  }
+
+  async getSalonTimezone(salonId: string): Promise<string> {
+    const salon = await this.prisma.salon.findUnique({
+      where: { id: salonId },
+      select: { timezone: true },
+    });
+    if (!salon) throw new Error('Salon not found');
+    return salon.timezone;
+  }
+
   /** Read the persisted business work mode for public booking and owner setup. */
   async getSalonWorkMode(salonId: string): Promise<string> {
     const salon = (await this.prisma.salon.findUnique({

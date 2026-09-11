@@ -113,12 +113,17 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
     publicReadLimit,
     asyncRoute(async (req, res) => {
       const bookingWindowDays = await services.availabilityConfig.getBookingWindowDays(req.params.id);
+      const bookingStartOffsetDays =
+        typeof services.availabilityConfig.getBookingStartOffsetDays === 'function'
+          ? await services.availabilityConfig.getBookingStartOffsetDays(req.params.id)
+          : 0;
       const workMode =
         typeof services.availabilityConfig.getSalonWorkMode === 'function'
           ? await services.availabilityConfig.getSalonWorkMode(req.params.id)
           : 'not_decided';
       res.status(200).json({
         bookingWindowDays,
+        bookingStartOffsetDays,
         workMode,
         locationTypes: locationTypesForWorkMode(workMode),
       });

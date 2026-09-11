@@ -22,7 +22,8 @@ for migration in \
   backend/prisma/migrations/00000000000015_referral_mvp/migration.sql \
   backend/prisma/migrations/00000000000016_solo_work_modes/migration.sql \
   backend/prisma/migrations/00000000000017_card_transfer_deposit/migration.sql \
-  backend/prisma/migrations/00000000000018_card_transfer_only/migration.sql
+  backend/prisma/migrations/00000000000018_card_transfer_only/migration.sql \
+  backend/prisma/migrations/00000000000028_booking_start_offset_days/migration.sql
 do
   psql "$cli_database_url" -v ON_ERROR_STOP=1 -f "$migration" >/dev/null
 done

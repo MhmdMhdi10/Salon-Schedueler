@@ -51,7 +51,7 @@ export const AdminServicePatchDto = AdminServiceDto.partial().passthrough();
 export const AdminServiceStaffDto = z.object({ staffIds: z.array(z.string().trim().min(1)) }).passthrough();
 export const AdminApprovalPolicyDto = z.object({ autoApprove: z.union([bool, z.literal('true'), z.literal('false')]).optional() }).passthrough();
 export const AdminOwnApprovalDto = z.object({ allowed: z.union([bool, z.literal('true'), z.literal('false')]).optional(), autoApprove: z.union([bool, z.literal('true'), z.literal('false'), z.null()]).optional() }).passthrough();
-export const AdminBookingPolicyDto = z.object({ bookingWindowDays: z.coerce.number().int().min(0).optional(), workMode: z.string().trim().min(1).optional() }).passthrough();
+export const AdminBookingPolicyDto = z.object({ bookingWindowDays: z.coerce.number().int().min(0).optional(), bookingStartOffsetDays: z.coerce.number().int().min(0).max(1).optional(), workMode: z.string().trim().min(1).optional() }).passthrough();
 export const AdminBrandAccentDto = z.object({ brandAccent: z.string().trim().max(40).nullable().optional() }).passthrough();
 export const AdminDepositSettingsDto = z
   .object({

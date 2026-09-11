@@ -309,6 +309,23 @@ describe('CancellationService', () => {
       });
     });
 
+    it('does not mark a future appointment as no-show', async () => {
+      const appt = confirmedAppointment(new Date('2024-03-15T14:00:00.000Z'));
+      const mockPrisma = createMockPrisma({
+        appointment: {
+          findUnique: jest.fn().mockResolvedValue(appt),
+          update: jest.fn(),
+        },
+      });
+      const service = new CancellationService(mockPrisma, createMockPaymentService());
+
+      await expect(
+        service.markNoShow(APPOINTMENT_ID, new Date('2024-03-15T12:00:00.000Z')),
+      ).rejects.toThrow('APPOINTMENT_NOT_STARTED');
+      expect(mockPrisma.appointment.update).not.toHaveBeenCalled();
+      expect(mockPrisma.customer.update).not.toHaveBeenCalled();
+    });
+
     it('throws if appointment not found', async () => {
       const mockPrisma = createMockPrisma();
       const mockPayment = createMockPaymentService();

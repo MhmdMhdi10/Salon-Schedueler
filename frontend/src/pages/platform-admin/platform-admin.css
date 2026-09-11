@@ -214,11 +214,12 @@
 
 .platform-admin-panel-nav__link {
   display: inline-flex;
-  min-height: var(--platform-size-40);
+  width: var(--platform-size-40);
+  height: var(--platform-size-40);
   flex-shrink: 0;
   align-items: center;
-  gap: var(--platform-size-5);
-  padding: var(--platform-size-7) var(--platform-size-10);
+  justify-content: center;
+  padding: 0;
   border: var(--platform-size-1) solid transparent;
   border-radius: var(--platform-size-10);
   color: var(--platform-text-secondary);
@@ -347,6 +348,38 @@
 .platform-admin-root .ant-tag {
   border-radius: var(--space-2);
   font-weight: 600;
+}
+
+.platform-admin-form-grid {
+  display: grid;
+  gap: var(--space-4);
+  padding-block: var(--space-2);
+}
+
+.platform-admin-form-field {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--platform-text-secondary);
+  font-size: var(--font-2xs);
+  font-weight: 700;
+}
+
+.platform-admin-form-field > .ant-input,
+.platform-admin-form-field > .ant-input-affix-wrapper,
+.platform-admin-form-field > .ant-select {
+  width: 100%;
+}
+
+.platform-admin-form-error {
+  margin: 0;
+}
+
+.platform-admin-form-note {
+  padding: var(--space-3);
+  border: var(--platform-size-1) solid var(--platform-border);
+  border-radius: var(--space-3);
+  background: var(--platform-surface-alt);
+  color: var(--platform-text-secondary);
 }
 
 .platform-admin-root .ant-input,
@@ -829,12 +862,7 @@
 
   .platform-admin-panel-nav__link {
     width: var(--platform-size-36);
-    justify-content: center;
-    padding-inline: 0;
-  }
-
-  .platform-admin-panel-nav__link span {
-    display: none;
+    height: var(--platform-size-36);
   }
 
   .platform-admin-root .platform-admin-page-header {
@@ -845,6 +873,10 @@
 
   .platform-admin-root .platform-admin-page-header .ant-btn {
     align-self: flex-start;
+  }
+
+  .platform-admin-root .platform-admin-page-header > .ant-space {
+    justify-content: flex-start;
   }
 
   .platform-admin-root .platform-admin-detail-hero {

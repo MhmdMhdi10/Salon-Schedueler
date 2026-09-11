@@ -96,10 +96,7 @@ export function OwnerTransactionsPage() {
     >
       <SeoHead title={t('owner.transactions.title', { defaultValue: 'تراکنش‌ها' })} />
 
-      <header
-        data-panel-guide="owner-transactions"
-        className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
-      >
+      <header className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <div className="min-w-0 flex flex-col gap-1">
           <h1 className="text-display text-2xl text-text sm:text-3xl">
             {t('owner.transactions.title', { defaultValue: 'تراکنش‌ها' })}

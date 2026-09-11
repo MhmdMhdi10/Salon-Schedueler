@@ -51,6 +51,11 @@ Feature: Customer booking and appointment lifecycle
   Scenario: Deposit service creates a held appointment with a payment redirect
     Given I have an isolated "fixed_salon" salon named "Cucumber Deposit"
     And I create a customer actor named "customer"
+    When I make a "PATCH" request to "/api/salons/{{salonId}}/deposit-settings" as actor "owner" with body:
+      """
+      {"depositMethod":"gateway"}
+      """
+    Then the response status should be 200
     When I make a "POST" request to "/api/salons/{{salonId}}/services" as actor "owner" with body:
       """
       {"name":"Cucumber Deposit Service","durationMinutes":30,"priceRial":900000,"requiresDeposit":true,"depositRial":100000}

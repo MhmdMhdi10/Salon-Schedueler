@@ -123,6 +123,8 @@ test.describe('public/auth/registration contract journeys', () => {
     const salon = await registerSalonViaApi(request, 'E2E Public Matrix');
     const owner = await loginWithApi(request, salon.ownerPhone);
 
+    // A person may own more than one salon; registration uniqueness is
+    // tenant-scoped, so reusing this phone creates a second salon.
     const duplicate = await apiCall(request, '/api/register/salon', {
       method: 'POST',
       data: {
@@ -131,14 +133,14 @@ test.describe('public/auth/registration contract journeys', () => {
         phone: salon.ownerPhone,
       },
     });
-    expect(duplicate.response.status()).toBe(409);
-    expect(duplicate.body).toMatchObject({ code: 'PHONE_TAKEN', field: 'phone' });
+    expect(duplicate.response.status()).toBe(201);
+    expect(duplicate.body).toMatchObject({ salonId: expect.any(String) });
 
     const taken = await apiJson<{ available: boolean }>(
       request,
       `/api/register/check-phone?phone=${salon.ownerPhone}`,
     );
-    expect(taken.available).toBe(false);
+    expect(taken.available).toBe(true);
     const free = await apiJson<{ available: boolean }>(
       request,
       `/api/register/check-phone?phone=${uniquePhone('2')}`,
@@ -166,13 +168,18 @@ test.describe('public/auth/registration contract journeys', () => {
     const refreshed = await apiCall<{ accessToken: string; refreshToken: string }>(
       request,
       '/api/auth/refresh',
-      { method: 'POST', data: { refreshToken: owner.refreshToken } },
+      {
+        method: 'POST',
+        data: { refreshToken: owner.refreshToken },
+        headers: { 'X-Auth-Client': 'mobile' },
+      },
     );
     expect(refreshed.response.status()).toBe(200);
     expect(refreshed.body.accessToken).toBeTruthy();
     const badRefresh = await apiCall(request, '/api/auth/refresh', {
       method: 'POST',
       data: { refreshToken: 'not-a-refresh-token' },
+      headers: { 'X-Auth-Client': 'mobile' },
     });
     expect(badRefresh.response.status()).toBe(401);
 
@@ -631,11 +638,11 @@ test.describe('owner configuration and tenant/RBAC journeys', () => {
       (
         await apiCall(request, `/api/salons/${salon.salonId}/services`, {
           method: 'POST',
-          data: { name: 'Admin must not write' },
+          data: { name: 'Admin can write' },
           token: admin.auth.accessToken,
         })
       ).response.status(),
-    ).toBe(403);
+    ).toBe(201);
     expect(
       (
         await apiCall(request, `/api/salons/${salon.salonId}/analytics?from=2026-01-01&to=2026-01-31`, {
@@ -779,6 +786,11 @@ test.describe('booking state machine journeys', () => {
       customer.accessToken,
       stylist.staff.id,
     );
+    await apiJson(request, `/api/staff/${stylist.staff.id}/approve-own`, {
+      method: 'POST',
+      data: { allowed: true },
+      token: owner,
+    });
     const approvedByStylist = await apiJson<{ status: string }>(
       request,
       `/api/appointments/${second.appointment.id}/approve`,
@@ -811,13 +823,32 @@ test.describe('booking state machine journeys', () => {
     });
     expect(depositService.service.requiresDeposit).toBe(true);
     expect(depositService.service.depositRial).toBe(100000);
+    await apiJson(request, `/api/salons/${salon.salonId}/deposit-settings`, {
+      method: 'PATCH',
+      data: {
+        depositMethod: 'card_transfer',
+        depositCardNumber: '6037991234567890',
+        depositCardHolder: 'Booking Matrix Owner',
+        depositBankName: 'بانک تست',
+      },
+      token: owner,
+    });
     const heldSlot = await nextSlot(
       request,
       salon.salonId,
       depositService.service.id,
       isoDateFromToday(5),
     );
-    const held = await apiCall<{ status: string; appointment: Appointment; paymentRedirectUrl: string }>(
+    const held = await apiCall<{
+      status: string;
+      appointment: Appointment;
+      deposit: {
+        method: string;
+        amountRial: number;
+        cardNumber?: string;
+        cardHolder?: string;
+      };
+    }>(
       request,
       '/api/appointments',
       {
@@ -832,7 +863,12 @@ test.describe('booking state machine journeys', () => {
     );
     expect(held.response.status()).toBe(200);
     expect(held.body.status).toBe('held');
-    expect(held.body.paymentRedirectUrl).toContain('/api/payments/callback');
+    expect(held.body.deposit).toMatchObject({
+      method: 'card_transfer',
+      amountRial: 100000,
+      cardNumber: '6037991234567890',
+      cardHolder: 'Booking Matrix Owner',
+    });
     const wrongDepositOwner = await apiCall(request, '/api/payments/initiate', {
       method: 'POST',
       data: { appointmentId: held.body.appointment.id },
@@ -912,12 +948,13 @@ test.describe('booking state machine journeys', () => {
       method: 'POST',
       token: owner,
     });
-    const noShow = await apiJson<{ status: string }>(
+    const futureNoShow = await apiCall<{ code: string }>(
       request,
       `/api/appointments/${fifth.appointment.id}/no-show`,
       { method: 'POST', token: owner },
     );
-    expect(noShow.status).toBe('no_show');
+    expect(futureNoShow.response.status()).toBe(409);
+    expect(futureNoShow.body.code).toBe('APPOINTMENT_NOT_STARTED');
 
     await apiJson(request, `/api/salons/${salon.salonId}/auto-approve`, {
       method: 'POST',
@@ -977,9 +1014,7 @@ test.describe('subscription, QR, card order, and transaction journeys', () => {
       '/api/subscription/plans',
       { token: owner },
     );
-    expect(plans.plans.map((plan) => plan.kind)).toEqual(
-      expect.arrayContaining(['trial', 'monthly', 'quarterly', 'annual']),
-    );
+    expect(plans.plans.map((plan) => plan.kind)).toEqual(['monthly', 'quarterly']);
     const trial = await apiJson<{ status: string; planKind: string }>(
       request,
       `/api/salons/${salon.salonId}/subscription`,
@@ -1072,10 +1107,13 @@ test.describe('subscription, QR, card order, and transaction journeys', () => {
     const orderPayload = {
       template: 'card',
       accent: 'rose',
-      quantity: 10,
+      quantity: 50,
       contactName: 'Premium Owner',
       phone: salon.ownerPhone,
+      province: 'تهران',
+      city: 'تهران',
       address: 'تهران، خیابان تست',
+      postalCode: '1234567890',
     };
     const order = await apiJson<{ orderId: string; status: string }>(
       request,
@@ -1218,8 +1256,10 @@ test.describe('inbox, device, webhook, and protected failure journeys', () => {
     const missingPaymentCallback = await apiCall(request, '/api/payments/callback', {
       method: 'POST',
       data: { status: 'OK' },
+      maxRedirects: 0,
     });
-    expect(missingPaymentCallback.response.status()).toBe(400);
+    expect(missingPaymentCallback.response.status()).toBe(302);
+    expect(missingPaymentCallback.response.headers().location).toContain('payment=failed');
     const unauthenticatedPayment = await apiCall(request, '/api/payments/initiate', {
       method: 'POST',
       data: { appointmentId: booking.appointment.id },

@@ -24,11 +24,16 @@ import {
 } from '../api/client';
 import { usePagination } from '../hooks/usePagination';
 import { SeoHead } from '../components/seo';
+import { CUSTOMER_NOTIFICATIONS_CHANGED, announceCustomerNotificationsChanged } from '../utils/customerNotifications';
 import { WorkspaceSwitcher } from '../components/layout/WorkspaceSwitcher';
 import {
   Badge,
   Button,
   Card,
+  Dialog,
+  DialogDescription,
+  DialogContent,
+  DialogTitle,
   EmptyState,
   ErrorState,
   JalaliDate,
@@ -76,6 +81,13 @@ interface SalonSummary {
   staffId?: string;
   staffName?: string;
   lastVisitAt?: string;
+}
+
+interface CustomerConfirmationRequest {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  onConfirm: () => Promise<void>;
 }
 
 function dateKey(date: Date): string {
@@ -187,6 +199,8 @@ function rescheduleErrorMessage(error: unknown): string {
       return 'ابتدا پیشنهاد تغییر زمان سالن را تأیید یا رد کن.';
     case 'RESCHEDULE_PROPOSAL_NOT_FOUND':
       return 'این پیشنهاد قبلاً پاسخ داده شده است؛ نوبت‌ها را تازه‌سازی کن.';
+    case 'APPOINTMENT_NOT_MOVABLE':
+      return 'این نوبت دیگر فعال نیست و امکان پذیرش تغییر زمان ندارد.';
     case 'RESCHEDULE_CONFLICT':
     case 'BOOKING_SLOT_UNAVAILABLE':
       return 'زمان انتخاب‌شده دیگر آزاد نیست؛ زمان دیگری را انتخاب کن.';
@@ -655,9 +669,12 @@ export function CustomerDashboardPage() {
   const [selectedDate, setSelectedDate] = useState(() => dateKey(new Date()));
   const [actionBusyId, setActionBusyId] = useState<string | null>(null);
   const [waitlistBusyId, setWaitlistBusyId] = useState<string | null>(null);
+  const [pendingConfirmation, setPendingConfirmation] = useState<CustomerConfirmationRequest | null>(null);
+  const [confirmationBusy, setConfirmationBusy] = useState(false);
   const [rescheduleId, setRescheduleId] = useState<string | null>(null);
   const [rescheduleReviewId, setRescheduleReviewId] = useState<string | null>(null);
   const [rescheduleValue, setRescheduleValue] = useState('');
+  const [rescheduleConfirm, setRescheduleConfirm] = useState<CustomerAppointment | null>(null);
   const [actionError, setActionError] = useState('');
   const [profileStatus, setProfileStatus] = useState<'idle' | 'loading' | 'needs-name' | 'ready'>('idle');
   const [profileName, setProfileName] = useState('');
@@ -732,7 +749,6 @@ export function CustomerDashboardPage() {
 
   const cancelAppointment = useCallback(
     async (appointment: CustomerAppointment) => {
-      if (!window.confirm('این نوبت لغو شود؟')) return;
       setActionBusyId(appointment.id);
       setActionError('');
       try {
@@ -745,6 +761,19 @@ export function CustomerDashboardPage() {
       }
     },
     [loadAppointments],
+  );
+
+  const requestCancelAppointment = useCallback(
+    (appointment: CustomerAppointment) => {
+      setActionError('');
+      setPendingConfirmation({
+        title: 'لغو نوبت',
+        description: `نوبت «${appointment.serviceName ?? 'خدمات زیبایی'}» در «${appointment.salonName ?? 'سالن'}» لغو شود؟`,
+        confirmLabel: 'لغو نوبت',
+        onConfirm: () => cancelAppointment(appointment),
+      });
+    },
+    [cancelAppointment],
   );
 
   const saveReschedule = useCallback(
@@ -774,21 +803,16 @@ export function CustomerDashboardPage() {
 
   const acceptReschedule = useCallback(
     async (appointment: CustomerAppointment) => {
-      if (!appointment.pendingReschedule?.startAt) return;
-      if (
-        !window.confirm(
-          'تغییر زمان پیشنهادی سالن تأیید شود؟ زمان نوبت به زمان جدید منتقل می‌شود.',
-        )
-      ) {
-        return;
-      }
+      if (!appointment.pendingReschedule?.startAt) return false;
       setActionBusyId(appointment.id);
       setActionError('');
       try {
         await customerApi.acceptReschedule(appointment.id);
         await loadAppointments();
+        return true;
       } catch (error) {
         setActionError(rescheduleErrorMessage(error));
+        return false;
       } finally {
         setActionBusyId(null);
       }
@@ -796,10 +820,15 @@ export function CustomerDashboardPage() {
     [loadAppointments],
   );
 
+  const confirmAcceptReschedule = useCallback(async () => {
+    if (!rescheduleConfirm) return;
+    const accepted = await acceptReschedule(rescheduleConfirm);
+    if (accepted) setRescheduleConfirm(null);
+  }, [acceptReschedule, rescheduleConfirm]);
+
   const rejectReschedule = useCallback(
     async (appointment: CustomerAppointment) => {
       if (!appointment.pendingReschedule?.startAt) return;
-      if (!window.confirm('پیشنهاد تغییر زمان رد شود؟ نوبت در زمان فعلی می‌ماند.')) return;
       setActionBusyId(appointment.id);
       setActionError('');
       try {
@@ -814,9 +843,21 @@ export function CustomerDashboardPage() {
     [loadAppointments],
   );
 
+  const requestRejectReschedule = useCallback(
+    (appointment: CustomerAppointment) => {
+      setActionError('');
+      setPendingConfirmation({
+        title: 'رد پیشنهاد تغییر زمان',
+        description: 'پیشنهاد تغییر زمان رد شود؟ نوبت در زمان فعلی می‌ماند.',
+        confirmLabel: 'رد پیشنهاد',
+        onConfirm: () => rejectReschedule(appointment),
+      });
+    },
+    [rejectReschedule],
+  );
+
   const cancelWaitlist = useCallback(
     async (entry: CustomerWaitlistEntry) => {
-      if (!window.confirm('از لیست انتظار خارج شوی؟')) return;
       setWaitlistBusyId(entry.id);
       setActionError('');
       try {
@@ -831,6 +872,30 @@ export function CustomerDashboardPage() {
     [loadWaitlist],
   );
 
+  const requestCancelWaitlist = useCallback(
+    (entry: CustomerWaitlistEntry) => {
+      setActionError('');
+      setPendingConfirmation({
+        title: 'خروج از لیست انتظار',
+        description: 'از لیست انتظار خارج شوی؟',
+        confirmLabel: 'خروج از صف',
+        onConfirm: () => cancelWaitlist(entry),
+      });
+    },
+    [cancelWaitlist],
+  );
+
+  const confirmPendingAction = useCallback(async () => {
+    if (!pendingConfirmation) return;
+    setConfirmationBusy(true);
+    try {
+      await pendingConfirmation.onConfirm();
+      setPendingConfirmation(null);
+    } finally {
+      setConfirmationBusy(false);
+    }
+  }, [pendingConfirmation]);
+
   useEffect(() => {
     if (isCustomer) {
       void loadAppointments();
@@ -839,6 +904,12 @@ export function CustomerDashboardPage() {
       void loadNotifications();
     }
   }, [isCustomer, loadAppointments, loadNotifications, loadProfile, loadWaitlist]);
+
+  useEffect(() => {
+    const refreshNotifications = () => void loadNotifications();
+    window.addEventListener(CUSTOMER_NOTIFICATIONS_CHANGED, refreshNotifications);
+    return () => window.removeEventListener(CUSTOMER_NOTIFICATIONS_CHANGED, refreshNotifications);
+  }, [loadNotifications]);
 
   useEffect(() => {
     const refreshSaved = () => setSavedSalons(readSavedSalons());
@@ -941,6 +1012,11 @@ export function CustomerDashboardPage() {
     setMonthAnchor(next);
     setSelectedDate(dateKey(next));
   };
+  const confirmCurrentStart = rescheduleConfirm ? parseDate(rescheduleConfirm.startAt) : null;
+  const confirmNextStart = rescheduleConfirm
+    ? parseDate(rescheduleConfirm.pendingReschedule?.startAt)
+    : null;
+  const confirmBusy = Boolean(rescheduleConfirm && actionBusyId === rescheduleConfirm.id);
 
   return (
     <div className="min-w-0 overflow-x-clip bg-bg text-text" data-testid="customer-dashboard-page">
@@ -968,7 +1044,6 @@ export function CustomerDashboardPage() {
         <Card
           as="section"
           data-testid="customer-workspace-card"
-          data-panel-guide="customer-workspace"
           className="border-primary/20 bg-primary/[0.04]"
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1002,8 +1077,114 @@ export function CustomerDashboardPage() {
           </p>
         )}
 
+        <Dialog
+          open={Boolean(pendingConfirmation)}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen && !confirmationBusy) setPendingConfirmation(null);
+          }}
+        >
+          <DialogContent
+            role="alertdialog"
+            data-testid="customer-confirm-dialog"
+            closeLabel="انصراف"
+            className="!max-w-sm !rounded-2xl !p-5"
+          >
+            <DialogTitle className="!text-lg !font-bold">
+              {pendingConfirmation?.title}
+            </DialogTitle>
+            <DialogDescription className="!mt-2 leading-6">
+              {pendingConfirmation?.description}
+            </DialogDescription>
+            <div className="mt-5 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={confirmationBusy}
+                onClick={() => setPendingConfirmation(null)}
+              >
+                انصراف
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                loading={confirmationBusy}
+                disabled={confirmationBusy || !pendingConfirmation}
+                onClick={() => void confirmPendingAction()}
+              >
+                {pendingConfirmation?.confirmLabel ?? 'تأیید'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={Boolean(rescheduleConfirm)}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen && !confirmBusy) setRescheduleConfirm(null);
+          }}
+        >
+          <DialogContent
+            role="alertdialog"
+            closeLabel="بستن تأیید تغییر زمان"
+            className="!max-w-md !rounded-2xl !p-5"
+          >
+            <DialogTitle className="!text-lg !font-bold">تأیید تغییر زمان نوبت</DialogTitle>
+            <DialogDescription className="!mt-2 leading-6">
+              سالن برای این نوبت زمان جدید پیشنهاد داده است. با تأیید، زمان فعلی نوبت جابه‌جا می‌شود.
+            </DialogDescription>
+            {rescheduleConfirm && (
+              <div className="mt-4 flex flex-col gap-2 rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm">
+                <div className="flex items-center justify-between gap-3 text-muted">
+                  <span>زمان فعلی</span>
+                  <span className="font-bold text-text">
+                    {confirmCurrentStart ? <JalaliDate value={confirmCurrentStart} variant="numeric" /> : 'نامشخص'}
+                    {' · '}
+                    {clockTime(rescheduleConfirm.startAt) || '—'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3 text-muted">
+                  <span>زمان جدید</span>
+                  <span className="font-bold text-primary">
+                    {confirmNextStart ? <JalaliDate value={confirmNextStart} variant="numeric" /> : 'نامشخص'}
+                    {' · '}
+                    {clockTime(rescheduleConfirm.pendingReschedule?.startAt) || '—'}
+                  </span>
+                </div>
+              </div>
+            )}
+            {actionError && (
+              <p role="alert" className="mt-3 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+                {actionError}
+              </p>
+            )}
+            <div className="mt-5 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={confirmBusy}
+                onClick={() => setRescheduleConfirm(null)}
+              >
+                انصراف
+              </Button>
+              <Button
+                type="button"
+                loading={confirmBusy}
+                disabled={confirmBusy || !rescheduleConfirm?.pendingReschedule?.startAt}
+                onClick={() => void confirmAcceptReschedule()}
+              >
+                تأیید زمان جدید
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {notifications.length > 0 && (
-          <Card as="section" data-testid="customer-notifications" className="border-primary/20">
+          <Card
+            as="section"
+            id="customer-notifications"
+            data-testid="customer-notifications"
+            className="border-primary/20"
+          >
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-bold text-text">پیام‌های آرا</h2>
@@ -1016,6 +1197,7 @@ export function CustomerDashboardPage() {
                 onClick={() => {
                   setNotifications((current) => current.map((item) => ({ ...item, readAt: item.readAt ?? new Date().toISOString() })));
                   void customerApi.markAllNotificationsRead?.();
+                  announceCustomerNotificationsChanged();
                 }}
               >
                 خوانده شد
@@ -1037,6 +1219,7 @@ export function CustomerDashboardPage() {
                       if (notification.readAt) return;
                       setNotifications((current) => current.map((item) => item.id === notification.id ? { ...item, readAt: new Date().toISOString() } : item));
                       void customerApi.markNotificationRead?.(notification.id);
+                      announceCustomerNotificationsChanged();
                     }}
                   >
                     <strong className="block text-text">{notification.title}</strong>
@@ -1109,7 +1292,7 @@ export function CustomerDashboardPage() {
                     <Button
                       variant="ghost"
                       loading={waitlistBusyId === entry.id}
-                      onClick={() => void cancelWaitlist(entry)}
+                      onClick={() => requestCancelWaitlist(entry)}
                     >
                       خروج از صف
                     </Button>
@@ -1133,7 +1316,6 @@ export function CustomerDashboardPage() {
             <Card as="section" className="min-w-0" data-testid="customer-calendar-card">
               <div
                 className="mb-4 flex flex-wrap items-center justify-between gap-3"
-                data-panel-guide="customer-calendar"
               >
                 <div>
                   <h2 className="text-lg font-bold text-text">تقویم من</h2>
@@ -1192,7 +1374,7 @@ export function CustomerDashboardPage() {
                           rescheduleId === appointment.id ? rescheduleValue : undefined
                         }
                         rescheduleReview={rescheduleReviewId === appointment.id}
-                        onCancel={cancelAppointment}
+                        onCancel={requestCancelAppointment}
                         onStartReschedule={(item) => {
                           setRescheduleId(item.id);
                           setRescheduleReviewId(null);
@@ -1205,8 +1387,11 @@ export function CustomerDashboardPage() {
                         onReviewReschedule={(item) => setRescheduleReviewId(item.id)}
                         onBackReschedule={() => setRescheduleReviewId(null)}
                         onReschedule={saveReschedule}
-                        onAcceptReschedule={acceptReschedule}
-                        onRejectReschedule={rejectReschedule}
+                        onAcceptReschedule={(item) => {
+                          setActionError('');
+                          setRescheduleConfirm(item);
+                        }}
+                        onRejectReschedule={requestRejectReschedule}
                       />
                     ))}
                     <Pagination
@@ -1226,7 +1411,6 @@ export function CustomerDashboardPage() {
             <Card as="section" className="min-w-0" data-testid="customer-upcoming">
               <div
                 className="mb-4 flex items-start justify-between gap-3"
-                data-panel-guide="customer-upcoming"
               >
                 <div>
                   <h2 className="text-lg font-bold text-text">نوبت‌های پیش‌رو</h2>
@@ -1250,7 +1434,7 @@ export function CustomerDashboardPage() {
                         rescheduleId === appointment.id ? rescheduleValue : undefined
                       }
                       rescheduleReview={rescheduleReviewId === appointment.id}
-                      onCancel={cancelAppointment}
+                      onCancel={requestCancelAppointment}
                       onStartReschedule={(item) => {
                         setRescheduleId(item.id);
                         setRescheduleReviewId(null);
@@ -1263,8 +1447,11 @@ export function CustomerDashboardPage() {
                       onReviewReschedule={(item) => setRescheduleReviewId(item.id)}
                       onBackReschedule={() => setRescheduleReviewId(null)}
                       onReschedule={saveReschedule}
-                      onAcceptReschedule={acceptReschedule}
-                      onRejectReschedule={rejectReschedule}
+                      onAcceptReschedule={(item) => {
+                        setActionError('');
+                        setRescheduleConfirm(item);
+                      }}
+                      onRejectReschedule={requestRejectReschedule}
                     />
                   ))}
                   <Pagination
@@ -1288,7 +1475,6 @@ export function CustomerDashboardPage() {
             <Card as="section" className="min-w-0 lg:col-span-2" data-testid="customer-history">
               <div
                 className="mb-4 flex items-start justify-between gap-3"
-                data-panel-guide="customer-history"
               >
                 <div>
                   <h2 className="text-lg font-bold text-text">سوابق نوبت‌ها</h2>
@@ -1319,7 +1505,6 @@ export function CustomerDashboardPage() {
         <Card as="section" data-testid="customer-salons">
           <div
             className="mb-4 flex flex-wrap items-start justify-between gap-3"
-            data-panel-guide="customer-salons"
           >
             <div>
               <h2 className="text-lg font-bold text-text">سالن‌های من</h2>

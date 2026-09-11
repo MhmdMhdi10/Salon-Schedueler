@@ -55,6 +55,36 @@ describe('bootstrapAuth', () => {
     expect(ok).toBe(false);
     expect(client.getAccessToken()).toBeNull();
   });
+
+  it('shares a simultaneous bootstrap refresh request', async () => {
+    const client = await import('../client');
+    mockFetch.mockResolvedValueOnce(jsonResponse({ accessToken: 'access-shared' }));
+
+    const [first, second] = await Promise.all([client.bootstrapAuth(), client.bootstrapAuth()]);
+
+    expect(first).toBe(true);
+    expect(second).toBe(true);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(client.getAccessToken()).toBe('access-shared');
+  });
+
+  it('does not clear a newer login token when an older bootstrap fails', async () => {
+    const client = await import('../client');
+    let rejectRefresh: ((reason?: unknown) => void) | undefined;
+    mockFetch.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          rejectRefresh = reject;
+        }),
+    );
+
+    const bootstrap = client.bootstrapAuth();
+    client.setAccessToken('access-from-login');
+    rejectRefresh?.(new Error('stale refresh failed'));
+
+    expect(await bootstrap).toBe(true);
+    expect(client.getAccessToken()).toBe('access-from-login');
+  });
 });
 
 describe('expired access token recovery', () => {

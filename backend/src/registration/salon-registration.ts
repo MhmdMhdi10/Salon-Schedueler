@@ -41,6 +41,8 @@ export class SalonRegistration {
       data: {
         name,
         qrToken,
+        bookingWindowDays: 1,
+        bookingStartOffsetDays: 0,
         ...(timezone ? { timezone } : {}),
       },
     });
@@ -90,6 +92,8 @@ export class SalonRegistration {
         data: {
           name: input.salonName,
           qrToken,
+          bookingWindowDays: 1,
+          bookingStartOffsetDays: 0,
           ...(input.businessType ? { businessType: input.businessType } : {}),
           ...(input.businessTypes?.length
             ? { businessTypes: input.businessTypes.slice(0, 12) }

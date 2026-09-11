@@ -185,7 +185,7 @@ export function OwnerMarketingPage() {
     >
       <SeoHead title="بازاریابی" />
 
-      <header data-panel-guide="owner-marketing" className="flex items-start gap-3">
+      <header className="flex items-start gap-3">
         <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
           <Megaphone className="size-5" aria-hidden="true" />
         </span>
@@ -215,7 +215,6 @@ export function OwnerMarketingPage() {
       {status === 'ready' && data && (
         <Card
           elevated
-          data-panel-guide="owner-marketing-booking"
           className="overflow-hidden border-primary/25 bg-primary/5"
         >
           <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_11rem] md:items-start">
@@ -255,15 +254,15 @@ export function OwnerMarketingPage() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                <a
-                  href={bookingUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 font-medium text-primary no-underline hover:underline"
-                >
-                  دیدن صفحه رزرو <ExternalLink className="size-4" aria-hidden="true" />
-                </a>
-                <a href="/owner/qr" className="inline-flex items-center gap-1 font-medium text-muted no-underline hover:text-primary">
+                  <a
+                    href={bookingUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex min-h-10 items-center gap-1 rounded-md px-1 font-medium text-primary no-underline hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+                  >
+                    دیدن صفحه رزرو <ExternalLink className="size-4" aria-hidden="true" />
+                  </a>
+                <a href="/owner/qr" className="inline-flex min-h-10 items-center gap-1 rounded-md px-1 font-medium text-muted no-underline hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus">
                   ساخت QR و استند <ArrowLeft className="size-4 rtl:-scale-x-100" aria-hidden="true" />
                 </a>
               </div>
@@ -276,7 +275,7 @@ export function OwnerMarketingPage() {
                 className="aspect-square w-full max-w-40 rounded-lg bg-white p-2"
               />
               <p className="text-center text-xs font-bold text-text">اسکن برای رزرو سریع</p>
-              <a href="/owner/qr" className="text-center text-xs font-bold text-primary no-underline hover:underline">
+              <a href="/owner/qr" className="inline-flex min-h-10 items-center justify-center rounded-md px-2 text-center text-xs font-bold text-primary no-underline hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus">
                 شخصی‌سازی و خروجی QR
               </a>
             </aside>
@@ -287,7 +286,6 @@ export function OwnerMarketingPage() {
       {status === 'ready' && data && (
         <Card
           data-testid="owner-campaign-kit"
-          data-panel-guide="owner-marketing-campaign"
           className="flex flex-col gap-5 border-primary/20 bg-surface"
         >
           <div className="flex items-start gap-3">
@@ -316,7 +314,7 @@ export function OwnerMarketingPage() {
                 }`}
               >
                 <span className="font-bold">{source.label}</span>
-                <span className="ms-1 text-xs opacity-75">{source.hint}</span>
+                <span className="ms-1 text-xs">{source.hint}</span>
               </button>
             ))}
           </div>
@@ -343,7 +341,6 @@ export function OwnerMarketingPage() {
       <Card
         as="section"
         data-testid="owner-referrals"
-        data-panel-guide="owner-marketing-referrals"
         className="border-success/20"
       >
         <div className="flex items-start gap-3">

@@ -58,12 +58,14 @@ export function WorkspaceSwitcher({
           'focus-visible:outline-offset-2 focus-visible:outline-focus',
         )
       : cn(
-          'inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-md border border-border',
-          'bg-surface px-3 py-2 text-xs font-semibold text-text no-underline sm:text-sm',
+          'inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-transparent',
+          'text-text no-underline',
           'transition-colors duration-fast ease-standard hover:bg-elevated',
           'outline-none focus-visible:outline focus-visible:outline-2',
           'focus-visible:outline-offset-2 focus-visible:outline-focus',
         );
+
+  const showText = variant === 'card' || destination.to === '/business/register';
 
   return (
     <nav
@@ -73,7 +75,7 @@ export function WorkspaceSwitcher({
     >
       <Link to={destination.to} className={linkClass}>
         <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-        <span>{destination.label}</span>
+        <span className={showText ? undefined : 'sr-only'}>{destination.label}</span>
       </Link>
       {isStaffSurface && staffContexts.length > 1 && (
         <select

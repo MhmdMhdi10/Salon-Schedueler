@@ -34,7 +34,6 @@ const OWNER_ROUTES = [
   '/owner/transactions',
   '/owner/notifications',
   '/owner/subscription',
-  '/owner/my-qr',
   '/owner/profile',
 ] as const;
 
@@ -217,12 +216,12 @@ test('critical owner surfaces remain usable at compact 320px width', async ({ pa
   }
 });
 
-test('legacy routes redirect to their supported destination', async ({ page }) => {
+test('legacy and discovery routes resolve to their supported destination', async ({ page }) => {
   const redirects: Array<[string, RegExp]> = [
     ['/business', /\/$/],
-    ['/city/tehran', /\/$/],
-    ['/services/hair', /\/$/],
-    ['/search', /\/$/],
+    ['/city/tehran', /\/city\/tehran(?:\?|$)/],
+    ['/services/hair', /\/services\/hair(?:\?|$)/],
+    ['/search', /\/search(?:\?|$)/],
     ['/admin/config', /\/auth(?:\?|$)/],
   ];
   for (const [route, destination] of redirects) {

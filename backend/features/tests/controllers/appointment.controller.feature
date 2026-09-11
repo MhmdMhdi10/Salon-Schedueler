@@ -11,4 +11,7 @@ Feature: Appointment controller HTTP contracts
     When I exercise controller endpoint "PATCH /appointments/:id/reschedule"
     When I exercise controller endpoint "POST /appointments/:id/reschedule/accept"
     When I exercise controller endpoint "POST /appointments/:id/reschedule/reject"
+    When I exercise controller endpoint "GET /appointments/:id/cancellation"
+    When I exercise controller endpoint "GET /appointments/:id/cancellation/refund-proof"
+    When I exercise controller endpoint "POST /appointments/:id/report-customer"
     Then this controller feature should have completed

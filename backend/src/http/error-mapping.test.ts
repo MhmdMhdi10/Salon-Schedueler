@@ -1,6 +1,8 @@
 import type { Response } from 'express';
 import { sendDomainError } from './error-mapping.js';
 import { SubscriptionDomainError } from '../subscription/subscription.service.js';
+import { AppointmentNotStartedError } from '../scheduling/cancellation.js';
+import { PlatformAdminError } from '../platform-admin/platform-admin.service.js';
 
 function responseStub(): Response {
   return {
@@ -49,5 +51,23 @@ describe('sendDomainError', () => {
 
     expect(response.status).toHaveBeenCalledWith(409);
     expect(response.json).toHaveBeenCalledWith({ code: 'SUBSCRIPTION_WINDOW_LIMIT_REACHED' });
+  });
+
+  it('maps future no-show attempts to a stable conflict', () => {
+    const response = responseStub();
+
+    sendDomainError(response, new AppointmentNotStartedError());
+
+    expect(response.status).toHaveBeenCalledWith(409);
+    expect(response.json).toHaveBeenCalledWith({ code: 'APPOINTMENT_NOT_STARTED' });
+  });
+
+  it('preserves stable platform-admin lifecycle reasons', () => {
+    const response = responseStub();
+
+    sendDomainError(response, new PlatformAdminError('INVALID_STATE', 'LAST_OWNER_REQUIRED'));
+
+    expect(response.status).toHaveBeenCalledWith(409);
+    expect(response.json).toHaveBeenCalledWith({ code: 'LAST_OWNER_REQUIRED' });
   });
 });

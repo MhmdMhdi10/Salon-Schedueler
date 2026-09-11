@@ -12,7 +12,6 @@ interface TabDef {
   key: string;
   labelKey: string;
   to: string;
-  guideId: string;
   icon: LucideIcon;
   roles: readonly OwnerRole[];
 }
@@ -29,7 +28,6 @@ const TABS: readonly TabDef[] = [
     key: 'calendar',
     labelKey: 'owner.nav.calendar',
     to: '/owner/calendar',
-    guideId: 'owner-calendar',
     icon: CalendarDays,
     roles: ['Owner', 'Admin', 'Stylist'],
   },
@@ -37,7 +35,6 @@ const TABS: readonly TabDef[] = [
     key: 'clients',
     labelKey: 'owner.nav.clients',
     to: '/owner/clients',
-    guideId: 'owner-clients',
     icon: ContactRound,
     roles: ['Owner', 'Admin', 'Stylist'],
   },
@@ -45,7 +42,6 @@ const TABS: readonly TabDef[] = [
     key: 'marketing',
     labelKey: 'owner.nav.marketing',
     to: '/owner/marketing',
-    guideId: 'owner-marketing',
     icon: Megaphone,
     roles: ['Owner', 'Admin'],
   },
@@ -53,7 +49,6 @@ const TABS: readonly TabDef[] = [
     key: 'profile',
     labelKey: 'owner.nav.profile',
     to: '/owner/profile',
-    guideId: 'owner-profile',
     icon: UserRound,
     roles: ['Owner', 'Admin', 'Stylist'],
   },
@@ -101,7 +96,6 @@ export function OwnerBottomTabs({ className, role = 'Owner' }: OwnerBottomTabsPr
                 to={tab.to}
                 aria-current={isActive ? 'page' : undefined}
                 aria-label={t(tab.labelKey)}
-                data-panel-guide={tab.guideId}
                 data-testid={tab.key === 'profile' ? 'owner-profile-trigger' : undefined}
                 className={cn(
                   'relative flex min-h-[64px] w-full flex-col items-center justify-center gap-1 rounded-[22px]',

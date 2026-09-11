@@ -18,7 +18,7 @@ import { useOwnerContext } from './index';
 
 import './owner-profile.css';
 
-type ProfileSectionKey = 'operations' | 'services' | 'business' | 'communication';
+type ProfileSectionKey = 'team' | 'services' | 'operations' | 'business' | 'communication';
 
 interface ProfileSectionDefinition {
   key: ProfileSectionKey;
@@ -29,16 +29,22 @@ interface ProfileSectionDefinition {
 
 const PROFILE_SECTIONS: readonly ProfileSectionDefinition[] = [
   {
-    key: 'operations',
-    titleKey: 'owner.profile.sections.operations',
-    hintKey: 'owner.profile.sections.operationsHint',
-    routes: ['/owner/team', '/owner/config', '/owner/qr', '/owner/my-qr'],
+    key: 'team',
+    titleKey: 'owner.profile.sections.team',
+    hintKey: 'owner.profile.sections.teamHint',
+    routes: ['/owner/team'],
   },
   {
     key: 'services',
     titleKey: 'owner.profile.sections.services',
     hintKey: 'owner.profile.sections.servicesHint',
     routes: ['/owner/services'],
+  },
+  {
+    key: 'operations',
+    titleKey: 'owner.profile.sections.operations',
+    hintKey: 'owner.profile.sections.operationsHint',
+    routes: ['/owner/config', '/owner/qr'],
   },
   {
     key: 'business',
@@ -59,7 +65,6 @@ const PROFILE_ITEM_HINTS: Record<string, string> = {
   '/owner/config': 'owner.profile.itemHints.configuration',
   '/owner/services': 'owner.profile.itemHints.services',
   '/owner/qr': 'owner.profile.itemHints.qr',
-  '/owner/my-qr': 'owner.profile.itemHints.myQr',
   '/owner/analytics': 'owner.profile.itemHints.analytics',
   '/owner/transactions': 'owner.profile.itemHints.transactions',
   '/owner/subscription': 'owner.profile.itemHints.subscription',
@@ -189,7 +194,7 @@ export function OwnerProfilePage() {
       data-testid="owner-profile-page"
       aria-busy={identityLoading}
     >
-      <header data-panel-guide="owner-profile" className="owner-profile-page__intro mb-5">
+      <header className="owner-profile-page__intro mb-5">
         <p className="owner-profile-page__eyebrow">{t('owner.profile.eyebrow')}</p>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
@@ -298,10 +303,7 @@ export function OwnerProfilePage() {
       <div className="owner-profile-page__tools space-y-5">
         {sections.map((section) => (
           <section key={section.key} aria-labelledby={'owner-profile-section-' + section.key}>
-            <div
-              data-panel-guide={section.key === 'operations' ? 'owner-profile-tools' : undefined}
-              className="mb-3 flex items-end justify-between gap-3"
-            >
+            <div className="mb-3 flex items-end justify-between gap-3">
               <div>
                 <h2
                   id={'owner-profile-section-' + section.key}
@@ -340,11 +342,7 @@ export function OwnerProfilePage() {
         </NavLink>
       </div>
 
-      <p
-        data-panel-guide="owner-profile-tools"
-        className="owner-profile-page__desktop-nav-note"
-        role="note"
-      >
+      <p className="owner-profile-page__desktop-nav-note" role="note">
         برای مدیریت تیم، خدمات و سایر بخش‌ها از سایدبار استفاده کنید.
       </p>
 

@@ -16,9 +16,9 @@ Feature: Tenant roles, customer account, and platform console
     Then the response status should be 403
     When I make a "POST" request to "/api/salons/{{salonId}}/staff" as actor "admin" with body:
       """
-      {"fullName":"Should Not Be Created","role":"Stylist","phone":"09123334455"}
+      {"fullName":"Admin Created Stylist","role":"Stylist","phone":"09123334455"}
       """
-    Then the response status should be 403
+    Then the response status should be 201
 
   @flow-customer-account
   Scenario: Customer can read their account but cannot read the owner calendar

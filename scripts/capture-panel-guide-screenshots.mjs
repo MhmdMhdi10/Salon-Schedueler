@@ -26,44 +26,22 @@ const ownerRoutes = [
   '/owner/transactions',
   '/owner/notifications',
   '/owner/subscription',
-  '/owner/my-qr',
   '/owner/profile',
 ];
 
 const ownerGuideIds = [
   'owner-team',
-  'owner-team-members',
   'owner-services',
-  'owner-services-catalog',
   'owner-profile',
-  'owner-profile-tools',
   'owner-calendar',
-  'owner-calendar-controls',
-  'owner-calendar-hours',
-  'owner-calendar-filters',
-  'owner-calendar-queues',
   'owner-clients',
-  'owner-clients-directory',
   'owner-marketing',
-  'owner-marketing-booking',
-  'owner-marketing-campaign',
-  'owner-marketing-referrals',
   'owner-analytics',
-  'owner-analytics-report',
   'owner-qr',
-  'owner-qr-studio',
-  'owner-qr-order',
   'owner-configuration',
-  'owner-configuration-messaging',
-  'owner-configuration-deposit',
-  'owner-configuration-resources',
-  'owner-configuration-equipment',
   'owner-transactions',
   'owner-notifications',
-  'owner-notifications-inbox',
   'owner-subscription',
-  'owner-subscription-plans',
-  'owner-my-qr',
 ];
 
 const platformRoutes = [
@@ -80,7 +58,9 @@ const platformRoutes = [
 ];
 
 const platformGuideIds = platformRoutes.map((route) =>
-  route === '/platform-admin' ? 'platform-admin-dashboard' : `platform-admin-${route.split('/').at(-1)}`,
+  route === '/platform-admin'
+    ? 'platform-admin-dashboard'
+    : `platform-admin-${route.split('/').at(-1)}`,
 );
 
 const viewports = [
@@ -138,18 +118,30 @@ async function login(page, phone, expectedPath) {
   await page.getByRole('button', { name: 'دریافت کد', exact: true }).click();
   const otpInput = page.locator('input[aria-label*="کد تایید"]').first();
   const nextSurface = await Promise.race([
-    page.waitForURL((url) => url.pathname.startsWith(expectedPath), { timeout: 20_000 }).then(() => 'route').catch(() => null),
-    otpInput.waitFor({ state: 'visible', timeout: 20_000 }).then(() => 'otp').catch(() => null),
+    page
+      .waitForURL((url) => url.pathname.startsWith(expectedPath), { timeout: 20_000 })
+      .then(() => 'route')
+      .catch(() => null),
+    otpInput
+      .waitFor({ state: 'visible', timeout: 20_000 })
+      .then(() => 'otp')
+      .catch(() => null),
   ]);
   if (nextSurface === 'otp') {
-    await page.getByRole('button', { name: /تایید و ورود/ }).click();
+    // OTP may submit automatically after the last digit. Older test fixtures
+    // still expose an explicit confirmation button, so support both flows.
+    const confirmButton = page.getByRole('button', { name: /تایید و ورود/ });
+    if (await confirmButton.count()) await confirmButton.click();
     await page.waitForURL((url) => url.pathname.startsWith(expectedPath), { timeout: 20_000 });
   }
   if (nextSurface !== 'route' && nextSurface !== 'otp') {
     throw new Error(`Login did not reach ${expectedPath} or show OTP for ${phone}`);
   }
   await waitForSurface(page);
-  await page.getByRole('button', { name: 'بستن', exact: true }).click().catch(() => {});
+  await page
+    .getByRole('button', { name: 'بستن', exact: true })
+    .click()
+    .catch(() => {});
 }
 
 async function waitForAuthenticatedRoute(page, expectedPath, timeout = 8_000) {
@@ -184,7 +176,9 @@ async function loginByApi(context, phone) {
     timeout: 10_000,
   });
   if (!otpResponse.ok()) {
-    throw new Error(`OTP request failed for ${phone}: ${otpResponse.status()} ${await otpResponse.text()}`);
+    throw new Error(
+      `OTP request failed for ${phone}: ${otpResponse.status()} ${await otpResponse.text()}`,
+    );
   }
   const otp = await otpResponse.json();
   if (typeof otp.devOtp !== 'string' || otp.devOtp.length === 0) {
@@ -196,7 +190,9 @@ async function loginByApi(context, phone) {
     timeout: 10_000,
   });
   if (!verifyResponse.ok()) {
-    throw new Error(`OTP verification failed for ${phone}: ${verifyResponse.status()} ${await verifyResponse.text()}`);
+    throw new Error(
+      `OTP verification failed for ${phone}: ${verifyResponse.status()} ${await verifyResponse.text()}`,
+    );
   }
 }
 
@@ -204,7 +200,10 @@ async function closeGuide(page) {
   const close = page.getByTestId('panel-guide-close');
   if (await close.isVisible().catch(() => false)) {
     await close.click();
-    await page.getByTestId('panel-guide-dialog').waitFor({ state: 'detached', timeout: 5_000 }).catch(() => {});
+    await page
+      .getByTestId('panel-guide-dialog')
+      .waitFor({ state: 'detached', timeout: 5_000 })
+      .catch(() => {});
   }
 }
 
@@ -217,13 +216,22 @@ async function captureGuideWalkthrough(page, surface, viewport, guideIds) {
     console.log(`${surface}/${viewport} guide ${index + 1}/${guideIds.length}: ${guideId}`);
     try {
       await page.waitForFunction(
-        (expected) => document.querySelector('[data-panel-guide-active="true"]')?.getAttribute('data-panel-guide') === expected,
+        (expected) =>
+          document
+            .querySelector('[data-panel-guide-active="true"]')
+            ?.getAttribute('data-panel-guide') === expected,
         guideId,
         { timeout: 20_000 },
       );
     } catch (error) {
-      const actual = await page.locator('[data-panel-guide-active="true"]').getAttribute('data-panel-guide').catch(() => null);
-      throw new Error(`Guide target ${guideId} was not reached; actual=${actual}; url=${page.url()}`, { cause: error });
+      const actual = await page
+        .locator('[data-panel-guide-active="true"]')
+        .getAttribute('data-panel-guide')
+        .catch(() => null);
+      throw new Error(
+        `Guide target ${guideId} was not reached; actual=${actual}; url=${page.url()}`,
+        { cause: error },
+      );
     }
     await page.waitForTimeout(500);
     await page.screenshot({
@@ -299,7 +307,15 @@ async function captureOwner(browser, viewportName, viewport) {
   const page = await context.newPage();
   await login(page, '09120000001', '/owner');
   await captureGuideWalkthrough(page, 'owner', viewportName, ownerGuideIds);
-  await captureRoutes(browser, 'owner', viewportName, viewport, ownerRoutes, '09120000001', '/owner');
+  await captureRoutes(
+    browser,
+    'owner',
+    viewportName,
+    viewport,
+    ownerRoutes,
+    '09120000001',
+    '/owner',
+  );
   await context.close();
 }
 
@@ -313,7 +329,15 @@ async function capturePlatform(browser, viewportName, viewport) {
   const page = await context.newPage();
   await login(page, '09120000999', '/platform-admin');
   await captureGuideWalkthrough(page, 'platform-admin', viewportName, platformGuideIds);
-  await captureRoutes(browser, 'platform-admin', viewportName, viewport, platformRoutes, '09120000999', '/platform-admin');
+  await captureRoutes(
+    browser,
+    'platform-admin',
+    viewportName,
+    viewport,
+    platformRoutes,
+    '09120000999',
+    '/platform-admin',
+  );
   await context.close();
 }
 

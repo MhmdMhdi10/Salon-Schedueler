@@ -192,7 +192,7 @@ export function OwnerNotificationsPage() {
     >
       <SeoHead title={t('owner.inbox.pageTitle', { defaultValue: 'اعلان‌ها' })} />
 
-      <header data-panel-guide="owner-notifications" className="flex flex-col gap-1">
+      <header className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
           <Bell className="h-5 w-5 text-primary" aria-hidden="true" />
           <h1 className="text-xl text-display text-text">
@@ -216,10 +216,7 @@ export function OwnerNotificationsPage() {
       </header>
 
       {/* Toolbar: filter tabs + mark-all */}
-      <div
-        data-panel-guide="owner-notifications-inbox"
-        className="flex flex-wrap items-center justify-between gap-3"
-      >
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div role="tablist" className="inline-flex rounded-lg border border-border bg-bg p-1">
           <button
             type="button"

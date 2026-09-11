@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { CircleHelp, LifeBuoy, LogIn, LogOut } from 'lucide-react';
+import { LifeBuoy, LogIn, LogOut } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { BrandLogo } from '../brand';
+import { CustomerInboxBell } from '../customer/CustomerInboxBell';
 import { OwnerInboxBell } from '../owner/OwnerInboxBell';
 import { ThemeToggle } from '../theme/ThemeToggle';
 import { Button } from '../ui/Button';
@@ -21,8 +22,6 @@ export interface PanelHeaderProps {
   themeControl?: React.ReactNode;
   /** Owner shell supplies its auth-aware sign-out/navigation handler. */
   onSignOut?: () => void;
-  /** Replays the first-entry panel walkthrough. */
-  onHelp?: () => void;
 }
 
 /**
@@ -32,7 +31,7 @@ export interface PanelHeaderProps {
  * notifications, theme, then authentication. Only the workspace destination
  * and surface-specific sign-out handler differ.
  */
-export function PanelHeader({ surface, brandLabel, themeControl, onSignOut, onHelp }: PanelHeaderProps) {
+export function PanelHeader({ surface, brandLabel, themeControl, onSignOut }: PanelHeaderProps) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -42,6 +41,8 @@ export function PanelHeader({ surface, brandLabel, themeControl, onSignOut, onHe
   const isAuthenticated = status === 'authenticated';
   const showWorkspace = isOwnerSurface || (isAuthenticated && !isPlatformAdmin);
   const showOwnerInbox = isOwnerSurface || (isAuthenticated && isStaff && !isPlatformAdmin);
+  const showCustomerInbox =
+    !isOwnerSurface && pathname === '/account' && isAuthenticated && !isStaff;
   const showAccountLink = !isOwnerSurface && pathname !== '/account' && !isPlatformAdmin;
 
   const handleSignOut = () => {
@@ -90,26 +91,13 @@ export function PanelHeader({ surface, brandLabel, themeControl, onSignOut, onHe
           <Link
             to={isOwnerSurface ? '/owner' : '/'}
             aria-label={brandLabel || (isOwnerSurface ? t('owner.title') : t('app.title'))}
-            className="flex min-h-11 shrink-0 items-center rounded-md text-sm font-bold text-text no-underline sm:text-md"
+            className="flex min-h-11 min-w-10 shrink-0 items-center justify-center rounded-md text-sm font-bold text-text no-underline sm:text-md"
           >
             <BrandLogo className="h-5 w-auto sm:h-6" />
           </Link>
         </nav>
 
         <div className="flex shrink-0 items-center gap-2">
-          {onHelp && (
-            <Button
-              variant="ghost"
-              size="md"
-              startIcon={<CircleHelp className="h-4 w-4" aria-hidden="true" />}
-              onClick={onHelp}
-              aria-label="راهنمای پنل"
-              data-testid="panel-guide-trigger"
-              className="shrink-0 !px-1 sm:!px-3"
-            >
-              <span className="hidden sm:inline">راهنما</span>
-            </Button>
-          )}
           {isPlatformAdmin ? (
             <PanelAccessNav />
           ) : (
@@ -162,6 +150,7 @@ export function PanelHeader({ surface, brandLabel, themeControl, onSignOut, onHe
           )}
 
           {showOwnerInbox && <OwnerInboxBell />}
+          {showCustomerInbox && <CustomerInboxBell />}
           {themeControl ?? <ThemeToggle />}
           {authControl}
         </div>

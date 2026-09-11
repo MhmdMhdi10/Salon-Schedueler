@@ -123,6 +123,30 @@ describe('SchedulingEngine.getAvailability', () => {
     expect(prisma.service.findUnique).not.toHaveBeenCalled();
   });
 
+  it('returns no slots for today when the salon allows booking from tomorrow only', async () => {
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Tehran',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+    const prisma = createMockPrisma({
+      salon: {
+        findUnique: jest.fn().mockResolvedValue({
+          timezone: 'Asia/Tehran',
+          bookingWindowDays: 1,
+          bookingStartOffsetDays: 1,
+        }),
+      },
+    });
+    const engine = new SchedulingEngine(prisma);
+
+    await expect(
+      engine.getAvailability({ salonId: SALON_ID, serviceId: SERVICE_ID, date: today }),
+    ).resolves.toEqual([]);
+    expect(prisma.service.findUnique).not.toHaveBeenCalled();
+  });
+
   describe('basic slot generation (R8.1)', () => {
     it('returns slots when staff and chair are both free', async () => {
       const prisma = createMockPrisma();

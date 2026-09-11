@@ -120,6 +120,7 @@ export { JalaliDatePicker } from './JalaliDatePicker';
 export type { JalaliDatePickerProps, JalaliDatePickerVariant } from './JalaliDatePicker';
 export { MobileDatePicker } from './MobileDatePicker';
 export type { MobileDatePickerProps } from './MobileDatePicker';
+export { TimeWheelField } from './TimeWheelField';
 export { SlotGrid, SlotChip } from './SlotGrid';
 export type { SlotGridProps, SlotChipProps, SlotItem, SlotState } from './SlotGrid';
 export { DayScroller } from './DayScroller';

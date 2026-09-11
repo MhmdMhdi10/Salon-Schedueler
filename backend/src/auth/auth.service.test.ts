@@ -360,6 +360,16 @@ describe('AuthService', () => {
       expect(prisma.customer.create).not.toHaveBeenCalled();
     });
 
+    it('should reject OTP login for a blocked customer', async () => {
+      const phone = '09123456789';
+      prisma._customerStore.push({ id: 'blocked-cust', phone, active: false, deletedAt: null });
+
+      await authService.requestOtp(phone);
+      await expect(authService.verifyOtp(phone, extractCode(smsProvider.calls[0].message))).rejects.toMatchObject({
+        code: 'CUSTOMER_BLOCKED',
+      });
+    });
+
     it('should issue a platform token with customer and salon context', async () => {
       const phone = '09123456789';
       prisma._customerStore.push({ id: 'customer-1', phone, noShowCount: 0 });

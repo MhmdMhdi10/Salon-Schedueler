@@ -90,7 +90,12 @@ describeIfDb(
       engine = new SchedulingEngine(prisma);
 
       const salon = await prisma.salon.create({
-        data: { name: 'Race Salon', qrToken: `race-${RUN}`, timezone: 'Asia/Tehran' },
+        data: {
+          name: 'Race Salon',
+          qrToken: `race-${RUN}`,
+          timezone: 'Asia/Tehran',
+          bookingWindowDays: 30,
+        },
       });
       salonId = salon.id;
 

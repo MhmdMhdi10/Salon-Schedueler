@@ -157,7 +157,11 @@ export class BackendWorld {
       salonName: String(created.body.salonName),
       ownerPhone,
       serviceName: `${label} خدمت`,
-      date: isoDateFromToday(2),
+      // Registration defaults to today + tomorrow (`bookingWindowDays=1`).
+      // Keep controller fixtures inside that real public booking window so
+      // availability-backed scenarios exercise the API instead of failing in
+      // setup with an out-of-policy date.
+      date: isoDateFromToday(1),
       futureDate: isoDateFromToday(5),
       laterDate: isoDateFromToday(8),
     };

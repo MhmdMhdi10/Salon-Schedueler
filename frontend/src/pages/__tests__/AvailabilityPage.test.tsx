@@ -16,6 +16,7 @@ import { expectNoSeriousA11yViolations } from '../../test/a11y';
 const getServices = vi.fn();
 const getAvailability = vi.fn();
 const getStylists = vi.fn();
+const getBookingPolicy = vi.fn();
 
 vi.mock('../../api/client', () => ({
   salonApi: {
@@ -23,6 +24,7 @@ vi.mock('../../api/client', () => ({
     getAvailability: (salonId: string, serviceId: string, date: string) =>
       getAvailability(salonId, serviceId, date),
     getStylists: (salonId: string) => getStylists(salonId),
+    getBookingPolicy: (salonId: string) => getBookingPolicy(salonId),
   },
 }));
 
@@ -79,6 +81,8 @@ beforeEach(() => {
   // Default: no stylists configured, so the optional picker stays hidden and
   // existing assertions are unaffected. Tests that exercise it override this.
   getStylists.mockResolvedValue({ stylists: [] });
+  // Keep legacy fixture dates usable; policy-specific tests override this.
+  getBookingPolicy.mockResolvedValue({ bookingWindowDays: 400000, bookingStartOffsetDays: 0 });
 });
 
 afterEach(() => {
@@ -126,6 +130,18 @@ describe('AvailabilityPage — date picker', () => {
     // The native <input type="date"> is gone; a labelled trigger replaces it.
     expect(container.querySelector('input[type="date"]')).toBeNull();
     expect(screen.getByRole('button', { name: /انتخاب تاریخ/ })).toBeInTheDocument();
+  });
+
+  it('starts the selectable range tomorrow when same-day booking is disabled', async () => {
+    getBookingPolicy.mockResolvedValue({ bookingWindowDays: 1, bookingStartOffsetDays: 1 });
+    renderPage();
+
+    const nearbyDates = await screen.findByRole('radiogroup', { name: 'روزهای نزدیک' });
+    expect(within(nearbyDates).getAllByRole('radio')).toHaveLength(1);
+
+    screen.getByRole('button', { name: /انتخاب تاریخ/ }).click();
+    const grid = await screen.findByRole('grid');
+    expect(grid.querySelector<HTMLButtonElement>('[aria-current="date"]')).toBeDisabled();
   });
 });
 
@@ -194,6 +210,31 @@ describe('AvailabilityPage — selection state on back', () => {
     expect(radio).toBeChecked();
 
     // And availability is requested for the restored service + date.
+    await waitFor(() =>
+      expect(getAvailability).toHaveBeenCalledWith('salon-1', 'svc-2', '2999-03-15'),
+    );
+  });
+
+  it('waits for the current booking policy before replaying a restored date', async () => {
+    window.sessionStorage.setItem(
+      'booking-selection:salon-1',
+      JSON.stringify({ serviceId: 'svc-2', date: '2999-03-15' }),
+    );
+    let resolvePolicy:
+      | ((value: { bookingWindowDays: number; bookingStartOffsetDays: number }) => void)
+      | undefined;
+    getBookingPolicy.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolvePolicy = resolve;
+        }),
+    );
+    renderPage();
+
+    expect(await screen.findByRole('radio', { name: 'رنگ مو' })).toBeChecked();
+    expect(getAvailability).not.toHaveBeenCalled();
+
+    resolvePolicy?.({ bookingWindowDays: 400000, bookingStartOffsetDays: 0 });
     await waitFor(() =>
       expect(getAvailability).toHaveBeenCalledWith('salon-1', 'svc-2', '2999-03-15'),
     );

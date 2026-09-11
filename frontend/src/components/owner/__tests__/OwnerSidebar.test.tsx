@@ -68,12 +68,11 @@ describe('OwnerSidebar', () => {
   });
 
   describe('role filtering', () => {
-    it('Stylist sees calendar, client book, notifications, and personal QR', () => {
+    it('Stylist sees calendar, client book, and notifications', () => {
       renderSidebar({ role: 'Stylist' });
       expect(screen.getByText('تقویم')).toBeInTheDocument();
       expect(screen.getByText('مشتری‌ها')).toBeInTheDocument();
       expect(screen.getByText('اعلان‌ها')).toBeInTheDocument();
-      expect(screen.getByText('بارکد من')).toBeInTheDocument();
       expect(screen.queryByText('آمار')).not.toBeInTheDocument();
       expect(screen.queryByText('تنظیمات سالن')).not.toBeInTheDocument();
       expect(screen.queryByText('تراکنش‌ها')).not.toBeInTheDocument();

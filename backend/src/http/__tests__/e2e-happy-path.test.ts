@@ -70,7 +70,12 @@ describeIfDb('E2E happy path (real app + PostgreSQL) [opt-in: requires DATABASE_
     const { prisma } = created;
 
     const salon = await prisma.salon.create({
-      data: { name: 'E2E Salon', qrToken: `e2e-${RUN}`, timezone: 'Asia/Tehran' },
+      data: {
+        name: 'E2E Salon',
+        qrToken: `e2e-${RUN}`,
+        timezone: 'Asia/Tehran',
+        bookingWindowDays: 30,
+      },
     });
     salonId = salon.id;
     salonQrToken = salon.qrToken;

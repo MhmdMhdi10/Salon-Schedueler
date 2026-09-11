@@ -2,7 +2,6 @@ import { Navigate, useOutletContext } from 'react-router-dom';
 import { OwnerConfigPage } from './OwnerConfigurationPage';
 import { OwnerAnalyticsPageContent } from './OwnerAnalyticsPage';
 import { OwnerCalendarPage as OwnerCalendarPageImpl } from './OwnerCalendarPage';
-import { MyQrPage } from './MyQrPage';
 import { OwnerClientsPage as OwnerClientsPageImpl } from './OwnerClientsPage';
 import { OwnerMarketingPage as OwnerMarketingPageImpl } from './OwnerMarketingPage';
 import type { OwnerRole } from '../../api/client';
@@ -29,8 +28,8 @@ export function useOwnerContext(): OwnerOutletContext {
  * Route-level RBAC guard (task 5.2; R2.1, R2.3–R2.7).
  *
  * The {@link OwnerShell} navigation only *shows* the destinations a role may
- * reach (Owner/Admin = everything; Stylist = calendar, client book,
- * notifications, and personal QR). This guard makes the
+ * reach (Owner/Admin = everything; Stylist = calendar, client book, and
+ * notifications). This guard makes the
  * **routes themselves** consistent with that nav:
  * a principal who deep-links or otherwise lands on a section their role can't
  * see is redirected back to the always-available calendar rather than rendering
@@ -97,7 +96,9 @@ export function OwnerMarketingPage() {
 export function OwnerAnalyticsPage() {
   return (
     <OwnerRoleGuard allow={['Owner', 'Admin']}>
-      <section data-testid="owner-analytics-page">
+      <section
+        data-testid="owner-analytics-page"
+      >
         <OwnerAnalyticsPageContent />
       </section>
     </OwnerRoleGuard>
@@ -120,7 +121,9 @@ export function OwnerAnalyticsPage() {
 export function OwnerConfigurationPage() {
   return (
     <OwnerRoleGuard allow={['Owner', 'Admin']}>
-      <section data-testid="owner-config-page">
+      <section
+        data-testid="owner-config-page"
+      >
         <OwnerConfigPage />
       </section>
     </OwnerRoleGuard>
@@ -164,22 +167,6 @@ export { OwnerNotificationsPage } from './OwnerNotificationsPage';
 
 /** QR + standee landing — real surface (task 5.4; R4.1, R4.3). */
 export { OwnerQrPage } from './QrPage';
-
-/**
- * Personal QR section — «بارکد من» (R4.1, R2.5).
- *
- * Like the calendar, this is the one *other* destination every authenticated
- * staff role may reach: a stylist views (and shares/prints) their **own**
- * booking QR. It therefore carries no `OwnerRoleGuard` — the {@link MyQrPage}
- * itself handles the "account not linked to a stylist" case.
- */
-export function OwnerMyQrPage() {
-  return (
-    <section data-testid="owner-my-qr-page">
-      <MyQrPage />
-    </section>
-  );
-}
 
 /** First-class account/profile surface for the owner panel. */
 export { OwnerProfilePage } from './OwnerProfilePage';

@@ -29,19 +29,23 @@ export interface ApiCallOptions {
   data?: unknown;
   token?: string;
   maxRedirects?: number;
+  headers?: Record<string, string>;
 }
 
 /** Call the Vite-proxied API and include a useful body in failures. */
 export async function apiCall<T>(
   request: APIRequestContext,
   path: string,
-  { method = 'GET', data, token, maxRedirects }: ApiCallOptions = {},
+  { method = 'GET', data, token, maxRedirects, headers }: ApiCallOptions = {},
 ): Promise<{ response: Awaited<ReturnType<APIRequestContext['fetch']>>; body: T }> {
   const response = await request.fetch(`${API_BASE_URL}${path}`, {
     method,
     data,
     maxRedirects,
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(headers ?? {}),
+    },
   });
   const body = (await response.json().catch(() => ({}))) as T;
   return { response, body };
@@ -76,6 +80,7 @@ export async function loginWithApi(
   return apiJson<AuthTokens>(request, '/api/auth/otp/verify', {
     method: 'POST',
     data: { phone, code: otp.devOtp },
+    headers: { 'X-Auth-Client': 'mobile' },
   });
 }
 
@@ -130,16 +135,33 @@ export async function loginViaUi(
   await page.goto('/auth');
   await page.getByLabel('شماره موبایل').fill(phone);
   await page.getByRole('button', { name: 'دریافت کد', exact: true }).click();
-  await expect(page.locator('input[aria-label*="کد تایید"]').first()).toBeVisible();
-  await page.getByRole('button', { name: /تایید و ورود/ }).click();
+  // Development API responses include `devOtp`; AuthPage fills it and
+  // auto-submits, so the route may already advance before an OTP box can be
+  // observed. Production responses omit that field and keep the manual step.
+  const otpInput = page.locator('input[aria-label*="کد تایید"]').first();
+  await expect(page).toHaveURL(expectedUrl, { timeout: 15_000 }).catch(async () => {
+    await expect(otpInput).toBeVisible();
+    await page.getByRole('button', { name: /تایید و ورود/ }).click();
+  });
   await expect(page).toHaveURL(expectedUrl);
 }
 
 /** Restore a refresh token, then let AuthProvider bootstrap the browser session. */
 export async function restoreSession(page: Page, refreshToken: string, expectedUrl?: RegExp): Promise<void> {
+  // Browser auth uses an HttpOnly cookie; localStorage cannot restore it. Seed
+  // the same cookie that `/auth/otp/verify` writes, then let AuthProvider run
+  // its normal refresh + /me bootstrap path.
+  await page.context().addCookies([
+    {
+      name: 'salon_refresh',
+      value: refreshToken,
+      domain: 'localhost',
+      path: '/api/auth',
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+  ]);
   await page.goto('/');
-  await page.evaluate((token) => localStorage.setItem('refreshToken', token), refreshToken);
-  await page.reload();
   if (expectedUrl) await expect(page).toHaveURL(expectedUrl);
 }
 
@@ -161,22 +183,31 @@ export async function registerSalonViaUi(page: Page, label = 'E2E UI'): Promise<
   const serviceName = `${label} سرویس`;
 
   await page.goto('/business/register');
-  await page.getByRole('button', { name: 'سالن مو و زیبایی', exact: true }).click();
+  await page.getByTestId('work-mode-solo').click();
+  await page.getByRole('button', { name: 'ادامه', exact: true }).click();
+
+  await page.locator('#workspace').click();
+  await page.getByRole('option', { name: 'سالن یا محل ثابت خودم', exact: true }).click();
+  await page.getByRole('button', { name: 'ادامه', exact: true }).click();
+
+  await page.getByTestId('business-type-hair_salon').click();
   await page.getByRole('button', { name: 'ادامه', exact: true }).click();
 
   await page.locator('#salonName').fill(salonName);
   await page.locator('#ownerName').fill(ownerName);
-  await page.locator('#phone').fill(ownerPhone);
-  await page.waitForTimeout(600);
   await page.getByRole('button', { name: 'ادامه', exact: true }).click();
 
   await page.locator('#svcName').fill(serviceName);
-  await page.locator('#svcDuration').fill('30');
+  await page
+    .getByRole('group', { name: /مدت/ })
+    .getByRole('button', { name: /افزایش/ })
+    .click();
   await page.locator('#svcPrice').fill('500000');
   await page.getByRole('button', { name: 'افزودن خدمت', exact: true }).click();
   await expect(page.getByText(serviceName, { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'ادامه', exact: true }).click();
 
+  await page.locator('#phone').fill(ownerPhone);
   await page.locator('#chairCount').fill('1');
   const registrationResponse = page.waitForResponse(
     (response) =>
@@ -190,8 +221,11 @@ export async function registerSalonViaUi(page: Page, label = 'E2E UI'): Promise<
     salonName: string;
   };
 
-  await expect(page.getByRole('heading', { level: 1, name: 'تایید شماره و ورود' })).toBeVisible();
-  await page.getByRole('button', { name: 'تایید و ورود به پنل', exact: true }).click();
+  const otpHeading = page.getByRole('heading', { level: 1, name: /تایید شماره و ورود/ });
+  await expect(page).toHaveURL(/\/owner(?:\/calendar)?(?:\?|$)/, { timeout: 15_000 }).catch(async () => {
+    await expect(otpHeading).toBeVisible();
+    await page.getByRole('button', { name: 'تایید و ورود به پنل', exact: true }).click();
+  });
   await expect(page).toHaveURL(/\/owner(?:\/calendar)?(?:\?|$)/);
 
   return {

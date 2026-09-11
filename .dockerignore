@@ -6,12 +6,51 @@ dist
 **/dist
 coverage
 **/coverage
+artifacts
+**/artifacts
+playwright-report
+**/playwright-report
+test-results
+**/test-results
+blob-report
+**/blob-report
+.nyc_output
+**/.nyc_output
 *.tsbuildinfo
 **/*.tsbuildinfo
+
+# Local generated presentation/chart workspaces
+.chart-data-*
+.codex-pitchdeck-build-*
+
+# Local database exports and runtime state
+backups
+**/backups
+.tmp-test
+**/.tmp-test
+node-compile-cache
+**/node-compile-cache
+
+# Git and local tool metadata
 .git
 .gitignore
 .kiro
+.claude
+.vscode
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Documentation/design assets are not required to build application images.
+docs
+mockups
+MVP-REPORT.html
+dev-users.html
+user-journeys.html
+business-ideas-for-iran.md
+
 # Never bake local secrets into the image.
 .env
 .env.*

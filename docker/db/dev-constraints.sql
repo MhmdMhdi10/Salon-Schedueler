@@ -30,9 +30,18 @@ ALTER TABLE salon ADD COLUMN IF NOT EXISTS brand_accent text;
 
 -- Inclusive customer booking horizon; 0 means today only.
 ALTER TABLE salon ADD COLUMN IF NOT EXISTS booking_window_days integer NOT NULL DEFAULT 14;
+ALTER TABLE salon ALTER COLUMN booking_window_days SET DEFAULT 1;
 DO $$ BEGIN
   ALTER TABLE salon ADD CONSTRAINT salon_booking_window_days_check
     CHECK (booking_window_days BETWEEN 0 AND 365);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Optional lower bound for customer booking dates; 0 = today, 1 = tomorrow.
+ALTER TABLE salon ADD COLUMN IF NOT EXISTS booking_start_offset_days integer NOT NULL DEFAULT 0;
+DO $$ BEGIN
+  ALTER TABLE salon ADD CONSTRAINT salon_booking_start_offset_days_check
+    CHECK (booking_start_offset_days BETWEEN 0 AND 1);
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -87,29 +96,19 @@ CREATE INDEX IF NOT EXISTS salon_notification_salon_id_staff_member_id_read_at_i
 ALTER TABLE holiday ADD COLUMN IF NOT EXISTS start_time time;
 ALTER TABLE holiday ADD COLUMN IF NOT EXISTS end_time time;
 
--- Optional staff login phone (StaffMember.phone String? @unique in schema.prisma).
--- Additive + nullable + unique. db push only runs on a fresh volume, so an
--- existing dev DB needs this to pick up the column BEFORE dev-seed.sql (which
--- inserts staff phones) runs. Idempotent.
+-- Optional staff login phone. A person may belong to multiple salons, so this
+-- column must not be globally unique; the salon remains the tenant scope.
+-- db push only runs on a fresh volume, so an existing dev DB needs this to pick
+-- up the column BEFORE dev-seed.sql (which inserts staff phones) runs.
 ALTER TABLE staff_member ADD COLUMN IF NOT EXISTS phone text;
 
--- Match Prisma's @unique index (default name staff_member_phone_key). Guarded so
--- it can never introduce a NEW abort if duplicate non-null phones somehow exist
--- on an old dev DB: catch unique_violation/duplicate_table and NOTICE instead of
--- erroring. The column ALTER above is the essential fix; this preserves fidelity.
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'staff_member_phone_key') THEN
-    BEGIN
-      CREATE UNIQUE INDEX staff_member_phone_key ON staff_member (phone);
-    EXCEPTION
-      WHEN unique_violation THEN
-        RAISE NOTICE 'staff_member_phone_key not created: duplicate phones present (dev DB).';
-      WHEN duplicate_table THEN
-        RAISE NOTICE 'staff_member_phone_key already exists; skipping.';
-    END;
-  END IF;
-END $$;
+-- Remove the pre-multi-salon unique index if an existing dev volume still has
+-- it, then keep lookups fast with the same non-unique index as Prisma.
+DROP INDEX IF EXISTS staff_member_phone_key;
+CREATE INDEX IF NOT EXISTS staff_member_phone_active_idx
+  ON staff_member (phone, active);
+CREATE UNIQUE INDEX IF NOT EXISTS staff_member_salon_id_phone_key
+  ON staff_member (salon_id, phone);
 
 -- Generated occupancy interval [start_at, end_at). ADD COLUMN IF NOT EXISTS is
 -- supported by PostgreSQL, so this is idempotent on its own.

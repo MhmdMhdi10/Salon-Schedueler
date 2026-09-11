@@ -289,8 +289,8 @@ describe('Keyboard navigation (RTL arrows)', () => {
       const dayTab = screen.getByRole('tab', { name: /روز/ });
       const weekTab = screen.getByRole('tab', { name: /هفته/ });
 
-      expect(dayTab).toHaveAttribute('aria-selected', 'false');
-      expect(weekTab).toHaveAttribute('aria-selected', 'true');
+      expect(dayTab).toHaveAttribute('aria-selected', 'true');
+      expect(weekTab).toHaveAttribute('aria-selected', 'false');
 
       // Click week tab
       fireEvent.click(weekTab);
@@ -544,6 +544,10 @@ describe('Jalali dates', () => {
     it('opens daily view when a week day is selected', async () => {
       renderCalendarPage();
       await waitFor(() => {
+        expect(screen.getByTestId('owner-calendar-page')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole('tab', { name: /هفته/ }));
+      await waitFor(() => {
         expect(screen.getByTestId('owner-calendar-week')).toBeInTheDocument();
       });
 
@@ -619,7 +623,8 @@ describe('Jalali dates', () => {
     it('keeps quick actions compact for short day appointments', async () => {
       const start = new Date();
       start.setHours(10, 0, 0, 0);
-      const end = new Date(start.getTime() + 30 * 60_000);
+      const end = new Date(start.getTime() + 45 * 60_000);
+      const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(end.getTime() + 1);
       mockGetCalendar.mockResolvedValue({
         appointments: [
           {
@@ -642,10 +647,46 @@ describe('Jalali dates', () => {
       const appointment = await screen.findByRole('article', { name: /کوتاهی مو/ });
       const noShow = within(appointment).getByRole('button', { name: /ثبت عدم حضور/ });
       const cancel = within(appointment).getByRole('button', { name: /لغو نوبت/ });
+      expect(appointment).toHaveStyle({ height: '90px' });
       expect(noShow).toHaveAttribute('title', 'ثبت عدم حضور');
       expect(cancel).toHaveAttribute('title', 'لغو نوبت');
       expect(within(appointment).queryByText('عدم حضور')).not.toBeInTheDocument();
       expect(within(appointment).queryByText('لغو نوبت')).not.toBeInTheDocument();
+      dateNowSpy.mockRestore();
+    });
+
+    it('keeps pending status details visible on short day appointments', async () => {
+      const start = new Date();
+      start.setHours(10, 0, 0, 0);
+      const end = new Date(start.getTime() + 45 * 60_000);
+      mockGetCalendar.mockResolvedValue({
+        appointments: [
+          {
+            id: 'appt-short-pending-reschedule',
+            startAt: start.toISOString(),
+            endAt: end.toISOString(),
+            serviceName: 'کوتاهی مو',
+            customerName: 'زهرا محمدی',
+            status: 'confirmed',
+            pendingReschedule: {
+              startAt: new Date(start.getTime() + 30 * 60_000).toISOString(),
+              endAt: new Date(end.getTime() + 30 * 60_000).toISOString(),
+            },
+          },
+        ],
+      });
+
+      renderCalendarPage();
+      await waitFor(() => {
+        expect(screen.getByTestId('owner-calendar-page')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole('tab', { name: /روز/ }));
+
+      const appointment = await screen.findByRole('article', { name: /تغییر زمان در انتظار تأیید مشتری/ });
+      const cancel = within(appointment).getByRole('button', { name: /لغو نوبت/ });
+      expect(appointment).toHaveStyle({ height: '104px' });
+      expect(appointment).toHaveTextContent('تغییر زمان در انتظار تأیید مشتری');
+      expect(cancel).toHaveClass('h-11', 'w-11');
     });
 
     it('moves an appointment in place without refetching the whole calendar', async () => {
@@ -669,7 +710,7 @@ describe('Jalali dates', () => {
 
       renderCalendarPage();
       await waitFor(() => {
-        expect(screen.getByTestId('owner-calendar-week')).toBeInTheDocument();
+        expect(screen.getByTestId('owner-calendar-page')).toBeInTheDocument();
       });
       fireEvent.click(screen.getByRole('tab', { name: /روز/ }));
       fireEvent.click(screen.getByRole('button', { name: 'بعدی' }));
@@ -681,9 +722,11 @@ describe('Jalali dates', () => {
       fireEvent.click(screen.getByRole('article', { name: /کوتاهی مو/ }));
       fireEvent.click(screen.getByRole('button', { name: /انتقال به زمان دیگر/ }));
       expect(screen.getByRole('button', { name: /تاریخ شروع جدید/ })).toBeInTheDocument();
-      fireEvent.change(screen.getByLabelText('ساعت شروع جدید'), {
-        target: { value: '11:00' },
-      });
+      fireEvent.click(screen.getByRole('button', { name: /ساعت شروع جدید/ }));
+      fireEvent.click(
+        within(screen.getByRole('listbox', { name: 'ساعت' })).getByRole('option', { name: '11' }),
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'تأیید ساعت' }));
       fireEvent.click(screen.getByRole('button', { name: 'بررسی تغییر زمان' }));
       fireEvent.click(screen.getByRole('button', { name: 'تأیید نهایی تغییر زمان' }));
 
@@ -714,7 +757,7 @@ describe('Jalali dates', () => {
 
       renderCalendarPage();
       await waitFor(() => {
-        expect(screen.getByTestId('owner-calendar-week')).toBeInTheDocument();
+        expect(screen.getByTestId('owner-calendar-page')).toBeInTheDocument();
       });
       fireEvent.click(screen.getByRole('tab', { name: /روز/ }));
       fireEvent.click(screen.getByRole('button', { name: 'بعدی' }));

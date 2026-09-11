@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '../../../auth/AuthContext';
 import { WorkspaceSwitcher } from '../WorkspaceSwitcher';
@@ -33,7 +33,9 @@ describe('WorkspaceSwitcher', () => {
 
     const nav = await screen.findByTestId('workspace-switcher');
     expect(nav.querySelector('a')).toHaveAttribute('href', '/owner');
-    expect(screen.getByText('پنل سالن')).toBeInTheDocument();
+    const salonPanel = within(nav).getByRole('link', { name: 'پنل سالن' });
+    expect(salonPanel).toBeInTheDocument();
+    expect(within(salonPanel).getByText('پنل سالن')).toHaveClass('sr-only');
   });
 
   it('takes staff from the salon panel to their customer panel', async () => {

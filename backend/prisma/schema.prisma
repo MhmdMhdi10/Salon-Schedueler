@@ -119,7 +119,9 @@ model Salon {
   // are auto-confirmed on creation. A staff member can override this (below).
   autoApprove       Boolean       @default(false) @map("auto_approve")
   // Inclusive future booking horizon. 0 means customers may book today only.
-  bookingWindowDays Int           @default(14) @map("booking_window_days")
+  bookingWindowDays Int           @default(1) @map("booking_window_days")
+  // Lower bound for public booking dates. 0 = today, 1 = tomorrow.
+  bookingStartOffsetDays Int      @default(0) @map("booking_start_offset_days")
   // Per-salon Brand_Accent key for storefront theming (signature-ui-system R4.1).
   // Additive + nullable: null = use the signature default palette. The value is an
   // opaque accent key (e.g. "rose") resolved client-side against the curated ACCENTS.
@@ -205,6 +207,9 @@ model StaffMember {
   reportedSupportTickets SupportTicket[] @relation("SupportTicketStaffReporter")
 
   @@map("staff_member")
+  // A login phone may be reused in another salon, but must identify at most
+  // one staff member inside this salon.
+  @@unique([salonId, phone])
   @@index([phone, active])
 }
 
@@ -391,6 +396,11 @@ model Customer {
   fullName         String? @map("full_name")
   preferredStaffId String? @map("preferred_staff_id") @db.Uuid
   noShowCount      Int     @default(0) @map("no_show_count")
+  // Global account lifecycle controlled by the platform operations center.
+  // Deactivation blocks new sessions while deletedAt keeps historical
+  // appointments, payments and moderation records recoverable.
+  active           Boolean   @default(true)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz
 
   preferredStaff  StaffMember?    @relation("PreferredStaff", fields: [preferredStaffId], references: [id])
   appointments    Appointment[]
@@ -406,6 +416,7 @@ model Customer {
   moderationReports CustomerModerationReport[]
 
   @@map("customer")
+  @@index([active, deletedAt])
 }
 
 // A customer can visit more than one salon. This join preserves a salon's

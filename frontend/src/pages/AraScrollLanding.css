@@ -191,7 +191,7 @@ html.ara-scroll-android .ara-scroll-landing-footer {
 
 .ara-scroll-header-start {
   display: inline-flex;
-  min-height: 40px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   gap: 6px;
@@ -219,7 +219,7 @@ html.ara-scroll-android .ara-scroll-landing-footer {
 
 .ara-scroll-login {
   display: inline-flex;
-  min-height: 40px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   padding-inline: 16px;
@@ -239,10 +239,10 @@ html.ara-scroll-android .ara-scroll-landing-footer {
 }
 
 .ara-scroll-theme-toggle {
-  width: 40px !important;
-  min-width: 40px !important;
-  height: 40px !important;
-  min-height: 40px !important;
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
   border-radius: 50% !important;
 }
 
@@ -711,7 +711,10 @@ html.ara-scroll-android .ara-scroll-landing-footer {
   bottom: 30px;
   left: 50%;
   display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
   align-items: center;
+  justify-content: center;
   gap: 9px;
   color: var(--ara-scroll-muted);
   font-size: 10px;
@@ -1237,21 +1240,45 @@ html.ara-scroll-android .ara-scroll-landing-footer {
   color: var(--ara-scroll-teal);
 }
 
-.ara-scroll-feature-link {
+.ara-scroll-feature-cta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  margin-top: 27px;
+  padding: 0;
+}
+
+.ara-scroll-page .ara-scroll-feature-link {
   display: inline-flex;
+  min-height: 44px;
   align-items: center;
   gap: 8px;
-  margin-top: 27px;
-  color: var(--ara-scroll-ink);
+  justify-content: center;
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 0 16px;
+  border: 1px solid color-mix(in srgb, var(--ara-scroll-teal) 52%, var(--ara-scroll-border));
+  border-radius: 999px;
+  background: var(--ara-scroll-teal);
+  box-shadow: 0 14px 28px color-mix(in srgb, var(--ara-scroll-teal) 22%, transparent);
+  color: #ffffff;
   font-size: 11px;
   font-weight: 950;
+  text-align: center;
   transition:
     transform 180ms ease,
-    color 180ms ease;
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .ara-scroll-feature-link:hover {
-  color: var(--ara-scroll-teal);
+  border-color: color-mix(in srgb, var(--ara-scroll-teal) 72%, white);
+  background: color-mix(in srgb, var(--ara-scroll-teal) 84%, white);
+  color: #ffffff;
+  box-shadow: 0 18px 34px color-mix(in srgb, var(--ara-scroll-teal) 30%, transparent);
 }
 
 .ara-scroll-object-shell {
@@ -2308,7 +2335,7 @@ html.ara-scroll-android .ara-scroll-landing-footer {
   }
 
   .ara-scroll-header-start {
-    min-height: 36px;
+    min-height: 44px;
     padding-inline: 11px;
     font-size: 10px;
   }
@@ -2319,16 +2346,16 @@ html.ara-scroll-android .ara-scroll-landing-footer {
   }
 
   .ara-scroll-login {
-    min-height: 36px;
+    min-height: 44px;
     padding-inline: 12px;
     font-size: 10px;
   }
 
   .ara-scroll-theme-toggle {
-    width: 36px !important;
-    min-width: 36px !important;
-    height: 36px !important;
-    min-height: 36px !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
   }
 
   .ara-scroll-hero {
@@ -2475,8 +2502,16 @@ html.ara-scroll-android .ara-scroll-landing-footer {
     text-align: right;
   }
 
-  .ara-scroll-feature-link {
+  .ara-scroll-feature-cta {
     margin-top: 22px;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0;
+  }
+
+  .ara-scroll-feature-link {
+    width: 100%;
   }
 
   .ara-scroll-final-cta {
@@ -2519,7 +2554,7 @@ html.ara-scroll-android .ara-scroll-landing-footer {
   }
 
   .ara-scroll-button {
-    min-height: 42px;
+    min-height: 44px;
     padding-inline: 11px;
     font-size: 9px;
   }
@@ -4309,6 +4344,18 @@ html.ara-scroll-android .ara-scroll-landing-footer {
     transform: perspective(1700px) rotateX(var(--ara-pointer-tilt-x, 0deg))
       rotateY(var(--ara-pointer-tilt-y, 0deg)) scale(0.82);
     transform-origin: center center;
+  }
+
+  /* Keep feature visuals from forcing the medium responsive layout below
+     the viewport before its CTA can be reached. */
+  .ara-scroll-real-calendar,
+  .ara-scroll-real-services,
+  .ara-scroll-real-clients {
+    height: 360px;
+  }
+
+  .ara-scroll-real-booking {
+    height: 350px;
   }
 }
 
@@ -7238,7 +7285,7 @@ html[data-theme='light'] .ara-calendar-hero-scene {
   }
 
   .ara-scroll-header-start {
-    min-height: 34px;
+    min-height: 44px;
     gap: 4px;
     padding-inline: 9px;
     font-size: 9px;
@@ -7250,16 +7297,16 @@ html[data-theme='light'] .ara-calendar-hero-scene {
   }
 
   .ara-scroll-login {
-    min-height: 34px;
+    min-height: 44px;
     padding-inline: 11px;
     font-size: 9px;
   }
 
   .ara-scroll-theme-toggle {
-    width: 34px !important;
-    min-width: 34px !important;
-    height: 34px !important;
-    min-height: 34px !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
   }
 
   .ara-scroll-real-instagram-profile.is-hero {

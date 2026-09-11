@@ -533,7 +533,12 @@ function MiniBarChart({
 
   return (
     <div data-testid={testId} className="min-w-0" role="img" aria-label={title}>
-      <div className="overflow-x-auto pb-2">
+      <div
+        className="overflow-x-auto rounded-md pb-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+        tabIndex={0}
+        role="region"
+        aria-label={`${title}؛ برای دیدن همه بازه‌ها به‌صورت افقی حرکت کن`}
+      >
         <div className="flex min-w-max items-end gap-2 px-1 pt-2">
           {data.map((item, index) => (
             <div
@@ -955,10 +960,13 @@ export function OwnerAnalyticsPageContent({ salonId: salonIdProp }: { salonId?: 
   ];
 
   return (
-    <div data-testid="admin-analytics" className="flex min-w-0 flex-col gap-5 pb-4">
+    <div
+      data-testid="admin-analytics"
+      className="flex min-w-0 flex-col gap-5 pb-4"
+    >
       <SeoHead title={t('seo.titles.adminAnalytics')} />
 
-      <header data-panel-guide="owner-analytics" className="flex min-w-0 flex-col gap-1">
+      <header className="flex min-w-0 flex-col gap-1">
         <h1 className="text-xl font-bold text-text text-display">{t('admin.analytics')}</h1>
         <p className="max-w-[65ch] text-sm text-muted">
           {t('admin.analyticsPage.subtitle', {
@@ -970,7 +978,6 @@ export function OwnerAnalyticsPageContent({ salonId: salonIdProp }: { salonId?: 
       <Card
         as="section"
         data-testid="analytics-range"
-        data-panel-guide="owner-analytics-report"
         className="min-w-0 p-3 sm:p-4"
       >
         <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

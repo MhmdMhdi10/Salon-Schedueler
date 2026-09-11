@@ -79,6 +79,35 @@ The mock-based concurrency test and the rest of the property-based tests run on 
 offline `npm test`. When `DATABASE_URL` points at a reachable PostgreSQL instance with
 migrations applied, the gated tests execute and exercise the real database behavior.
 
+### Backend E2E (Cucumber)
+
+Start the development database and backend, then run the complete backend E2E matrix:
+
+```bash
+docker compose up -d postgres backend
+npm run test:e2e
+```
+
+Run the quality gate with automatic backend build, Cucumber execution, complete JSON
+validation, controller-route coverage, DTO coverage, and feature-structure checks:
+
+```bash
+npm run test:e2e:cov
+```
+
+Equivalent commands from `backend/` are `npm run test:e2e` and `npm run test:e2e:cov`.
+Generated artifacts:
+
+- `backend/artifacts/cucumber-results.json`
+- `backend/artifacts/cucumber-report.html`
+- `backend/coverage/coverage-final.json`
+- `backend/coverage/coverage-summary.json`
+
+`npm run e2e` remains the Playwright browser suite. Backend E2E uses the explicit
+`test:e2e` commands above, following the same separation used by V-House.
+For the API-facing business/browser Cucumber matrix use `npm run test:e2e:business`;
+for the backend Cucumber TypeScript check use `npm run test:e2e:typecheck`.
+
 ### Accessibility checks (web)
 
 The web PWA gates accessibility in CI two ways: axe assertions baked into the

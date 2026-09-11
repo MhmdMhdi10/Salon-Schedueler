@@ -57,6 +57,16 @@ export class BookingAbuseGuard {
   constructor(private readonly prisma: PrismaClient) {}
 
   async check(input: BookingAbuseInput): Promise<void> {
+    const customerDelegate = (this.prisma as any).customer;
+    if (customerDelegate?.findUnique) {
+      const customer = await customerDelegate.findUnique({
+        where: { id: input.customerId },
+        select: { active: true, deletedAt: true },
+      });
+      if (customer && (customer.active === false || customer.deletedAt)) {
+        throw new BookingAbuseError('CUSTOMER_BLOCKED', 'Customer account is blocked');
+      }
+    }
     const blockDelegate = (this.prisma as any).customerSalonBlock;
     if (blockDelegate?.findUnique) {
       const block = await blockDelegate.findUnique({

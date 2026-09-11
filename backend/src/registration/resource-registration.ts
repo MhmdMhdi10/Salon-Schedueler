@@ -1,6 +1,16 @@
 import type { PrismaClient, StaffMember, Chair, Equipment } from '@prisma/client';
 import type { StaffRole } from '@salon/shared';
 
+/** Stable domain error used when a login phone is already used in this salon. */
+export class StaffPhoneTakenError extends Error {
+  public readonly code = 'PHONE_TAKEN';
+
+  public constructor() {
+    super('PHONE_TAKEN');
+    this.name = 'StaffPhoneTakenError';
+  }
+}
+
 /**
  * ResourceRegistration handles owner-guarded CRUD for salon resources:
  * staff members, chairs, and equipment.
@@ -30,6 +40,13 @@ export class ResourceRegistration {
     role: StaffRole,
     phone?: string | null,
   ): Promise<StaffMember> {
+    if (phone) {
+      const existing = await this.prisma.staffMember.findFirst({
+        where: { salonId, phone },
+      });
+      if (existing) throw new StaffPhoneTakenError();
+    }
+
     const staffMember = await this.prisma.staffMember.create({
       data: {
         salonId,
@@ -49,7 +66,7 @@ export class ResourceRegistration {
    * Update a staff member's identity / role / login / active flag (owner-guarded
    * at the route layer). Only provided fields are changed. Passing `phone: null`
    * clears the login; a non-empty `phone` sets it. A person may share this phone
-   * across salons. Changing `role` is how an
+   * across salons, but not twice in the same salon. Changing `role` is how an
    * owner promotes/demotes a person (e.g. Stylist → Admin).
    */
   async updateStaffMember(
@@ -62,6 +79,19 @@ export class ResourceRegistration {
       assignedChairId?: string | null;
     },
   ): Promise<StaffMember> {
+    if (patch.phone) {
+      const current = await this.prisma.staffMember.findUnique({
+        where: { id },
+        select: { salonId: true, phone: true },
+      });
+      const existing = current
+        ? await this.prisma.staffMember.findFirst({
+            where: { salonId: current.salonId, phone: patch.phone, id: { not: id } },
+          })
+        : null;
+      if (existing) throw new StaffPhoneTakenError();
+    }
+
     return this.prisma.staffMember.update({
       where: { id },
       data: {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AppShell, MAIN_CONTENT_ID } from '..';
 import { ThemeProvider } from '../../theme';
@@ -8,11 +8,19 @@ import '../../../i18n';
 import { renderRtl, expectNoSeriousA11yViolations } from '../../../test/a11y';
 
 const mockGetMe = vi.hoisted(() => vi.fn());
+const mockGetCustomerNotifications = vi.hoisted(() => vi.fn());
+const mockMarkCustomerNotificationRead = vi.hoisted(() => vi.fn());
+const mockMarkAllCustomerNotificationsRead = vi.hoisted(() => vi.fn());
 
 vi.mock('../../../api/client', () => ({
   bootstrapAuth: vi.fn().mockResolvedValue(true),
   getAccessToken: vi.fn().mockReturnValue('access-token'),
   meApi: { getMe: mockGetMe },
+  customerApi: {
+    getNotifications: mockGetCustomerNotifications,
+    markNotificationRead: mockMarkCustomerNotificationRead,
+    markAllNotificationsRead: mockMarkAllCustomerNotificationsRead,
+  },
   signOut: vi.fn(),
 }));
 
@@ -91,10 +99,53 @@ describe('AppShell', () => {
     expect(within(banner).queryByRole('link', { name: 'QR و استند' })).not.toBeInTheDocument();
   });
 
+  it('shows customer notifications in the account header', async () => {
+    mockGetMe.mockResolvedValue({ principal: { id: 'customer-1' } });
+    mockGetCustomerNotifications.mockResolvedValue({
+      notifications: [
+        {
+          id: 'notification-1',
+          appointmentId: null,
+          type: 'booking.confirmed',
+          title: 'نوبت تأیید شد',
+          body: 'نوبت شما با موفقیت تأیید شد.',
+          readAt: null,
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    });
+
+    render(
+      <ThemeProvider defaultTheme="light">
+        <MemoryRouter initialEntries={['/account']}>
+          <AuthProvider>
+            <div dir="rtl" lang="fa">
+              <AppShell>
+                <p>حساب من</p>
+              </AppShell>
+            </div>
+          </AuthProvider>
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
+
+    const banner = screen.getByRole('banner');
+    const bell = await within(banner).findByRole('button', { name: 'اعلان‌های حساب کاربری' });
+    expect(bell).toBeInTheDocument();
+    expect(await within(banner).findByText('۱')).toBeInTheDocument();
+
+    fireEvent.click(bell);
+    const dialog = await screen.findByRole('dialog', { name: 'اعلان‌های حساب کاربری' });
+    expect(within(dialog).getByText('نوبت تأیید شد')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'خواندن همه' }));
+    await waitFor(() => expect(mockMarkAllCustomerNotificationsRead).toHaveBeenCalledTimes(1));
+  });
+
   it('shows all three panel destinations for a platform administrator', async () => {
     mockGetMe.mockResolvedValue({
       principal: { id: 'platform-admin-1', role: 'PlatformAdmin' },
     });
+    mockGetCustomerNotifications.mockResolvedValue({ notifications: [] });
 
     render(
       <ThemeProvider defaultTheme="light">
@@ -111,18 +162,25 @@ describe('AppShell', () => {
     );
 
     const banner = screen.getByRole('banner');
-    expect(await within(banner).findByRole('link', { name: 'پنل سالن' })).toHaveAttribute(
+    const salonPanel = await within(banner).findByRole('link', { name: 'پنل سالن' });
+    expect(salonPanel).toHaveAttribute(
       'href',
       '/owner',
     );
-    expect(within(banner).getByRole('link', { name: 'پنل کاربری' })).toHaveAttribute(
+    const userPanel = within(banner).getByRole('link', { name: 'پنل کاربری' });
+    const adminPanel = within(banner).getByRole('link', { name: 'پنل ادمین' });
+    expect(within(salonPanel).getByText('پنل سالن')).toHaveClass('sr-only');
+    expect(within(userPanel).getByText('پنل کاربری')).toHaveClass('sr-only');
+    expect(within(adminPanel).getByText('پنل ادمین')).toHaveClass('sr-only');
+    expect(userPanel).toHaveAttribute(
       'href',
       '/account',
     );
-    expect(within(banner).getByRole('link', { name: 'پنل ادمین' })).toHaveAttribute(
+    expect(adminPanel).toHaveAttribute(
       'href',
       '/platform-admin',
     );
+    expect(await within(banner).findByRole('button', { name: 'اعلان‌های حساب کاربری' })).toBeInTheDocument();
   });
 
   it('exposes a single <main> with the skip-link target id', () => {

@@ -17,7 +17,10 @@ import {
   makeWsInboxHandle,
   verifyWsToken,
 } from '../../src/inbox/controllers/inbox.controller.js';
-import { paymentCallbackRouter, paymentInitiateRouter } from '../../src/payment/controllers/payment.controller.js';
+import {
+  paymentCallbackRouter,
+  paymentInitiateRouter,
+} from '../../src/payment/controllers/payment.controller.js';
 import {
   referralPublicRouter,
   referralRouter,
@@ -25,7 +28,10 @@ import {
 import { ReferralStateError } from '../../src/referral/services/index.js';
 import { registrationRouter } from '../../src/registration/controllers/registration.controller.js';
 import { salonRouter } from '../../src/salon/controllers/salon.controller.js';
-import { subscriptionCallbackRouter, subscriptionRouter } from '../../src/subscription/controllers/subscription.controller.js';
+import {
+  subscriptionCallbackRouter,
+  subscriptionRouter,
+} from '../../src/subscription/controllers/subscription.controller.js';
 import { waitlistRouter } from '../../src/waitlist/controllers/waitlist.controller.js';
 import { platformAdminRouter } from '../../src/platform-admin/controllers/platform-admin.controller.js';
 import { BackendWorld } from '../bootstrap/custom.world.js';
@@ -44,13 +50,9 @@ const PLATFORM = {
   platformAdminId: 'platform-1',
 };
 
-const allowRole: RequireRole = () => ((_req, _res, next) => next());
+const allowRole: RequireRole = () => (_req, _res, next) => next();
 
-function appFor(
-  router: Express | RequestHandler,
-  principal?: object,
-  parseJson = true,
-): Express {
+function appFor(router: Express | RequestHandler, principal?: object, parseJson = true): Express {
   const app = express();
   if (parseJson) app.use(express.json());
   app.use((req, _res, next) => {
@@ -82,7 +84,8 @@ async function withMutedExpectedLog<T>(
   operation: () => Promise<T>,
 ): Promise<T> {
   const previousQuietMode = process.env.E2E_QUIET_LOGS;
-  const consoleWithMethod = console as Console & Record<'warn' | 'error', (...args: unknown[]) => void>;
+  const consoleWithMethod = console as Console &
+    Record<'warn' | 'error', (...args: unknown[]) => void>;
   const previousLogger = consoleWithMethod[method];
   process.env.E2E_QUIET_LOGS = 'false';
   consoleWithMethod[method] = () => undefined;
@@ -142,6 +145,16 @@ async function exerciseAppointmentBranches(): Promise<void> {
   };
   let depositMode: 'redirect' | 'card' | 'card-no-bank' | 'cash' = 'redirect';
   let approvalStaffId: string | undefined = 'staff-1';
+  let cancellation: any = null;
+  let manualReceipt: any = {
+    id: 'receipt-1',
+    fileName: 'receipt.jpg',
+    mimeType: 'image/jpeg',
+    sizeBytes: 3,
+    uploadedAt: new Date('2030-01-01T09:00:00Z'),
+    status: 'pending',
+    data: Buffer.from('img'),
+  };
   let allowed = true;
   let canApproveOwn = true;
   const services: any = {
@@ -172,22 +185,18 @@ async function exerciseAppointmentBranches(): Promise<void> {
       },
       getDepositOverview: async () => ({ method: 'card_transfer', amountRial: 1000 }),
       uploadManualReceipt: async () => ({ id: 'receipt-1', status: 'pending' }),
-      getManualReceiptFile: async () => ({
-        id: 'receipt-1',
-        fileName: 'receipt.jpg',
-        mimeType: 'image/jpeg',
-        sizeBytes: 3,
-        uploadedAt: new Date('2030-01-01T09:00:00Z'),
-        status: 'pending',
-        data: Buffer.from('img'),
-      }),
+      getManualReceiptFile: async () => manualReceipt,
       reviewManualReceipt: async (_id: string, decision: string) => ({
         status: decision,
         appointmentStatus: decision === 'approved' ? 'confirmed' : 'held',
       }),
     },
     cancellationFlow: { cancel: async () => appointment },
-    cancellationService: { markNoShow: async () => appointment },
+    cancellationService: {
+      markNoShow: async () => appointment,
+      getCancellation: async () => cancellation,
+      reportCustomer: async () => undefined,
+    },
     appointmentManagementService: {
       createWalkIn: async () => walkInResult,
       reschedule: async () => rescheduleResult,
@@ -198,7 +207,9 @@ async function exerciseAppointmentBranches(): Promise<void> {
       acceptReschedule: async () => ({ appointment, decision: 'accepted' }),
       rejectReschedule: async () => ({ appointment, decision: 'rejected' }),
     },
-    serviceCatalog: { listServices: async () => [{ id: appointment?.serviceId ?? 'service-1', approvalStaffId }] },
+    serviceCatalog: {
+      listServices: async () => [{ id: appointment?.serviceId ?? 'service-1', approvalStaffId }],
+    },
     notificationService: {
       sendConfirmation: async () => undefined,
       sendSalonBookingNotice: async () => undefined,
@@ -233,9 +244,15 @@ async function exerciseAppointmentBranches(): Promise<void> {
   });
   await hit(bookingApp, 'POST', '/appointments', { ...bookingBody, durationMinutes: 4 });
   await hit(bookingApp, 'POST', '/appointments', { ...bookingBody, durationMinutes: 500 });
-  await hit(bookingApp, 'POST', '/appointments', { ...bookingBody, locationType: 'salon' }, {
-    'Idempotency-Key': 'branch-key',
-  });
+  await hit(
+    bookingApp,
+    'POST',
+    '/appointments',
+    { ...bookingBody, locationType: 'salon' },
+    {
+      'Idempotency-Key': 'branch-key',
+    },
+  );
   bookingResult = { status: 'rejected', reason: 'no_availability', appointment };
   await hit(bookingApp, 'POST', '/appointments', bookingBody);
   bookingResult = { status: 'rejected', reason: 'resource_busy', appointment };
@@ -257,6 +274,20 @@ async function exerciseAppointmentBranches(): Promise<void> {
   bookingResult = { status: 'pending', appointment };
   await hit(noAbuseApp, 'POST', '/appointments', bookingBody);
 
+  const multiServiceBookingApp = appFor(
+    appointmentRouter(services as Services, allowRole),
+    CUSTOMER,
+  );
+  await hit(multiServiceBookingApp, 'POST', '/appointments', {
+    salonId: 'salon-1',
+    serviceIds: ['service-1', 'service-2', ''],
+    startAt: bookingBody.startAt,
+  });
+  await hit(multiServiceBookingApp, 'POST', '/appointments', {
+    salonId: 'salon-1',
+    startAt: bookingBody.startAt,
+  });
+
   const noIpApp = express();
   noIpApp.use(express.json());
   noIpApp.use((req, _res, next) => {
@@ -268,71 +299,119 @@ async function exerciseAppointmentBranches(): Promise<void> {
   await hit(noIpApp, 'POST', '/appointments', bookingBody);
 
   const noWalkInApp = appFor(
-    appointmentRouter({ ...services, appointmentManagementService: undefined } as Services, allowRole),
+    appointmentRouter(
+      { ...services, appointmentManagementService: undefined } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(noWalkInApp, 'POST', '/salons/salon-1/appointments/manual', {});
   const adminApp = appFor(appointmentRouter(services as Services, allowRole), OWNER);
   await hit(adminApp, 'POST', '/salons/salon-1/appointments/manual', {});
   await hit(adminApp, 'POST', '/salons/salon-1/appointments/manual', {
-    serviceId: 'service-1', startAt: bookingBody.startAt, phone: '123',
+    serviceId: 'service-1',
+    startAt: bookingBody.startAt,
+    phone: '123',
   });
   await hit(adminApp, 'POST', '/salons/salon-1/appointments/manual', {
-    serviceId: 'service-1', startAt: bookingBody.startAt, phone: 123,
+    serviceId: 'service-1',
+    startAt: bookingBody.startAt,
+    phone: 123,
   });
   await hit(adminApp, 'POST', '/salons/salon-1/appointments/manual', {
-    serviceId: 'service-1', startAt: bookingBody.startAt, phone: '09121110010', locationType: 'bad',
+    serviceId: 'service-1',
+    startAt: bookingBody.startAt,
+    phone: '09121110010',
+    locationType: 'bad',
   });
   await hit(adminApp, 'POST', '/salons/salon-1/appointments/manual', {
-    serviceId: 'service-1', startAt: bookingBody.startAt, phone: '09121110010', customerNote: 'x'.repeat(1001),
+    serviceId: 'service-1',
+    startAt: bookingBody.startAt,
+    phone: '09121110010',
+    customerNote: 'x'.repeat(1001),
   });
   await hit(adminApp, 'POST', '/salons/salon-1/appointments/manual', {
-    serviceId: 'service-1', startAt: bookingBody.startAt, phone: '09121110010', durationMinutes: 4,
+    serviceId: 'service-1',
+    startAt: bookingBody.startAt,
+    phone: '09121110010',
+    durationMinutes: 4,
   });
   await hit(adminApp, 'POST', '/salons/salon-1/appointments/manual', {
-    serviceId: 'service-1', startAt: bookingBody.startAt, phone: '09121110010',
-    customerNote: 'Counter note', durationMinutes: 30,
+    serviceId: 'service-1',
+    startAt: bookingBody.startAt,
+    phone: '09121110010',
+    customerNote: 'Counter note',
+    durationMinutes: 30,
   });
   await hit(adminApp, 'POST', '/salons/salon-1/appointments/manual', {
-    serviceId: 'service-1', startAt: bookingBody.startAt, phone: '09121110010', durationMinutes: 500,
+    serviceId: 'service-1',
+    startAt: bookingBody.startAt,
+    phone: '09121110010',
+    durationMinutes: 500,
   });
   await hit(adminApp, 'POST', '/salons/salon-1/appointments/manual', {
-    serviceId: 'service-1', startAt: bookingBody.startAt, phone: '09121110010', locationType: 'customer',
+    serviceId: 'service-1',
+    startAt: bookingBody.startAt,
+    phone: '09121110010',
+    locationType: 'customer',
   });
   await hit(adminApp, 'POST', '/salons/salon-1/appointments/manual', {
-    serviceId: 'service-1', startAt: bookingBody.startAt, phone: '09121110010',
-    fullName: 'Walk-in customer', preferredStaffId: 'staff-1', locationType: 'customer',
+    serviceId: 'service-1',
+    startAt: bookingBody.startAt,
+    phone: '09121110010',
+    fullName: 'Walk-in customer',
+    preferredStaffId: 'staff-1',
+    locationType: 'customer',
     locationAddress: 'Customer address',
   });
   walkInResult = { status: 'rejected', reason: 'no_availability', appointment };
   await hit(adminApp, 'POST', '/salons/salon-1/appointments/manual', {
-    serviceId: 'service-1', startAt: bookingBody.startAt, phone: '09121110010',
+    serviceId: 'service-1',
+    startAt: bookingBody.startAt,
+    phone: '09121110010',
   });
   walkInResult = { status: 'rejected', reason: 'busy', appointment };
   await hit(adminApp, 'POST', '/salons/salon-1/appointments/manual', {
-    serviceId: 'service-1', startAt: bookingBody.startAt, phone: '09121110010',
+    serviceId: 'service-1',
+    startAt: bookingBody.startAt,
+    phone: '09121110010',
   });
   walkInResult = { status: 'held', appointment };
   await hit(adminApp, 'POST', '/salons/salon-1/appointments/manual', {
-    serviceId: 'service-1', startAt: bookingBody.startAt, phone: '09121110010',
+    serviceId: 'service-1',
+    startAt: bookingBody.startAt,
+    phone: '09121110010',
   });
   walkInResult = { status: 'confirmed', appointment };
   await hit(adminApp, 'POST', '/salons/salon-1/appointments/manual', {
-    serviceId: 'service-1', startAt: bookingBody.startAt, phone: '09121110010',
+    serviceId: 'service-1',
+    startAt: bookingBody.startAt,
+    phone: '09121110010',
   });
 
-  const customerAppointmentApp = appFor(appointmentRouter(services as Services, allowRole), CUSTOMER);
+  const customerAppointmentApp = appFor(
+    appointmentRouter(services as Services, allowRole),
+    CUSTOMER,
+  );
   await hit(customerAppointmentApp, 'POST', '/appointments/appointment-1/reschedule', {});
   rescheduleResult = { previousAppointment: appointment, booking: { status: 'held', appointment } };
   await hit(customerAppointmentApp, 'POST', '/appointments/appointment-1/reschedule', {
     startAt: bookingBody.startAt,
     preferredStaffId: 'staff-1',
   });
-  rescheduleResult = { previousAppointment: appointment, booking: { status: 'rejected', appointment } };
-  await hit(customerAppointmentApp, 'POST', '/appointments/appointment-1/reschedule', { startAt: bookingBody.startAt });
+  rescheduleResult = {
+    previousAppointment: appointment,
+    booking: { status: 'rejected', appointment },
+  };
+  await hit(customerAppointmentApp, 'POST', '/appointments/appointment-1/reschedule', {
+    startAt: bookingBody.startAt,
+  });
 
   const noManagementAppointmentApp = appFor(
-    appointmentRouter({ ...services, appointmentManagementService: undefined } as Services, allowRole),
+    appointmentRouter(
+      { ...services, appointmentManagementService: undefined } as Services,
+      allowRole,
+    ),
     CUSTOMER,
   );
   await hit(noManagementAppointmentApp, 'POST', '/appointments/appointment-1/reschedule', {
@@ -342,21 +421,32 @@ async function exerciseAppointmentBranches(): Promise<void> {
     startAt: bookingBody.startAt,
   });
   const noManagementCustomerApp = appFor(
-    appointmentRouter({ ...services, appointmentManagementService: undefined } as Services, allowRole),
+    appointmentRouter(
+      { ...services, appointmentManagementService: undefined } as Services,
+      allowRole,
+    ),
     CUSTOMER,
   );
   await hit(noManagementCustomerApp, 'POST', '/appointments/appointment-1/reschedule/accept');
   await hit(noManagementCustomerApp, 'POST', '/appointments/appointment-1/reschedule/reject');
   const noManagementPatchApp = appFor(
-    appointmentRouter({ ...services, appointmentManagementService: undefined } as Services, allowRole),
+    appointmentRouter(
+      { ...services, appointmentManagementService: undefined } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(noManagementPatchApp, 'PATCH', '/appointments/appointment-1/reschedule', {
     startAt: bookingBody.startAt,
     preferredStaffId: 'staff-1',
   });
-  rescheduleResult = { previousAppointment: appointment, booking: { status: 'pending', appointment } };
-  await hit(customerAppointmentApp, 'POST', '/appointments/appointment-1/reschedule', { startAt: bookingBody.startAt });
+  rescheduleResult = {
+    previousAppointment: appointment,
+    booking: { status: 'pending', appointment },
+  };
+  await hit(customerAppointmentApp, 'POST', '/appointments/appointment-1/reschedule', {
+    startAt: bookingBody.startAt,
+  });
 
   await hit(customerAppointmentApp, 'POST', '/appointments/appointment-1/reschedule/accept');
   await hit(customerAppointmentApp, 'POST', '/appointments/appointment-1/reschedule/reject');
@@ -368,60 +458,188 @@ async function exerciseAppointmentBranches(): Promise<void> {
   });
   await hit(customerAppointmentApp, 'POST', '/appointments/appointment-1/deposit-receipt', {});
   await hit(customerAppointmentApp, 'GET', '/appointments/appointment-1/deposit-receipt');
-  await hit(appFor(appointmentRouter(services as Services, allowRole), OWNER),
-    'POST', '/appointments/appointment-1/deposit-receipt/review', { decision: 'approved' });
-  await hit(appFor(appointmentRouter(services as Services, allowRole), OWNER),
-    'POST', '/appointments/appointment-1/deposit-receipt/review', {});
-  await hit(appFor(appointmentRouter(services as Services, allowRole), { id: 'owner-no-staff', role: 'Owner' }),
-    'POST', '/appointments/appointment-1/deposit-receipt/review', { decision: 'rejected', note: 'Reviewed' });
+  await hit(
+    appFor(appointmentRouter(services as Services, allowRole), OWNER),
+    'POST',
+    '/appointments/appointment-1/deposit-receipt/review',
+    { decision: 'approved' },
+  );
+  await hit(
+    appFor(appointmentRouter(services as Services, allowRole), OWNER),
+    'POST',
+    '/appointments/appointment-1/deposit-receipt/review',
+    {},
+  );
+  await hit(
+    appFor(appointmentRouter(services as Services, allowRole), {
+      id: 'owner-no-staff',
+      role: 'Owner',
+    }),
+    'POST',
+    '/appointments/appointment-1/deposit-receipt/review',
+    { decision: 'rejected', note: 'Reviewed' },
+  );
 
-  await hit(appFor(appointmentRouter(services as Services, allowRole), OWNER),
-    'POST', '/appointments/appointment-1/reschedule/accept');
-  await hit(appFor(appointmentRouter(services as Services, allowRole)),
-    'GET', '/appointments/appointment-1/deposit');
+  await hit(
+    appFor(appointmentRouter(services as Services, allowRole), OWNER),
+    'POST',
+    '/appointments/appointment-1/reschedule/accept',
+  );
+  await hit(
+    appFor(appointmentRouter(services as Services, allowRole)),
+    'GET',
+    '/appointments/appointment-1/deposit',
+  );
   appointment = {
-    id: 'appointment-1', salonId: 'salon-1', customerId: PLATFORM.id,
-    staffMemberId: 'staff-1', status: 'held',
+    id: 'appointment-1',
+    salonId: 'salon-1',
+    customerId: PLATFORM.id,
+    staffMemberId: 'staff-1',
+    status: 'held',
   };
-  await hit(appFor(appointmentRouter(services as Services, allowRole), PLATFORM),
-    'GET', '/appointments/appointment-1/deposit');
+  await hit(
+    appFor(appointmentRouter(services as Services, allowRole), PLATFORM),
+    'GET',
+    '/appointments/appointment-1/deposit',
+  );
   appointment = null;
-  await hit(appFor(appointmentRouter(services as Services, allowRole), CUSTOMER),
-    'POST', '/appointments/appointment-1/reschedule/accept');
+  await hit(
+    appFor(appointmentRouter(services as Services, allowRole), CUSTOMER),
+    'POST',
+    '/appointments/appointment-1/reschedule/accept',
+  );
   appointment = {
-    id: 'appointment-1', salonId: 'salon-1', customerId: 'other-customer',
-    staffMemberId: 'staff-1', status: 'pending',
+    id: 'appointment-1',
+    salonId: 'salon-1',
+    customerId: 'other-customer',
+    staffMemberId: 'staff-1',
+    status: 'pending',
   };
-  await hit(appFor(appointmentRouter(services as Services, allowRole), CUSTOMER),
-    'POST', '/appointments/appointment-1/reschedule/accept');
+  await hit(
+    appFor(appointmentRouter(services as Services, allowRole), CUSTOMER),
+    'POST',
+    '/appointments/appointment-1/reschedule/accept',
+  );
   appointment = {
-    id: 'appointment-1', salonId: 'salon-1', customerId: CUSTOMER.id,
-    staffMemberId: 'staff-1', status: 'pending',
+    id: 'appointment-1',
+    salonId: 'salon-1',
+    customerId: CUSTOMER.id,
+    staffMemberId: 'staff-1',
+    status: 'pending',
   };
 
-  await hit(appFor(appointmentRouter(services as Services, allowRole)),
-    'GET', '/appointments/appointment-1/deposit-receipt');
-  appointment = null;
-  await hit(appFor(appointmentRouter(services as Services, allowRole), CUSTOMER),
-    'GET', '/appointments/appointment-1/deposit-receipt');
-  appointment = {
-    id: 'appointment-1', salonId: 'salon-1', customerId: 'other-customer',
-    staffMemberId: 'staff-1', status: 'pending',
+  const cancellationApp = appFor(appointmentRouter(services as Services, allowRole), OWNER);
+  await hit(cancellationApp, 'GET', '/appointments/appointment-1/cancellation');
+  cancellation = { id: 'cancellation-1', reason: 'Customer request' };
+  await hit(cancellationApp, 'GET', '/appointments/appointment-1/cancellation');
+  await hit(cancellationApp, 'GET', '/appointments/appointment-1/cancellation/refund-proof');
+  cancellation = {
+    ...cancellation,
+    proof: { fileName: 'proof.jpg', mimeType: 'image/jpeg', data: Buffer.from('img') },
   };
-  await hit(appFor(appointmentRouter(services as Services, allowRole), CUSTOMER),
-    'GET', '/appointments/appointment-1/deposit-receipt');
+  await hit(cancellationApp, 'GET', '/appointments/appointment-1/cancellation/refund-proof');
+
+  const cancelInputApp = appFor(appointmentRouter(services as Services, allowRole), OWNER, false);
+  await hit(cancelInputApp, 'POST', '/appointments/appointment-1/cancel');
+  await hit(cancellationApp, 'POST', '/appointments/appointment-1/cancel', { kind: 'bad' });
+  await hit(cancellationApp, 'POST', '/appointments/appointment-1/cancel', { kind: 'emergency' });
+  await hit(cancellationApp, 'POST', '/appointments/appointment-1/cancel', {
+    kind: 'emergency',
+    reason: 'Valid closure reason',
+    refundProof: {},
+  });
+  await hit(cancellationApp, 'POST', '/appointments/appointment-1/cancel', {
+    kind: 'emergency',
+    reason: 'Valid closure reason',
+    refundProof: { fileName: 'proof.jpg', mimeType: 'image/jpeg', dataBase64: '' },
+  });
+  await hit(cancellationApp, 'POST', '/appointments/appointment-1/cancel', {
+    kind: 'emergency',
+    reason: 'Valid closure reason',
+    refundProof: { fileName: 'proof.jpg', mimeType: 'image/jpeg', dataBase64: 'aW1n' },
+  });
+  await hit(cancellationApp, 'POST', '/appointments/appointment-1/cancel', {
+    kind: 'standard',
+    reason: 'Standard cancellation',
+  });
+  const customerCancellationApp = appFor(
+    appointmentRouter(services as Services, allowRole),
+    CUSTOMER,
+  );
+  await hit(customerCancellationApp, 'POST', '/appointments/appointment-1/cancel', {
+    kind: 'emergency',
+  });
+  await hit(cancellationApp, 'POST', '/appointments/appointment-1/report-customer', {});
+  await hit(cancellationApp, 'POST', '/appointments/appointment-1/report-customer', {
+    reason: 'x'.repeat(1001),
+  });
+  await hit(cancellationApp, 'POST', '/appointments/appointment-1/report-customer', {
+    reason: 'Customer was absent',
+    block: false,
+  });
+  await hit(cancellationApp, 'POST', '/appointments/appointment-1/report-customer', {
+    reason: 'Customer was abusive',
+    block: true,
+  });
+
+  await hit(
+    appFor(appointmentRouter(services as Services, allowRole)),
+    'GET',
+    '/appointments/appointment-1/deposit-receipt',
+  );
+  appointment = null;
+  await hit(
+    appFor(appointmentRouter(services as Services, allowRole), CUSTOMER),
+    'GET',
+    '/appointments/appointment-1/deposit-receipt',
+  );
   appointment = {
-    id: 'appointment-1', salonId: 'salon-1', customerId: CUSTOMER.id,
-    staffMemberId: 'staff-1', status: 'pending',
+    id: 'appointment-1',
+    salonId: 'salon-1',
+    customerId: 'other-customer',
+    staffMemberId: 'staff-1',
+    status: 'pending',
+  };
+  await hit(
+    appFor(appointmentRouter(services as Services, allowRole), CUSTOMER),
+    'GET',
+    '/appointments/appointment-1/deposit-receipt',
+  );
+  appointment = {
+    id: 'appointment-1',
+    salonId: 'salon-1',
+    customerId: CUSTOMER.id,
+    staffMemberId: 'staff-1',
+    status: 'pending',
   };
   allowed = false;
-  await hit(appFor(appointmentRouter(services as Services, allowRole), OWNER),
-    'GET', '/appointments/appointment-1/deposit-receipt');
+  await hit(
+    appFor(appointmentRouter(services as Services, allowRole), OWNER),
+    'GET',
+    '/appointments/appointment-1/deposit-receipt',
+  );
   allowed = true;
+
+  manualReceipt = null;
+  await hit(
+    appFor(appointmentRouter(services as Services, allowRole), CUSTOMER),
+    'GET',
+    '/appointments/appointment-1/deposit-receipt',
+  );
+  manualReceipt = {
+    id: 'receipt-1',
+    fileName: 'receipt.jpg',
+    mimeType: 'image/jpeg',
+    sizeBytes: 3,
+    uploadedAt: new Date('2030-01-01T09:00:00Z'),
+    status: 'pending',
+    data: Buffer.from('img'),
+  };
 
   await hit(adminApp, 'POST', '/appointments/appointment-1/no-show');
   await hit(adminApp, 'POST', '/appointments/appointment-1/approve');
   await hit(adminApp, 'POST', '/appointments/appointment-1/reject');
+  await hit(adminApp, 'POST', '/appointments/appointment-1/reject', { reason: 'x'.repeat(1001) });
 
   const approvalRouter = () => appointmentRouter(services as Services, allowRole);
   await hit(appFor(approvalRouter()), 'POST', '/appointments/appointment-1/approve');
@@ -429,18 +647,36 @@ async function exerciseAppointmentBranches(): Promise<void> {
   appointment = null;
   await hit(appFor(approvalRouter(), OWNER), 'POST', '/appointments/appointment-1/approve');
   appointment = {
-    id: 'appointment-1', salonId: 'salon-1', customerId: 'other-customer', staffMemberId: 'staff-1',
-    serviceId: 'service-1', status: 'pending',
+    id: 'appointment-1',
+    salonId: 'salon-1',
+    customerId: 'other-customer',
+    staffMemberId: 'staff-1',
+    serviceId: 'service-1',
+    status: 'pending',
   };
   canApproveOwn = false;
-  await hit(appFor(approvalRouter(), {
-    id: 'stylist-customer', role: 'Stylist', staffMemberId: 'staff-1', salonId: 'salon-1',
-  }), 'POST', '/appointments/appointment-1/approve');
+  await hit(
+    appFor(approvalRouter(), {
+      id: 'stylist-customer',
+      role: 'Stylist',
+      staffMemberId: 'staff-1',
+      salonId: 'salon-1',
+    }),
+    'POST',
+    '/appointments/appointment-1/approve',
+  );
   approvalStaffId = undefined;
   canApproveOwn = true;
-  await hit(appFor(approvalRouter(), {
-    id: 'stylist-customer', role: 'Stylist', staffMemberId: 'staff-1', salonId: 'salon-1',
-  }), 'POST', '/appointments/appointment-1/approve');
+  await hit(
+    appFor(approvalRouter(), {
+      id: 'stylist-customer',
+      role: 'Stylist',
+      staffMemberId: 'staff-1',
+      salonId: 'salon-1',
+    }),
+    'POST',
+    '/appointments/appointment-1/approve',
+  );
   approvalStaffId = 'staff-1';
   allowed = false;
   await hit(appFor(approvalRouter(), OWNER), 'POST', '/appointments/appointment-1/approve');
@@ -449,7 +685,11 @@ async function exerciseAppointmentBranches(): Promise<void> {
   appointment = null;
   await hit(appFor(approvalRouter(), OWNER), 'POST', '/appointments/appointment-1/cancel');
   appointment = {
-    id: 'appointment-1', salonId: 'salon-1', customerId: 'other-customer', staffMemberId: 'staff-1', status: 'pending',
+    id: 'appointment-1',
+    salonId: 'salon-1',
+    customerId: 'other-customer',
+    staffMemberId: 'staff-1',
+    status: 'pending',
   };
   await hit(appFor(approvalRouter()), 'POST', '/appointments/appointment-1/cancel');
   await hit(appFor(approvalRouter(), CUSTOMER), 'POST', '/appointments/appointment-1/cancel');
@@ -461,17 +701,28 @@ async function exerciseAppointmentBranches(): Promise<void> {
   const patchApp = appFor(appointmentRouter(services as Services, allowRole), OWNER);
   await hit(patchApp, 'PATCH', '/appointments/appointment-1/reschedule', {});
   await hit(patchApp, 'PATCH', '/appointments/appointment-1/reschedule', { startAt: 'bad' });
-  await hit(patchApp, 'PATCH', '/appointments/appointment-1/reschedule', { startAt: bookingBody.startAt });
   await hit(patchApp, 'PATCH', '/appointments/appointment-1/reschedule', {
-    startAt: bookingBody.startAt, preferredStaffId: 'staff-1',
+    startAt: bookingBody.startAt,
+  });
+  await hit(patchApp, 'PATCH', '/appointments/appointment-1/reschedule', {
+    startAt: bookingBody.startAt,
+    preferredStaffId: 'staff-1',
   });
   appointment = null;
-  await hit(patchApp, 'PATCH', '/appointments/appointment-1/reschedule', { startAt: bookingBody.startAt });
+  await hit(patchApp, 'PATCH', '/appointments/appointment-1/reschedule', {
+    startAt: bookingBody.startAt,
+  });
   appointment = {
-    id: 'appointment-1', salonId: 'salon-1', customerId: 'other-customer', staffMemberId: 'staff-1', status: 'pending',
+    id: 'appointment-1',
+    salonId: 'salon-1',
+    customerId: 'other-customer',
+    staffMemberId: 'staff-1',
+    status: 'pending',
   };
   allowed = false;
-  await hit(patchApp, 'PATCH', '/appointments/appointment-1/reschedule', { startAt: bookingBody.startAt });
+  await hit(patchApp, 'PATCH', '/appointments/appointment-1/reschedule', {
+    startAt: bookingBody.startAt,
+  });
   allowed = true;
 
   const previousNodeEnv = process.env.NODE_ENV;
@@ -487,33 +738,71 @@ async function exerciseAppointmentBranches(): Promise<void> {
 
 async function exerciseAdminBranches(): Promise<void> {
   const appointment: any = {
-    id: 'appointment-1', salonId: 'salon-1', customerId: 'customer-1', staffMemberId: 'staff-1',
-    status: 'pending', startAt: new Date('2030-01-01T09:00:00Z'), endAt: new Date('2030-01-01T09:30:00Z'),
-    serviceId: 'service-1', customer: { id: 'customer-1', phone: '09121110011', fullName: 'Customer' },
-    service: { name: 'Service' }, staffMember: { fullName: 'Stylist' }, locationType: 'salon', locationAddress: null,
-    depositReceipt: { status: 'pending' }, payments: [{ status: 'pending' }],
+    id: 'appointment-1',
+    salonId: 'salon-1',
+    customerId: 'customer-1',
+    staffMemberId: 'staff-1',
+    status: 'pending',
+    startAt: new Date('2030-01-01T09:00:00Z'),
+    endAt: new Date('2030-01-01T09:30:00Z'),
+    serviceId: 'service-1',
+    customer: { id: 'customer-1', phone: '09121110011', fullName: 'Customer' },
+    service: { name: 'Service' },
+    staffMember: { fullName: 'Stylist' },
+    locationType: 'salon',
+    locationAddress: null,
+    depositReceipt: { status: 'pending' },
+    payments: [{ status: 'pending' }],
   };
   const ownerStaff: any = {
-    id: 'staff-owner-1', salonId: 'salon-1', fullName: 'Owner', role: 'Owner', phone: '09121110012', active: true,
-    autoApprove: null, manageOwnAvailability: false, canApproveOwnAppointments: false, assignedChairId: null,
+    id: 'staff-owner-1',
+    salonId: 'salon-1',
+    fullName: 'Owner',
+    role: 'Owner',
+    phone: '09121110012',
+    active: true,
+    autoApprove: null,
+    manageOwnAvailability: false,
+    canApproveOwnAppointments: false,
+    assignedChairId: null,
   };
   let stylist: any = {
-    id: 'staff-1', salonId: 'salon-1', fullName: 'Stylist', role: 'Stylist', phone: '09121110013', active: true,
-    autoApprove: null, manageOwnAvailability: false, canApproveOwnAppointments: false, assignedChairId: null,
+    id: 'staff-1',
+    salonId: 'salon-1',
+    fullName: 'Stylist',
+    role: 'Stylist',
+    phone: '09121110013',
+    active: true,
+    autoApprove: null,
+    manageOwnAvailability: false,
+    canApproveOwnAppointments: false,
+    assignedChairId: null,
   };
   let staff = [ownerStaff, stylist];
-  let chairs: any[] = [{ id: 'chair-1', salonId: 'salon-1', name: 'Chair', active: true, kind: 'physical' }];
-  let equipmentRows: any[] = [{ id: 'equipment-1', salonId: 'salon-1', name: 'Dryer', deletedAt: null }];
+  let chairs: any[] = [
+    { id: 'chair-1', salonId: 'salon-1', name: 'Chair', active: true, kind: 'physical' },
+  ];
+  let equipmentRows: any[] = [
+    { id: 'equipment-1', salonId: 'salon-1', name: 'Dryer', deletedAt: null },
+  ];
   let service: any = {
-    id: 'service-1', name: 'Service', durationMin: 30, bufferMin: 0, priceRial: 1000n,
-    requiresDeposit: false, depositRial: null, serviceStaff: [{ staffMemberId: 'staff-1' }],
+    id: 'service-1',
+    name: 'Service',
+    durationMin: 30,
+    bufferMin: 0,
+    priceRial: 1000n,
+    requiresDeposit: false,
+    depositRial: null,
+    serviceStaff: [{ staffMemberId: 'staff-1' }],
   };
   let closures: any[] = [];
   let blocks: any[] = [];
   let staffScope: any = { salonId: 'salon-1', manageOwnAvailability: false };
   let notificationSettings: any = {
     getSmsSettings: async () => ({ ownerBooking: false }),
-    updateSmsSettings: async (_id: string, patch: any) => ({ ownerBooking: Boolean(patch.ownerBooking) }),
+    updateSmsSettings: async (_id: string, patch: any) => ({
+      ownerBooking: Boolean(patch.ownerBooking),
+    }),
   };
   const salonRegistration: any = {
     getSalonPublicBrand: async () => ({ name: 'Branch Matrix Salon' }),
@@ -526,7 +815,13 @@ async function exerciseAdminBranches(): Promise<void> {
   let uniqueMode = 'none';
   let analyticsDashboard = true;
   let allowed = true;
-  const hours = [{ weekday: 1, startTime: new Date('1970-01-01T09:00:00Z'), endTime: new Date('1970-01-01T20:00:00Z') }];
+  const hours = [
+    {
+      weekday: 1,
+      startTime: new Date('1970-01-01T09:00:00Z'),
+      endTime: new Date('1970-01-01T20:00:00Z'),
+    },
+  ];
   const services: any = {
     calendarService: {
       getSalonCalendar: async () => [appointment],
@@ -535,11 +830,23 @@ async function exerciseAdminBranches(): Promise<void> {
       getCustomerProfile: async () => ({ id: 'customer-1', fullName: 'Customer' }),
       getPendingAppointments: async () => [appointment],
     },
-    waitlistService: { getWaitlist: async () => [{ customerId: 'customer-1', serviceId: 'service-1' }] },
+    waitlistService: {
+      getWaitlist: async () => [{ customerId: 'customer-1', serviceId: 'service-1' }],
+    },
     serviceCatalog: {
       listServices: async () => [service],
-      createService: async (input: any) => ({ ...service, ...input, id: 'service-new', priceRial: BigInt(input.priceRial ?? 0), serviceStaff: [] }),
-      updateService: async (_id: string, patch: any) => ({ ...service, ...patch, serviceStaff: [] }),
+      createService: async (input: any) => ({
+        ...service,
+        ...input,
+        id: 'service-new',
+        priceRial: BigInt(input.priceRial ?? 0),
+        serviceStaff: [],
+      }),
+      updateService: async (_id: string, patch: any) => ({
+        ...service,
+        ...patch,
+        serviceStaff: [],
+      }),
       setServiceStaff: async () => undefined,
       deleteService: async () => undefined,
       addServiceStaff: async () => undefined,
@@ -549,11 +856,17 @@ async function exerciseAdminBranches(): Promise<void> {
       getHistory: async () => [],
       getNotes: async () => [],
       getPreferredStaff: async () => null,
-      addNote: async (_customer: string, _author: string | null, body: string) => ({ id: 'note-1', body }),
+      addNote: async (_customer: string, _author: string | null, body: string) => ({
+        id: 'note-1',
+        body,
+      }),
     },
     authorizer: { can: () => allowed },
     appointmentManagementService: {
-      requestRescheduleForStaff: async () => ({ appointment, pendingReschedule: { startAt: '2030-01-01T10:00:00Z' } }),
+      requestRescheduleForStaff: async () => ({
+        appointment,
+        pendingReschedule: { startAt: '2030-01-01T10:00:00Z' },
+      }),
     },
     paymentService: { initiateDeposit: async () => ({ redirectUrl: '/pay/admin' }) },
     bookingFlow: {
@@ -579,7 +892,12 @@ async function exerciseAdminBranches(): Promise<void> {
       listStaff: async () => staff,
       listChairs: async () => chairs,
       getStaffMember: async (id: string) => staff.find((item) => item.id === id) ?? null,
-      registerStaffMember: async (_salon: string, fullName: string, role: string, phone: string | null) => {
+      registerStaffMember: async (
+        _salon: string,
+        fullName: string,
+        role: string,
+        phone: string | null,
+      ) => {
         if (uniqueMode === 'register') throw { code: 'P2002' };
         if (uniqueMode === 'register-error') throw new Error('staff registration failure');
         const created = { ...stylist, id: `staff-${Date.now()}`, fullName, role, phone };
@@ -587,7 +905,8 @@ async function exerciseAdminBranches(): Promise<void> {
         return created;
       },
       updateStaffMember: async (id: string, patch: any) => {
-        if (uniqueMode === 'chair') throw { code: 'P2002', meta: { target: ['assigned_chair_id'] } };
+        if (uniqueMode === 'chair')
+          throw { code: 'P2002', meta: { target: ['assigned_chair_id'] } };
         if (uniqueMode === 'phone') throw { code: 'P2002', meta: { target: ['phone'] } };
         if (uniqueMode === 'phone-string') throw { code: 'P2002', meta: { target: 'phone' } };
         if (uniqueMode === 'phone-number') throw { code: 'P2002', meta: { target: 42 } };
@@ -596,11 +915,21 @@ async function exerciseAdminBranches(): Promise<void> {
         return stylist;
       },
       registerChair: async (_salon: string, name: string) => {
-        const chair = { id: `chair-${Date.now()}`, salonId: 'salon-1', name, active: true, kind: 'physical' };
+        const chair = {
+          id: `chair-${Date.now()}`,
+          salonId: 'salon-1',
+          name,
+          active: true,
+          kind: 'physical',
+        };
         chairs = [...chairs, chair];
         return chair;
       },
-      updateChair: async (id: string, patch: any) => ({ ...chairs.find((item) => item.id === id), ...patch, id }),
+      updateChair: async (id: string, patch: any) => ({
+        ...chairs.find((item) => item.id === id),
+        ...patch,
+        id,
+      }),
       setChairActive: async (id: string, active: boolean) => ({ id, active, kind: 'physical' }),
       listEquipment: async () => equipmentRows,
       registerEquipment: async (_salon: string, name: string) => {
@@ -621,6 +950,7 @@ async function exerciseAdminBranches(): Promise<void> {
       getWorkingHours: async () => hours,
       setWorkingHours: async () => undefined,
       getBookingWindowDays: async () => 14,
+      getBookingStartOffsetDays: async () => 0,
       setBookingWindowDays: async () => undefined,
       getSalonWorkMode: async () => 'fixed_salon',
       setSalonWorkMode: async () => undefined,
@@ -633,7 +963,12 @@ async function exerciseAdminBranches(): Promise<void> {
       setSalonBrandAccent: async () => undefined,
       getHolidays: async () => closures,
       addHoliday: async (_salon: string, onDate: string) => {
-        const row = { id: `holiday-${Date.now()}-${onDate}`, onDate, startTime: null, endTime: null };
+        const row = {
+          id: `holiday-${Date.now()}-${onDate}`,
+          onDate,
+          startTime: null,
+          endTime: null,
+        };
         closures = [...closures, row];
         return row;
       },
@@ -662,7 +997,9 @@ async function exerciseAdminBranches(): Promise<void> {
   await hit(app, 'GET', '/salons/salon-1/waitlist?from=2030-01-01&to=2030-01-02');
   await hit(app, 'GET', '/salons/salon-1/customers/customer-1');
   await hit(app, 'POST', '/appointments/appointment-1/reschedule-managed', {});
-  await hit(app, 'POST', '/appointments/appointment-1/reschedule-managed', { startAt: '2030-01-01T10:00:00Z' });
+  await hit(app, 'POST', '/appointments/appointment-1/reschedule-managed', {
+    startAt: '2030-01-01T10:00:00Z',
+  });
   await hit(app, 'GET', '/appointments/appointment-1/customer');
   await hit(app, 'POST', '/appointments/appointment-1/customer-notes', {});
   await hit(app, 'POST', '/appointments/appointment-1/customer-notes', { body: 'note' });
@@ -680,16 +1017,19 @@ async function exerciseAdminBranches(): Promise<void> {
   await hit(app, 'GET', '/salons/salon-1/staff');
   await hit(app, 'GET', '/staff/staff-1');
   const missingStaffHandlerApp = appFor(
-    adminRouter({
-      ...services,
-      resourceRegistration: {
-        ...services.resourceRegistration,
-        getStaffMember: (() => {
-          let lookup = 0;
-          return async () => (++lookup === 1 ? stylist : null);
-        })(),
-      },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        resourceRegistration: {
+          ...services.resourceRegistration,
+          getStaffMember: (() => {
+            let lookup = 0;
+            return async () => (++lookup === 1 ? stylist : null);
+          })(),
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(missingStaffHandlerApp, 'GET', '/staff/staff-1');
@@ -698,11 +1038,26 @@ async function exerciseAdminBranches(): Promise<void> {
   await hit(app, 'POST', '/salons/salon-1/clients', {});
   await hit(app, 'POST', '/salons/salon-1/clients', { fullName: 'Client', phone: 'bad' });
   await hit(app, 'POST', '/salons/salon-1/clients', { fullName: 'Client', phone: '09121110014' });
-  await hit(app, 'POST', '/salons/salon-1/clients', { fullName: 'Plus phone', phone: '+989121112233' });
-  await hit(app, 'POST', '/salons/salon-1/clients', { fullName: 'Zero phone', phone: '00989121112234' });
-  await hit(app, 'POST', '/salons/salon-1/clients', { fullName: 'Country phone', phone: '989121112235' });
-  await hit(app, 'POST', '/salons/salon-1/services', { name: 'Null approval', approvalStaffId: null });
-  await hit(app, 'POST', '/salons/salon-1/services', { name: 'Empty approval', approvalStaffId: '' });
+  await hit(app, 'POST', '/salons/salon-1/clients', {
+    fullName: 'Plus phone',
+    phone: '+989121112233',
+  });
+  await hit(app, 'POST', '/salons/salon-1/clients', {
+    fullName: 'Zero phone',
+    phone: '00989121112234',
+  });
+  await hit(app, 'POST', '/salons/salon-1/clients', {
+    fullName: 'Country phone',
+    phone: '989121112235',
+  });
+  await hit(app, 'POST', '/salons/salon-1/services', {
+    name: 'Null approval',
+    approvalStaffId: null,
+  });
+  await hit(app, 'POST', '/salons/salon-1/services', {
+    name: 'Empty approval',
+    approvalStaffId: '',
+  });
   await hit(app, 'GET', '/salons/salon-1/sms-settings');
   await hit(app, 'PATCH', '/salons/salon-1/sms-settings', { ownerBooking: 'yes' });
   await hit(app, 'PATCH', '/salons/salon-1/sms-settings', { ownerBooking: true });
@@ -711,21 +1066,45 @@ async function exerciseAdminBranches(): Promise<void> {
   await hit(app, 'POST', '/salons/salon-1/staff', { fullName: 'X', role: 'Bad' });
   await hit(app, 'POST', '/salons/salon-1/staff', { fullName: 'X', role: 'Stylist', phone: 'bad' });
   await hit(app, 'POST', '/salons/salon-1/staff', { fullName: 'Admin', role: 'Admin' });
-  await hit(app, 'POST', '/salons/salon-1/staff', { fullName: 'New', role: 'Stylist', phone: '09121110015' });
-  await hit(appFor(adminRouter({
-    ...services,
-    salonRegistration: { getSalonPublicBrand: undefined },
-  } as Services, allowRole), OWNER),
-    'POST', '/salons/salon-1/staff', { fullName: 'No brand', role: 'Stylist', phone: '09123334456' });
-  const nullBrandInvitationApp = appFor(adminRouter({
-    ...services,
-    salonRegistration: { getSalonPublicBrand: async () => ({ name: null }) },
-  } as Services, allowRole), OWNER);
+  await hit(app, 'POST', '/salons/salon-1/staff', {
+    fullName: 'New',
+    role: 'Stylist',
+    phone: '09121110015',
+  });
+  await hit(
+    appFor(
+      adminRouter(
+        {
+          ...services,
+          salonRegistration: { getSalonPublicBrand: undefined },
+        } as Services,
+        allowRole,
+      ),
+      OWNER,
+    ),
+    'POST',
+    '/salons/salon-1/staff',
+    { fullName: 'No brand', role: 'Stylist', phone: '09123334456' },
+  );
+  const nullBrandInvitationApp = appFor(
+    adminRouter(
+      {
+        ...services,
+        salonRegistration: { getSalonPublicBrand: async () => ({ name: null }) },
+      } as Services,
+      allowRole,
+    ),
+    OWNER,
+  );
   await hit(nullBrandInvitationApp, 'POST', '/salons/salon-1/staff', {
-    fullName: 'Admin invite', role: 'Admin', phone: '09123334457',
+    fullName: 'Admin invite',
+    role: 'Admin',
+    phone: '09123334457',
   });
   await hit(nullBrandInvitationApp, 'POST', '/salons/salon-1/staff', {
-    fullName: 'Owner invite', role: 'Owner', phone: '09123334458',
+    fullName: 'Owner invite',
+    role: 'Owner',
+    phone: '09123334458',
   });
   uniqueMode = 'register';
   await hit(app, 'POST', '/salons/salon-1/staff', { fullName: 'Duplicate', role: 'Stylist' });
@@ -740,7 +1119,11 @@ async function exerciseAdminBranches(): Promise<void> {
   await hit(app, 'PATCH', '/staff/staff-1', { assignedChairId: 123 });
   await hit(app, 'PATCH', '/staff/staff-1', { active: 'true', assignedChairId: 'bad-chair' });
   await hit(app, 'PATCH', '/staff/staff-1', { active: true, assignedChairId: '' });
-  await hit(app, 'PATCH', '/staff/staff-1', { fullName: 'Updated', role: 'Stylist', phone: '09121110016' });
+  await hit(app, 'PATCH', '/staff/staff-1', {
+    fullName: 'Updated',
+    role: 'Stylist',
+    phone: '09121110016',
+  });
   uniqueMode = 'chair';
   await hit(app, 'PATCH', '/staff/staff-1', { assignedChairId: 'chair-1' });
   uniqueMode = 'phone';
@@ -752,37 +1135,50 @@ async function exerciseAdminBranches(): Promise<void> {
   uniqueMode = 'update-error';
   await hit(app, 'PATCH', '/staff/staff-1', { fullName: 'Update error' });
   uniqueMode = 'none';
-  const onlyOwnerDeleteApp = appFor(adminRouter({
-    ...services,
-    resourceRegistration: {
-      ...services.resourceRegistration,
-      getStaffMember: async () => ownerStaff,
-      listStaff: async () => [ownerStaff],
-    },
-  } as Services, allowRole), OWNER);
+  const onlyOwnerDeleteApp = appFor(
+    adminRouter(
+      {
+        ...services,
+        resourceRegistration: {
+          ...services.resourceRegistration,
+          getStaffMember: async () => ownerStaff,
+          listStaff: async () => [ownerStaff],
+        },
+      } as Services,
+      allowRole,
+    ),
+    OWNER,
+  );
   await hit(onlyOwnerDeleteApp, 'DELETE', '/staff/staff-owner-1');
   const lastOwnerDeleteApp = appFor(adminRouter(services as Services, allowRole), OWNER);
   await hit(lastOwnerDeleteApp, 'DELETE', '/staff/staff-owner-1');
   await hit(app, 'DELETE', '/staff/staff-1');
   const missingStaffDeleteApp = appFor(
-    adminRouter({
-      ...services,
-      resourceRegistration: {
-        ...services.resourceRegistration,
-        getStaffMember: (() => {
-          let lookup = 0;
-          return async () => (++lookup === 1 ? stylist : null);
-        })(),
-      },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        resourceRegistration: {
+          ...services.resourceRegistration,
+          getStaffMember: (() => {
+            let lookup = 0;
+            return async () => (++lookup === 1 ? stylist : null);
+          })(),
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(missingStaffDeleteApp, 'DELETE', '/staff/staff-1');
 
   await hit(app, 'GET', '/salons/salon-1/chairs');
   await hit(app, 'GET', '/salons/salon-1/working-hours');
-  await hit(app, 'PUT', '/salons/salon-1/working-hours', { hours: [{ weekday: 1, startTime: '20:00', endTime: '09:00' }] });
-  await hit(app, 'PUT', '/salons/salon-1/working-hours', { hours: [{ weekday: 1, startTime: '09:00', endTime: '20:00' }] });
+  await hit(app, 'PUT', '/salons/salon-1/working-hours', {
+    hours: [{ weekday: 1, startTime: '20:00', endTime: '09:00' }],
+  });
+  await hit(app, 'PUT', '/salons/salon-1/working-hours', {
+    hours: [{ weekday: 1, startTime: '09:00', endTime: '20:00' }],
+  });
   await hit(app, 'PUT', '/salons/salon-1/working-hours', {
     hours: [
       { weekday: 1, startTime: '09:00', endTime: '12:00' },
@@ -799,43 +1195,83 @@ async function exerciseAdminBranches(): Promise<void> {
     depositBankName: 'Test Bank',
   });
   await hit(app, 'PATCH', '/salons/salon-1/deposit-settings', {
-    depositMethod: 'card_transfer', depositCardNumber: '123', depositCardHolder: 'Test Owner',
+    depositMethod: 'card_transfer',
+    depositCardNumber: '123',
+    depositCardHolder: 'Test Owner',
   });
   await hit(app, 'PATCH', '/salons/salon-1/deposit-settings', {
-    depositMethod: 'card_transfer', depositCardNumber: '6037991234567890', depositCardHolder: 'A',
+    depositMethod: 'card_transfer',
+    depositCardNumber: '6037991234567890',
+    depositCardHolder: 'A',
   });
   await hit(app, 'PATCH', '/salons/salon-1/deposit-settings', {
-    depositMethod: 'card_transfer', depositCardNumber: '6037991234567890', depositCardHolder: 'Test Owner',
+    depositMethod: 'card_transfer',
+    depositCardNumber: '6037991234567890',
+    depositCardHolder: 'Test Owner',
     depositBankName: 'x'.repeat(81),
   });
   await hit(app, 'PATCH', '/salons/salon-1/deposit-settings', {
-    depositMethod: 'card_transfer', depositCardNumber: '6037991234567890', depositCardHolder: 'Test Owner',
+    depositMethod: 'card_transfer',
+    depositCardNumber: '6037991234567890',
+    depositCardHolder: 'Test Owner',
   });
   await hit(app, 'PATCH', '/salons/salon-1/deposit-settings', {
     depositMethod: 'cash',
   });
   await hit(app, 'PATCH', '/salons/salon-1/deposit-settings', {
-    depositMethod: 'card_transfer', depositCardHolder: 'Test Owner',
+    depositMethod: 'card_transfer',
+    depositCardHolder: 'Test Owner',
   });
   await hit(app, 'PATCH', '/salons/salon-1/deposit-settings', {
-    depositMethod: 'card_transfer', depositCardNumber: '6037991234567890',
+    depositMethod: 'card_transfer',
+    depositCardNumber: '6037991234567890',
   });
   await hit(app, 'GET', '/salons/salon-1/booking-policy');
   await hit(app, 'PUT', '/salons/salon-1/booking-policy', { workMode: 'bad' });
   await hit(app, 'PUT', '/salons/salon-1/booking-policy', { bookingWindowDays: -1 });
   await hit(app, 'PUT', '/salons/salon-1/booking-policy', {});
-  await hit(app, 'PUT', '/salons/salon-1/booking-policy', { bookingWindowDays: 30, workMode: 'hybrid' });
+  await hit(app, 'PUT', '/salons/salon-1/booking-policy', {
+    bookingWindowDays: 30,
+    workMode: 'hybrid',
+  });
+  await hit(app, 'PUT', '/salons/salon-1/booking-policy', { bookingStartOffsetDays: -1 });
+  await hit(app, 'PUT', '/salons/salon-1/booking-policy', {
+    bookingWindowDays: 0,
+    bookingStartOffsetDays: 1,
+  });
+  const legacyBookingPolicyApp = appFor(
+    adminRouter(
+      {
+        ...services,
+        availabilityConfig: {
+          ...services.availabilityConfig,
+          getBookingStartOffsetDays: undefined,
+        },
+      } as Services,
+      allowRole,
+    ),
+    OWNER,
+  );
+  await hit(legacyBookingPolicyApp, 'GET', '/salons/salon-1/booking-policy');
+  await hit(legacyBookingPolicyApp, 'PUT', '/salons/salon-1/booking-policy', {});
   await hit(app, 'GET', '/salons/salon-1/staff/staff-1/working-hours');
   await hit(app, 'GET', '/salons/salon-1/staff/missing/working-hours');
   await hit(app, 'PUT', '/salons/salon-1/staff/staff-1/working-hours', {});
-  await hit(app, 'PUT', '/salons/salon-1/staff/staff-1/working-hours', { hours: [{ weekday: 1, startTime: '09:00', endTime: '20:00' }] });
-  await hit(app, 'PUT', '/salons/salon-1/staff/missing/working-hours', { hours: [{ weekday: 1, startTime: '09:00', endTime: '20:00' }] });
+  await hit(app, 'PUT', '/salons/salon-1/staff/staff-1/working-hours', {
+    hours: [{ weekday: 1, startTime: '09:00', endTime: '20:00' }],
+  });
+  await hit(app, 'PUT', '/salons/salon-1/staff/missing/working-hours', {
+    hours: [{ weekday: 1, startTime: '09:00', endTime: '20:00' }],
+  });
 
   await hit(app, 'POST', '/salons/salon-1/chairs', {});
   await hit(app, 'POST', '/salons/salon-1/chairs', { name: 'New chair' });
   await hit(app, 'PATCH', '/salons/salon-1/chairs/chair-1', {});
   await hit(app, 'PATCH', '/salons/salon-1/chairs/chair-1', { active: true });
-  await hit(app, 'PATCH', '/salons/salon-1/chairs/chair-1', { name: 'Renamed chair', active: true });
+  await hit(app, 'PATCH', '/salons/salon-1/chairs/chair-1', {
+    name: 'Renamed chair',
+    active: true,
+  });
   await hit(app, 'PATCH', '/salons/salon-1/chairs/chair-1', { active: 'true' });
   await hit(app, 'PATCH', '/salons/salon-1/chairs/chair-1', { name: '' });
   await hit(app, 'PATCH', '/salons/salon-1/chairs/chair-1', { name: 123 });
@@ -852,7 +1288,10 @@ async function exerciseAdminBranches(): Promise<void> {
   await hit(app, 'PATCH', '/salons/salon-1/equipment/equipment-1', {});
   await hit(app, 'PATCH', '/salons/salon-1/equipment/equipment-1', { name: '' });
   await hit(app, 'PATCH', '/salons/salon-1/equipment/equipment-1', { active: 'true' });
-  await hit(app, 'PATCH', '/salons/salon-1/equipment/equipment-1', { name: 'Updated equipment', active: false });
+  await hit(app, 'PATCH', '/salons/salon-1/equipment/equipment-1', {
+    name: 'Updated equipment',
+    active: false,
+  });
   await hit(app, 'PATCH', '/salons/salon-1/equipment/equipment-1', { name: 'x'.repeat(121) });
   await hit(app, 'PATCH', '/salons/salon-1/equipment/equipment-1', { name: 123 });
   await hit(app, 'PATCH', '/salons/salon-1/equipment/equipment-1', { active: false });
@@ -862,32 +1301,77 @@ async function exerciseAdminBranches(): Promise<void> {
 
   await hit(app, 'POST', '/salons/salon-1/services', {});
   await hit(app, 'POST', '/salons/salon-1/services', { name: 'Deposit', requiresDeposit: true });
-  await hit(app, 'POST', '/salons/salon-1/services', { name: 'Deposit', requiresDeposit: true, depositRial: 1000 });
-  await hit(app, 'POST', '/salons/salon-1/services', { name: 'Buffered', durationMinutes: 45, bufferMinutes: 15, priceRial: 1000 });
-  await hit(app, 'POST', '/salons/salon-1/services', { name: 'Invalid approval', approvalStaffId: 123 });
-  await hit(app, 'POST', '/salons/salon-1/services', { name: 'Missing approval', approvalStaffId: 'missing-staff' });
-  await hit(app, 'POST', '/salons/salon-1/services', { name: 'Stylist approval', approvalStaffId: 'staff-1' });
-  await hit(app, 'POST', '/salons/salon-1/services', { name: 'Owner approval', approvalStaffId: 'staff-owner-1' });
   await hit(app, 'POST', '/salons/salon-1/services', {
-    name: 'Bad variable', durationMode: 'variable', minDurationMinutes: 30, maxDurationMinutes: 20,
+    name: 'Deposit',
+    requiresDeposit: true,
+    depositRial: 1000,
   });
   await hit(app, 'POST', '/salons/salon-1/services', {
-    name: 'Too long variable', durationMode: 'variable', minDurationMinutes: 30, maxDurationMinutes: 481,
+    name: 'Buffered',
+    durationMinutes: 45,
+    bufferMinutes: 15,
+    priceRial: 1000,
   });
   await hit(app, 'POST', '/salons/salon-1/services', {
-    name: 'Variable service', durationMode: 'variable', minDurationMinutes: 30, maxDurationMinutes: 60,
+    name: 'Invalid approval',
+    approvalStaffId: 123,
   });
   await hit(app, 'POST', '/salons/salon-1/services', {
-    name: 'Bad percent', requiresDeposit: true, depositType: 'percentage', depositPercent: 0,
+    name: 'Missing approval',
+    approvalStaffId: 'missing-staff',
   });
   await hit(app, 'POST', '/salons/salon-1/services', {
-    name: 'Percent service', requiresDeposit: true, depositType: 'percentage', depositPercent: 25,
+    name: 'Stylist approval',
+    approvalStaffId: 'staff-1',
+  });
+  await hit(app, 'POST', '/salons/salon-1/services', {
+    name: 'Owner approval',
+    approvalStaffId: 'staff-owner-1',
+  });
+  await hit(app, 'POST', '/salons/salon-1/services', {
+    name: 'Bad variable',
+    durationMode: 'variable',
+    minDurationMinutes: 30,
+    maxDurationMinutes: 20,
+  });
+  await hit(app, 'POST', '/salons/salon-1/services', {
+    name: 'Too long variable',
+    durationMode: 'variable',
+    minDurationMinutes: 30,
+    maxDurationMinutes: 481,
+  });
+  await hit(app, 'POST', '/salons/salon-1/services', {
+    name: 'Variable service',
+    durationMode: 'variable',
+    minDurationMinutes: 30,
+    maxDurationMinutes: 60,
+  });
+  await hit(app, 'POST', '/salons/salon-1/services', {
+    name: 'Bad percent',
+    requiresDeposit: true,
+    depositType: 'percentage',
+    depositPercent: 0,
+  });
+  await hit(app, 'POST', '/salons/salon-1/services', {
+    name: 'Percent service',
+    requiresDeposit: true,
+    depositType: 'percentage',
+    depositPercent: 25,
   });
   await hit(app, 'PATCH', '/salons/salon-1/services/service-missing', {});
   await hit(app, 'PATCH', '/salons/salon-1/services/service-1', { name: '' });
   await hit(app, 'PATCH', '/salons/salon-1/services/service-1', { durationMinutes: 1 });
-  await hit(app, 'PATCH', '/salons/salon-1/services/service-1', { durationMinutes: 30, requiresDeposit: true, depositRial: 1000 });
-  await hit(app, 'PATCH', '/salons/salon-1/services/service-1', { bufferMinutes: 10, priceRial: 2000, requiresDeposit: 'false', depositRial: null });
+  await hit(app, 'PATCH', '/salons/salon-1/services/service-1', {
+    durationMinutes: 30,
+    requiresDeposit: true,
+    depositRial: 1000,
+  });
+  await hit(app, 'PATCH', '/salons/salon-1/services/service-1', {
+    bufferMinutes: 10,
+    priceRial: 2000,
+    requiresDeposit: 'false',
+    depositRial: null,
+  });
   await hit(app, 'PATCH', '/salons/salon-1/services/service-1', { depositRial: 0 });
   await hit(app, 'PATCH', '/salons/salon-1/services/service-1', { durationMode: 'bad' });
   await hit(app, 'PATCH', '/salons/salon-1/services/service-1', { minDurationMinutes: 4 });
@@ -895,17 +1379,28 @@ async function exerciseAdminBranches(): Promise<void> {
   await hit(app, 'PATCH', '/salons/salon-1/services/service-1', { depositType: 'bad' });
   await hit(app, 'PATCH', '/salons/salon-1/services/service-1', { depositPercent: 0 });
   await hit(app, 'PATCH', '/salons/salon-1/services/service-1', { depositPercent: null });
-  await hit(app, 'PATCH', '/salons/salon-1/services/service-1', { approvalStaffId: 'missing-staff' });
-  await hit(app, 'PATCH', '/salons/salon-1/services/service-1', { approvalStaffId: 'staff-owner-1' });
+  await hit(app, 'PATCH', '/salons/salon-1/services/service-1', {
+    approvalStaffId: 'missing-staff',
+  });
+  await hit(app, 'PATCH', '/salons/salon-1/services/service-1', {
+    approvalStaffId: 'staff-owner-1',
+  });
   await hit(app, 'PATCH', '/salons/salon-1/services/service-1', { durationMode: 'fixed' });
-  await hit(app, 'PATCH', '/salons/salon-1/services/service-1', { minDurationMinutes: 30, maxDurationMinutes: 31 });
+  await hit(app, 'PATCH', '/salons/salon-1/services/service-1', {
+    minDurationMinutes: 30,
+    maxDurationMinutes: 31,
+  });
   await hit(app, 'PATCH', '/salons/salon-1/services/service-1', { maxDurationMinutes: 481 });
   await hit(app, 'PATCH', '/salons/salon-1/services/service-1', { depositType: 'fixed' });
   await hit(app, 'PATCH', '/salons/salon-1/services/service-1', { depositPercent: 25 });
   await hit(app, 'PUT', '/salons/salon-1/services/service-1/staff', {});
   await hit(app, 'PUT', '/salons/salon-1/services/service-missing/staff', { staffIds: [] });
-  await hit(app, 'PUT', '/salons/salon-1/services/service-1/staff', { staffIds: ['missing-staff'] });
-  await hit(app, 'PUT', '/salons/salon-1/services/service-1/staff', { staffIds: ['staff-1', 'staff-1'] });
+  await hit(app, 'PUT', '/salons/salon-1/services/service-1/staff', {
+    staffIds: ['missing-staff'],
+  });
+  await hit(app, 'PUT', '/salons/salon-1/services/service-1/staff', {
+    staffIds: ['staff-1', 'staff-1'],
+  });
   await hit(app, 'DELETE', '/salons/salon-1/services/service-missing');
   await hit(app, 'DELETE', '/salons/salon-1/services/service-1');
 
@@ -918,10 +1413,10 @@ async function exerciseAdminBranches(): Promise<void> {
   await hit(app, 'POST', '/staff/staff-1/approve-own', {});
   await hit(app, 'POST', '/staff/missing/approve-own', { allowed: true });
   stylist = { ...stylist, role: 'Owner' };
-  staff = staff.map((item) => item.id === 'staff-1' ? stylist : item);
+  staff = staff.map((item) => (item.id === 'staff-1' ? stylist : item));
   await hit(app, 'POST', '/staff/staff-1/approve-own', { allowed: true });
   stylist = { ...stylist, role: 'Stylist' };
-  staff = staff.map((item) => item.id === 'staff-1' ? stylist : item);
+  staff = staff.map((item) => (item.id === 'staff-1' ? stylist : item));
   await hit(app, 'POST', '/staff/staff-1/approve-own', { allowed: true });
   await hit(app, 'POST', '/salons/salon-1/brand-accent', {});
   await hit(app, 'POST', '/salons/salon-1/brand-accent', { brandAccent: ' teal ' });
@@ -930,27 +1425,54 @@ async function exerciseAdminBranches(): Promise<void> {
   await hit(app, 'POST', '/salons/salon-1/holidays', {});
   await hit(app, 'POST', '/salons/salon-1/holidays', { onDate: 'bad' });
   await hit(app, 'POST', '/salons/salon-1/holidays', { onDate: '2030-01-02', toDate: 'bad' });
-  await hit(app, 'POST', '/salons/salon-1/holidays', { onDate: '2030-01-02', toDate: '2030-01-01' });
+  await hit(app, 'POST', '/salons/salon-1/holidays', {
+    onDate: '2030-01-02',
+    toDate: '2030-01-01',
+  });
   await hit(app, 'POST', '/salons/salon-1/holidays', { onDate: '2030-01-02', startTime: '09:00' });
   await hit(app, 'POST', '/salons/salon-1/holidays', { onDate: '2030-01-02', endTime: '10:00' });
-  await hit(app, 'POST', '/salons/salon-1/holidays', { onDate: '2030-01-02', startTime: 'bad', endTime: '10:00' });
-  await hit(app, 'POST', '/salons/salon-1/holidays', { onDate: '2030-01-02', startTime: '11:00', endTime: '10:00' });
-  await hit(app, 'POST', '/salons/salon-1/holidays', { onDate: '2030-01-02', startTime: '09:00', endTime: '10:00' });
-  await hit(app, 'POST', '/salons/salon-1/holidays', { onDate: '2030-01-03', toDate: '2030-01-04' });
+  await hit(app, 'POST', '/salons/salon-1/holidays', {
+    onDate: '2030-01-02',
+    startTime: 'bad',
+    endTime: '10:00',
+  });
+  await hit(app, 'POST', '/salons/salon-1/holidays', {
+    onDate: '2030-01-02',
+    startTime: '11:00',
+    endTime: '10:00',
+  });
+  await hit(app, 'POST', '/salons/salon-1/holidays', {
+    onDate: '2030-01-02',
+    startTime: '09:00',
+    endTime: '10:00',
+  });
+  await hit(app, 'POST', '/salons/salon-1/holidays', {
+    onDate: '2030-01-03',
+    toDate: '2030-01-04',
+  });
   await hit(app, 'DELETE', '/salons/salon-1/holidays/holiday-1');
   await hit(app, 'POST', '/salons/salon-1/emergency-close', {});
   await hit(app, 'POST', '/salons/salon-1/emergency-close', { onDate: '2030-01-05' });
-  await hit(app, 'POST', '/salons/salon-1/emergency-close', { onDate: '2030-01-06', cancelAppointments: true });
+  await hit(app, 'POST', '/salons/salon-1/emergency-close', {
+    onDate: '2030-01-06',
+    cancelAppointments: true,
+  });
 
   await hit(app, 'GET', '/staff/staff-1/availability-blocks');
   await hit(app, 'POST', '/staff/staff-1/availability-blocks', {});
-  await hit(app, 'POST', '/staff/staff-1/availability-blocks', { onDate: '2030-01-02', toDate: '2030-01-03' });
+  await hit(app, 'POST', '/staff/staff-1/availability-blocks', {
+    onDate: '2030-01-02',
+    toDate: '2030-01-03',
+  });
   await hit(app, 'POST', '/staff/staff-1/availability-blocks', { onDate: '2030-02-01' });
   await hit(app, 'DELETE', '/staff/staff-1/availability-blocks/block-1');
   await hit(app, 'POST', '/staff/staff-1/manage-availability', { allowed: true });
 
   const noOptionalApp = appFor(
-    adminRouter({ ...services, notificationSettings: undefined, clientService: undefined } as Services, allowRole),
+    adminRouter(
+      { ...services, notificationSettings: undefined, clientService: undefined } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(noOptionalApp, 'GET', '/salons/salon-1/sms-settings');
@@ -974,115 +1496,170 @@ async function exerciseAdminBranches(): Promise<void> {
   await hit(noBodyAdminApp, 'PATCH', '/salons/salon-1/equipment/equipment-1');
 
   const sparseCalendarRows = [
-    { id: 'sparse-1', status: 'pending', customerId: 'customer-1', staffMemberId: 'staff-1', serviceId: 'service-1' },
-    { id: 'sparse-2', status: 'pending', staffMemberId: 'staff-1', serviceId: 'service-1', customer: { id: 'customer-2' } },
+    {
+      id: 'sparse-1',
+      status: 'pending',
+      customerId: 'customer-1',
+      staffMemberId: 'staff-1',
+      serviceId: 'service-1',
+    },
+    {
+      id: 'sparse-2',
+      status: 'pending',
+      staffMemberId: 'staff-1',
+      serviceId: 'service-1',
+      customer: { id: 'customer-2' },
+    },
     { id: 'sparse-3', status: 'pending' },
   ];
   const sparseCalendarApp = appFor(
-    adminRouter({
-      ...services,
-      calendarService: {
-        ...services.calendarService,
-        getSalonCalendar: async () => sparseCalendarRows,
-        getStaffCalendar: async () => sparseCalendarRows,
-        getPendingAppointments: async () => sparseCalendarRows,
-      },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        calendarService: {
+          ...services.calendarService,
+          getSalonCalendar: async () => sparseCalendarRows,
+          getStaffCalendar: async () => sparseCalendarRows,
+          getPendingAppointments: async () => sparseCalendarRows,
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(sparseCalendarApp, 'GET', '/salons/salon-1/calendar?from=2030-01-01&to=2030-01-02');
   await hit(sparseCalendarApp, 'GET', '/salons/salon-1/pending');
 
-  const stylistCalendarApp = appFor(
-    adminRouter(services as Services, allowRole),
-    { id: 'stylist-customer', role: 'Stylist', staffMemberId: 'staff-1', salonId: 'salon-1' },
-  );
+  const stylistCalendarApp = appFor(adminRouter(services as Services, allowRole), {
+    id: 'stylist-customer',
+    role: 'Stylist',
+    staffMemberId: 'staff-1',
+    salonId: 'salon-1',
+  });
   await hit(stylistCalendarApp, 'GET', '/salons/salon-1/calendar?from=2030-01-01&to=2030-01-02');
   await hit(stylistCalendarApp, 'GET', '/salons/salon-1/pending');
 
   const waitlistSparseApp = appFor(
-    adminRouter({
-      ...services,
-      waitlistService: { getWaitlist: async () => [{ customerId: 'missing', serviceId: 'missing' }] },
-      serviceCatalog: { ...services.serviceCatalog, listServices: async () => [] },
-      customerService: { ...services.customerService, getProfile: async () => null },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        waitlistService: {
+          getWaitlist: async () => [{ customerId: 'missing', serviceId: 'missing' }],
+        },
+        serviceCatalog: { ...services.serviceCatalog, listServices: async () => [] },
+        customerService: { ...services.customerService, getProfile: async () => null },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(waitlistSparseApp, 'GET', '/salons/salon-1/waitlist?from=2030-01-01&to=2030-01-02');
 
   const missingProfileApp = appFor(
-    adminRouter({
-      ...services,
-      calendarService: { ...services.calendarService, getCustomerProfile: async () => null },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        calendarService: { ...services.calendarService, getCustomerProfile: async () => null },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(missingProfileApp, 'GET', '/salons/salon-1/customers/customer-1');
   await hit(stylistCalendarApp, 'GET', '/salons/salon-1/customers/customer-1');
   await hit(
-    appFor(adminRouter(services as Services, allowRole), { id: 'owner-no-staff', role: 'Owner', salonId: 'salon-1' }),
+    appFor(adminRouter(services as Services, allowRole), {
+      id: 'owner-no-staff',
+      role: 'Owner',
+      salonId: 'salon-1',
+    }),
     'POST',
     '/appointments/appointment-1/customer-notes',
     { body: 'note' },
   );
 
   const managedHeldApp = appFor(
-    adminRouter({
-      ...services,
-      appointmentManagementService: {
-        requestRescheduleForStaff: async () => ({ appointment, pendingReschedule: { startAt: '2030-01-01T10:00:00Z' } }),
-      },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        appointmentManagementService: {
+          requestRescheduleForStaff: async () => ({
+            appointment,
+            pendingReschedule: { startAt: '2030-01-01T10:00:00Z' },
+          }),
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(managedHeldApp, 'POST', '/appointments/appointment-1/reschedule-managed', {
-    startAt: '2030-01-01T10:00:00Z', preferredStaffId: 'staff-1',
+    startAt: '2030-01-01T10:00:00Z',
+    preferredStaffId: 'staff-1',
   });
   const managedRejectedApp = appFor(
-    adminRouter({
-      ...services,
-      appointmentManagementService: {
-        requestRescheduleForStaff: async () => ({ appointment, pendingReschedule: null }),
-      },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        appointmentManagementService: {
+          requestRescheduleForStaff: async () => ({ appointment, pendingReschedule: null }),
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
-  await hit(managedRejectedApp, 'POST', '/appointments/appointment-1/reschedule-managed', { startAt: '2030-01-01T10:00:00Z' });
+  await hit(managedRejectedApp, 'POST', '/appointments/appointment-1/reschedule-managed', {
+    startAt: '2030-01-01T10:00:00Z',
+  });
 
   let customerLookup = 0;
   const missingAppointmentCustomerApp = appFor(
-    adminRouter({
-      ...services,
-      calendarService: {
-        ...services.calendarService,
-        getAppointmentById: async () => (++customerLookup === 1 ? appointment : null),
-      },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        calendarService: {
+          ...services.calendarService,
+          getAppointmentById: async () => (++customerLookup === 1 ? appointment : null),
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(missingAppointmentCustomerApp, 'GET', '/appointments/appointment-1/customer');
   const missingCustomerApp = appFor(
-    adminRouter({
-      ...services,
-      calendarService: { ...services.calendarService, getAppointmentById: async () => appointment },
-      customerService: { ...services.customerService, getProfile: async () => null },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        calendarService: {
+          ...services.calendarService,
+          getAppointmentById: async () => appointment,
+        },
+        customerService: { ...services.customerService, getProfile: async () => null },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(missingCustomerApp, 'GET', '/appointments/appointment-1/customer');
   let noteLookup = 0;
   const missingNoteAppointmentApp = appFor(
-    adminRouter({
-      ...services,
-      calendarService: {
-        ...services.calendarService,
-        getAppointmentById: async () => (++noteLookup === 1 ? appointment : null),
-      },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        calendarService: {
+          ...services.calendarService,
+          getAppointmentById: async () => (++noteLookup === 1 ? appointment : null),
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
-  await hit(missingNoteAppointmentApp, 'POST', '/appointments/appointment-1/customer-notes', { body: 'note' });
+  await hit(missingNoteAppointmentApp, 'POST', '/appointments/appointment-1/customer-notes', {
+    body: 'note',
+  });
   const noMessageApp = appFor(
     adminRouter({ ...services, notificationService: {} } as Services, allowRole),
     OWNER,
@@ -1090,257 +1667,477 @@ async function exerciseAdminBranches(): Promise<void> {
   await hit(noMessageApp, 'POST', '/appointments/appointment-1/message', { message: 'message' });
 
   const pendingDeniedStylistApp = appFor(
-    adminRouter({
-      ...services,
-      resourceRegistration: { ...services.resourceRegistration, getStaffMember: async () => ({ ...stylist, canApproveOwnAppointments: false }) },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        resourceRegistration: {
+          ...services.resourceRegistration,
+          getStaffMember: async () => ({ ...stylist, canApproveOwnAppointments: false }),
+        },
+      } as Services,
+      allowRole,
+    ),
     { id: 'stylist-customer', role: 'Stylist', staffMemberId: 'staff-1', salonId: 'salon-1' },
   );
   await hit(pendingDeniedStylistApp, 'GET', '/salons/salon-1/pending');
 
   const noPrincipalAdminApp = appFor(adminRouter(services as Services, allowRole));
-  await hit(noPrincipalAdminApp, 'POST', '/appointments/appointment-1/reschedule-managed', { startAt: '2030-01-01T10:00:00Z' });
-  await hit(appFor(adminRouter(services as Services, allowRole), CUSTOMER),
-    'POST', '/appointments/appointment-1/reschedule-managed', { startAt: '2030-01-01T10:00:00Z' });
-  const platformAdminAppointmentApp = appFor(adminRouter(services as Services, allowRole), PLATFORM);
-  await hit(platformAdminAppointmentApp, 'POST', '/appointments/appointment-1/reschedule-managed', { startAt: '2030-01-01T10:00:00Z' });
+  await hit(noPrincipalAdminApp, 'POST', '/appointments/appointment-1/reschedule-managed', {
+    startAt: '2030-01-01T10:00:00Z',
+  });
+  await hit(
+    appFor(adminRouter(services as Services, allowRole), CUSTOMER),
+    'POST',
+    '/appointments/appointment-1/reschedule-managed',
+    { startAt: '2030-01-01T10:00:00Z' },
+  );
+  const platformAdminAppointmentApp = appFor(
+    adminRouter(services as Services, allowRole),
+    PLATFORM,
+  );
+  await hit(platformAdminAppointmentApp, 'POST', '/appointments/appointment-1/reschedule-managed', {
+    startAt: '2030-01-01T10:00:00Z',
+  });
   const noAppointmentAdminApp = appFor(
-    adminRouter({ ...services, calendarService: { ...services.calendarService, getAppointmentById: async () => null } } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        calendarService: { ...services.calendarService, getAppointmentById: async () => null },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
-  await hit(noAppointmentAdminApp, 'POST', '/appointments/appointment-1/reschedule-managed', { startAt: '2030-01-01T10:00:00Z' });
+  await hit(noAppointmentAdminApp, 'POST', '/appointments/appointment-1/reschedule-managed', {
+    startAt: '2030-01-01T10:00:00Z',
+  });
   const deniedAppointmentAdminApp = appFor(
     adminRouter({ ...services, authorizer: { can: () => false } } as Services, allowRole),
     OWNER,
   );
-  await hit(deniedAppointmentAdminApp, 'POST', '/appointments/appointment-1/reschedule-managed', { startAt: '2030-01-01T10:00:00Z' });
+  await hit(deniedAppointmentAdminApp, 'POST', '/appointments/appointment-1/reschedule-managed', {
+    startAt: '2030-01-01T10:00:00Z',
+  });
 
   const noPrincipalStaffApp = appFor(adminRouter(services as Services, allowRole));
   await hit(noPrincipalStaffApp, 'POST', '/staff/staff-1/auto-approve', { autoApprove: true });
   const crossSalonStaffApp = appFor(
-    adminRouter({
-      ...services,
-      resourceRegistration: { ...services.resourceRegistration, getStaffMember: async () => ({ ...stylist, salonId: 'salon-2' }) },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        resourceRegistration: {
+          ...services.resourceRegistration,
+          getStaffMember: async () => ({ ...stylist, salonId: 'salon-2' }),
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(crossSalonStaffApp, 'POST', '/staff/staff-1/auto-approve', { autoApprove: true });
 
   const closureAppointments = [
-    { ...appointment, id: 'closure-pending', status: 'pending', startAt: new Date('2030-01-10T09:00:00Z') },
-    { ...appointment, id: 'closure-held', status: 'held', startAt: new Date('2030-01-10T10:00:00Z') },
-    { ...appointment, id: 'closure-confirmed', status: 'confirmed', startAt: new Date('2030-01-10T11:00:00Z') },
-    { ...appointment, id: 'closure-cancelled', status: 'cancelled', startAt: new Date('2030-01-10T12:00:00Z') },
-    { ...appointment, id: 'closure-past', status: 'pending', startAt: new Date('2020-01-10T12:00:00Z') },
+    {
+      ...appointment,
+      id: 'closure-pending',
+      status: 'pending',
+      startAt: new Date('2030-01-10T09:00:00Z'),
+    },
+    {
+      ...appointment,
+      id: 'closure-held',
+      status: 'held',
+      startAt: new Date('2030-01-10T10:00:00Z'),
+    },
+    {
+      ...appointment,
+      id: 'closure-confirmed',
+      status: 'confirmed',
+      startAt: new Date('2030-01-10T11:00:00Z'),
+    },
+    {
+      ...appointment,
+      id: 'closure-cancelled',
+      status: 'cancelled',
+      startAt: new Date('2030-01-10T12:00:00Z'),
+    },
+    {
+      ...appointment,
+      id: 'closure-past',
+      status: 'pending',
+      startAt: new Date('2020-01-10T12:00:00Z'),
+    },
   ];
   const closureApp = appFor(
-    adminRouter({
-      ...services,
-      calendarService: { ...services.calendarService, getSalonCalendar: async () => closureAppointments },
-      cancellationFlow: {
-        cancel: async (id: string) => {
-          if (id === 'closure-held') throw new Error('cancel failed');
-          return appointment;
+    adminRouter(
+      {
+        ...services,
+        calendarService: {
+          ...services.calendarService,
+          getSalonCalendar: async () => closureAppointments,
         },
-      },
-    } as Services, allowRole),
+        cancellationFlow: {
+          cancel: async (id: string) => {
+            if (id === 'closure-held') throw new Error('cancel failed');
+            return appointment;
+          },
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(closureApp, 'POST', '/salons/salon-1/holidays', { onDate: '2030-01-10' });
-  await hit(closureApp, 'POST', '/salons/salon-1/emergency-close', { onDate: '2030-01-11', cancelAppointments: true });
+  await hit(closureApp, 'POST', '/salons/salon-1/emergency-close', {
+    onDate: '2030-01-11',
+    cancelAppointments: true,
+  });
+  await hit(closureApp, 'POST', '/salons/salon-1/emergency-close', {
+    onDate: '2030-01-12',
+    cancelAppointments: true,
+    reason: 'Salon maintenance',
+  });
+  await hit(closureApp, 'POST', '/salons/salon-1/emergency-close', {
+    onDate: '2030-01-13',
+    cancelAppointments: true,
+    reason: 'Salon maintenance',
+    refundProof: {},
+  });
+  await hit(closureApp, 'POST', '/salons/salon-1/emergency-close', {
+    onDate: '2030-01-14',
+    cancelAppointments: true,
+    reason: 'Salon maintenance',
+    refundProof: { fileName: 'proof.jpg', mimeType: 'image/jpeg', dataBase64: '' },
+  });
+  await hit(closureApp, 'POST', '/salons/salon-1/emergency-close', {
+    onDate: '2030-01-15',
+    cancelAppointments: true,
+    reason: 'Salon maintenance',
+    refundProof: { fileName: 'proof.jpg', mimeType: 'image/jpeg', dataBase64: 'aW1n' },
+  });
 
   const invalidClosureDtoApp = appFor(
-    adminRouter({
-      ...services,
-      availabilityConfig: { ...services.availabilityConfig, getHolidays: async () => [{ id: 'bad', onDate: '2030-01-01', startTime: 'bad', endTime: null }] },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        availabilityConfig: {
+          ...services.availabilityConfig,
+          getHolidays: async () => [
+            { id: 'bad', onDate: '2030-01-01', startTime: 'bad', endTime: null },
+          ],
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(invalidClosureDtoApp, 'GET', '/salons/salon-1/holidays');
 
   const invalidHoursApp = appFor(
-    adminRouter({
-      ...services,
-      availabilityConfig: { ...services.availabilityConfig, getWorkingHours: async () => [{ weekday: 1, startTime: 'bad', endTime: 'bad' }] },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        availabilityConfig: {
+          ...services.availabilityConfig,
+          getWorkingHours: async () => [{ weekday: 1, startTime: 'bad', endTime: 'bad' }],
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(invalidHoursApp, 'GET', '/salons/salon-1/working-hours');
 
   const noSourceRegistrationApp = appFor(
-    adminRouter({
-      ...services,
-      resourceRegistration: {
-        ...services.resourceRegistration,
-        listStaff: async () => [{ ...ownerStaff, role: 'Admin' }],
-        getStaffMember: async () => null,
-        registerStaffMember: async () => ({ ...stylist, id: 'edge-no-source', role: 'Stylist' }),
-      },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        resourceRegistration: {
+          ...services.resourceRegistration,
+          listStaff: async () => [{ ...ownerStaff, role: 'Admin' }],
+          getStaffMember: async () => null,
+          registerStaffMember: async () => ({ ...stylist, id: 'edge-no-source', role: 'Stylist' }),
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
-  await hit(noSourceRegistrationApp, 'POST', '/salons/salon-1/staff', { fullName: 'No source', role: 'Stylist' });
+  await hit(noSourceRegistrationApp, 'POST', '/salons/salon-1/staff', {
+    fullName: 'No source',
+    role: 'Stylist',
+  });
 
   const emptyHoursRegistrationApp = appFor(
-    adminRouter({
-      ...services,
-      resourceRegistration: {
-        ...services.resourceRegistration,
-        listStaff: async () => [stylist],
-        getStaffMember: async () => null,
-        registerStaffMember: async () => ({ ...stylist, id: 'edge-empty-hours', role: 'Stylist' }),
-      },
-      availabilityConfig: { ...services.availabilityConfig, getWorkingHours: async () => [] },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        resourceRegistration: {
+          ...services.resourceRegistration,
+          listStaff: async () => [stylist],
+          getStaffMember: async () => null,
+          registerStaffMember: async () => ({
+            ...stylist,
+            id: 'edge-empty-hours',
+            role: 'Stylist',
+          }),
+        },
+        availabilityConfig: { ...services.availabilityConfig, getWorkingHours: async () => [] },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
-  await hit(emptyHoursRegistrationApp, 'POST', '/salons/salon-1/staff', { fullName: 'Empty hours', role: 'Stylist' });
+  await hit(emptyHoursRegistrationApp, 'POST', '/salons/salon-1/staff', {
+    fullName: 'Empty hours',
+    role: 'Stylist',
+  });
 
   const mobileRegistrationApp = appFor(
-    adminRouter({
-      ...services,
-      availabilityConfig: { ...services.availabilityConfig, getSalonWorkMode: async () => 'mobile' },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        availabilityConfig: {
+          ...services.availabilityConfig,
+          getSalonWorkMode: async () => 'mobile',
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
-  await hit(mobileRegistrationApp, 'POST', '/salons/salon-1/staff', { fullName: 'Mobile stylist', role: 'Stylist' });
+  await hit(mobileRegistrationApp, 'POST', '/salons/salon-1/staff', {
+    fullName: 'Mobile stylist',
+    role: 'Stylist',
+  });
   const emptyNameMobileRegistrationApp = appFor(
-    adminRouter({
-      ...services,
-      resourceRegistration: {
-        ...services.resourceRegistration,
-        registerStaffMember: async () => ({ ...stylist, id: 'edge-empty-name', fullName: '', role: 'Stylist' }),
-      },
-      availabilityConfig: { ...services.availabilityConfig, getSalonWorkMode: async () => 'mobile' },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        resourceRegistration: {
+          ...services.resourceRegistration,
+          registerStaffMember: async () => ({
+            ...stylist,
+            id: 'edge-empty-name',
+            fullName: '',
+            role: 'Stylist',
+          }),
+        },
+        availabilityConfig: {
+          ...services.availabilityConfig,
+          getSalonWorkMode: async () => 'mobile',
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
-  await hit(emptyNameMobileRegistrationApp, 'POST', '/salons/salon-1/staff', { fullName: 'Input name', role: 'Stylist' });
+  await hit(emptyNameMobileRegistrationApp, 'POST', '/salons/salon-1/staff', {
+    fullName: 'Input name',
+    role: 'Stylist',
+  });
   const emptyNamePhysicalRegistrationApp = appFor(
-    adminRouter({
-      ...services,
-      resourceRegistration: {
-        ...services.resourceRegistration,
-        registerStaffMember: async () => ({ ...stylist, id: 'edge-empty-physical-name', fullName: '', role: 'Stylist' }),
-      },
-      availabilityConfig: { ...services.availabilityConfig, getSalonWorkMode: async () => 'fixed_salon' },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        resourceRegistration: {
+          ...services.resourceRegistration,
+          registerStaffMember: async () => ({
+            ...stylist,
+            id: 'edge-empty-physical-name',
+            fullName: '',
+            role: 'Stylist',
+          }),
+        },
+        availabilityConfig: {
+          ...services.availabilityConfig,
+          getSalonWorkMode: async () => 'fixed_salon',
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
-  await hit(emptyNamePhysicalRegistrationApp, 'POST', '/salons/salon-1/staff', { fullName: 'Input name', role: 'Stylist' });
+  await hit(emptyNamePhysicalRegistrationApp, 'POST', '/salons/salon-1/staff', {
+    fullName: 'Input name',
+    role: 'Stylist',
+  });
   const rentedRegistrationApp = appFor(
-    adminRouter({
-      ...services,
-      availabilityConfig: { ...services.availabilityConfig, getSalonWorkMode: async () => 'rented_chair' },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        availabilityConfig: {
+          ...services.availabilityConfig,
+          getSalonWorkMode: async () => 'rented_chair',
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
-  await hit(rentedRegistrationApp, 'POST', '/salons/salon-1/staff', { fullName: 'Rented stylist', role: 'Stylist' });
+  await hit(rentedRegistrationApp, 'POST', '/salons/salon-1/staff', {
+    fullName: 'Rented stylist',
+    role: 'Stylist',
+  });
   const legacyRegistrationApp = appFor(
-    adminRouter({
-      ...services,
-      availabilityConfig: { ...services.availabilityConfig, getSalonWorkMode: undefined },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        availabilityConfig: { ...services.availabilityConfig, getSalonWorkMode: undefined },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
-  await hit(legacyRegistrationApp, 'POST', '/salons/salon-1/staff', { fullName: 'Legacy stylist', role: 'Stylist' });
+  await hit(legacyRegistrationApp, 'POST', '/salons/salon-1/staff', {
+    fullName: 'Legacy stylist',
+    role: 'Stylist',
+  });
   uniqueMode = 'register-error';
-  await hit(app, 'POST', '/salons/salon-1/staff', { fullName: 'Registration error', role: 'Stylist' });
+  await hit(app, 'POST', '/salons/salon-1/staff', {
+    fullName: 'Registration error',
+    role: 'Stylist',
+  });
   uniqueMode = 'none';
 
   const invalidAssignedChairApp = appFor(
-    adminRouter({
-      ...services,
-      resourceRegistration: {
-        ...services.resourceRegistration,
-        getStaffMember: async () => ({ ...stylist, salonId: undefined }),
-      },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        resourceRegistration: {
+          ...services.resourceRegistration,
+          getStaffMember: async () => ({ ...stylist, salonId: undefined }),
+        },
+      } as Services,
+      allowRole,
+    ),
     { id: 'owner-no-salon', role: 'Owner' },
   );
   await hit(invalidAssignedChairApp, 'PATCH', '/staff/staff-1', { assignedChairId: 'chair-1' });
 
   const chairHoursApp = appFor(
-    adminRouter({
-      ...services,
-      resourceRegistration: {
-        ...services.resourceRegistration,
-        listStaff: async () => [{ ...stylist, mobileChairId: 'chair-1' }],
-      },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        resourceRegistration: {
+          ...services.resourceRegistration,
+          listStaff: async () => [{ ...stylist, mobileChairId: 'chair-1' }],
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
-  await hit(chairHoursApp, 'PUT', '/salons/salon-1/staff/staff-1/working-hours', { hours: [{ weekday: 1, startTime: '09:00', endTime: '20:00' }] });
+  await hit(chairHoursApp, 'PUT', '/salons/salon-1/staff/staff-1/working-hours', {
+    hours: [{ weekday: 1, startTime: '09:00', endTime: '20:00' }],
+  });
 
   const chairSourceApp = appFor(
-    adminRouter({
-      ...services,
-      resourceRegistration: { ...services.resourceRegistration, listStaff: async () => [{ ...ownerStaff, role: 'Admin' }] },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        resourceRegistration: {
+          ...services.resourceRegistration,
+          listStaff: async () => [{ ...ownerStaff, role: 'Admin' }],
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(chairSourceApp, 'GET', '/salons/salon-1/working-hours');
   const noSourceHoursApp = appFor(
-    adminRouter({
-      ...services,
-      resourceRegistration: { ...services.resourceRegistration, listStaff: async () => [], listChairs: async () => [] },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        resourceRegistration: {
+          ...services.resourceRegistration,
+          listStaff: async () => [],
+          listChairs: async () => [],
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(noSourceHoursApp, 'GET', '/salons/salon-1/working-hours');
 
   const noWorkModePolicyApp = appFor(
-    adminRouter({
-      ...services,
-      availabilityConfig: { ...services.availabilityConfig, getSalonWorkMode: undefined },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        availabilityConfig: { ...services.availabilityConfig, getSalonWorkMode: undefined },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(noWorkModePolicyApp, 'GET', '/salons/salon-1/booking-policy');
 
   let approveOwnLookup = 0;
   const missingApproveOwnApp = appFor(
-    adminRouter({
-      ...services,
-      resourceRegistration: {
-        ...services.resourceRegistration,
-        getStaffMember: async () => (++approveOwnLookup === 1 ? stylist : null),
-      },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        resourceRegistration: {
+          ...services.resourceRegistration,
+          getStaffMember: async () => (++approveOwnLookup === 1 ? stylist : null),
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(missingApproveOwnApp, 'POST', '/staff/staff-1/approve-own', { allowed: true });
   const invalidRoleApproveOwnApp = appFor(
-    adminRouter({
-      ...services,
-      resourceRegistration: {
-        ...services.resourceRegistration,
-        getStaffMember: async () => ({ ...stylist, role: 'Owner' }),
-      },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        resourceRegistration: {
+          ...services.resourceRegistration,
+          getStaffMember: async () => ({ ...stylist, role: 'Owner' }),
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(invalidRoleApproveOwnApp, 'POST', '/staff/staff-1/approve-own', { allowed: true });
 
   const noPrincipalAvailabilityApp = appFor(adminRouter(services as Services, allowRole));
   await hit(noPrincipalAvailabilityApp, 'GET', '/staff/staff-1/availability-blocks');
-  await hit(appFor(adminRouter(services as Services, allowRole), CUSTOMER),
-    'GET', '/staff/staff-1/availability-blocks');
+  await hit(
+    appFor(adminRouter(services as Services, allowRole), CUSTOMER),
+    'GET',
+    '/staff/staff-1/availability-blocks',
+  );
   const platformAvailabilityApp = appFor(adminRouter(services as Services, allowRole), PLATFORM);
   await hit(platformAvailabilityApp, 'GET', '/staff/staff-1/availability-blocks');
   const missingAvailabilityApp = appFor(
-    adminRouter({
-      ...services,
-      availabilityConfig: { ...services.availabilityConfig, getStaffAvailabilityContext: async () => null },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        availabilityConfig: {
+          ...services.availabilityConfig,
+          getStaffAvailabilityContext: async () => null,
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(missingAvailabilityApp, 'GET', '/staff/staff-1/availability-blocks');
   const crossSalonAvailabilityApp = appFor(
-    adminRouter({
-      ...services,
-      availabilityConfig: { ...services.availabilityConfig, getStaffAvailabilityContext: async () => ({ ...staffScope, salonId: 'salon-2' }) },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        availabilityConfig: {
+          ...services.availabilityConfig,
+          getStaffAvailabilityContext: async () => ({ ...staffScope, salonId: 'salon-2' }),
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(crossSalonAvailabilityApp, 'GET', '/staff/staff-1/availability-blocks');
@@ -1360,20 +2157,32 @@ async function exerciseAdminBranches(): Promise<void> {
   );
   await hit(selfDeniedAvailabilityApp, 'GET', '/staff/staff-1/availability-blocks');
   const selfAllowedAvailabilityApp = appFor(
-    adminRouter({
-      ...services,
-      authorizer: { can: () => false },
-      availabilityConfig: { ...services.availabilityConfig, getStaffAvailabilityContext: async () => ({ ...staffScope, manageOwnAvailability: true }) },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        authorizer: { can: () => false },
+        availabilityConfig: {
+          ...services.availabilityConfig,
+          getStaffAvailabilityContext: async () => ({ ...staffScope, manageOwnAvailability: true }),
+        },
+      } as Services,
+      allowRole,
+    ),
     { id: 'stylist-customer', role: 'Stylist', staffMemberId: 'staff-1', salonId: 'salon-1' },
   );
   await hit(selfAllowedAvailabilityApp, 'GET', '/staff/staff-1/availability-blocks');
 
   const notFoundBlockApp = appFor(
-    adminRouter({
-      ...services,
-      availabilityConfig: { ...services.availabilityConfig, removeDayOffForStaff: async () => false },
-    } as Services, allowRole),
+    adminRouter(
+      {
+        ...services,
+        availabilityConfig: {
+          ...services.availabilityConfig,
+          removeDayOffForStaff: async () => false,
+        },
+      } as Services,
+      allowRole,
+    ),
     OWNER,
   );
   await hit(notFoundBlockApp, 'DELETE', '/staff/staff-1/availability-blocks/block-1');
@@ -1383,12 +2192,19 @@ async function exerciseAdminBranches(): Promise<void> {
   await hit(noBodyClosureApp, 'POST', '/staff/staff-1/availability-blocks');
   await hit(app, 'POST', '/staff/staff-1/manage-availability', { allowed: 'false' });
   analyticsDashboard = false;
-  const legacyAnalytics = { ...services, analyticsService: {
-    chairUtilization: async () => ({ utilization: 1 }),
-    revenue: async () => ({ totalRial: 1000n, appointmentCount: 1 }),
-    busiestWindows: async () => ({ busiestWindows: [] }),
-  } };
-  await hit(appFor(adminRouter(legacyAnalytics as Services, allowRole), OWNER), 'GET', '/salons/salon-1/analytics?from=2030-01-01&to=2030-01-02');
+  const legacyAnalytics = {
+    ...services,
+    analyticsService: {
+      chairUtilization: async () => ({ utilization: 1 }),
+      revenue: async () => ({ totalRial: 1000n, appointmentCount: 1 }),
+      busiestWindows: async () => ({ busiestWindows: [] }),
+    },
+  };
+  await hit(
+    appFor(adminRouter(legacyAnalytics as Services, allowRole), OWNER),
+    'GET',
+    '/salons/salon-1/analytics?from=2030-01-01&to=2030-01-02',
+  );
   analyticsDashboard = true;
 }
 
@@ -1420,12 +2236,18 @@ async function exerciseInboxBranches(): Promise<void> {
     SECRET,
   );
   verifyWsToken(validToken, SECRET);
-  verifyWsToken(jwt.sign({
-    sub: 'platform-1',
-    type: 'access',
-    role: 'PlatformAdmin',
-    platformAdminId: 'platform-1',
-  }, SECRET), SECRET);
+  verifyWsToken(
+    jwt.sign(
+      {
+        sub: 'platform-1',
+        type: 'access',
+        role: 'PlatformAdmin',
+        platformAdminId: 'platform-1',
+      },
+      SECRET,
+    ),
+    SECRET,
+  );
   verifyWsToken(jwt.sign({}, SECRET), SECRET);
   verifyWsToken(jwt.sign({ type: 'access' }, SECRET), SECRET);
   verifyWsToken('not-a-token', SECRET);
@@ -1433,19 +2255,40 @@ async function exerciseInboxBranches(): Promise<void> {
   let destroyed = 0;
   const socket: any = {
     send: () => undefined,
-    on: (_event: string, callback: () => void) => { callback(); },
+    on: (_event: string, callback: () => void) => {
+      callback();
+    },
   };
-  wsHandle.handleUpgrade(socket, {}, () => { destroyed += 1; });
-  wsHandle.handleUpgrade(socket, { subprotocol: 'bearer.invalid' }, () => { destroyed += 1; });
+  wsHandle.handleUpgrade(socket, {}, () => {
+    destroyed += 1;
+  });
+  wsHandle.handleUpgrade(socket, { subprotocol: 'bearer.invalid' }, () => {
+    destroyed += 1;
+  });
   const noSalon = jwt.sign({ sub: 'staff-1', type: 'access', role: 'Owner' }, SECRET);
-  wsHandle.handleUpgrade(socket, { subprotocol: `bearer.${noSalon}` }, () => { destroyed += 1; });
+  wsHandle.handleUpgrade(socket, { subprotocol: `bearer.${noSalon}` }, () => {
+    destroyed += 1;
+  });
   const noRole = jwt.sign({ sub: 'customer-1', type: 'access', salonId: 'salon-1' }, SECRET);
-  wsHandle.handleUpgrade(socket, { subprotocol: `bearer.${noRole}` }, () => { destroyed += 1; });
-  wsHandle.handleUpgrade(socket, { subprotocol: `bearer.${validToken}` }, () => { destroyed += 1; });
+  wsHandle.handleUpgrade(socket, { subprotocol: `bearer.${noRole}` }, () => {
+    destroyed += 1;
+  });
+  wsHandle.handleUpgrade(socket, { subprotocol: `bearer.${validToken}` }, () => {
+    destroyed += 1;
+  });
   const querySocket: any = { send: () => undefined, on: () => undefined };
-  wsHandle.handleUpgrade(querySocket, { url: `/?token=${encodeURIComponent(validToken)}` }, () => { destroyed += 1; });
-  const throwingSocket: any = { send: () => { throw new Error('closed'); }, on: () => undefined };
-  wsHandle.handleUpgrade(throwingSocket, { subprotocol: `bearer.${validToken}` }, () => { destroyed += 1; });
+  wsHandle.handleUpgrade(querySocket, { url: `/?token=${encodeURIComponent(validToken)}` }, () => {
+    destroyed += 1;
+  });
+  const throwingSocket: any = {
+    send: () => {
+      throw new Error('closed');
+    },
+    on: () => undefined,
+  };
+  wsHandle.handleUpgrade(throwingSocket, { subprotocol: `bearer.${validToken}` }, () => {
+    destroyed += 1;
+  });
   void destroyed;
 
   try {
@@ -1476,60 +2319,549 @@ async function exerciseInboxBranches(): Promise<void> {
 
 async function exercisePlatformAdminBranches(): Promise<void> {
   const validId = '11111111-1111-1111-1111-111111111111';
+  let uniqueMethod: string | undefined;
+  let genericErrorMethod: string | undefined;
+  let ticket: any = null;
+  let walkInMode: 'success' | 'no_availability' | 'slot_unavailable' = 'success';
+  const maybeUnique = (method: string): void => {
+    if (uniqueMethod === method) {
+      uniqueMethod = undefined;
+      throw { code: 'P2002' };
+    }
+    if (genericErrorMethod === method) {
+      genericErrorMethod = undefined;
+      throw new Error(`${method} failed`);
+    }
+  };
   const platformAdminService: any = {
     isActiveAdmin: async () => true,
     dashboard: async () => ({ ok: true }),
     listSalons: async () => ({ data: [], meta: {} }),
     getSalon: async () => ({ id: validId }),
+    updateSalon: async (_id: string, patch: any) => ({ id: validId, ...patch }),
+    archiveSalon: async () => ({ id: validId, active: false }),
     getDetail: async () => ({ resource: 'salons', record: {} }),
     setSalonActive: async () => ({ id: validId, active: true }),
     listCustomers: async () => ({ data: [], meta: {} }),
+    createCustomer: async (input: any) => {
+      maybeUnique('customer.create');
+      return { id: validId, ...input };
+    },
+    updateCustomer: async (_id: string, patch: any) => {
+      maybeUnique('customer.update');
+      return { id: validId, ...patch };
+    },
+    setCustomerActive: async () => ({ id: validId, active: false }),
+    deleteCustomer: async () => ({ id: validId, deleted: true }),
     listStaff: async () => ({ data: [], meta: {} }),
+    createStaff: async (input: any) => {
+      maybeUnique('staff.create');
+      return { id: validId, ...input };
+    },
+    updateStaff: async (_id: string, patch: any) => {
+      maybeUnique('staff.update');
+      return { id: validId, ...patch };
+    },
+    deleteStaff: async () => ({ id: validId, deleted: true }),
     setStaffActive: async () => ({ id: validId, active: true }),
+    listPlatformAdmins: async () => ({ data: [], meta: {} }),
+    createPlatformAdmin: async (input: any) => {
+      maybeUnique('platform-admin.create');
+      return { id: validId, ...input };
+    },
+    updatePlatformAdmin: async (_id: string, patch: any) => {
+      maybeUnique('platform-admin.update');
+      return { id: validId, ...patch };
+    },
+    deletePlatformAdmin: async () => ({ id: validId, deleted: true }),
+    listServices: async () => ({ data: [], meta: {} }),
+    createService: async (input: any) => ({ id: validId, ...input }),
+    updateService: async (_id: string, patch: any) => ({ id: validId, ...patch }),
+    deleteService: async () => ({ id: validId, deleted: true }),
+    listChairs: async () => ({ data: [], meta: {} }),
+    createChair: async (input: any) => ({ id: validId, ...input }),
+    updateChair: async (_id: string, patch: any) => ({ id: validId, ...patch }),
+    deleteChair: async () => ({ id: validId, deleted: true }),
+    listEquipment: async () => ({ data: [], meta: {} }),
+    createEquipment: async (input: any) => ({ id: validId, ...input }),
+    updateEquipment: async (_id: string, patch: any) => ({ id: validId, ...patch }),
+    deleteEquipment: async () => ({ id: validId, deleted: true }),
     listAppointments: async () => ({ data: [], meta: {} }),
+    updateAppointment: async (_id: string, patch: any) => ({ id: validId, ...patch }),
     completeAppointment: async () => ({ id: validId, status: 'completed' }),
     recordAudit: async () => undefined,
     listSubscriptions: async () => ({ data: [], meta: {} }),
+    updateSubscription: async (_id: string, patch: any) => ({ id: validId, ...patch }),
+    deleteSubscription: async () => ({ id: validId, deleted: true }),
     listPayments: async () => ({ data: [], meta: {} }),
+    updatePayment: async (_id: string, kind: string, status: string) => ({
+      id: validId,
+      kind,
+      status,
+    }),
     listWaitlist: async () => ({ data: [], meta: {} }),
+    updateWaitlist: async (_id: string, patch: any) => ({ id: validId, ...patch }),
+    deleteWaitlist: async () => ({ id: validId, deleted: true }),
     listQrScans: async () => ({ data: [], meta: {} }),
     listAuditLogs: async () => ({ data: [], meta: {} }),
   };
-  const app = appFor(
-    platformAdminRouter({
-      bookingFlow: { approve: async () => ({ id: validId }), reject: async () => ({ id: validId }) },
-      cancellationFlow: { cancel: async () => ({ id: validId }) },
-      cancellationService: { markNoShow: async () => ({ id: validId }) },
-    } as unknown as Services, platformAdminService),
-    PLATFORM,
+  const supportTicketService: any = {
+    listAll: async () => ({ data: [], meta: {} }),
+    get: async () => ticket,
+    update: async (_id: string, patch: any) => ({ id: validId, ...patch }),
+  };
+  const services: any = {
+    salonRegistration: {
+      registerSalon: async (input: any) => {
+        maybeUnique('salon.create');
+        return { salon: { id: validId, name: input.salonName, active: true } };
+      },
+    },
+    subscriptionService: { startTrial: async () => undefined },
+    appointmentManagementService: {
+      createWalkIn: async () =>
+        walkInMode === 'success'
+          ? { status: 'confirmed', appointment: { id: validId } }
+          : { status: 'rejected', reason: walkInMode },
+    },
+    bookingFlow: {
+      approve: async () => ({ id: validId }),
+      reject: async () => ({ id: validId }),
+    },
+    cancellationFlow: { cancel: async () => ({ id: validId }) },
+    cancellationService: { markNoShow: async () => ({ id: validId }) },
+    cardOrderService: {
+      list: async () => ({ data: [], meta: {} }),
+      updateStatus: async (_id: string, status: string) => ({ id: validId, status }),
+    },
+    supportTicketService,
+  };
+  const call = (method: string, path: string, body?: unknown) =>
+    hit(
+      appFor(platformAdminRouter(services as Services, platformAdminService), PLATFORM),
+      method,
+      path,
+      body,
+    );
+  const callWithRawBody = (method: string, path: string, body: unknown) => {
+    const rawApp = express();
+    rawApp.use((req, _res, next) => {
+      req.principal = PLATFORM as any;
+      req.body = body;
+      next();
+    });
+    rawApp.use(platformAdminRouter(services as Services, platformAdminService));
+    rawApp.use((error: unknown, _req: unknown, res: express.Response, _next: unknown) => {
+      res.status(500).json({ code: 'INTERNAL', error: String(error) });
+    });
+    return hit(rawApp, method, path);
+  };
+
+  await call('GET', '/platform-admin/dashboard');
+  await call('GET', '/platform-admin/salons');
+  await call(
+    'GET',
+    '/platform-admin/salons?page=2&limit=5&search=salon&status=active&salonId=salon-1&source=web&from=2030-01-01&to=2030-01-02',
   );
-  await hit(app, 'GET', '/platform-admin/dashboard');
-  await hit(app, 'GET', '/platform-admin/salons');
-  await hit(app, 'GET', '/platform-admin/salons?page=bad&limit=bad&search=%20&from=bad&to=2030-01-01');
-  await hit(app, 'GET', '/platform-admin/salons/not-an-id');
-  await hit(app, 'GET', `/platform-admin/salons/${validId}`);
-  await hit(app, 'GET', `/platform-admin/details/nope/${validId}`);
-  await hit(app, 'GET', `/platform-admin/details/salons/not-an-id`);
-  await hit(app, 'GET', `/platform-admin/details/salons/${validId}`);
-  await hit(app, 'PATCH', `/platform-admin/salons/not-an-id/status`, { active: true });
-  await hit(app, 'PATCH', `/platform-admin/salons/${validId}/status`, {});
-  await hit(app, 'PATCH', `/platform-admin/salons/${validId}/status`, { active: true });
-  await hit(app, 'GET', '/platform-admin/customers?status=active&salonId=salon-1&source=web');
-  await hit(app, 'GET', '/platform-admin/staff');
-  await hit(app, 'PATCH', `/platform-admin/staff/not-an-id/status`, { active: true });
-  await hit(app, 'PATCH', `/platform-admin/staff/${validId}/status`, { active: 'true' });
-  await hit(app, 'PATCH', `/platform-admin/staff/${validId}/status`, { active: true });
-  await hit(app, 'GET', '/platform-admin/appointments');
-  await hit(app, 'POST', `/platform-admin/appointments/not-an-id/action`, { action: 'approve' });
-  await hit(app, 'POST', `/platform-admin/appointments/${validId}/action`, {});
+  await call('GET', '/platform-admin/salons?from=2031-02-03&to=2031-02-04');
+  await call('GET', '/platform-admin/salons?from=bad');
+  await call('GET', '/platform-admin/salons/not-an-id');
+  await call('GET', `/platform-admin/salons/${validId}`);
+  await call('POST', '/platform-admin/salons', {});
+  await call('POST', '/platform-admin/salons');
+  await call('POST', '/platform-admin/salons', { salonName: 'Salon' });
+  await call('POST', '/platform-admin/salons', { salonName: 'Salon', ownerName: 'Owner' });
+  await call('POST', '/platform-admin/salons', {
+    salonName: 'Salon',
+    ownerName: 'Owner',
+    phone: '09121110001',
+    timezone: 'Asia/Tehran',
+    businessType: 'hair',
+    workMode: 'fixed_salon',
+  });
+  await call('POST', '/platform-admin/salons', {
+    salonName: 'Salon',
+    ownerName: 'Owner',
+    phone: '09121110019',
+    timezone: '   ',
+    businessType: '   ',
+  });
+  uniqueMethod = 'salon.create';
+  await call('POST', '/platform-admin/salons', {
+    salonName: 'Salon',
+    ownerName: 'Owner',
+    phone: '09121110002',
+  });
+  genericErrorMethod = 'salon.create';
+  await call('POST', '/platform-admin/salons', {
+    salonName: 'Salon',
+    ownerName: 'Owner',
+    phone: '09121110015',
+  });
+  await call('PATCH', '/platform-admin/salons/not-an-id', { name: 'Salon' });
+  await call('PATCH', `/platform-admin/salons/${validId}`);
+  await call('PATCH', `/platform-admin/salons/${validId}`, {});
+  await call('PATCH', `/platform-admin/salons/${validId}`, {
+    name: 'Renamed',
+    timezone: 'UTC',
+    businessType: null,
+    brandAccent: null,
+    workMode: 'hybrid',
+    autoApprove: true,
+    bookingWindowDays: 14,
+    bookingStartOffsetDays: 1,
+    active: false,
+  });
+  await call('DELETE', '/platform-admin/salons/not-an-id');
+  await call('DELETE', `/platform-admin/salons/${validId}`);
+  await call('GET', `/platform-admin/details/nope/${validId}`);
+  await call('GET', `/platform-admin/details/salons/not-an-id`);
+  await call('GET', `/platform-admin/details/salons/${validId}`);
+  await call('PATCH', `/platform-admin/salons/not-an-id/status`, { active: true });
+  await call('PATCH', `/platform-admin/salons/${validId}/status`, {});
+  await call('PATCH', `/platform-admin/salons/${validId}/status`, { active: true });
+
+  await call('GET', '/platform-admin/customers?status=active&salonId=salon-1&source=web');
+  await call('POST', '/platform-admin/customers', {});
+  await call('POST', '/platform-admin/customers');
+  await call('POST', '/platform-admin/customers', { phone: '09121110003', fullName: null });
+  await call('POST', '/platform-admin/customers', { phone: '09121110020', fullName: 123 });
+  uniqueMethod = 'customer.create';
+  await call('POST', '/platform-admin/customers', { phone: '09121110004', fullName: 'Duplicate' });
+  await call('PATCH', '/platform-admin/customers/not-an-id', { phone: '09121110005' });
+  await call('PATCH', `/platform-admin/customers/${validId}`);
+  await call('PATCH', `/platform-admin/customers/${validId}`, {});
+  await call('PATCH', `/platform-admin/customers/${validId}`, {
+    phone: '09121110006',
+    fullName: 'Updated',
+  });
+  uniqueMethod = 'customer.update';
+  await call('PATCH', `/platform-admin/customers/${validId}`, { phone: '09121110007' });
+  genericErrorMethod = 'customer.create';
+  await call('POST', '/platform-admin/customers', { phone: '09121110016', fullName: 'Error' });
+  genericErrorMethod = 'customer.update';
+  await call('PATCH', `/platform-admin/customers/${validId}`, { phone: '09121110017' });
+  await call('PATCH', `/platform-admin/customers/not-an-id/status`, { active: true });
+  await call('PATCH', `/platform-admin/customers/${validId}/status`, {});
+  await call('PATCH', `/platform-admin/customers/${validId}/status`, { active: false });
+  await call('DELETE', '/platform-admin/customers/not-an-id');
+  await call('DELETE', `/platform-admin/customers/${validId}`);
+
+  await call('GET', '/platform-admin/staff?search=staff&page=1&limit=5');
+  await call('POST', '/platform-admin/staff', {});
+  await call('POST', '/platform-admin/staff');
+  await call('POST', '/platform-admin/staff', {
+    salonId: validId,
+    fullName: 'Staff',
+    role: 'Stylist',
+    phone: null,
+  });
+  await call('POST', '/platform-admin/staff', {
+    salonId: validId,
+    fullName: 'Staff',
+    role: 'Stylist',
+    phone: 123,
+  });
+  uniqueMethod = 'staff.create';
+  await call('POST', '/platform-admin/staff', {
+    salonId: validId,
+    fullName: 'Duplicate',
+    role: 'Stylist',
+    phone: '09121110008',
+  });
+  await call('PATCH', '/platform-admin/staff/not-an-id', { fullName: 'Staff' });
+  await call('PATCH', `/platform-admin/staff/${validId}`);
+  await call('PATCH', `/platform-admin/staff/${validId}`, {});
+  await call('PATCH', `/platform-admin/staff/${validId}`, {
+    fullName: 'Updated',
+    role: 'Admin',
+    phone: null,
+    active: true,
+  });
+  uniqueMethod = 'staff.update';
+  await call('PATCH', `/platform-admin/staff/${validId}`, { phone: '09121110009' });
+  genericErrorMethod = 'staff.create';
+  await call('POST', '/platform-admin/staff', {
+    salonId: validId,
+    fullName: 'Error',
+    role: 'Stylist',
+  });
+  genericErrorMethod = 'staff.update';
+  await call('PATCH', `/platform-admin/staff/${validId}`, { fullName: 'Error' });
+  await call('DELETE', '/platform-admin/staff/not-an-id');
+  await call('DELETE', `/platform-admin/staff/${validId}`);
+  await call('PATCH', `/platform-admin/staff/not-an-id/status`, { active: true });
+  await call('PATCH', `/platform-admin/staff/${validId}/status`, {});
+  await call('PATCH', `/platform-admin/staff/${validId}/status`, { active: true });
+
+  await call('GET', '/platform-admin/platform-admins?search=admin');
+  await call('POST', '/platform-admin/platform-admins', {});
+  await call('POST', '/platform-admin/platform-admins');
+  await call('POST', '/platform-admin/platform-admins', {
+    phone: '09121110010',
+    fullName: 'Admin',
+    role: 'PlatformAdmin',
+    active: true,
+  });
+  uniqueMethod = 'platform-admin.create';
+  await call('POST', '/platform-admin/platform-admins', {
+    phone: '09121110011',
+    fullName: 'Duplicate',
+  });
+  await call('PATCH', '/platform-admin/platform-admins/not-an-id', { fullName: 'Admin' });
+  await call('PATCH', `/platform-admin/platform-admins/${validId}`);
+  await call('PATCH', `/platform-admin/platform-admins/${validId}`, {});
+  await call('PATCH', `/platform-admin/platform-admins/${validId}`, {
+    phone: '09121110012',
+    fullName: 'Updated',
+    role: 'PlatformAdmin',
+    active: false,
+  });
+  uniqueMethod = 'platform-admin.update';
+  await call('PATCH', `/platform-admin/platform-admins/${validId}`, { phone: '09121110013' });
+  genericErrorMethod = 'platform-admin.create';
+  await call('POST', '/platform-admin/platform-admins', {
+    phone: '09121110018',
+    fullName: 'Error',
+  });
+  genericErrorMethod = 'platform-admin.update';
+  await call('PATCH', `/platform-admin/platform-admins/${validId}`, { fullName: 'Error' });
+  await call('DELETE', '/platform-admin/platform-admins/not-an-id');
+  await call('DELETE', `/platform-admin/platform-admins/${validId}`);
+
+  await call('GET', '/platform-admin/services?search=service');
+  await call('POST', '/platform-admin/services', {});
+  await call('POST', '/platform-admin/services');
+  await call('POST', '/platform-admin/services', {
+    salonId: validId,
+    name: 'Service',
+    durationMinutes: 30,
+    durationMode: 'variable',
+    minDurationMinutes: 30,
+    maxDurationMinutes: 60,
+    bufferMinutes: 10,
+    priceRial: 1000,
+    requiresDeposit: true,
+    depositRial: null,
+    depositType: 'percentage',
+    depositPercent: null,
+  });
+  await call('POST', '/platform-admin/services', {
+    salonId: validId,
+    name: 'Minimal service',
+    durationMinutes: 30,
+    durationMode: 123,
+    minDurationMinutes: 'bad',
+    maxDurationMinutes: 'bad',
+    bufferMinutes: 'bad',
+    priceRial: 'bad',
+    requiresDeposit: 'bad',
+    depositRial: 'bad',
+    depositType: 123,
+    depositPercent: 'bad',
+  });
+  await call('PATCH', '/platform-admin/services/not-an-id', { name: 'Service' });
+  await call('PATCH', `/platform-admin/services/${validId}`);
+  await call('PATCH', `/platform-admin/services/${validId}`, {});
+  await call('PATCH', `/platform-admin/services/${validId}`, {
+    name: 'Updated',
+    durationMinutes: 45,
+    durationMode: 'fixed',
+    minDurationMinutes: null,
+    maxDurationMinutes: null,
+    bufferMinutes: 5,
+    priceRial: 2000,
+    requiresDeposit: false,
+    depositRial: 0,
+    depositType: 'fixed',
+    depositPercent: 25,
+    active: true,
+  });
+  await call('DELETE', '/platform-admin/services/not-an-id');
+  await call('DELETE', `/platform-admin/services/${validId}`);
+
+  await call('GET', '/platform-admin/chairs');
+  await call('POST', '/platform-admin/chairs', {});
+  await call('POST', '/platform-admin/chairs');
+  await call('POST', '/platform-admin/chairs', {
+    salonId: validId,
+    name: 'Chair',
+    kind: 'physical',
+  });
+  await call('POST', '/platform-admin/chairs', { salonId: validId, name: 'Minimal chair' });
+  await call('PATCH', '/platform-admin/chairs/not-an-id', { name: 'Chair' });
+  await call('PATCH', `/platform-admin/chairs/${validId}`);
+  await call('PATCH', `/platform-admin/chairs/${validId}`, {});
+  await call('PATCH', `/platform-admin/chairs/${validId}`, { name: 'Updated', active: false });
+  await call('DELETE', '/platform-admin/chairs/not-an-id');
+  await call('DELETE', `/platform-admin/chairs/${validId}`);
+
+  await call('GET', '/platform-admin/equipment');
+  await call('POST', '/platform-admin/equipment', {});
+  await call('POST', '/platform-admin/equipment');
+  await call('POST', '/platform-admin/equipment', { salonId: validId, name: 'Equipment' });
+  await call('PATCH', '/platform-admin/equipment/not-an-id', { name: 'Equipment' });
+  await call('PATCH', `/platform-admin/equipment/${validId}`);
+  await call('PATCH', `/platform-admin/equipment/${validId}`, {});
+  await call('PATCH', `/platform-admin/equipment/${validId}`, { name: 'Updated', active: true });
+  await call('DELETE', '/platform-admin/equipment/not-an-id');
+  await call('DELETE', `/platform-admin/equipment/${validId}`);
+
+  await call('GET', '/platform-admin/appointments');
+  await hit(
+    appFor(
+      platformAdminRouter({ bookingFlow: services.bookingFlow } as Services, platformAdminService),
+      PLATFORM,
+    ),
+    'POST',
+    '/platform-admin/appointments',
+    { salonId: validId, serviceId: validId, startAt: '2030-01-01T09:00:00Z', phone: '09121110014' },
+  );
+  await call('POST', '/platform-admin/appointments', {});
+  await call('POST', '/platform-admin/appointments');
+  walkInMode = 'no_availability';
+  await call('POST', '/platform-admin/appointments', {
+    salonId: validId,
+    serviceId: validId,
+    startAt: '2030-01-01T09:00:00Z',
+    phone: '09121110014',
+  });
+  walkInMode = 'slot_unavailable';
+  await call('POST', '/platform-admin/appointments', {
+    salonId: validId,
+    serviceId: validId,
+    startAt: '2030-01-01T09:00:00Z',
+    phone: '09121110014',
+  });
+  walkInMode = 'success';
+  await call('POST', '/platform-admin/appointments', {
+    salonId: validId,
+    serviceId: validId,
+    startAt: '2030-01-01T09:00:00Z',
+    phone: '09121110014',
+    fullName: 'Walk-in',
+    preferredStaffId: validId,
+    locationType: 'customer',
+    locationAddress: 'Tehran',
+    customerNote: 'Note',
+    durationMinutes: 30,
+  });
+  await call('PATCH', '/platform-admin/appointments/not-an-id', { customerNote: 'Note' });
+  await call('PATCH', `/platform-admin/appointments/${validId}`);
+  await call('PATCH', `/platform-admin/appointments/${validId}`, {});
+  await call('PATCH', `/platform-admin/appointments/${validId}`, {
+    customerNote: null,
+    locationType: 'salon',
+    locationAddress: null,
+  });
+  await call('DELETE', '/platform-admin/appointments/not-an-id');
+  await call('DELETE', `/platform-admin/appointments/${validId}`);
+  await call('POST', `/platform-admin/appointments/not-an-id/action`, { action: 'approve' });
+  await call('POST', `/platform-admin/appointments/${validId}/action`, {});
   for (const action of ['approve', 'reject', 'cancel', 'no_show', 'complete', 'unknown']) {
-    await hit(app, 'POST', `/platform-admin/appointments/${validId}/action`, { action });
+    await call('POST', `/platform-admin/appointments/${validId}/action`, { action });
   }
-  await hit(app, 'GET', '/platform-admin/subscriptions');
-  await hit(app, 'GET', '/platform-admin/payments');
-  await hit(app, 'GET', '/platform-admin/waitlist');
-  await hit(app, 'GET', '/platform-admin/qr-scans');
-  await hit(app, 'GET', '/platform-admin/audit-logs');
+
+  await call('GET', '/platform-admin/subscriptions');
+  await call('PATCH', '/platform-admin/subscriptions/not-an-id', { status: 'active' });
+  await call('PATCH', `/platform-admin/subscriptions/${validId}`);
+  await call('PATCH', `/platform-admin/subscriptions/${validId}`, {});
+  await call('PATCH', `/platform-admin/subscriptions/${validId}`, { expiresAt: 123 });
+  await call('PATCH', `/platform-admin/subscriptions/${validId}`, { expiresAt: 'bad' });
+  await call('PATCH', `/platform-admin/subscriptions/${validId}`, { graceUntil: 123 });
+  await call('PATCH', `/platform-admin/subscriptions/${validId}`, { graceUntil: 'bad' });
+  await call('PATCH', `/platform-admin/subscriptions/${validId}`, { graceUntil: null });
+  await call('PATCH', `/platform-admin/subscriptions/${validId}`, {
+    status: 'active',
+    planKind: 'monthly',
+    expiresAt: '2030-01-01T00:00:00Z',
+    graceUntil: '2030-01-02T00:00:00Z',
+  });
+  await call('DELETE', '/platform-admin/subscriptions/not-an-id');
+  await call('DELETE', `/platform-admin/subscriptions/${validId}`);
+
+  await call('GET', '/platform-admin/payments');
+  await call('PATCH', '/platform-admin/payments/not-an-id', {
+    kind: 'appointment',
+    status: 'paid',
+  });
+  await call('PATCH', `/platform-admin/payments/${validId}`);
+  await call('PATCH', `/platform-admin/payments/${validId}`, {});
+  await call('PATCH', `/platform-admin/payments/${validId}`, { kind: 'unknown', status: 'paid' });
+  await call('PATCH', `/platform-admin/payments/${validId}`, {
+    kind: 'appointment',
+    status: 'paid',
+  });
+  await call('GET', '/platform-admin/waitlist');
+  await call('PATCH', '/platform-admin/waitlist/not-an-id', { status: 'active' });
+  await call('PATCH', `/platform-admin/waitlist/${validId}`);
+  await call('PATCH', `/platform-admin/waitlist/${validId}`, {});
+  await call('PATCH', `/platform-admin/waitlist/${validId}`, { windowStart: 'bad' });
+  await call('PATCH', `/platform-admin/waitlist/${validId}`, { windowStart: 123 });
+  await call('PATCH', `/platform-admin/waitlist/${validId}`, { windowEnd: 'bad' });
+  await call('PATCH', `/platform-admin/waitlist/${validId}`, {
+    status: 'active',
+    windowStart: '2030-01-01T09:00:00Z',
+    windowEnd: '2030-01-01T10:00:00Z',
+  });
+  await call('DELETE', '/platform-admin/waitlist/not-an-id');
+  await call('DELETE', `/platform-admin/waitlist/${validId}`);
+  await call('GET', '/platform-admin/qr-scans');
+  await call('GET', '/platform-admin/audit-logs');
+  await call('GET', '/platform-admin/card-orders');
+  await call('PATCH', '/platform-admin/card-orders/not-an-id', { status: 'received' });
+  await call('PATCH', `/platform-admin/card-orders/${validId}`);
+  await call('PATCH', `/platform-admin/card-orders/${validId}`, {});
+  await call('PATCH', `/platform-admin/card-orders/${validId}`, { status: 'unknown' });
+  await call('PATCH', `/platform-admin/card-orders/${validId}`, {
+    status: 'completed',
+    note: 'Done',
+  });
+  await call('PATCH', `/platform-admin/card-orders/${validId}`, { status: 'completed', note: 123 });
+
+  for (const [method, path] of [
+    ['POST', '/platform-admin/salons'],
+    ['PATCH', `/platform-admin/salons/${validId}`],
+    ['POST', '/platform-admin/customers'],
+    ['PATCH', `/platform-admin/customers/${validId}`],
+    ['POST', '/platform-admin/staff'],
+    ['PATCH', `/platform-admin/staff/${validId}`],
+    ['POST', '/platform-admin/platform-admins'],
+    ['PATCH', `/platform-admin/platform-admins/${validId}`],
+    ['POST', '/platform-admin/services'],
+    ['PATCH', `/platform-admin/services/${validId}`],
+    ['POST', '/platform-admin/chairs'],
+    ['PATCH', `/platform-admin/chairs/${validId}`],
+    ['POST', '/platform-admin/equipment'],
+    ['PATCH', `/platform-admin/equipment/${validId}`],
+    ['POST', '/platform-admin/appointments'],
+    ['PATCH', `/platform-admin/appointments/${validId}`],
+    ['PATCH', `/platform-admin/subscriptions/${validId}`],
+    ['PATCH', `/platform-admin/waitlist/${validId}`],
+    ['PATCH', `/platform-admin/card-orders/${validId}`],
+  ] as const) {
+    await callWithRawBody(method, path, null);
+    await callWithRawBody(method, path, {});
+  }
+
+  await call('GET', '/platform-admin/support/tickets');
+  await call('GET', '/platform-admin/support/tickets/not-an-id');
+  ticket = null;
+  await call('GET', `/platform-admin/support/tickets/${validId}`);
+  ticket = { id: validId, status: 'open' };
+  await call('GET', `/platform-admin/support/tickets/${validId}`);
+  await call('PATCH', '/platform-admin/support/tickets/not-an-id', { status: 'open' });
+  await call('PATCH', `/platform-admin/support/tickets/${validId}`, { status: 'invalid' });
+  await call('PATCH', `/platform-admin/support/tickets/${validId}`, { priority: 'invalid' });
+  await call('PATCH', `/platform-admin/support/tickets/${validId}`, {
+    assignedAdminId: 'not-an-id',
+  });
+  await call('PATCH', `/platform-admin/support/tickets/${validId}`, {
+    status: 'resolved',
+    priority: 'high',
+    assignedAdminId: null,
+    resolution: 'Resolved',
+  });
 }
 
 async function exerciseAuthBranches(): Promise<void> {
@@ -1560,14 +2892,29 @@ async function exerciseAuthBranches(): Promise<void> {
   await hit(app, 'POST', '/auth/otp/request', { phone: '09121110002' });
   await hit(app, 'POST', '/auth/otp/verify', {});
   await hit(app, 'POST', '/auth/otp/verify', { phone: '09121110001', code: '123456' });
-  await hit(app, 'POST', '/auth/otp/verify', { phone: '09121110001', code: '123456' }, {
-    'X-Auth-Client': 'mobile',
-    Origin: 'http://localhost:5273',
-  });
+  await hit(
+    app,
+    'POST',
+    '/auth/otp/verify',
+    { phone: '09121110001', code: '123456' },
+    {
+      'X-Auth-Client': 'mobile',
+      Origin: 'http://localhost:5273',
+    },
+  );
   await hit(app, 'POST', '/auth/refresh', {});
-  await hit(app, 'POST', '/auth/refresh', { refreshToken: 'refresh' }, {
+  await hit(app, 'POST', '/auth/refresh', undefined, {
     'X-Auth-Client': 'mobile',
   });
+  await hit(
+    app,
+    'POST',
+    '/auth/refresh',
+    { refreshToken: 'refresh' },
+    {
+      'X-Auth-Client': 'mobile',
+    },
+  );
   await hit(app, 'POST', '/auth/refresh', undefined, {
     'X-Auth-Client': 'mobile',
     Origin: 'http://localhost:5273',
@@ -1589,7 +2936,12 @@ async function exerciseAuthBranches(): Promise<void> {
       }),
     },
   } as unknown as Services;
-  const contextPrincipal = { id: 'owner-1', role: 'Owner', staffMemberId: 'staff-1', salonId: 'salon-1' };
+  const contextPrincipal = {
+    id: 'owner-1',
+    role: 'Owner',
+    staffMemberId: 'staff-1',
+    salonId: 'salon-1',
+  };
   const unauthenticatedContextApp = appFor(authContextRouter(contextServices));
   await hit(unauthenticatedContextApp, 'GET', '/auth/contexts');
   await hit(unauthenticatedContextApp, 'POST', '/auth/context', {});
@@ -1597,15 +2949,27 @@ async function exerciseAuthBranches(): Promise<void> {
   await hit(contextApp, 'GET', '/auth/contexts');
   await hit(contextApp, 'POST', '/auth/context', {});
   await hit(contextApp, 'POST', '/auth/context', { staffMemberId: 'staff-1' });
-  await hit(contextApp, 'POST', '/auth/context', { staffMemberId: 'staff-1' }, {
-    'X-Auth-Client': 'mobile',
-  });
-  const contextWithoutListApp = appFor(authContextRouter({
-    authService: {
-      getStaffContexts: async () => [],
-      selectStaffContext: async () => ({ accessToken: 'context-access', refreshToken: 'context-refresh' }),
+  await hit(
+    contextApp,
+    'POST',
+    '/auth/context',
+    { staffMemberId: 'staff-1' },
+    {
+      'X-Auth-Client': 'mobile',
     },
-  } as unknown as Services), contextPrincipal);
+  );
+  const contextWithoutListApp = appFor(
+    authContextRouter({
+      authService: {
+        getStaffContexts: async () => [],
+        selectStaffContext: async () => ({
+          accessToken: 'context-access',
+          refreshToken: 'context-refresh',
+        }),
+      },
+    } as unknown as Services),
+    contextPrincipal,
+  );
   await hit(contextWithoutListApp, 'POST', '/auth/context', { staffMemberId: 'staff-1' });
 
   const previousNodeEnv = process.env.NODE_ENV;
@@ -1636,20 +3000,54 @@ async function exerciseBotBranches(): Promise<void> {
 }
 
 async function exerciseCardOrderBranches(): Promise<void> {
-  const app = appFor(cardOrderRouter(allowRole), OWNER);
-  await hit(app, 'POST', '/salons/salon-1/card-orders', {});
-  await hit(app, 'POST', '/salons/salon-1/card-orders', {
-    template: 'salon-qr-card',
-    quantity: 1,
+  const services: any = {
+    cardOrderService: {
+      create: async (_salonId: string, input: any) => ({ orderId: 'order-1', ...input }),
+    },
+    salonInboxService: { emit: async () => undefined },
+  };
+  const app = appFor(cardOrderRouter(services as Services, allowRole), OWNER);
+  const validBody = {
+    template: 'card',
+    quantity: 50,
     contactName: 'Owner',
     phone: '09121110002',
-    address: 'Tehran',
+    province: 'Tehran',
+    city: 'Tehran',
+    address: 'Tehran Street 1',
+    postalCode: '1234567890',
+  };
+  await hit(app, 'POST', '/salons/salon-1/card-orders', {});
+  await hit(app, 'POST', '/salons/salon-1/card-orders', { ...validBody, template: 'unknown' });
+  await hit(app, 'POST', '/salons/salon-1/card-orders', { ...validBody, quantity: 1 });
+  await hit(app, 'POST', '/salons/salon-1/card-orders', { ...validBody, contactName: '' });
+  await hit(app, 'POST', '/salons/salon-1/card-orders', { ...validBody, contactName: 123 });
+  await hit(app, 'POST', '/salons/salon-1/card-orders', { ...validBody, phone: 'bad' });
+  await hit(app, 'POST', '/salons/salon-1/card-orders', { ...validBody, phone: 123 });
+  await hit(app, 'POST', '/salons/salon-1/card-orders', { ...validBody, province: '' });
+  await hit(app, 'POST', '/salons/salon-1/card-orders', { ...validBody, province: 123 });
+  await hit(app, 'POST', '/salons/salon-1/card-orders', { ...validBody, city: '' });
+  await hit(app, 'POST', '/salons/salon-1/card-orders', { ...validBody, city: 123 });
+  await hit(app, 'POST', '/salons/salon-1/card-orders', { ...validBody, address: 'x' });
+  await hit(app, 'POST', '/salons/salon-1/card-orders', { ...validBody, address: 123 });
+  await hit(app, 'POST', '/salons/salon-1/card-orders', { ...validBody, postalCode: '123' });
+  await hit(app, 'POST', '/salons/salon-1/card-orders', { ...validBody, postalCode: 123 });
+  await hit(app, 'POST', '/salons/salon-1/card-orders', { ...validBody, notes: '  ' });
+  await hit(app, 'POST', '/salons/salon-1/card-orders', { ...validBody, notes: 'x'.repeat(1001) });
+  await hit(app, 'POST', '/salons/salon-1/card-orders', { ...validBody, notes: 123 });
+  await hit(app, 'POST', '/salons/salon-1/card-orders', {
+    ...validBody,
+    template: 'banner',
+    notes: 'Please call first',
+    accent: ' teal ',
+    printSpecs: { paper: 'matte' },
   });
 }
 
 async function exerciseCustomerBranches(): Promise<void> {
   let profile: any = null;
   let entry: any = null;
+  let notificationRead: any = null;
   const app = appFor(
     customerRouter({
       customerService: {
@@ -1662,6 +3060,11 @@ async function exerciseCustomerBranches(): Promise<void> {
         getEntry: async () => entry,
         cancelEntry: async (id: string) => ({ id, status: 'cancelled' }),
       },
+      customerNotificationService: {
+        list: async () => [],
+        markRead: async () => notificationRead,
+        markAllRead: async () => 1,
+      },
     } as unknown as Services),
     CUSTOMER,
   );
@@ -1669,22 +3072,35 @@ async function exerciseCustomerBranches(): Promise<void> {
   profile = { id: CUSTOMER.id, phone: '09121110003', fullName: null };
   await hit(app, 'GET', '/customers/me/profile');
   await hit(app, 'PATCH', '/customers/me/profile', {});
-  await hit(appFor(customerRouter({
-    customerService: {
-      getProfile: async () => profile,
-      updateProfile: async (_id: string, fullName: string) => ({ id: CUSTOMER.id, fullName }),
-      getHistory: async () => [],
-    },
-    waitlistService: {
-      getCustomerEntries: async () => [],
-      getEntry: async () => entry,
-      cancelEntry: async (id: string) => ({ id, status: 'cancelled' }),
-    },
-  } as unknown as Services), CUSTOMER, false), 'PATCH', '/customers/me/profile');
+  await hit(
+    appFor(
+      customerRouter({
+        customerService: {
+          getProfile: async () => profile,
+          updateProfile: async (_id: string, fullName: string) => ({ id: CUSTOMER.id, fullName }),
+          getHistory: async () => [],
+        },
+        waitlistService: {
+          getCustomerEntries: async () => [],
+          getEntry: async () => entry,
+          cancelEntry: async (id: string) => ({ id, status: 'cancelled' }),
+        },
+      } as unknown as Services),
+      CUSTOMER,
+      false,
+    ),
+    'PATCH',
+    '/customers/me/profile',
+  );
   await hit(app, 'PATCH', '/customers/me/profile', { fullName: '' });
   await hit(app, 'PATCH', '/customers/me/profile', { fullName: 'Branch Customer' });
   await hit(app, 'GET', '/customers/me/appointments');
   await hit(app, 'GET', '/customers/me/waitlist');
+  await hit(app, 'GET', '/customers/me/notifications');
+  await hit(app, 'PATCH', '/customers/me/notifications/notification-1/read');
+  notificationRead = { id: 'notification-1', read: true };
+  await hit(app, 'PATCH', '/customers/me/notifications/notification-1/read');
+  await hit(app, 'POST', '/customers/me/notifications/read-all');
   await hit(app, 'DELETE', '/waitlist/entry-1');
   entry = { id: 'entry-1', customerId: 'other-customer' };
   await hit(app, 'DELETE', '/waitlist/entry-1');
@@ -1714,8 +3130,11 @@ async function exercisePaymentBranches(): Promise<void> {
         initiateDeposit: async () => {
           if (paymentMethod === 'card' || paymentMethod === 'card-no-bank') {
             return {
-              method: 'card_transfer', amountRial: 1000, cardNumber: '6037991234567890',
-              cardHolder: 'Branch Owner', ...(paymentMethod === 'card' ? { bankName: 'Branch Bank' } : {}),
+              method: 'card_transfer',
+              amountRial: 1000,
+              cardNumber: '6037991234567890',
+              cardHolder: 'Branch Owner',
+              ...(paymentMethod === 'card' ? { bankName: 'Branch Bank' } : {}),
             };
           }
           return { redirectUrl: '/pay/branch' };
@@ -1735,10 +3154,18 @@ async function exercisePaymentBranches(): Promise<void> {
   paymentMethod = 'card-no-bank';
   await hit(app, 'POST', '/payments/initiate', { appointmentId: appointment.id });
   paymentMethod = 'redirect';
-  await hit(appFor(paymentInitiateRouter({
-    calendarService: { getAppointmentById: async () => appointment },
-    paymentService: { initiateDeposit: async () => ({ redirectUrl: '/pay/platform' }) },
-  } as unknown as Services), PLATFORM), 'POST', '/payments/initiate', { appointmentId: appointment.id });
+  await hit(
+    appFor(
+      paymentInitiateRouter({
+        calendarService: { getAppointmentById: async () => appointment },
+        paymentService: { initiateDeposit: async () => ({ redirectUrl: '/pay/platform' }) },
+      } as unknown as Services),
+      PLATFORM,
+    ),
+    'POST',
+    '/payments/initiate',
+    { appointmentId: appointment.id },
+  );
 
   const callbackApp = appFor(
     paymentCallbackRouter({
@@ -1752,13 +3179,27 @@ async function exercisePaymentBranches(): Promise<void> {
     } as unknown as Services),
   );
   await hit(callbackApp, 'POST', '/payments/callback', {});
-  await hit(appFor(paymentCallbackRouter({
-    paymentService: { handleCallback: async () => ({ confirmed: false }) },
-    notificationService: { sendConfirmation: async () => undefined, sendSalonBookingNotice: async () => undefined },
-  } as unknown as Services), undefined, false), 'POST', '/payments/callback');
+  await hit(
+    appFor(
+      paymentCallbackRouter({
+        paymentService: { handleCallback: async () => ({ confirmed: false }) },
+        notificationService: {
+          sendConfirmation: async () => undefined,
+          sendSalonBookingNotice: async () => undefined,
+        },
+      } as unknown as Services),
+      undefined,
+      false,
+    ),
+    'POST',
+    '/payments/callback',
+  );
   await hit(callbackApp, 'POST', '/payments/callback', { authority: 'branch-a', status: 'NOK' });
   await hit(callbackApp, 'POST', '/payments/callback', { authority: 123, status: 'OK' });
-  await hit(callbackApp, 'POST', '/payments/callback', { authority: 'branch-success', success: '1' });
+  await hit(callbackApp, 'POST', '/payments/callback', {
+    authority: 'branch-success',
+    success: '1',
+  });
   await hit(callbackApp, 'POST', '/payments/callback', { authority: 'branch-false', success: '0' });
   await hit(callbackApp, 'POST', '/payments/callback', { authority: 'branch-no-status' });
   callbackConfirmed = true;
@@ -1768,13 +3209,27 @@ async function exercisePaymentBranches(): Promise<void> {
     appointmentId: 'appointment-1',
   });
   await hit(callbackApp, 'POST', '/payments/callback', {
-    authority: 'branch-c', status: 'OK', appointmentID: 'appointment-1',
+    authority: 'branch-c',
+    status: 'OK',
+    appointmentID: 'appointment-1',
   });
-  const throwingCallbackApp = appFor(paymentCallbackRouter({
-    paymentService: { handleCallback: async () => { throw new Error('callback failure'); } },
-    notificationService: { sendConfirmation: async () => undefined, sendSalonBookingNotice: async () => undefined },
-  } as unknown as Services));
-  await hit(throwingCallbackApp, 'POST', '/payments/callback', { authority: 'branch-error', status: 'OK' });
+  const throwingCallbackApp = appFor(
+    paymentCallbackRouter({
+      paymentService: {
+        handleCallback: async () => {
+          throw new Error('callback failure');
+        },
+      },
+      notificationService: {
+        sendConfirmation: async () => undefined,
+        sendSalonBookingNotice: async () => undefined,
+      },
+    } as unknown as Services),
+  );
+  await hit(throwingCallbackApp, 'POST', '/payments/callback', {
+    authority: 'branch-error',
+    status: 'OK',
+  });
 }
 
 async function exerciseReferralBranches(): Promise<void> {
@@ -1815,10 +3270,16 @@ async function exerciseReferralBranches(): Promise<void> {
   };
   await hit(publicApp, 'GET', '/referrals/claim/token');
 
-  const ownerApp = appFor(referralRouter({ referralService } as unknown as Services, allowRole), OWNER);
+  const ownerApp = appFor(
+    referralRouter({ referralService } as unknown as Services, allowRole),
+    OWNER,
+  );
   await hit(ownerApp, 'POST', '/referrals', { salonName: 'X', city: 'Tehran' });
   await hit(ownerApp, 'GET', '/customers/me/referrals');
-  const customerApp = appFor(referralRouter({ referralService } as unknown as Services, allowRole), CUSTOMER);
+  const customerApp = appFor(
+    referralRouter({ referralService } as unknown as Services, allowRole),
+    CUSTOMER,
+  );
   await hit(customerApp, 'POST', '/referrals', {
     salonName: 'Salon',
     city: 'Tehran',
@@ -1833,10 +3294,10 @@ async function exerciseReferralBranches(): Promise<void> {
   );
   await hit(customerApp, 'GET', '/customers/me/referrals');
   await hit(ownerApp, 'GET', '/salons/salon-1/referrals');
-  const noSalonApp = appFor(
-    referralRouter({ referralService } as unknown as Services, allowRole),
-    { id: 'owner-2', role: 'Owner' },
-  );
+  const noSalonApp = appFor(referralRouter({ referralService } as unknown as Services, allowRole), {
+    id: 'owner-2',
+    role: 'Owner',
+  });
   await hit(noSalonApp, 'POST', '/referrals/ref-1/redeem');
   await hit(ownerApp, 'POST', '/referrals/ref-1/redeem');
   for (const mode of ['not-found', 'wrong-salon', 'conflict', 'error']) {
@@ -1949,17 +3410,38 @@ async function exerciseSalonBranches(): Promise<void> {
   }
   await hit(app, 'GET', '/salons/salon-1/services');
   await hit(app, 'GET', '/salons/salon-1/availability');
-  await hit(app, 'GET', '/salons/salon-1/availability?serviceId=service-1&date=2030-01-01&locationType=bad');
-  await hit(app, 'GET', '/salons/salon-1/availability?serviceId=service-1&date=2030-01-01&staffId=staff-1');
-  await hit(app, 'GET', '/salons/salon-1/availability?serviceId=service-1&date=2030-01-01&durationMinutes=45');
+  await hit(app, 'GET', '/salons/salon-1/availability?date=2030-01-01');
+  await hit(
+    app,
+    'GET',
+    '/salons/salon-1/availability?serviceIds=service-1,service-2&date=2030-01-01',
+  );
+  await hit(
+    app,
+    'GET',
+    '/salons/salon-1/availability?serviceId=service-1&date=2030-01-01&locationType=bad',
+  );
+  await hit(
+    app,
+    'GET',
+    '/salons/salon-1/availability?serviceId=service-1&date=2030-01-01&staffId=staff-1',
+  );
+  await hit(
+    app,
+    'GET',
+    '/salons/salon-1/availability?serviceId=service-1&date=2030-01-01&durationMinutes=45',
+  );
   await hit(app, 'POST', '/salons/salon-1/scan');
   await hit(app, 'POST', '/salons/salon-1/scan', { source: 'qr' });
   await hit(app, 'POST', '/salons/salon-1/scan?utm_source=qr');
 
   const noBodyApp = appFor(
-    salonRouter({
-      qrService: { recordScan: async () => undefined },
-    } as unknown as Services, ((_req, _res, next) => next()) as RequestHandler),
+    salonRouter(
+      {
+        qrService: { recordScan: async () => undefined },
+      } as unknown as Services,
+      ((_req, _res, next) => next()) as RequestHandler,
+    ),
     undefined,
     false,
   );
@@ -1981,6 +3463,7 @@ async function exerciseSalonBranches(): Promise<void> {
 async function exerciseSubscriptionBranches(): Promise<void> {
   let detail: any = null;
   let callbackMode = 'success';
+  let cleanupMode = 'success';
   const subscriptionService: any = {
     getPlans: () => [{ kind: 'monthly', durationDays: 30, priceRial: 1000n }],
     getStatusResponse: async () => detail,
@@ -1988,6 +3471,9 @@ async function exerciseSubscriptionBranches(): Promise<void> {
     findPaymentByAuthority: async () => (callbackMode === 'missing' ? null : { id: 'payment-1' }),
     activateFromPayment: async () => {
       if (callbackMode === 'error') throw new Error('activation failure');
+    },
+    markPaymentFailedByAuthority: async () => {
+      if (cleanupMode === 'error') throw new Error('cleanup failure');
     },
   };
   const app = appFor(
@@ -2002,9 +3488,16 @@ async function exerciseSubscriptionBranches(): Promise<void> {
   await hit(app, 'POST', '/subscription/purchase', { salonId: 'salon-1', plan: 'trial' });
   await hit(app, 'POST', '/subscription/purchase', { salonId: 'salon-1', plan: 'monthly' });
 
-  const callbackApp = appFor(subscriptionCallbackRouter({ subscriptionService } as unknown as Services));
+  const callbackApp = appFor(
+    subscriptionCallbackRouter({ subscriptionService } as unknown as Services),
+  );
   await hit(callbackApp, 'GET', '/subscriptions/callback');
   await hit(callbackApp, 'GET', '/subscriptions/callback?Authority=x&Status=NOK');
+  cleanupMode = 'error';
+  await withMutedExpectedLog('error', () =>
+    hit(callbackApp, 'GET', '/subscriptions/callback?Authority=cleanup-error&Status=NOK'),
+  );
+  cleanupMode = 'success';
   callbackMode = 'missing';
   await withMutedExpectedLog('error', () =>
     hit(callbackApp, 'GET', '/subscriptions/callback?Authority=x&Status=OK'),
@@ -2041,16 +3534,69 @@ async function exerciseWaitlistBranches(): Promise<void> {
   const end = new Date(now + 2 * 60 * 60 * 1000).toISOString();
   catalog = [];
   await hit(app, 'POST', '/salons/salon-1/waitlist', {
-    serviceId: 'service-1', windowStart: start, windowEnd: end,
+    serviceId: 'service-1',
+    windowStart: start,
+    windowEnd: end,
   });
   catalog = [{ id: 'service-1' }];
   await hit(app, 'POST', '/salons/salon-1/waitlist', {
-    serviceId: 'service-1', windowStart: new Date(now - 2 * 60 * 60 * 1000).toISOString(), windowEnd: new Date(now - 60 * 60 * 1000).toISOString(),
+    serviceId: 'service-1',
+    windowStart: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
+    windowEnd: new Date(now - 60 * 60 * 1000).toISOString(),
   });
   await hit(app, 'POST', '/salons/salon-1/waitlist', {
-    serviceId: 'service-1', windowStart: new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString(), windowEnd: new Date(now + 31 * 24 * 60 * 60 * 1000).toISOString(),
+    serviceId: 'service-1',
+    windowStart: new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    windowEnd: new Date(now + 31 * 24 * 60 * 60 * 1000).toISOString(),
   });
-  await hit(app, 'POST', '/salons/salon-1/waitlist', { serviceId: 'service-1', windowStart: start, windowEnd: end });
+  await hit(app, 'POST', '/salons/salon-1/waitlist', {
+    serviceId: 'service-1',
+    windowStart: start,
+    windowEnd: end,
+  });
+
+  const delayedBookingApp = appFor(
+    waitlistRouter({
+      serviceCatalog: { listServices: async () => [{ id: 'service-1' }] },
+      availabilityConfig: {
+        getBookingWindowDays: async () => 14,
+        getBookingStartOffsetDays: async () => 1,
+        getSalonTimezone: async () => 'Etc/GMT+12',
+      },
+      waitlistService: { joinWaitlist: async (input: any) => input },
+    } as unknown as Services),
+    CUSTOMER,
+  );
+  await hit(delayedBookingApp, 'POST', '/salons/salon-1/waitlist', {
+    serviceId: 'service-1',
+    windowStart: new Date(now - 60 * 60 * 1000).toISOString(),
+    windowEnd: new Date(now + 60 * 60 * 1000).toISOString(),
+  });
+
+  const originalDateTimeFormat = Intl.DateTimeFormat;
+  try {
+    Object.defineProperty(Intl, 'DateTimeFormat', {
+      configurable: true,
+      value: class {
+        public formatToParts(): Intl.DateTimeFormatPart[] {
+          return [
+            { type: 'month', value: '01' },
+            { type: 'day', value: '01' },
+          ];
+        }
+      },
+    });
+    await hit(delayedBookingApp, 'POST', '/salons/salon-1/waitlist', {
+      serviceId: 'service-1',
+      windowStart: new Date(now - 60 * 60 * 1000).toISOString(),
+      windowEnd: new Date(now + 60 * 60 * 1000).toISOString(),
+    });
+  } finally {
+    Object.defineProperty(Intl, 'DateTimeFormat', {
+      configurable: true,
+      value: originalDateTimeFormat,
+    });
+  }
 }
 
 When('I exercise controller branch matrix', async function (this: BackendWorld) {

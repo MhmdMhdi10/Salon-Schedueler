@@ -5,6 +5,7 @@ import { asyncRoute, validateRequired } from '../../common/http/route-helpers.js
 import type { ServiceCatalog } from '../../catalog/service-catalog.js';
 import { normalizeDigits, type StaffRole } from '@salon/shared';
 import type { CancellationDetails, RefundProof } from '../../scheduling/cancellation.js';
+import { StaffPhoneTakenError } from '../../registration/resource-registration.js';
 
 /**
  * Parse an ISO date string from a query param; respond 400 VALIDATION_ERROR and
@@ -822,7 +823,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
 
   // Add a staff member to the salon (Owner/Admin). Body: { fullName, role,
   // phone? }. `role` sets their RBAC access (Owner/Admin/Stylist); an optional
-  // unique `phone` is their OTP login (matched in auth.service → staff JWT).
+  // salon-scoped `phone` is their OTP login (matched in auth.service → staff JWT).
   router.post(
     '/salons/:id/staff',
     requireRole('configure_salon'),
@@ -919,7 +920,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         }
         res.status(201).json({ staff: toStaffDto(current ?? created) });
       } catch (err) {
-        if (isUniqueViolation(err)) {
+        if (err instanceof StaffPhoneTakenError || isUniqueViolation(err)) {
           res.status(409).json({ code: 'PHONE_TAKEN', field: 'phone' });
           return;
         }
@@ -930,7 +931,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
 
   // Update a staff member's identity / role / login / active flag (Owner/Admin).
   // Body: any subset of { fullName, role, phone, active }. `phone: ""`/null
-  // clears the login; a non-empty value (must be unique) sets it.
+  // clears the login; a non-empty value (unique within this salon) sets it.
   router.patch(
     '/staff/:id',
     requireRole('configure_salon'),
@@ -995,7 +996,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         const updated = await services.resourceRegistration.updateStaffMember(req.params.id, patch);
         res.status(200).json({ staff: toStaffDto(updated) });
       } catch (err) {
-        if (isUniqueViolation(err)) {
+        if (err instanceof StaffPhoneTakenError || isUniqueViolation(err)) {
           const targets = uniqueViolationTargets(err as { meta?: { target?: unknown } });
           const assignmentTaken = targets.some((target) => target.includes('assigned_chair'));
           res
@@ -1159,11 +1160,19 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
       const bookingWindowDays = await services.availabilityConfig.getBookingWindowDays(
         req.params.id,
       );
+      const bookingStartOffsetDays =
+        typeof services.availabilityConfig.getBookingStartOffsetDays === 'function'
+          ? await services.availabilityConfig.getBookingStartOffsetDays(req.params.id)
+          : 0;
       const workMode =
         typeof services.availabilityConfig.getSalonWorkMode === 'function'
           ? await services.availabilityConfig.getSalonWorkMode(req.params.id)
           : undefined;
-      res.status(200).json({ bookingWindowDays, ...(workMode ? { workMode } : {}) });
+      res.status(200).json({
+        bookingWindowDays,
+        bookingStartOffsetDays,
+        ...(workMode ? { workMode } : {}),
+      });
     }),
   );
 
@@ -1172,6 +1181,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     requireRole('configure_salon'),
     asyncRoute(async (req, res) => {
       const value = req.body?.bookingWindowDays;
+      const startOffsetValue = req.body?.bookingStartOffsetDays;
       const rawWorkMode = req.body?.workMode;
       const hasWorkMode = rawWorkMode !== undefined;
       if (
@@ -1186,12 +1196,32 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         res.status(400).json({ code: 'VALIDATION_ERROR', field: 'bookingWindowDays' });
         return;
       }
+      if (
+        startOffsetValue !== undefined &&
+        (!Number.isInteger(startOffsetValue) || startOffsetValue < 0 || startOffsetValue > 1)
+      ) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'bookingStartOffsetDays' });
+        return;
+      }
       const bookingWindowDays =
         value === undefined
           ? await services.availabilityConfig.getBookingWindowDays(req.params.id)
           : value;
+      const bookingStartOffsetDays =
+        startOffsetValue === undefined
+          ? typeof services.availabilityConfig.getBookingStartOffsetDays === 'function'
+            ? await services.availabilityConfig.getBookingStartOffsetDays(req.params.id)
+            : 0
+          : startOffsetValue;
+      if (bookingStartOffsetDays > bookingWindowDays) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'bookingStartOffsetDays' });
+        return;
+      }
       if (value !== undefined) {
         await services.availabilityConfig.setBookingWindowDays(req.params.id, value);
+      }
+      if (startOffsetValue !== undefined && typeof services.availabilityConfig.setBookingStartOffsetDays === 'function') {
+        await services.availabilityConfig.setBookingStartOffsetDays(req.params.id, startOffsetValue);
       }
       if (hasWorkMode) {
         const workMode = rawWorkMode as string;
@@ -1203,6 +1233,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
       res.status(200).json({
         ok: true,
         bookingWindowDays,
+        bookingStartOffsetDays,
         ...(hasWorkMode ? { workMode: rawWorkMode } : {}),
       });
     }),

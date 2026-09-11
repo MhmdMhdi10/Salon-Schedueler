@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { ArrowRight, Check, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { ArrowRight, Check, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { normalizeDigits } from '@salon/shared';
 import {
   ApiError,
@@ -202,6 +202,7 @@ function RegisterSalonContent() {
     price: string;
   } | null>(null);
   const [serviceEditError, setServiceEditError] = useState('');
+  const [servicePresetQuery, setServicePresetQuery] = useState('');
 
   // Setup questionnaire.
   const [chairCount, setChairCount] = useState('1');
@@ -215,11 +216,10 @@ function RegisterSalonContent() {
   const [otpError, setOtpError] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
-  const [servicePresetPage, setServicePresetPage] = useState(0);
   const [servicePage, setServicePage] = useState(0);
 
   useEffect(() => {
-    setServicePresetPage(0);
+    setServicePresetQuery('');
   }, [categories]);
 
   const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
@@ -410,11 +410,13 @@ function RegisterSalonContent() {
       };
     });
   }, [categories, t]);
-  const servicePresetPageCount = Math.max(1, Math.ceil(suggestedServices.length / SERVICE_PRESETS_PAGE_SIZE));
-  const visibleServicePresets = suggestedServices.slice(
-    servicePresetPage * SERVICE_PRESETS_PAGE_SIZE,
-    (servicePresetPage + 1) * SERVICE_PRESETS_PAGE_SIZE,
-  );
+  const filteredServicePresets = useMemo(() => {
+    const query = servicePresetQuery.trim().toLocaleLowerCase('fa-IR');
+    if (!query) return suggestedServices;
+    return suggestedServices.filter((service) =>
+      service.label.toLocaleLowerCase('fa-IR').includes(query),
+    );
+  }, [servicePresetQuery, suggestedServices]);
   const visibleServices = services.slice(
     servicePage * ONBOARDING_SERVICE_PAGE_SIZE,
     (servicePage + 1) * ONBOARDING_SERVICE_PAGE_SIZE,
@@ -1057,6 +1059,7 @@ function RegisterSalonContent() {
                           inputMode="numeric"
                           dir="ltr"
                           placeholder="۵۰۰۰۰۰"
+                          className="min-h-14"
                           containerClassName="min-w-0 w-full"
                           value={svcPrice}
                           onChange={(e) => setSvcPrice(e.target.value)}
@@ -1080,73 +1083,77 @@ function RegisterSalonContent() {
                       )}
                     </form>
 
-                    <div className="rounded-xl border border-border bg-bg p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
+                    <div className="flex h-[18rem] min-h-0 flex-col rounded-xl border border-border bg-bg p-3">
+                      <div className="flex shrink-0 items-start justify-between gap-3">
+                        <div className="min-w-0">
                           <p className="text-sm font-bold text-text">
                             {t('business.register.services.presetsLabel')}
                           </p>
-                          <p className="text-xs text-muted">
+                          <p className="mt-1 text-xs text-muted">
                             {t('business.register.services.presetsHelper')}
                           </p>
                         </div>
-                        <span className="text-xs text-muted">
-                          {toPersianDigits(`${servicePresetPage + 1}/${servicePresetPageCount}`)}
+                        <span className="shrink-0 text-xs text-muted">
+                          {t('business.register.services.presetsCount', {
+                            count: toPersianDigits(filteredServicePresets.length),
+                          })}
                         </span>
                       </div>
-                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                        {visibleServicePresets.map((preset) => {
-                          const name = preset.label;
-                          const checked = services.some(
-                            (service) => service.key === `preset-${preset.key}`,
-                          );
-                          return (
-                            <label
-                              key={preset.key}
-                              className={cn(
-                                'flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm',
-                                checked
-                                  ? 'border-primary bg-primary/5 text-primary'
-                                  : 'border-border text-text',
-                              )}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => handleTogglePresetService(preset)}
-                                className="size-4 accent-primary"
-                              />
-                              <span>{name}</span>
-                            </label>
-                          );
-                        })}
+                      <label className="relative mt-3 block shrink-0">
+                        <span className="sr-only">
+                          {t('business.register.services.presetsSearchLabel')}
+                        </span>
+                        <Search
+                          className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted"
+                          aria-hidden="true"
+                        />
+                        <input
+                          id="suggested-service-search"
+                          type="search"
+                          value={servicePresetQuery}
+                          onChange={(event) => setServicePresetQuery(event.target.value)}
+                          placeholder={t('business.register.services.presetsSearchPlaceholder')}
+                          className="min-h-11 w-full rounded-lg border border-border bg-elevated pe-10 ps-3 text-sm text-text outline-none placeholder:text-muted focus:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus"
+                        />
+                      </label>
+                      <div
+                        className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain pe-1"
+                        data-testid="suggested-services-list"
+                      >
+                        {filteredServicePresets.length > 0 ? (
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            {filteredServicePresets.map((preset) => {
+                              const name = preset.label;
+                              const checked = services.some(
+                                (service) => service.key === `preset-${preset.key}`,
+                              );
+                              return (
+                                <label
+                                  key={preset.key}
+                                  className={cn(
+                                    'flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm',
+                                    checked
+                                      ? 'border-primary bg-primary/5 text-primary'
+                                      : 'border-border text-text',
+                                  )}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() => handleTogglePresetService(preset)}
+                                    className="size-4 accent-primary"
+                                  />
+                                  <span>{name}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs leading-5 text-muted" role="status">
+                            {t('business.register.services.presetsNoResults')}
+                          </p>
+                        )}
                       </div>
-                      {servicePresetPageCount > 1 && (
-                        <div className="mt-3 flex items-center justify-between gap-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="md"
-                            disabled={servicePresetPage === 0}
-                            onClick={() => setServicePresetPage((page) => Math.max(0, page - 1))}
-                          >
-                            قبلی
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="md"
-                            disabled={servicePresetPage >= servicePresetPageCount - 1}
-                            onClick={() =>
-                              setServicePresetPage((page) =>
-                                Math.min(servicePresetPageCount - 1, page + 1),
-                              )
-                            }
-                          >
-                            بعدی
-                          </Button>
-                        </div>
-                      )}
                     </div>
 
                     {services.length > 0 && (
@@ -1194,6 +1201,7 @@ function RegisterSalonContent() {
                                     label={t('business.register.services.priceLabel')}
                                     inputMode="numeric"
                                     dir="ltr"
+                                    className="min-h-14"
                                     value={editingService.price}
                                     onChange={(event) =>
                                       setEditingService((current) =>
@@ -1725,15 +1733,76 @@ function specialtyLabels(categories: string[], keys: string[]): string {
 
 /** Quick-add service presets adapt to every selected business profile. */
 const SERVICE_PRESETS_BY_PROFILE: Record<string, readonly string[]> = {
-  hair_salon: ['haircut', 'color', 'highlights', 'blowout'],
-  barber: ['mens_haircut', 'beard', 'fade'],
-  nails: ['manicure', 'pedicure', 'nail_art', 'extensions'],
-  brows_lashes: ['brows', 'lash_lift', 'lash_extension'],
-  makeup: ['makeup', 'bridal_makeup', 'skin_prep'],
-  spa: ['massage', 'facial', 'spa'],
-  tattoo: ['tattoo', 'microblading', 'piercing'],
+  hair_salon: [
+    'haircut',
+    'color',
+    'highlights',
+    'blowout',
+    'bridal',
+    'hair_treatment',
+    'keratin',
+    'hair_extension',
+    'updo',
+    'root_touch_up',
+  ],
+  barber: [
+    'mens_haircut',
+    'beard',
+    'fade',
+    'classic_shave',
+    'kids_haircut',
+    'hair_wash',
+    'styling',
+    'gray_blending',
+  ],
+  nails: [
+    'manicure',
+    'pedicure',
+    'nail_art',
+    'extensions',
+    'gel_polish',
+    'nail_repair',
+    'french_design',
+    'polish_removal',
+  ],
+  brows_lashes: [
+    'brows',
+    'lash_lift',
+    'lash_extension',
+    'brow_lamination',
+    'brow_tint',
+    'lash_tint',
+    'lash_repair',
+  ],
+  makeup: [
+    'makeup',
+    'bridal_makeup',
+    'skin_prep',
+    'party_makeup',
+    'makeup_lesson',
+    'hair_styling',
+    'makeup_touchup',
+  ],
+  spa: [
+    'massage',
+    'facial',
+    'spa',
+    'deep_cleaning',
+    'skin_care',
+    'body_scrub',
+    'aromatherapy',
+    'waxing',
+  ],
+  tattoo: [
+    'tattoo',
+    'microblading',
+    'piercing',
+    'tattoo_touchup',
+    'tattoo_design',
+    'tattoo_coverup',
+    'piercing_change',
+  ],
 };
-const SERVICE_PRESETS_PAGE_SIZE = 4;
 const ONBOARDING_SERVICE_PAGE_SIZE = 5;
 
 /** Large, touch-friendly choice used for the first adaptive onboarding question. */

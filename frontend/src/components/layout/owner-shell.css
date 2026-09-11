@@ -21,6 +21,14 @@ html:has([data-shell='owner']) {
   direction: rtl;
 }
 
+/* Keep keyboard/programmatic scroll targets clear of the fixed mobile dock,
+ * including pages with their own long internal sections. */
+@media (max-width: 63.9375rem) {
+  [data-shell='owner'] #owner-content {
+    scroll-padding-block-end: calc(8rem + env(safe-area-inset-bottom));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-shell='owner'] #owner-content > div {
     transition: none;

@@ -177,9 +177,6 @@ export function OwnerLayout() {
         role={role}
         salonId={state.salonId}
         onSignOut={handleSignOut}
-        guideStartAtFirst={
-          location.pathname === '/owner' || location.pathname === '/owner/calendar'
-        }
       >
         <SeoHead title={t('owner.title')} />
         <Outlet context={outletContext} />

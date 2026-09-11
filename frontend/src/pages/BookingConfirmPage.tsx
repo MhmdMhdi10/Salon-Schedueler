@@ -455,7 +455,12 @@ export function BookingConfirmPage() {
   // A bare confirm URL has no service or time to confirm. Restart at the first
   // booking step instead of leaving the customer on a dead-end confirmation.
   if (!state) {
-    return <Navigate to={`/salon/${salonId}/book`} replace />;
+    return (
+      <>
+        <SeoHead title={t('seo.titles.confirm')} />
+        <Navigate to={`/salon/${salonId}/book`} replace />
+      </>
+    );
   }
 
   const time = toPersianDigits(timeLabel(state.startAt));

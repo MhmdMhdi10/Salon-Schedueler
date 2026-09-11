@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -29,7 +29,6 @@ import {
   X,
   GripVertical,
   XCircle,
-  TriangleAlert,
 } from 'lucide-react';
 import {
   ApiError,
@@ -37,7 +36,6 @@ import {
   approvalPolicyApi,
   bookingPolicyApi,
   clientBookApi,
-  emergencyScheduleApi,
   holidaysApi,
   salonApi,
   staffAvailabilityApi,
@@ -80,6 +78,7 @@ import {
   SheetTitle,
   Textarea,
   TextField,
+  TimeWheelField,
   toPersianDigits,
   cn,
 } from '../../components/ui';
@@ -101,16 +100,9 @@ function getCalendarAppointmentId(data: Record<string | symbol, unknown>): strin
     : null;
 }
 
-/** Booksy-style mobile default: show today's actionable schedule first. */
+/** Show today's actionable schedule first on every screen size. */
 function initialCalendarView(): CalendarView {
-  if (
-    typeof window !== 'undefined' &&
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(max-width: 47.9375rem)').matches
-  ) {
-    return 'day';
-  }
-  return 'week';
+  return 'day';
 }
 
 interface Appointment {
@@ -728,18 +720,88 @@ function AppointmentBlock({
   const compactActions = compactView || (positioned && (height ?? 0) < 180);
   const canDragAppointment = Boolean(draggableId) && !hasPendingReschedule;
   const canCancel = ['pending', 'held', 'confirmed', 'approved'].includes(appt.status ?? '');
-  const canNoShow = appt.status === 'confirmed' && Boolean(onNoShow);
+  const appointmentStartMs = appt.startAt ? new Date(appt.startAt).getTime() : Number.NaN;
+  const canNoShow =
+    appt.status === 'confirmed' &&
+    Boolean(onNoShow) &&
+    !Number.isNaN(appointmentStartMs) &&
+    appointmentStartMs <= Date.now();
   const statusClass = isPending
     ? 'bg-warning/15 text-warning'
     : isCancelled
       ? 'bg-danger/10 text-danger'
       : 'bg-success/10 text-success';
+  const statusBadge = (
+    <span
+      className={cn(
+        'inline-flex w-fit shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[0.6rem] font-medium leading-tight',
+        statusClass,
+      )}
+    >
+      {statusIcon} {statusLabel}
+    </span>
+  );
+  const hasStatusExtras =
+    hasPendingReschedule ||
+    Boolean(appt.depositReceiptStatus) ||
+    (!compactActions && (canNoShow || canCancel));
+  // Short positioned blocks have no room for a full status row beneath the
+  // touch actions. Use a two-row layout so service and customer remain
+  // readable while status and time stay in the visible card area.
+  const shortPositioned = positioned && (height ?? 0) < 120;
+  const showShortLayout = shortPositioned && !hasStatusExtras;
+  const actionButtonSize = shortPositioned ? 'h-11 w-11' : 'h-10 w-10';
+  const appointmentActions = compactActions && (canNoShow || canCancel) ? (
+    <span className="flex shrink-0 items-center gap-0.5">
+      {canNoShow && onNoShow && (
+        <button
+          type="button"
+          className={cn(
+            'flex items-center justify-center rounded-md border border-warning/25 bg-bg text-warning hover:bg-warning/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus',
+            actionButtonSize,
+          )}
+          aria-label={`ثبت عدم حضور ${customer ?? service}`}
+          title="ثبت عدم حضور"
+          onClick={(event) => {
+            event.stopPropagation();
+            onNoShow(appt);
+          }}
+        >
+          <UserX className="h-4 w-4" aria-hidden="true" />
+        </button>
+      )}
+      {canCancel && onCancel && (
+        <button
+          type="button"
+          className={cn(
+            'flex items-center justify-center rounded-md border border-danger/25 bg-bg text-danger hover:bg-danger/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus',
+            actionButtonSize,
+          )}
+          aria-label={`لغو نوبت ${customer ?? service}`}
+          title="لغو نوبت"
+          onClick={(event) => {
+            event.stopPropagation();
+            onCancel(appt);
+          }}
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+        </button>
+      )}
+    </span>
+  ) : null;
 
   const positionStyle = positioned
     ? {
         position: 'absolute' as const,
         top: `${top}px`,
-        height: `${height}px`,
+        // A short appointment with a pending reschedule or receipt status
+        // needs one extra compact row; keep that content inside the card
+        // instead of clipping its bottom edge with overflow-hidden.
+        height: `${
+          positioned && hasStatusExtras && (height ?? 0) < 120
+            ? Math.max(height ?? 0, 104)
+            : height
+        }px`,
         insetInlineStart: `calc(${(lane / laneCount) * 100}% + 7px)`,
         insetInlineEnd: `calc(${((laneCount - lane - 1) / laneCount) * 100}% + 7px)`,
       }
@@ -759,6 +821,68 @@ function AppointmentBlock({
       onDrop: () => onDragEnd?.(),
     });
   }, [draggableId, hasPendingReschedule, onDragEnd]);
+
+  if (showShortLayout) {
+    return (
+      <div
+        ref={draggableRef}
+        className={cn(
+          'flex flex-col justify-start gap-1 overflow-hidden rounded-lg border border-border border-s-4 bg-surface px-2.5 py-2 text-text shadow-1',
+          'transition-all duration-fast ease-standard',
+          'hover:-translate-y-px hover:border-primary/40 hover:shadow-2',
+          colorClass,
+          'absolute z-20',
+          onOpen && 'cursor-pointer',
+          canDragAppointment && 'cursor-grab active:cursor-grabbing',
+        )}
+        style={positionStyle}
+        onClick={() => onOpen?.(appt)}
+        role="article"
+        aria-label={`${service} — ${customer ?? ''} — ${statusLabel}`}
+        data-status={ariaState}
+      >
+        <span className="flex min-w-0 items-center gap-1.5">
+          <Scissors className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+          {canDragAppointment && (
+            <span
+              ref={dragHandleRef}
+              role="img"
+              className="flex h-6 w-6 shrink-0 cursor-grab items-center justify-center touch-none text-muted/60"
+              aria-label="دسته جابه‌جایی نوبت"
+            >
+              <GripVertical className="h-3.5 w-3.5" aria-hidden="true" />
+            </span>
+          )}
+          <strong className="min-w-0 flex-1 truncate text-xs leading-tight">{service}</strong>
+          {appointmentActions}
+        </span>
+        <span className="flex min-w-0 items-center justify-between gap-2">
+          {customer ? (
+            <span className="min-w-0 flex-1 truncate text-[0.68rem] leading-tight text-muted">
+              <User className="inline-block h-2.5 w-2.5 shrink-0 opacity-60" aria-hidden="true" />{' '}
+              {customer}
+            </span>
+          ) : (
+            <span className="min-w-0 flex-1" aria-hidden="true" />
+          )}
+          <span className="flex shrink-0 items-center gap-1">
+            {statusBadge}
+            {start && (
+              <span className="shrink-0 rounded-full bg-bg px-1.5 py-0.5 text-[0.62rem] tabular-nums text-muted">
+                <Clock className="me-0.5 inline-block h-2.5 w-2.5" aria-hidden="true" />
+                <Num value={start} />
+                {end && (
+                  <>
+                    –<Num value={end} />
+                  </>
+                )}
+              </span>
+            )}
+          </span>
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -784,6 +908,7 @@ function AppointmentBlock({
         {canDragAppointment && (
           <span
             ref={dragHandleRef}
+            role="img"
             className="flex h-6 w-6 shrink-0 cursor-grab items-center justify-center touch-none text-muted/60"
             aria-label="دسته جابه‌جایی نوبت"
           >
@@ -802,38 +927,7 @@ function AppointmentBlock({
             )}
           </span>
         )}
-        {compactActions && (canNoShow || canCancel) && (
-          <span className="flex shrink-0 items-center gap-0.5">
-            {canNoShow && onNoShow && (
-              <button
-                type="button"
-                className="flex h-9 w-9 items-center justify-center rounded-md text-warning hover:bg-warning/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
-                aria-label={`ثبت عدم حضور ${customer ?? service}`}
-                title="ثبت عدم حضور"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onNoShow(appt);
-                }}
-              >
-                <UserX className="h-4 w-4" aria-hidden="true" />
-              </button>
-            )}
-            {canCancel && onCancel && (
-              <button
-                type="button"
-                className="flex h-9 w-9 items-center justify-center rounded-md text-danger hover:bg-danger/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
-                aria-label={`لغو نوبت ${customer ?? service}`}
-                title="لغو نوبت"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onCancel(appt);
-                }}
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
-            )}
-          </span>
-        )}
+        {appointmentActions}
       </span>
       {customer && !compact && (
         <span className="truncate text-[0.68rem] leading-tight text-muted">
@@ -844,14 +938,7 @@ function AppointmentBlock({
       {/* Status indicator: icon + text label (non-color, Goal 14) */}
       {!compact && (
         <span className="flex items-center justify-between gap-2">
-          <span
-            className={cn(
-              'inline-flex w-fit items-center gap-1 rounded-full px-1.5 py-0.5 text-[0.6rem] font-medium leading-tight',
-              statusClass,
-            )}
-          >
-            {statusIcon} {statusLabel}
-          </span>
+          {statusBadge}
           {hasPendingReschedule && (
             <span className="inline-flex items-center rounded-full bg-warning/15 px-1.5 py-0.5 text-[0.6rem] font-medium leading-tight text-warning">
               تغییر زمان در انتظار تأیید مشتری
@@ -878,7 +965,7 @@ function AppointmentBlock({
                     : 'رسید نیازمند بررسی'}
               </span>
             )}
-            {canNoShow && onNoShow && (
+            {!compactActions && canNoShow && onNoShow && (
               <button
                 type="button"
                 className="inline-flex min-h-10 items-center rounded-md px-2 text-sm font-bold text-warning hover:bg-warning/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
@@ -891,7 +978,7 @@ function AppointmentBlock({
                 عدم حضور
               </button>
             )}
-            {canCancel && onCancel && (
+            {!compactActions && canCancel && onCancel && (
               <button
                 type="button"
                 className="inline-flex min-h-10 items-center rounded-md px-2 text-sm font-bold text-danger hover:bg-danger/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
@@ -1065,7 +1152,7 @@ function DayView({
           {nextAppointment ? (
             <button
               type="button"
-              className="mt-1 flex max-w-full items-center gap-1.5 truncate text-sm font-bold text-text hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+              className="mt-1 flex min-h-10 max-w-full items-center gap-1.5 truncate text-sm font-bold text-text hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
               onClick={(event) => {
                 event.stopPropagation();
                 onOpenAppointment(nextAppointment);
@@ -1102,13 +1189,15 @@ function DayView({
       )}
       <div
         ref={gridRef}
-        role="grid"
-        aria-label={t('owner.calendar.dayGridLabel', { defaultValue: 'نمای روزانه' })}
-        data-testid="owner-calendar-day"
         className="owner-calendar-day-grid relative overflow-x-hidden overflow-y-auto rounded-lg border border-border bg-surface"
-        onKeyDown={handleGridKeyDown}
       >
-        <div className="relative min-w-full sm:min-w-[20rem]">
+        <div
+          data-testid="owner-calendar-day"
+          role="grid"
+          aria-label={t('owner.calendar.dayGridLabel', { defaultValue: 'نمای روزانه' })}
+          className="relative min-w-full overflow-y-auto sm:min-w-[20rem]"
+          onKeyDown={handleGridKeyDown}
+        >
           {/* Time rows */}
           {TIME_SLOTS.map((slot, idx) => {
             const timeStr = `${String(slot.hour).padStart(2, '0')}:${String(slot.minute).padStart(2, '0')}`;
@@ -1167,7 +1256,12 @@ function DayView({
                   <Num value={timeStr} />
                 </div>
                 {/* Empty cell area — appointments overlay on top */}
-                <div className="relative flex-1" style={{ height: `${SLOT_HEIGHT}px` }} />
+                <div
+                  role="gridcell"
+                  aria-label={`${timeStr} زمان خالی`}
+                  className="relative flex-1"
+                  style={{ height: `${SLOT_HEIGHT}px` }}
+                />
                 {blocked && (
                   <span className="pointer-events-none absolute end-3 mt-2 rounded-full bg-danger/15 px-2 py-1 text-[0.65rem] font-bold text-danger">
                     بسته
@@ -1181,38 +1275,38 @@ function DayView({
               </div>
             );
           })}
+        </div>
 
-          {/* Positioned appointment blocks */}
-          <div className="pointer-events-none absolute inset-0" style={{ insetInlineStart: '4rem' }}>
-            {positionedAppointments.map(({ appt, lane, laneCount, startMin, endMin }) => {
-              const topPx = (startMin - gridStartMin) * PX_PER_MIN;
-              const duration = endMin - startMin;
-              const heightPx = Math.max(duration * PX_PER_MIN, 24);
-              if (topPx < 0) return null;
-              return (
-                <div
-                  key={appt.id}
-                  className="pointer-events-auto"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <AppointmentBlock
-                    appt={appt}
-                    positioned
-                    timezone={calendarTimezone}
-                    top={topPx}
-                    height={heightPx}
-                    lane={lane}
-                    laneCount={laneCount}
-                    onCancel={onCancel}
-                    onNoShow={onNoShow}
-                    onOpen={onOpenAppointment}
-                    draggableId={appt.id}
-                    onDragEnd={finishDrag}
-                  />
-                </div>
-              );
-            })}
-          </div>
+        {/* Positioned appointment blocks */}
+        <div className="pointer-events-none absolute inset-0" style={{ insetInlineStart: '4rem' }}>
+          {positionedAppointments.map(({ appt, lane, laneCount, startMin, endMin }) => {
+            const topPx = (startMin - gridStartMin) * PX_PER_MIN;
+            const duration = endMin - startMin;
+            const heightPx = Math.max(duration * PX_PER_MIN, 24);
+            if (topPx < 0) return null;
+            return (
+              <div
+                key={appt.id}
+                className="pointer-events-auto"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <AppointmentBlock
+                  appt={appt}
+                  positioned
+                  timezone={calendarTimezone}
+                  top={topPx}
+                  height={heightPx}
+                  lane={lane}
+                  laneCount={laneCount}
+                  onCancel={onCancel}
+                  onNoShow={onNoShow}
+                  onOpen={onOpenAppointment}
+                  draggableId={appt.id}
+                  onDragEnd={finishDrag}
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -1836,7 +1930,6 @@ function CalendarFilters({
     <section
       aria-label="فیلتر نوبت‌ها"
       data-testid="owner-calendar-filters"
-      data-panel-guide="owner-calendar-filters"
       className="owner-calendar-filters rounded-xl border border-border bg-surface p-3 shadow-1"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1931,145 +2024,6 @@ function addThirtyMinutes(value: string): string {
 
 const IRANIAN_WEEKDAY_NUMBERS = [6, 0, 1, 2, 3, 4, 5] as const;
 
-const TIME_WHEEL_ITEM_HEIGHT = 44;
-
-function setTimeWheelPosition(element: HTMLDivElement | null, index: number, smooth = false) {
-  if (!element) return;
-  const top = index * TIME_WHEEL_ITEM_HEIGHT;
-  if (typeof element.scrollTo === 'function') {
-    element.scrollTo({ top, behavior: smooth ? 'smooth' : 'auto' });
-  } else {
-    element.scrollTop = top;
-  }
-}
-
-function TimeWheelField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [hour, setHour] = useState(Number(value.split(':')[0] ?? 0));
-  const [minute, setMinute] = useState(Number(value.split(':')[1] ?? 0));
-  const selectedHourRef = useRef(hour);
-  const selectedMinuteRef = useRef(minute);
-  const hourRef = useRef<HTMLDivElement>(null);
-  const minuteRef = useRef<HTMLDivElement>(null);
-  const hours = useMemo(() => Array.from({ length: 24 }, (_, index) => index), []);
-  const minutes = useMemo(() => Array.from({ length: 60 }, (_, index) => index), []);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    const nextHour = Number(value.split(':')[0] ?? 0);
-    const nextMinute = Number(value.split(':')[1] ?? 0);
-    selectedHourRef.current = nextHour;
-    selectedMinuteRef.current = nextMinute;
-    setHour(nextHour);
-    setMinute(nextMinute);
-    setTimeWheelPosition(hourRef.current, nextHour);
-    setTimeWheelPosition(minuteRef.current, nextMinute);
-  }, [open, value]);
-
-  const wheel = (
-    values: number[],
-    selected: number,
-    setSelected: (value: number) => void,
-    ref: React.RefObject<HTMLDivElement>,
-    selectedRef: React.MutableRefObject<number>,
-    ariaLabel: string,
-  ) => (
-    <div className="relative overflow-hidden rounded-2xl border border-border bg-bg shadow-inner">
-      <div className="pointer-events-none absolute inset-x-2 top-1/2 z-10 h-11 -translate-y-1/2 rounded-xl border border-primary/40 bg-primary/15 shadow-[0_0_24px_rgb(var(--color-primary-rgb)/0.12)]" />
-      <div
-        ref={ref}
-        role="listbox"
-        aria-label={ariaLabel}
-        className="h-[220px] snap-y snap-mandatory overflow-y-auto overscroll-contain py-[88px] [mask-image:linear-gradient(to_bottom,transparent,black_25%,black_75%,transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        onScroll={(event) => {
-          const index = Math.max(
-            0,
-            Math.min(values.length - 1, Math.round(event.currentTarget.scrollTop / TIME_WHEEL_ITEM_HEIGHT)),
-          );
-          const nextValue = values[index];
-          selectedRef.current = nextValue;
-          setSelected(nextValue);
-        }}
-      >
-        {values.map((item) => (
-          <button
-            type="button"
-            role="option"
-            aria-selected={selected === item}
-            aria-label={String(item).padStart(2, '0')}
-            key={item}
-            className={cn(
-              'relative z-20 flex h-11 w-full snap-center items-center justify-center text-xl tabular-nums transition-all',
-              selected === item ? 'scale-110 font-black text-text' : 'scale-90 text-muted/45',
-            )}
-            onClick={() => {
-              selectedRef.current = item;
-              setSelected(item);
-              // Do not animate this correction: an in-flight smooth scroll can
-              // emit intermediate scroll events and overwrite the value just
-              // selected before the user confirms the dialog.
-              setTimeWheelPosition(ref.current, item);
-            }}
-          >
-            <Num value={String(item).padStart(2, '0')} />
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
-  return (
-    <>
-      <label className="flex min-w-0 flex-col gap-1.5 text-xs font-medium text-muted">
-        {label}
-        <button
-          type="button"
-          dir="ltr"
-          aria-label={`${label} ${value}`}
-          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-bg px-3 text-base font-black tabular-nums text-text shadow-sm transition hover:border-primary/60 hover:bg-primary/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
-          onClick={() => setOpen(true)}
-        >
-          <Clock className="h-4 w-4 text-primary" aria-hidden="true" />
-          <Num value={value} />
-        </button>
-      </label>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="!w-[min(400px,calc(100vw-24px))] !max-w-none overflow-hidden rounded-2xl p-6">
-          <DialogTitle className="text-center text-xl">{label}</DialogTitle>
-          <DialogDescription className="text-center">برای انتخاب، ساعت و دقیقه را بالا یا پایین بکش.</DialogDescription>
-          <div className="relative mx-auto mt-5 grid max-w-[19rem] grid-cols-[1fr_auto_1fr] items-center gap-3" dir="ltr">
-            {wheel(hours, hour, setHour, hourRef, selectedHourRef, 'ساعت')}
-            <span className="text-2xl font-black text-muted">:</span>
-            {wheel(minutes, minute, setMinute, minuteRef, selectedMinuteRef, 'دقیقه')}
-          </div>
-          <div className="mt-5 flex justify-center gap-2">
-            <DialogClose asChild><Button variant="ghost">انصراف</Button></DialogClose>
-            <Button
-              variant="primary"
-              onClick={() => {
-                onChange(
-                  `${String(selectedHourRef.current).padStart(2, '0')}:${String(selectedMinuteRef.current).padStart(2, '0')}`,
-                );
-                setOpen(false);
-              }}
-            >
-              تأیید ساعت
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}
-
 function ScheduleSwitch({
   checked,
   onChange,
@@ -2091,7 +2045,7 @@ function ScheduleSwitch({
       aria-label={ariaLabel}
       onClick={() => onChange(!checked)}
       className={cn(
-        'group inline-flex min-h-11 min-w-[6.5rem] items-center justify-between gap-2 rounded-xl border px-2.5 py-1.5 text-sm font-black transition-all duration-200',
+        'group inline-flex w-fit min-h-11 min-w-[6.5rem] items-center justify-between gap-2 justify-self-end rounded-xl border px-2.5 py-1.5 text-sm font-black transition-all duration-200',
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
         checked
           ? 'border-success/35 bg-success/10 text-success shadow-[0_5px_18px_rgba(16,185,129,0.10)]'
@@ -2108,8 +2062,8 @@ function ScheduleSwitch({
       >
         <span
           className={cn(
-            'absolute start-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200',
-            checked && '-translate-x-5',
+            'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-md transition-all duration-200',
+            checked ? 'end-0.5' : 'start-0.5',
           )}
         />
       </span>
@@ -2133,7 +2087,8 @@ export function WeeklySchedulePage({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [bookingWindowDays, setBookingWindowDays] = useState(14);
+  const [bookingWindowDays, setBookingWindowDays] = useState(1);
+  const [bookingStartOffsetDays, setBookingStartOffsetDays] = useState(0);
   const [workMode, setWorkMode] = useState<SalonWorkMode | ''>('');
   const [breakEnabled, setBreakEnabled] = useState(false);
   const [breakStart, setBreakStart] = useState('13:00');
@@ -2149,12 +2104,15 @@ export function WeeklySchedulePage({
         : workingHoursApi.getStaff(salonId, target);
     Promise.all([
       request,
-      bookingPolicyApi.get(salonId).catch(() => ({ bookingWindowDays: 14, workMode: undefined })),
+      bookingPolicyApi
+        .get(salonId)
+        .catch(() => ({ bookingWindowDays: 1, bookingStartOffsetDays: 0, workMode: undefined })),
     ])
       .then(([res, policy]) => {
         if (!active) return;
         setHours(res.hours);
         setBookingWindowDays(policy.bookingWindowDays);
+        setBookingStartOffsetDays(policy.bookingStartOffsetDays ?? 0);
         if (policy.workMode) setWorkMode(policy.workMode);
         const grouped = new Map<number, WeeklyWorkingHour[]>();
         for (const row of res.hours) {
@@ -2255,8 +2213,12 @@ export function WeeklySchedulePage({
         .sort((a, b) => a.weekday - b.weekday || a.startTime.localeCompare(b.startTime));
       if (target === 'salon') await workingHoursApi.setSalon(salonId, ordered);
       else await workingHoursApi.setStaff(salonId, target, ordered);
-      if (workMode) await bookingPolicyApi.set(salonId, bookingWindowDays, workMode);
-      else await bookingPolicyApi.set(salonId, bookingWindowDays);
+      await bookingPolicyApi.set(
+        salonId,
+        bookingWindowDays,
+        workMode || undefined,
+        bookingStartOffsetDays,
+      );
       onSaved();
     } catch {
       setError('ذخیره برنامه کاری انجام نشد. دوباره تلاش کنید.');
@@ -2301,11 +2263,30 @@ export function WeeklySchedulePage({
             />
             <Select
               label="مشتری تا چه زمانی بتواند رزرو کند؟"
-              value={String(bookingWindowDays)}
-              onValueChange={(value) => setBookingWindowDays(Number(value))}
+              value={
+                bookingStartOffsetDays === 1 && bookingWindowDays === 1
+                  ? 'tomorrow_only'
+                  : bookingStartOffsetDays === 0 && bookingWindowDays === 0
+                    ? 'today_only'
+                    : bookingStartOffsetDays === 0 && bookingWindowDays === 1
+                      ? 'today_tomorrow'
+                      : String(bookingWindowDays)
+              }
+              onValueChange={(value) => {
+                if (value === 'tomorrow_only') {
+                  setBookingWindowDays(1);
+                  setBookingStartOffsetDays(1);
+                  return;
+                }
+                setBookingStartOffsetDays(0);
+                setBookingWindowDays(
+                  value === 'today_tomorrow' ? 1 : value === 'today_only' ? 0 : Number(value),
+                );
+              }}
               options={[
-                { value: '0', label: 'فقط امروز' },
-                { value: '1', label: 'امروز و فردا' },
+                { value: 'today_tomorrow', label: 'امروز و فردا' },
+                { value: 'tomorrow_only', label: 'فقط فردا' },
+                { value: 'today_only', label: 'فقط امروز' },
                 { value: '7', label: 'تا ۷ روز آینده' },
                 { value: '14', label: 'تا ۱۴ روز آینده' },
                 { value: '30', label: 'تا ۳۰ روز آینده' },
@@ -2374,7 +2355,7 @@ export function WeeklySchedulePage({
                   <div
                     key={weekday}
                     className={cn(
-                      'grid grid-cols-[minmax(90px,1fr)_auto] items-center gap-3 border-b border-border/70 p-4 transition-colors last:border-b-0 sm:grid-cols-[120px_90px_1fr_1fr] sm:px-5',
+                      'grid grid-cols-2 items-center gap-3 border-b border-border/70 p-4 transition-colors last:border-b-0 sm:grid-cols-[7.5rem_6.5rem_minmax(0,1fr)_minmax(0,1fr)] sm:px-5',
                       row ? 'bg-surface' : 'bg-bg/50 opacity-70',
                     )}
                   >
@@ -2489,11 +2470,10 @@ function AvailabilityDialog({
     setBusy(true);
     setError('');
     try {
-      const input = {
-        onDate: selectedKey,
-        startTime: mode === 'range' ? start : null,
-        endTime: mode === 'range' ? end : null,
-      };
+      const input =
+        mode === 'range'
+          ? { onDate: selectedKey, startTime: start, endTime: end }
+          : { onDate: selectedKey };
       if (target === 'salon') {
         await holidaysApi.add(salonId, input);
         onChanged();
@@ -2522,6 +2502,10 @@ function AvailabilityDialog({
         setStaffBlocks((current) => current.filter((item) => item.id !== id));
         onChanged();
       }
+      // Removing a closure is the complete action. Keep the dialog from
+      // immediately re-adding the same closure when the user presses the
+      // primary "اعمال در تقویم" button after reopening the day.
+      onOpenChange(false);
     } catch {
       setError('باز کردن این زمان انجام نشد. دوباره تلاش کنید.');
     } finally {
@@ -3368,23 +3352,38 @@ function ManualBookingDialog({
               dir="ltr"
             />
           )}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <MobileDatePicker
-              label="تاریخ شروع"
-              value={startDate || null}
-              onChange={(nextDate) => setStartAt(`${nextDate}T${startTime || '09:00'}`)}
-              disabled={saving}
-            />
-            <TextField
-              label="ساعت شروع"
-              type="time"
-              value={startTime || ''}
-              onChange={(event) => setStartAt(`${startDate}T${event.target.value}`)}
-              disabled={saving}
-              dir="ltr"
-              step={900}
-            />
-          </div>
+          <section
+            aria-labelledby="manual-booking-start-title"
+            className="rounded-2xl border border-border bg-elevated/60 p-3 sm:p-4"
+          >
+            <div className="flex items-start gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Clock className="size-4" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <h3 id="manual-booking-start-title" className="m-0 text-sm font-bold text-text">
+                  زمان شروع نوبت
+                </h3>
+                <p className="m-0 mt-1 text-xs leading-5 text-muted">
+                  تاریخ و ساعت را از انتخاب‌گر فارسی مشخص کن.
+                </p>
+              </div>
+            </div>
+            <div className="owner-calendar-time-fields mt-3 grid gap-3 sm:grid-cols-2">
+              <MobileDatePicker
+                label="تاریخ نوبت"
+                value={startDate || null}
+                onChange={(nextDate) => setStartAt(`${nextDate}T${startTime || '09:00'}`)}
+                disabled={saving}
+              />
+              <TimeWheelField
+                label="ساعت شروع"
+                value={startTime || '09:00'}
+                onChange={(nextTime) => setStartAt(`${startDate}T${nextTime}`)}
+                disabled={saving}
+              />
+            </div>
+          </section>
           <label className="flex flex-col gap-1.5 text-xs font-medium text-muted">
             <span>یادداشت مشتری (اختیاری)</span>
             <textarea
@@ -3697,7 +3696,6 @@ function ApprovalQueue({
           onClick={openApprovalDialog}
           aria-haspopup="dialog"
           aria-expanded={approvalDialogOpen}
-          data-panel-guide="owner-calendar-queues"
           data-testid="owner-approval-queue-fab"
           className="owner-calendar-pending-fab"
         >
@@ -4317,7 +4315,6 @@ function CalendarActionsSheet({
   onOpenChange,
   onWorkingHours,
   onAvailability,
-  onEmergencyClose,
   showApprovalPolicy,
 }: {
   salonId: string;
@@ -4325,7 +4322,6 @@ function CalendarActionsSheet({
   onOpenChange: (open: boolean) => void;
   onWorkingHours: () => void;
   onAvailability: () => void;
-  onEmergencyClose: () => void;
   showApprovalPolicy: boolean;
 }) {
   const [approvalOpen, setApprovalOpen] = useState(false);
@@ -4404,15 +4400,6 @@ function CalendarActionsSheet({
                   تأیید رزروهای جدید
                 </Button>
               )}
-              <Button
-                variant="danger"
-                size="md"
-                startIcon={<TriangleAlert className="h-4 w-4" />}
-                onClick={onEmergencyClose}
-                className="min-h-12 w-full justify-start sm:col-span-2"
-              >
-                بستن فوری امروز
-              </Button>
             </div>
           </>
         )}
@@ -4460,12 +4447,6 @@ export function OwnerCalendarPage() {
   const [noShowAppointment, setNoShowAppointment] = useState<Appointment | null>(null);
   const [noShowBusy, setNoShowBusy] = useState(false);
   const [noShowError, setNoShowError] = useState('');
-  const [emergencyOpen, setEmergencyOpen] = useState(false);
-  const [emergencyCancelAll, setEmergencyCancelAll] = useState(true);
-  const [emergencyReason, setEmergencyReason] = useState('');
-  const [emergencyProof, setEmergencyProof] = useState<RefundProofDraft | null>(null);
-  const [emergencyBusy, setEmergencyBusy] = useState(false);
-  const [emergencyError, setEmergencyError] = useState('');
   const [appointmentListDate, setAppointmentListDate] = useState<Date | null>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [moveAppointment, setMoveAppointment] = useState<CalendarAppointmentLike | null>(null);
@@ -4871,50 +4852,15 @@ export function OwnerCalendarPage() {
       await adminApi.noShowAppointment(noShowAppointment.id);
       setNoShowAppointment(null);
       setReloadToken((value) => value + 1);
-    } catch {
-      setNoShowError('ثبت عدم حضور انجام نشد. دوباره تلاش کنید.');
+    } catch (error) {
+      setNoShowError(
+        error instanceof ApiError && error.code === 'APPOINTMENT_NOT_STARTED'
+          ? 'زمان این نوبت هنوز نرسیده است؛ بعد از شروع نوبت می‌توان عدم حضور را ثبت کرد.'
+          : getApiErrorMessage(error, 'ثبت عدم حضور انجام نشد. دوباره تلاش کنید.'),
+      );
     } finally {
       setNoShowBusy(false);
     }
-  };
-
-  const confirmEmergencyClose = async () => {
-    const reason = emergencyReason.trim();
-    if (emergencyCancelAll && reason.length < 5) {
-      setEmergencyError('برای لغو نوبت‌ها، دلیل را حداقل در ۵ حرف بنویسید.');
-      return;
-    }
-    setEmergencyBusy(true);
-    setEmergencyError('');
-    try {
-      const result = await emergencyScheduleApi.closeDay(
-        salonId,
-        dateKey(anchor),
-        emergencyCancelAll,
-        emergencyCancelAll ? { reason, refundProof: emergencyProof ?? undefined } : undefined,
-      );
-      if (result.failedCount > 0) {
-        setEmergencyError(
-          `${toPersianDigits(String(result.cancelledCount))} نوبت لغو شد؛ لغو ${toPersianDigits(String(result.failedCount))} نوبت ناموفق بود. دوباره بررسی کن.`,
-        );
-        return;
-      }
-      setEmergencyOpen(false);
-      setClosureReloadToken((value) => value + 1);
-      setReloadToken((value) => value + 1);
-    } catch {
-      setEmergencyError('بستن این روز انجام نشد. دوباره تلاش کنید.');
-    } finally {
-      setEmergencyBusy(false);
-    }
-  };
-
-  const openEmergencyClose = () => {
-    setEmergencyError('');
-    setEmergencyReason('');
-    setEmergencyProof(null);
-    setEmergencyCancelAll(true);
-    setEmergencyOpen(true);
   };
 
   // ─── Render ────────────────────────────────────────────────────────────────
@@ -4925,10 +4871,7 @@ export function OwnerCalendarPage() {
       className="owner-calendar-page flex flex-col gap-4 sm:gap-5"
     >
       {/* Header */}
-      <header
-        data-panel-guide="owner-calendar"
-        className="owner-calendar-header flex flex-col gap-1"
-      >
+      <header className="owner-calendar-header flex flex-col gap-1">
         <h1 className="text-xl text-display text-text">
           {t('owner.calendar.title', { defaultValue: 'تقویم' })}
         </h1>
@@ -4944,10 +4887,7 @@ export function OwnerCalendarPage() {
       )}
 
       {/* Toolbar: view toggle + date nav */}
-      <div
-        data-panel-guide="owner-calendar-controls"
-        className="owner-calendar-toolbar flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
-      >
+      <div className="owner-calendar-toolbar flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="owner-calendar-view-toggle">
           <ViewToggle view={view} onViewChange={handleViewChange} />
         </div>
@@ -4990,15 +4930,6 @@ export function OwnerCalendarPage() {
                 aria-label="تعطیلی و عدم حضور"
               >
                 تعطیلی و عدم حضور
-              </Button>
-              <Button
-                variant="danger"
-                size="md"
-                startIcon={<TriangleAlert className="h-4 w-4" />}
-                aria-label="اختلال و بستن این روز"
-                onClick={openEmergencyClose}
-              >
-                اختلال و بستن این روز
               </Button>
             </div>
             <Button
@@ -5074,10 +5005,6 @@ export function OwnerCalendarPage() {
         onAvailability={() => {
           setManageActionsOpen(false);
           openAvailability(anchor);
-        }}
-        onEmergencyClose={() => {
-          setManageActionsOpen(false);
-          openEmergencyClose();
         }}
         showApprovalPolicy={role === 'Owner' || role === 'Admin' || role === 'PlatformAdmin'}
       />
@@ -5384,71 +5311,6 @@ export function OwnerCalendarPage() {
             <DialogClose asChild><Button variant="ghost" disabled={noShowBusy}>انصراف</Button></DialogClose>
             <Button variant="danger" loading={noShowBusy} onClick={() => void confirmNoShow()}>
               ثبت عدم حضور
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={emergencyOpen} onOpenChange={(next) => !emergencyBusy && setEmergencyOpen(next)}>
-        <DialogContent>
-          <DialogTitle>بستن فوری این روز</DialogTitle>
-          <DialogDescription>
-            رزرو جدید برای {PERSIAN_WEEKDAYS[iranianDayIndex(anchor)]} بسته می‌شود. اگر برنامه سالن ناگهانی به‌هم خورد، تکلیف نوبت‌های فعلی را هم همین‌جا مشخص کن.
-          </DialogDescription>
-          <div className="mt-4 grid gap-2" role="radiogroup" aria-label="نحوه بستن روز">
-            <label className="flex cursor-pointer gap-3 rounded-lg border border-border p-3 text-sm text-text">
-              <input type="radio" checked={!emergencyCancelAll} onChange={() => setEmergencyCancelAll(false)} />
-              <span><strong className="block">فقط رزرو جدید بسته شود</strong><span className="text-xs text-muted">نوبت‌های فعلی سر جای خود می‌مانند.</span></span>
-            </label>
-            <label className="flex cursor-pointer gap-3 rounded-lg border border-danger/40 bg-danger/5 p-3 text-sm text-text">
-              <input type="radio" checked={emergencyCancelAll} onChange={() => setEmergencyCancelAll(true)} />
-              <span><strong className="block">بستن روز و لغو همه نوبت‌ها</strong><span className="text-xs text-muted">مشتری‌ها مطلع می‌شوند و روند عادی بازپرداخت اجرا می‌شود.</span></span>
-              </label>
-          </div>
-          {emergencyCancelAll && (
-            <>
-              <Textarea
-                label="دلیل لغو نوبت‌ها"
-                value={emergencyReason}
-                onChange={(event) => {
-                  setEmergencyReason(event.target.value);
-                  setEmergencyError('');
-                }}
-                maxLength={1000}
-                rows={3}
-                required
-                disabled={emergencyBusy}
-                helperText="این دلیل برای مشتری‌ها و سوابق سالن ثبت می‌شود."
-                className="mt-4"
-              />
-              <label className="mt-3 flex cursor-pointer flex-col gap-1.5 rounded-lg border border-dashed border-danger/40 bg-danger/5 p-3 text-sm text-text">
-                <span className="font-bold">مدرک بازگشت بیعانه</span>
-                <span className="text-xs text-muted">اختیاری؛ اگر در دسترس است تصویر بازپرداخت را انتخاب کن. لغو اضطراری بدون تصویر هم انجام می‌شود.</span>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  disabled={emergencyBusy}
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    event.target.value = '';
-                    if (!file) return;
-                    void readRefundProof(file)
-                      .then((proof) => {
-                        setEmergencyProof(proof);
-                        setEmergencyError('');
-                      })
-                      .catch(() => setEmergencyError('تصویر معتبر نیست یا حجم آن بیشتر از ۵ مگابایت است.'));
-                  }}
-                  className="mt-1 block min-h-11 w-full rounded-md border border-border bg-bg p-2 text-xs text-text"
-                />
-                {emergencyProof && <span className="text-xs text-success">مدرک انتخاب شد: {emergencyProof.fileName}</span>}
-              </label>
-            </>
-          )}
-          {emergencyError && <p role="alert" className="mt-3 text-sm text-danger">{emergencyError}</p>}
-          <div className="mt-5 flex justify-end gap-2">
-            <DialogClose asChild><Button variant="ghost" disabled={emergencyBusy}>انصراف</Button></DialogClose>
-            <Button variant="danger" loading={emergencyBusy} onClick={() => void confirmEmergencyClose()}>
-              اعمال و بستن روز
             </Button>
           </div>
         </DialogContent>

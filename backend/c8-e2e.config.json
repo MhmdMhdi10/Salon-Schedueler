@@ -2,8 +2,13 @@
   "include": ["src/**/controllers/**/*.controller.ts"],
   "exclude": ["src/**/*.test.ts", "src/**/*.spec.ts", "features/**", "scripts/**"],
   "extension": [".ts"],
-  "reporter": ["text", "text-summary", "lcov"],
+  "reporter": ["text", "text-summary", "json", "json-summary", "lcov"],
   "all": true,
   "src": ["src"],
-  "clean": true
+  "clean": true,
+  "checkCoverage": true,
+  "lines": 100,
+  "statements": 100,
+  "functions": 100,
+  "branches": 100
 }

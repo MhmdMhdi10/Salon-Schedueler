@@ -42,8 +42,8 @@ export function PanelAccessNav({ tone = 'app', className }: PanelAccessNavProps)
                 tone === 'platform'
                   ? 'platform-admin-panel-nav__link'
                   : [
-                      'inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-md border px-3 py-2',
-                      'border-border bg-surface text-xs font-semibold text-text no-underline sm:text-sm',
+                      'inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-transparent',
+                      'text-text no-underline',
                       'transition-colors duration-fast ease-standard hover:bg-elevated',
                       'outline-none focus-visible:outline focus-visible:outline-2',
                       'focus-visible:outline-offset-2 focus-visible:outline-focus',
@@ -56,7 +56,7 @@ export function PanelAccessNav({ tone = 'app', className }: PanelAccessNavProps)
             }
           >
             <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-            <span>{label}</span>
+            <span className="sr-only">{label}</span>
           </NavLink>
         );
       })}

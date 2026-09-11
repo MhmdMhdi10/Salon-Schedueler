@@ -29,6 +29,42 @@ export class PlatformAdminError extends Error {
   }
 }
 
+const PLATFORM_STAFF_ROLES = ['Owner', 'Admin', 'Stylist'] as const;
+type PlatformStaffRole = (typeof PLATFORM_STAFF_ROLES)[number];
+const SUBSCRIPTION_STATUSES = ['trial', 'active', 'grace', 'expired'] as const;
+const SUBSCRIPTION_PLANS = ['trial', 'monthly', 'quarterly', 'annual'] as const;
+const PAYMENT_STATUSES = ['pending', 'paid', 'refunded', 'retained', 'failed'] as const;
+
+function normalizePhone(value: string): string {
+  let phone = value.trim().replace(/[\s()-]/g, '');
+  const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+  const arabicDigits = '٠١٢٣٤٥٦٧٨٩';
+  phone = [...phone].map((digit) => {
+    const persianIndex = persianDigits.indexOf(digit);
+    if (persianIndex >= 0) return String(persianIndex);
+    const arabicIndex = arabicDigits.indexOf(digit);
+    return arabicIndex >= 0 ? String(arabicIndex) : digit;
+  }).join('');
+  if (phone.startsWith('+98')) phone = `0${phone.slice(3)}`;
+  else if (phone.startsWith('0098')) phone = `0${phone.slice(4)}`;
+  else if (phone.startsWith('98') && phone.length === 12) phone = `0${phone.slice(2)}`;
+  return phone;
+}
+
+function assertPhone(phone: string): void {
+  if (!/^09\d{9}$/.test(phone)) throw new PlatformAdminError('INVALID_STATE', 'Invalid phone');
+}
+
+function assertText(value: string, max: number, message: string): string {
+  const normalized = value.trim();
+  if (!normalized || normalized.length > max) throw new PlatformAdminError('INVALID_STATE', message);
+  return normalized;
+}
+
+function isoOrNull(value: Date | null | undefined): string | null {
+  return value ? value.toISOString() : null;
+}
+
 type AuditMetadata = Record<string, unknown>;
 
 function pageOf(query: PlatformListQuery): { page: number; limit: number; skip: number } {
@@ -84,6 +120,115 @@ export class PlatformAdminService {
       select: { active: true },
     });
     return admin?.active === true;
+  }
+
+  async listPlatformAdmins(query: PlatformListQuery) {
+    const { page, limit, skip } = pageOf(query);
+    const where: any = {};
+    if (query.search) {
+      where.OR = [
+        { fullName: { contains: query.search, mode: 'insensitive' } },
+        { phone: { contains: query.search } },
+        { role: { contains: query.search, mode: 'insensitive' } },
+      ];
+    }
+    if (query.status === 'active') where.active = true;
+    if (query.status === 'inactive') where.active = false;
+    const [total, rows] = await Promise.all([
+      this.prisma.platformAdmin.count({ where }),
+      this.prisma.platformAdmin.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          phone: true,
+          fullName: true,
+          role: true,
+          active: true,
+          createdAt: true,
+          lastLoginAt: true,
+          _count: { select: { auditLogs: true, assignedSupportTickets: true } },
+        },
+      }),
+    ]);
+    return {
+      data: rows.map((row) => ({
+        ...row,
+        createdAt: row.createdAt.toISOString(),
+        lastLoginAt: isoOrNull(row.lastLoginAt),
+      })),
+      meta: pageMeta(page, limit, total),
+    };
+  }
+
+  async createPlatformAdmin(input: { phone: string; fullName: string; role?: string; active?: boolean }, adminId: string) {
+    const phone = normalizePhone(input.phone);
+    assertPhone(phone);
+    const fullName = assertText(input.fullName, 120, 'Invalid admin name');
+    const role = assertText(input.role ?? 'operator', 60, 'Invalid admin role');
+    const admin = await this.prisma.platformAdmin.create({
+      data: {
+        id: randomUUID(),
+        phone,
+        fullName,
+        role,
+        active: input.active !== false,
+      },
+    });
+    await this.recordAudit(adminId, 'platform-admin.create', 'platform_admin', admin.id, { role });
+    return {
+      id: admin.id,
+      phone: admin.phone,
+      fullName: admin.fullName,
+      role: admin.role,
+      active: admin.active,
+      createdAt: admin.createdAt.toISOString(),
+      lastLoginAt: isoOrNull(admin.lastLoginAt),
+    };
+  }
+
+  async updatePlatformAdmin(
+    id: string,
+    patch: { phone?: string; fullName?: string; role?: string; active?: boolean },
+    actorId: string,
+  ) {
+    const current = await this.prisma.platformAdmin.findUnique({ where: { id } });
+    if (!current) throw new PlatformAdminError('NOT_FOUND', 'Platform admin not found');
+    if (patch.active === false && id === actorId) {
+      throw new PlatformAdminError('INVALID_STATE', 'You cannot deactivate your own account');
+    }
+    if (patch.active === false && current.active) {
+      const activeCount = await this.prisma.platformAdmin.count({ where: { active: true } });
+      if (activeCount <= 1) throw new PlatformAdminError('INVALID_STATE', 'At least one active platform admin is required');
+    }
+    const phone = patch.phone === undefined ? undefined : normalizePhone(patch.phone);
+    if (phone !== undefined) assertPhone(phone);
+    const admin = await this.prisma.platformAdmin.update({
+      where: { id },
+      data: {
+        ...(phone !== undefined ? { phone } : {}),
+        ...(patch.fullName !== undefined ? { fullName: assertText(patch.fullName, 120, 'Invalid admin name') } : {}),
+        ...(patch.role !== undefined ? { role: assertText(patch.role, 60, 'Invalid admin role') } : {}),
+        ...(patch.active !== undefined ? { active: patch.active } : {}),
+      },
+    });
+    await this.recordAudit(actorId, 'platform-admin.update', 'platform_admin', id, { fields: Object.keys(patch) });
+    return {
+      id: admin.id,
+      phone: admin.phone,
+      fullName: admin.fullName,
+      role: admin.role,
+      active: admin.active,
+      createdAt: admin.createdAt.toISOString(),
+      lastLoginAt: isoOrNull(admin.lastLoginAt),
+    };
+  }
+
+  /** Platform-admin delete is an auditable, reversible deactivation. */
+  async deletePlatformAdmin(id: string, actorId: string) {
+    return this.updatePlatformAdmin(id, { active: false }, actorId);
   }
 
   async dashboard() {
@@ -261,6 +406,7 @@ export class PlatformAdminService {
         active: true,
         autoApprove: true,
         bookingWindowDays: true,
+        bookingStartOffsetDays: true,
         brandAccent: true,
         createdAt: true,
         subscription: { select: { status: true, planKind: true, startedAt: true, expiresAt: true, graceUntil: true } },
@@ -281,6 +427,64 @@ export class PlatformAdminService {
           }
         : null,
     };
+  }
+
+  async updateSalon(
+    id: string,
+    patch: {
+      name?: string;
+      timezone?: string;
+      businessType?: string | null;
+      brandAccent?: string | null;
+      workMode?: string;
+      autoApprove?: boolean;
+      bookingWindowDays?: number;
+      bookingStartOffsetDays?: number;
+      active?: boolean;
+    },
+    adminId: string,
+  ) {
+    const current = await this.prisma.salon.findUnique({ where: { id } });
+    if (!current) throw new PlatformAdminError('NOT_FOUND', 'Salon not found');
+    if (patch.bookingWindowDays !== undefined && (!Number.isInteger(patch.bookingWindowDays) || patch.bookingWindowDays < 0 || patch.bookingWindowDays > 365)) {
+      throw new PlatformAdminError('INVALID_STATE', 'Invalid booking window');
+    }
+    if (
+      patch.bookingStartOffsetDays !== undefined &&
+      (!Number.isInteger(patch.bookingStartOffsetDays) ||
+        patch.bookingStartOffsetDays < 0 ||
+        patch.bookingStartOffsetDays > 1)
+    ) {
+      throw new PlatformAdminError('INVALID_STATE', 'Invalid booking start offset');
+    }
+    const currentBookingWindowDays = current.bookingWindowDays as number;
+    const currentBookingStartOffsetDays = (current as { bookingStartOffsetDays?: number }).bookingStartOffsetDays ?? 0;
+    const nextBookingWindowDays = patch.bookingWindowDays ?? currentBookingWindowDays;
+    const nextBookingStartOffsetDays = patch.bookingStartOffsetDays ?? currentBookingStartOffsetDays;
+    if (nextBookingStartOffsetDays > nextBookingWindowDays) {
+      throw new PlatformAdminError('INVALID_STATE', 'Invalid booking start offset');
+    }
+    const salon = await this.prisma.salon.update({
+      where: { id },
+      data: {
+        ...(patch.name !== undefined ? { name: assertText(patch.name, 160, 'Invalid salon name') } : {}),
+        ...(patch.timezone !== undefined ? { timezone: assertText(patch.timezone, 80, 'Invalid timezone') } : {}),
+        ...(patch.businessType !== undefined ? { businessType: patch.businessType?.trim() || null } : {}),
+        ...(patch.brandAccent !== undefined ? { brandAccent: patch.brandAccent?.trim() || null } : {}),
+        ...(patch.workMode !== undefined ? { workMode: patch.workMode as any } : {}),
+        ...(patch.autoApprove !== undefined ? { autoApprove: patch.autoApprove } : {}),
+        ...(patch.bookingWindowDays !== undefined ? { bookingWindowDays: patch.bookingWindowDays } : {}),
+        ...(patch.bookingStartOffsetDays !== undefined ? { bookingStartOffsetDays: patch.bookingStartOffsetDays } : {}),
+        ...(patch.active !== undefined ? { active: patch.active } : {}),
+      },
+    });
+    await this.recordAudit(adminId, 'salon.update', 'salon', id, { fields: Object.keys(patch), active: salon.active });
+    return { id: salon.id, name: salon.name, timezone: salon.timezone, active: salon.active };
+  }
+
+  /** Keep salon history intact: archiving disables booking without cascading deletes. */
+  async archiveSalon(id: string, adminId: string) {
+    return this.updateSalon(id, { active: false }, adminId);
   }
 
   /**
@@ -339,6 +543,44 @@ export class PlatformAdminService {
                 service: { select: { id: true, name: true } },
               },
             },
+          },
+        });
+        break;
+      case 'platform-admins':
+        record = await this.prisma.platformAdmin.findUnique({
+          where: { id },
+          include: {
+            _count: { select: { auditLogs: true, assignedSupportTickets: true } },
+          },
+        });
+        break;
+      case 'services':
+        record = await this.prisma.service.findUnique({
+          where: { id },
+          include: {
+            salon: { select: { id: true, name: true, active: true } },
+            serviceStaff: { include: { staffMember: { select: { id: true, fullName: true, role: true, active: true } } } },
+            serviceEquipment: { include: { equipment: { select: { id: true, name: true } } } },
+          },
+        });
+        break;
+      case 'chairs':
+        record = await this.prisma.chair.findUnique({
+          where: { id },
+          include: {
+            salon: { select: { id: true, name: true, active: true } },
+            assignedStaff: { select: { id: true, fullName: true, role: true, active: true } },
+            mobileStaff: { select: { id: true, fullName: true, role: true, active: true } },
+          },
+        });
+        break;
+      case 'equipment':
+        record = await this.prisma.equipment.findUnique({
+          where: { id },
+          include: {
+            salon: { select: { id: true, name: true, active: true } },
+            chairEquipment: { include: { chair: { select: { id: true, name: true, active: true } } } },
+            serviceEquipment: { include: { service: { select: { id: true, name: true, deletedAt: true } } } },
           },
         });
         break;
@@ -433,14 +675,19 @@ export class PlatformAdminService {
 
   async listCustomers(query: PlatformListQuery) {
     const { page, limit, skip } = pageOf(query);
-    const where: any = query.search
-      ? {
-          OR: [
-            { phone: { contains: query.search } },
-            { fullName: { contains: query.search, mode: 'insensitive' } },
-          ],
-        }
-      : {};
+    const where: any = {};
+    if (query.search) {
+      where.OR = [
+        { phone: { contains: query.search } },
+        { fullName: { contains: query.search, mode: 'insensitive' } },
+      ];
+    }
+    if (query.status === 'active') where.active = true;
+    if (query.status === 'blocked') {
+      where.active = false;
+      where.deletedAt = null;
+    }
+    if (query.status === 'deleted') where.deletedAt = { not: null };
     const [total, rows] = await Promise.all([
       this.prisma.customer.count({ where }),
       this.prisma.customer.findMany({
@@ -453,11 +700,96 @@ export class PlatformAdminService {
           phone: true,
           fullName: true,
           noShowCount: true,
+          active: true,
+          deletedAt: true,
           _count: { select: { appointments: true, waitlistEntries: true } },
         },
       }),
     ]);
-    return { data: rows, meta: pageMeta(page, limit, total) };
+    return {
+      data: rows.map((row) => ({ ...row, deletedAt: isoOrNull(row.deletedAt) })),
+      meta: pageMeta(page, limit, total),
+    };
+  }
+
+  async createCustomer(input: { phone: string; fullName?: string | null }, adminId: string) {
+    const phone = normalizePhone(input.phone);
+    assertPhone(phone);
+    const customer = await this.prisma.customer.create({
+      data: {
+        id: randomUUID(),
+        phone,
+        fullName: input.fullName?.trim() || null,
+        active: true,
+        deletedAt: null,
+      },
+    });
+    await this.recordAudit(adminId, 'customer.create', 'customer', customer.id);
+    return this.getCustomerRow(customer.id);
+  }
+
+  async updateCustomer(id: string, patch: { phone?: string; fullName?: string | null }, adminId: string) {
+    const current = await this.prisma.customer.findUnique({ where: { id } });
+    if (!current) throw new PlatformAdminError('NOT_FOUND', 'Customer not found');
+    const phone = patch.phone === undefined ? undefined : normalizePhone(patch.phone);
+    if (phone !== undefined) assertPhone(phone);
+    await this.prisma.customer.update({
+      where: { id },
+      data: {
+        ...(phone !== undefined ? { phone } : {}),
+        ...(patch.fullName !== undefined ? { fullName: patch.fullName?.trim() || null } : {}),
+      },
+    });
+    await this.recordAudit(adminId, 'customer.update', 'customer', id, { fields: Object.keys(patch) });
+    return this.getCustomerRow(id);
+  }
+
+  async setCustomerActive(id: string, active: boolean, adminId: string) {
+    const current = await this.prisma.customer.findUnique({ where: { id }, select: { active: true, deletedAt: true } });
+    if (!current) throw new PlatformAdminError('NOT_FOUND', 'Customer not found');
+    const customer = await this.prisma.customer.update({
+      where: { id },
+      data: { active, ...(active ? { deletedAt: null } : {}) },
+    });
+    await this.recordAudit(adminId, active ? 'customer.unblock' : 'customer.block', 'customer', id, {
+      previousActive: current.active,
+      previousDeletedAt: isoOrNull(current.deletedAt),
+      active,
+    });
+    return this.getCustomerRow(customer.id);
+  }
+
+  /** Soft-delete and deactivate a customer, retaining all legal/financial history. */
+  async deleteCustomer(id: string, adminId: string) {
+    const current = await this.prisma.customer.findUnique({ where: { id }, select: { active: true, deletedAt: true } });
+    if (!current) throw new PlatformAdminError('NOT_FOUND', 'Customer not found');
+    const customer = await this.prisma.customer.update({
+      where: { id },
+      data: { active: false, deletedAt: new Date() },
+    });
+    await this.recordAudit(adminId, 'customer.delete', 'customer', id, {
+      previousActive: current.active,
+      previousDeletedAt: isoOrNull(current.deletedAt),
+      softDelete: true,
+    });
+    return this.getCustomerRow(customer.id);
+  }
+
+  private async getCustomerRow(id: string) {
+    const customer = await this.prisma.customer.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        phone: true,
+        fullName: true,
+        noShowCount: true,
+        active: true,
+        deletedAt: true,
+        _count: { select: { appointments: true, waitlistEntries: true } },
+      },
+    });
+    if (!customer) throw new PlatformAdminError('NOT_FOUND', 'Customer not found');
+    return { ...customer, deletedAt: isoOrNull(customer.deletedAt) };
   }
 
   async listStaff(query: PlatformListQuery) {
@@ -471,7 +803,11 @@ export class PlatformAdminService {
       ];
     }
     if (query.status === 'active') where.active = true;
-    if (query.status === 'inactive') where.active = false;
+    if (query.status === 'inactive' || query.status === 'blocked') {
+      where.active = false;
+      where.deletedAt = null;
+    }
+    if (query.status === 'deleted') where.deletedAt = { not: null };
     if (['Owner', 'Admin', 'Stylist'].includes(query.status ?? '')) where.role = query.status;
     const [total, rows] = await Promise.all([
       this.prisma.staffMember.count({ where }),
@@ -480,16 +816,370 @@ export class PlatformAdminService {
         orderBy: { fullName: 'asc' },
         skip,
         take: limit,
-        select: { id: true, fullName: true, phone: true, role: true, active: true, salon: { select: { id: true, name: true } } },
+        select: { id: true, fullName: true, phone: true, role: true, active: true, deletedAt: true, salon: { select: { id: true, name: true } } },
       }),
     ]);
-    return { data: rows, meta: pageMeta(page, limit, total) };
+    return { data: rows.map((row) => ({ ...row, deletedAt: isoOrNull(row.deletedAt) })), meta: pageMeta(page, limit, total) };
+  }
+
+  async createStaff(input: { salonId: string; fullName: string; role: string; phone?: string | null }, adminId: string) {
+    const salon = await this.prisma.salon.findUnique({ where: { id: input.salonId }, select: { id: true } });
+    if (!salon) throw new PlatformAdminError('NOT_FOUND', 'Salon not found');
+    if (!PLATFORM_STAFF_ROLES.includes(input.role as PlatformStaffRole)) {
+      throw new PlatformAdminError('INVALID_STATE', 'Invalid staff role');
+    }
+    const phone = input.phone ? normalizePhone(input.phone) : null;
+    if (phone) assertPhone(phone);
+    const staff = await this.prisma.staffMember.create({
+      data: {
+        id: randomUUID(),
+        salonId: input.salonId,
+        fullName: assertText(input.fullName, 120, 'Invalid staff name'),
+        role: input.role as PlatformStaffRole,
+        phone,
+        active: true,
+        deletedAt: null,
+      },
+      select: { id: true, fullName: true, phone: true, role: true, active: true, deletedAt: true, salon: { select: { id: true, name: true } } },
+    });
+    await this.recordAudit(adminId, 'staff.create', 'staff', staff.id, { salonId: staff.salon.id, role: staff.role });
+    return { ...staff, deletedAt: isoOrNull(staff.deletedAt) };
+  }
+
+  async updateStaff(
+    id: string,
+    patch: { fullName?: string; role?: string; phone?: string | null; active?: boolean },
+    adminId: string,
+  ) {
+    const current = await this.prisma.staffMember.findUnique({ where: { id }, select: { salonId: true, role: true, active: true, deletedAt: true } });
+    if (!current) throw new PlatformAdminError('NOT_FOUND', 'Staff member not found');
+    if (patch.role !== undefined && !PLATFORM_STAFF_ROLES.includes(patch.role as PlatformStaffRole)) {
+      throw new PlatformAdminError('INVALID_STATE', 'Invalid staff role');
+    }
+    const nextRole = (patch.role ?? current.role) as PlatformStaffRole;
+    const nextActive = patch.active ?? current.active;
+    if (current.role === 'Owner' && current.active && (nextRole !== 'Owner' || !nextActive)) {
+      await this.assertOwnerCanLeave(current.salonId, id);
+    }
+    const phone = patch.phone === undefined ? undefined : patch.phone ? normalizePhone(patch.phone) : null;
+    if (phone) assertPhone(phone);
+    const staff = await this.prisma.staffMember.update({
+      where: { id },
+      data: {
+        ...(patch.fullName !== undefined ? { fullName: assertText(patch.fullName, 120, 'Invalid staff name') } : {}),
+        ...(patch.role !== undefined ? { role: nextRole } : {}),
+        ...(patch.phone !== undefined ? { phone } : {}),
+        ...(patch.active !== undefined ? { active: nextActive, deletedAt: nextActive ? null : new Date() } : {}),
+      },
+      select: { id: true, fullName: true, phone: true, role: true, active: true, deletedAt: true, salon: { select: { id: true, name: true } } },
+    });
+    await this.recordAudit(adminId, 'staff.update', 'staff', id, { fields: Object.keys(patch), salonId: current.salonId });
+    return { ...staff, deletedAt: isoOrNull(staff.deletedAt) };
+  }
+
+  async deleteStaff(id: string, adminId: string) {
+    const current = await this.prisma.staffMember.findUnique({ where: { id }, select: { salonId: true, role: true, active: true } });
+    if (!current) throw new PlatformAdminError('NOT_FOUND', 'Staff member not found');
+    if (current.role === 'Owner' && current.active) await this.assertOwnerCanLeave(current.salonId, id);
+    const staff = await this.prisma.staffMember.update({
+      where: { id },
+      data: { active: false, deletedAt: new Date() },
+      select: { id: true, active: true, deletedAt: true },
+    });
+    await this.recordAudit(adminId, 'staff.delete', 'staff', id, { salonId: current.salonId, softDelete: true });
+    return { ...staff, deletedAt: isoOrNull(staff.deletedAt) };
+  }
+
+  private async assertOwnerCanLeave(salonId: string, staffId: string): Promise<void> {
+    const remainingOwners = await this.prisma.staffMember.count({
+      where: { salonId, role: 'Owner', active: true, id: { not: staffId } },
+    });
+    if (remainingOwners < 1) throw new PlatformAdminError('INVALID_STATE', 'LAST_OWNER_REQUIRED');
+  }
+
+  async listServices(query: PlatformListQuery) {
+    const { page, limit, skip } = pageOf(query);
+    const where: any = {};
+    if (query.salonId) where.salonId = query.salonId;
+    if (query.search) {
+      where.OR = [
+        { name: { contains: query.search, mode: 'insensitive' } },
+        { salon: { name: { contains: query.search, mode: 'insensitive' } } },
+      ];
+    }
+    if (query.status === 'active') where.deletedAt = null;
+    if (query.status === 'deleted') where.deletedAt = { not: null };
+    const [total, rows] = await Promise.all([
+      this.prisma.service.count({ where }),
+      this.prisma.service.findMany({
+        where,
+        orderBy: { name: 'asc' },
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          salonId: true,
+          name: true,
+          durationMin: true,
+          durationMode: true,
+          minDurationMin: true,
+          maxDurationMin: true,
+          bufferMin: true,
+          priceRial: true,
+          requiresDeposit: true,
+          depositRial: true,
+          depositType: true,
+          depositPercent: true,
+          approvalStaffId: true,
+          deletedAt: true,
+          salon: { select: { id: true, name: true } },
+          _count: { select: { appointments: true, serviceStaff: true } },
+        },
+      }),
+    ]);
+    return {
+      data: rows.map((row) => ({
+        ...row,
+        priceRial: rial(row.priceRial),
+        depositRial: row.depositRial == null ? null : rial(row.depositRial),
+        deletedAt: isoOrNull(row.deletedAt),
+      })),
+      meta: pageMeta(page, limit, total),
+    };
+  }
+
+  async createService(
+    input: {
+      salonId: string;
+      name: string;
+      durationMinutes: number;
+      durationMode?: string;
+      minDurationMinutes?: number | null;
+      maxDurationMinutes?: number | null;
+      bufferMinutes?: number;
+      priceRial?: number;
+      requiresDeposit?: boolean;
+      depositRial?: number | null;
+      depositType?: string;
+      depositPercent?: number | null;
+    },
+    adminId: string,
+  ) {
+    await this.assertSalonExists(input.salonId);
+    const service = await this.prisma.service.create({
+      data: {
+        id: randomUUID(),
+        salonId: input.salonId,
+        name: assertText(input.name, 160, 'Invalid service name'),
+        durationMin: input.durationMinutes,
+        durationMode: input.durationMode === 'variable' ? 'variable' : 'fixed',
+        minDurationMin: input.minDurationMinutes ?? null,
+        maxDurationMin: input.maxDurationMinutes ?? null,
+        bufferMin: input.bufferMinutes ?? 0,
+        priceRial: BigInt(input.priceRial ?? 0),
+        requiresDeposit: input.requiresDeposit === true,
+        depositRial: input.depositRial == null ? null : BigInt(input.depositRial),
+        depositType: input.depositType === 'percentage' ? 'percentage' : 'fixed',
+        depositPercent: input.depositPercent ?? null,
+      },
+    });
+    const staff = await this.prisma.staffMember.findMany({
+      where: { salonId: input.salonId, active: true, role: { in: ['Owner', 'Stylist'] } },
+      select: { id: true },
+    });
+    if (staff.length) {
+      await this.prisma.serviceStaff.createMany({
+        data: staff.map((member) => ({ serviceId: service.id, staffMemberId: member.id })),
+        skipDuplicates: true,
+      });
+    }
+    await this.recordAudit(adminId, 'service.create', 'service', service.id, { salonId: input.salonId });
+    return this.getServiceRecord(service.id);
+  }
+
+  async updateService(
+    id: string,
+    patch: {
+      name?: string;
+      durationMinutes?: number;
+      durationMode?: string;
+      minDurationMinutes?: number | null;
+      maxDurationMinutes?: number | null;
+      bufferMinutes?: number;
+      priceRial?: number;
+      requiresDeposit?: boolean;
+      depositRial?: number | null;
+      depositType?: string;
+      depositPercent?: number | null;
+      active?: boolean;
+    },
+    adminId: string,
+  ) {
+    const current = await this.prisma.service.findUnique({ where: { id } });
+    if (!current) throw new PlatformAdminError('NOT_FOUND', 'Service not found');
+    const service = await this.prisma.service.update({
+      where: { id },
+      data: {
+        ...(patch.name !== undefined ? { name: assertText(patch.name, 160, 'Invalid service name') } : {}),
+        ...(patch.durationMinutes !== undefined ? { durationMin: patch.durationMinutes } : {}),
+        ...(patch.durationMode !== undefined ? { durationMode: patch.durationMode } : {}),
+        ...(patch.minDurationMinutes !== undefined ? { minDurationMin: patch.minDurationMinutes } : {}),
+        ...(patch.maxDurationMinutes !== undefined ? { maxDurationMin: patch.maxDurationMinutes } : {}),
+        ...(patch.bufferMinutes !== undefined ? { bufferMin: patch.bufferMinutes } : {}),
+        ...(patch.priceRial !== undefined ? { priceRial: BigInt(patch.priceRial) } : {}),
+        ...(patch.requiresDeposit !== undefined ? { requiresDeposit: patch.requiresDeposit } : {}),
+        ...(patch.depositRial !== undefined ? { depositRial: patch.depositRial == null ? null : BigInt(patch.depositRial) } : {}),
+        ...(patch.depositType !== undefined ? { depositType: patch.depositType } : {}),
+        ...(patch.depositPercent !== undefined ? { depositPercent: patch.depositPercent } : {}),
+        ...(patch.active !== undefined ? { deletedAt: patch.active ? null : new Date() } : {}),
+      },
+    });
+    await this.recordAudit(adminId, 'service.update', 'service', id, { fields: Object.keys(patch), salonId: current.salonId });
+    return this.getServiceRecord(service.id);
+  }
+
+  async deleteService(id: string, adminId: string) {
+    const current = await this.prisma.service.findUnique({ where: { id }, select: { salonId: true } });
+    if (!current) throw new PlatformAdminError('NOT_FOUND', 'Service not found');
+    const service = await this.prisma.service.update({ where: { id }, data: { deletedAt: new Date() } });
+    await this.recordAudit(adminId, 'service.delete', 'service', id, { salonId: current.salonId, softDelete: true });
+    return { id: service.id, active: service.deletedAt === null };
+  }
+
+  private async getServiceRecord(id: string) {
+    const row = await this.prisma.service.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        salonId: true,
+        name: true,
+        durationMin: true,
+        durationMode: true,
+        minDurationMin: true,
+        maxDurationMin: true,
+        bufferMin: true,
+        priceRial: true,
+        requiresDeposit: true,
+        depositRial: true,
+        depositType: true,
+        depositPercent: true,
+        approvalStaffId: true,
+        deletedAt: true,
+        salon: { select: { id: true, name: true } },
+        _count: { select: { appointments: true, serviceStaff: true } },
+      },
+    });
+    if (!row) throw new PlatformAdminError('NOT_FOUND', 'Service not found');
+    return { ...row, priceRial: rial(row.priceRial), depositRial: row.depositRial == null ? null : rial(row.depositRial), deletedAt: isoOrNull(row.deletedAt) };
+  }
+
+  async listChairs(query: PlatformListQuery) {
+    return this.listSimpleSalonResource('chair', query);
+  }
+
+  async createChair(input: { salonId: string; name: string; kind?: string }, adminId: string) {
+    await this.assertSalonExists(input.salonId);
+    const chair = await this.prisma.chair.create({
+      data: { id: randomUUID(), salonId: input.salonId, name: assertText(input.name, 100, 'Invalid chair name'), kind: input.kind === 'mobile' ? 'mobile' : 'physical' },
+      select: { id: true, salonId: true, name: true, kind: true, active: true, deletedAt: true, salon: { select: { id: true, name: true } } },
+    });
+    await this.recordAudit(adminId, 'chair.create', 'chair', chair.id, { salonId: input.salonId });
+    return { ...chair, deletedAt: isoOrNull(chair.deletedAt) };
+  }
+
+  async updateChair(id: string, patch: { name?: string; active?: boolean }, adminId: string) {
+    const current = await this.prisma.chair.findUnique({ where: { id }, select: { salonId: true } });
+    if (!current) throw new PlatformAdminError('NOT_FOUND', 'Chair not found');
+    const chair = await this.prisma.chair.update({
+      where: { id },
+      data: {
+        ...(patch.name !== undefined ? { name: assertText(patch.name, 100, 'Invalid chair name') } : {}),
+        ...(patch.active !== undefined ? { active: patch.active, deletedAt: patch.active ? null : new Date() } : {}),
+      },
+      select: { id: true, salonId: true, name: true, kind: true, active: true, deletedAt: true, salon: { select: { id: true, name: true } } },
+    });
+    await this.recordAudit(adminId, 'chair.update', 'chair', id, { fields: Object.keys(patch), salonId: current.salonId });
+    return { ...chair, deletedAt: isoOrNull(chair.deletedAt) };
+  }
+
+  async deleteChair(id: string, adminId: string) {
+    return this.updateChair(id, { active: false }, adminId);
+  }
+
+  async listEquipment(query: PlatformListQuery) {
+    return this.listSimpleSalonResource('equipment', query);
+  }
+
+  async createEquipment(input: { salonId: string; name: string }, adminId: string) {
+    await this.assertSalonExists(input.salonId);
+    const equipment = await this.prisma.equipment.create({
+      data: { id: randomUUID(), salonId: input.salonId, name: assertText(input.name, 100, 'Invalid equipment name') },
+      select: { id: true, salonId: true, name: true, deletedAt: true, salon: { select: { id: true, name: true } } },
+    });
+    await this.recordAudit(adminId, 'equipment.create', 'equipment', equipment.id, { salonId: input.salonId });
+    return { ...equipment, active: equipment.deletedAt === null, deletedAt: isoOrNull(equipment.deletedAt) };
+  }
+
+  async updateEquipment(id: string, patch: { name?: string; active?: boolean }, adminId: string) {
+    const current = await this.prisma.equipment.findUnique({ where: { id }, select: { salonId: true } });
+    if (!current) throw new PlatformAdminError('NOT_FOUND', 'Equipment not found');
+    const equipment = await this.prisma.equipment.update({
+      where: { id },
+      data: {
+        ...(patch.name !== undefined ? { name: assertText(patch.name, 100, 'Invalid equipment name') } : {}),
+        ...(patch.active !== undefined ? { deletedAt: patch.active ? null : new Date() } : {}),
+      },
+      select: { id: true, salonId: true, name: true, deletedAt: true, salon: { select: { id: true, name: true } } },
+    });
+    await this.recordAudit(adminId, 'equipment.update', 'equipment', id, { fields: Object.keys(patch), salonId: current.salonId });
+    return { ...equipment, active: equipment.deletedAt === null, deletedAt: isoOrNull(equipment.deletedAt) };
+  }
+
+  async deleteEquipment(id: string, adminId: string) {
+    return this.updateEquipment(id, { active: false }, adminId);
+  }
+
+  private async listSimpleSalonResource(resource: 'chair' | 'equipment', query: PlatformListQuery) {
+    const { page, limit, skip } = pageOf(query);
+    const where: any = {};
+    if (query.salonId) where.salonId = query.salonId;
+    if (query.search) {
+      where.OR = [
+        { name: { contains: query.search, mode: 'insensitive' } },
+        { salon: { name: { contains: query.search, mode: 'insensitive' } } },
+      ];
+    }
+    if (query.status === 'active') where.deletedAt = null;
+    if (query.status === 'deleted') where.deletedAt = { not: null };
+    const delegate: any = resource === 'chair' ? this.prisma.chair : this.prisma.equipment;
+    const [total, rows] = await Promise.all([
+      delegate.count({ where }),
+      delegate.findMany({
+        where,
+        orderBy: { name: 'asc' },
+        skip,
+        take: limit,
+        select: resource === 'chair'
+          ? { id: true, salonId: true, name: true, kind: true, active: true, deletedAt: true, salon: { select: { id: true, name: true } } }
+          : { id: true, salonId: true, name: true, deletedAt: true, salon: { select: { id: true, name: true } } },
+      } as any),
+    ]);
+    return {
+      data: rows.map((row: any) => ({ ...row, active: resource === 'chair' ? row.active : row.deletedAt === null, deletedAt: isoOrNull(row.deletedAt) })),
+      meta: pageMeta(page, limit, total),
+    };
+  }
+
+  private async assertSalonExists(id: string): Promise<void> {
+    const salon = await this.prisma.salon.findUnique({ where: { id }, select: { id: true } });
+    if (!salon) throw new PlatformAdminError('NOT_FOUND', 'Salon not found');
   }
 
   async setStaffActive(id: string, active: boolean, adminId: string) {
-    const current = await this.prisma.staffMember.findUnique({ where: { id }, select: { active: true, salonId: true } });
+    const current = await this.prisma.staffMember.findUnique({ where: { id }, select: { active: true, salonId: true, role: true } });
     if (!current) throw new PlatformAdminError('NOT_FOUND', 'Staff member not found');
-    const staff = await this.prisma.staffMember.update({ where: { id }, data: { active } });
+    if (!active && current.active && current.role === 'Owner') await this.assertOwnerCanLeave(current.salonId, id);
+    const staff = await this.prisma.staffMember.update({ where: { id }, data: { active, deletedAt: null } });
     await this.recordAudit(adminId, active ? 'staff.activate' : 'staff.deactivate', 'staff', id, {
       previousActive: current.active,
       active,
@@ -526,6 +1216,9 @@ export class PlatformAdminService {
           endAt: true,
           status: true,
           source: true,
+          customerNote: true,
+          locationType: true,
+          locationAddress: true,
           createdAt: true,
           salon: { select: { id: true, name: true } },
           customer: { select: { id: true, fullName: true, phone: true } },
@@ -547,6 +1240,31 @@ export class PlatformAdminService {
     };
   }
 
+  async updateAppointment(
+    id: string,
+    patch: { customerNote?: string | null; locationType?: string; locationAddress?: string | null },
+    adminId: string,
+  ) {
+    const current = await this.prisma.appointment.findUnique({ where: { id }, select: { salonId: true } });
+    if (!current) throw new PlatformAdminError('NOT_FOUND', 'Appointment not found');
+    if (patch.locationType !== undefined && !['salon', 'customer'].includes(patch.locationType)) {
+      throw new PlatformAdminError('INVALID_STATE', 'Invalid appointment location');
+    }
+    if (patch.locationType === 'customer' && !patch.locationAddress?.trim()) {
+      throw new PlatformAdminError('INVALID_STATE', 'Customer location requires an address');
+    }
+    const appointment = await this.prisma.appointment.update({
+      where: { id },
+      data: {
+        ...(patch.customerNote !== undefined ? { customerNote: patch.customerNote?.trim() || null } : {}),
+        ...(patch.locationType !== undefined ? { locationType: patch.locationType as any } : {}),
+        ...(patch.locationAddress !== undefined ? { locationAddress: patch.locationAddress?.trim() || null } : {}),
+      },
+    });
+    await this.recordAudit(adminId, 'appointment.update', 'appointment', id, { fields: Object.keys(patch), salonId: current.salonId });
+    return appointment;
+  }
+
   async listSubscriptions(query: PlatformListQuery) {
     const { page, limit, skip } = pageOf(query);
     const where: any = {};
@@ -566,6 +1284,39 @@ export class PlatformAdminService {
       data: rows.map((row) => ({ ...row, startedAt: row.startedAt.toISOString(), expiresAt: row.expiresAt.toISOString(), graceUntil: iso(row.graceUntil) })),
       meta: pageMeta(page, limit, total),
     };
+  }
+
+  async updateSubscription(
+    id: string,
+    patch: { status?: string; planKind?: string; expiresAt?: Date; graceUntil?: Date | null },
+    adminId: string,
+  ) {
+    const current = await this.prisma.subscription.findUnique({ where: { id }, select: { salonId: true, status: true, planKind: true, expiresAt: true, graceUntil: true } });
+    if (!current) throw new PlatformAdminError('NOT_FOUND', 'Subscription not found');
+    if (patch.status !== undefined && !SUBSCRIPTION_STATUSES.includes(patch.status as (typeof SUBSCRIPTION_STATUSES)[number])) {
+      throw new PlatformAdminError('INVALID_STATE', 'Invalid subscription status');
+    }
+    if (patch.planKind !== undefined && !SUBSCRIPTION_PLANS.includes(patch.planKind as (typeof SUBSCRIPTION_PLANS)[number])) {
+      throw new PlatformAdminError('INVALID_STATE', 'Invalid subscription plan');
+    }
+    if (patch.expiresAt && patch.expiresAt.getTime() < 0) throw new PlatformAdminError('INVALID_STATE', 'Invalid subscription expiry');
+    const subscription = await this.prisma.subscription.update({
+      where: { id },
+      data: {
+        ...(patch.status !== undefined ? { status: patch.status as any } : {}),
+        ...(patch.planKind !== undefined ? { planKind: patch.planKind as any } : {}),
+        ...(patch.expiresAt !== undefined ? { expiresAt: patch.expiresAt } : {}),
+        ...(patch.graceUntil !== undefined ? { graceUntil: patch.graceUntil } : {}),
+      },
+      select: { id: true, status: true, planKind: true, startedAt: true, expiresAt: true, graceUntil: true, salon: { select: { id: true, name: true, active: true } } },
+    });
+    await this.recordAudit(adminId, 'subscription.update', 'subscription', id, { fields: Object.keys(patch), salonId: current.salonId });
+    return { ...subscription, startedAt: subscription.startedAt.toISOString(), expiresAt: subscription.expiresAt.toISOString(), graceUntil: isoOrNull(subscription.graceUntil) };
+  }
+
+  /** Subscription delete is represented as immediate expiry, preserving billing history. */
+  async deleteSubscription(id: string, adminId: string) {
+    return this.updateSubscription(id, { status: 'expired', expiresAt: new Date(), graceUntil: null }, adminId);
   }
 
   async listPayments(query: PlatformListQuery) {
@@ -605,6 +1356,35 @@ export class PlatformAdminService {
     return { data: rows.slice(start, start + limit), meta: pageMeta(page, limit, total) };
   }
 
+  /**
+   * Payment edits are restricted to reconciliation status and always require
+   * the source ledger (`appointment` or `subscription`) because both tables
+   * intentionally use independent ids. Raw deletion is never allowed.
+   */
+  async updatePayment(id: string, kind: 'appointment' | 'subscription', status: string, adminId: string) {
+    if (!PAYMENT_STATUSES.includes(status as (typeof PAYMENT_STATUSES)[number])) {
+      throw new PlatformAdminError('INVALID_STATE', 'Invalid payment status');
+    }
+    let salonId: string | undefined;
+    if (kind === 'appointment') {
+      const current = await this.prisma.payment.findUnique({ where: { id }, select: { appointment: { select: { salonId: true } } } });
+      if (!current) throw new PlatformAdminError('NOT_FOUND', 'Payment not found');
+      salonId = current.appointment.salonId;
+      await this.prisma.payment.update({ where: { id }, data: { status: status as any } });
+    } else {
+      const current = await this.prisma.subscriptionPayment.findUnique({ where: { id }, select: { subscription: { select: { salonId: true } } } });
+      if (!current) throw new PlatformAdminError('NOT_FOUND', 'Payment not found');
+      salonId = current.subscription.salonId;
+      await this.prisma.subscriptionPayment.update({ where: { id }, data: { status: status as any } });
+    }
+    await this.recordAudit(adminId, 'payment.reconcile', 'payment', id, { kind, status, salonId });
+    return { id, kind, status };
+  }
+
+  async deletePayment(_id: string, _kind: 'appointment' | 'subscription', _adminId: string): Promise<never> {
+    throw new PlatformAdminError('INVALID_STATE', 'FINANCIAL_LEDGER_IMMUTABLE');
+  }
+
   async listWaitlist(query: PlatformListQuery) {
     const { page, limit, skip } = pageOf(query);
     const where: any = {};
@@ -628,6 +1408,28 @@ export class PlatformAdminService {
       }),
     ]);
     return { data: rows.map((row) => ({ ...row, windowStart: row.windowStart.toISOString(), windowEnd: row.windowEnd.toISOString(), createdAt: row.createdAt.toISOString() })), meta: pageMeta(page, limit, total) };
+  }
+
+  async updateWaitlist(id: string, patch: { status?: string; windowStart?: Date; windowEnd?: Date }, adminId: string) {
+    const current = await this.prisma.waitlistEntry.findUnique({ where: { id }, select: { salonId: true, status: true } });
+    if (!current) throw new PlatformAdminError('NOT_FOUND', 'Waitlist entry not found');
+    const allowed = ['waiting', 'notified', 'fulfilled', 'cancelled'];
+    if (patch.status !== undefined && !allowed.includes(patch.status)) throw new PlatformAdminError('INVALID_STATE', 'Invalid waitlist status');
+    if (patch.windowStart && patch.windowEnd && patch.windowStart >= patch.windowEnd) throw new PlatformAdminError('INVALID_STATE', 'Invalid waitlist window');
+    const entry = await this.prisma.waitlistEntry.update({
+      where: { id },
+      data: {
+        ...(patch.status !== undefined ? { status: patch.status } : {}),
+        ...(patch.windowStart !== undefined ? { windowStart: patch.windowStart } : {}),
+        ...(patch.windowEnd !== undefined ? { windowEnd: patch.windowEnd } : {}),
+      },
+    });
+    await this.recordAudit(adminId, 'waitlist.update', 'waitlist', id, { fields: Object.keys(patch), salonId: current.salonId });
+    return { ...entry, windowStart: entry.windowStart.toISOString(), windowEnd: entry.windowEnd.toISOString(), createdAt: entry.createdAt.toISOString() };
+  }
+
+  async deleteWaitlist(id: string, adminId: string) {
+    return this.updateWaitlist(id, { status: 'cancelled' }, adminId);
   }
 
   async listQrScans(query: PlatformListQuery) {

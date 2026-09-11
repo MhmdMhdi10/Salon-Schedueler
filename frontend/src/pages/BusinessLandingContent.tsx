@@ -1655,7 +1655,7 @@ function CommandVariant() {
         <div className="mx-auto max-w-7xl px-4">
           <SectionHeader
             eyebrow="ساختار بدون شلوغی"
-            title="برای پنل، راهنمای ۳ مرحله‌ای لازم نیست"
+            title="ساختار ساده برای کار روزانه"
             body="پروفایل را تنظیم کنید؛ بعد هر روز از همان‌جایی ادامه دهید که کارتان مانده است."
           />
           <div className="mt-10">

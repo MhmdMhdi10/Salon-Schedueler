@@ -155,7 +155,7 @@ function AraScrollBrandRail() {
           رزرو نوبت
         </Link>
         <Link to="/business/register" className="ara-scroll-header-start">
-          شروع رایگان <ArrowUpLeft aria-hidden="true" />
+          ثبت سالن <ArrowUpLeft aria-hidden="true" />
         </Link>
         <Link to="/auth" className="ara-scroll-login">
           ورود
@@ -825,9 +825,11 @@ function AraScrollFeatureSection({
             </li>
           ))}
         </ul>
-        <Link to="/business/register" className="ara-scroll-feature-link">
-          {feature.cta} <ArrowUpLeft aria-hidden="true" />
-        </Link>
+        <div className={`ara-scroll-feature-cta is-${feature.accent}`}>
+          <Link to="/business/register" className="ara-scroll-feature-link">
+            {feature.cta} <ArrowUpLeft aria-hidden="true" />
+          </Link>
+        </div>
       </motion.div>
     </section>
   );

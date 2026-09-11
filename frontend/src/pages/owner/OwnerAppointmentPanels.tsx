@@ -31,6 +31,7 @@ import {
   SheetDescription,
   SheetTitle,
   Money,
+  TimeWheelField,
   TextField,
   cn,
   Num,
@@ -848,23 +849,33 @@ export function MoveAppointmentDialog({
             </div>
           ) : (
             <>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <MobileDatePicker
-                  label="تاریخ شروع جدید"
-                  value={startDate || null}
-                  onChange={(nextDate) => setStartAt(`${nextDate}T${startTime || '09:00'}`)}
-                  disabled={saving}
-                />
-                <TextField
-                  label="ساعت شروع جدید"
-                  type="time"
-                  value={startTime || ''}
-                  onChange={(event) => setStartAt(`${startDate}T${event.target.value}`)}
-                  disabled={saving}
-                  dir="ltr"
-                  step={900}
-                />
-              </div>
+              <section
+                aria-labelledby="move-appointment-time-title"
+                className="rounded-2xl border border-border bg-elevated/60 p-3 sm:p-4"
+              >
+                <div className="mb-3">
+                  <h3 id="move-appointment-time-title" className="m-0 text-sm font-bold text-text">
+                    زمان جدید نوبت
+                  </h3>
+                  <p className="m-0 mt-1 text-xs leading-5 text-muted">
+                    تاریخ و ساعت جدید را از انتخاب‌گر فارسی مشخص کن.
+                  </p>
+                </div>
+                <div className="owner-calendar-time-fields grid items-stretch gap-3 sm:grid-cols-2">
+                  <MobileDatePicker
+                    label="تاریخ شروع جدید"
+                    value={startDate || null}
+                    onChange={(nextDate) => setStartAt(`${nextDate}T${startTime || '09:00'}`)}
+                    disabled={saving}
+                  />
+                  <TimeWheelField
+                    label="ساعت شروع جدید"
+                    value={startTime || '09:00'}
+                    onChange={(nextTime) => setStartAt(`${startDate}T${nextTime}`)}
+                    disabled={saving}
+                  />
+                </div>
+              </section>
               {appointment?.staffName && (
                 <p className="m-0 rounded-lg bg-bg p-2.5 text-xs text-muted">
                   عضو تیم فعلی: {appointment.staffName}

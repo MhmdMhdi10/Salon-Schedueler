@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -96,12 +97,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [principal, setPrincipal] = useState<AuthPrincipal | null>(null);
   const [staffContexts, setStaffContexts] = useState<StaffContext[]>([]);
+  const refreshGeneration = useRef(0);
 
   const refresh = useCallback(async (): Promise<AuthPrincipal | null> => {
+    const generation = ++refreshGeneration.current;
+    const isCurrent = () => generation === refreshGeneration.current;
+
     // Reuse an access token already in memory (just-completed OTP login),
     // otherwise restore the session from the HttpOnly refresh cookie.
     const hasSession = getAccessToken() != null || (await bootstrapAuth());
     if (!hasSession) {
+      if (!isCurrent()) return null;
       setPrincipal(null);
       setStaffContexts([]);
       setStatus('anonymous');
@@ -116,19 +122,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         salonId: p.salonId,
         platformAdminId: p.platformAdminId,
       };
-      setPrincipal(next);
+      let nextStaffContexts: StaffContext[] = [];
       // Older test doubles and older API deployments do not expose contexts;
       // the optional lookup must never make an otherwise valid login fail.
       try {
         const result = await authApi.getContexts();
-        setStaffContexts(result.staffContexts ?? []);
+        nextStaffContexts = result.staffContexts ?? [];
       } catch {
-        setStaffContexts([]);
+        nextStaffContexts = [];
       }
+      if (!isCurrent()) return next;
+      setPrincipal(next);
+      setStaffContexts(nextStaffContexts);
       setStatus('authenticated');
       return next;
     } catch {
       // A present-but-rejected token means the session is no longer valid.
+      if (!isCurrent()) return null;
       clearSession();
       setPrincipal(null);
       setStaffContexts([]);

@@ -22,11 +22,12 @@ type Entry = [string, unknown];
 
 const RESOURCE_LABEL: Record<string, string> = {
   salons: 'سالن‌ها', customers: 'مشتری‌ها', staff: 'تیم', appointments: 'نوبت‌ها', subscriptions: 'اشتراک‌ها',
-  payments: 'پرداخت‌ها', waitlist: 'صف انتظار', 'qr-scans': 'اسکن‌های QR', 'audit-logs': 'گزارش تغییرات',
+  payments: 'پرداخت‌ها', waitlist: 'صف انتظار', services: 'خدمات', chairs: 'صندلی‌ها', equipment: 'تجهیزات',
+  'platform-admins': 'مدیران پلتفرم', 'qr-scans': 'اسکن‌های QR', 'audit-logs': 'گزارش تغییرات',
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  active: 'فعال', trial: 'آزمایشی', grace: 'مهلت تمدید', expired: 'منقضی', suspended: 'تعلیق‌شده', inactive: 'غیرفعال',
+  active: 'فعال', trial: 'آزمایشی', grace: 'مهلت تمدید', expired: 'منقضی', suspended: 'تعلیق‌شده', inactive: 'غیرفعال', deleted: 'حذف‌شده',
   pending: 'در انتظار', held: 'موقت', confirmed: 'تأییدشده', completed: 'انجام‌شده', cancelled: 'لغوشده', no_show: 'عدم مراجعه',
   paid: 'پرداخت‌شده', refunded: 'مستردشده', retained: 'نگه‌داشته‌شده', failed: 'ناموفق', waiting: 'در صف', notified: 'اطلاع داده‌شده', fulfilled: 'تکمیل‌شده',
   Owner: 'مالک', Admin: 'ادمین', Stylist: 'عضو تیم',
@@ -37,11 +38,11 @@ const dateTimeFormatter = new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium'
 
 function fieldLabel(field: string): string {
   const labels: Record<string, string> = {
-    id: 'شناسه', name: 'نام', fullName: 'نام کامل', phone: 'تلفن', qrToken: 'توکن QR', timezone: 'منطقه زمانی', active: 'فعال',
+    id: 'شناسه', name: 'نام', fullName: 'نام کامل', phone: 'تلفن', qrToken: 'توکن QR', timezone: 'منطقه زمانی', active: 'فعال', deletedAt: 'تاریخ حذف نرم',
     status: 'وضعیت', role: 'نقش', source: 'منبع', createdAt: 'تاریخ ایجاد', updatedAt: 'آخرین تغییر', lastLoginAt: 'آخرین ورود',
     startAt: 'شروع', endAt: 'پایان', windowStart: 'شروع بازه', windowEnd: 'پایان بازه', startedAt: 'شروع اشتراک', expiresAt: 'انقضا', graceUntil: 'مهلت تمدید',
     amountRial: 'مبلغ (تومان)', priceRial: 'قیمت (تومان)', depositRial: 'ودیعه (تومان)', gateway: 'درگاه', refId: 'شناسه مرجع',
-    planKind: 'نوع پلن', autoApprove: 'تأیید خودکار', bookingWindowDays: 'افق رزرو (روز)', brandAccent: 'رنگ برند', noShowCount: 'عدم مراجعه',
+    planKind: 'نوع پلن', autoApprove: 'تأیید خودکار', bookingWindowDays: 'افق رزرو (روز)', bookingStartOffsetDays: 'شروع رزرو از (روز)', brandAccent: 'رنگ برند', noShowCount: 'عدم مراجعه',
     durationMin: 'مدت (دقیقه)', bufferMin: 'فاصله (دقیقه)', requiresDeposit: 'نیازمند ودیعه', entityType: 'نوع رکورد', entityId: 'شناسه رکورد',
     action: 'عملیات', metadata: 'جزئیات ساختاری', salon: 'سالن', customer: 'مشتری', staffMember: 'عضو تیم', service: 'خدمت', payments: 'پرداخت‌ها',
     appointments: 'نوبت‌ها', waitlistEntries: 'صف انتظار', customerNotes: 'یادداشت‌ها', preferredStaff: 'عضو تیم منتخب', subscription: 'اشتراک', admin: 'مدیر',
@@ -52,7 +53,7 @@ function fieldLabel(field: string): string {
 function statusColor(value: string): string {
   if (['active', 'paid', 'confirmed', 'completed', 'fulfilled'].includes(value)) return 'green';
   if (['pending', 'trial', 'grace', 'held', 'waiting', 'notified'].includes(value)) return 'gold';
-  if (['expired', 'suspended', 'inactive', 'cancelled', 'no_show', 'failed'].includes(value)) return 'red';
+  if (['expired', 'suspended', 'inactive', 'deleted', 'cancelled', 'no_show', 'failed'].includes(value)) return 'red';
   return 'default';
 }
 
@@ -179,8 +180,8 @@ export function PlatformAdminRecordDetailPage() {
   const backPath = sessionStorage.getItem(`${storageKey}:back`);
   const goBack = () => backPath?.startsWith('/platform-admin') ? navigate(backPath) : navigate(-1);
 
-  if (!record && loading) return <div className="platform-admin-detail-page"><Card><Skeleton active paragraph={{ rows: 12 }} /></Card></div>;
-  if (!record) return <div className="platform-admin-detail-page"><Card><Empty description="رکورد پیدا نشد." /></Card></div>;
+  if (!record && loading) return <div className="platform-admin-detail-page"><Card><Typography.Title level={1}>در حال بارگذاری جزئیات</Typography.Title><Skeleton active paragraph={{ rows: 12 }} /></Card></div>;
+  if (!record) return <div className="platform-admin-detail-page"><Card><Typography.Title level={1}>جزئیات رکورد</Typography.Title><Empty description="رکوردی برای نمایش وجود ندارد."><Button icon={<ArrowRightOutlined />} onClick={goBack}>بازگشت به فهرست</Button></Empty></Card></div>;
 
   return (
     <div className="platform-admin-detail-page">

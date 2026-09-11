@@ -32,10 +32,11 @@ vi.mock('../../api/client', () => ({
 import { AuthPage, normalizePhone } from '../AuthPage';
 import { ToastProvider } from '../../components/ui/Toast';
 
-function renderAuth() {
+function renderAuth(initialEntry = '/auth') {
+  window.history.replaceState({}, '', initialEntry);
   return render(
     <HelmetProvider>
-      <MemoryRouter initialEntries={['/auth']}>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <ToastProvider>
           <AuthPage />
         </ToastProvider>
@@ -77,6 +78,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  window.history.replaceState({}, '', '/auth');
   cleanup();
 });
 
@@ -101,6 +103,44 @@ describe('AuthPage — phone step', () => {
   it('preserves the auth-page testID', () => {
     renderAuth();
     expect(screen.getByTestId('auth-page')).toBeInTheDocument();
+  });
+
+  it('defaults public auth to salon and team login', () => {
+    renderAuth();
+
+    expect(screen.getByRole('tab', { name: 'ورود سالن و تیم' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(screen.getByRole('tab', { name: 'رزرو نوبت' })).toHaveAttribute(
+      'aria-selected',
+      'false',
+    );
+    expect(
+      screen.getByText('برای ورود به پنل سالن یا انتخاب سالن، شماره موبایل خود را وارد کنید.'),
+    ).toBeInTheDocument();
+  });
+
+  it('honors an explicit customer intent from booking entry points', () => {
+    renderAuth('/auth?intent=customer');
+
+    expect(screen.getByRole('tab', { name: 'رزرو نوبت' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(screen.getByRole('tab', { name: 'ورود سالن و تیم' })).toHaveAttribute(
+      'aria-selected',
+      'false',
+    );
+  });
+
+  it('offers salon registration from the public phone step', () => {
+    renderAuth();
+    const registerSalon = screen.getByTestId('auth-register-salon');
+
+    expect(registerSalon).toHaveRole('link');
+    expect(registerSalon).toHaveAttribute('href', '/business/register');
+    expect(registerSalon).toHaveTextContent('ثبت سالن');
   });
 
   it('rejects an invalid phone with an inline error and no API call', async () => {

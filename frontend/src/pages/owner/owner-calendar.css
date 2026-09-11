@@ -34,6 +34,13 @@
   display: none;
 }
 
+/* Date values can wrap to two lines; keep their paired time trigger aligned. */
+.owner-calendar-time-fields > div > button,
+.owner-calendar-time-fields > label > button {
+  height: 4.5rem;
+  min-height: 4.5rem;
+}
+
 /* Day schedule keeps time on a vertical axis so long services occupy
    their actual height and the whole day remains easy to scan. */
 .owner-calendar-day-grid {

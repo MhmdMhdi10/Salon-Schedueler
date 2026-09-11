@@ -80,6 +80,9 @@ export class SalonWorld {
       data,
       headers: {
         ...this.requestHeaders,
+        ...(resolvedPath.endsWith('/auth/otp/verify') || resolvedPath.endsWith('/auth/refresh')
+          ? { 'X-Auth-Client': 'mobile' }
+          : {}),
         ...(this.tokenFor(actorName)
           ? { Authorization: `Bearer ${this.tokenFor(actorName)}` }
           : {}),
@@ -142,8 +145,12 @@ export class SalonWorld {
       salonName: String(created.body.salonName),
       ownerPhone,
       serviceName,
-      date: isoDateFromToday(2),
-      futureDate: isoDateFromToday(5),
+      // New salons are bookable today and tomorrow by default.
+      date: isoDateFromToday(1),
+      // Keep availability-backed E2E flows inside the default today/tomorrow
+      // booking window. Longer dates remain available through laterDate for
+      // calendar and closure scenarios that do not create bookings.
+      futureDate: isoDateFromToday(1),
       laterDate: isoDateFromToday(8),
     };
   }
