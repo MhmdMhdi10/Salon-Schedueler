@@ -150,13 +150,23 @@
 /* Mobile keeps one primary booking CTA and one compact management entry point
    above the floating tab bar. The secondary actions stay in a sheet. */
 @media (max-width: 63.9375rem) {
+  /* Keep every calendar FAB above the same bottom inset used by
+     OwnerBottomTabs. Android Chrome can report both safe-area and visual
+     viewport insets as zero, so the runtime Android fallback must be shared
+     here instead of only moving the dock. */
   .owner-calendar-page {
-    padding-block-end: calc(7rem + env(safe-area-inset-bottom));
-    scroll-padding-block-end: calc(7rem + env(safe-area-inset-bottom));
+    --owner-calendar-bottom-inset: max(
+      env(safe-area-inset-bottom),
+      var(--visual-viewport-bottom-inset, 0rem),
+      var(--android-navigation-inset, 0rem)
+    );
+    padding-block-end: calc(7rem + var(--owner-calendar-bottom-inset));
+    scroll-padding-block-end: calc(7rem + var(--owner-calendar-bottom-inset));
     /* OwnerBottomTabs is ~66px tall and sits 12px above the viewport edge.
        Keep calendar CTAs above its upper edge with a visible 24px breathing
-       gap, including devices with a bottom safe area. */
-    --owner-calendar-actions-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+       gap, including Android system navigation and devices with a bottom safe
+       area. */
+    --owner-calendar-actions-bottom: calc(6.5rem + var(--owner-calendar-bottom-inset));
   }
 
   .owner-calendar-actions {
