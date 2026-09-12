@@ -725,6 +725,11 @@ test.describe('booking state machine journeys', () => {
         token: owner,
       },
     );
+    await apiJson(request, `/api/salons/${salon.salonId}/booking-policy`, {
+      method: 'PUT',
+      data: { bookingWindowDays: 7, bookingStartOffsetDays: 0 },
+      token: owner,
+    });
     const staff = await staffList(request, salon.salonId, owner);
     const ownerStaff = staff.staff.find((member) => member.role === 'Owner')!;
     const date = isoDateFromToday(2);

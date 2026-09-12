@@ -45,7 +45,7 @@ export default defineConfig({
     },
     {
       name: 'functional',
-      testMatch: /(?:functional|full-matrix)\.spec\.ts/,
+      testMatch: /(?:functional|full-matrix|qa-final|scenario-coverage)\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
     },
     {

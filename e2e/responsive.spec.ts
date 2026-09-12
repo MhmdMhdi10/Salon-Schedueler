@@ -70,10 +70,38 @@ test('owner panel navigation and primary surfaces fit current viewport', async (
     const nav = page.getByTestId('owner-bottom-tabs');
     await expect(nav).toBeVisible();
     const box = await nav.boundingBox();
-    expect(box?.height ?? 0, 'mobile bottom nav should be comfortably tappable').toBeGreaterThanOrEqual(64);
+    expect(
+      box?.height ?? 0,
+      'mobile bottom nav should be comfortably tappable',
+    ).toBeGreaterThanOrEqual(64);
     await expect(page.getByRole('link', { name: 'تقویم' })).toBeVisible();
   } else {
     await expect(page.getByLabel('ناوبری پنل مدیریت')).toBeVisible();
   }
+  expect(pageErrors).toEqual([]);
+});
+
+test('platform admin mobile drawer navigates and stays within viewport', async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 0) >= 1024, 'mobile-only platform shell check');
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+
+  await loginViaUi(page, '09120000999', /\/platform-admin(?:\?|$)/);
+  await page.goto('/platform-admin', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
+
+  await page.getByRole('button', { name: 'باز کردن منوی مدیریت' }).click();
+  const drawer = page.getByRole('dialog', { name: 'منوی مدیریت' });
+  await expect(drawer).toBeVisible();
+  await drawer.getByRole('menuitem', { name: 'عملیات کسب‌وکار' }).click();
+  await drawer.getByText('سالن‌ها', { exact: true }).click();
+  await expect(page).toHaveURL(/\/platform-admin\/salons(?:\?|$)/);
+  await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
+
+  const metrics = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
   expect(pageErrors).toEqual([]);
 });

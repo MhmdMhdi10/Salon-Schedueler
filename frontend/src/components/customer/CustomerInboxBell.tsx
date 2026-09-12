@@ -35,6 +35,7 @@ export function CustomerInboxBell() {
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const anchorRef = useRef<HTMLDivElement>(null);
+  const readOnOpenRef = useRef(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -118,6 +119,20 @@ export function CustomerInboxBell() {
     }
   }, [notifications, unread]);
 
+  // Opening the inbox marks current notifications as seen, matching the salon
+  // panel. Wait for the initial list request when the bell is clicked first.
+  useEffect(() => {
+    if (!open || !readOnOpenRef.current || unread <= 0 || busy) return;
+    readOnOpenRef.current = false;
+    void markAll();
+  }, [open, unread, busy, markAll]);
+
+  const toggleOpen = () => {
+    const nextOpen = !open;
+    setOpen(nextOpen);
+    readOnOpenRef.current = nextOpen;
+  };
+
   const recent = notifications.slice(0, 8);
   const renderedNotifications = useMemo(() => {
     if (loading && recent.length === 0) {
@@ -191,7 +206,7 @@ export function CustomerInboxBell() {
     <div ref={anchorRef} className="relative" data-testid="customer-notifications-header">
       <button
         type="button"
-        onClick={() => setOpen((current) => !current)}
+        onClick={toggleOpen}
         aria-label="اعلان‌های حساب کاربری"
         aria-expanded={open}
         aria-haspopup="dialog"

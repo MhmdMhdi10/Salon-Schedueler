@@ -137,7 +137,6 @@ describe('AppShell', () => {
     fireEvent.click(bell);
     const dialog = await screen.findByRole('dialog', { name: 'اعلان‌های حساب کاربری' });
     expect(within(dialog).getByText('نوبت تأیید شد')).toBeInTheDocument();
-    fireEvent.click(within(dialog).getByRole('button', { name: 'خواندن همه' }));
     await waitFor(() => expect(mockMarkAllCustomerNotificationsRead).toHaveBeenCalledTimes(1));
   });
 
