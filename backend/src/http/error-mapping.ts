@@ -55,10 +55,6 @@ export function mapDomainError(err: unknown): MappedError {
   if (domainCode === 'APPOINTMENT_NOT_FOUND' || domainCode === 'SALON_NOT_FOUND') {
     return { status: 404, code: domainCode };
   }
-  if (domainCode === 'REFUND_PROOF_REQUIRED') {
-    return { status: 400, code: domainCode };
-  }
-
   if (err instanceof ReferralConflictError) {
     return { status: 409, code: 'REFERRAL_EXISTS' };
   }

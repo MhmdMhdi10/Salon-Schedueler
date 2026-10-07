@@ -52,8 +52,8 @@ export class MelliPayamakSharedOtpAdapter implements OtpProvider, SmsTemplatePro
 
   async sendOtp(phone: string, requestedCode?: string): Promise<OtpDeliveryResult> {
     const code = requestedCode?.trim() || this.generateOtpCode();
-    if (!/^\d{4,10}$/.test(code)) {
-      return this.fail(phone, 'OTP code must contain 4 to 10 digits');
+    if (!/^\d{4}$/.test(code)) {
+      return this.fail(phone, 'OTP code must contain exactly 4 digits');
     }
 
     const delivery = await this.sendTemplate(phone, this.bodyId, [code]);
@@ -125,7 +125,7 @@ export class MelliPayamakSharedOtpAdapter implements OtpProvider, SmsTemplatePro
   }
 
   private generateOtpCode(): string {
-    return (crypto.randomBytes(4).readUInt32BE(0) % 1_000_000).toString().padStart(6, '0');
+    return (crypto.randomBytes(4).readUInt32BE(0) % 10_000).toString().padStart(4, '0');
   }
 
   private async readResponse(response: Response): Promise<MelliPayamakResponse | undefined> {

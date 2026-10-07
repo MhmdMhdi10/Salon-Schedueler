@@ -134,7 +134,7 @@ export function PanelHeader({ surface, brandLabel, themeControl, onSignOut }: Pa
 
           {isAuthenticated && !isPlatformAdmin && (
             <Link
-              to="/support"
+              to={isOwnerSurface ? '/owner/support' : '/support'}
               data-testid="header-support-link"
               aria-label="پشتیبانی و گزارش خطا"
               className={cn(

@@ -15,6 +15,63 @@ import {
 const dateRange = () => ({ from: isoDateFromToday(-1), to: isoDateFromToday(30) });
 
 test.describe('authentication and customer journeys', () => {
+  test('first-time salon login completes onboarding before opening the owner panel', async ({
+    page,
+    request,
+  }) => {
+    const phone = uniquePhone('8');
+    await page.goto('/auth?intent=salon');
+    await page.getByLabel('شماره موبایل').fill(phone);
+    await page.getByRole('button', { name: 'دریافت کد', exact: true }).click();
+
+    await expect(page).toHaveURL(/\/business\/register(?:\?|$)/, { timeout: 5_000 });
+    await expect(page.getByTestId('register-salon-page')).toBeVisible();
+
+    const salon = await registerSalonViaUi(page, 'E2E First Salon Login', phone);
+    await expect(page.getByTestId('owner-calendar-page')).toBeVisible();
+    const ownerSession = await loginWithApi(request, phone);
+    const principal = await apiJson<{
+      principal: { role?: string; salonId?: string };
+    }>(request, '/api/me', { token: ownerSession.accessToken });
+    expect(principal.principal).toMatchObject({ role: 'Owner', salonId: salon.salonId });
+  });
+
+  test('an authenticated customer can start salon onboarding from salon login', async ({
+    page,
+    request,
+  }) => {
+    const customer = await loginWithApi(request, uniquePhone('7'));
+    await restoreSession(page, customer.refreshToken, /\/account(?:\?|$)/);
+    await page.goto('/auth?intent=salon');
+
+    await expect(page).toHaveURL(/\/business\/register(?:\?|$)/, { timeout: 5_000 });
+    await expect(page.getByTestId('register-salon-page')).toBeVisible();
+  });
+
+  test('an owner without a salon context cannot fall back to an empty default panel', async ({
+    page,
+    request,
+  }) => {
+    const salon = await registerSalonViaApi(request, 'E2E Missing Owner Context');
+    await page.route('**/api/me', (route) =>
+      route.fulfill({
+        status: 200,
+        json: {
+          principal: {
+            id: 'owner-without-salon-context',
+            role: 'Owner',
+            staffMemberId: 'owner-without-salon-context',
+          },
+        },
+      }),
+    );
+    await restoreSession(page, salon.refreshToken);
+    await page.goto('/owner/calendar');
+
+    await expect(page).toHaveURL(/\/business\/register(?:\?|$)/, { timeout: 5_000 });
+    await expect(page.getByTestId('register-salon-page')).toBeVisible();
+  });
+
   test('invalid phone is explained, customer login works, and landing stays locked', async ({
     page,
   }) => {
@@ -33,7 +90,8 @@ test.describe('authentication and customer journeys', () => {
     await page.goto('/auth');
     await expect(page).toHaveURL(/\/account(?:\?|$)/);
     await page.goto('/owner/calendar');
-    await expect(page).toHaveURL(/\/account(?:\?|$)/);
+    await expect(page).toHaveURL(/\/business\/register(?:\?|$)/);
+    await expect(page.getByTestId('register-salon-page')).toBeVisible();
   });
 });
 
@@ -86,11 +144,9 @@ test.describe('owner onboarding and configuration journey', () => {
     expect(stylist?.role).toBe('Stylist');
 
     const stylistTokens = await loginWithApi(request, stylistPhone);
-    const beforeGrant = await apiCall(
-      request,
-      `/api/staff/${stylist!.id}/availability-blocks`,
-      { token: stylistTokens.accessToken },
-    );
+    const beforeGrant = await apiCall(request, `/api/staff/${stylist!.id}/availability-blocks`, {
+      token: stylistTokens.accessToken,
+    });
     expect(beforeGrant.response.status()).toBe(403);
 
     await page.getByRole('button', { name: `ویرایش ${stylistName}`, exact: true }).click();
@@ -179,11 +235,9 @@ test.describe('RBAC and protected resource matrix', () => {
       `/api/salons/${salon.salonId}/analytics?from=${range.from}&to=${range.to}`,
       { token: ownerToken },
     );
-    const ownerStaff = await apiCall(
-      request,
-      `/api/salons/${salon.salonId}/staff`,
-      { token: ownerToken },
-    );
+    const ownerStaff = await apiCall(request, `/api/salons/${salon.salonId}/staff`, {
+      token: ownerToken,
+    });
     expect(ownerCalendar.response.status()).toBe(200);
     expect(ownerAnalytics.response.status()).toBe(200);
     expect(ownerStaff.response.status()).toBe(200);
@@ -195,29 +249,21 @@ test.describe('RBAC and protected resource matrix', () => {
       `/api/salons/${salon.salonId}/analytics?from=${range.from}&to=${range.to}`,
       { token: stylistTokens.accessToken },
     );
-    const stylistStaffWrite = await apiCall(
-      request,
-      `/api/salons/${salon.salonId}/staff`,
-      {
-        method: 'POST',
-        data: { fullName: 'نباید ساخته شود', role: 'Stylist', phone: uniquePhone('3') },
-        token: stylistTokens.accessToken,
-      },
-    );
+    const stylistStaffWrite = await apiCall(request, `/api/salons/${salon.salonId}/staff`, {
+      method: 'POST',
+      data: { fullName: 'نباید ساخته شود', role: 'Stylist', phone: uniquePhone('3') },
+      token: stylistTokens.accessToken,
+    });
     const adminAnalytics = await apiCall(
       request,
       `/api/salons/${salon.salonId}/analytics?from=${range.from}&to=${range.to}`,
       { token: adminTokens.accessToken },
     );
-    const adminConfigWrite = await apiCall(
-      request,
-      `/api/salons/${salon.salonId}/staff`,
-      {
-        method: 'POST',
-        data: { fullName: 'نباید ساخته شود', role: 'Stylist', phone: uniquePhone('2') },
-        token: adminTokens.accessToken,
-      },
-    );
+    const adminConfigWrite = await apiCall(request, `/api/salons/${salon.salonId}/staff`, {
+      method: 'POST',
+      data: { fullName: 'نباید ساخته شود', role: 'Stylist', phone: uniquePhone('2') },
+      token: adminTokens.accessToken,
+    });
     expect(stylistAnalytics.response.status()).toBe(403);
     expect(stylistStaffWrite.response.status()).toBe(403);
     expect(adminAnalytics.response.status()).toBe(200);
@@ -255,7 +301,10 @@ test.describe('booking, QR, and failure-state journeys', () => {
       request,
       `/api/salons/${salon.salonId}/availability?serviceId=${service!.id}&date=${bookingDate}`,
     );
-    expect(availability.slots.length, 'registered salon should expose future slots').toBeGreaterThan(0);
+    expect(
+      availability.slots.length,
+      'registered salon should expose future slots',
+    ).toBeGreaterThan(0);
 
     await clearBrowserSession(page);
     await page.goto(`/salon/${salon.salonId}/book`);
@@ -277,13 +326,15 @@ test.describe('booking, QR, and failure-state journeys', () => {
     // Blur commits the controlled field before the submit handler reads it.
     await bookingPhone.press('Tab');
     await page.getByRole('button', { name: 'دریافت کد', exact: true }).click();
-    await expect(page).toHaveURL(/\/salon\/.*\/book\/confirm|\/booking\/success/, {
-      timeout: 15_000,
-    }).catch(async () => {
-      const otpInput = page.locator('input[aria-label*="کد تایید"]').first();
-      await expect(otpInput).toBeVisible();
-      await page.getByRole('button', { name: /تایید و ورود/ }).click();
-    });
+    await expect(page)
+      .toHaveURL(/\/salon\/.*\/book\/confirm|\/booking\/success/, {
+        timeout: 15_000,
+      })
+      .catch(async () => {
+        const otpInput = page.locator('input[aria-label*="کد تایید"]').first();
+        await expect(otpInput).toBeVisible();
+        await page.getByRole('button', { name: /تایید و ورود/ }).click();
+      });
 
     // Browser OTP autofill can return directly to the confirm step. The first
     // booking also asks for the customer's display name before creating it.
@@ -309,11 +360,9 @@ test.describe('booking, QR, and failure-state journeys', () => {
     request,
   }) => {
     const trialSalon = await registerSalonViaApi(request, 'E2E QR Trial');
-    const trialQr = await apiCall(
-      request,
-      `/api/salons/${trialSalon.salonId}/qr`,
-      { token: trialSalon.accessToken },
-    );
+    const trialQr = await apiCall(request, `/api/salons/${trialSalon.salonId}/qr`, {
+      token: trialSalon.accessToken,
+    });
     expect(trialQr.response.status()).toBe(200);
 
     // QR stays available during trial: it is the acquisition entry point for

@@ -22,7 +22,7 @@ function makeServices() {
   return {
     authService: {
       requestOtp: jest.fn().mockResolvedValue(undefined),
-      requestOtpWithDetails: jest.fn().mockResolvedValue({ otpLength: 6 }),
+      requestOtpWithDetails: jest.fn().mockResolvedValue({ otpLength: 4 }),
       verifyOtp: jest.fn(),
       refresh: jest.fn(),
     },
@@ -158,15 +158,15 @@ describe('HTTP routes', () => {
 
   // ── Auth (public) ──────────────────────────────────────────────────────────
   describe('POST /api/auth/otp/request', () => {
-    it('returns the provider-reported OTP length without exposing the code', async () => {
-      fake.authService.requestOtpWithDetails.mockResolvedValue({ otpLength: 10 });
+    it('returns the four-digit OTP length without exposing the code', async () => {
+      fake.authService.requestOtpWithDetails.mockResolvedValue({ otpLength: 4 });
 
       const res = await request(app)
         .post('/api/auth/otp/request')
         .send({ phone: '+989120000000' });
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ ok: true, otpLength: 10 });
+      expect(res.body).toEqual({ ok: true, otpLength: 4 });
       expect(fake.authService.requestOtpWithDetails).toHaveBeenCalledWith(
         '+989120000000',
         { exposeCode: true },
@@ -183,17 +183,17 @@ describe('HTTP routes', () => {
       const res = await request(app)
         .post('/api/auth/otp/verify')
         .set('X-Auth-Client', 'mobile')
-        .send({ phone: '+989120000000', code: '123456' });
+        .send({ phone: '+989120000000', code: '1234' });
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ accessToken: 'access-xyz', refreshToken: 'refresh-xyz' });
-      expect(fake.authService.verifyOtp).toHaveBeenCalledWith('+989120000000', '123456');
+      expect(fake.authService.verifyOtp).toHaveBeenCalledWith('+989120000000', '1234');
     });
 
     it('maps OTP_EXPIRED to 401 OTP_EXPIRED', async () => {
       fake.authService.verifyOtp.mockRejectedValue(new AuthError('OTP_EXPIRED', 'expired'));
       const res = await request(app)
         .post('/api/auth/otp/verify')
-        .send({ phone: '+989120000000', code: '000000' });
+        .send({ phone: '+989120000000', code: '0000' });
       expect(res.status).toBe(401);
       expect(res.body).toEqual({ code: 'OTP_EXPIRED' });
     });
@@ -202,7 +202,7 @@ describe('HTTP routes', () => {
       fake.authService.verifyOtp.mockRejectedValue(new AuthError('OTP_MISMATCH', 'wrong'));
       const res = await request(app)
         .post('/api/auth/otp/verify')
-        .send({ phone: '+989120000000', code: '000000' });
+        .send({ phone: '+989120000000', code: '0000' });
       expect(res.status).toBe(401);
       expect(res.body).toEqual({ code: 'OTP_INVALID' });
     });
@@ -211,7 +211,7 @@ describe('HTTP routes', () => {
       fake.authService.verifyOtp.mockRejectedValue(new AuthError('NO_OTP', 'none'));
       const res = await request(app)
         .post('/api/auth/otp/verify')
-        .send({ phone: '+989120000000', code: '000000' });
+        .send({ phone: '+989120000000', code: '0000' });
       expect(res.status).toBe(401);
       expect(res.body).toEqual({ code: 'OTP_INVALID' });
     });
@@ -220,6 +220,18 @@ describe('HTTP routes', () => {
       const res = await request(app).post('/api/auth/otp/verify').send({ phone: '+989120000000' });
       expect(res.status).toBe(400);
       expect(res.body.code).toBe('VALIDATION_ERROR');
+      expect(fake.authService.verifyOtp).not.toHaveBeenCalled();
+    });
+
+    it('rejects OTPs that are not exactly four digits', async () => {
+      for (const code of ['123', '12345', '12a4']) {
+        const res = await request(app)
+          .post('/api/auth/otp/verify')
+          .send({ phone: '+989120000000', code });
+
+        expect(res.status).toBe(400);
+        expect(res.body.code).toBe('VALIDATION_ERROR');
+      }
       expect(fake.authService.verifyOtp).not.toHaveBeenCalled();
     });
 
@@ -232,7 +244,7 @@ describe('HTTP routes', () => {
       const res = await request(app)
         .post('/api/auth/otp/verify')
         .set('X-Auth-Client', 'web')
-        .send({ phone: '+989120000000', code: '123456' });
+        .send({ phone: '+989120000000', code: '1234' });
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ accessToken: 'access-web' });
@@ -252,7 +264,7 @@ describe('HTTP routes', () => {
         .post('/api/auth/otp/verify')
         .set('X-Auth-Client', 'mobile')
         .set('Origin', 'http://localhost:5273')
-        .send({ phone: '+989120000000', code: '123456' });
+        .send({ phone: '+989120000000', code: '1234' });
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ accessToken: 'access-browser' });
@@ -760,7 +772,10 @@ describe('HTTP routes', () => {
         .post('/api/appointments/appt-1/cancel')
         .set('Authorization', `Bearer ${staffToken('Owner')}`);
       expect(res.status).toBe(200);
-      expect(fake.cancellationFlow.cancel).toHaveBeenCalledWith('appt-1');
+      expect(fake.cancellationFlow.cancel).toHaveBeenCalledWith('appt-1', undefined, undefined, {
+        actor: 'staff',
+        kind: 'standard',
+      });
     });
 
     it('returns 404 when the appointment does not exist', async () => {

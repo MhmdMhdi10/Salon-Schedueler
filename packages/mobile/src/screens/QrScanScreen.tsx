@@ -139,12 +139,14 @@ export function QrScanScreen({ onScan, onResolved }: QrScanScreenProps) {
 
   return (
     <View testID="qr-scan-screen" style={styles.screen}>
-      <Text style={styles.title}>{t('salon.scanQr')}</Text>
+      <Text accessibilityRole="header" style={styles.title}>
+        {t('salon.scanQr')}
+      </Text>
 
       {/* Themed viewfinder: a square frame with corner accents. The live camera
           preview mounts behind the accents when permission is granted; the
           permission gate / loading state render as overlays otherwise. */}
-      <View style={styles.frame} accessibilityRole="image" accessibilityLabel={t('salon.scanQr')}>
+      <View style={styles.frame}>
         {useCamera && permission?.granted ? (
           <View style={styles.cameraContainer}>
             <CameraView

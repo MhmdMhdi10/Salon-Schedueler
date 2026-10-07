@@ -1,4 +1,6 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
+import { mkdirSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   apiCall,
   apiJson,
@@ -10,6 +12,9 @@ import {
 } from './fixtures';
 
 test.describe.configure({ timeout: 180_000 });
+
+const SCREENSHOT_DIR = resolve(process.env.QA_ARTIFACT_DIR ?? 'artifacts/qa', 'screenshots');
+mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
 const PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
@@ -197,8 +202,8 @@ test.describe('remaining authentication and tenant variants', () => {
       method: 'POST',
       data: { phone: first.ownerPhone },
     });
-    expect(firstOtp.devOtp).toMatch(/^\d{6}$/);
-    expect(secondOtp.devOtp).toMatch(/^\d{6}$/);
+    expect(firstOtp.devOtp).toMatch(/^\d{4}$/);
+    expect(secondOtp.devOtp).toMatch(/^\d{4}$/);
 
     const superseded = await apiCall(request, '/api/auth/otp/verify', {
       method: 'POST',
@@ -530,7 +535,7 @@ test.describe('booking, profile, waitlist, support, and referral variants', () =
     });
   });
 
-  test('creates, claims, scopes, and rejects premature referral redemption', async ({
+  test('keeps referrals unlinked when a salon registers without referral support', async ({
     request,
   }) => {
     const referrer = await loginWithApi(request, uniquePhone('3'));
@@ -568,7 +573,6 @@ test.describe('booking, profile, waitlist, support, and referral variants', () =
         salonName: 'سالن معرفی‌شده',
         ownerName: 'صاحب سالن معرفی‌شده',
         phone: ownerPhone,
-        referralToken: created.body.referral.claimToken,
         workMode: 'fixed_salon',
         services: [{ name: 'خدمت معرفی‌شده', durationMinutes: 30, priceRial: 300000 }],
         chairCount: 1,
@@ -576,18 +580,18 @@ test.describe('booking, profile, waitlist, support, and referral variants', () =
     });
     expect(linked.response.status()).toBe(201);
     const linkedOwner = await loginWithApi(request, ownerPhone);
-    const claimedPreview = await apiJson<{ referral: { status: string } }>(
+    const unlinkedPreview = await apiJson<{ referral: { status: string } }>(
       request,
       `/api/referrals/claim/${created.body.referral.claimToken}`,
     );
-    expect(claimedPreview.referral.status).toBe('claimed');
+    expect(unlinkedPreview.referral.status).toBe('submitted');
 
     const customerList = await apiJson<{
       referrals: Array<{ id: string; salonId: string | null }>;
     }>(request, '/api/customers/me/referrals', { token: referrer.accessToken });
     expect(customerList.referrals).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: created.body.referral.id, salonId: linked.body.salonId }),
+        expect.objectContaining({ id: created.body.referral.id, salonId: null }),
       ]),
     );
     const salonList = await apiJson<{ referrals: Array<{ id: string; salonId: string | null }> }>(
@@ -595,7 +599,7 @@ test.describe('booking, profile, waitlist, support, and referral variants', () =
       `/api/salons/${linked.body.salonId}/referrals`,
       { token: linkedOwner.accessToken },
     );
-    expect(salonList.referrals).toEqual(
+    expect(salonList.referrals).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ id: created.body.referral.id })]),
     );
     const otherSalon = await registerSalonViaApi(request, 'E2E Wrong Referral Salon');
@@ -610,13 +614,13 @@ test.describe('booking, profile, waitlist, support, and referral variants', () =
       `/api/referrals/${created.body.referral.id}/redeem`,
       { method: 'POST', token: linkedOwner.accessToken },
     );
-    expect(prematureRedeem.response.status()).toBe(409);
-    expect(prematureRedeem.body).toMatchObject({ code: 'NOT_REWARDABLE' });
+    expect(prematureRedeem.response.status()).toBe(403);
+    expect(prematureRedeem.body).toMatchObject({ code: 'WRONG_SALON' });
   });
 });
 
 test.describe('appointment lifecycle and payment variants', () => {
-  test('covers direct reschedule, staff proposal accept/reject, cancellation proof, and report', async ({
+  test('covers direct reschedule, staff proposal accept/reject, cancellation policy, and report', async ({
     request,
   }) => {
     const salon = await registerScenarioSalon(request, 'E2E Lifecycle', 'hybrid');
@@ -773,9 +777,8 @@ test.describe('appointment lifecycle and payment variants', () => {
         method: 'POST',
         token: owner,
         data: {
-          kind: 'emergency',
+          kind: 'standard',
           reason: 'مشتری درخواست بازگشت وجه دارد',
-          refundProof: { fileName: 'refund.png', mimeType: 'image/png', dataBase64: PNG_BASE64 },
         },
       },
     );
@@ -784,19 +787,9 @@ test.describe('appointment lifecycle and payment variants', () => {
       cancellation: { kind: string; cancelledBy: string; reason: string };
     }>(request, `/api/appointments/${cancelled.appointment.id}/cancellation`, { token: owner });
     expect(cancellationRecord.cancellation).toMatchObject({
-      kind: 'emergency',
+      kind: 'standard',
       cancelledBy: 'staff',
       reason: 'مشتری درخواست بازگشت وجه دارد',
-    });
-    const refundProof = await apiJson<{
-      proof: { fileName: string; mimeType: string; dataBase64: string };
-    }>(request, `/api/appointments/${cancelled.appointment.id}/cancellation/refund-proof`, {
-      token: owner,
-    });
-    expect(refundProof.proof).toMatchObject({
-      fileName: 'refund.png',
-      mimeType: 'image/png',
-      dataBase64: PNG_BASE64,
     });
 
     const reportStart = await nextSlot(
@@ -1264,7 +1257,7 @@ test.describe('platform administrator API and UI matrix', () => {
     await page.goto('/platform-admin', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible({ timeout: 15_000 });
     await page.screenshot({
-      path: 'artifacts/qa-screenshots/platform-admin-final.png',
+      path: resolve(SCREENSHOT_DIR, 'platform-admin-final.png'),
       fullPage: true,
     });
   });

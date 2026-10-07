@@ -62,7 +62,10 @@ function resolveWsUrl(token: string): string {
  * / bell bump). Persistent state lives in the page that calls this together
  * with the REST list endpoint — see `OwnerNotificationsPage`.
  */
-export function useInboxWs(salonId: string | null | undefined): UseInboxWsResult {
+export function useInboxWs(
+  salonId: string | null | undefined,
+  channel: 'salon' | 'customer' = 'salon',
+): UseInboxWsResult {
   const [lastEvent, setLastEvent] = useState<InboxNotification | null>(null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +76,7 @@ export function useInboxWs(salonId: string | null | undefined): UseInboxWsResult
   const connect = useCallback(() => {
     if (cleanRef.current) return;
     const token = getAccessToken();
-    if (!token || !salonId) {
+    if (!token || (channel === 'salon' && !salonId)) {
       setError('no-auth');
       return;
     }
@@ -98,8 +101,14 @@ export function useInboxWs(salonId: string | null | undefined): UseInboxWsResult
     ws.onmessage = (msg) => {
       try {
         const data = JSON.parse(msg.data);
-        if (data.type === 'notification' && data.payload?.id) {
-          setLastEvent(data.payload as InboxNotification);
+        const eventType = channel === 'customer' ? 'customer-notification' : 'notification';
+        if (data.type === eventType && data.payload?.id) {
+          setLastEvent({
+            salonId: salonId ?? '',
+            audience: channel === 'customer' ? 'customer' : 'all-staff',
+            staffMemberId: null,
+            ...data.payload,
+          } as InboxNotification);
         }
       } catch {
         // seam noise — ignore
@@ -116,7 +125,7 @@ export function useInboxWs(salonId: string | null | undefined): UseInboxWsResult
     ws.onerror = () => {
       setError('ws-error');
     };
-  }, [salonId]);
+  }, [salonId, channel]);
 
   useEffect(() => {
     cleanRef.current = false;

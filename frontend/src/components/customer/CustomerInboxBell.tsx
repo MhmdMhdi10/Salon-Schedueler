@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Check, CheckCheck } from 'lucide-react';
 import { customerApi, type CustomerNotification } from '../../api/client';
+import { useInboxWs } from '../../hooks/useInboxWs';
 import {
   CUSTOMER_NOTIFICATIONS_CHANGED,
   announceCustomerNotificationsChanged,
@@ -30,6 +31,7 @@ function relativeTime(iso: string): string {
 /** Customer account notification bell shown in the `/account` header. */
 export function CustomerInboxBell() {
   const navigate = useNavigate();
+  const { lastEvent } = useInboxWs(null, 'customer');
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<CustomerNotification[]>([]);
   const [loading, setLoading] = useState(false);
@@ -64,6 +66,13 @@ export function CustomerInboxBell() {
       window.removeEventListener(CUSTOMER_NOTIFICATIONS_CHANGED, handleChanged);
     };
   }, [refresh]);
+
+  useEffect(() => {
+    if (!lastEvent || notifications.some((item) => item.id === lastEvent.id)) return;
+    const event = lastEvent as unknown as CustomerNotification;
+    setNotifications((current) => [event, ...current.filter((item) => item.id !== event.id)]);
+    announceCustomerNotificationsChanged();
+  }, [lastEvent, notifications]);
 
   useEffect(() => {
     if (!open) return;

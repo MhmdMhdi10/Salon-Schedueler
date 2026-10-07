@@ -95,9 +95,6 @@ const CustomerDashboardPage = lazy(() =>
   import('./pages/CustomerDashboardPage').then((m) => ({ default: m.CustomerDashboardPage })),
 );
 const SupportPage = lazy(() => import('./pages/SupportPage').then((m) => ({ default: m.SupportPage })));
-const ReferralPage = lazy(() =>
-  import('./pages/ReferralPage').then((m) => ({ default: m.ReferralPage })),
-);
 const AvailabilityPage = lazy(() =>
   import('./pages/AvailabilityPage').then((m) => ({
     default: m.AvailabilityPage,
@@ -331,8 +328,9 @@ export function App() {
                      * `OwnerLayout` gates the area (auth bootstrap + RBAC) and the
                      * nested pages render inside its `<Outlet>`.
                      */}
-                    <Route path="/owner" element={<OwnerLayout />}>
+                      <Route path="/owner" element={<OwnerLayout />}>
                       <Route index element={<Navigate to="/owner/calendar" replace />} />
+                      <Route path="support" element={<SupportPage />} />
                       <Route path="profile" element={<OwnerProfilePage />} />
                       <Route path="calendar" element={<OwnerCalendarPage />} />
                       <Route path="clients" element={<OwnerClientsPage />} />
@@ -417,7 +415,7 @@ export function App() {
                         <Route path="/account" element={<CustomerDashboardPage />} />
                         <Route path="/salon/:salonId/waitlist" element={<WaitlistPage />} />
                         <Route path="/my-salons" element={<MySalonsPage />} />
-                        <Route path="/refer-salon" element={<ReferralPage />} />
+                        <Route path="/refer-salon" element={<Navigate to="/account" replace />} />
                       </Route>
                       <Route path="/qr/:payload" element={<QrLandingPage />} />
                       {/*

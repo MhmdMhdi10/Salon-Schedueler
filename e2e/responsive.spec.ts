@@ -105,3 +105,39 @@ test('platform admin mobile drawer navigates and stays within viewport', async (
   expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
   expect(pageErrors).toEqual([]);
 });
+
+test('mobile salon registration keeps suggested services scroll area tall and scrollable', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile-responsive', 'mobile-only service list check');
+
+  await page.goto('/business/register');
+  await page.getByTestId('work-mode-starting').click();
+  await page.getByRole('button', { name: 'ادامه', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'برای شروع چه شرایطی دارید؟' })).toBeVisible();
+  await page.getByRole('button', { name: 'رد کردن این مرحله' }).click();
+  await expect(page.getByRole('heading', { name: 'حوزه کاری‌تان چیست؟' })).toBeVisible();
+  await page.getByRole('button', { name: 'رد کردن این مرحله' }).click();
+  await page.locator('#salonName').fill('سالن QA');
+  await page.locator('#ownerName').fill('مدیر QA');
+  await page.getByRole('button', { name: 'ادامه', exact: true }).click();
+
+  const list = page.getByTestId('suggested-services-list');
+  await expect(list).toBeVisible();
+  const dimensions = await list.evaluate((element) => {
+    const panel = element.parentElement!;
+    return {
+      panelHeight: panel.getBoundingClientRect().height,
+      listHeight: element.getBoundingClientRect().height,
+      listScrollHeight: element.scrollHeight,
+    };
+  });
+  expect(dimensions.panelHeight).toBeGreaterThanOrEqual(640);
+  expect(dimensions.listHeight).toBeGreaterThanOrEqual(512);
+  expect(dimensions.listScrollHeight).toBeGreaterThan(dimensions.listHeight);
+
+  await list.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+});

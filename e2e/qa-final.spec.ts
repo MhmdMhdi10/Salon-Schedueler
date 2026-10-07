@@ -11,7 +11,7 @@ import {
   uniquePhone,
 } from './fixtures';
 
-const SCREENSHOT_DIR = resolve(process.cwd(), 'artifacts/qa-screenshots');
+const SCREENSHOT_DIR = resolve(process.env.QA_ARTIFACT_DIR ?? 'artifacts/qa', 'screenshots');
 mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
 type RequestContext = Parameters<typeof apiJson>[0];

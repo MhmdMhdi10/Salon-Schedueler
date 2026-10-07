@@ -132,7 +132,7 @@ import { ToastProvider } from '../../../components/ui/Toast';
  */
 function renderOwnerApp(role: OwnerRole, initialPath: string) {
   getAccessToken.mockReturnValue('access-token');
-  getMe.mockResolvedValue({ principal: { id: 'u1', role } });
+  getMe.mockResolvedValue({ principal: { id: 'u1', role, salonId: 'salon-test' } });
 
   return render(
     <HelmetProvider>
@@ -214,7 +214,9 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
     expect(
       within(sheet).getByRole('button', { name: 'تعطیلی‌ها و محدودیت‌ها' }),
     ).toBeInTheDocument();
-    expect(within(sheet).queryByRole('button', { name: 'بستن فوری امروز' })).not.toBeInTheDocument();
+    expect(
+      within(sheet).queryByRole('button', { name: 'بستن فوری امروز' }),
+    ).not.toBeInTheDocument();
   });
 
   it('closes availability after reopening a day instead of re-adding the closure', async () => {
@@ -231,8 +233,12 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'باز کردن دوباره' }));
 
-    await waitFor(() => expect(removeHoliday).toHaveBeenCalledWith(expect.any(String), 'holiday-1'));
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'اعمال در تقویم' })).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(removeHoliday).toHaveBeenCalledWith(expect.any(String), 'holiday-1'),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'اعمال در تقویم' })).not.toBeInTheDocument(),
+    );
   });
 
   it('opens recurring weekly hours on a separate page with back navigation', async () => {
@@ -313,7 +319,9 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
       await screen.findByRole('option', { name: 'کارت‌به‌کارت و ارسال رسید' }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'نقدی در محل' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: 'پرداخت آنلاین از درگاه' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('option', { name: 'پرداخت آنلاین از درگاه' }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByTestId('holidays-list')).not.toBeInTheDocument();
     expect(screen.queryByTestId('approval-policy')).not.toBeInTheDocument();
     expect(screen.queryByTestId('approval-loading')).not.toBeInTheDocument();
@@ -376,21 +384,23 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
     const picker = await screen.findByTestId('service-staff-picker');
     expect(picker).toHaveTextContent('انتخاب اعضای تیم');
     expect(screen.queryByRole('button', { name: 'ذخیره تغییرات خدمت' })).not.toBeInTheDocument();
-    expect(
-      within(picker).getByRole('checkbox', { name: /سارا محمدی/ }),
-    ).toHaveAttribute('aria-checked', 'true');
+    expect(within(picker).getByRole('checkbox', { name: /سارا محمدی/ })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
 
     fireEvent.click(within(picker).getByRole('checkbox', { name: /نرگس احمدی/ }));
     fireEvent.click(within(picker).getByRole('button', { name: 'ذخیره اعضا' }));
 
     await waitFor(() =>
-      expect(setServiceStaff).toHaveBeenCalledWith(
-        expect.any(String),
-        'service-1',
-        ['staff-1', 'staff-2'],
-      ),
+      expect(setServiceStaff).toHaveBeenCalledWith(expect.any(String), 'service-1', [
+        'staff-1',
+        'staff-2',
+      ]),
     );
-    await waitFor(() => expect(screen.queryByTestId('service-staff-picker')).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByTestId('service-staff-picker')).not.toBeInTheDocument(),
+    );
   });
 
   it('does not send nullable variable-duration fields for a fixed service', async () => {

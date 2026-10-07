@@ -569,6 +569,24 @@ async function exerciseAppointmentBranches(): Promise<void> {
   await hit(customerCancellationApp, 'POST', '/appointments/appointment-1/cancel', {
     kind: 'emergency',
   });
+  await hit(
+    appFor(appointmentRouter(services as Services, allowRole), OWNER),
+    'POST',
+    '/appointments/appointment-1/cancel',
+    { kind: 'standard', refundProof: {} },
+  );
+  await hit(
+    appFor(appointmentRouter(services as Services, allowRole), CUSTOMER),
+    'POST',
+    '/appointments/appointment-1/cancel',
+    { kind: 'standard', reason: 'Customer cancellation' },
+  );
+  await hit(
+    appFor(appointmentRouter(services as Services, allowRole), CUSTOMER),
+    'POST',
+    '/appointments/appointment-1/cancel',
+    { kind: 'standard' },
+  );
   await hit(cancellationApp, 'POST', '/appointments/appointment-1/report-customer', {});
   await hit(cancellationApp, 'POST', '/appointments/appointment-1/report-customer', {
     reason: 'x'.repeat(1001),
@@ -1567,6 +1585,7 @@ async function exerciseAdminBranches(): Promise<void> {
   );
   await hit(missingProfileApp, 'GET', '/salons/salon-1/customers/customer-1');
   await hit(stylistCalendarApp, 'GET', '/salons/salon-1/customers/customer-1');
+  await hit(stylistCalendarApp, 'GET', '/appointments/appointment-1/customer');
   await hit(
     appFor(adminRouter(services as Services, allowRole), {
       id: 'owner-no-staff',
@@ -2871,8 +2890,8 @@ async function exerciseAuthBranches(): Promise<void> {
   const authServices = {
     authService: {
       requestOtpWithDetails: async () => ({
-        otpLength: 6,
-        ...(otpDetailsCalls++ % 2 === 1 ? { devOtp: '123456' } : {}),
+        otpLength: 4,
+        ...(otpDetailsCalls++ % 2 === 1 ? { devOtp: '1234' } : {}),
       }),
       verifyOtp: async () => ({
         accessToken: 'access',
@@ -2891,12 +2910,12 @@ async function exerciseAuthBranches(): Promise<void> {
   await hit(app, 'POST', '/auth/otp/request', { phone: '09121110001' });
   await hit(app, 'POST', '/auth/otp/request', { phone: '09121110002' });
   await hit(app, 'POST', '/auth/otp/verify', {});
-  await hit(app, 'POST', '/auth/otp/verify', { phone: '09121110001', code: '123456' });
+  await hit(app, 'POST', '/auth/otp/verify', { phone: '09121110001', code: '1234' });
   await hit(
     app,
     'POST',
     '/auth/otp/verify',
-    { phone: '09121110001', code: '123456' },
+    { phone: '09121110001', code: '1234' },
     {
       'X-Auth-Client': 'mobile',
       Origin: 'http://localhost:5273',

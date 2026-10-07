@@ -47,9 +47,22 @@ export interface CustomerCancellationNotify {
     notice?: {
       kind?: CancellationDetails['kind'];
       reason?: string;
+      cancelledBySalon?: boolean;
       refundDueHours?: number;
     },
   ): Promise<void>;
+}
+
+export interface CancellationInbox {
+  emit(input: {
+    salonId: string;
+    audience?: 'owner' | 'admin' | 'stylist' | 'all-staff';
+    staffMemberId?: string | null;
+    type: string;
+    title: string;
+    body: string;
+    payload?: Record<string, unknown> | null;
+  }): Promise<unknown>;
 }
 
 /** Constructor dependencies for {@link CancellationFlow}. */
@@ -63,6 +76,7 @@ export interface CancellationFlowDeps {
    * that don't need it keep working.
    */
   notificationService?: CustomerCancellationNotify;
+  inboxService?: CancellationInbox;
   logger?: Logger;
 }
 
@@ -80,6 +94,7 @@ export class CancellationFlow {
   private readonly schedulingEngine: HoldReleaser;
   private readonly waitlistService: WaitlistNotify;
   private readonly notificationService?: CustomerCancellationNotify;
+  private readonly inboxService?: CancellationInbox;
   private readonly logger: Logger;
 
   constructor(deps: CancellationFlowDeps) {
@@ -87,6 +102,7 @@ export class CancellationFlow {
     this.schedulingEngine = deps.schedulingEngine;
     this.waitlistService = deps.waitlistService;
     this.notificationService = deps.notificationService;
+    this.inboxService = deps.inboxService;
     this.logger = deps.logger ?? console;
   }
 
@@ -120,10 +136,25 @@ export class CancellationFlow {
             ? {
                 kind: details.kind,
                 reason: details.reason,
-                refundDueHours: details.refundDueHours,
+                cancelledBySalon: details.actor === 'staff',
               }
             : undefined,
         ),
+        this.logger,
+      );
+    }
+    if (this.inboxService) {
+      const inbox = this.inboxService;
+      await safelyNotify(
+        () => inbox.emit({
+          salonId: appointment.salonId,
+          audience: 'all-staff',
+          staffMemberId: appointment.staffMemberId,
+          type: 'appointment.cancelled',
+          title: 'نوبت لغو شد',
+          body: 'نوبت لغو شد و زمان آن آزاد شد.',
+          payload: { appointmentId: appointment.id, date: appointment.startAt.toISOString() },
+        }),
         this.logger,
       );
     }

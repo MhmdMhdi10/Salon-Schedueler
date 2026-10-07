@@ -157,7 +157,8 @@ describe('RegisterSalonPage services step', () => {
     const list = within(step).getByTestId('suggested-services-list');
 
     expect(list).toHaveClass('overflow-y-auto');
-    expect(list.parentElement).toHaveClass('h-[18rem]');
+    expect(list.parentElement).toHaveClass('h-[48rem]', 'shrink-0');
+    expect(list).toHaveClass('min-h-[40rem]');
     expect(within(list).getByRole('checkbox', { name: 'کراتین مو' })).toBeInTheDocument();
 
     fireEvent.change(search, { target: { value: 'کراتین' } });

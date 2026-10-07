@@ -1,4 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
+import { join, resolve } from 'node:path';
+
+const playwrightArtifacts = join(
+  resolve(process.env.QA_ARTIFACT_DIR ?? 'artifacts/qa'),
+  'playwright',
+);
 
 /**
  * Browser-level contract for the web workspace.
@@ -10,7 +16,7 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './e2e',
-  outputDir: 'artifacts/playwright-test-results',
+  outputDir: join(playwrightArtifacts, 'test-results'),
   timeout: 45_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,
@@ -19,8 +25,8 @@ export default defineConfig({
   workers: 1,
   reporter: [
     ['list'],
-    ['html', { outputFolder: 'artifacts/playwright-report', open: 'never' }],
-    ['json', { outputFile: 'artifacts/playwright-results.json' }],
+    ['html', { outputFolder: join(playwrightArtifacts, 'report'), open: 'never' }],
+    ['json', { outputFile: join(playwrightArtifacts, 'results.json') }],
   ],
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:5273',
@@ -45,7 +51,8 @@ export default defineConfig({
     },
     {
       name: 'functional',
-      testMatch: /(?:functional|full-matrix|qa-final|scenario-coverage)\.spec\.ts/,
+      testMatch:
+        /(?:functional|full-matrix|qa-final|scenario-coverage|notification-delivery|role-access)\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
     },
     {

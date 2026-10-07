@@ -301,7 +301,8 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
   }, otpProvider);
 
   // Port-based services with Prisma-backed adapters.
-  const customerNotificationService = new CustomerNotificationService(prisma);
+  const wsInboxHub = new WsInboxHub();
+  const customerNotificationService = new CustomerNotificationService(prisma, wsInboxHub);
   const notificationService = new NotificationService(
     smsProvider,
     pushProvider,
@@ -368,7 +369,6 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
   // Salon Inbox_Notification_Service: durable row store + realtime WS fan-out.
   // `WsInboxHub` is the in-process realization of the hub; the same interface
   // can be backed by Redis pub/sub for a real farm.
-  const wsInboxHub = new WsInboxHub();
   const salonInboxService = new SalonInboxService(prisma, wsInboxHub);
 
   const authorizer = new Authorizer();
@@ -380,12 +380,14 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
     notificationService,
     inboxService: salonInboxService,
     cancellationRecorder: cancellationService,
+    clientBook: clientService,
   });
   const cancellationFlow = new CancellationFlow({
     cancellationService,
     schedulingEngine,
     waitlistService,
     notificationService,
+    inboxService: salonInboxService,
   });
 
   const appointmentManagementService = new AppointmentManagementService(

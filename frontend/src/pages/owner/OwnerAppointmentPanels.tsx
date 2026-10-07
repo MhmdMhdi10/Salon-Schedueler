@@ -5,17 +5,14 @@ import {
   CheckCircle2,
   CreditCard,
   History,
-  MessageCircle,
   Move,
   Phone,
-  Send,
   TriangleAlert,
   UserRound,
 } from 'lucide-react';
 import {
   ApiError,
   adminApi,
-  getApiErrorMessage,
   type AppointmentCustomerOverview,
 } from '../../api/client';
 import {
@@ -172,12 +169,6 @@ export function AppointmentDetailsSheet({
   const [overview, setOverview] = useState<AppointmentCustomerOverview | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
-  const [message, setMessage] = useState('');
-  const [lastMessage, setLastMessage] = useState('');
-  const [messageProviderId, setMessageProviderId] = useState('');
-  const [messageState, setMessageState] = useState<'idle' | 'sent' | 'error'>('idle');
-  const [messageError, setMessageError] = useState('');
-  const [sending, setSending] = useState(false);
   const [noteDraft, setNoteDraft] = useState('');
   const [noteSaving, setNoteSaving] = useState(false);
   const [noteError, setNoteError] = useState('');
@@ -197,11 +188,6 @@ export function AppointmentDetailsSheet({
     let active = true;
     setOverview(null);
     setLoadError('');
-    setMessage('');
-    setLastMessage('');
-    setMessageProviderId('');
-    setMessageState('idle');
-    setMessageError('');
     setNoteDraft('');
     setNoteError('');
     setReceipt(null);
@@ -256,34 +242,6 @@ export function AppointmentDetailsSheet({
     () => (overview?.appointments ?? []).slice(0, 5),
     [overview?.appointments],
   );
-
-  const sendMessageText = async (text: string) => {
-    if (!appointment || !text || sending) return;
-    setSending(true);
-    setMessageState('idle');
-    setMessageProviderId('');
-    setMessageError('');
-    try {
-      const result = await adminApi.sendCustomerMessage(appointment.id, text);
-      setMessage('');
-      setLastMessage('');
-      setMessageProviderId(result.providerId ?? '');
-      setMessageState('sent');
-    } catch (error) {
-      setMessageProviderId('');
-      setMessageState('error');
-      setMessageError(getApiErrorMessage(error, 'ارسال پیامک انجام نشد؛ دوباره تلاش کن.'));
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const sendMessage = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const text = message.trim();
-    setLastMessage(text);
-    await sendMessageText(text);
-  };
 
   const addNote = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -381,7 +339,7 @@ export function AppointmentDetailsSheet({
             )}
             <Button
               type="button"
-              variant="secondary"
+              variant="primary"
               size="md"
               className="mt-3 w-full"
               startIcon={<Move className="h-4 w-4" />}
@@ -393,7 +351,7 @@ export function AppointmentDetailsSheet({
             >
               {appointment.pendingReschedule?.startAt
                 ? 'در انتظار پاسخ مشتری'
-                : 'انتقال به زمان دیگر'}
+                : 'تغییر زمان نوبت'}
             </Button>
             <Button
               type="button"
@@ -452,78 +410,7 @@ export function AppointmentDetailsSheet({
               <Phone className="h-4 w-4" aria-hidden="true" />
               تماس
             </a>
-            <a
-              href={phone ? 'sms:' + phone : undefined}
-              aria-disabled={!phone}
-              className={cn(
-                actionLinkClass,
-                phone
-                  ? 'border-primary/30 bg-primary/10 text-primary hover:bg-primary/15'
-                  : 'cursor-not-allowed border-border bg-bg text-muted/50',
-              )}
-            >
-              <MessageCircle className="h-4 w-4" aria-hidden="true" />
-              پیامک
-            </a>
           </div>
-        </section>
-
-        <section className="mt-4 rounded-xl border border-border bg-surface p-3">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="m-0 text-sm font-bold text-text">پیام مستقیم</h3>
-            <span className="text-xs text-muted">حداکثر ۵۰۰ کاراکتر</span>
-          </div>
-          <form onSubmit={(event) => void sendMessage(event)} className="mt-3">
-            <textarea
-              value={message}
-              onChange={(event) => {
-                setMessage(event.target.value);
-                setMessageState('idle');
-                setMessageError('');
-              }}
-              maxLength={500}
-              rows={3}
-              disabled={!phone || sending}
-              aria-label="متن پیامک"
-              placeholder="مثلاً: سلام، برای تأیید نوبت فردا با شما تماس می‌گیریم."
-              className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2.5 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
-            />
-            <Button
-              type="submit"
-              variant="primary"
-              size="md"
-              className="mt-2 w-full"
-              startIcon={<Send className="h-4 w-4" />}
-              loading={sending}
-              disabled={!phone || !message.trim() || sending}
-            >
-              ارسال پیامک
-            </Button>
-          </form>
-          {messageState === 'sent' && (
-            <p role="status" className="m-0 mt-2 text-xs text-success">
-              پیامک برای ارسال پذیرفته شد.
-              {messageProviderId && (
-                <span className="ms-1 text-muted" dir="ltr">
-                  کد پیگیری: {messageProviderId}
-                </span>
-              )}
-            </p>
-          )}
-          {messageState === 'error' && (
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-              <p role="alert" className="m-0 text-xs text-danger">{messageError || 'ارسال پیامک انجام نشد.'}</p>
-              <Button
-                type="button"
-                size="md"
-                variant="ghost"
-                disabled={sending || !lastMessage}
-                onClick={() => void sendMessageText(lastMessage)}
-              >
-                تلاش مجدد
-              </Button>
-            </div>
-          )}
         </section>
 
         {loading && (

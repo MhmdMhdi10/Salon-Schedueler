@@ -170,7 +170,7 @@ beforeEach(() => {
   mediaQueryMatches = false;
   mockMatchMedia();
   getAccessToken.mockReturnValue('access-token');
-  getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Owner' } });
+  getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Owner', salonId: 'salon-1' } });
   // Default: resolve with data
   mockGetCalendar.mockResolvedValue({ appointments: MOCK_APPOINTMENTS });
   mockGetAnalytics.mockResolvedValue(MOCK_ANALYTICS);
@@ -452,7 +452,9 @@ describe('Skeleton and error states', () => {
       expect(screen.queryByText('مشتری 6')).not.toBeInTheDocument();
 
       fireEvent.click(
-        within(screen.getByTestId('analytics-customers-pagination')).getByRole('button', { name: 'بعدی' }),
+        within(screen.getByTestId('analytics-customers-pagination')).getByRole('button', {
+          name: 'بعدی',
+        }),
       );
       expect(await screen.findByText('مشتری 6')).toBeInTheDocument();
     });
@@ -682,7 +684,9 @@ describe('Jalali dates', () => {
       });
       fireEvent.click(screen.getByRole('tab', { name: /روز/ }));
 
-      const appointment = await screen.findByRole('article', { name: /تغییر زمان در انتظار تأیید مشتری/ });
+      const appointment = await screen.findByRole('article', {
+        name: /تغییر زمان در انتظار تأیید مشتری/,
+      });
       const cancel = within(appointment).getByRole('button', { name: /لغو نوبت/ });
       expect(appointment).toHaveStyle({ height: '104px' });
       expect(appointment).toHaveTextContent('تغییر زمان در انتظار تأیید مشتری');
@@ -720,7 +724,7 @@ describe('Jalali dates', () => {
 
       const calendarFetchesBeforeMove = mockGetCalendar.mock.calls.length;
       fireEvent.click(screen.getByRole('article', { name: /کوتاهی مو/ }));
-      fireEvent.click(screen.getByRole('button', { name: /انتقال به زمان دیگر/ }));
+      fireEvent.click(screen.getByRole('button', { name: /تغییر زمان نوبت/ }));
       expect(screen.getByRole('button', { name: /تاریخ شروع جدید/ })).toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: /ساعت شروع جدید/ }));
       fireEvent.click(
@@ -731,7 +735,11 @@ describe('Jalali dates', () => {
       fireEvent.click(screen.getByRole('button', { name: 'تأیید نهایی تغییر زمان' }));
 
       await waitFor(() => {
-        expect(mockRescheduleAppointment).toHaveBeenCalledWith('appt-1', expect.any(String), undefined);
+        expect(mockRescheduleAppointment).toHaveBeenCalledWith(
+          'appt-1',
+          expect.any(String),
+          undefined,
+        );
       });
       expect(mockGetCalendar).toHaveBeenCalledTimes(calendarFetchesBeforeMove);
     });
@@ -800,7 +808,11 @@ describe('Jalali dates', () => {
       fireEvent.click(screen.getByRole('button', { name: 'تأیید نهایی تغییر زمان' }));
 
       await waitFor(() => {
-        expect(mockRescheduleAppointment).toHaveBeenCalledWith('appt-1', expect.any(String), undefined);
+        expect(mockRescheduleAppointment).toHaveBeenCalledWith(
+          'appt-1',
+          expect.any(String),
+          undefined,
+        );
       });
       expect(mockGetCalendar).toHaveBeenCalledTimes(calendarFetchesBeforeMove);
     });

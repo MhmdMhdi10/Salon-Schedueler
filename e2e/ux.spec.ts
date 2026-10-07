@@ -22,6 +22,7 @@ const PUBLIC_ROUTES = [
 ] as const;
 
 const OWNER_ROUTES = [
+  '/owner/support',
   '/owner/calendar',
   '/owner/calendar/working-hours',
   '/owner/team',
@@ -35,6 +36,26 @@ const OWNER_ROUTES = [
   '/owner/notifications',
   '/owner/subscription',
   '/owner/profile',
+] as const;
+
+const PLATFORM_ADMIN_ROUTES = [
+  '/platform-admin',
+  '/platform-admin/details',
+  '/platform-admin/salons',
+  '/platform-admin/customers',
+  '/platform-admin/staff',
+  '/platform-admin/platform-admins',
+  '/platform-admin/services',
+  '/platform-admin/chairs',
+  '/platform-admin/equipment',
+  '/platform-admin/appointments',
+  '/platform-admin/subscriptions',
+  '/platform-admin/payments',
+  '/platform-admin/waitlist',
+  '/platform-admin/qr-scans',
+  '/platform-admin/audit-logs',
+  '/platform-admin/card-orders',
+  '/platform-admin/support',
 ] as const;
 
 type AxeViolation = {
@@ -180,7 +201,15 @@ test('customer dashboard UX contract after authentication', async ({ page }) => 
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
   await loginViaUi(page, uniquePhone('5'), /\/account(?:\?|$)/);
-  await assertUx(page, '/account');
+  for (const route of [
+    '/account',
+    '/support',
+    '/salon/11111111-1111-1111-1111-111111111111/waitlist',
+    '/my-salons',
+  ]) {
+    await page.goto(route, { waitUntil: 'domcontentloaded' });
+    await assertUx(page, route);
+  }
   expect(pageErrors).toEqual([]);
 });
 
@@ -203,6 +232,31 @@ test('owner panel UX contract across every section', async ({ page }) => {
   } else {
     await expect(page.getByLabel('ناوبری پنل مدیریت')).toBeVisible();
   }
+  expect(pageErrors).toEqual([]);
+});
+
+test('platform admin UX contract across every section', async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  await loginViaUi(page, '09120000999', /\/platform-admin(?:\?|$)/);
+
+  for (const route of PLATFORM_ADMIN_ROUTES) {
+    await page.goto(route, { waitUntil: 'domcontentloaded' });
+    await assertUx(page, route);
+  }
+
+  const width = page.viewportSize()?.width ?? 0;
+  if (width < 1024) {
+    await expect(page.getByRole('button', { name: 'باز کردن منوی مدیریت' })).toBeVisible();
+    if (width > 320) {
+      await page.setViewportSize({ width: 320, height: 844 });
+      for (const route of ['/platform-admin', '/platform-admin/salons'] as const) {
+        await page.goto(route, { waitUntil: 'domcontentloaded' });
+        await assertUx(page, route);
+      }
+    }
+  }
+
   expect(pageErrors).toEqual([]);
 });
 

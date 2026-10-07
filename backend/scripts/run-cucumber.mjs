@@ -1,9 +1,12 @@
 import { mkdirSync, rmSync } from 'node:fs';
 import { execFileSync, spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
-const artifactsDir = join(process.cwd(), 'artifacts');
+const qaArtifacts = resolve(
+  process.env.QA_ARTIFACT_DIR ?? resolve(process.cwd(), '..', 'artifacts/qa'),
+);
+const artifactsDir = join(qaArtifacts, 'backend');
 mkdirSync(artifactsDir, { recursive: true });
 for (const file of ['cucumber-results.json', 'cucumber-report.html']) {
   rmSync(join(artifactsDir, file), { force: true });
@@ -23,6 +26,7 @@ const env = {
   E2E_QUIET_LOGS: process.env.E2E_QUIET_LOGS ?? 'true',
   TS_NODE_EXPERIMENTAL_RESOLVER: process.env.TS_NODE_EXPERIMENTAL_RESOLVER ?? 'true',
   DEV_OTP_AUTO_FILL: process.env.DEV_OTP_AUTO_FILL ?? 'true',
+  CUCUMBER_JSON: process.env.CUCUMBER_JSON ?? join(artifactsDir, 'cucumber-results.json'),
   E2E_REGISTRATION_IP_LIMIT: process.env.E2E_REGISTRATION_IP_LIMIT ?? '500',
   E2E_OTP_REQUEST_IP_LIMIT: process.env.E2E_OTP_REQUEST_IP_LIMIT ?? '1000',
   E2E_OTP_REQUEST_PHONE_LIMIT: process.env.E2E_OTP_REQUEST_PHONE_LIMIT ?? '500',

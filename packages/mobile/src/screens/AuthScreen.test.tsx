@@ -63,7 +63,7 @@ describe('AuthScreen OTP flow logic', () => {
     );
     const persist = jest.fn();
 
-    const result = await verifyOtp('09120000000', '123456', persist);
+    const result = await verifyOtp('09120000000', '1234', persist);
 
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -74,14 +74,14 @@ describe('AuthScreen OTP flow logic', () => {
 
     const [url, options] = mockFetch.mock.calls[0];
     expect(String(url)).toContain('/auth/otp/verify');
-    expect(JSON.parse(options.body)).toEqual({ phone: '09120000000', code: '123456' });
+    expect(JSON.parse(options.body)).toEqual({ phone: '09120000000', code: '1234' });
   });
 
   it('verifyOtp returns a structured error and stores no token on failure', async () => {
     mockFetch.mockResolvedValueOnce(errorResponse(401, { code: 'OTP_INVALID', message: 'wrong code' }));
     const persist = jest.fn();
 
-    const result = await verifyOtp('09120000000', '000000', persist);
+    const result = await verifyOtp('09120000000', '0000', persist);
 
     expect(result.ok).toBe(false);
     if (!result.ok) {

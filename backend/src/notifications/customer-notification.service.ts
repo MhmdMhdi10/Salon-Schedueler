@@ -9,6 +9,10 @@ export type CustomerNotificationInput = {
   payload?: Record<string, unknown>;
 };
 
+export interface CustomerNotificationHub {
+  broadcastCustomer(customerId: string, event: unknown): void;
+}
+
 const toDto = (row: any) => ({
   id: row.id,
   appointmentId: row.appointmentId,
@@ -21,7 +25,10 @@ const toDto = (row: any) => ({
 });
 
 export class CustomerNotificationService {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly hub?: CustomerNotificationHub,
+  ) {}
 
   async create(input: CustomerNotificationInput) {
     const row = await this.prisma.customerNotification.create({
@@ -34,7 +41,13 @@ export class CustomerNotificationService {
         payload: input.payload ? (input.payload as Prisma.InputJsonObject) : undefined,
       },
     });
-    return toDto(row);
+    const notification = toDto(row);
+    try {
+      this.hub?.broadcastCustomer(input.customerId, notification);
+    } catch {
+      // Durable notification state must survive a transient socket failure.
+    }
+    return notification;
   }
 
   async list(customerId: string, limit = 50) {

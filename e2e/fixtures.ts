@@ -21,7 +21,11 @@ export function isoDateFromToday(days = 0): string {
   const date = new Date();
   date.setHours(0, 0, 0, 0);
   date.setDate(date.getDate() + days);
-  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-');
 }
 
 export interface ApiCallOptions {
@@ -58,7 +62,9 @@ export async function apiJson<T>(
 ): Promise<T> {
   const { response, body } = await apiCall<T>(request, path, options);
   if (!response.ok()) {
-    throw new Error(`${options.method ?? 'GET'} ${path} → ${response.status()}: ${JSON.stringify(body)}`);
+    throw new Error(
+      `${options.method ?? 'GET'} ${path} → ${response.status()}: ${JSON.stringify(body)}`,
+    );
   }
   return body;
 }
@@ -68,15 +74,12 @@ export interface AuthTokens {
   refreshToken: string;
 }
 
-export async function loginWithApi(
-  request: APIRequestContext,
-  phone: string,
-): Promise<AuthTokens> {
+export async function loginWithApi(request: APIRequestContext, phone: string): Promise<AuthTokens> {
   const otp = await apiJson<{ ok: boolean; devOtp?: string }>(request, '/api/auth/otp/request', {
     method: 'POST',
     data: { phone },
   });
-  expect(otp.devOtp, 'DEV_OTP_AUTO_FILL must expose OTP to E2E').toMatch(/^\d{6}$/);
+  expect(otp.devOtp, 'DEV_OTP_AUTO_FILL must expose a four-digit OTP to E2E').toMatch(/^\d{4}$/);
   return apiJson<AuthTokens>(request, '/api/auth/otp/verify', {
     method: 'POST',
     data: { phone, code: otp.devOtp },
@@ -131,23 +134,30 @@ export async function loginViaUi(
   page: Page,
   phone: string,
   expectedUrl: RegExp = /\/(account|owner)(?:\/|$)/,
+  intent: 'customer' | 'salon' = 'customer',
 ): Promise<void> {
-  await page.goto('/auth');
+  await page.goto(`/auth?intent=${intent}`);
   await page.getByLabel('شماره موبایل').fill(phone);
   await page.getByRole('button', { name: 'دریافت کد', exact: true }).click();
   // Development API responses include `devOtp`; AuthPage fills it and
   // auto-submits, so the route may already advance before an OTP box can be
   // observed. Production responses omit that field and keep the manual step.
   const otpInput = page.locator('input[aria-label*="کد تایید"]').first();
-  await expect(page).toHaveURL(expectedUrl, { timeout: 15_000 }).catch(async () => {
-    await expect(otpInput).toBeVisible();
-    await page.getByRole('button', { name: /تایید و ورود/ }).click();
-  });
+  await expect(page)
+    .toHaveURL(expectedUrl, { timeout: 15_000 })
+    .catch(async () => {
+      await expect(otpInput).toBeVisible();
+      await page.getByRole('button', { name: /تایید و ورود/ }).click();
+    });
   await expect(page).toHaveURL(expectedUrl);
 }
 
 /** Restore a refresh token, then let AuthProvider bootstrap the browser session. */
-export async function restoreSession(page: Page, refreshToken: string, expectedUrl?: RegExp): Promise<void> {
+export async function restoreSession(
+  page: Page,
+  refreshToken: string,
+  expectedUrl?: RegExp,
+): Promise<void> {
   // Browser auth uses an HttpOnly cookie; localStorage cannot restore it. Seed
   // the same cookie that `/auth/otp/verify` writes, then let AuthProvider run
   // its normal refresh + /me bootstrap path.
@@ -176,13 +186,17 @@ export async function clearBrowserSession(page: Page): Promise<void> {
 }
 
 /** Exercise the owner onboarding wizard, including its OTP completion step. */
-export async function registerSalonViaUi(page: Page, label = 'E2E UI'): Promise<RegisteredSalon> {
-  const ownerPhone = uniquePhone('8');
+export async function registerSalonViaUi(
+  page: Page,
+  label = 'E2E UI',
+  ownerPhone = uniquePhone('8'),
+): Promise<RegisteredSalon> {
   const ownerName = `${label} مدیر`;
   const salonName = `${label} سالن ${Date.now()}`;
   const serviceName = `${label} سرویس`;
 
-  await page.goto('/business/register');
+  const isResumingOnboarding = page.url().includes('/business/register');
+  if (!isResumingOnboarding) await page.goto('/business/register');
   await page.getByTestId('work-mode-solo').click();
   await page.getByRole('button', { name: 'ادامه', exact: true }).click();
 
@@ -207,7 +221,11 @@ export async function registerSalonViaUi(page: Page, label = 'E2E UI'): Promise<
   await expect(page.getByText(serviceName, { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'ادامه', exact: true }).click();
 
-  await page.locator('#phone').fill(ownerPhone);
+  if (isResumingOnboarding) {
+    await expect(page.locator('#phone')).toHaveValue(ownerPhone);
+  } else {
+    await page.locator('#phone').fill(ownerPhone);
+  }
   await page.locator('#chairCount').fill('1');
   const registrationResponse = page.waitForResponse(
     (response) =>
@@ -222,10 +240,12 @@ export async function registerSalonViaUi(page: Page, label = 'E2E UI'): Promise<
   };
 
   const otpHeading = page.getByRole('heading', { level: 1, name: /تایید شماره و ورود/ });
-  await expect(page).toHaveURL(/\/owner(?:\/calendar)?(?:\?|$)/, { timeout: 15_000 }).catch(async () => {
-    await expect(otpHeading).toBeVisible();
-    await page.getByRole('button', { name: 'تایید و ورود به پنل', exact: true }).click();
-  });
+  await expect(page)
+    .toHaveURL(/\/owner(?:\/calendar)?(?:\?|$)/, { timeout: 15_000 })
+    .catch(async () => {
+      await expect(otpHeading).toBeVisible();
+      await page.getByRole('button', { name: 'تایید و ورود به پنل', exact: true }).click();
+    });
   await expect(page).toHaveURL(/\/owner(?:\/calendar)?(?:\?|$)/);
 
   return {

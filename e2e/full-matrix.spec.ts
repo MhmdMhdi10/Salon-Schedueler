@@ -147,14 +147,22 @@ test.describe('public/auth/registration contract journeys', () => {
     );
     expect(free.available).toBe(true);
 
-    const otp = await apiJson<{ devOtp?: string }>(request, '/api/auth/otp/request', {
+    const otp = await apiJson<{ otpLength?: number; devOtp: string }>(request, '/api/auth/otp/request', {
       method: 'POST',
       data: { phone: salon.ownerPhone },
     });
-    expect(otp.devOtp).toMatch(/^\d{6}$/);
+    expect(otp.otpLength).toBe(4);
+    expect(otp.devOtp).toMatch(/^\d{4}$/);
+    const malformedLength = await apiCall(request, '/api/auth/otp/verify', {
+      method: 'POST',
+      data: { phone: salon.ownerPhone, code: '99999' },
+    });
+    expect(malformedLength.response.status()).toBe(400);
+    expect(malformedLength.body).toMatchObject({ code: 'VALIDATION_ERROR' });
+    const wrongCode = String((Number(otp.devOtp) + 1) % 10_000).padStart(4, '0');
     const wrongOtp = await apiCall(request, '/api/auth/otp/verify', {
       method: 'POST',
-      data: { phone: salon.ownerPhone, code: '999999' },
+      data: { phone: salon.ownerPhone, code: wrongCode },
     });
     expect(wrongOtp.response.status()).toBe(401);
     expect(wrongOtp.body).toMatchObject({ code: 'OTP_INVALID' });

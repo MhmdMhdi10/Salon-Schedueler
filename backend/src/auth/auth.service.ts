@@ -69,8 +69,8 @@ export interface AuthServiceConfig {
 
 /** Metadata returned to clients after an OTP request. */
 export interface OtpRequestDetails {
-  /** Number of numeric characters the client must collect before submitting. */
-  otpLength: number;
+  /** The fixed number of numeric characters the client must collect. */
+  otpLength: 4;
   /** Development-only autofill value. Never returned in production. */
   devOtp?: string;
 }
@@ -79,7 +79,7 @@ const DEFAULT_CONFIG: AuthServiceConfig = {
   jwtAccessSecret: process.env['JWT_ACCESS_SECRET'] || 'dev-access-secret',
   jwtRefreshSecret: process.env['JWT_REFRESH_SECRET'] || 'dev-refresh-secret',
   accessExpirySeconds: 900, // 15 minutes
-  refreshExpirySeconds: 604800, // 7 days
+  refreshExpirySeconds: 2592000, // 30 days
   otpWindowSeconds: 120,
   devOtpAutoFill: false,
 };
@@ -117,13 +117,13 @@ export class AuthService {
   }
 
   /**
-   * Generate a cryptographically random 6-digit OTP code.
+   * Generate a cryptographically random 4-digit OTP code.
    */
   generateOtpCode(): string {
-    // Generate a random integer between 0 and 999999, zero-padded to 6 digits
+    // Generate a random integer between 0 and 9999, zero-padded to 4 digits
     const randomBytes = crypto.randomBytes(4);
-    const num = randomBytes.readUInt32BE(0) % 1000000;
-    return num.toString().padStart(6, '0');
+    const num = randomBytes.readUInt32BE(0) % 10000;
+    return num.toString().padStart(4, '0');
   }
 
   /**
@@ -137,7 +137,7 @@ export class AuthService {
    * Request a new OTP for the given phone number.
    *
    * 1. Invalidate any previous unconsumed OTPs for this phone (R1.5)
-   * 2. Generate a local six-digit code and deliver it through the configured OTP
+   * 2. Generate a local four-digit code and deliver it through the configured OTP
    *    provider, or send it through the regular SMS provider (R1.1)
    * 3. Store the exact code that the recipient received
    * 4. Return only the code length plus development-only autofill metadata
@@ -153,8 +153,8 @@ export class AuthService {
   }
 
   /**
-   * Request an OTP and expose its length to clients that render a variable-size
-   * input. The code itself is returned only when development autofill is enabled.
+   * Request an OTP and report its fixed four-digit input length. The code itself
+   * is returned only when development autofill is enabled.
    */
   async requestOtpWithDetails(
     phone: string,
@@ -190,7 +190,7 @@ export class AuthService {
       }
     }
 
-    if (!/^\d{4,10}$/.test(code)) {
+    if (!/^\d{4}$/.test(code)) {
       throw new AuthError('OTP_DELIVERY_FAILED', 'OTP provider returned an invalid code');
     }
 
@@ -206,7 +206,7 @@ export class AuthService {
     });
 
     return {
-      otpLength: code.length,
+      otpLength: 4,
       ...(options?.exposeCode && this.config.devOtpAutoFill ? { devOtp: code } : {}),
     };
   }

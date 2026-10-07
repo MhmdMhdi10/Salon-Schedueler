@@ -1,18 +1,25 @@
 {
   "app": {
-    "title": "سامانه رزرو سالن",
-    "loading": "در حال بارگذاری..."
+    "title": "آرا",
+    "loading": "آرا در حال بارگذاری است...",
+    "lightTheme": "روشن",
+    "darkTheme": "تیره",
+    "navAuth": "ورود",
+    "navSalon": "انتخاب سالن",
+    "navBooking": "رزرو",
+    "switchToLightTheme": "فعال‌کردن پوسته روشن",
+    "switchToDarkTheme": "فعال‌کردن پوسته تیره"
   },
   "auth": {
-    "title": "سامانه رزرو سالن",
+    "title": "ورود به حساب",
     "phoneStepSubtitle": "شماره موبایل خود را وارد کنید تا کد تایید ارسال شود",
-    "otpStepSubtitle": "کد ۶ رقمی ارسال‌شده به شماره {{phone}} را وارد کنید",
+    "otpStepSubtitle": "کد ۴ رقمی ارسال‌شده به شماره {{phone}} را وارد کنید",
     "phoneLabel": "شماره موبایل",
     "phonePlaceholder": "09xxxxxxxxx",
     "phoneHelper": "نمونه: ۰۹۱۲۳۴۵۶۷۸۹",
     "requestOtp": "دریافت کد",
     "otpLabel": "کد تایید",
-    "otpPlaceholder": "کد ۶ رقمی",
+    "otpPlaceholder": "کد ۴ رقمی",
     "otpSent": "کد ارسال شد",
     "verify": "تایید",
     "resend": "ارسال مجدد کد",

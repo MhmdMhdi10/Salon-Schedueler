@@ -3,7 +3,8 @@ import type { InboxAudience, InboxEvent, InboxHub } from './salon-inbox.service.
 
 interface Conn {
   ws: WebSocket;
-  salonId: string;
+  salonId?: string;
+  customerId?: string;
   role: string;
   staffMemberId?: string;
   alive: boolean;
@@ -55,6 +56,18 @@ export class WsInboxHub implements InboxHub {
         conn.ws.send(data);
       } catch {
         // swallow single-send errors; the durable row covers it
+      }
+    }
+  }
+
+  broadcastCustomer(customerId: string, event: unknown) {
+    const data = JSON.stringify({ type: 'customer-notification', payload: event });
+    for (const conn of this.conns.values()) {
+      if (conn.customerId !== customerId || conn.ws.readyState !== conn.ws.OPEN) continue;
+      try {
+        conn.ws.send(data);
+      } catch {
+        // The durable customer notification remains available over REST.
       }
     }
   }

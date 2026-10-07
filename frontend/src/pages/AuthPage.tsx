@@ -25,30 +25,6 @@ function formatCountdown(totalSeconds: number): string {
   return toPersianDigits(`${minutes}:${String(seconds).padStart(2, '0')}`);
 }
 
-/** Authenticated operator roles that route into a management panel. */
-const PANEL_ROLES = new Set(['Owner', 'Admin', 'Stylist', 'PlatformAdmin']);
-
-/**
- * Best-effort decode of the `role` claim from a JWT access token, for routing
- * only (the server still enforces authorization). Returns the role string when
- * the token carries a recognised staff role, otherwise undefined (customers).
- * Never throws — a malformed/opaque token simply yields undefined.
- */
-function roleFromAccessToken(token: string): string | undefined {
-  try {
-    const payload = token.split('.')[1];
-    if (!payload) return undefined;
-    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
-    const json = JSON.parse(atob(padded)) as {
-      role?: unknown;
-    };
-    return typeof json.role === 'string' && PANEL_ROLES.has(json.role) ? json.role : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 /** Reduced-motion step variants: opacity-only crossfade, no transform. */
 const fadeStepVariants: Variants = {
   enter: { opacity: 0 },
@@ -80,8 +56,9 @@ export interface AuthPageProps {
  *    typing and paste), resend cooldown with a
  *    draining progress bar, and expiry-aware error copy.
  *
- * Already-authenticated visitors are redirected away (`/owner` for staff, `/account`
- * for customers, honoring any mid-booking `returnTo`). Verify failures branch
+ * Already-authenticated visitors are redirected away (`/owner` for provisioned
+ * staff, salon onboarding for a salon prospect, `/account` for customers,
+ * honoring a mid-booking `returnTo`). Verify failures branch
  * on the server error code: `OTP_EXPIRED` → «کد منقضی شده…» + resend unlocked;
  * network failure → connection copy; anything else → «کد نامعتبر است». Errors
  * render inline in a `role="alert"` region without discarding entered data.
@@ -99,8 +76,16 @@ export function AuthPage({
   const navigate = useNavigate();
   const location = useLocation();
   const { success } = useToast();
-  const { status, role, refresh: refreshAuth } = useAuth();
+  const { status, role, principal, refresh: refreshAuth } = useAuth();
   const prefersReduced = useReducedMotion();
+  const authLocationState = location.state as {
+    returnTo?: string;
+    returnState?: Record<string, unknown>;
+  } | null;
+  const returnTo = authLocationState?.returnTo;
+  const returnState = authLocationState?.returnState ?? {};
+  const authIntent = new URLSearchParams(location.search).get('intent');
+  const ownerPanelReturn = typeof returnTo === 'string' && /^\/owner(?:\/|$)/.test(returnTo);
 
   const [phone, setPhone] = useState('');
   const [otpLength, setOtpLength] = useState(OTP_LENGTH);
@@ -113,14 +98,22 @@ export function AuthPage({
   const [verified, setVerified] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [audience, setAudience] = useState<'customer' | 'salon'>(() =>
-    new URLSearchParams(window.location.search).get('intent') === 'customer' ? 'customer' : 'salon',
+    authIntent === 'customer' ? 'customer' : 'salon',
   );
+
+  useEffect(() => {
+    if (authIntent === 'salon' || authIntent === 'customer') {
+      setAudience(authIntent);
+      return;
+    }
+    setAudience('salon');
+  }, [authIntent]);
 
   const otpRef = useRef<OtpInputHandle | null>(null);
   const phoneInputRef = useRef<HTMLInputElement | null>(null);
   const phoneValueRef = useRef('');
   const redirectTimer = useRef<number | undefined>(undefined);
-  const lastAccessToken = useRef('');
+  const verifiedSession = useRef<{ role?: string; salonId?: string } | null>(null);
   const submittedPhone = useRef('');
   const autoSubmittedCode = useRef('');
   const normalizedPhone = useMemo(() => normalizePhone(phone), [phone]);
@@ -128,28 +121,43 @@ export function AuthPage({
   const codeIsComplete = codeValue.length === otpLength;
 
   const applyOtpResponse = (response?: { devOtp?: string; otpLength?: number }) => {
-    const candidate = response?.otpLength ?? response?.devOtp?.length ?? OTP_LENGTH;
-    const nextLength = Number.isInteger(candidate) && candidate >= 4 && candidate <= 10
-      ? candidate
-      : OTP_LENGTH;
-    setOtpLength(nextLength);
+    setOtpLength(OTP_LENGTH);
     setCode(
-      response?.devOtp
-        ? response.devOtp.split('').slice(0, nextLength)
-        : Array(nextLength).fill(''),
+      response?.devOtp && /^\d{4}$/.test(response.devOtp)
+        ? response.devOtp.split('')
+        : Array(OTP_LENGTH).fill(''),
     );
   };
 
   // Where to land after auth. `returnTo` means we arrived mid-booking
   // (BookingConfirmPage bounced an anonymous customer to log in) — it drives
   // the phone-step subtitle copy and the post-verify routing.
-  const returnTo = (location.state as { returnTo?: string } | null)?.returnTo;
-  const returnState =
-    (location.state as { returnState?: Record<string, unknown> } | null)?.returnState ?? {};
-  const hasBookingReturnIntent = typeof returnTo === 'string' && returnTo.length > 0;
+  const isBookingConfirmReturn =
+    typeof returnTo === 'string' &&
+    /^\/salon\/[^/]+\/book\/confirm(?:[?#].*)?$/.test(returnTo) &&
+    typeof returnState.serviceId === 'string';
+  const isWaitlistReturn =
+    typeof returnTo === 'string' &&
+    /^\/salon\/[^/]+\/waitlist(?:[?#].*)?$/.test(returnTo) &&
+    typeof returnState.serviceId === 'string';
+  const hasBookingReturnIntent = isBookingConfirmReturn || isWaitlistReturn;
 
-  const panelPath = (panelRole: string | undefined) =>
-    panelRole === 'PlatformAdmin' ? '/platform-admin' : panelRole ? '/owner' : '/account';
+  const authDestination = (
+    authenticatedRole: string | undefined,
+    salonId: string | undefined,
+    salonIntent: boolean,
+  ) => {
+    if (authenticatedRole === 'PlatformAdmin') return '/platform-admin';
+    if (['Owner', 'Admin', 'Stylist'].includes(authenticatedRole ?? '')) {
+      return salonId ? '/owner' : '/business/register';
+    }
+    return salonIntent ? '/business/register' : '/account';
+  };
+
+  const salonRegistrationState = () => {
+    const ownerPhone = submittedPhone.current || normalizedPhone;
+    return ownerPhone ? { ownerPhone } : undefined;
+  };
 
   const handleBack = () => {
     if (location.key !== 'default') {
@@ -172,10 +180,19 @@ export function AuthPage({
 
   const goToDestination = () => {
     if (hasBookingReturnIntent) {
-      navigate(returnTo!, { state: { ...returnState, autoConfirm: true }, replace: true });
-    } else {
-      navigate(panelPath(roleFromAccessToken(lastAccessToken.current)), {
+      navigate(returnTo!, {
+        state: isBookingConfirmReturn ? { ...returnState, autoConfirm: true } : returnState,
         replace: true,
+      });
+    } else {
+      const destination = authDestination(
+        verifiedSession.current?.role,
+        verifiedSession.current?.salonId,
+        audience === 'salon',
+      );
+      navigate(destination, {
+        replace: true,
+        ...(destination === '/business/register' ? { state: salonRegistrationState() } : {}),
       });
     }
   };
@@ -202,7 +219,9 @@ export function AuthPage({
     // for paste/automation followed immediately by submit, where the DOM has
     // the complete phone but a concurrent render still exposes the prior
     // closure to the click handler.
-    const enteredPhone = normalizePhone(phoneValueRef.current || phoneInputRef.current?.value || phone);
+    const enteredPhone = normalizePhone(
+      phoneValueRef.current || phoneInputRef.current?.value || phone,
+    );
     if (!PHONE_PATTERN.test(enteredPhone)) {
       setPhoneError(t('auth.invalidPhone'));
       return;
@@ -226,14 +245,17 @@ export function AuthPage({
     try {
       const result = await authApi.verifyOtp(submittedPhone.current || normalizedPhone, codeValue);
       setAccessToken(result.accessToken);
-      lastAccessToken.current = result.accessToken;
       // Resolve the app-wide session before navigating. This prevents the
       // owner guard from racing the /me request and bouncing a valid login
       // back to auth on slower mobile connections.
-      await refreshAuth();
+      const authenticatedPrincipal = await refreshAuth();
+      verifiedSession.current = {
+        role: authenticatedPrincipal?.role,
+        salonId: authenticatedPrincipal?.salonId,
+      };
       // Show a brief in-button success beat (motion-safe), then route: back to
-      // the funnel with `autoConfirm` when we arrived mid-booking, otherwise by
-      // the token's role (staff → panel, customers → account dashboard).
+      // the funnel when we arrived mid-booking, otherwise by the refreshed
+      // server principal and whether a salon has been provisioned.
       setVerified(true);
       if (prefersReduced) {
         goToDestination();
@@ -278,10 +300,23 @@ export function AuthPage({
   // Suppressed while the just-verified success beat plays (its own timer
   // performs the same navigation).
   if (status === 'authenticated' && !verified) {
+    const destination = authDestination(
+      role,
+      principal?.salonId,
+      authIntent === 'salon' || ownerPanelReturn,
+    );
     return hasBookingReturnIntent ? (
-      <Navigate to={returnTo!} state={{ ...returnState, autoConfirm: true }} replace />
+      <Navigate
+        to={returnTo!}
+        state={isBookingConfirmReturn ? { ...returnState, autoConfirm: true } : returnState}
+        replace
+      />
     ) : (
-      <Navigate to={panelPath(role)} replace />
+      <Navigate
+        to={destination}
+        state={destination === '/business/register' ? salonRegistrationState() : undefined}
+        replace
+      />
     );
   }
 
@@ -341,7 +376,9 @@ export function AuthPage({
             >
               <div className="mb-5 text-start">
                 <h1 className="text-lg font-bold leading-display text-text">
-                  {bookingMode ? t('auth.bookingTitle', { defaultValue: 'برای ادامه رزرو وارد شوید' }) : t('auth.title')}
+                  {bookingMode
+                    ? t('auth.bookingTitle', { defaultValue: 'برای ادامه رزرو وارد شوید' })
+                    : t('auth.title')}
                 </h1>
                 {!bookingMode && (
                   <div className="mt-4 grid grid-cols-2 gap-2" role="tablist" aria-label="نوع ورود">
@@ -427,8 +464,18 @@ export function AuthPage({
                 <Trans
                   i18nKey="auth.consent"
                   components={{
-                    terms: <Link to="/terms" className="inline-flex min-h-10 items-center text-primary" />,
-                    privacy: <Link to="/privacy" className="inline-flex min-h-10 items-center text-primary" />,
+                    terms: (
+                      <Link
+                        to="/terms"
+                        className="inline-flex min-h-10 items-center text-primary"
+                      />
+                    ),
+                    privacy: (
+                      <Link
+                        to="/privacy"
+                        className="inline-flex min-h-10 items-center text-primary"
+                      />
+                    ),
                   }}
                 />
               </p>
@@ -579,11 +626,7 @@ export function AuthPage({
   );
 
   return bookingMode ? (
-    <FunnelShell
-      currentStep="confirm"
-      salonName={bookingSalonName}
-      onBack={onBookingBack}
-    >
+    <FunnelShell currentStep="confirm" salonName={bookingSalonName} onBack={onBookingBack}>
       {page}
     </FunnelShell>
   ) : (

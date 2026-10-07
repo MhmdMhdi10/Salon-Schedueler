@@ -391,47 +391,19 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
       const body = (req.body ?? {}) as Record<string, unknown>;
       const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
       const isStaff = Boolean(req.principal?.role);
-      const emergency = body.kind === 'emergency';
-      if (isStaff && emergency && (reason.length < 5 || reason.length > 1000)) {
-        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'reason' });
-        return;
-      }
-      if (body.kind !== undefined && body.kind !== 'standard' && body.kind !== 'emergency') {
+      if (body.kind !== undefined && body.kind !== 'standard') {
         res.status(400).json({ code: 'VALIDATION_ERROR', field: 'kind' });
         return;
       }
-      let refundProof;
       if (body.refundProof !== undefined) {
-        const proof = body.refundProof as Record<string, unknown>;
-        if (
-          !proof ||
-          typeof proof.fileName !== 'string' ||
-          typeof proof.mimeType !== 'string' ||
-          typeof proof.dataBase64 !== 'string' ||
-          !['image/jpeg', 'image/png', 'image/webp'].includes(proof.mimeType) ||
-          proof.fileName.length > 120 ||
-          proof.dataBase64.length > 7_200_000
-        ) {
-          res.status(400).json({ code: 'VALIDATION_ERROR', field: 'refundProof' });
-          return;
-        }
-        const data = Buffer.from(proof.dataBase64, 'base64');
-        if (data.length === 0 || data.length > 5 * 1024 * 1024) {
-          res.status(400).json({ code: 'VALIDATION_ERROR', field: 'refundProof' });
-          return;
-        }
-        refundProof = {
-          fileName: proof.fileName,
-          mimeType: proof.mimeType as 'image/jpeg' | 'image/png' | 'image/webp',
-          data,
-        };
+        res.status(400).json({ code: 'VALIDATION_ERROR', field: 'refundProof' });
+        return;
       }
-      const details = emergency || reason || refundProof
+      const details = isStaff || reason
         ? {
             actor: isStaff ? ('staff' as const) : ('customer' as const),
-            kind: emergency ? ('emergency' as const) : ('standard' as const),
+            kind: 'standard' as const,
             ...(reason ? { reason } : {}),
-            ...(refundProof ? { refundProof } : {}),
           }
         : undefined;
       const appointment = details

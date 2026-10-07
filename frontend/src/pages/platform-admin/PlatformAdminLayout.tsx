@@ -234,7 +234,7 @@ function PlatformHeader({ collapsed, mobile, mobileOpen, onToggleCollapsed, onSi
         </div>
         <div className="platform-admin-header__tools">
           <PanelAccessNav tone="platform" />
-          <Button type="text" className="platform-admin-header__search" icon={<SearchOutlined />} onClick={() => setCommandOpen(true)}>
+          <Button type="text" className="platform-admin-header__search" aria-label="جستجوی بخش‌ها" icon={<SearchOutlined />} onClick={() => setCommandOpen(true)}>
             <span>جستجو</span><kbd>⌘ K</kbd>
           </Button>
           <OwnerThemeToggle theme={theme} onToggle={toggleTheme} />

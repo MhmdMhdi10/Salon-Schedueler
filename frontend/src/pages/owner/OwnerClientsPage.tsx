@@ -198,7 +198,14 @@ export function OwnerClientsPage() {
                     {displayName(client).slice(0, 1)}
                   </span>
                   <div className="min-w-0">
-                    <p className="truncate font-bold text-text">{displayName(client)}</p>
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <p className="truncate font-bold text-text">{displayName(client)}</p>
+                      {client.visits >= 3 && (
+                        <span className="inline-flex shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-[0.65rem] font-bold text-success">
+                          مشتری وفادار
+                        </span>
+                      )}
+                    </div>
                     <a
                       href={`tel:${client.phone}`}
                       dir="ltr"

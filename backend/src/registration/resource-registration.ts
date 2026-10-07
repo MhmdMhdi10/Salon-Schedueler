@@ -167,8 +167,8 @@ export class ResourceRegistration {
     const defaultHours = Array.from({ length: 7 }, (_, weekday) => ({
       ownerKind: 'chair',
       weekday,
-      startTime: new Date('1970-01-01T09:00:00'),
-      endTime: new Date('1970-01-01T20:00:00'),
+      startTime: new Date('1970-01-01T10:00:00'),
+      endTime: new Date('1970-01-01T21:00:00'),
     }));
 
     if (needsPhysical && !chairs.some((chair) => chair.kind === 'physical')) {

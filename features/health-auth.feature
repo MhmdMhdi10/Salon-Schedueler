@@ -45,7 +45,7 @@ Feature: Public health, registration, and authentication
     And the response field "devOtp" should exist
     When I make a "POST" request to "/api/auth/otp/verify" with body:
       """
-      {"phone":"{{ownerPhone}}","code":"999999"}
+      {"phone":"{{ownerPhone}}","code":"9999"}
       """
     Then the response status should be 401
     And the response field "code" should equal "OTP_INVALID"

@@ -8,9 +8,7 @@ export const AuthRequestDto = z
 export const AuthVerifyDto = z
   .object({
     phone: z.string().trim().min(1),
-    // Local OTPs are six digits; provider-generated OTPs may be up to ten
-    // digits (Melli Payamak's endpoint returns the exact code it sent).
-    code: z.string().min(4).max(10).regex(/^\d+$/),
+    code: z.string().length(4).regex(/^\d{4}$/),
   })
   .passthrough();
 // Browser refresh uses the HttpOnly cookie; native clients send the token body.

@@ -53,6 +53,9 @@ export interface BookingFlowDeps {
   cancellationRecorder?: {
     recordRejection(appointment: Appointment, reason?: string): Promise<void>;
   };
+  clientBook?: {
+    ensureCustomer(salonId: string, customerId: string): Promise<void>;
+  };
   logger?: Logger;
 }
 
@@ -74,6 +77,7 @@ export class BookingFlow {
   private readonly notificationService: ConfirmationNotifier;
   private readonly inboxService: BookingFlowDeps['inboxService'];
   private readonly cancellationRecorder: BookingFlowDeps['cancellationRecorder'];
+  private readonly clientBook: BookingFlowDeps['clientBook'];
   private readonly logger: Logger;
 
   constructor(deps: BookingFlowDeps) {
@@ -81,6 +85,7 @@ export class BookingFlow {
     this.notificationService = deps.notificationService;
     this.inboxService = deps.inboxService;
     this.cancellationRecorder = deps.cancellationRecorder;
+    this.clientBook = deps.clientBook;
     this.logger = deps.logger ?? console;
   }
 
@@ -96,13 +101,21 @@ export class BookingFlow {
    */
   async book(req: BookingRequest): Promise<BookingResult> {
     const result = await this.schedulingEngine.book(req);
+    if (result.status !== 'rejected' && this.clientBook) {
+      await this.safelyNotify(() =>
+        this.clientBook!.ensureCustomer(result.appointment.salonId, result.appointment.customerId),
+      );
+    }
+    const isWalkIn = req.source === 'walkin';
     if (result.status === 'confirmed') {
       await this.safelyNotify(() =>
         this.notificationService.sendConfirmation(result.appointment.id),
       );
-      await this.safelyNotify(() =>
-        this.notificationService.sendSalonBookingNotice(result.appointment.id, 'confirmed'),
-      );
+      if (!isWalkIn) {
+        await this.safelyNotify(() =>
+          this.notificationService.sendSalonBookingNotice(result.appointment.id, 'confirmed'),
+        );
+      }
       if (this.inboxService) {
         const a = result.appointment;
         const inbox = this.inboxService;
@@ -111,21 +124,25 @@ export class BookingFlow {
             salonId: a.salonId,
             audience: 'all-staff',
             staffMemberId: a.staffMemberId,
-            type: 'booking.confirmed',
-            title: 'رزرو جدید تأیید شد',
-            body: 'یک نوبت جدید ثبت و به‌صورت خودکار تأیید شد.',
+            type: isWalkIn ? 'walkin.created' : 'booking.confirmed',
+            title: isWalkIn ? 'نوبت حضوری ثبت شد' : 'رزرو جدید تأیید شد',
+            body: isWalkIn
+              ? 'نوبت حضوری ثبت شد و نیازی به تأیید ندارد.'
+              : 'یک نوبت جدید ثبت و به‌صورت خودکار تأیید شد.',
             payload: {
               appointmentId: a.id,
               staffMemberId: a.staffMemberId,
-              date: a.startAt.toISOString().slice(0, 10),
+              date: a.startAt.toISOString(),
             },
           }),
         );
       }
     } else if (result.status === 'pending') {
-      await this.safelyNotify(() =>
-        this.notificationService.sendSalonBookingNotice(result.appointment.id, 'pending'),
-      );
+      if (!isWalkIn) {
+        await this.safelyNotify(() =>
+          this.notificationService.sendSalonBookingNotice(result.appointment.id, 'pending'),
+        );
+      }
       if (!this.inboxService) return result;
       const a = result.appointment;
       const inbox = this.inboxService;
@@ -134,13 +151,15 @@ export class BookingFlow {
           salonId: a.salonId,
           audience: 'all-staff',
           staffMemberId: a.staffMemberId,
-          type: 'booking.pending',
-          title: 'نوبت در انتظار تأیید',
-          body: 'یک رزرو جدید ثبت شد و منتظر تأیید شماست.',
+          type: isWalkIn ? 'walkin.created' : 'booking.pending',
+          title: isWalkIn ? 'نوبت حضوری ثبت شد' : 'نوبت در انتظار تأیید',
+          body: isWalkIn
+            ? 'نوبت حضوری ثبت شد و نیازی به تأیید ندارد.'
+            : 'یک رزرو جدید ثبت شد و منتظر تأیید شماست.',
           payload: {
             appointmentId: a.id,
             staffMemberId: a.staffMemberId,
-            date: a.startAt.toISOString().slice(0, 10),
+            date: a.startAt.toISOString(),
           },
         }),
       );
@@ -158,7 +177,7 @@ export class BookingFlow {
     await this.safelyNotify(() =>
       this.notificationService.sendConfirmation(appointment.id),
     );
-    if (this.inboxService) {
+    if (this.inboxService && appointment.source !== 'walkin') {
       const inbox = this.inboxService;
       await this.safelyNotify(() =>
         inbox.emit({

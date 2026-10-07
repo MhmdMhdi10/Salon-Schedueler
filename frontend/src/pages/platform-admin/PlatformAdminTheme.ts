@@ -8,7 +8,7 @@ const LIGHT = {
   border: '#E2E4E1',
   text: '#202721',
   textSecondary: '#4B554D',
-  textMuted: '#727C74',
+  textMuted: '#5F6961',
   primary: '#B9470F',
   primaryBrand: '#D85C1A',
   primaryContainer: '#FFF2E9',

@@ -89,7 +89,7 @@ function createMockSmsProvider(): SmsProvider & { lastCodes: Map<string, string[
   return {
     lastCodes,
     send: async (phone: string, message: string): Promise<SmsDeliveryResult> => {
-      const match = message.match(/(\d{6})/);
+      const match = message.match(/(\d{4})/);
       if (match) {
         const codes = lastCodes.get(phone) || [];
         codes.push(match[1]);
@@ -108,10 +108,10 @@ const phoneArb = fc.stringOf(fc.constantFrom('0', '1', '2', '3', '4', '5', '6', 
   maxLength: 11,
 }).map((digits) => '09' + digits.slice(0, 9));
 
-/** Generate a random 6-digit code that will likely not match the real one */
+/** Generate a random 4-digit code that will likely not match the real one */
 const wrongCodeArb = fc.stringOf(fc.constantFrom('0', '1', '2', '3', '4', '5', '6', '7', '8', '9'), {
-  minLength: 6,
-  maxLength: 6,
+  minLength: 4,
+  maxLength: 4,
 });
 
 /** Generate a time offset in seconds: within window (0-119) or outside (121-600) */

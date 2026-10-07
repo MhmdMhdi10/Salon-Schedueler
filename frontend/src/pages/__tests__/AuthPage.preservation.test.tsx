@@ -113,23 +113,23 @@ describe('AuthPage — Preservation: Phone normalization (Req 3.1)', () => {
   it('calls verifyOtp with the normalized phone after completing OTP flow with +98 prefix', async () => {
     await advanceToOtpWithPhone('+989123456789');
 
-    // Paste the 6-digit code and submit
+    // Paste the four-digit code and submit
     const first = screen.getByLabelText('رقم ۱ کد تایید') as HTMLInputElement;
-    fireEvent.paste(first, { clipboardData: { getData: () => '123456' } });
-    await waitFor(() => expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('6'));
+    fireEvent.paste(first, { clipboardData: { getData: () => '1234' } });
+    await waitFor(() => expect(screen.getByLabelText('رقم ۴ کد تایید')).toHaveValue('4'));
 
     await waitFor(() => {
-      expect(verifyOtp).toHaveBeenCalledWith('09123456789', '123456');
+      expect(verifyOtp).toHaveBeenCalledWith('09123456789', '1234');
     });
   });
 });
 
 describe('AuthPage — Preservation: Paste fill order (Req 3.2)', () => {
-  it('pasting "123456" into the first box fills boxes left-to-right and submits "123456"', async () => {
+  it('pasting "1234" into the first box fills boxes left-to-right and submits "1234"', async () => {
     await advanceToOtp();
 
     const first = screen.getByLabelText('رقم ۱ کد تایید') as HTMLInputElement;
-    fireEvent.paste(first, { clipboardData: { getData: () => '123456' } });
+    fireEvent.paste(first, { clipboardData: { getData: () => '1234' } });
 
     // Verify boxes filled left-to-right
     await waitFor(() => {
@@ -137,12 +137,10 @@ describe('AuthPage — Preservation: Paste fill order (Req 3.2)', () => {
       expect(screen.getByLabelText('رقم ۲ کد تایید')).toHaveValue('2');
       expect(screen.getByLabelText('رقم ۳ کد تایید')).toHaveValue('3');
       expect(screen.getByLabelText('رقم ۴ کد تایید')).toHaveValue('4');
-      expect(screen.getByLabelText('رقم ۵ کد تایید')).toHaveValue('5');
-      expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('6');
     });
 
     await waitFor(() => {
-      expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '123456');
+      expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '1234');
     });
   });
 });
@@ -164,11 +162,9 @@ describe('AuthPage — Preservation: Auto-advance and backspace (Req 3.3)', () =
       'رقم ۲ کد تایید',
       'رقم ۳ کد تایید',
       'رقم ۴ کد تایید',
-      'رقم ۵ کد تایید',
-      'رقم ۶ کد تایید',
     ];
 
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 3; i++) {
       const input = screen.getByLabelText(labels[i]);
       fireEvent.change(input, { target: { value: String(i + 1) } });
       expect(screen.getByLabelText(labels[i + 1])).toHaveFocus();
@@ -195,17 +191,15 @@ describe('AuthPage — Preservation: Auto-advance and backspace (Req 3.3)', () =
 });
 
 describe('AuthPage — Preservation: Persian digit normalization in OTP (Req 3.4)', () => {
-  it('entering Persian digits ۱۳۳۳۸۹ in reading order submits Latin "133389"', async () => {
+  it('entering Persian digits ۱۳۳۸ in reading order submits Latin "1338"', async () => {
     await advanceToOtp();
 
-    const persianDigits = ['۱', '۳', '۳', '۳', '۸', '۹'];
+    const persianDigits = ['۱', '۳', '۳', '۸'];
     const labels = [
       'رقم ۱ کد تایید',
       'رقم ۲ کد تایید',
       'رقم ۳ کد تایید',
       'رقم ۴ کد تایید',
-      'رقم ۵ کد تایید',
-      'رقم ۶ کد تایید',
     ];
 
     for (let i = 0; i < persianDigits.length; i++) {
@@ -214,21 +208,19 @@ describe('AuthPage — Preservation: Persian digit normalization in OTP (Req 3.4
     }
 
     await waitFor(() => {
-      expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '133389');
+      expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '1338');
     });
   });
 
-  it('entering Persian digits ۱۲۳۴۵۶ in reading order submits Latin "123456"', async () => {
+  it('entering Persian digits ۱۲۳۴ in reading order submits Latin "1234"', async () => {
     await advanceToOtp();
 
-    const persianDigits = ['۱', '۲', '۳', '۴', '۵', '۶'];
+    const persianDigits = ['۱', '۲', '۳', '۴'];
     const labels = [
       'رقم ۱ کد تایید',
       'رقم ۲ کد تایید',
       'رقم ۳ کد تایید',
       'رقم ۴ کد تایید',
-      'رقم ۵ کد تایید',
-      'رقم ۶ کد تایید',
     ];
 
     for (let i = 0; i < persianDigits.length; i++) {
@@ -237,7 +229,7 @@ describe('AuthPage — Preservation: Persian digit normalization in OTP (Req 3.4
     }
 
     await waitFor(() => {
-      expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '123456');
+      expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '1234');
     });
   });
 });
@@ -260,8 +252,8 @@ describe('AuthPage — Preservation: RTL layout and chrome (Req 3.5)', () => {
 
     // Fill all boxes and submit
     const first = screen.getByLabelText('رقم ۱ کد تایید') as HTMLInputElement;
-    fireEvent.paste(first, { clipboardData: { getData: () => '999999' } });
-    await waitFor(() => expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('9'));
+    fireEvent.paste(first, { clipboardData: { getData: () => '9999' } });
+    await waitFor(() => expect(screen.getByLabelText('رقم ۴ کد تایید')).toHaveValue('9'));
 
     // Error alert appears
     expect(await screen.findByRole('alert')).toBeInTheDocument();

@@ -101,7 +101,7 @@ export class SalonWorld {
 
   async authenticate(phone: string): Promise<Actor> {
     const otp = await this.rawRequest('POST', '/api/auth/otp/request', { phone });
-    if (otp.status !== 200 || !/^\d{6}$/.test(String(otp.body.devOtp ?? ''))) {
+    if (otp.status !== 200 || !/^\d{4}$/.test(String(otp.body.devOtp ?? ''))) {
       throw new Error(`OTP request failed for ${phone}: ${JSON.stringify(otp.body)}`);
     }
     const verified = await this.rawRequest('POST', '/api/auth/otp/verify', {

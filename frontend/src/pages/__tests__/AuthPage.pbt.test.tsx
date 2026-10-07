@@ -66,14 +66,14 @@ afterEach(() => {
 
 describe('AuthPage — Property-Based Tests', () => {
   /**
-   * Property 1 (fix check): For any generated complete 6-digit code, entering
+   * Property 1 (fix check): For any generated complete 4-digit code, entering
    * it in reading order (leftmost box first) submits exactly that string to
    * `verifyOtp`.
    *
    * **Validates: Requirements 2.1, 2.2, 2.3**
    */
   it(
-    'Property 1: any 6-digit code entered in reading order submits that exact string',
+    'Property 1: any 4-digit code entered in reading order submits that exact string',
     { timeout: 60_000 },
     async () => {
       const persianLabels = [
@@ -81,15 +81,13 @@ describe('AuthPage — Property-Based Tests', () => {
         'رقم ۲ کد تایید',
         'رقم ۳ کد تایید',
         'رقم ۴ کد تایید',
-        'رقم ۵ کد تایید',
-        'رقم ۶ کد تایید',
       ];
 
       await fc.assert(
         fc.asyncProperty(
           fc.stringOf(fc.constantFrom('0', '1', '2', '3', '4', '5', '6', '7', '8', '9'), {
-            minLength: 6,
-            maxLength: 6,
+            minLength: 4,
+            maxLength: 4,
           }),
           async (code) => {
             // Reset mocks and DOM between iterations
@@ -102,7 +100,7 @@ describe('AuthPage — Property-Based Tests', () => {
             await advanceToOtp();
 
             // Enter digits in reading order (leftmost box first)
-            for (let i = 0; i < 6; i++) {
+            for (let i = 0; i < 4; i++) {
               const input = screen.getByLabelText(persianLabels[i]);
               fireEvent.change(input, { target: { value: code[i] } });
             }
@@ -119,21 +117,21 @@ describe('AuthPage — Property-Based Tests', () => {
   );
 
   /**
-   * Property 2 (preservation — paste order): For any generated 6-digit paste
+   * Property 2 (preservation — paste order): For any generated 4-digit paste
    * string, the boxes fill left-to-right and the submitted value equals the
    * pasted string.
    *
    * **Validates: Requirement 3.2**
    */
   it(
-    'Property 2 (paste): any 6-digit paste fills left-to-right and submits pasted string',
+    'Property 2 (paste): any 4-digit paste fills left-to-right and submits pasted string',
     { timeout: 60_000 },
     async () => {
       await fc.assert(
         fc.asyncProperty(
           fc.stringOf(fc.constantFrom('0', '1', '2', '3', '4', '5', '6', '7', '8', '9'), {
-            minLength: 6,
-            maxLength: 6,
+            minLength: 4,
+            maxLength: 4,
           }),
           async (code) => {
             // Reset mocks and DOM between iterations
@@ -153,7 +151,7 @@ describe('AuthPage — Property-Based Tests', () => {
 
             // Verify boxes filled left-to-right
             await waitFor(() => {
-              expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue(code[5]);
+              expect(screen.getByLabelText('رقم ۴ کد تایید')).toHaveValue(code[3]);
             });
 
             // A complete paste auto-submits the OTP.

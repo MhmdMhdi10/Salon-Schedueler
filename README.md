@@ -79,6 +79,31 @@ The mock-based concurrency test and the rest of the property-based tests run on 
 offline `npm test`. When `DATABASE_URL` points at a reachable PostgreSQL instance with
 migrations applied, the gated tests execute and exercise the real database behavior.
 
+### Complete QA loop
+
+Start the local Docker stack once, then run the same full quality gate used by CI:
+
+```bash
+docker compose up -d --build
+npm run qa
+```
+
+`npm run qa` checks the API and web app first, then runs workspace unit/property tests,
+the business API/browser Cucumber journeys, backend Cucumber coverage gates, and the
+Playwright browser matrix. It stops at the first failing suite. The backend and web
+services must remain available while the command runs.
+
+Reports are written under `artifacts/qa/` by default. Use `QA_ARTIFACT_DIR=/tmp/salon-qa`
+to keep large local reports outside the checkout. Playwright HTML report is at
+`artifacts/qa/playwright/report`; open it with `npm run e2e:report` when using the
+default directory.
+
+The backend gate enforces **100% lines, statements, functions, and branches in
+controller source files**, **100% exercised registered controller routes**, and
+**100% route-to-DTO mapping**. Domain services are covered by the workspace unit and
+property tests; this gate does not claim 100% statement coverage for every backend
+service file.
+
 ### Backend E2E (Cucumber)
 
 Start the development database and backend, then run the complete backend E2E matrix:
@@ -96,10 +121,10 @@ npm run test:e2e:cov
 ```
 
 Equivalent commands from `backend/` are `npm run test:e2e` and `npm run test:e2e:cov`.
-Generated artifacts:
+Generated artifacts (also included in `artifacts/qa/backend/` during the full QA run):
 
-- `backend/artifacts/cucumber-results.json`
-- `backend/artifacts/cucumber-report.html`
+- `artifacts/qa/backend/cucumber-results.json`
+- `artifacts/qa/backend/cucumber-report.html`
 - `backend/coverage/coverage-final.json`
 - `backend/coverage/coverage-summary.json`
 
@@ -107,6 +132,23 @@ Generated artifacts:
 `test:e2e` commands above, following the same separation used by V-House.
 For the API-facing business/browser Cucumber matrix use `npm run test:e2e:business`;
 for the backend Cucumber TypeScript check use `npm run test:e2e:typecheck`.
+
+### Browser exploration with Playwright MCP
+
+The [Playwright Test](https://github.com/microsoft/playwright) suite is the repeatable
+regression gate. Use [Playwright MCP](https://github.com/microsoft/playwright-mcp) for
+interactive browser exploration against the running Docker app. Add this server entry
+to Codex's user config at `~/.codex/config.toml`, then restart Codex:
+
+```toml
+[mcp_servers.playwright]
+command = "npx"
+args = ["@playwright/mcp@latest"]
+```
+
+The app is available at `http://localhost:5173` and the API at `http://localhost:3000`
+with default Docker ports. MCP exploration complements `npm run qa`; automated
+regressions remain in Playwright Test so they run consistently in CI and after changes.
 
 ### Accessibility checks (web)
 

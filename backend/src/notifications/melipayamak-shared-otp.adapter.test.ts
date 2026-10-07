@@ -36,7 +36,7 @@ describe('MelliPayamakSharedOtpAdapter', () => {
     const result = await new MelliPayamakSharedOtpAdapter({
       endpointUrl,
       bodyId: 524,
-    }).sendOtp('09304116941', '123456');
+    }).sendOtp('09304116941', '1234');
 
     expect(seenUrl).toBe(endpointUrl);
     expect(seenInit?.method).toBe('POST');
@@ -47,12 +47,12 @@ describe('MelliPayamakSharedOtpAdapter', () => {
     expect(JSON.parse(seenInit?.body as string)).toEqual({
       bodyId: 524,
       to: '09304116941',
-      args: ['123456'],
+      args: ['1234'],
     });
     expect(result).toEqual({
       ok: true,
       providerId: '3741437414',
-      code: '123456',
+      code: '1234',
     });
   });
 
@@ -77,7 +77,7 @@ describe('MelliPayamakSharedOtpAdapter', () => {
     expect(result).toEqual({ ok: true, providerId: 'template-message-id' });
   });
 
-  it('generates a six-digit code when called without one', async () => {
+  it('generates a four-digit code when called without one', async () => {
     let sentCode = '';
     (global.fetch as jest.Mock).mockImplementation(async (_url: string, init: RequestInit) => {
       sentCode = JSON.parse(init.body as string).args[0];
@@ -86,7 +86,7 @@ describe('MelliPayamakSharedOtpAdapter', () => {
 
     const result = await new MelliPayamakSharedOtpAdapter({ endpointUrl }).sendOtp('09304116941');
 
-    expect(sentCode).toMatch(/^\d{6}$/);
+    expect(sentCode).toMatch(/^\d{4}$/);
     expect(JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body as string).bodyId).toBe(523232);
     expect(result).toEqual({ ok: true, providerId: 'message-id', code: sentCode });
   });
@@ -98,7 +98,7 @@ describe('MelliPayamakSharedOtpAdapter', () => {
 
     const result = await new MelliPayamakSharedOtpAdapter({ endpointUrl }).sendOtp(
       '09304116941',
-      '123456',
+      '1234',
     );
 
     expect(result).toEqual({
@@ -114,7 +114,17 @@ describe('MelliPayamakSharedOtpAdapter', () => {
       'abc',
     );
 
-    expect(result).toEqual({ ok: false, error: 'OTP code must contain 4 to 10 digits' });
+    expect(result).toEqual({ ok: false, error: 'OTP code must contain exactly 4 digits' });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('rejects six-digit codes to keep the OTP contract fixed at four digits', async () => {
+    const result = await new MelliPayamakSharedOtpAdapter({ endpointUrl }).sendOtp(
+      '09304116941',
+      '123456',
+    );
+
+    expect(result).toEqual({ ok: false, error: 'OTP code must contain exactly 4 digits' });
     expect(global.fetch).not.toHaveBeenCalled();
   });
 });

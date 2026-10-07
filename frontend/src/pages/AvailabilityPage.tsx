@@ -714,16 +714,18 @@ export function AvailabilityPage() {
 
           {servicesStatus === 'ready' && services.length > 0 && (
             <>
-              <ServiceCardList
-                services={serviceCardItems}
-                value={selectedService}
-                onValueChange={handleServiceChange}
-                multiple={multiServiceSelection}
-                values={selectedServiceIds}
-                onValuesChange={handleServiceSelection}
-                ariaLabel={t('booking.selectService')}
-                durationLabel={(minutes) => t('booking.durationMinutes', { count: minutes })}
-              />
+              <div className="max-h-[32rem] overflow-y-auto overscroll-contain pe-1 sm:max-h-[36rem]">
+                <ServiceCardList
+                  services={serviceCardItems}
+                  value={selectedService}
+                  onValueChange={handleServiceChange}
+                  multiple={multiServiceSelection}
+                  values={selectedServiceIds}
+                  onValuesChange={handleServiceSelection}
+                  ariaLabel={t('booking.selectService')}
+                  durationLabel={(minutes) => t('booking.durationMinutes', { count: minutes })}
+                />
+              </div>
               {services.length > 1 && (
                 <Button
                   type="button"

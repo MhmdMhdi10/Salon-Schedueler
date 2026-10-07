@@ -4,7 +4,7 @@ import type { RequireRole } from '../../common/http/require-role.js';
 import { asyncRoute, validateRequired } from '../../common/http/route-helpers.js';
 import type { ServiceCatalog } from '../../catalog/service-catalog.js';
 import { normalizeDigits, type StaffRole } from '@salon/shared';
-import type { CancellationDetails, RefundProof } from '../../scheduling/cancellation.js';
+import type { CancellationDetails } from '../../scheduling/cancellation.js';
 import { StaffPhoneTakenError } from '../../registration/resource-registration.js';
 
 /**
@@ -570,9 +570,14 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         res.status(404).json({ code: 'NOT_FOUND' });
         return;
       }
-      const [customer, appointments, notes, preferredStaff] = await Promise.all([
+      const principal = req.principal!;
+      const [customer, profile, notes, preferredStaff] = await Promise.all([
         services.customerService.getProfile(appointment.customerId),
-        services.customerService.getHistory(appointment.customerId),
+        services.calendarService.getCustomerProfile(
+          appointment.salonId,
+          appointment.customerId,
+          principal.role === 'Stylist' ? principal.staffMemberId : undefined,
+        ),
         services.customerService.getNotes(appointment.customerId),
         services.customerService.getPreferredStaff(appointment.customerId),
       ]);
@@ -580,7 +585,12 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         res.status(404).json({ code: 'NOT_FOUND' });
         return;
       }
-      const response: Record<string, unknown> = { customer, appointments, notes, preferredStaff };
+      const response: Record<string, unknown> = {
+        customer,
+        appointments: profile?.appointments ?? [],
+        notes,
+        preferredStaff,
+      };
       if (typeof services.paymentService.getDepositOverview === 'function') {
         response.deposit = await services.paymentService.getDepositOverview(req.params.id);
       }
@@ -1924,38 +1934,10 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         res.status(400).json({ code: 'VALIDATION_ERROR', field: 'reason' });
         return;
       }
-      let refundProof: RefundProof | undefined;
-      const rawProof = req.body?.refundProof;
-      if (rawProof !== undefined) {
-        if (
-          !rawProof ||
-          typeof rawProof !== 'object' ||
-          typeof rawProof.fileName !== 'string' ||
-          typeof rawProof.mimeType !== 'string' ||
-          typeof rawProof.dataBase64 !== 'string' ||
-          !['image/jpeg', 'image/png', 'image/webp'].includes(rawProof.mimeType) ||
-          rawProof.fileName.length > 120 ||
-          rawProof.dataBase64.length > 7_200_000
-        ) {
-          res.status(400).json({ code: 'VALIDATION_ERROR', field: 'refundProof' });
-          return;
-        }
-        const data = Buffer.from(rawProof.dataBase64, 'base64');
-        if (!data.length || data.length > 5 * 1024 * 1024) {
-          res.status(400).json({ code: 'VALIDATION_ERROR', field: 'refundProof' });
-          return;
-        }
-        refundProof = {
-          fileName: rawProof.fileName,
-          mimeType: rawProof.mimeType,
-          data,
-        };
-      }
-
       const { cancelledCount, failedCount } = await cancelAppointmentsForFullDayClosure(
         req.params.id,
         onDate,
-        { actor: 'staff', kind: 'emergency', reason, refundProof },
+        { actor: 'staff', kind: 'standard', reason },
       );
       res.status(200).json({
         ok: true,

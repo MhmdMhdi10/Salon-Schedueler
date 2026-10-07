@@ -46,13 +46,8 @@ export const RescheduleAppointmentDto = z
 export const ManagedRescheduleDto = RescheduleAppointmentDto;
 export const EmptyAppointmentBodyDto = z
   .object({
-    kind: z.enum(['standard', 'emergency']).optional(),
+    kind: z.enum(['standard']).optional(),
     reason: z.string().trim().max(1000).optional(),
-    refundProof: z.object({
-      fileName: z.string().trim().min(1).max(120),
-      mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
-      dataBase64: z.string().max(7_200_000),
-    }).optional(),
   })
   .passthrough();
 export const RejectAppointmentDto = z.object({ reason: z.string().trim().max(1000).optional() }).passthrough();

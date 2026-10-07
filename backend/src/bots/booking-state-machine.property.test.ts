@@ -458,11 +458,11 @@ describe('Feature: salon-platform-expansion, Property 2: single booking source',
 
 // ─── Property 3: no OTP/token leak ───────────────────────────────────────────
 
-/** Arbitrary numeric OTP code (4–6 digits). */
+/** Arbitrary four-digit numeric OTP code. */
 const otpCodeArb = fc
   .stringOf(fc.constantFrom(...'0123456789'.split('')), {
     minLength: 4,
-    maxLength: 6,
+    maxLength: 4,
   })
   // Avoid coincidental substring collision with the fixed phone number.
   .filter((code) => !'09123456789'.includes(code));

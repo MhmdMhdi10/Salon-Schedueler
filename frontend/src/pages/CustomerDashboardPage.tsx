@@ -768,7 +768,7 @@ export function CustomerDashboardPage() {
       setActionError('');
       setPendingConfirmation({
         title: 'لغو نوبت',
-        description: `نوبت «${appointment.serviceName ?? 'خدمات زیبایی'}» در «${appointment.salonName ?? 'سالن'}» لغو شود؟`,
+        description: `نوبت «${appointment.serviceName ?? 'خدمات زیبایی'}» در «${appointment.salonName ?? 'سالن'}» لغو شود؟ اگر بیعانه پرداخت کرده‌ای، در صورت لغو بیش از ۶۰ دقیقه پیش از شروع بازگردانده می‌شود؛ در ۶۰ دقیقه پایانی نزد سالن می‌ماند.`,
         confirmLabel: 'لغو نوبت',
         onConfirm: () => cancelAppointment(appointment),
       });

@@ -12,10 +12,10 @@ import {
   Share2,
   Users,
 } from 'lucide-react';
-import { ApiError, qrApi, referralApi, type SalonQrResponse, type SalonReferral } from '../../api/client';
+import { ApiError, qrApi, type SalonQrResponse } from '../../api/client';
 import { useSalonId } from '../../auth/useSalonId';
 import { SeoHead } from '../../components/seo';
-import { Badge, Button, Card, ErrorState, Skeleton, useToast } from '../../components/ui';
+import { Button, Card, ErrorState, Skeleton, useToast } from '../../components/ui';
 import { qrImageDataUri } from './marketing-assets';
 
 type CampaignSource = 'instagram_bio' | 'instagram_story' | 'whatsapp' | 'qr' | 'google';
@@ -28,25 +28,6 @@ const CAMPAIGN_SOURCES: Array<{ value: CampaignSource; label: string; hint: stri
   { value: 'google', label: 'گوگل/پروفایل', hint: 'جست‌وجوی محلی' },
 ];
 
-function referralStatusMeta(referral: SalonReferral): {
-  label: string;
-  status: 'success' | 'warning' | 'danger' | 'neutral';
-} {
-  if (referral.rewardStatus === 'available') {
-    return { label: 'اعتبار آماده استفاده', status: 'success' };
-  }
-  if (referral.rewardStatus === 'redeemed') {
-    return { label: 'اعتبار ثبت شد', status: 'neutral' };
-  }
-  if (referral.rewardStatus === 'expired') {
-    return { label: 'اعتبار منقضی شد', status: 'danger' };
-  }
-  return {
-    label: referral.salonId ? 'در حال تکمیل شرط سه رزرو' : 'منتظر ورود سالن',
-    status: 'warning',
-  };
-}
-
 /** Owner activation surface: share, measure, and repeat the booking campaign. */
 export function OwnerMarketingPage() {
   const salonId = useSalonId();
@@ -56,9 +37,6 @@ export function OwnerMarketingPage() {
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const [selectedSource, setSelectedSource] = useState<CampaignSource>('instagram_bio');
-  const [referrals, setReferrals] = useState<SalonReferral[]>([]);
-  const [referralsLoading, setReferralsLoading] = useState(true);
-  const [redeemingId, setRedeemingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setStatus('loading');
@@ -75,42 +53,6 @@ export function OwnerMarketingPage() {
   useEffect(() => {
     void load();
   }, [load]);
-  const loadReferrals = useCallback(async () => {
-    setReferralsLoading(true);
-    try {
-      const result = await referralApi.listSalon(salonId);
-      setReferrals(result.referrals);
-    } catch (reason) {
-      showError({
-        title: reason instanceof ApiError ? reason.message : 'دریافت معرفی‌ها انجام نشد.',
-      });
-    } finally {
-      setReferralsLoading(false);
-    }
-  }, [salonId, showError]);
-
-  useEffect(() => {
-    void loadReferrals();
-  }, [loadReferrals]);
-
-  const redeemReferral = async (referralId: string) => {
-    setRedeemingId(referralId);
-    try {
-      const result = await referralApi.redeem(referralId);
-      setReferrals((items) =>
-        items.map((item) => (item.id === referralId ? result.referral : item)),
-      );
-      success({ title: 'مصرف اعتبار ثبت شد' });
-    } catch (reason) {
-      showError({
-        title: reason instanceof ApiError ? reason.message : 'ثبت مصرف اعتبار انجام نشد.',
-      });
-    } finally {
-      setRedeemingId(null);
-    }
-  };
-
-
   const bookingUrl = useMemo(() => {
     if (!data?.url) return '';
     try {
@@ -338,71 +280,6 @@ export function OwnerMarketingPage() {
         </Card>
       )}
 
-      <Card
-        as="section"
-        data-testid="owner-referrals"
-        className="border-success/20"
-      >
-        <div className="flex items-start gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
-            <Users className="size-5" aria-hidden="true" />
-          </span>
-          <div>
-            <h2 className="font-bold text-text">معرفی‌های مشتریان</h2>
-            <p className="mt-1 text-sm leading-6 text-muted">
-              سالن‌هایی که با معرفی مشتری وارد شده‌اند و اعتبار قابل مصرف آن‌ها.
-            </p>
-          </div>
-        </div>
-
-        {referralsLoading ? (
-          <div className="mt-5 flex flex-col gap-3">
-            <Skeleton variant="rect" className="h-16" />
-            <Skeleton variant="rect" className="h-16" />
-          </div>
-        ) : referrals.length === 0 ? (
-          <p className="mt-5 rounded-lg bg-surface p-4 text-sm leading-7 text-muted">
-            هنوز معرفی‌ای برای این سالن ثبت نشده است.
-          </p>
-        ) : (
-          <div className="mt-5 space-y-3">
-            {referrals.map((referral) => {
-              const meta = referralStatusMeta(referral);
-              const maxBookings = Math.max(1, referral.requiredBookings);
-              const progress = Math.min(100, Math.round((referral.qualifyingBookings / maxBookings) * 100));
-              return (
-                <div key={referral.id} className="rounded-xl border border-border p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-text">{referral.referrerName || referral.referrerPhone || 'مشتری آرا'}</p>
-                      <p className="mt-1 text-sm text-muted">
-                        معرفی سالن {referral.salonName} · {referral.qualifyingBookings} از {referral.requiredBookings} رزرو تکمیل‌شده
-                      </p>
-                    </div>
-                    <Badge status={meta.status}>{meta.label}</Badge>
-                  </div>
-                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-border" role="progressbar" aria-valuemin={0} aria-valuemax={referral.requiredBookings} aria-valuenow={referral.qualifyingBookings}>
-                    <div className="h-full rounded-full bg-success transition-all" style={{ width: progress + '%' }} />
-                  </div>
-                  {referral.rewardStatus === 'available' ? (
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-success/10 p-3">
-                      <span className="text-sm font-medium text-success">اعتبار خدماتی مشتری آماده استفاده است.</span>
-                      <Button
-                        type="button"
-                        size="md"
-                        loading={redeemingId === referral.id}
-                        onClick={() => void redeemReferral(referral.id)}
-                      >
-                        ثبت مصرف اعتبار
-                      </Button>
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </Card>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <ActionCard

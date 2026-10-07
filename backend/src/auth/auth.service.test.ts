@@ -122,8 +122,8 @@ function createMockSmsProvider(): SmsProvider & {
 }
 
 function extractCode(message: string): string {
-  const code = message.match(/(\d{6})/)?.[1];
-  if (!code) throw new Error('Mock SMS did not contain a six-digit code');
+  const code = message.match(/(\d{4})/)?.[1];
+  if (!code) throw new Error('Mock SMS did not contain a four-digit code');
   return code;
 }
 
@@ -149,10 +149,10 @@ describe('AuthService', () => {
   });
 
   describe('generateOtpCode', () => {
-    it('should generate a 6-digit numeric string', () => {
+    it('should generate a 4-digit numeric string', () => {
       const code = authService.generateOtpCode();
-      expect(code).toMatch(/^\d{6}$/);
-      expect(code.length).toBe(6);
+      expect(code).toMatch(/^\d{4}$/);
+      expect(code.length).toBe(4);
     });
 
     it('should generate different codes on subsequent calls', () => {
@@ -202,10 +202,10 @@ describe('AuthService', () => {
       const diffMs = expiresAt.getTime() - issuedAt.getTime();
       expect(diffMs).toBe(120_000);
 
-      // Should have sent SMS with 6-digit code
+      // Should have sent SMS with a 4-digit code
       expect(smsProvider.send).toHaveBeenCalledTimes(1);
       expect(smsProvider.calls[0].phone).toBe(phone);
-      expect(smsProvider.calls[0].message).toMatch(/\d{6}/);
+      expect(smsProvider.calls[0].message).toMatch(/\d{4}/);
     });
 
     it('returns the generated code only when explicit autofill is enabled', async () => {
@@ -216,12 +216,12 @@ describe('AuthService', () => {
 
       const code = await devService.requestOtp('09123456789', { exposeCode: true });
 
-      expect(code).toMatch(/^\d{6}$/);
+      expect(code).toMatch(/^\d{4}$/);
       expect(smsProvider.calls[0].message).toContain(code);
     });
 
     it('stores the code returned by a provider-generated OTP service', async () => {
-      const providerCode = '3741437414';
+      const providerCode = '3741';
       const otpProvider = {
         sendOtp: jest.fn().mockResolvedValue({
           ok: true,
@@ -240,10 +240,10 @@ describe('AuthService', () => {
         exposeCode: true,
       });
 
-      expect(details).toEqual({ otpLength: 10, devOtp: providerCode });
+      expect(details).toEqual({ otpLength: 4, devOtp: providerCode });
       expect(otpProvider.sendOtp).toHaveBeenCalledWith(
         '09123456789',
-        expect.stringMatching(/^\d{6}$/),
+        expect.stringMatching(/^\d{4}$/),
       );
       expect(smsProvider.send).not.toHaveBeenCalled();
       expect(prisma.otp.create).toHaveBeenCalledWith({
@@ -257,6 +257,22 @@ describe('AuthService', () => {
         expect.objectContaining({ accessToken: expect.any(String) }),
       );
     });
+
+    it('rejects provider-generated codes that are not four digits', async () => {
+      const otpProvider = {
+        sendOtp: jest.fn().mockResolvedValue({
+          ok: true,
+          providerId: 'provider',
+          code: '123456',
+        }),
+      };
+      const providerService = new AuthService(prisma, smsProvider, config, otpProvider);
+
+      await expect(providerService.requestOtp('09123456789')).rejects.toMatchObject({
+        code: 'OTP_DELIVERY_FAILED',
+      });
+      expect(prisma.otp.create).not.toHaveBeenCalled();
+    });
   });
 
   describe('verifyOtp', () => {
@@ -268,7 +284,7 @@ describe('AuthService', () => {
 
       // Extract the code from the SMS message
       const smsMessage = smsProvider.calls[0].message;
-      const code = smsMessage.match(/(\d{6})/)?.[1];
+      const code = smsMessage.match(/(\d{4})/)?.[1];
       expect(code).toBeDefined();
 
       // Verify the OTP
@@ -317,16 +333,18 @@ describe('AuthService', () => {
     it('should reject mismatched OTP code (R1.4)', async () => {
       const phone = '09123456789';
       await authService.requestOtp(phone);
+      const issuedCode = extractCode(smsProvider.calls[0].message);
+      const wrongCode = String((Number(issuedCode) + 1) % 10_000).padStart(4, '0');
 
-      await expect(authService.verifyOtp(phone, '000000')).rejects.toThrow(AuthError);
-      await expect(authService.verifyOtp(phone, '999999')).rejects.toMatchObject({
+      await expect(authService.verifyOtp(phone, wrongCode)).rejects.toThrow(AuthError);
+      await expect(authService.verifyOtp(phone, wrongCode)).rejects.toMatchObject({
         code: 'OTP_MISMATCH',
       });
     });
 
     it('should reject when no OTP exists', async () => {
-      await expect(authService.verifyOtp('09111111111', '123456')).rejects.toThrow(AuthError);
-      await expect(authService.verifyOtp('09111111111', '123456')).rejects.toMatchObject({
+      await expect(authService.verifyOtp('09111111111', '1234')).rejects.toThrow(AuthError);
+      await expect(authService.verifyOtp('09111111111', '1234')).rejects.toMatchObject({
         code: 'NO_OTP',
       });
     });

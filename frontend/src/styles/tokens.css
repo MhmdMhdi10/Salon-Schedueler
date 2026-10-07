@@ -213,7 +213,11 @@
   --platform-border: #e2e4e1;
   --platform-text: #202721;
   --platform-text-secondary: #4b554d;
-  --platform-text-muted: #727c74;
+  --platform-text-muted: #5f6961;
+  --platform-status-success: #24613b;
+  --platform-status-warning: #6a4a00;
+  --platform-status-danger: #8a2636;
+  --platform-status-info: #274d8a;
   --platform-primary: #b9470f;
   --platform-primary-soft: #fff2e9;
   --platform-chart-secondary: #4168c5;
@@ -307,6 +311,10 @@
   --platform-text: #f4f6f8;
   --platform-text-secondary: #d3d8de;
   --platform-text-muted: #9aa4af;
+  --platform-status-success: #c1f1ce;
+  --platform-status-warning: #ffe3a1;
+  --platform-status-danger: #ffb2bb;
+  --platform-status-info: #b8d1ff;
   --platform-primary: #ff955c;
   --platform-primary-soft: #38251c;
   --platform-chart-secondary: #4168c5;

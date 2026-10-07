@@ -112,7 +112,7 @@ export class BackendWorld {
   async authenticate(phone: string): Promise<Actor> {
     const otp = await this.rawRequest('POST', '/api/auth/otp/request', { phone });
     const code = String(otp.body?.devOtp ?? '');
-    if (otp.status !== 200 || !/^\d{6}$/.test(code)) {
+    if (otp.status !== 200 || !/^\d{4}$/.test(code)) {
       throw new Error(`OTP request failed for ${phone}: ${JSON.stringify(otp.body)}`);
     }
 

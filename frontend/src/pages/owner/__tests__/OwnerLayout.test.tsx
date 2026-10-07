@@ -100,6 +100,10 @@ function renderOwnerApp(initialPath = '/owner/calendar') {
               <Route path="subscription" element={<OwnerSubscriptionPage />} />
             </Route>
             <Route path="/auth" element={<AuthSurface />} />
+            <Route
+              path="/business/register"
+              element={<div data-testid="salon-registration-surface">ثبت سالن</div>}
+            />
             <Route path="/account" element={<div data-testid="account-surface">حساب</div>} />
           </Routes>
         </MemoryRouter>
@@ -135,7 +139,7 @@ describe('OwnerLayout — auth bootstrap (R2.2)', () => {
     // No in-memory access token, but the stored refresh token bootstraps one.
     getAccessToken.mockReturnValue(null);
     bootstrapAuth.mockResolvedValue(true);
-    getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Owner' } });
+    getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Owner', salonId: 'salon-test' } });
 
     renderOwnerApp();
 
@@ -147,7 +151,7 @@ describe('OwnerLayout — auth bootstrap (R2.2)', () => {
 
   it('reuses an in-memory access token without re-bootstrapping', async () => {
     getAccessToken.mockReturnValue('access-token');
-    getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Admin' } });
+    getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Admin', salonId: 'salon-test' } });
 
     renderOwnerApp();
 
@@ -189,13 +193,13 @@ describe('OwnerLayout — auth bootstrap (R2.2)', () => {
 });
 
 describe('OwnerLayout — RBAC (R2.3)', () => {
-  it('returns a signed-in customer to the customer dashboard', async () => {
+  it('routes a customer opening the salon PWA to onboarding before the panel', async () => {
     getAccessToken.mockReturnValue('customer-token');
     getMe.mockResolvedValue({ principal: { id: 'c1' } });
 
     renderOwnerApp();
 
-    expect(await screen.findByTestId('account-surface')).toBeInTheDocument();
+    expect(await screen.findByTestId('salon-registration-surface')).toBeInTheDocument();
     expect(screen.queryByTestId('owner-calendar-page')).not.toBeInTheDocument();
   });
 
@@ -210,7 +214,7 @@ describe('OwnerLayout — RBAC (R2.3)', () => {
 
   it('gives an Owner the full panel navigation', async () => {
     getAccessToken.mockReturnValue('t');
-    getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Owner' } });
+    getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Owner', salonId: 'salon-test' } });
 
     renderOwnerApp();
 
@@ -222,7 +226,7 @@ describe('OwnerLayout — RBAC (R2.3)', () => {
 
   it('keeps team and services as separate profile destinations', async () => {
     getAccessToken.mockReturnValue('t');
-    getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Owner' } });
+    getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Owner', salonId: 'salon-test' } });
 
     renderOwnerApp('/owner/profile');
 
@@ -233,7 +237,7 @@ describe('OwnerLayout — RBAC (R2.3)', () => {
 
   it('limits a Stylist to the own-appointments view', async () => {
     getAccessToken.mockReturnValue('t');
-    getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Stylist' } });
+    getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Stylist', salonId: 'salon-test' } });
 
     renderOwnerApp();
 
@@ -243,7 +247,7 @@ describe('OwnerLayout — RBAC (R2.3)', () => {
 
   it('renders subscription payment results without owner shell chrome', async () => {
     getAccessToken.mockReturnValue('t');
-    getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Owner' } });
+    getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Owner', salonId: 'salon-test' } });
 
     renderOwnerApp('/owner/subscription?payment=success');
 
@@ -256,7 +260,7 @@ describe('OwnerLayout — RBAC (R2.3)', () => {
 describe('OwnerLayout — sign-out', () => {
   it('clears the app-wide session so the shared header shows signed-out', async () => {
     getAccessToken.mockReturnValue('t');
-    getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Owner' } });
+    getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Owner', salonId: 'salon-test' } });
 
     // Render inside a real AuthProvider with the app-shell header mounted at the
     // sign-out destination. Regression for the bug where the owner sign-out

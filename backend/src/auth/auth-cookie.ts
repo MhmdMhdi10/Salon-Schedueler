@@ -5,7 +5,7 @@ export const REFRESH_COOKIE_NAME = 'salon_refresh';
 /** Keep cookie scope narrower than the whole application. */
 export const REFRESH_COOKIE_PATH = '/api/auth';
 /** Must stay aligned with AuthService's default refresh lifetime. */
-export const REFRESH_COOKIE_MAX_AGE_SECONDS = 604_800;
+export const REFRESH_COOKIE_MAX_AGE_SECONDS = 2_592_000;
 
 function serializeRefreshCookie(
   value: string,

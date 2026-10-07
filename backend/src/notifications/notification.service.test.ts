@@ -185,7 +185,7 @@ describe('NotificationService', () => {
       expect(repo.logs[0]).toMatchObject({
         appointmentId: 'appt-1',
         channel: 'sms',
-        type: 'generic',
+        type: 'reschedule',
         status: 'sent',
       });
     });

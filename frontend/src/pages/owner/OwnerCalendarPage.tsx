@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   draggable,
   dropTargetForElements,
@@ -57,6 +57,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { useSalonId } from '../../auth/useSalonId';
 import { usePagination } from '../../hooks/usePagination';
 import { useHashScroll } from '../../hooks/useHashScroll';
+import { useInboxWs } from '../../hooks/useInboxWs';
 import { gregorianToJalali, getJalaliMonthName } from '@salon/shared';
 import {
   Button,
@@ -105,6 +106,16 @@ function initialCalendarView(): CalendarView {
   return 'day';
 }
 
+function calendarDateFromSearch(search: string): Date | null {
+  const raw = new URLSearchParams(search).get('date');
+  if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+  const [year, month, day] = raw.split('-').map(Number);
+  const date = new Date(year, month - 1, day, 12);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
+    ? date
+    : null;
+}
+
 interface Appointment {
   id: string;
   startAt?: string;
@@ -151,39 +162,6 @@ type ManualCustomerPrefill = {
 interface StaffCalendarBlock extends SalonClosure {
   staffId: string;
   staffName: string;
-}
-
-type RefundProofDraft = {
-  fileName: string;
-  mimeType: 'image/jpeg' | 'image/png' | 'image/webp';
-  dataBase64: string;
-};
-
-const REFUND_PROOF_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
-
-function readRefundProof(file: File): Promise<RefundProofDraft> {
-  return new Promise((resolve, reject) => {
-    if (!REFUND_PROOF_TYPES.has(file.type) || file.size > 5 * 1024 * 1024) {
-      reject(new Error('INVALID_REFUND_PROOF'));
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result !== 'string') {
-        reject(new Error('INVALID_REFUND_PROOF'));
-        return;
-      }
-      const comma = reader.result.indexOf(',');
-      const dataBase64 = comma >= 0 ? reader.result.slice(comma + 1) : reader.result;
-      resolve({
-        fileName: file.name,
-        mimeType: file.type as RefundProofDraft['mimeType'],
-        dataBase64,
-      });
-    };
-    reader.onerror = () => reject(reader.error ?? new Error('INVALID_REFUND_PROOF'));
-    reader.readAsDataURL(file);
-  });
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -3076,6 +3054,7 @@ function ManualBookingDialog({
         return;
       }
       setPhone(selectedPhone);
+      setClientSearch(selectedPhone);
       setFullName(contact?.name?.find((value) => value.trim())?.trim() ?? '');
       setContactStatus('success');
     } catch (error) {
@@ -3104,6 +3083,7 @@ function ManualBookingDialog({
         return;
       }
       setPhone(selectedPhone);
+      setClientSearch(selectedPhone);
       setFullName(parsed.name ?? '');
       setContactStatus('success');
     } catch {
@@ -3194,7 +3174,7 @@ function ManualBookingDialog({
               <div className="min-w-0">
                 <h3 className="m-0 text-sm font-bold text-text">مشتری</h3>
                 <p className="m-0 mt-1 text-xs leading-5 text-muted">
-                  مشتری قبلی را پیدا کن یا اطلاعات مشتری جدید را وارد کن.
+                  شماره را وارد کن؛ مشتری قبلی را انتخاب کن یا با همین شماره نوبت جدید ثبت کن.
                 </p>
               </div>
             </div>
@@ -3221,14 +3201,37 @@ function ManualBookingDialog({
             </div>
           ) : (
             <>
-              <TextField
-                label="جست‌وجوی مشتری قبلی"
-                placeholder="نام یا شماره موبایل"
-                value={clientSearch}
-                onChange={(event) => setClientSearch(event.target.value)}
-                disabled={saving || loading}
-                autoComplete="off"
-              />
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+                <div className="min-w-0 flex-1">
+                  <TextField
+                    label="شماره موبایل مشتری"
+                    placeholder="۰۹۱۲۳۴۵۶۷۸۹"
+                    value={clientSearch}
+                    onChange={(event) => {
+                      setClientSearch(event.target.value);
+                      setPhone(event.target.value);
+                      setSelectedClient(null);
+                      setError('');
+                    }}
+                    disabled={saving || loading}
+                    autoComplete="tel"
+                    inputMode="tel"
+                    dir="ltr"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="md"
+                  className="w-full shrink-0 sm:w-auto"
+                  startIcon={<ContactRound className="h-4 w-4" />}
+                  onClick={() => void handleContactPick()}
+                  loading={contactLoading}
+                  disabled={saving || loading || contactLoading}
+                >
+                  از مخاطبین تلفن
+                </Button>
+              </div>
               {clientSearch.trim().length >= 2 && (
                 <div className="mt-2">
                   {clientSearchLoading && (
@@ -3260,29 +3263,23 @@ function ManualBookingDialog({
                     </ul>
                   )}
                   {!clientSearchLoading && clientResults.length === 0 && (
-                    <p className="m-0 px-1 text-xs text-muted">
-                      مشتری پیدا نشد؛ اطلاعات را دستی وارد کن.
+                    <p className="m-0 rounded-lg bg-bg px-3 py-2 text-xs leading-5 text-muted">
+                      مشتری با این شماره پیدا نشد؛ با ثبت نوبت به مشتری‌های این سالن اضافه می‌شود.
                     </p>
                   )}
                 </div>
               )}
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <Button type="button" variant="secondary" size="md" className="w-full" onClick={handleNewClient} disabled={saving || loading}>
-                  مشتری جدید / ورود دستی
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="md"
-                  className="w-full"
-                  startIcon={<ContactRound className="h-4 w-4" />}
-                  onClick={() => void handleContactPick()}
-                  loading={contactLoading}
-                  disabled={saving || loading || contactLoading}
-                >
-                  از مخاطبین تلفن
-                </Button>
-                <label className="col-span-2 inline-flex min-h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border bg-bg px-3 py-2 text-xs font-bold text-muted transition-colors hover:bg-elevated hover:text-text focus-within:outline focus-within:outline-2 focus-within:outline-focus">
+              {!selectedClient && (
+                <TextField
+                  label="نام مشتری (اختیاری)"
+                  value={fullName}
+                  onChange={(event) => setFullName(event.target.value)}
+                  disabled={saving || loading}
+                  autoComplete="name"
+                />
+              )}
+              <div className="mt-2">
+                <label className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border bg-bg px-3 py-2 text-xs font-bold text-muted transition-colors hover:bg-elevated hover:text-text focus-within:outline focus-within:outline-2 focus-within:outline-focus">
                   <input
                     type="file"
                     accept=".vcf,text/vcard"
@@ -3421,25 +3418,6 @@ function ManualBookingDialog({
               helperText="برای جلوگیری از ثبت اشتباه، آدرس را کامل بنویسید."
             />
           )}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <TextField
-                label="موبایل مشتری"
-                placeholder="09xxxxxxxxx"
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-                disabled={saving}
-                inputMode="tel"
-                dir="ltr"
-              />
-            </div>
-            <TextField
-              label="نام مشتری (اختیاری)"
-              value={fullName}
-              onChange={(event) => setFullName(event.target.value)}
-              disabled={saving}
-            />
-          </div>
           {error && <p role="alert" className="text-sm text-danger">{error}</p>}
           <div className="mt-2 flex items-center justify-end gap-2">
             <DialogClose asChild>
@@ -4412,11 +4390,15 @@ export function OwnerCalendarPage() {
   const { t } = useTranslation();
   const { role } = useAuth();
   const salonId = useSalonId();
+  const location = useLocation();
+  const { lastEvent: inboxEvent } = useInboxWs(salonId);
   useHashScroll();
   const navigate = useNavigate();
 
-  const [view, setView] = useState<CalendarView>(() => initialCalendarView());
-  const [anchor, setAnchor] = useState<Date>(() => new Date());
+  const [view, setView] = useState<CalendarView>(() =>
+    new URLSearchParams(location.search).get('view') === 'day' ? 'day' : initialCalendarView(),
+  );
+  const [anchor, setAnchor] = useState<Date>(() => calendarDateFromSearch(location.search) ?? new Date());
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [approvalReloadToken, setApprovalReloadToken] = useState(0);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -4434,9 +4416,7 @@ export function OwnerCalendarPage() {
   const [manualStart, setManualStart] = useState<string | undefined>();
   const [manualCustomer, setManualCustomer] = useState<ManualCustomerPrefill>({});
   const [cancelAppointment, setCancelAppointment] = useState<Appointment | null>(null);
-  const [cancelKind, setCancelKind] = useState<'standard' | 'emergency'>('standard');
   const [cancelReason, setCancelReason] = useState('');
-  const [cancelProof, setCancelProof] = useState<RefundProofDraft | null>(null);
   const [cancelBusy, setCancelBusy] = useState(false);
   const [cancelError, setCancelError] = useState('');
   const [reportAppointment, setReportAppointment] = useState<Appointment | null>(null);
@@ -4456,6 +4436,19 @@ export function OwnerCalendarPage() {
   const [calendarQuery, setCalendarQuery] = useState('');
   const [calendarStaffId, setCalendarStaffId] = useState('all');
   const [calendarStatus, setCalendarStatus] = useState<CalendarStatusFilter>('all');
+
+  useEffect(() => {
+    const date = calendarDateFromSearch(location.search);
+    if (!date) return;
+    setAnchor(date);
+    setView('day');
+  }, [location.search]);
+
+  useEffect(() => {
+    if (!inboxEvent) return;
+    setReloadToken((value) => value + 1);
+    setApprovalReloadToken((value) => value + 1);
+  }, [inboxEvent?.id]);
 
 
   // Track direction for animations
@@ -4484,9 +4477,7 @@ export function OwnerCalendarPage() {
   const openCancelAppointment = useCallback((appointment: Appointment) => {
     setSelectedAppointment(null);
     setCancelAppointment(appointment);
-    setCancelKind('standard');
     setCancelReason('');
-    setCancelProof(null);
     setCancelError('');
   }, []);
 
@@ -4810,9 +4801,8 @@ export function OwnerCalendarPage() {
         await adminApi.rejectAppointment(cancelAppointment.id, reason);
       } else {
         await adminApi.cancelAppointment(cancelAppointment.id, {
-          kind: cancelKind,
+          kind: 'standard',
           reason,
-          ...(cancelProof ? { refundProof: cancelProof } : {}),
         });
       }
       setCancelAppointment(null);
@@ -4948,7 +4938,7 @@ export function OwnerCalendarPage() {
       </div>
 
       <p className="owner-calendar-hint -mt-3 hidden text-xs text-muted sm:block">
-        روی هر روز یا ساعت بزن تا همان‌جا تعطیلی کامل یا محدودیت ساعتی ثبت کنی.
+        روی ساعت خالی بزن تا همان‌جا نوبت ثبت کنی؛ برای تعطیلی از «برنامه حضور» استفاده کن.
       </p>
 
       <CalendarFilters
@@ -5052,7 +5042,7 @@ export function OwnerCalendarPage() {
                       anchor={anchor}
                       closures={closures}
                       staffBlocks={staffCalendarBlocks}
-                      onSelectSlot={(date, time) => openAvailability(date, time)}
+                      onSelectSlot={(date, time) => openManualBooking(date, time)}
                       onViewAppointments={openAppointmentList}
                       onCancel={openCancelAppointment}
                       onNoShow={setNoShowAppointment}
@@ -5168,37 +5158,12 @@ export function OwnerCalendarPage() {
         <DialogContent>
           <DialogTitle>لغو این نوبت؟</DialogTitle>
           <DialogDescription>
-            نوبت {cancelAppointment?.customerName ?? 'مشتری'} لغو می‌شود، زمان آزاد خواهد شد و پیام اطلاع‌رسانی برای مشتری ارسال می‌شود.
+            نوبت {cancelAppointment?.customerName ?? 'مشتری'} لغو می‌شود، زمان آزاد خواهد شد و پیامک به مشتری می‌رسد.
           </DialogDescription>
           {cancelAppointment?.status !== 'pending' && (
-            <div className="mt-4 grid gap-2" role="radiogroup" aria-label="نوع لغو نوبت">
-              <label className="flex cursor-pointer gap-3 rounded-lg border border-border p-3 text-sm text-text">
-                <input
-                  type="radio"
-                  name="appointment-cancel-kind"
-                  checked={cancelKind === 'standard'}
-                  onChange={() => setCancelKind('standard')}
-                  disabled={cancelBusy}
-                />
-                <span>
-                  <strong className="block">لغو عادی</strong>
-                  <span className="text-xs text-muted">قانون عادی بیعانه بر اساس زمان لغو اجرا می‌شود.</span>
-                </span>
-              </label>
-              <label className="flex cursor-pointer gap-3 rounded-lg border border-danger/40 bg-danger/5 p-3 text-sm text-text">
-                <input
-                  type="radio"
-                  name="appointment-cancel-kind"
-                  checked={cancelKind === 'emergency'}
-                  onChange={() => setCancelKind('emergency')}
-                  disabled={cancelBusy}
-                />
-                <span>
-                  <strong className="block">لغو اضطراری از طرف سالن</strong>
-                  <span className="text-xs text-muted">بیعانه این رزرو ظرف ۲۴ ساعت به مشتری برگردانده می‌شود.</span>
-                </span>
-              </label>
-            </div>
+            <p className="mt-4 rounded-lg border border-border bg-bg p-3 text-xs leading-6 text-muted">
+              سیاست بیعانه: اگر سالن نوبت را لغو کند یا درخواست را رد کند، بیعانهٔ پرداخت‌شده بازگردانده می‌شود. در لغو از طرف مشتری، بیش از ۶۰ دقیقه مانده به شروع بازپرداخت می‌شود و در ۶۰ دقیقهٔ پایانی نزد سالن می‌ماند. پیامک لغو برای مشتری ثبت می‌شود.
+            </p>
           )}
           <Textarea
             label="دلیل لغو"
@@ -5214,30 +5179,6 @@ export function OwnerCalendarPage() {
             helperText="این دلیل برای پیگیری و اطلاع‌رسانی ذخیره می‌شود."
             className="mt-4"
           />
-          {cancelKind === 'emergency' && cancelAppointment?.status !== 'pending' && (
-            <label className="mt-3 flex cursor-pointer flex-col gap-1.5 rounded-lg border border-dashed border-danger/40 bg-danger/5 p-3 text-sm text-text">
-              <span className="font-bold">تصویر مدرک بازپرداخت بیعانه</span>
-              <span className="text-xs text-muted">اختیاری؛ JPG، PNG یا WebP، حداکثر ۵ مگابایت. بدون تصویر هم لغو اضطراری انجام می‌شود و بازپرداخت پیگیری خواهد شد.</span>
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                disabled={cancelBusy}
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  event.target.value = '';
-                  if (!file) return;
-                  void readRefundProof(file)
-                    .then((proof) => {
-                      setCancelProof(proof);
-                      setCancelError('');
-                    })
-                    .catch(() => setCancelError('تصویر معتبر نیست یا حجم آن بیشتر از ۵ مگابایت است.'));
-                }}
-                className="mt-1 block min-h-11 w-full rounded-md border border-border bg-bg p-2 text-xs text-text"
-              />
-              {cancelProof && <span className="text-xs text-success">مدرک انتخاب شد: {cancelProof.fileName}</span>}
-            </label>
-          )}
           {cancelError && <p role="alert" className="mt-3 text-sm text-danger">{cancelError}</p>}
           <div className="mt-5 flex justify-end gap-2">
             <DialogClose asChild><Button variant="ghost" disabled={cancelBusy}>انصراف</Button></DialogClose>

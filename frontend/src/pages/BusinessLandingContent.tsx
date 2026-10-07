@@ -560,7 +560,7 @@ function GrowthBoardMock() {
         {[
           { icon: Camera, label: 'بیوی اینستاگرام', value: 'قابل ردیابی', tone: 'bg-primary/20' },
           { icon: QrCode, label: 'QR داخل سالن', value: 'آمادهٔ اسکن', tone: 'bg-accent/15' },
-          { icon: Send, label: 'لینک دعوت مشتری', value: 'قابل اشتراک', tone: 'bg-warning/15' },
+          { icon: Users, label: 'مشتری وفادار', value: '۳ مراجعه', tone: 'bg-warning/15' },
           { icon: RefreshCw, label: 'مراجعهٔ بعدی', value: 'قابل پیگیری', tone: 'bg-primary/20' },
         ].map(({ icon: Icon, label, value, tone }) => (
           <div key={label} className="rounded-xl border border-ink-border p-3">
@@ -619,8 +619,8 @@ const BUSINESS_TOUR: Record<
     icon: WandSparkles,
     label: 'رشد بده',
     title: 'هر ورودی را به رابطهٔ بعدی تبدیل کنید.',
-    body: 'کانال‌های ورودی و مسیر معرفی سالن را شفاف کنید تا بدانید مشتری از کجا آمده و چه زمانی برمی‌گردد.',
-    bullets: ['بیو، استوری و QR', 'لینک معرفی مشتری', 'یادآوری مراجعهٔ بعدی'],
+    body: 'سابقهٔ مراجعه را نگه دارید تا مشتری‌های پرتکرار و زمان پیگیری بعدی را بشناسید.',
+    bullets: ['بیو، استوری و QR', 'پرونده و سابقهٔ مشتری', 'یادآوری مراجعهٔ بعدی'],
   },
 };
 
@@ -704,41 +704,7 @@ function BusinessFeatureTour() {
   );
 }
 
-function ReferralFlow() {
-  const steps = [
-    { icon: Send, label: 'دعوت', body: 'مشتری لینک سالن محبوبش را می‌فرستد.' },
-    { icon: PanelTop, label: 'ثبت سالن', body: 'صاحب سالن با همان لینک وارد شروع می‌شود.' },
-    {
-      icon: CalendarDays,
-      label: 'رزرو واقعی',
-      body: 'خدمت و زمان در صفحهٔ فارسی سالن قرار می‌گیرد.',
-    },
-    {
-      icon: CircleDollarSign,
-      label: 'پاداش کمپین',
-      body: 'پس از شرط روشن کمپین، پاداش یا پوشش اعمال می‌شود.',
-    },
-  ];
-
-  return (
-    <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {steps.map(({ icon: Icon, label, body }, index) => (
-        <div key={label} className="relative rounded-2xl border border-ink-border bg-ink/70 p-5">
-          <div className="flex items-center justify-between gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-primary/20 text-accent">
-              <Icon className="size-5" aria-hidden="true" />
-            </span>
-            <span className="text-xs font-bold text-ink-muted">۰{index + 1}</span>
-          </div>
-          <h3 className="mt-6 font-bold">{label}</h3>
-          <p className="mt-2 text-sm leading-7 text-ink-muted">{body}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/** Main owner-first landing: Fresha-inspired hierarchy, localized for Iran and Ara's referral loop. */
+/** Main owner-first landing: Fresha-inspired hierarchy, localized for salon teams in Iran. */
 function BusinessInspiredVariant() {
   return (
     <>
@@ -754,7 +720,7 @@ function BusinessInspiredVariant() {
               سالن شما، <span className="text-primary">یک قدم جلوتر.</span>
             </h1>
             <p className="mt-6 max-w-xl text-md leading-8 text-muted sm:text-lg">
-              آرا تقویم، صفحهٔ رزرو، مشتری‌ها و مسیر معرفی را در یک فضای فارسی جمع می‌کند؛ تا شما
+              آرا تقویم، صفحهٔ رزرو و پروندهٔ مشتری‌ها را در یک فضای فارسی جمع می‌کند؛ تا شما
               به‌جای جواب‌دادن به پیام‌های تکراری، روی تجربهٔ سالن تمرکز کنید.
             </p>
             <HeroActions primaryLabel="رایگان شروع کنید" />
@@ -807,7 +773,7 @@ function BusinessInspiredVariant() {
               {
                 icon: WandSparkles,
                 title: 'رشد بده',
-                body: 'مسیر معرفی و مراجعهٔ بعدی را بسازید؛ نه فقط یک تقویم خالی.',
+                body: 'مراجعهٔ بعدی و وضعیت مشتری‌ها را کنار تقویم پیگیری کنید.',
               },
             ].map(({ icon: Icon, title, body }, index) => (
               <article key={title} className="rounded-2xl border border-ink-border bg-ink/70 p-6">
@@ -848,7 +814,7 @@ function BusinessInspiredVariant() {
               'یادآوری',
               'QR اختصاصی',
               'گزارش ظرفیت',
-              'معرفی مشتری',
+              'مشتری وفادار',
             ].map((item) => (
               <span
                 key={item}
@@ -859,33 +825,6 @@ function BusinessInspiredVariant() {
               </span>
             ))}
           </div>
-        </div>
-      </section>
-
-      <section
-        id="solutions"
-        className="scroll-mt-20 overflow-hidden bg-primary py-16 text-primary-contrast sm:py-20"
-      >
-        <div className="mx-auto grid max-w-7xl gap-10 px-4 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-          <div>
-            <SectionHeader
-              dark
-              eyebrow="ایدهٔ معرفی شما، داخل محصول"
-              title="مشتری‌ها سالن محبوبشان را وارد آرا می‌کنند"
-              body="این مسیر برای کمپین اینستاگرامی شماست: مشتری لینک را می‌فرستد، سالن وارد می‌شود و بعد از تکمیل شرط‌های شفاف، پاداش یا پوشش اشتراک اعمال می‌شود."
-            />
-            <ReferralFlow />
-            <p className="mt-6 flex items-start gap-2 text-xs leading-6 text-primary-contrast/80">
-              <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-              شرایط، سقف و زمان پاداش را قبل از انتشار هر کمپین به‌وضوح اعلام کنید.
-            </p>
-          </div>
-          <figure className="mx-auto w-full max-w-xs rounded-[2rem] border border-primary-contrast/20 bg-ink p-2 shadow-3">
-            <BookingImage className="rounded-[1.5rem]" />
-            <figcaption className="px-2 py-3 text-center text-xs text-ink-muted">
-              مقصد نهایی لینک؛ رزرو ساده برای مشتری
-            </figcaption>
-          </figure>
         </div>
       </section>
 
@@ -918,12 +857,11 @@ function BusinessInspiredVariant() {
             <div className="rounded-2xl border border-ink bg-ink p-6 text-ink-contrast shadow-1">
               <div className="flex items-center gap-3">
                 <Users className="size-5 text-accent" aria-hidden="true" />
-                <p className="font-bold">کمپین معرفی</p>
+                <p className="font-bold">مدیریت مشتری</p>
               </div>
-              <p className="mt-5 text-lg font-bold">برای هر دعوت، مسیر روشن</p>
+              <p className="mt-5 text-lg font-bold">سابقه و وفاداری کنار تقویم</p>
               <p className="mt-3 text-sm leading-7 text-ink-muted">
-                لینک دعوت، وضعیت رزرو و شرط پاداش را کنار هم ببینید؛ بدون وعدهٔ مبهم برای سالن یا
-                مشتری.
+                نوبت‌های قبلی، یادداشت‌ها و مشتری‌های پرتکرار را در پروندهٔ همان سالن دنبال کنید.
               </p>
             </div>
           </div>

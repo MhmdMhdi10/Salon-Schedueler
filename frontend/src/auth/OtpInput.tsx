@@ -6,7 +6,7 @@ import { cn, toPersianDigits } from '../components/ui';
 import { durations } from '../lib/motion-variants';
 
 /** Number of digits in the SMS one-time code. */
-export const OTP_LENGTH = 6;
+export const OTP_LENGTH = 4;
 
 export interface OtpInputHandle {
   /** Focus the first empty box (or the last box when all are filled). */
@@ -25,12 +25,12 @@ export interface OtpInputProps {
   /** Focus the first box when the component mounts. */
   autoFocus?: boolean;
   disabled?: boolean;
-  /** Provider-reported code length; defaults to the local six-digit flow. */
+  /** Provider-reported code length; defaults to the local four-digit flow. */
   length?: number;
 }
 
 /**
- * Six-box one-time-code entry shared by the OTP login page and the salon
+ * Four-box one-time-code entry shared by the OTP login page and the salon
  * registration wizard.
  *
  * Robust against manual entry and pasted codes (the previous per-box

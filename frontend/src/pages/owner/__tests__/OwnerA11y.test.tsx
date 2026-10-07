@@ -155,7 +155,7 @@ const QR_RESPONSE = {
  */
 function renderOwnerPanel(role: OwnerRole, initialPath: string) {
   getAccessToken.mockReturnValue('access-token');
-  getMe.mockResolvedValue({ principal: { id: 'u1', role } });
+  getMe.mockResolvedValue({ principal: { id: 'u1', role, salonId: 'salon-test' } });
 
   return renderRtl(
     <HelmetProvider>

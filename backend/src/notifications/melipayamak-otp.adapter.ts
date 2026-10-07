@@ -59,7 +59,7 @@ export class MelliPayamakOtpAdapter implements OtpProvider {
       };
       const code = data.code === undefined || data.code === null ? '' : String(data.code).trim();
 
-      if (!/^\d{4,10}$/.test(code)) {
+      if (!/^\d{4}$/.test(code)) {
         return this.fail(phone, data.status || 'Melli Payamak returned an invalid OTP code');
       }
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, Check, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { normalizeDigits } from '@salon/shared';
@@ -46,7 +46,7 @@ import type { CategoryIconProps } from '../../components/icons';
 import './RegisterSalonPage.css';
 
 /** Number of digits in the SMS one-time code. */
-const OTP_LENGTH = 6;
+const OTP_LENGTH = 4;
 /** Resend cooldown in seconds — the «ارسال مجدد تا ۰:۴۵» timer (ui-ux §7). */
 const RESEND_SECONDS = 45;
 
@@ -161,9 +161,8 @@ export function RegisterSalonPage() {
 
 function RegisterSalonContent() {
   const { t } = useTranslation();
+  const location = useLocation();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const referralToken = searchParams.get('referral')?.trim() || undefined;
   const { success } = useToast();
   const { refresh: refreshAuth } = useAuth();
 
@@ -182,7 +181,10 @@ function RegisterSalonContent() {
   // Identity — required before provisioning the salon.
   const [salonName, setSalonName] = useState('');
   const [ownerName, setOwnerName] = useState('');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(() => {
+    const ownerPhone = (location.state as { ownerPhone?: unknown } | null)?.ownerPhone;
+    return typeof ownerPhone === 'string' ? ownerPhone : '';
+  });
   const [infoErrors, setInfoErrors] = useState<{
     salonName?: string;
     ownerName?: string;
@@ -237,14 +239,11 @@ function RegisterSalonContent() {
   const prefersReducedMotion = useReducedMotion();
 
   const applyOtpResponse = (response?: { devOtp?: string; otpLength?: number }) => {
-    const candidate = response?.otpLength ?? response?.devOtp?.length ?? OTP_LENGTH;
-    const nextLength =
-      Number.isInteger(candidate) && candidate >= 4 && candidate <= 10 ? candidate : OTP_LENGTH;
-    setOtpLength(nextLength);
+    setOtpLength(OTP_LENGTH);
     setCode(
-      response?.devOtp
-        ? response.devOtp.split('').slice(0, nextLength)
-        : Array(nextLength).fill(''),
+      response?.devOtp && /^\d{4}$/.test(response.devOtp)
+        ? response.devOtp.split('')
+        : Array(OTP_LENGTH).fill(''),
     );
     autoSubmittedOtp.current = '';
   };
@@ -399,9 +398,9 @@ function RegisterSalonContent() {
     const profileKeys = categories.length > 0 ? categories : ['hair_salon'];
     const keys = profileKeys.flatMap((profileKey) => SERVICE_PRESETS_BY_PROFILE[profileKey] ?? []);
     return [...new Set(keys)].map((key) => {
-      const specialty = BUSINESS_PROFILES
-        .flatMap((profile) => profile.specialties)
-        .find((item) => item.key === key);
+      const specialty = BUSINESS_PROFILES.flatMap((profile) => profile.specialties).find(
+        (item) => item.key === key,
+      );
       return {
         key,
         label: t(`business.register.services.presets.${key}`, {
@@ -455,7 +454,6 @@ function RegisterSalonContent() {
           .map((fullName) => ({ fullName: fullName.trim() }))
           .filter((member) => member.fullName.length > 0),
         chairCount: isMobileWorkspace ? 0 : toIntOrZero(chairCount),
-        referralToken,
       });
       // Salon created — send the OTP so the owner can sign straight in.
       const response = await authApi.requestOtp(normalizedPhone);
@@ -995,7 +993,9 @@ function RegisterSalonContent() {
                         type="button"
                         variant="ghost"
                         size="md"
-                        startIcon={<ArrowRight className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
+                        startIcon={
+                          <ArrowRight className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />
+                        }
                         onClick={() => setStep('category')}
                       >
                         {t('business.register.back')}
@@ -1083,7 +1083,7 @@ function RegisterSalonContent() {
                       )}
                     </form>
 
-                    <div className="flex h-[18rem] min-h-0 flex-col rounded-xl border border-border bg-bg p-3">
+                    <div className="flex h-[48rem] shrink-0 flex-col rounded-xl border border-border bg-bg p-3 sm:h-[32rem] sm:shrink">
                       <div className="flex shrink-0 items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-sm font-bold text-text">
@@ -1117,7 +1117,7 @@ function RegisterSalonContent() {
                         />
                       </label>
                       <div
-                        className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain pe-1"
+                        className="mt-3 min-h-[40rem] flex-1 overflow-y-auto overscroll-contain pe-1 sm:min-h-0"
                         data-testid="suggested-services-list"
                       >
                         {filteredServicePresets.length > 0 ? (
@@ -1131,7 +1131,7 @@ function RegisterSalonContent() {
                                 <label
                                   key={preset.key}
                                   className={cn(
-                                    'flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm',
+                                    'flex min-h-16 cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm sm:min-h-11',
                                     checked
                                       ? 'border-primary bg-primary/5 text-primary'
                                       : 'border-border text-text',
@@ -1149,7 +1149,10 @@ function RegisterSalonContent() {
                             })}
                           </div>
                         ) : (
-                          <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs leading-5 text-muted" role="status">
+                          <p
+                            className="rounded-lg border border-dashed border-border p-4 text-center text-xs leading-5 text-muted"
+                            role="status"
+                          >
                             {t('business.register.services.presetsNoResults')}
                           </p>
                         )}

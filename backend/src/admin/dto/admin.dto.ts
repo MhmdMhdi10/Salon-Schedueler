@@ -67,11 +67,6 @@ export const AdminEmergencyCloseDto = z
     onDate: z.string().trim().min(1),
     cancelAppointments: bool.optional(),
     reason: z.string().trim().max(1000).optional(),
-    refundProof: z.object({
-      fileName: z.string().trim().min(1).max(120),
-      mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
-      dataBase64: z.string().max(7_200_000),
-    }).optional(),
   })
   .passthrough();
 export const AdminWorkingHoursDto = loose;

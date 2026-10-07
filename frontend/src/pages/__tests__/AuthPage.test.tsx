@@ -9,7 +9,7 @@ import { expectNoSeriousA11yViolations } from '../../test/a11y';
  * Tests for the redesigned phone + OTP auth page (task 6.1; R4.1, R4.2, R7.6;
  * ui-ux §7, §10, §11). They cover: the phone step with Iranian-pattern
  * validation + digit normalization, the «کد ارسال شد» send toast, the
- * provider-sized OTP step with auto-advance / paste / backspace, the resend timer in Persian
+ * fixed four-digit OTP step with auto-advance / paste / backspace, the resend timer in Persian
  * digits, the inline `role="alert"` error that preserves entered data, and the
  * preserved `auth-page` testID.
  */
@@ -199,33 +199,31 @@ describe('AuthPage — OTP step', () => {
     await screen.findByLabelText('رقم ۱ کد تایید');
   }
 
-  it('renders six single-digit boxes', async () => {
+  it('renders exactly four single-digit boxes', async () => {
     await advanceToOtp();
-    const persianDigits = ['۱', '۲', '۳', '۴', '۵', '۶'];
+    const persianDigits = ['۱', '۲', '۳', '۴'];
     for (const d of persianDigits) {
       expect(screen.getByLabelText(`رقم ${d} کد تایید`)).toBeInTheDocument();
     }
+    expect(screen.queryByLabelText('رقم ۵ کد تایید')).not.toBeInTheDocument();
   });
 
-  it('renders the provider-reported ten-digit OTP length', async () => {
-    requestOtp.mockResolvedValueOnce({ otpLength: 10 });
+  it('keeps four boxes and ignores malformed provider OTPs', async () => {
+    requestOtp.mockResolvedValueOnce({ otpLength: 10, devOtp: '3741437414' });
     await advanceToOtp();
 
-    expect(screen.getByLabelText('رقم ۱۰ کد تایید')).toBeInTheDocument();
-    const first = screen.getByLabelText('رقم ۱ کد تایید');
-    fireEvent.paste(first, {
-      clipboardData: { getData: () => '3741437414' },
-    });
-    await waitFor(() => expect(screen.getByLabelText('رقم ۱۰ کد تایید')).toHaveValue('4'));
-    await waitFor(() => expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '3741437414'));
+    expect(screen.getByLabelText('رقم ۴ کد تایید')).toBeInTheDocument();
+    expect(screen.queryByLabelText('رقم ۵ کد تایید')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('رقم ۱ کد تایید')).toHaveValue('');
+    expect(verifyOtp).not.toHaveBeenCalled();
   });
 
   it('fills a temporary development OTP returned by the API', async () => {
-    requestOtp.mockResolvedValueOnce({ devOtp: '123456' });
+    requestOtp.mockResolvedValueOnce({ devOtp: '1234' });
     await advanceToOtp();
 
     expect(screen.getByLabelText('رقم ۱ کد تایید')).toHaveValue('1');
-    expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('6');
+    expect(screen.getByLabelText('رقم ۴ کد تایید')).toHaveValue('4');
   });
 
   it('auto-advances focus to the next box on entry', async () => {
@@ -235,14 +233,14 @@ describe('AuthPage — OTP step', () => {
     expect(screen.getByLabelText('رقم ۲ کد تایید')).toHaveFocus();
   });
 
-  it('supports full paste of the 6-digit code', async () => {
+  it('supports full paste of the four-digit code', async () => {
     await advanceToOtp();
     const first = screen.getByLabelText('رقم ۱ کد تایید') as HTMLInputElement;
     fireEvent.paste(first, {
-      clipboardData: { getData: () => '123456' },
+      clipboardData: { getData: () => '1234' },
     });
-    await waitFor(() => expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('6'));
-    await waitFor(() => expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '123456'));
+    await waitFor(() => expect(screen.getByLabelText('رقم ۴ کد تایید')).toHaveValue('4'));
+    await waitFor(() => expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '1234'));
   });
 
   it('moves focus to the previous box on backspace in an empty box', async () => {
@@ -257,8 +255,8 @@ describe('AuthPage — OTP step', () => {
     verifyOtp.mockRejectedValueOnce(new Error('bad code'));
     await advanceToOtp();
     const first = screen.getByLabelText('رقم ۱ کد تایید') as HTMLInputElement;
-    fireEvent.paste(first, { clipboardData: { getData: () => '000000' } });
-    await waitFor(() => expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('0'));
+    fireEvent.paste(first, { clipboardData: { getData: () => '0000' } });
+    await waitFor(() => expect(screen.getByLabelText('رقم ۴ کد تایید')).toHaveValue('0'));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     // Still on the OTP step.
     expect(screen.getByLabelText('رقم ۱ کد تایید')).toBeInTheDocument();
@@ -326,10 +324,10 @@ describe('AuthPage — booking return intent', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'دریافت کد' }));
 
-    // OTP step → paste the 6 digits and verify.
+    // OTP step → paste the four digits and verify.
     const first = await screen.findByLabelText('رقم ۱ کد تایید');
-    fireEvent.paste(first, { clipboardData: { getData: () => '123456' } });
-    await waitFor(() => expect(screen.getByLabelText('رقم ۶ کد تایید')).toHaveValue('6'));
+    fireEvent.paste(first, { clipboardData: { getData: () => '1234' } });
+    await waitFor(() => expect(screen.getByLabelText('رقم ۴ کد تایید')).toHaveValue('4'));
 
     // Landed back on the booking funnel with the selection + the resume flag.
     const probe = await screen.findByText(/^return-page:/);

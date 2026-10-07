@@ -54,6 +54,7 @@ export interface NotificationLogEntry {
     | 'reminder'
     | 'rejection'
     | 'cancellation'
+    | 'reschedule'
     | 'booking_notice'
     | 'generic';
   status: 'sent' | 'failed';
@@ -117,6 +118,7 @@ export interface CancellationNotice {
   kind?: 'standard' | 'emergency' | 'rejected';
   reason?: string;
   refundDueHours?: number;
+  cancelledBySalon?: boolean;
 }
 
 /**
@@ -314,10 +316,16 @@ export class NotificationService {
     await this.repository.logNotification({
       appointmentId,
       channel: 'sms',
-      type: 'generic',
+      type: 'reschedule',
       status: result.ok ? 'sent' : 'failed',
       error: result.ok ? null : result.error,
     });
+    await this.writeCustomerNotification(
+      appointment,
+      'booking.reschedule.proposed',
+      'پیشنهاد تغییر زمان نوبت',
+      message,
+    );
   }
 
   /**
@@ -558,7 +566,9 @@ export class NotificationService {
   ): string {
     const { dateStr, timeStr } = this.getAppointmentDateTime(appointment);
     const reason = notice?.reason?.trim() ? ` دلیل: ${notice.reason.trim()}.` : '';
-    const refund = notice?.kind === 'emergency' && notice.refundDueHours
+    const refund = notice?.cancelledBySalon
+      ? ' بیعانهٔ پرداخت‌شده طبق سیاست سالن بازگردانده می‌شود.'
+      : notice?.kind === 'emergency' && notice.refundDueHours
       ? ` بازگشت وجه حداکثر ظرف ${notice.refundDueHours} ساعت انجام می‌شود.`
       : '';
     return `نوبت شما در ${appointment.salonName} برای ${appointment.serviceName} در تاریخ ${dateStr} ساعت ${timeStr} لغو شد.${reason}${refund} برای رزرو زمانی دیگر می‌توانید دوباره اقدام کنید.`;
@@ -569,7 +579,9 @@ export class NotificationService {
     notice?: CancellationNotice,
   ): string {
     const reason = notice?.reason?.trim() ? ` دلیل لغو: ${notice.reason.trim()}.` : '';
-    const refund = notice?.kind === 'emergency'
+    const refund = notice?.cancelledBySalon
+      ? ' سالن نوبت را لغو کرد؛ بیعانهٔ پرداخت‌شده طبق سیاست بازگردانده می‌شود.'
+      : notice?.kind === 'emergency'
       ? ` بازگشت وجه حداکثر ظرف ${notice.refundDueHours ?? 24} ساعت انجام می‌شود.`
       : ' وضعیت بازگشت وجه در پنل نمایش داده می‌شود.';
     return `نوبت ${appointment.serviceName} در ${appointment.salonName} لغو شد.${reason}${refund}`;

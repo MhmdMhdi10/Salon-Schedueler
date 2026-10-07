@@ -114,7 +114,7 @@ export class SalonRegistration {
         },
       });
 
-      // Default working hours for the owner (all 7 weekdays, 09:00–20:00) so a
+      // Default working hours for the owner (all 7 weekdays, 10:00–21:00) so a
       // freshly-registered salon is immediately bookable. The scheduling engine
       // returns no slots until at least one staff member has working_hours.
       const staffMembers: StaffMember[] = [owner];
@@ -137,8 +137,8 @@ export class SalonRegistration {
             ownerKind: 'staff',
             ownerId: member.id,
             weekday,
-            startTime: new Date('1970-01-01T09:00:00'),
-            endTime: new Date('1970-01-01T20:00:00'),
+            startTime: new Date('1970-01-01T10:00:00'),
+            endTime: new Date('1970-01-01T21:00:00'),
           })),
         ),
       });
@@ -197,8 +197,8 @@ export class SalonRegistration {
               ownerKind: 'chair',
               ownerId: chair.id,
               weekday,
-              startTime: new Date('1970-01-01T09:00:00'),
-              endTime: new Date('1970-01-01T20:00:00'),
+              startTime: new Date('1970-01-01T10:00:00'),
+              endTime: new Date('1970-01-01T21:00:00'),
             });
           }
         }
@@ -228,8 +228,8 @@ export class SalonRegistration {
             ownerKind: 'chair',
             ownerId: mobileLane.id,
             weekday,
-            startTime: new Date('1970-01-01T09:00:00'),
-            endTime: new Date('1970-01-01T20:00:00'),
+            startTime: new Date('1970-01-01T10:00:00'),
+            endTime: new Date('1970-01-01T21:00:00'),
           })),
         });
       }

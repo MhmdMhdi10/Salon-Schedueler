@@ -132,4 +132,13 @@ export class SalonClientService {
       createdAt: relation.createdAt,
     };
   }
+
+  /** Keep every booked customer in the book of the salon they booked. */
+  async ensureCustomer(salonId: string, customerId: string): Promise<void> {
+    await (this.prisma as PrismaWithClientBook).salonClient.upsert({
+      where: { salonId_customerId: { salonId, customerId } },
+      update: {},
+      create: { salonId, customerId },
+    });
+  }
 }

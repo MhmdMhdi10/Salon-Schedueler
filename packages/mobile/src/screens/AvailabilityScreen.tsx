@@ -1,11 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  ActivityIndicator,
-  StyleSheet,
-} from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
   gregorianToJalali,
@@ -206,6 +200,13 @@ export function AvailabilityScreen({
     setBookingError('');
   };
 
+  const handleBookAnother = () => {
+    setSelectedService('');
+    setSelectedSlot('');
+    setBookingError('');
+    setBookingStatus('idle');
+  };
+
   const handleConfirm = async () => {
     if (!selectedSlot || bookingStatus === 'loading') return;
     setBookingStatus('loading');
@@ -233,11 +234,7 @@ export function AvailabilityScreen({
   const monthDays = useMemo(() => {
     const length = jalaliMonthLength(viewJy, viewJm);
     const firstGreg = jalaliToGregorian({ jy: viewJy, jm: viewJm, jd: 1 });
-    const firstWeekday = new Date(
-      firstGreg.year,
-      firstGreg.month - 1,
-      firstGreg.day
-    ).getDay();
+    const firstWeekday = new Date(firstGreg.year, firstGreg.month - 1, firstGreg.day).getDay();
     const lead = WEEKDAY_ORDER.indexOf(firstWeekday);
     const cells: Array<{ jd: number; iso: string; disabled: boolean } | null> = [];
     for (let i = 0; i < lead; i += 1) cells.push(null);
@@ -433,7 +430,7 @@ export function AvailabilityScreen({
                     {toPersianDigits(cell.jd)}
                   </Text>
                 </Pressable>
-              )
+              ),
             )}
           </View>
         </View>
@@ -576,10 +573,7 @@ export function AvailabilityScreen({
             ]}
           >
             {bookingStatus === 'loading' ? (
-              <ActivityIndicator
-                testID="booking-loading"
-                color={theme.colors.primaryContrast}
-              />
+              <ActivityIndicator testID="booking-loading" color={theme.colors.primaryContrast} />
             ) : (
               <Text style={styles.primaryButtonText}>{t('booking.confirm')}</Text>
             )}
@@ -592,6 +586,17 @@ export function AvailabilityScreen({
         <View testID="booking-success" style={styles.successCard} accessibilityRole="alert">
           <Text style={styles.successTitle}>{t('booking.pending')}</Text>
           <Text style={styles.successBody}>{t('booking.pendingBody')}</Text>
+          <Pressable
+            testID="book-another-button"
+            accessibilityRole="button"
+            onPress={handleBookAnother}
+            style={({ pressed }: { pressed: boolean }) => [
+              styles.retryButton,
+              pressed ? styles.pressed : null,
+            ]}
+          >
+            <Text style={styles.retryButtonText}>{t('booking.bookAnother')}</Text>
+          </Pressable>
         </View>
       ) : null}
     </View>

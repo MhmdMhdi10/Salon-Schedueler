@@ -60,10 +60,15 @@ export interface InboxHub {
     staffMemberId: string | null,
     event: InboxEvent,
   ): void;
+  broadcastCustomer?(customerId: string, event: unknown): void;
 }
 
 export class NullInboxHub implements InboxHub {
   broadcast() {
+    // No-op; tests can swap an in-memory capture here.
+  }
+
+  broadcastCustomer() {
     // No-op; tests can swap an in-memory capture here.
   }
 }

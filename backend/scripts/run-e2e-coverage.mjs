@@ -1,15 +1,15 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const forwardedArgs = process.argv.slice(2);
 
-function run(command, args) {
+function run(command, args, env = process.env) {
   const result = spawnSync(command, args, {
     cwd: process.cwd(),
-    env: process.env,
+    env,
     stdio: 'inherit',
   });
 
@@ -37,16 +37,24 @@ const buildStatus = run(npmCommand, [
 rmSync(buildDir, { recursive: true, force: true });
 if (buildStatus !== 0) process.exit(buildStatus);
 
+const qaArtifacts = resolve(
+  process.env.QA_ARTIFACT_DIR ?? resolve(process.cwd(), '..', 'artifacts/qa'),
+);
+const e2eEnv = {
+  ...process.env,
+  CUCUMBER_JSON:
+    process.env.CUCUMBER_JSON ?? join(qaArtifacts, 'backend', 'cucumber-results.json'),
+};
 const cucumberArgs = ['run', 'e2e:cucumber:coverage:run'];
 if (forwardedArgs.length > 0) cucumberArgs.push('--', ...forwardedArgs);
 
-const statuses = [run(npmCommand, cucumberArgs)];
+const statuses = [run(npmCommand, cucumberArgs, e2eEnv)];
 
 // Keep diagnostics complete even when Cucumber fails. JSON, route, DTO, and
 // structure checks remain visible in the same command output.
-statuses.push(run(process.execPath, ['scripts/check-cucumber-json.mjs']));
-statuses.push(run(npmCommand, ['run', 'e2e:cucumber:structure']));
-statuses.push(run(process.execPath, ['scripts/check-controller-coverage.mjs']));
-statuses.push(run(process.execPath, ['scripts/check-dto-coverage.mjs']));
+statuses.push(run(process.execPath, ['scripts/check-cucumber-json.mjs'], e2eEnv));
+statuses.push(run(npmCommand, ['run', 'e2e:cucumber:structure'], e2eEnv));
+statuses.push(run(process.execPath, ['scripts/check-controller-coverage.mjs'], e2eEnv));
+statuses.push(run(process.execPath, ['scripts/check-dto-coverage.mjs'], e2eEnv));
 
 process.exitCode = statuses.find((status) => status !== 0) ?? 0;

@@ -213,7 +213,7 @@ describe('CancellationService', () => {
       expect(mockPayment.retainDeposit).not.toHaveBeenCalled();
     });
 
-    it('allows staff emergency cancellation before a refund proof image is available', async () => {
+    it('refunds a paid deposit when salon staff cancels, regardless of timing', async () => {
       const appt = confirmedAppointment();
       const cancellationUpsert = jest.fn().mockResolvedValue({});
       const mockPrisma = createMockPrisma({
@@ -238,13 +238,13 @@ describe('CancellationService', () => {
       await expect(
         service.cancel(APPOINTMENT_ID, undefined, new Date('2024-03-15T09:00:00.000Z'), {
           actor: 'staff',
-          kind: 'emergency',
-          reason: 'بسته شدن اضطراری سالن',
+          kind: 'standard',
+          reason: 'لغو از طرف سالن',
         }),
       ).resolves.toMatchObject({ status: 'cancelled' });
 
       expect(mockPayment.refundDeposit).toHaveBeenCalledWith(APPOINTMENT_ID);
-      expect(cancellationUpsert.mock.calls[0][0].create.refundStatus).toBe('pending');
+      expect(cancellationUpsert.mock.calls[0][0].create.refundStatus).toBe('processed');
     });
 
     it('uses custom cancellation window when provided', async () => {

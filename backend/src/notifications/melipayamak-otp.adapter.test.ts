@@ -30,7 +30,7 @@ describe('MelliPayamakOtpAdapter', () => {
     (global.fetch as jest.Mock).mockImplementation(async (url: string, init: RequestInit) => {
       seenUrl = url;
       seenInit = init;
-      return jsonResponse({ code: '3741437414', status: 'موفق' });
+      return jsonResponse({ code: '3741', status: 'موفق' });
     });
 
     const result = await new MelliPayamakOtpAdapter({ endpointUrl }).sendOtp('09123456789');
@@ -45,7 +45,7 @@ describe('MelliPayamakOtpAdapter', () => {
     expect(result).toEqual({
       ok: true,
       providerId: 'melipayamak-otp',
-      code: '3741437414',
+      code: '3741',
     });
   });
 
@@ -74,5 +74,13 @@ describe('MelliPayamakOtpAdapter', () => {
     const result = await new MelliPayamakOtpAdapter({ endpointUrl }).sendOtp('09123456789');
 
     expect(result).toEqual({ ok: false, error: 'خطا' });
+  });
+
+  it('rejects provider-generated codes that are not four digits', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue(jsonResponse({ code: '123456' }));
+
+    const result = await new MelliPayamakOtpAdapter({ endpointUrl }).sendOtp('09123456789');
+
+    expect(result).toEqual({ ok: false, error: 'Melli Payamak returned an invalid OTP code' });
   });
 });

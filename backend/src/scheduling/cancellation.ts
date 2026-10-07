@@ -19,18 +19,10 @@ export interface CancellationServiceOptions {
   defaultCancellationWindowMinutes?: number;
 }
 
-export interface RefundProof {
-  fileName: string;
-  mimeType: 'image/jpeg' | 'image/png' | 'image/webp';
-  data: Buffer;
-}
-
 export interface CancellationDetails {
   actor?: 'customer' | 'staff' | 'system';
-  kind?: 'standard' | 'emergency' | 'rejected';
+  kind?: 'standard' | 'rejected';
   reason?: string;
-  refundProof?: RefundProof;
-  refundDueHours?: number;
 }
 
 /** A future appointment cannot be recorded as a customer no-show. */
@@ -274,10 +266,9 @@ export class CancellationService {
 
     // Calculate whether we're within the cancellation window
     const windowBoundary = new Date(now.getTime() + windowMinutes * 60 * 1000);
-    const isWithinWindow =
-      details?.kind === 'emergency' && details.actor === 'staff'
-        ? false
-        : windowBoundary >= appointment.startAt;
+    // Customer cancellations retain paid deposits inside the 60-minute window.
+    // Salon cancellations refund deposits regardless of timing.
+    const isWithinWindow = details?.actor !== 'staff' && windowBoundary >= appointment.startAt;
 
     if (isWithinWindow) {
       // R11.3: Cancellation within the window — retain the deposit
@@ -296,10 +287,6 @@ export class CancellationService {
   ): Promise<void> {
     const delegate = (this.prisma as any).appointmentCancellation;
     if (!delegate?.upsert) return;
-    const emergency = details?.kind === 'emergency' && details.actor === 'staff';
-    const refundDueAt = emergency && payment
-      ? new Date(now.getTime() + (details?.refundDueHours ?? 24) * 60 * 60 * 1000)
-      : null;
     await delegate.upsert({
       where: { appointmentId: appointment.id },
       create: {
@@ -308,26 +295,26 @@ export class CancellationService {
         kind: details?.kind ?? 'standard',
         reason: details?.reason?.trim() || 'نوبت لغو شد.',
         refundStatus: payment
-          ? (emergency ? (details?.refundProof ? 'proof_attached' : 'pending') : 'processed')
+          ? 'processed'
           : 'not_required',
-        refundDueAt,
-        proofFileName: details?.refundProof?.fileName ?? null,
-        proofMimeType: details?.refundProof?.mimeType ?? null,
-        proofSizeBytes: details?.refundProof?.data.length ?? null,
-        proofData: details?.refundProof?.data ?? null,
+        refundDueAt: null,
+        proofFileName: null,
+        proofMimeType: null,
+        proofSizeBytes: null,
+        proofData: null,
       },
       update: {
         cancelledBy: details?.actor ?? 'customer',
         kind: details?.kind ?? 'standard',
         reason: details?.reason?.trim() || 'نوبت لغو شد.',
         refundStatus: payment
-          ? (emergency ? (details?.refundProof ? 'proof_attached' : 'pending') : 'processed')
+          ? 'processed'
           : 'not_required',
-        refundDueAt,
-        proofFileName: details?.refundProof?.fileName ?? null,
-        proofMimeType: details?.refundProof?.mimeType ?? null,
-        proofSizeBytes: details?.refundProof?.data.length ?? null,
-        proofData: details?.refundProof?.data ?? null,
+        refundDueAt: null,
+        proofFileName: null,
+        proofMimeType: null,
+        proofSizeBytes: null,
+        proofData: null,
       },
     });
   }

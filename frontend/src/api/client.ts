@@ -26,7 +26,6 @@ const API_ERROR_MESSAGES: Record<string, string> = {
   BOOKING_SLOT_UNAVAILABLE: 'این زمان در همین لحظه توسط رزرو دیگری گرفته شد؛ زمان دیگری انتخاب کن.',
   BOOKING_NO_AVAILABILITY: 'برای این خدمت در تاریخ انتخاب‌شده زمان خالی وجود ندارد.',
   DEPOSIT_CARD_NOT_CONFIGURED: 'این سالن هنوز اطلاعات دریافت بیعانه را تکمیل نکرده است؛ خدمت دیگری انتخاب کن یا با سالن تماس بگیر.',
-  REFUND_PROOF_REQUIRED: 'برای لغو اضطراریِ رزرو دارای بیعانه، دلیل و تصویر بازپرداخت را ثبت کن.',
   CUSTOMER_BLOCKED: 'امکان ثبت رزرو در این سالن برای این حساب وجود ندارد.',
   SMS_FAILED: 'ارسال پیامک ناموفق بود؛ دوباره تلاش کن.',
   RESCHEDULE_CONFLICT: 'زمان جدید دیگر خالی نیست؛ یک زمان تازه انتخاب کن.',
@@ -212,7 +211,7 @@ export class ApiError extends Error {
 // Auth endpoints
 export const authApi = {
   requestOtp: (phone: string) =>
-    request<{ ok: boolean; otpLength?: number; devOtp?: string }>('/auth/otp/request', {
+    request<{ ok: boolean; otpLength?: 4; devOtp?: string }>('/auth/otp/request', {
       method: 'POST',
       body: { phone },
     }),
@@ -515,8 +514,6 @@ export interface RegisterSalonInput {
   teamMembers?: RegisterSalonTeamMemberInput[];
   /** Number of chairs to pre-create (optional). */
   chairCount?: number;
-  /** Referral token from a customer invite link (optional). */
-  referralToken?: string;
 }
 
 /** Server acknowledgement of a created salon. */
@@ -1082,9 +1079,8 @@ export const adminApi = {
   cancelAppointment: (
     appointmentId: string,
     body?: {
-      kind?: 'standard' | 'emergency';
+      kind?: 'standard';
       reason?: string;
-      refundProof?: { fileName: string; mimeType: 'image/jpeg' | 'image/png' | 'image/webp'; dataBase64: string };
     },
   ) =>
     request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/cancel`, {

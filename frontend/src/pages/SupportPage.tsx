@@ -112,19 +112,32 @@ export function SupportPage() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-3 py-6 sm:px-6 sm:py-10">
+    <div
+      data-testid="support-page"
+      className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8"
+    >
       <SeoHead title="پشتیبانی آرا" />
-      <header>
-        <p className="flex items-center gap-2 text-sm font-medium text-primary">
-          <LifeBuoy className="h-4 w-4" aria-hidden="true" /> پشتیبانی آرا
-        </p>
-        <h1 className="mt-2 text-2xl font-bold text-text">مشکل را سریع گزارش کن</h1>
-        <p className="mt-2 text-sm leading-7 text-muted">
-          متن خطا، صفحه و اقدام انجام‌شده همراه درخواست ثبت می‌شود تا تیم پشتیبانی بتواند آن را پیدا و پیگیری کند.
-        </p>
+      <header className="rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/10 via-surface to-surface p-5 shadow-1 sm:p-7">
+        <div className="flex items-start gap-3 sm:gap-4">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary sm:size-12">
+            <LifeBuoy className="size-5" aria-hidden="true" />
+          </span>
+          <div>
+            <p className="m-0 text-sm font-bold text-primary">پشتیبانی آرا</p>
+            <h1 className="mt-1 text-2xl font-bold text-text">مشکل را سریع گزارش کن</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-7 text-muted">
+              شرح مشکل و تصویر خطا را بفرست؛ صفحهٔ فعلی و اطلاعات مرورگر هم برای پیگیری ثبت می‌شود.
+            </p>
+          </div>
+        </div>
       </header>
 
-      <Card as="section" className="p-4 sm:p-6">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+      <Card as="section" aria-labelledby="support-form-title" className="p-4 sm:p-6">
+        <div className="mb-4">
+          <h2 id="support-form-title" className="m-0 text-lg font-bold text-text">ثبت درخواست تازه</h2>
+          <p className="m-0 mt-1 text-sm leading-6 text-muted">جزئیات را بنویس تا سریع‌تر بررسی شود.</p>
+        </div>
         <form onSubmit={(event) => void submit(event)} className="flex flex-col gap-4">
           <Textarea
             label="شرح مشکل"
@@ -177,7 +190,7 @@ export function SupportPage() {
         </form>
       </Card>
 
-      <section aria-labelledby="support-history-title">
+      <section aria-labelledby="support-history-title" className="min-w-0">
         <div className="flex items-center justify-between gap-3">
           <h2 id="support-history-title" className="text-lg font-bold text-text">درخواست‌های قبلی</h2>
           <Button type="button" variant="ghost" size="md" onClick={loadTickets} startIcon={<RefreshCw className="h-4 w-4" />}>
@@ -187,11 +200,11 @@ export function SupportPage() {
         {loading ? (
           <p className="mt-3 rounded-lg border border-border bg-surface p-4 text-sm text-muted">در حال دریافت…</p>
         ) : tickets.length === 0 ? (
-          <p className="mt-3 rounded-lg border border-border bg-surface p-4 text-sm text-muted">هنوز درخواستی ثبت نکرده‌ای.</p>
+          <p className="mt-3 rounded-xl border border-dashed border-border bg-surface p-5 text-sm leading-6 text-muted">هنوز درخواستی ثبت نکرده‌ای.</p>
         ) : (
           <ul className="mt-3 flex flex-col gap-2" role="list">
             {tickets.map((ticket) => (
-              <li key={ticket.id} className="rounded-lg border border-border bg-surface p-4">
+              <li key={ticket.id} className="rounded-xl border border-border bg-surface p-4 shadow-1">
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
                   <button
                     type="button"
@@ -211,6 +224,7 @@ export function SupportPage() {
           </ul>
         )}
       </section>
+      </div>
     </div>
   );
 }

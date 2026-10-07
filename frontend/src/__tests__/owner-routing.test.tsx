@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import '../i18n';
 import { ROUTE_LOADER_TESTID } from '../components/layout';
 
@@ -67,7 +67,7 @@ import { App } from '../App';
 beforeEach(() => {
   vi.clearAllMocks();
   getAccessToken.mockReturnValue('access-token');
-  getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Owner' } });
+  getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Owner', salonId: 'salon-1' } });
   window.history.pushState({}, '', '/owner/calendar');
 });
 
@@ -93,5 +93,23 @@ describe('owner routes are code-split off the main bundle', () => {
     // `/me` is fetched to derive the principal: once by the app-wide
     // AuthProvider (drives the header) and once by the OwnerLayout guard.
     expect(getMe).toHaveBeenCalled();
+  });
+
+  it('routes a first-time salon PWA visit into onboarding when the account has no salon', async () => {
+    getMe.mockResolvedValue({ principal: { id: 'u1' } });
+    window.history.pushState({}, '', '/owner/calendar');
+
+    render(<App />);
+
+    await waitFor(() => expect(window.location.pathname).toBe('/business/register'));
+  });
+
+  it('routes an owner without a salon context into onboarding instead of an empty panel', async () => {
+    getMe.mockResolvedValue({ principal: { id: 'u1', role: 'Owner' } });
+    window.history.pushState({}, '', '/owner/calendar');
+
+    render(<App />);
+
+    await waitFor(() => expect(window.location.pathname).toBe('/business/register'));
   });
 });

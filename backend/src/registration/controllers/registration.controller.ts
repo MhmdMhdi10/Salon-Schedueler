@@ -3,7 +3,6 @@ import { RegisterSalonSchema } from '@salon/shared';
 import type { Services } from '../../http/app.js';
 import { asyncRoute } from '../../common/http/route-helpers.js';
 import { createRateLimit, phoneRateLimitKey } from '../../http/middleware/rate-limit.js';
-import { isE2EQuietLogs } from '../../common/logging.js';
 
 /**
  * True when an error is a Prisma unique-constraint violation (P2002). Kept for
@@ -99,14 +98,6 @@ export function registrationRouter(services: Services): Router {
         // salon already exists; if this ever failed the owner could still sign
         // in and the subscription would simply read `expired` until purchase.
         await services.subscriptionService.startTrial(salon.id);
-
-        if (input.referralToken && services.referralService) {
-          await services.referralService.linkSalon(input.referralToken, salon.id).catch((error) => {
-            if (!isE2EQuietLogs()) {
-              console.warn('[referral] could not link salon signup:', error);
-            }
-          });
-        }
 
         res.status(201).json({ salonId: salon.id, salonName: salon.name });
       } catch (err) {

@@ -6,6 +6,7 @@ import { RouteLoader } from '../../components/layout/RouteLoader';
 import { SeoHead } from '../../components/seo';
 import { TooltipProvider } from '../../components/ui/Tooltip';
 import { useAuth } from '../../auth/AuthContext';
+import { useSalonManifest } from '../../pwa/salonManifest';
 import { DEFAULT_SALON_ID } from '../../auth/useSalonId';
 import {
   bootstrapAuth,
@@ -21,6 +22,7 @@ type OwnerAuthState =
   | { phase: 'authenticated'; role: OwnerRole; salonId: string; staffMemberId?: string }
   | { phase: 'unauthenticated' }
   | { phase: 'customer' }
+  | { phase: 'unprovisioned' }
   | { phase: 'platform-admin'; salonId: string };
 
 /**
@@ -51,6 +53,12 @@ export function OwnerLayout() {
   const navigate = useNavigate();
   const { signOut: signOutSession, principal } = useAuth();
   const [state, setState] = useState<OwnerAuthState>({ phase: 'loading' });
+  useSalonManifest(
+    state.phase === 'authenticated' || state.phase === 'platform-admin'
+      ? 'پنل سالن آرا'
+      : undefined,
+    '/owner/calendar',
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -85,10 +93,14 @@ export function OwnerLayout() {
           setState({ phase: 'customer' });
           return;
         }
+        if (!principal.salonId) {
+          setState({ phase: 'unprovisioned' });
+          return;
+        }
         setState({
           phase: 'authenticated',
           role: principal.role,
-          salonId: principal.salonId ?? DEFAULT_SALON_ID,
+          salonId: principal.salonId,
           staffMemberId: principal.staffMemberId,
         });
       } catch {
@@ -150,7 +162,15 @@ export function OwnerLayout() {
   }
 
   if (state.phase === 'customer') {
-    return <Navigate to="/account" replace />;
+    // `/owner/*` is a salon-panel entry point (including the installed PWA
+    // start URL). A customer token has no salon context yet, so guide first-time
+    // salon operators through provisioning instead of opening an empty panel or
+    // sending them to the unrelated customer dashboard.
+    return <Navigate to="/business/register" replace />;
+  }
+
+  if (state.phase === 'unprovisioned') {
+    return <Navigate to="/business/register" replace />;
   }
 
   const role: OwnerRole = state.phase === 'platform-admin' ? 'Admin' : state.role;
@@ -173,11 +193,7 @@ export function OwnerLayout() {
 
   return (
     <TooltipProvider>
-      <OwnerShell
-        role={role}
-        salonId={state.salonId}
-        onSignOut={handleSignOut}
-      >
+      <OwnerShell role={role} salonId={state.salonId} onSignOut={handleSignOut}>
         <SeoHead title={t('owner.title')} />
         <Outlet context={outletContext} />
       </OwnerShell>

@@ -125,11 +125,17 @@ export function TimeWheelField({
       <Dialog open={open} onOpenChange={(nextOpen) => !disabled && setOpen(nextOpen)}>
         <DialogContent className="!w-[min(400px,calc(100vw-24px))] !max-w-none overflow-hidden rounded-2xl p-6">
           <DialogTitle className="text-center text-xl">{label}</DialogTitle>
-          <DialogDescription className="text-center">برای انتخاب، ساعت و دقیقه را بالا یا پایین بکش.</DialogDescription>
-          <div className="relative mx-auto mt-5 grid max-w-[19rem] grid-cols-[1fr_auto_1fr] items-center gap-3" dir="ltr">
-            {wheel(hours, hour, setHour, hourRef, selectedHourRef, 'ساعت')}
-            <span className="text-2xl font-black text-muted">:</span>
-            {wheel(minutes, minute, setMinute, minuteRef, selectedMinuteRef, 'دقیقه')}
+          <DialogDescription className="text-center">برای انتخاب، ستون ساعت یا دقیقه را بالا یا پایین بکش.</DialogDescription>
+          <div className="relative mx-auto mt-5 grid max-w-[19rem] grid-cols-[1fr_auto_1fr] items-end gap-3" dir="ltr">
+            <div className="flex min-w-0 flex-col gap-2">
+              <span className="text-center text-xs font-bold text-muted">ساعت</span>
+              {wheel(hours, hour, setHour, hourRef, selectedHourRef, 'ساعت')}
+            </div>
+            <span className="mb-[6.3rem] text-2xl font-black text-muted">:</span>
+            <div className="flex min-w-0 flex-col gap-2">
+              <span className="text-center text-xs font-bold text-muted">دقیقه</span>
+              {wheel(minutes, minute, setMinute, minuteRef, selectedMinuteRef, 'دقیقه')}
+            </div>
           </div>
           <div className="mt-5 flex justify-center gap-2">
             <DialogClose asChild>

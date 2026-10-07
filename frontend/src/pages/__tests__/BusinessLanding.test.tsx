@@ -97,7 +97,7 @@ describe('BusinessLanding', () => {
     });
   });
 
-  it('renders the editorial hero image and authentic product proof accessibly', () => {
+  it('renders the editorial hero image and dashboard proof accessibly', () => {
     const { getByTestId } = renderLanding();
     const root = getByTestId('business-landing');
     const hero = within(root)
@@ -113,9 +113,6 @@ describe('BusinessLanding', () => {
     ).toHaveAttribute('src', '/images/business/iranian-salon-owner-at-work.webp');
     expect(
       within(root).getAllByRole('img', { name: /داشبورد|تقویم و داشبورد مدیریت/ }).length,
-    ).toBeGreaterThan(0);
-    expect(
-      within(root).getAllByRole('img', { name: /رزرو.*موبایل|موبایلی رزرو/ }).length,
     ).toBeGreaterThan(0);
   });
 

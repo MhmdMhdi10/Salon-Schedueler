@@ -65,20 +65,24 @@ export function makeWsInboxHandle(services: Services, jwtAccessSecret: string) {
         return;
       }
       const principal = verifyWsToken(token, jwtAccessSecret);
-      if (!principal || !principal.salonId) {
+      if (!principal) {
         destroy();
         return;
       }
       services.wsInboxHub.add({
         ws: socket,
         salonId: principal.salonId,
+        customerId: principal.id,
         role: principal.role ?? '',
         staffMemberId: principal.staffMemberId,
         alive: true,
       });
       // hello frame — confirms to the client the WS is open and subscribed.
       try {
-        socket.send(JSON.stringify({ type: 'ready', payload: { salonId: principal.salonId } }));
+        socket.send(JSON.stringify({
+          type: 'ready',
+          payload: { salonId: principal.salonId ?? null, customerId: principal.id },
+        }));
       } catch {
         // The peer may have closed between auth and the hello frame.
       }

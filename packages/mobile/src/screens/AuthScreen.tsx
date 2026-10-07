@@ -48,7 +48,7 @@ export const AUTH_SCREEN = 'AuthScreen';
 export type AuthStep = 'phone' | 'otp';
 
 /** Number of digits in the SMS one-time code. */
-const OTP_LENGTH = 6;
+const OTP_LENGTH = 4;
 /** Resend cooldown in seconds — the «ارسال مجدد تا ۰:۴۵» timer (ui-ux §7). */
 const RESEND_SECONDS = 45;
 
@@ -72,7 +72,6 @@ export function AuthScreen({ onAuthenticated, persistTokens }: AuthScreenProps) 
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [phone, setPhone] = useState('');
-  const [otpLength, setOtpLength] = useState(OTP_LENGTH);
   const [code, setCode] = useState<string[]>(() => Array(OTP_LENGTH).fill(''));
   const [step, setStep] = useState<AuthStep>('phone');
   const [loading, setLoading] = useState(false);
@@ -81,7 +80,7 @@ export function AuthScreen({ onAuthenticated, persistTokens }: AuthScreenProps) 
 
   const otpRefs = useRef<Array<TextInputInstance | null>>([]);
   const codeValue = code.join('');
-  const codeIsComplete = codeValue.length === otpLength;
+  const codeIsComplete = codeValue.length === OTP_LENGTH;
 
   // Resend countdown: ticks once per second while the cooldown is active.
   useEffect(() => {
@@ -98,12 +97,7 @@ export function AuthScreen({ onAuthenticated, persistTokens }: AuthScreenProps) 
     const result = await requestOtp(phone);
     setLoading(false);
     if (result.ok) {
-      const candidate = result.otpLength ?? OTP_LENGTH;
-      const nextLength = Number.isInteger(candidate) && candidate >= 4 && candidate <= 10
-        ? candidate
-        : OTP_LENGTH;
-      setOtpLength(nextLength);
-      setCode(Array(nextLength).fill(''));
+      setCode(Array(OTP_LENGTH).fill(''));
       setStep('otp');
       setSecondsLeft(RESEND_SECONDS);
     } else {
@@ -118,7 +112,7 @@ export function AuthScreen({ onAuthenticated, persistTokens }: AuthScreenProps) 
 
   const handleResend = () => {
     if (secondsLeft > 0 || loading) return;
-    setCode(Array(otpLength).fill(''));
+    setCode(Array(OTP_LENGTH).fill(''));
     sendOtp();
   };
 
@@ -157,7 +151,7 @@ export function AuthScreen({ onAuthenticated, persistTokens }: AuthScreenProps) 
       next[index] = digit;
       return next;
     });
-    if (digit && index < otpLength - 1) {
+    if (digit && index < OTP_LENGTH - 1) {
       otpRefs.current[index + 1]?.focus();
     }
   };
@@ -170,7 +164,7 @@ export function AuthScreen({ onAuthenticated, persistTokens }: AuthScreenProps) 
     }
     // Full-paste support: distribute multiple digits across the boxes.
     if (raw.length > 1) {
-      const slice = raw.slice(0, otpLength - index);
+      const slice = raw.slice(0, OTP_LENGTH - index);
       setError('');
       setCode((prev) => {
         const next = [...prev];
@@ -179,7 +173,7 @@ export function AuthScreen({ onAuthenticated, persistTokens }: AuthScreenProps) 
         }
         return next;
       });
-      const lastFilled = Math.min(index + slice.length, otpLength - 1);
+      const lastFilled = Math.min(index + slice.length, OTP_LENGTH - 1);
       otpRefs.current[lastFilled]?.focus();
       return;
     }
@@ -196,7 +190,7 @@ export function AuthScreen({ onAuthenticated, persistTokens }: AuthScreenProps) 
   const backToPhone = () => {
     setStep('phone');
     setError('');
-    setCode(Array(otpLength).fill(''));
+    setCode(Array(OTP_LENGTH).fill(''));
   };
 
   const phoneStepValid = phone.length > 0;
@@ -206,7 +200,9 @@ export function AuthScreen({ onAuthenticated, persistTokens }: AuthScreenProps) 
   return (
     <View testID="auth-screen" style={styles.screen}>
       <View style={styles.card}>
-        <Text style={styles.title}>{t('auth.title')}</Text>
+        <Text accessibilityRole="header" style={styles.title}>
+          {t('auth.title')}
+        </Text>
         <Text style={styles.subtitle}>
           {step === 'phone'
             ? t('auth.phoneStepSubtitle')
@@ -233,7 +229,7 @@ export function AuthScreen({ onAuthenticated, persistTokens }: AuthScreenProps) 
         ) : (
           <View style={styles.field}>
             <Text style={styles.label}>{t('auth.otpLabel')}</Text>
-            {/* Six single-digit boxes laid out left-to-right: box index 0 is
+            {/* Four single-digit boxes laid out left-to-right: box index 0 is
                 the leftmost so entry order matches the code sent to the API. */}
             <View style={styles.otpRow}>
               {code.map((digit, index) => (
@@ -251,11 +247,10 @@ export function AuthScreen({ onAuthenticated, persistTokens }: AuthScreenProps) 
                   keyboardType="number-pad"
                   autoComplete="off"
                   textContentType="none"
-                  maxLength={index === 0 ? otpLength : 1}
+                  maxLength={index === 0 ? OTP_LENGTH : 1}
                   style={[
                     styles.input,
                     styles.otpBox,
-                    otpLength > 6 ? styles.otpBoxCompact : null,
                     error ? styles.inputError : null,
                   ]}
                 />
@@ -411,9 +406,6 @@ function createStyles(theme: RnTheme) {
       writingDirection: 'ltr',
       fontSize: typography.variants.lg.fontSize,
       fontWeight: '700',
-    },
-    otpBoxCompact: {
-      width: 36,
     },
     primaryButton: {
       backgroundColor: colors.primary,

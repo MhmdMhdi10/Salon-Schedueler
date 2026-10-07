@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { cloneElement, isValidElement, useCallback, useEffect, useMemo, useState, type ReactElement, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   App as AntdApp,
@@ -65,6 +65,13 @@ import { ErrorState } from '../../components/ui';
 import './platform-admin.css';
 
 export const platformDetailSnapshotKey = (resource: string, id: string) => `ara.platform-admin.detail:${resource}:${id}`;
+
+const paginationItemRender = (_page: number, type: string, element: ReactNode) => {
+  if ((type !== 'prev' && type !== 'next') || !isValidElement(element)) return element;
+  return cloneElement(element as ReactElement<{ 'aria-label'?: string }>, {
+    'aria-label': type === 'prev' ? 'صفحه قبلی' : 'صفحه بعدی',
+  });
+};
 
 const faNumber = new Intl.NumberFormat('fa-IR');
 const dateFormatter = new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium' });
@@ -458,7 +465,7 @@ function ResourceListPage<T extends { id: string }>({
           onRow={rowProps}
           scroll={{ x: 980 }}
           locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="رکوردی برای نمایش وجود ندارد." /> }}
-          pagination={{ current: result.meta.page, pageSize: result.meta.limit, total: result.meta.total, showSizeChanger: false, showTotal: (total) => `${faNumber.format(total)} رکورد` , onChange: (next) => setPage(next) }}
+          pagination={{ current: result.meta.page, pageSize: result.meta.limit, total: result.meta.total, showSizeChanger: false, showTotal: (total) => `${faNumber.format(total)} رکورد`, itemRender: paginationItemRender, onChange: (next) => setPage(next) }}
         />
       ) : null}
     </div>
@@ -1111,7 +1118,7 @@ export function PlatformCardOrdersPage() {
         dataSource={rows}
         scroll={{ x: 1200 }}
         locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="سفارشی برای نمایش وجود ندارد." /> }}
-        pagination={{ current: pageInfo.page, pageSize: pageInfo.limit, total: pageInfo.total, showSizeChanger: false, onChange: setPage, showTotal: (total) => `${faNumber.format(total)} سفارش` }}
+        pagination={{ current: pageInfo.page, pageSize: pageInfo.limit, total: pageInfo.total, showSizeChanger: false, itemRender: paginationItemRender, onChange: setPage, showTotal: (total) => `${faNumber.format(total)} سفارش` }}
       />
     </div>
   );
@@ -1287,7 +1294,7 @@ export function PlatformSupportPage() {
         dataSource={rows}
         scroll={{ x: 1300 }}
         locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="گزارشی برای نمایش وجود ندارد." /> }}
-        pagination={{ current: pageInfo.page, pageSize: pageInfo.limit, total: pageInfo.total, showSizeChanger: false, onChange: setPage, showTotal: (total) => `${faNumber.format(total)} گزارش` }}
+        pagination={{ current: pageInfo.page, pageSize: pageInfo.limit, total: pageInfo.total, showSizeChanger: false, itemRender: paginationItemRender, onChange: setPage, showTotal: (total) => `${faNumber.format(total)} گزارش` }}
       />
     </div>
   );

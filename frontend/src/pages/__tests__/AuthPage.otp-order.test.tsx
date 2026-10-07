@@ -9,16 +9,15 @@ import '../../i18n';
  *
  * **Validates: Requirements 1.1, 1.2, 1.3**
  *
- * GOAL: Demonstrate that a complete, non-palindrome 6-digit code entered
+ * GOAL: Demonstrate that a complete, non-palindrome 4-digit code entered
  * left-to-right (reading order) is submitted to `verifyOtp` in the correct
  * reading order. On the UNFIXED code, the expectation is:
  *
  * - Tests 1–3 (digit order assertions): may PASS in jsdom because jsdom does
  *   NOT compute flex layout direction — DOM source order and "visual" order
  *   coincide regardless of `dir` attributes.
- * - Test 4 (direction guard): SHOULD FAIL because the OTP row container has
- *   `dir="ltr"` but does NOT have an inline `style.direction = 'ltr'` — the
- *   cascade-proof guard is missing, confirming the RTL vulnerability.
+ * - Test 4 (direction guard): verifies the OTP row has cascade-proof LTR
+ *   direction so RTL page styles cannot reverse the entered code.
  *
  * This test encodes the EXPECTED correct behavior. Any failure on unfixed code
  * documents the bug condition / cascade vulnerability.
@@ -65,7 +64,7 @@ async function advanceToOtp() {
 
 /**
  * Enters digits by reading-order position (leftmost box `رقم ۱` first →
- * rightmost box `رقم ۶`), firing a `change` event per box. The final digit
+ * rightmost box `رقم ۴`), firing a `change` event per box. The final digit
  * auto-submits the OTP.
  */
 async function enterDigitsInReadingOrderAndSubmit(digits: string[]) {
@@ -74,8 +73,6 @@ async function enterDigitsInReadingOrderAndSubmit(digits: string[]) {
     'رقم ۲ کد تایید',
     'رقم ۳ کد تایید',
     'رقم ۴ کد تایید',
-    'رقم ۵ کد تایید',
-    'رقم ۶ کد تایید',
   ];
 
   for (let i = 0; i < digits.length; i++) {
@@ -100,50 +97,50 @@ afterEach(() => {
 describe('AuthPage — OTP reading-order bug condition exploration', () => {
   /**
    * Test case 1 (reported screenshot case):
-   * Enter `1,3,3,3,8,9` leftmost→rightmost; assert verifyOtp is called with
-   * the reading-order string '133389'.
+   * Enter `1,3,3,8` leftmost→rightmost; assert verifyOtp is called with
+   * the reading-order string '1338'.
    *
-   * On unfixed code in a real browser, the submitted value would be '983331'
+   * On unfixed code in a real browser, the submitted value would be '8331'
    * (reversed). In jsdom, this may pass because jsdom ignores flex direction.
    */
-  it('case 1: reading-order entry of "133389" submits "133389" (not reversed)', async () => {
+  it('case 1: reading-order entry of "1338" submits "1338" (not reversed)', async () => {
     await advanceToOtp();
-    await enterDigitsInReadingOrderAndSubmit(['1', '3', '3', '3', '8', '9']);
+    await enterDigitsInReadingOrderAndSubmit(['1', '3', '3', '8']);
 
     await waitFor(() => {
-      expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '133389');
+      expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '1338');
     });
   });
 
   /**
    * Test case 2 (distinct digits):
-   * Enter `1,2,3,4,5,6` leftmost→rightmost; assert verifyOtp is called with
-   * '123456'.
+   * Enter `1,2,3,4` leftmost→rightmost; assert verifyOtp is called with
+   * '1234'.
    *
-   * On unfixed code in a real browser, submitted as '654321'.
+   * On unfixed code in a real browser, submitted as '4321'.
    */
-  it('case 2: reading-order entry of "123456" submits "123456" (not reversed)', async () => {
+  it('case 2: reading-order entry of "1234" submits "1234" (not reversed)', async () => {
     await advanceToOtp();
-    await enterDigitsInReadingOrderAndSubmit(['1', '2', '3', '4', '5', '6']);
+    await enterDigitsInReadingOrderAndSubmit(['1', '2', '3', '4']);
 
     await waitFor(() => {
-      expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '123456');
+      expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '1234');
     });
   });
 
   /**
    * Test case 3 (asymmetric edge):
-   * Enter `1,0,0,0,0,0` leftmost→rightmost; assert verifyOtp is called with
-   * '100000'.
+   * Enter `1,0,0,0` leftmost→rightmost; assert verifyOtp is called with
+   * '1000'.
    *
-   * On unfixed code in a real browser, submitted as '000001'.
+   * On unfixed code in a real browser, submitted as '0001'.
    */
-  it('case 3: reading-order entry of "100000" submits "100000" (not reversed)', async () => {
+  it('case 3: reading-order entry of "1000" submits "1000" (not reversed)', async () => {
     await advanceToOtp();
-    await enterDigitsInReadingOrderAndSubmit(['1', '0', '0', '0', '0', '0']);
+    await enterDigitsInReadingOrderAndSubmit(['1', '0', '0', '0']);
 
     await waitFor(() => {
-      expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '100000');
+      expect(verifyOtp).toHaveBeenCalledWith(VALID_PHONE, '1000');
     });
   });
 
@@ -153,9 +150,8 @@ describe('AuthPage — OTP reading-order bug condition exploration', () => {
    * `style.direction = 'ltr'` to cascade-proof the left-to-right layout against
    * inherited RTL direction.
    *
-   * On UNFIXED code, the container has `dir="ltr"` but does NOT have
-   * `style={{ direction: 'ltr' }}` — this test SHOULD FAIL, confirming the
-   * cascade vulnerability that causes the digit reversal in real browsers.
+   * Both controls must remain in place so inherited RTL styles cannot reverse
+   * the OTP row in a browser.
    */
   it('case 4: OTP boxes container has cascade-proof inline direction: ltr', async () => {
     await advanceToOtp();
@@ -170,9 +166,7 @@ describe('AuthPage — OTP reading-order bug condition exploration', () => {
 
     // Assert the inline style includes `direction: ltr` — this is the
     // cascade-proof guard that prevents inherited RTL from flipping the
-    // flex layout. On unfixed code, this assertion SHOULD FAIL because
-    // only the `dir` attribute is present (which can be defeated by
-    // CSS cascade in a real RTL browser).
+    // flex layout in the RTL page.
     expect(otpRow.style.direction).toBe('ltr');
   });
 });
