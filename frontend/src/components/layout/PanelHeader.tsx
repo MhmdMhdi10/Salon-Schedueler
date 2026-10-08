@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LifeBuoy, LogIn, LogOut } from 'lucide-react';
+import { LifeBuoy, LogIn, LogOut, UserRound } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { BrandLogo } from '../brand';
 import { CustomerInboxBell } from '../customer/CustomerInboxBell';
@@ -42,7 +42,10 @@ export function PanelHeader({ surface, brandLabel, themeControl, onSignOut }: Pa
   const showWorkspace = isOwnerSurface || (isAuthenticated && !isPlatformAdmin);
   const showOwnerInbox = isOwnerSurface || (isAuthenticated && isStaff && !isPlatformAdmin);
   const showCustomerInbox =
-    !isOwnerSurface && pathname === '/account' && isAuthenticated && !isStaff;
+    !isOwnerSurface &&
+    (pathname === '/account' || pathname === '/support') &&
+    isAuthenticated &&
+    !isStaff;
   const showAccountLink = !isOwnerSurface && pathname !== '/account' && !isPlatformAdmin;
 
   const handleSignOut = () => {
@@ -97,7 +100,7 @@ export function PanelHeader({ surface, brandLabel, themeControl, onSignOut }: Pa
           </Link>
         </nav>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           {isPlatformAdmin ? (
             <PanelAccessNav />
           ) : (
@@ -105,9 +108,11 @@ export function PanelHeader({ surface, brandLabel, themeControl, onSignOut }: Pa
               {showAccountLink && (
                 <Link
                   to="/account"
-                  className="flex min-h-10 shrink-0 items-center rounded-md px-2 py-2 text-xs font-semibold text-text no-underline transition-colors duration-fast ease-standard hover:bg-elevated sm:px-3 sm:text-sm"
+                  aria-label={t('app.account')}
+                  className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-md px-2 py-2 text-xs font-semibold text-text no-underline transition-colors duration-fast ease-standard hover:bg-elevated md:min-h-10 md:min-w-0 md:justify-start md:px-3 md:text-sm"
                 >
-                  {t('app.account')}
+                  <UserRound className="h-4 w-4 md:hidden" aria-hidden="true" />
+                  <span className="hidden md:inline">{t('app.account')}</span>
                 </Link>
               )}
 

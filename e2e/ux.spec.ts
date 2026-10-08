@@ -243,6 +243,31 @@ test('customer dashboard UX contract after authentication', async ({ page }) => 
   expect(pageErrors).toEqual([]);
 });
 
+test('customer notifications stay in the header on the mobile support page', async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 0) >= 768, 'mobile viewport project only');
+  await loginViaUi(page, uniquePhone('5'), /\/account(?:\?|$)/);
+  for (const viewportWidth of [390, 320]) {
+    await page.setViewportSize({ width: viewportWidth, height: 844 });
+    await page.goto('/support', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('support-page')).toBeVisible();
+    await expect(page.getByTestId('route-progress')).toHaveCount(0);
+    await expect(page.locator('.animate-page-enter')).toHaveCount(0);
+
+    const bell = page.getByRole('banner').getByRole('button', {
+      name: 'اعلان‌های حساب کاربری',
+      exact: true,
+    });
+    await expect(bell).toBeVisible();
+    const box = await bell.boundingBox();
+    expect(box, 'notification bell has a visible touch target').not.toBeNull();
+    expect(box!.x, 'notification bell stays inside the mobile viewport').toBeGreaterThanOrEqual(0);
+    expect(
+      box!.x + box!.width,
+      'notification bell stays inside the mobile viewport',
+    ).toBeLessThanOrEqual(viewportWidth);
+  }
+});
+
 test('owner panel UX contract across every section', async ({ page }) => {
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
@@ -251,6 +276,21 @@ test('owner panel UX contract across every section', async ({ page }) => {
   for (const route of OWNER_ROUTES) {
     await page.goto(route, { waitUntil: 'domcontentloaded' });
     await assertUx(page, route);
+    if (route === '/owner/marketing') {
+      const qr = page.getByTestId('owner-marketing-qr');
+      await expect(qr).toBeVisible();
+      const qrBox = await qr.boundingBox();
+      expect(qrBox, 'booking QR is large and visible').not.toBeNull();
+      expect(qrBox!.width, 'booking QR width').toBeGreaterThanOrEqual(220);
+      expect(qrBox!.height, 'booking QR height').toBeGreaterThanOrEqual(220);
+      if ((page.viewportSize()?.width ?? 0) < 768) {
+        const headingBox = await page.getByRole('heading', { name: 'بازاریابی' }).boundingBox();
+        expect(headingBox, 'marketing heading follows QR').not.toBeNull();
+        expect(qrBox!.y, 'large QR appears before the page heading on mobile').toBeLessThan(
+          headingBox!.y,
+        );
+      }
+    }
   }
 
   const width = page.viewportSize()?.width ?? 0;
@@ -305,29 +345,91 @@ test('platform admin UX contract across every section', async ({ page }) => {
   expect(pageErrors).toEqual([]);
 });
 
+test('platform admin header remains fixed while scrolling on mobile', async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 0) >= 768, 'mobile viewport project only');
+  await loginViaUi(page, '09120000999', /\/platform-admin(?:\?|$)/);
+  for (const width of [520, 390, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/platform-admin', { waitUntil: 'domcontentloaded' });
+
+    const header = page.locator('.platform-admin-root .ant-layout-header');
+    await expect(header).toBeVisible();
+    const documentHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+    expect(documentHeight).toBeGreaterThan(page.viewportSize()?.height ?? 0);
+
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect.poll(async () => (await header.boundingBox())?.y).toBe(0);
+  }
+});
+
 test('critical owner surfaces remain usable at compact 320px width', async ({ page }) => {
   test.skip((page.viewportSize()?.width ?? 0) >= 768, 'mobile viewport project only');
   await page.setViewportSize({ width: 320, height: 844 });
   await loginViaUi(page, '09120000001', /\/owner(?:\/calendar)?(?:\?|$)/);
-  for (const route of ['/owner/calendar', '/owner/qr'] as const) {
+  for (const route of [
+    '/owner/calendar',
+    '/owner/calendar/working-hours',
+    '/owner/qr',
+    '/owner/support',
+  ] as const) {
     await page.goto(route, { waitUntil: 'domcontentloaded' });
     if (route === '/owner/calendar') {
       const manage = page.getByTestId('owner-calendar-mobile-manage');
-      await expect(manage.getByRole('heading', { name: 'تغییر ساعت یا تعطیلی' })).toBeInViewport();
+      const manageToggle = manage.getByTestId('owner-calendar-mobile-manage-toggle');
+      await expect(manageToggle).toHaveAccessibleName(/مدیریت ساعت و تعطیلی برای/);
+      await expect(manageToggle).toBeInViewport();
+      const collapsedManageBox = await manage.boundingBox();
+      expect(collapsedManageBox, 'collapsed day controls have a visible box').not.toBeNull();
+      expect(collapsedManageBox!.height, 'collapsed day controls stay compact').toBeLessThan(130);
+
+      const bottomNavBox = await page.getByTestId('owner-bottom-tabs').boundingBox();
+      expect(bottomNavBox, 'mobile navigation has a visible box').not.toBeNull();
+      expect(
+        collapsedManageBox!.y + collapsedManageBox!.height,
+        'collapsed day controls clear the fixed bottom navigation',
+      ).toBeLessThanOrEqual(bottomNavBox!.y);
+
+      await manageToggle.click();
+      await expect(manageToggle).toHaveAttribute('aria-expanded', 'true');
       await expect(
         manage.getByRole('button', { name: /تغییر ساعت کاری هفتگی برای همه‌ی/ }),
-      ).toBeInViewport();
+      ).toBeVisible();
       await expect(
         manage.getByRole('button', { name: /تعطیلی کامل یا بستن بخشی از ساعت فقط برای/ }),
-      ).toBeInViewport();
-      const manageBox = await manage.boundingBox();
-      const bottomNavBox = await page.getByTestId('owner-bottom-tabs').boundingBox();
-      expect(manageBox, 'day management card has a visible box').not.toBeNull();
-      expect(bottomNavBox, 'mobile navigation has a visible box').not.toBeNull();
-      expect(manageBox!.y + manageBox!.height, 'day controls clear the fixed bottom navigation')
-        .toBeLessThanOrEqual(bottomNavBox!.y);
+      ).toBeVisible();
+    }
+    if (route === '/owner/calendar/working-hours') {
+      const settings = page.getByRole('region', { name: 'تنظیمات اصلی' });
+      const selects = settings.getByRole('combobox');
+      await expect(selects).toHaveCount(3);
+      const firstSelect = await selects.nth(0).boundingBox();
+      const secondSelect = await selects.nth(1).boundingBox();
+      expect(firstSelect, 'first schedule setting is visible').not.toBeNull();
+      expect(secondSelect, 'second schedule setting is visible').not.toBeNull();
+      expect(secondSelect!.y).toBeGreaterThanOrEqual(firstSelect!.y + firstSelect!.height);
+      await expect(page.getByRole('button', { name: 'همین ساعت برای همه روزها' })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'پنجشنبه و جمعه تعطیل' })).toHaveCount(0);
+    }
+    if (route === '/owner/support') {
+      const bell = page.getByRole('banner').getByRole('button', {
+        name: 'اعلان‌ها',
+        exact: true,
+      });
+      await expect(bell).toBeVisible();
+      const box = await bell.boundingBox();
+      expect(box, 'owner notification bell has a visible touch target').not.toBeNull();
+      expect(
+        box!.x,
+        'owner notification bell stays inside the mobile viewport',
+      ).toBeGreaterThanOrEqual(0);
+      expect(
+        box!.x + box!.width,
+        'owner notification bell stays inside the mobile viewport',
+      ).toBeLessThanOrEqual(320);
     }
     await assertUx(page, route);
+    await expect(page.getByTestId('route-progress')).toHaveCount(0);
+    await expect(page.locator('.animate-page-enter')).toHaveCount(0);
   }
 });
 

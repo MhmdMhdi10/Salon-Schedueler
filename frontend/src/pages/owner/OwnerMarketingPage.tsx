@@ -3,19 +3,19 @@ import {
   ArrowLeft,
   CalendarClock,
   Check,
+  ChevronDown,
   Copy,
   ExternalLink,
   Link2,
   Megaphone,
   MessageCircle,
-  QrCode,
   Share2,
   Users,
 } from 'lucide-react';
 import { ApiError, qrApi, type SalonQrResponse } from '../../api/client';
 import { useSalonId } from '../../auth/useSalonId';
 import { SeoHead } from '../../components/seo';
-import { Button, Card, ErrorState, Skeleton, useToast } from '../../components/ui';
+import { Button, Card, ErrorState, Select, Skeleton, useToast } from '../../components/ui';
 import { qrImageDataUri } from './marketing-assets';
 
 type CampaignSource = 'instagram_bio' | 'instagram_story' | 'whatsapp' | 'qr' | 'google';
@@ -86,6 +86,8 @@ export function OwnerMarketingPage() {
       `برای دیدن خدمات و رزرو نوبت ${data?.salonName ?? 'سالن'} از این لینک استفاده کن:\n${campaignUrl}`,
     [campaignUrl, data?.salonName],
   );
+  const activeSource =
+    CAMPAIGN_SOURCES.find((source) => source.value === selectedSource) ?? CAMPAIGN_SOURCES[0];
 
   const copyText = async (value: string, title: string) => {
     if (!value) return;
@@ -123,19 +125,21 @@ export function OwnerMarketingPage() {
   return (
     <section
       data-testid="owner-marketing-page"
-      className="flex flex-col gap-5"
+      className="flex flex-col gap-4"
     >
       <SeoHead title="بازاریابی" />
 
-      <header className="flex items-start gap-3">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <Megaphone className="size-5" aria-hidden="true" />
-        </span>
-        <div>
-          <h1 className="text-display text-2xl text-text sm:text-3xl">بازاریابی</h1>
-          <p className="mt-1 text-sm leading-6 text-muted">یک لینک، یک QR، و مشتری‌هایی که خودشان وقت می‌گیرند.</p>
-        </div>
-      </header>
+      {status !== 'ready' && (
+        <header className="flex items-start gap-3">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Megaphone className="size-5" aria-hidden="true" />
+          </span>
+          <div>
+            <h1 className="text-display text-2xl text-text sm:text-3xl">بازاریابی</h1>
+            <p className="mt-1 text-sm leading-6 text-muted">لینک رزرو را با مشتری‌ها به اشتراک بگذار.</p>
+          </div>
+        </header>
+      )}
 
       {status === 'loading' && (
         <Card data-testid="owner-marketing-loading" className="flex flex-col gap-4">
@@ -159,28 +163,44 @@ export function OwnerMarketingPage() {
           elevated
           className="overflow-hidden border-primary/25 bg-primary/5"
         >
-          <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_11rem] md:items-start">
-            <div className="flex flex-col gap-4">
+          <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_14rem] sm:items-center">
+            <aside className="flex min-w-0 flex-col items-center gap-2 rounded-xl border border-primary/20 bg-surface p-3">
+              <img
+                data-testid="owner-marketing-qr"
+                src={bookingQrUri}
+                alt={`کد QR رزرو ${data.salonName}`}
+                className="size-56 shrink-0 rounded-lg bg-white p-2 sm:size-64"
+              />
+              <p className="text-sm font-bold text-text">اسکن برای رزرو سریع</p>
+              <a href="/owner/qr" className="inline-flex min-h-10 items-center gap-1 font-bold text-primary no-underline hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus">
+                تنظیم و دانلود QR <ArrowLeft className="size-4 rtl:-scale-x-100" aria-hidden="true" />
+              </a>
+            </aside>
+            <div className="flex min-w-0 flex-col gap-3">
+              <header className="flex items-start gap-3">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Megaphone className="size-5" aria-hidden="true" />
+                </span>
+                <div>
+                  <h1 className="text-display text-2xl text-text sm:text-3xl">بازاریابی</h1>
+                  <p className="mt-1 text-sm leading-6 text-muted">لینک رزرو را با مشتری‌ها به اشتراک بگذار.</p>
+                </div>
+              </header>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-bold text-primary">لینک رزرو {data.salonName}</p>
-                  <h2 className="mt-1 text-xl font-black text-text">همین را در بیو بگذار</h2>
-                  <p className="mt-1 max-w-xl text-sm leading-6 text-muted">
-                    مشتری خدمات و وقت‌های خالی را می‌بیند و بدون تماس رزرو می‌کند.
-                  </p>
+                  <p className="text-sm font-bold text-primary">لینک رزرو</p>
+                  <h2 className="mt-1 text-xl font-black text-text">رزرو آنلاین سالن</h2>
+                  <p className="mt-1 text-sm leading-6 text-muted">مشتری‌ها از این لینک خدمات را می‌بینند و وقت می‌گیرند.</p>
                 </div>
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-contrast">
-                  <QrCode className="size-5" aria-hidden="true" />
-                </span>
               </div>
-              <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3">
-                <span className="break-words text-sm text-text" dir="ltr">{bookingUrl}</span>
-                <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="flex min-w-0 flex-col gap-2 rounded-lg border border-border bg-surface p-3">
+                <span className="block truncate text-sm text-text" dir="ltr" title={bookingUrl}>{bookingUrl}</span>
+                <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
                     onClick={() => void copyLink()}
                     startIcon={copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                    className="flex-1"
+                    className="min-w-0 basis-32 flex-1"
                   >
                     {copied ? 'کپی شد' : 'کپی لینک'}
                   </Button>
@@ -189,38 +209,23 @@ export function OwnerMarketingPage() {
                     variant="secondary"
                     onClick={() => void shareLink()}
                     startIcon={<Share2 className="size-4" />}
-                    className="flex-1"
+                    className="min-w-0 basis-32 flex-1"
                   >
-                    اشتراک‌گذاری
+                    اشتراک
                   </Button>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                  <a
-                    href={bookingUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex min-h-10 items-center gap-1 rounded-md px-1 font-medium text-primary no-underline hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
-                  >
-                    دیدن صفحه رزرو <ExternalLink className="size-4" aria-hidden="true" />
-                  </a>
-                <a href="/owner/qr" className="inline-flex min-h-10 items-center gap-1 rounded-md px-1 font-medium text-muted no-underline hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus">
-                  ساخت QR و استند <ArrowLeft className="size-4 rtl:-scale-x-100" aria-hidden="true" />
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                <a
+                  href={bookingUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex min-h-10 items-center gap-1 rounded-md px-1 font-medium text-primary no-underline hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+                >
+                  پیش‌نمایش صفحه رزرو <ExternalLink className="size-4" aria-hidden="true" />
                 </a>
               </div>
             </div>
-            <aside className="flex flex-col items-center gap-2 rounded-xl border border-primary/20 bg-surface p-3">
-              <img
-                data-testid="owner-marketing-qr"
-                src={bookingQrUri}
-                alt={`کد QR رزرو ${data.salonName}`}
-                className="aspect-square w-full max-w-40 rounded-lg bg-white p-2"
-              />
-              <p className="text-center text-xs font-bold text-text">اسکن برای رزرو سریع</p>
-              <a href="/owner/qr" className="inline-flex min-h-10 items-center justify-center rounded-md px-2 text-center text-xs font-bold text-primary no-underline hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus">
-                شخصی‌سازی و خروجی QR
-              </a>
-            </aside>
           </div>
         </Card>
       )}
@@ -228,108 +233,103 @@ export function OwnerMarketingPage() {
       {status === 'ready' && data && (
         <Card
           data-testid="owner-campaign-kit"
-          className="flex flex-col gap-5 border-primary/20 bg-surface"
+          className="flex flex-col gap-4 border-primary/20 bg-surface"
         >
           <div className="flex items-start gap-3">
             <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Link2 className="size-5" aria-hidden="true" />
             </span>
             <div>
-              <h2 className="text-lg font-bold text-text">لینک‌های قابل‌اندازه‌گیری</h2>
-              <p className="mt-1 text-sm leading-6 text-muted">
-                برای هر کانال لینک جدا بساز؛ بعد در آنالیتیکس می‌بینی کدام کانال واقعاً اسکن و رزرو می‌سازد.
-              </p>
+              <h2 className="text-lg font-bold text-text">لینک کمپین</h2>
+              <p className="mt-1 text-sm leading-6 text-muted">کانال انتشار را انتخاب کن تا لینک مخصوص همان کانال ساخته شود.</p>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2" role="group" aria-label="انتخاب کانال کمپین">
-            {CAMPAIGN_SOURCES.map((source) => (
-              <button
-                key={source.value}
-                type="button"
-                aria-pressed={selectedSource === source.value}
-                onClick={() => setSelectedSource(source.value)}
-                className={`min-h-10 rounded-md border px-3 py-2 text-sm transition-colors ${
-                  selectedSource === source.value
-                    ? 'border-primary bg-primary text-primary-contrast'
-                    : 'border-border bg-surface text-text hover:bg-elevated'
-                }`}
-              >
-                <span className="font-bold">{source.label}</span>
-                <span className="ms-1 text-xs">{source.hint}</span>
-              </button>
-            ))}
-          </div>
+          <Select
+            label="کانال انتشار"
+            value={selectedSource}
+            onValueChange={(value) => setSelectedSource(value as CampaignSource)}
+            options={CAMPAIGN_SOURCES.map(({ value, label }) => ({ value, label }))}
+            helperText={activeSource.hint}
+          />
 
           <div className="flex flex-col gap-2 rounded-xl border border-border bg-elevated p-3 shadow-1">
-            <span className="text-xs font-bold text-muted">لینک {CAMPAIGN_SOURCES.find((item) => item.value === selectedSource)?.label}</span>
-            <span className="break-words text-sm text-text" dir="ltr">{campaignUrl}</span>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button type="button" onClick={() => void copyCampaignLink()} startIcon={<Copy className="size-4" />} className="flex-1">
-                کپی لینک کمپین
+            <span className="text-xs font-bold text-muted">{activeSource.label}</span>
+            <span className="block truncate text-sm text-text" dir="ltr" title={campaignUrl}>{campaignUrl}</span>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                onClick={() => void copyCampaignLink()}
+                startIcon={<Copy className="size-4" />}
+                className="min-w-0 basis-32 flex-1"
+              >
+                کپی لینک
               </Button>
-              <Button type="button" variant="secondary" onClick={() => void copyCampaignMessage()} startIcon={<MessageCircle className="size-4" />} className="flex-1">
-                کپی متن واتساپ
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => void copyCampaignMessage()}
+                startIcon={<MessageCircle className="size-4" />}
+                className="min-w-0 basis-32 flex-1"
+              >
+                کپی متن
               </Button>
             </div>
           </div>
 
-          <p className="whitespace-pre-line rounded-lg border border-border bg-surface p-3 text-sm leading-7 text-muted">
-            {campaignMessage}
-          </p>
+          <details className="group rounded-lg border border-border bg-surface">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-bold text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus [&::-webkit-details-marker]:hidden">
+              پیش‌نمایش پیام آماده
+              <ChevronDown className="size-4 shrink-0 text-muted transition-transform group-open:rotate-180" aria-hidden="true" />
+            </summary>
+            <p className="whitespace-pre-line break-words border-t border-border px-3 py-2 text-sm leading-6 text-muted" dir="auto">
+              {campaignMessage}
+            </p>
+          </details>
         </Card>
       )}
 
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <ActionCard
-          icon={<Users className="size-5" aria-hidden="true" />}
-          title="مشتری‌ها را دعوت کن"
-          body="مشتری‌های قدیمی را به دفترچه اضافه کن و لینک رزرو را برایشان بفرست."
-          href="/owner/clients"
-          cta="رفتن به مشتری‌ها"
-        />
-        <ActionCard
-          icon={<CalendarClock className="size-5" aria-hidden="true" />}
-          title="وقت‌های خالی را کامل کن"
-          body="خدمت‌ها و ساعت کاری درست، صفحه رزرو را قابل استفاده می‌کند."
-          href="/owner/config"
-          cta="تکمیل تنظیمات"
-        />
-        <ActionCard
-          icon={<QrCode className="size-5" aria-hidden="true" />}
-          title="QR روی آینه"
-          body="یک QR برای ویترین، آینه یا رسید چاپ کن تا رزرو همیشه جلوی چشم باشد."
-          href="/owner/qr"
-          cta="باز کردن QR"
-        />
+      <div className="rounded-xl border border-border bg-surface p-3 sm:p-4">
+        <h2 className="mb-2 text-sm font-bold text-text">برای شروع</h2>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <ActionLink
+            icon={<Users className="size-4" aria-hidden="true" />}
+            title="دعوت از مشتری‌ها"
+            href="/owner/clients"
+          />
+          <ActionLink
+            icon={<CalendarClock className="size-4" aria-hidden="true" />}
+            title="تنظیم خدمات و ساعت کاری"
+            href="/owner/config"
+          />
+        </div>
       </div>
     </section>
   );
 }
 
-function ActionCard({
+function ActionLink({
   icon,
   title,
-  body,
   href,
-  cta,
 }: {
   icon: React.ReactNode;
   title: string;
-  body: string;
   href: string;
-  cta: string;
 }) {
   return (
-    <Card as="article" className="flex flex-col gap-3">
-      <span className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">{icon}</span>
-      <h2 className="font-bold text-text">{title}</h2>
-      <p className="flex-1 text-sm leading-6 text-muted">{body}</p>
-      <a href={href} className="inline-flex min-h-10 items-center gap-1 text-sm font-bold text-primary no-underline hover:underline">
-        {cta} <ArrowLeft className="size-4 rtl:-scale-x-100" aria-hidden="true" />
-      </a>
-    </Card>
+    <a
+      href={href}
+      className="flex min-h-12 items-center justify-between gap-3 rounded-lg border border-border bg-elevated px-3 py-2 text-sm font-medium text-text no-underline transition-colors hover:border-primary/40 hover:bg-primary/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+    >
+      <span className="flex min-w-0 items-center gap-2">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          {icon}
+        </span>
+        <span>{title}</span>
+      </span>
+      <ArrowLeft className="size-4 shrink-0 text-muted rtl:-scale-x-100" aria-hidden="true" />
+    </a>
   );
 }
 

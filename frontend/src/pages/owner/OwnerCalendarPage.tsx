@@ -14,6 +14,7 @@ import {
   Coffee,
   ContactRound,
   CreditCard,
+  ChevronDown,
   ChevronLeft,
   ListChecks,
   MessageCircle,
@@ -2147,22 +2148,6 @@ export function WeeklySchedulePage({
     });
   };
 
-  const applyThursdayFridayOff = () => {
-    setHours((current) => current.filter((item) => item.weekday !== 4 && item.weekday !== 5));
-  };
-
-  const copyFirstOpenDay = () => {
-    const source = IRANIAN_WEEKDAY_NUMBERS.map(rowFor).find(Boolean);
-    if (!source) return;
-    setHours(
-      IRANIAN_WEEKDAY_NUMBERS.map((weekday) => ({
-        weekday,
-        startTime: source.startTime,
-        endTime: source.endTime,
-      })),
-    );
-  };
-
   const save = async () => {
     const baseHours = IRANIAN_WEEKDAY_NUMBERS.map(rowFor).filter(
       (item): item is WeeklyWorkingHour => Boolean(item),
@@ -2232,7 +2217,7 @@ export function WeeklySchedulePage({
         </header>
         <div className="p-3 sm:p-6">
           <div className="flex flex-col gap-5">
-          <section aria-label="تنظیمات اصلی" className="grid gap-4 rounded-2xl border border-border bg-surface p-4 shadow-1 min-[520px]:grid-cols-2 sm:p-5">
+          <section aria-label="تنظیمات اصلی" className="grid gap-4 rounded-2xl border border-border bg-surface p-4 shadow-1 sm:grid-cols-2 sm:p-5">
             <Select
               label="برنامه برای"
               value={target}
@@ -2292,14 +2277,6 @@ export function WeeklySchedulePage({
               helperText="در حالت سیار، رزروها روی مسیر اختصاصی همان عضو تیم ثبت می‌شوند."
             />
           </section>
-          <div className="grid grid-cols-1 gap-2 min-[520px]:grid-cols-2">
-            <Button type="button" size="md" variant="secondary" onClick={copyFirstOpenDay} className="w-full">
-              همین ساعت برای همه روزها
-            </Button>
-            <Button type="button" size="md" variant="secondary" onClick={applyThursdayFridayOff} className="w-full">
-              پنجشنبه و جمعه تعطیل
-            </Button>
-          </div>
           <section className={cn('rounded-2xl border p-4 transition-colors sm:p-5', breakEnabled ? 'border-warning/40 bg-warning/5' : 'border-border bg-surface')}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -4346,6 +4323,7 @@ export function OwnerCalendarPage() {
   const [staff, setStaff] = useState<SalonStaff[]>([]);
   const [staffCalendarBlocks, setStaffCalendarBlocks] = useState<StaffCalendarBlock[]>([]);
   const [closureReloadToken, setClosureReloadToken] = useState(0);
+  const [mobileManageOpen, setMobileManageOpen] = useState(false);
   const [approvalPolicyOpen, setApprovalPolicyOpen] = useState(false);
   const [availabilityOpen, setAvailabilityOpen] = useState(false);
   const [availabilityDate, setAvailabilityDate] = useState<Date>(() => new Date());
@@ -4848,85 +4826,100 @@ export function OwnerCalendarPage() {
           </div>
           <div className="owner-calendar-mobile-manage">
             <section
-              aria-labelledby="owner-calendar-mobile-manage-title"
+              aria-label="مدیریت ساعت و تعطیلی"
               data-testid="owner-calendar-mobile-manage"
-              className="owner-calendar-mobile-manage-card rounded-2xl border-2 border-s-primary border-border bg-elevated p-4 shadow-2"
+              className="owner-calendar-mobile-manage-card rounded-2xl border-2 border-s-primary border-border bg-elevated p-2 shadow-2"
             >
-              <div className="flex items-start gap-3">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-contrast shadow-1">
+              <button
+                type="button"
+                aria-expanded={mobileManageOpen}
+                aria-controls="owner-calendar-mobile-manage-options"
+                aria-label={`مدیریت ساعت و تعطیلی برای ${anchorLabel}`}
+                data-testid="owner-calendar-mobile-manage-toggle"
+                onClick={() => setMobileManageOpen((open) => !open)}
+                className="owner-calendar-mobile-manage-toggle flex min-h-[4.25rem] w-full items-center gap-3 rounded-xl px-2 py-2 text-start transition-colors hover:bg-primary/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-contrast shadow-1">
                   <Settings2 className="h-5 w-5" aria-hidden="true" />
                 </span>
-                <div className="min-w-0">
-                  <span className="text-[11px] font-bold text-primary">تغییر برنامه روز</span>
-                  <h2
-                    id="owner-calendar-mobile-manage-title"
-                    className="m-0 mt-0.5 text-lg font-extrabold text-text"
-                  >
-                    تغییر ساعت یا تعطیلی
-                  </h2>
-                  <p className="m-0 mt-1 text-sm leading-5 text-muted">
-                    ساعت‌های هر هفته را از گزینه اول؛ تعطیلی فقط همین تاریخ را از گزینه دوم تنظیم کن.
-                  </p>
+                <span className="flex min-w-0 flex-1 flex-col gap-1">
+                  <span className="text-sm font-extrabold text-text">مدیریت ساعت و تعطیلی</span>
+                  <span className="truncate text-xs font-medium text-muted">
+                    تنظیم ساعت هفتگی یا تعطیلی {anchorLabel}
+                  </span>
+                </span>
+                <ChevronDown
+                  className={`h-5 w-5 shrink-0 text-primary transition-transform ${mobileManageOpen ? 'rotate-180' : ''}`}
+                  aria-hidden="true"
+                />
+              </button>
+
+              <div
+                id="owner-calendar-mobile-manage-options"
+                hidden={!mobileManageOpen}
+                className="owner-calendar-mobile-manage-options mt-2 border-t border-border/70 pt-3"
+              >
+                <p className="m-0 text-xs leading-5 text-muted">
+                  ساعت‌های هر هفته را از گزینه اول؛ تعطیلی فقط همین تاریخ را از گزینه دوم تنظیم کن.
+                </p>
+                <div className="owner-calendar-mobile-manage-date mt-2 flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5">
+                  <CalendarClock className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                  <span className="text-xs font-semibold text-muted">روز انتخاب‌شده:</span>
+                  <strong className="min-w-0 text-sm text-text">{anchorLabel}</strong>
                 </div>
-              </div>
 
-              <div className="owner-calendar-mobile-manage-date mt-3 flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5">
-                <CalendarClock className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-                <span className="text-xs font-semibold text-muted">روز انتخاب‌شده:</span>
-                <strong className="min-w-0 text-sm text-text">{anchorLabel}</strong>
-              </div>
-
-              <div className="mt-3 flex flex-col gap-2">
-                <Button
-                  variant="primary"
-                  size="lg"
-                  fullWidth
-                  startIcon={
-                    <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-contrast/15 text-primary-contrast">
-                      <Clock className="h-5 w-5" />
+                <div className="mt-2 flex flex-col gap-2">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    fullWidth
+                    startIcon={
+                      <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-contrast/15 text-primary-contrast">
+                        <Clock className="h-5 w-5" />
+                      </span>
+                    }
+                    endIcon={<ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
+                    onClick={() =>
+                      navigate(
+                        `/owner/calendar/working-hours?weekday=${iranianDayIndex(anchor)}&date=${dateKey(anchor)}`,
+                      )
+                    }
+                    aria-label={`تغییر ساعت کاری هفتگی برای همه‌ی ${PERSIAN_WEEKDAYS[iranianDayIndex(anchor)]}‌ها`}
+                    data-testid="owner-calendar-manage-weekly-trigger"
+                    className="owner-calendar-mobile-manage-action min-h-[4.5rem] !justify-start !rounded-2xl !px-3 !py-2.5 !text-start !whitespace-normal"
+                  >
+                    <span className="owner-calendar-mobile-manage-copy">
+                      <span className="text-sm font-extrabold">تغییر ساعت کاری</span>
+                      <span className="owner-calendar-mobile-manage-scope owner-calendar-mobile-manage-scope-weekly">
+                        <span className="owner-calendar-mobile-manage-scope-badge">هر هفته</span>
+                        <span>همه‌ی {PERSIAN_WEEKDAYS[iranianDayIndex(anchor)]}‌ها</span>
+                      </span>
                     </span>
-                  }
-                  endIcon={<ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
-                  onClick={() =>
-                    navigate(
-                      `/owner/calendar/working-hours?weekday=${iranianDayIndex(anchor)}&date=${dateKey(anchor)}`,
-                    )
-                  }
-                  aria-label={`تغییر ساعت کاری هفتگی برای همه‌ی ${PERSIAN_WEEKDAYS[iranianDayIndex(anchor)]}‌ها`}
-                  data-testid="owner-calendar-manage-weekly-trigger"
-                  className="owner-calendar-mobile-manage-action min-h-[4.5rem] !justify-start !rounded-2xl !px-3 !py-2.5 !text-start !whitespace-normal"
-                >
-                  <span className="owner-calendar-mobile-manage-copy">
-                    <span className="text-sm font-extrabold">تغییر ساعت کاری</span>
-                    <span className="owner-calendar-mobile-manage-scope owner-calendar-mobile-manage-scope-weekly">
-                      <span className="owner-calendar-mobile-manage-scope-badge">هر هفته</span>
-                      <span>همه‌ی {PERSIAN_WEEKDAYS[iranianDayIndex(anchor)]}‌ها</span>
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    fullWidth
+                    startIcon={
+                      <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning">
+                        <CalendarOff className="h-5 w-5" />
+                      </span>
+                    }
+                    endIcon={<ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
+                    onClick={() => openAvailability(anchor)}
+                    aria-label={`تعطیلی کامل یا بستن بخشی از ساعت فقط برای ${anchorLabel}`}
+                    data-testid="owner-calendar-manage-day-trigger"
+                    className="owner-calendar-mobile-manage-action !border-warning/40 !bg-warning/5 min-h-[4.5rem] !justify-start !rounded-2xl !px-3 !py-2.5 !text-start !whitespace-normal"
+                  >
+                    <span className="owner-calendar-mobile-manage-copy">
+                      <span className="text-sm font-extrabold">تعطیلی یا بستن ساعت</span>
+                      <span className="owner-calendar-mobile-manage-scope owner-calendar-mobile-manage-scope-date">
+                        <span className="owner-calendar-mobile-manage-scope-badge">فقط همین روز</span>
+                        <span>تعطیلی کامل یا بخشی از ساعت</span>
+                      </span>
                     </span>
-                  </span>
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  fullWidth
-                  startIcon={
-                    <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning">
-                      <CalendarOff className="h-5 w-5" />
-                    </span>
-                  }
-                  endIcon={<ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
-                  onClick={() => openAvailability(anchor)}
-                  aria-label={`تعطیلی کامل یا بستن بخشی از ساعت فقط برای ${anchorLabel}`}
-                  data-testid="owner-calendar-manage-day-trigger"
-                  className="owner-calendar-mobile-manage-action !border-warning/40 !bg-warning/5 min-h-[4.5rem] !justify-start !rounded-2xl !px-3 !py-2.5 !text-start !whitespace-normal"
-                >
-                  <span className="owner-calendar-mobile-manage-copy">
-                    <span className="text-sm font-extrabold">تعطیلی یا بستن ساعت</span>
-                    <span className="owner-calendar-mobile-manage-scope owner-calendar-mobile-manage-scope-date">
-                      <span className="owner-calendar-mobile-manage-scope-badge">فقط همین روز</span>
-                      <span>تعطیلی کامل یا بخشی از ساعت</span>
-                    </span>
-                  </span>
-                </Button>
+                  </Button>
+                </div>
               </div>
             </section>
             {(role === 'Owner' || role === 'Admin' || role === 'PlatformAdmin') && (

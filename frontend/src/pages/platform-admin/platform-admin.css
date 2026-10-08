@@ -936,6 +936,8 @@
 
 @media (max-width: 47.5rem) {
   .platform-admin-root .ant-layout-header {
+    position: sticky;
+    top: 0;
     padding-inline: var(--space-4);
   }
 

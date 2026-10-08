@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Skeleton } from '../ui/Skeleton';
 import { cn } from '../ui/cn';
 
 /** Stable test id for the route-level loading fallback. */
@@ -18,8 +17,8 @@ export interface RouteLoaderProps {
  * It is a **layout-matched skeleton**, not a centered spinner: a title bar plus
  * a stack of content blocks sized with the 8pt spacing scale so the loader
  * occupies roughly the same vertical space the routed page will, reserving
- * layout to protect Cumulative Layout Shift (CLS < 0.1). Animation is the
- * opacity-only `Skeleton` pulse, neutralized under `prefers-reduced-motion`.
+ * layout to protect Cumulative Layout Shift (CLS < 0.1). Placeholders stay
+ * static so route changes do not introduce distracting motion.
  *
  * Accessibility: the region is a polite live region with `aria-busy` and an
  * accessible name, so assistive tech announces the in-flight load once without
@@ -52,28 +51,26 @@ export function RouteLoader({ className }: RouteLoaderProps) {
     >
       <div className="mb-1 flex items-center gap-3" aria-hidden="true">
         <span className="relative flex h-12 w-12 items-center justify-center">
-          <span className="ara-loading-orbit absolute inset-0 rounded-xl border-2 border-primary/20" />
+          <span className="absolute inset-0 rounded-xl border-2 border-primary/20" />
           <img
             src="/icons/icon-192.png"
             width={48}
             height={48}
             alt=""
-            className="ara-loading-mark relative h-10 w-10 rounded-lg"
+            className="relative h-10 w-10 rounded-lg"
           />
         </span>
         <span className="text-sm font-semibold text-text">در حال آماده‌سازی صفحه…</span>
       </div>
 
       {/* Page-title placeholder. */}
-      <Skeleton variant="text" className="h-7 w-1/2 max-w-xs" />
+      <div aria-hidden="true" className="h-7 w-1/2 max-w-xs rounded-sm bg-border" />
 
-      {/* Primary content blocks — staggered so the loading grid ripples
-          instead of pulsing as one block (delays are decorative; the shimmer
-          keyframe itself is reduced-motion clamped). */}
+      {/* Static primary content placeholders. */}
       <div className="flex flex-col gap-3">
-        <Skeleton variant="rect" className="h-12" />
-        <Skeleton variant="rect" className="h-12 [animation-delay:var(--dur-stagger)]" />
-        <Skeleton variant="rect" className="h-32 [animation-delay:calc(var(--dur-stagger)*2)]" />
+        <div aria-hidden="true" className="h-12 rounded-md bg-border" />
+        <div aria-hidden="true" className="h-12 rounded-md bg-border" />
+        <div aria-hidden="true" className="h-32 rounded-md bg-border" />
       </div>
 
       {/* Visually-hidden status text for AT (the skeletons are aria-hidden). */}

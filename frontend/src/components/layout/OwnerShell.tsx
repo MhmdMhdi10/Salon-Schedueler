@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type UIEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { OwnerThemeToggle } from '../theme/OwnerThemeToggle';
 import { THEME_STORAGE_KEY, ThemeScope, useTheme } from '../theme';
 import { cn } from '../ui/cn';
@@ -92,7 +91,6 @@ export function OwnerShell({
   const { pathname } = location;
   const routeKey = `${location.pathname}${location.search}`;
   const isDesktop = useMediaQuery('(min-width: 1024px)');
-  const prefersReducedMotion = useReducedMotion();
   const contentRef = useRef<HTMLElement | null>(null);
   const profileScrollPositionRef = useRef<{ top: number; left: number } | null>(null);
 
@@ -218,25 +216,12 @@ export function OwnerShell({
             !isDesktop && 'pb-[calc(8rem+env(safe-area-inset-bottom))]',
           )}
         >
-          <AnimatePresence initial={false} mode="wait">
-            <motion.div
-              key={routeKey}
-              initial={prefersReducedMotion ? false : { opacity: 0, x: 18 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={prefersReducedMotion ? undefined : { opacity: 0, x: -12 }}
-              transition={
-                prefersReducedMotion
-                  ? { duration: 0 }
-                  : { duration: 0.24, ease: [0.22, 0.8, 0.2, 1] }
-              }
-              className="min-w-0 w-full"
-            >
-              {(role === 'Owner' || role === 'Admin') && salonId && (
-                <OwnerSetupAlert salonId={salonId} refreshKey={pathname} />
-              )}
-              {children}
-            </motion.div>
-          </AnimatePresence>
+          <div className="min-w-0 w-full">
+            {(role === 'Owner' || role === 'Admin') && salonId && (
+              <OwnerSetupAlert salonId={salonId} refreshKey={pathname} />
+            )}
+            {children}
+          </div>
         </main>
       </div>
 

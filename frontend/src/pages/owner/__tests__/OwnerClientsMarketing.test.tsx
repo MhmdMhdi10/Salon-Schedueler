@@ -124,16 +124,22 @@ describe('OwnerClientsPage', () => {
 });
 
 describe('OwnerMarketingPage', () => {
-  it('shows one reusable booking link and the next setup actions', async () => {
+  it('shows the large QR first, then the booking link and next setup actions', async () => {
     renderPage(<OwnerMarketingPage />, '/owner/marketing');
 
-    expect(await screen.findByText('همین را در بیو بگذار')).toBeInTheDocument();
+    const pageHeading = await screen.findByRole('heading', { name: 'بازاریابی' });
+    const bookingHeading = screen.getByRole('heading', { name: 'رزرو آنلاین سالن' });
     expect(screen.getByText('https://book.salon.app/s/salon-1?utm_source=qr')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /ساخت QR و استند/ })).toHaveAttribute('href', '/owner/qr');
-    expect(screen.getByTestId('owner-marketing-qr')).toHaveAttribute(
-      'alt',
-      'کد QR رزرو سالن آرا',
-    );
+    const qr = screen.getByTestId('owner-marketing-qr');
+    expect(qr).toHaveAttribute('alt', 'کد QR رزرو سالن آرا');
+    expect(qr).toHaveClass('size-56', 'sm:size-64');
+    expect(qr.compareDocumentPosition(pageHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(qr.compareDocumentPosition(bookingHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole('link', { name: /تنظیم و دانلود QR/ })).toHaveAttribute('href', '/owner/qr');
+    expect(screen.getByRole('combobox', { name: 'کانال انتشار' })).toBeInTheDocument();
+    expect(screen.getByText('پیش‌نمایش پیام آماده').closest('details')).not.toHaveAttribute('open');
+    expect(screen.getByRole('link', { name: /دعوت از مشتری‌ها/ })).toHaveAttribute('href', '/owner/clients');
+    expect(screen.getByRole('link', { name: /تنظیم خدمات و ساعت کاری/ })).toHaveAttribute('href', '/owner/config');
     expect(getSalonQr).toHaveBeenCalledWith('salon-1');
   });
 });

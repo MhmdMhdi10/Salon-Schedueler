@@ -48,7 +48,7 @@
   display: inline-flex;
   min-height: 1.25rem;
   align-items: center;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   padding: 0.125rem 0.5rem;
   font-size: 0.65rem;
   font-weight: 800;
@@ -75,7 +75,7 @@
 }
 
 .owner-calendar-mobile-policy {
-  border: 1px solid var(--color-border);
+  border: 0.0625rem solid var(--color-border);
   background: var(--color-surface);
 }
 

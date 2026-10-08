@@ -201,7 +201,7 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
     ).toBeTruthy();
   });
 
-  it('shows direct, clearly labeled mobile controls for weekly hours and a date closure', async () => {
+  it('keeps schedule management compact and expands clear weekly and date-specific actions', async () => {
     renderOwnerApp('Owner', '/owner/calendar');
 
     await screen.findByTestId('owner-calendar-page');
@@ -209,9 +209,14 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
       'ثبت نوبت حضوری',
     );
     const manage = await screen.findByTestId('owner-calendar-mobile-manage');
-    expect(
-      within(manage).getByRole('heading', { name: 'تغییر ساعت یا تعطیلی' }),
-    ).toBeInTheDocument();
+    const toggle = within(manage).getByTestId('owner-calendar-mobile-manage-toggle');
+    expect(toggle).toHaveAccessibleName(/مدیریت ساعت و تعطیلی برای/);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(within(manage).getByTestId('owner-calendar-manage-weekly-trigger')).not.toBeVisible();
+    expect(within(manage).getByTestId('owner-calendar-manage-day-trigger')).not.toBeVisible();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
     expect(manage).toHaveTextContent('روز انتخاب‌شده:');
     expect(manage).toHaveTextContent('هر هفته');
     expect(manage).toHaveTextContent('فقط همین روز');
@@ -258,7 +263,8 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
       expect.stringContaining('?date='),
     );
     await waitFor(() => expect(getSalonWorkingHours).toHaveBeenCalled());
-    expect(screen.getByText('پنجشنبه و جمعه تعطیل')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'همین ساعت برای همه روزها' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'پنجشنبه و جمعه تعطیل' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('link', { name: 'بازگشت به تقویم' }));
     expect(await screen.findByTestId('owner-calendar-page')).toBeInTheDocument();
   });

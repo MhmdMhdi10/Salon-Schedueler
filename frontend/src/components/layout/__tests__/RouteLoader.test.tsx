@@ -29,6 +29,15 @@ describe('RouteLoader', () => {
     expect(loader.className).toContain('min-h-[60vh]');
   });
 
+  it('keeps route loading placeholders static', () => {
+    render(<RouteLoader />);
+    const loader = screen.getByTestId(ROUTE_LOADER_TESTID);
+
+    expect(loader.querySelector('.animate-shimmer')).not.toBeInTheDocument();
+    expect(loader.querySelector('.ara-loading-orbit')).not.toBeInTheDocument();
+    expect(loader.querySelector('.ara-loading-mark')).not.toBeInTheDocument();
+  });
+
   it('exposes the loader as the Suspense fallback and then swaps in the route', async () => {
     const LazyPage = lazy(() =>
       Promise.resolve({

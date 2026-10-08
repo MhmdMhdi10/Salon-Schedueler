@@ -11,7 +11,6 @@ import {
 import { ThemeProvider } from './components/theme/ThemeProvider';
 import { AppShell } from './components/layout/AppShell';
 import { RouteLoader } from './components/layout/RouteLoader';
-import { RouteProgress } from './components/layout/RouteProgress';
 import { PageTransition } from './components/ui/Motion';
 import { ToastProvider } from './components/ui/Toast';
 import { AuthProvider, useAuth } from './auth/AuthContext';
@@ -298,7 +297,6 @@ export function App() {
              * a nested one would silo its toasts to that page.) */}
             <ToastProvider>
               <div dir="rtl" lang="fa" className="app-root">
-                <RouteProgress />
                 <Suspense fallback={<RouteLoader />}>
                   <Routes>
                     <Route path="/platform-admin" element={<PlatformAdminLayout />}>
@@ -370,8 +368,8 @@ export function App() {
                     {/* Public + customer + admin surfaces, inside the app shell.
                      * The INNER Suspense keeps the shell chrome (sticky header,
                      * footer) mounted while a page chunk loads — only the main
-                     * region shows the RouteLoader skeleton. `PageTransition`
-                     * adds the enter-only route crossfade (reduced-motion safe).
+                     * region shows the RouteLoader skeleton. Route changes render
+                     * directly without an entrance animation.
                      */}
                     <Route
                       element={
