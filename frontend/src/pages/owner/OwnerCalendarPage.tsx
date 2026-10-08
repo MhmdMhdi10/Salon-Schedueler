@@ -4850,28 +4850,29 @@ export function OwnerCalendarPage() {
             <section
               aria-labelledby="owner-calendar-mobile-manage-title"
               data-testid="owner-calendar-mobile-manage"
-              className="rounded-2xl border-2 border-s-primary border-border bg-elevated p-4 shadow-2"
+              className="owner-calendar-mobile-manage-card rounded-2xl border-2 border-s-primary border-border bg-elevated p-4 shadow-2"
             >
               <div className="flex items-start gap-3">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-contrast shadow-1">
                   <Settings2 className="h-5 w-5" aria-hidden="true" />
                 </span>
                 <div className="min-w-0">
+                  <span className="text-[11px] font-bold text-primary">تنظیم ساعت و حضور</span>
                   <h2
                     id="owner-calendar-mobile-manage-title"
-                    className="m-0 text-base font-extrabold text-text"
+                    className="m-0 mt-0.5 text-lg font-extrabold text-text"
                   >
-                    مدیریت برنامه‌ی کاری سالن
+                    مدیریت همین روز
                   </h2>
                   <p className="m-0 mt-1 text-sm leading-5 text-muted">
-                    ساعت کاری یا تعطیلی این روز را از همین بخش تغییر بده.
+                    ساعت‌های تکراری یا تعطیلی این تاریخ را از گزینه‌های زیر تغییر بده.
                   </p>
                 </div>
               </div>
 
-              <div className="mt-3 flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2.5">
+              <div className="owner-calendar-mobile-manage-date mt-3 flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5">
                 <CalendarClock className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-                <span className="text-xs font-semibold text-muted">روز انتخاب‌شده:</span>
+                <span className="text-xs font-semibold text-muted">تنظیم برای:</span>
                 <strong className="min-w-0 text-sm text-text">{anchorLabel}</strong>
               </div>
 
@@ -4891,14 +4892,14 @@ export function OwnerCalendarPage() {
                       `/owner/calendar/working-hours?weekday=${iranianDayIndex(anchor)}&date=${dateKey(anchor)}`,
                     )
                   }
-                  aria-label={`ویرایش ساعت کاری هفتگی ${PERSIAN_WEEKDAYS[iranianDayIndex(anchor)]}`}
+                  aria-label={`ویرایش ساعت کاری هفتگی برای همه‌ی ${PERSIAN_WEEKDAYS[iranianDayIndex(anchor)]}‌ها`}
                   data-testid="owner-calendar-manage-weekly-trigger"
                   className="owner-calendar-mobile-manage-action min-h-[4.5rem] !justify-start !rounded-2xl !px-3 !py-2.5 !text-start !whitespace-normal"
                 >
                   <span className="owner-calendar-mobile-manage-copy">
                     <span className="text-sm font-extrabold">ویرایش ساعت کاری هفتگی</span>
-                    <span className="text-xs font-medium leading-5 text-primary-contrast">
-                      برای همه‌ی {PERSIAN_WEEKDAYS[iranianDayIndex(anchor)]}‌ها، هر هفته
+                    <span className="owner-calendar-mobile-manage-scope owner-calendar-mobile-manage-scope-weekly">
+                      هر هفته · همه‌ی {PERSIAN_WEEKDAYS[iranianDayIndex(anchor)]}‌ها
                     </span>
                   </span>
                 </Button>
@@ -4913,33 +4914,33 @@ export function OwnerCalendarPage() {
                   }
                   endIcon={<ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
                   onClick={() => openAvailability(anchor)}
-                  aria-label={`تعطیلی یا محدودیت ساعت برای ${anchorLabel}`}
+                  aria-label={`تعطیلی کامل یا بستن بخشی از ساعت فقط برای ${anchorLabel}`}
                   data-testid="owner-calendar-manage-day-trigger"
                   className="owner-calendar-mobile-manage-action !border-warning/40 !bg-warning/5 min-h-[4.5rem] !justify-start !rounded-2xl !px-3 !py-2.5 !text-start !whitespace-normal"
                 >
                   <span className="owner-calendar-mobile-manage-copy">
-                    <span className="text-sm font-extrabold">تعطیل‌کردن یا بستن ساعت</span>
-                    <span className="text-xs font-medium leading-5 text-muted">
-                      فقط برای {anchorLabel}
+                    <span className="text-sm font-extrabold">تعطیلی یا بستن بخشی از ساعت</span>
+                    <span className="owner-calendar-mobile-manage-scope owner-calendar-mobile-manage-scope-date">
+                      فقط {anchorLabel} · روزهای دیگر تغییر نمی‌کنند
                     </span>
                   </span>
                 </Button>
-                {(role === 'Owner' || role === 'Admin' || role === 'PlatformAdmin') && (
-                  <Button
-                    variant="ghost"
-                    size="md"
-                    startIcon={<CheckCircle2 className="h-4 w-4 text-primary" />}
-                    endIcon={<ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
-                    onClick={() => setApprovalPolicyOpen(true)}
-                    aria-haspopup="dialog"
-                    data-testid="owner-calendar-approval-policy-trigger"
-                    className="mt-1 min-h-11 w-full justify-start border-t border-border !rounded-none !px-2 pt-3 text-xs"
-                  >
-                    تنظیم روش تأیید رزروهای جدید
-                  </Button>
-                )}
               </div>
             </section>
+            {(role === 'Owner' || role === 'Admin' || role === 'PlatformAdmin') && (
+              <Button
+                variant="ghost"
+                size="md"
+                startIcon={<CheckCircle2 className="h-4 w-4 text-primary" />}
+                endIcon={<ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
+                onClick={() => setApprovalPolicyOpen(true)}
+                aria-haspopup="dialog"
+                data-testid="owner-calendar-approval-policy-trigger"
+                className="owner-calendar-mobile-policy min-h-11 w-full justify-start !rounded-xl !px-3 text-xs"
+              >
+                تنظیم روش تأیید رزروهای جدید
+              </Button>
+            )}
           </div>
           <div className="owner-calendar-actions">
             <Button

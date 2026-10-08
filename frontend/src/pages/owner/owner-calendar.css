@@ -33,6 +33,27 @@
   white-space: normal;
 }
 
+.owner-calendar-mobile-manage-scope {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: normal;
+}
+
+.owner-calendar-mobile-manage-scope-weekly {
+  color: var(--color-primary-contrast);
+}
+
+.owner-calendar-mobile-manage-scope-date {
+  color: var(--color-text-muted);
+}
+
+.owner-calendar-mobile-policy {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
 /* Keep manual booking compact on phones without exposing a second scrollbar. */
 .manual-booking-dialog {
   -ms-overflow-style: none;
@@ -209,8 +230,23 @@
   }
 
   .owner-calendar-mobile-manage {
-    display: block;
+    display: flex;
+    flex-direction: column;
     inline-size: 100%;
+    gap: 0.5rem;
+  }
+
+  .owner-calendar-mobile-manage-card {
+    border-inline-start-width: 0.375rem;
+    border-inline-start-color: var(--color-primary);
+  }
+
+  .owner-calendar-mobile-manage-date {
+    min-block-size: 2.75rem;
+  }
+
+  .owner-calendar-mobile-policy {
+    min-block-size: 2.75rem;
   }
 
 }

@@ -210,16 +210,16 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
     );
     const manage = await screen.findByTestId('owner-calendar-mobile-manage');
     expect(
-      within(manage).getByRole('heading', { name: 'مدیریت برنامه‌ی کاری سالن' }),
+      within(manage).getByRole('heading', { name: 'مدیریت همین روز' }),
     ).toBeInTheDocument();
-    expect(manage).toHaveTextContent('روز انتخاب‌شده:');
-    expect(manage).toHaveTextContent('برای همه‌ی');
-    expect(manage).toHaveTextContent('تعطیل‌کردن یا بستن ساعت');
+    expect(manage).toHaveTextContent('تنظیم برای:');
+    expect(manage).toHaveTextContent('هر هفته · همه‌ی');
+    expect(manage).toHaveTextContent('روزهای دیگر تغییر نمی‌کنند');
     expect(within(manage).getByTestId('owner-calendar-manage-weekly-trigger')).toHaveAccessibleName(
-      /ویرایش ساعت کاری هفتگی/,
+      /ویرایش ساعت کاری هفتگی برای همه‌ی/,
     );
     expect(within(manage).getByTestId('owner-calendar-manage-day-trigger')).toHaveAccessibleName(
-      /تعطیلی یا محدودیت ساعت برای/,
+      /تعطیلی کامل یا بستن بخشی از ساعت فقط برای/,
     );
     fireEvent.click(screen.getByTestId('owner-calendar-mobile-booking-action'));
     expect(await screen.findByRole('heading', { name: 'ثبت نوبت حضوری' })).toBeInTheDocument();
