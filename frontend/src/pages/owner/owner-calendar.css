@@ -34,19 +34,44 @@
 }
 
 .owner-calendar-mobile-manage-scope {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.375rem;
   font-size: 0.75rem;
   font-weight: 600;
   line-height: 1.5;
   white-space: normal;
 }
 
+.owner-calendar-mobile-manage-scope-badge {
+  display: inline-flex;
+  min-height: 1.25rem;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.65rem;
+  font-weight: 800;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
 .owner-calendar-mobile-manage-scope-weekly {
   color: var(--color-primary-contrast);
 }
 
+.owner-calendar-mobile-manage-scope-weekly .owner-calendar-mobile-manage-scope-badge {
+  background: var(--color-primary-contrast);
+  color: var(--color-primary);
+}
+
 .owner-calendar-mobile-manage-scope-date {
   color: var(--color-text-muted);
+}
+
+.owner-calendar-mobile-manage-scope-date .owner-calendar-mobile-manage-scope-badge {
+  background: color-mix(in srgb, var(--color-warning) 18%, var(--color-surface));
+  color: var(--color-text);
 }
 
 .owner-calendar-mobile-policy {
@@ -108,15 +133,15 @@
     order: 1;
   }
 
-  .owner-calendar-pending-approval {
+  .owner-calendar-date-nav {
     order: 2;
   }
 
-  .owner-calendar-date-nav {
+  .owner-calendar-mobile-manage {
     order: 3;
   }
 
-  .owner-calendar-mobile-manage {
+  .owner-calendar-pending-approval {
     order: 4;
   }
 
@@ -238,7 +263,9 @@
 
   .owner-calendar-mobile-manage-card {
     border-inline-start-width: 0.375rem;
+    border-color: color-mix(in srgb, var(--color-primary) 38%, var(--color-border));
     border-inline-start-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 5%, var(--color-elevated));
   }
 
   .owner-calendar-mobile-manage-date {

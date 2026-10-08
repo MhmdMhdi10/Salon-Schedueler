@@ -4,6 +4,18 @@ import { loginViaUi, uniquePhone } from './fixtures';
 
 test.describe.configure({ timeout: 120_000 });
 
+test.beforeEach(async ({ page }) => {
+  const theme = process.env.E2E_THEME;
+  if (theme !== 'light' && theme !== 'dark') return;
+  await page.addInitScript((value) => {
+    try {
+      window.localStorage.setItem('salon-theme', value);
+    } catch {
+      // The initial about:blank document may not expose storage.
+    }
+  }, theme);
+});
+
 const PUBLIC_ROUTES = [
   '/',
   '/business/register',
@@ -66,6 +78,10 @@ type AxeViolation = {
 
 async function waitForSurface(page: Page): Promise<void> {
   await expect(page.locator('#app-boot-loader')).toHaveCount(0);
+  const expectedTheme = process.env.E2E_THEME;
+  if (expectedTheme === 'light' || expectedTheme === 'dark') {
+    await expect(page.locator('html')).toHaveAttribute('data-theme', expectedTheme);
+  }
   await expect(page.getByTestId('route-loader')).toHaveCount(0);
   await expect(page.locator('main')).toHaveCount(1);
   await expect(page.locator('main')).toBeVisible();
@@ -210,6 +226,20 @@ test('customer dashboard UX contract after authentication', async ({ page }) => 
     await page.goto(route, { waitUntil: 'domcontentloaded' });
     await assertUx(page, route);
   }
+
+  for (const width of [390, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/account', { waitUntil: 'domcontentloaded' });
+    await assertUx(page, `/account at ${width}px`);
+
+    const registerLink = page.getByRole('banner').getByRole('link', { name: 'ثبت سالن' });
+    await expect(registerLink).toBeVisible();
+    if (width < 360) {
+      await expect(registerLink.locator('span')).toBeHidden();
+    } else {
+      await expect(registerLink.locator('span')).toBeVisible();
+    }
+  }
   expect(pageErrors).toEqual([]);
 });
 
@@ -243,6 +273,12 @@ test('platform admin UX contract across every section', async ({ page }) => {
   for (const route of PLATFORM_ADMIN_ROUTES) {
     await page.goto(route, { waitUntil: 'domcontentloaded' });
     await assertUx(page, route);
+    if (route === '/platform-admin/card-orders') {
+      await expect(page.getByRole('region', { name: 'جدول سفارش کارت چاپی' })).toHaveAttribute(
+        'tabindex',
+        '0',
+      );
+    }
   }
 
   const width = page.viewportSize()?.width ?? 0;
@@ -266,6 +302,22 @@ test('critical owner surfaces remain usable at compact 320px width', async ({ pa
   await loginViaUi(page, '09120000001', /\/owner(?:\/calendar)?(?:\?|$)/);
   for (const route of ['/owner/calendar', '/owner/qr'] as const) {
     await page.goto(route, { waitUntil: 'domcontentloaded' });
+    if (route === '/owner/calendar') {
+      const manage = page.getByTestId('owner-calendar-mobile-manage');
+      await expect(manage.getByRole('heading', { name: 'تغییر ساعت یا تعطیلی' })).toBeInViewport();
+      await expect(
+        manage.getByRole('button', { name: /تغییر ساعت کاری هفتگی برای همه‌ی/ }),
+      ).toBeInViewport();
+      await expect(
+        manage.getByRole('button', { name: /تعطیلی کامل یا بستن بخشی از ساعت فقط برای/ }),
+      ).toBeInViewport();
+      const manageBox = await manage.boundingBox();
+      const bottomNavBox = await page.getByTestId('owner-bottom-tabs').boundingBox();
+      expect(manageBox, 'day management card has a visible box').not.toBeNull();
+      expect(bottomNavBox, 'mobile navigation has a visible box').not.toBeNull();
+      expect(manageBox!.y + manageBox!.height, 'day controls clear the fixed bottom navigation')
+        .toBeLessThanOrEqual(bottomNavBox!.y);
+    }
     await assertUx(page, route);
   }
 });

@@ -217,8 +217,10 @@
   --platform-status-success: #24613b;
   --platform-status-warning: #6a4a00;
   --platform-status-danger: #8a2636;
+  --platform-status-danger-fill: #b53a4d;
   --platform-status-info: #274d8a;
   --platform-primary: #b9470f;
+  --platform-primary-fill: #b9470f;
   --platform-primary-soft: #fff2e9;
   --platform-chart-secondary: #4168c5;
   --platform-shadow: 0 0 0 1px rgba(32, 39, 33, 0.025), 0 6px 18px rgba(32, 39, 33, 0.035);
@@ -314,8 +316,10 @@
   --platform-status-success: #c1f1ce;
   --platform-status-warning: #ffe3a1;
   --platform-status-danger: #ffb2bb;
+  --platform-status-danger-fill: #8a2636;
   --platform-status-info: #b8d1ff;
   --platform-primary: #ff955c;
+  --platform-primary-fill: #b9470f;
   --platform-primary-soft: #38251c;
   --platform-chart-secondary: #4168c5;
   --platform-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);

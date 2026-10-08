@@ -210,14 +210,14 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
     );
     const manage = await screen.findByTestId('owner-calendar-mobile-manage');
     expect(
-      within(manage).getByRole('heading', { name: 'مدیریت همین روز' }),
+      within(manage).getByRole('heading', { name: 'تغییر ساعت یا تعطیلی' }),
     ).toBeInTheDocument();
-    expect(manage).toHaveTextContent('تنظیم برای:');
-    expect(manage).toHaveTextContent('هر هفته · همه‌ی');
-    expect(manage).toHaveTextContent('روزهای دیگر تغییر نمی‌کنند');
-    expect(within(manage).getByTestId('owner-calendar-manage-weekly-trigger')).toHaveAccessibleName(
-      /ویرایش ساعت کاری هفتگی برای همه‌ی/,
-    );
+    expect(manage).toHaveTextContent('روز انتخاب‌شده:');
+    expect(manage).toHaveTextContent('هر هفته');
+    expect(manage).toHaveTextContent('فقط همین روز');
+    expect(
+      within(manage).getByTestId('owner-calendar-manage-weekly-trigger'),
+    ).toHaveAccessibleName(/تغییر ساعت کاری هفتگی برای همه‌ی/);
     expect(within(manage).getByTestId('owner-calendar-manage-day-trigger')).toHaveAccessibleName(
       /تعطیلی کامل یا بستن بخشی از ساعت فقط برای/,
     );

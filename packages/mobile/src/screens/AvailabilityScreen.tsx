@@ -410,6 +410,7 @@ export function AvailabilityScreen({
                     selected: cell.iso === date,
                     disabled: cell.disabled,
                   }}
+                  hitSlop={{ top: 4, right: 4, bottom: 4, left: 4 }}
                   disabled={cell.disabled}
                   onPress={() => handleSelectDate(cell.iso)}
                   style={({ pressed }: { pressed: boolean }) => [

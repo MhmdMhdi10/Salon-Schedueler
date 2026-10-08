@@ -246,7 +246,7 @@ function ServicesSection({
                     onClick={onBookClick}
                     aria-label={t('salon.profile.bookServiceAria', { name: service.name })}
                     className={cn(
-                      'inline-flex min-h-[44px] items-center rounded-md border border-primary px-5 text-sm font-semibold text-primary no-underline',
+                      'inline-flex min-h-[44px] items-center rounded-md border border-primary px-5 text-sm font-semibold text-primary dark:text-text no-underline',
                       'transition-colors duration-fast ease-standard hover:bg-primary hover:text-primary-contrast',
                       'outline-none focus-visible:outline focus-visible:outline-2',
                       'focus-visible:outline-offset-2 focus-visible:outline-focus',
@@ -662,7 +662,7 @@ export function SalonProfilePage() {
                 </p>
                 <a
                   href={`tel:${salon.telephone}`}
-                  className="flex min-h-10 items-center gap-2 font-semibold text-primary no-underline"
+                  className="flex min-h-10 items-center gap-2 font-semibold text-primary dark:text-text no-underline"
                 >
                   <Phone className="size-4 shrink-0" aria-hidden="true" />
                   <DirText dir="ltr">{salon.telephone}</DirText>

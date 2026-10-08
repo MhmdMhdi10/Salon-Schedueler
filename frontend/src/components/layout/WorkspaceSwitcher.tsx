@@ -47,6 +47,7 @@ export function WorkspaceSwitcher({
       : { to: '/owner', label: t('app.workspace.salonPanel'), Icon: Building2 }
     : { to: '/business/register', label: t('app.workspace.registerSalon'), Icon: Store };
   const Icon = destination.Icon;
+  const isRegistrationLink = destination.to === '/business/register';
 
   const linkClass =
     variant === 'card'
@@ -57,6 +58,13 @@ export function WorkspaceSwitcher({
           'outline-none focus-visible:outline focus-visible:outline-2',
           'focus-visible:outline-offset-2 focus-visible:outline-focus',
         )
+      : isRegistrationLink
+        ? cn(
+            'inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-border px-2',
+            'text-xs font-semibold text-text no-underline transition-colors duration-fast ease-standard hover:bg-elevated',
+            'outline-none focus-visible:outline focus-visible:outline-2',
+            'focus-visible:outline-offset-2 focus-visible:outline-focus',
+          )
       : cn(
           'inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-transparent',
           'text-text no-underline',
@@ -65,7 +73,7 @@ export function WorkspaceSwitcher({
           'focus-visible:outline-offset-2 focus-visible:outline-focus',
         );
 
-  const showText = variant === 'card' || destination.to === '/business/register';
+  const showText = variant === 'card' || isRegistrationLink;
 
   return (
     <nav
@@ -73,9 +81,19 @@ export function WorkspaceSwitcher({
       data-testid={testId}
       className={cn('flex shrink-0 items-center', className)}
     >
-      <Link to={destination.to} className={linkClass}>
+      <Link to={destination.to} className={linkClass} aria-label={destination.label}>
         <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-        <span className={showText ? undefined : 'sr-only'}>{destination.label}</span>
+        <span
+          className={
+            variant === 'header' && isRegistrationLink
+              ? 'hidden min-[360px]:inline'
+              : showText
+                ? undefined
+                : 'sr-only'
+          }
+        >
+          {destination.label}
+        </span>
       </Link>
       {isStaffSurface && staffContexts.length > 1 && (
         <select

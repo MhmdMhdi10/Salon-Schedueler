@@ -174,7 +174,7 @@ export function OwnerMarketingPage() {
                 </span>
               </div>
               <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3">
-                <span className="break-all text-sm text-text" dir="ltr">{bookingUrl}</span>
+                <span className="break-words text-sm text-text" dir="ltr">{bookingUrl}</span>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Button
                     type="button"
@@ -263,7 +263,7 @@ export function OwnerMarketingPage() {
 
           <div className="flex flex-col gap-2 rounded-xl border border-border bg-elevated p-3 shadow-1">
             <span className="text-xs font-bold text-muted">لینک {CAMPAIGN_SOURCES.find((item) => item.value === selectedSource)?.label}</span>
-            <span className="break-all text-sm text-text" dir="ltr">{campaignUrl}</span>
+            <span className="break-words text-sm text-text" dir="ltr">{campaignUrl}</span>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button type="button" onClick={() => void copyCampaignLink()} startIcon={<Copy className="size-4" />} className="flex-1">
                 کپی لینک کمپین

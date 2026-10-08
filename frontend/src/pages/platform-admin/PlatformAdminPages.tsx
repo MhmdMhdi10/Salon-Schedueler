@@ -1,4 +1,4 @@
-import { cloneElement, isValidElement, useCallback, useEffect, useMemo, useState, type ReactElement, type ReactNode } from 'react';
+import { cloneElement, isValidElement, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   App as AntdApp,
@@ -553,7 +553,7 @@ export function PlatformSalonsPage() {
   <ResourceListPage resource="salons" refreshToken={refreshToken} title="سالن‌ها" subtitle="همه tenantهای آرا، وضعیت اشتراک، مالک و سلامت عملیاتی هر سالن." loader={loader} createAction={<Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setEditorOpen(true); }}>ثبت سالن</Button>} statusOptions={[{ value: 'active', label: 'فعال' }, { value: 'suspended', label: 'تعلیق‌شده' }, { value: 'trial', label: 'آزمایشی' }, { value: 'expired', label: 'منقضی' }]} columns={[
     { key: 'name', title: 'سالن', render: (row: PlatformSalonRow) => <div className="platform-admin-table-name"><strong>{row.name}</strong><span>{row.timezone} · {row.qrToken}</span></div> },
     { key: 'owner', title: 'مالک', render: (row) => <div className="platform-admin-table-name"><strong>{personName(row.owner?.fullName, row.owner?.phone)}</strong><span dir="ltr">{row.owner?.phone ?? 'بدون تلفن'}</span></div> },
-    { key: 'subscription', title: 'اشتراک', render: (row) => row.subscription ? <div><StatusTag value={row.subscription.status} /><span className="block text-xs text-gray-500">{label(row.subscription.planKind)} تا {dateLabel(row.subscription.expiresAt)}</span></div> : '—' },
+    { key: 'subscription', title: 'اشتراک', render: (row) => row.subscription ? <div className="platform-admin-table-name"><StatusTag value={row.subscription.status} /><span>{label(row.subscription.planKind)} تا {dateLabel(row.subscription.expiresAt)}</span></div> : '—' },
     { key: 'counts', title: 'مصرف', render: (row) => `${faNumber.format(row.counts.staffMembers)} عضو تیم · ${faNumber.format(row.counts.appointments)} نوبت` },
     { key: 'created', title: 'تاریخ ثبت', render: (row) => dateLabel(row.createdAt) },
   ]} action={(row, run, busy) => <Space size={4} wrap>
@@ -997,6 +997,7 @@ function deliveryPostalCode(specs: Record<string, unknown> | null): string | nul
 }
 
 export function PlatformCardOrdersPage() {
+  const pageRootRef = useRef<HTMLDivElement>(null);
   const [rows, setRows] = useState<PlatformCardOrderRow[]>([]);
   const [resultSummary, setResultSummary] = useState<{ orderCount: number; pieceCount: number } | undefined>();
   const [pageInfo, setPageInfo] = useState({ page: 1, limit: 20, total: 0, pageCount: 1 });
@@ -1028,6 +1029,14 @@ export function PlatformCardOrdersPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    const scrollRegion = pageRootRef.current?.querySelector<HTMLElement>('.ant-table-content');
+    if (!scrollRegion) return;
+    scrollRegion.tabIndex = 0;
+    scrollRegion.setAttribute('role', 'region');
+    scrollRegion.setAttribute('aria-label', 'جدول سفارش کارت چاپی');
+  }, [rows, loading]);
 
   const updateStatus = async (row: PlatformCardOrderRow, status: string) => {
     setBusyId(row.id);
@@ -1094,7 +1103,7 @@ export function PlatformCardOrdersPage() {
   ];
 
   return (
-    <div className="platform-admin-page">
+    <div ref={pageRootRef} className="platform-admin-page">
       <PageHeader title="سفارش کارت چاپی" subtitle="اطلاعات تماس، تعداد و مشخصات تولید در یک گزارش قابل چاپ؛ پیگیری ادامه کار از طریق inbox سالن انجام می‌شود." onRefresh={() => void load()} loading={loading} />
       <div className="mb-4 flex flex-wrap justify-end gap-2">
         <Button icon={<PrinterOutlined />} onClick={() => window.print()}>چاپ گزارش</Button>

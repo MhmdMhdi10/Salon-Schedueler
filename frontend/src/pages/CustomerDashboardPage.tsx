@@ -550,15 +550,15 @@ function CalendarMonth({
   }, [appointments]);
 
   return (
-    <div className="flex flex-col gap-2" data-testid="customer-calendar">
-      <div className="grid grid-cols-7 gap-1 text-center text-[0.68rem] font-semibold text-muted sm:text-xs">
+    <div className="flex flex-col gap-2 max-[359px]:-mx-1.5" data-testid="customer-calendar">
+      <div className="grid grid-cols-7 gap-1 text-center text-[0.68rem] font-semibold text-muted max-[359px]:gap-0 sm:text-xs">
         {PERSIAN_WEEKDAYS.map((weekday, index) => (
           <span key={weekday} className="py-1" aria-label={weekday}>
             {PERSIAN_WEEKDAY_SHORT[index]}
           </span>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-1" role="group" aria-label="روزهای ماه">
+      <div className="grid grid-cols-7 gap-1 max-[359px]:gap-0" role="group" aria-label="روزهای ماه">
         {buildMonthCells(month).map((cell, index) => {
           if (!cell) {
             return (
@@ -581,7 +581,7 @@ function CalendarMonth({
               aria-pressed={selected}
               onClick={() => onSelect(key)}
               className={cn(
-                'relative flex min-h-14 flex-col items-start justify-between overflow-hidden rounded-lg border p-1.5 text-start transition-colors sm:min-h-20 sm:p-2',
+                'relative flex min-h-14 min-w-0 flex-col items-start justify-between overflow-hidden rounded-lg border p-1.5 text-start transition-colors max-[359px]:p-1 sm:min-h-20 sm:p-2',
                 'outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
                 selected
                   ? 'border-primary bg-primary/10'
@@ -1313,7 +1313,7 @@ export function CustomerDashboardPage() {
           </Card>
         ) : (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.8fr)]">
-            <Card as="section" className="min-w-0" data-testid="customer-calendar-card">
+            <Card as="section" className="min-w-0 max-[359px]:p-2" data-testid="customer-calendar-card">
               <div
                 className="mb-4 flex flex-wrap items-center justify-between gap-3"
               >

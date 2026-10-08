@@ -393,6 +393,39 @@
   color: var(--platform-status-danger);
 }
 
+[data-theme='dark'] .platform-admin-root .ant-btn-dangerous.ant-btn-default.ant-btn-variant-outlined {
+  color: var(--platform-status-danger);
+  border-color: var(--platform-status-danger);
+}
+
+[data-theme='dark'] .platform-admin-root .ant-btn-dangerous.ant-btn-default.ant-btn-variant-outlined:hover,
+[data-theme='dark'] .platform-admin-root .ant-btn-dangerous.ant-btn-default.ant-btn-variant-outlined:focus-visible,
+[data-theme='dark'] .platform-admin-root .ant-btn-dangerous.ant-btn-primary.ant-btn-variant-solid {
+  color: var(--platform-text);
+  background: var(--platform-status-danger-fill);
+  border-color: var(--platform-status-danger-fill);
+}
+
+[data-theme='dark'] .platform-admin-root .ant-btn-dangerous.ant-btn-primary.ant-btn-variant-solid:hover,
+[data-theme='dark'] .platform-admin-root .ant-btn-dangerous.ant-btn-primary.ant-btn-variant-solid:focus-visible {
+  color: var(--platform-text);
+  background: color-mix(in srgb, var(--platform-status-danger-fill) 82%, black);
+  border-color: color-mix(in srgb, var(--platform-status-danger-fill) 82%, black);
+}
+
+[data-theme='dark'] .platform-admin-root .ant-btn-primary.ant-btn-variant-solid:not(.ant-btn-dangerous) {
+  color: var(--platform-text);
+  background: var(--platform-primary-fill);
+  border-color: var(--platform-primary-fill);
+}
+
+[data-theme='dark'] .platform-admin-root .ant-btn-primary.ant-btn-variant-solid:not(.ant-btn-dangerous):hover,
+[data-theme='dark'] .platform-admin-root .ant-btn-primary.ant-btn-variant-solid:not(.ant-btn-dangerous):focus-visible {
+  color: var(--platform-text);
+  background: color-mix(in srgb, var(--platform-primary-fill) 82%, black);
+  border-color: color-mix(in srgb, var(--platform-primary-fill) 82%, black);
+}
+
 .platform-admin-root .ant-tag-blue {
   color: var(--platform-status-info);
 }
