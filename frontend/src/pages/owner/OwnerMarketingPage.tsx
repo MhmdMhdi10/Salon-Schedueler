@@ -261,7 +261,7 @@ export function OwnerMarketingPage() {
             ))}
           </div>
 
-          <div className="flex flex-col gap-2 rounded-lg border border-border bg-elevated/40 p-3">
+          <div className="flex flex-col gap-2 rounded-xl border border-border bg-elevated p-3 shadow-1">
             <span className="text-xs font-bold text-muted">لینک {CAMPAIGN_SOURCES.find((item) => item.value === selectedSource)?.label}</span>
             <span className="break-all text-sm text-text" dir="ltr">{campaignUrl}</span>
             <div className="flex flex-col gap-2 sm:flex-row">

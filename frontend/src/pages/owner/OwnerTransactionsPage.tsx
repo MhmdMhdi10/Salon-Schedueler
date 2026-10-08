@@ -16,6 +16,7 @@ import {
   Money,
   Pagination,
   Skeleton,
+  toPersianDigits,
 } from '../../components/ui';
 
 type Status = 'loading' | 'error' | 'ready';
@@ -113,11 +114,13 @@ export function OwnerTransactionsPage() {
       </header>
 
       {status === 'loading' && (
-        <Card className="flex flex-col gap-2">
+        <div role="status" aria-label="در حال بارگذاری تراکنش‌ها" className="flex flex-col gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} variant="rect" className="h-14" />
+            <div key={i} className="rounded-2xl border border-border bg-elevated p-4 shadow-1">
+              <Skeleton variant="rect" className="h-14 rounded-xl" />
+            </div>
           ))}
-        </Card>
+        </div>
       )}
 
       {status === 'error' && (
@@ -141,41 +144,56 @@ export function OwnerTransactionsPage() {
 
       {status === 'ready' && transactions.length > 0 && (
         <>
-          <Card className="flex flex-col">
-            <ul className="flex flex-col">
+          <section aria-labelledby="owner-transactions-list-title" className="flex flex-col gap-3">
+            <header className="flex items-center justify-between gap-3">
+              <h2 id="owner-transactions-list-title" className="text-base font-bold text-text">
+                فهرست تراکنش‌ها
+              </h2>
+              <span className="rounded-full bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">
+                {toPersianDigits(transactionTotal)} مورد
+              </span>
+            </header>
+            <ul className="flex flex-col gap-3">
               {pageItems.map((tx) => (
-              <li
-                key={`${tx.kind}-${tx.id}`}
-                className="flex items-start justify-between gap-3 border-b border-border/50 px-4 py-4 last:border-b-0 sm:items-center sm:px-5"
-              >
-                <div className="flex min-w-0 flex-col gap-1">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <span className="break-words text-base font-semibold leading-7 text-text">{txLabel(tx)}</span>
-                    <Badge status={statusBadge(tx.status)}>
-                      {statusLabel[tx.status] ?? tx.status}
-                    </Badge>
+                <Card
+                  as="li"
+                  elevated
+                  key={`${tx.kind}-${tx.id}`}
+                  className="flex flex-col gap-3 rounded-2xl p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4"
+                >
+                  <div className="flex min-w-0 flex-col gap-1.5">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <span className="break-words text-base font-semibold leading-7 text-text">
+                        {txLabel(tx)}
+                      </span>
+                      <Badge status={statusBadge(tx.status)}>
+                        {statusLabel[tx.status] ?? tx.status}
+                      </Badge>
+                    </div>
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm leading-6 text-muted">
+                      <span>{kindLabel[tx.kind]}</span>
+                      <span aria-hidden="true">•</span>
+                      <JalaliDate value={tx.createdAt} />
+                      {tx.refId && (
+                        <>
+                          <span aria-hidden="true">•</span>
+                          <span dir="ltr">{tx.refId}</span>
+                        </>
+                      )}
+                    </span>
                   </div>
-                  <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm leading-6 text-muted">
-                    <span>{kindLabel[tx.kind]}</span>
-                    <span aria-hidden="true">•</span>
-                    <JalaliDate value={tx.createdAt} />
-                    {tx.refId && (
-                      <>
-                        <span aria-hidden="true">•</span>
-                        <span dir="ltr">{tx.refId}</span>
-                      </>
-                    )}
-                  </span>
-                </div>
-                <Money
-                  amountRial={tx.amountRial}
-                  unit="toman"
-                  className="shrink-0 text-base font-bold tabular-nums text-text"
-                />
-              </li>
+                  <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface px-3 py-2 sm:min-w-40 sm:flex-col sm:items-start sm:gap-1">
+                    <span className="text-xs text-muted">مبلغ تراکنش</span>
+                    <Money
+                      amountRial={tx.amountRial}
+                      unit="toman"
+                      className="text-base font-bold tabular-nums text-text"
+                    />
+                  </div>
+                </Card>
               ))}
             </ul>
-          </Card>
+          </section>
           <Pagination
             page={page}
             pageSize={transactionPageSize}

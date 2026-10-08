@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarPlus, Phone, Plus, UserRound, Users } from 'lucide-react';
+import { CalendarPlus, Phone, Plus, Search, UserRound, Users } from 'lucide-react';
 import { normalizeDigits } from '@salon/shared';
 import { ApiError, clientBookApi, type SalonClient } from '../../api/client';
 import { useSalonId } from '../../auth/useSalonId';
@@ -15,6 +15,7 @@ import {
   DialogTitle,
   EmptyState,
   ErrorState,
+  Skeleton,
   TextField,
   useToast,
   toPersianDigits,
@@ -139,24 +140,65 @@ export function OwnerClientsPage() {
         </Button>
       </header>
 
-      <Card className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <Card
+        as="section"
+        aria-labelledby="owner-client-search-title"
+        className="flex flex-col gap-4"
+      >
+        <div className="flex items-start gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Search className="size-4" aria-hidden="true" />
+          </span>
+          <div>
+            <h2 id="owner-client-search-title" className="font-bold text-text">
+              جست‌وجو در دفترچه مشتری‌ها
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-muted">
+              با نام یا شماره موبایل، مشتری را پیدا کن.
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <TextField
             id="owner-client-search"
-            label="جست‌وجوی مشتری"
+            label="نام یا شماره موبایل"
             placeholder="نام یا شماره موبایل"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            containerClassName="w-full"
+            containerClassName="w-full sm:flex-1"
           />
-          <span className="text-sm text-muted" aria-live="polite">
+          <span
+            className="inline-flex min-h-11 shrink-0 items-center self-start rounded-lg border border-border bg-elevated px-3 text-sm font-semibold text-text sm:self-end"
+            aria-live="polite"
+          >
             {status === 'ready' ? `${toPersianDigits(clients.length)} مشتری` : 'در حال بررسی…'}
           </span>
         </div>
       </Card>
 
       {status === 'loading' && (
-        <Card loading loadingLabel="در حال بارگذاری مشتری‌ها" data-testid="owner-clients-loading" />
+        <div
+          data-testid="owner-clients-loading"
+          role="status"
+          aria-label="در حال بارگذاری مشتری‌ها"
+          className="flex flex-col gap-3"
+        >
+          {[0, 1, 2].map((item) => (
+            <div
+              key={item}
+              className="flex flex-col gap-3 rounded-2xl border border-border bg-elevated p-4 shadow-1"
+            >
+              <div className="flex items-center gap-3">
+                <Skeleton variant="circle" className="size-11 shrink-0" />
+                <div className="flex flex-1 flex-col gap-2">
+                  <Skeleton variant="text" className="w-2/5" />
+                  <Skeleton variant="text" className="w-1/3" />
+                </div>
+              </div>
+              <Skeleton variant="rect" className="h-14 rounded-xl" />
+            </div>
+          ))}
+        </div>
       )}
 
       {status === 'error' && (
@@ -179,7 +221,11 @@ export function OwnerClientsPage() {
           }
           action={
             !search ? (
-              <Button type="button" onClick={() => setAddOpen(true)} startIcon={<Plus className="size-4" />}>
+              <Button
+                type="button"
+                onClick={() => setAddOpen(true)}
+                startIcon={<Plus className="size-4" />}
+              >
                 افزودن اولین مشتری
               </Button>
             ) : undefined
@@ -188,52 +234,78 @@ export function OwnerClientsPage() {
       )}
 
       {status === 'ready' && clients.length > 0 && (
-        <Card as="section" aria-labelledby="owner-client-list-title" className="p-0">
-          <h2 id="owner-client-list-title" className="sr-only">فهرست مشتری‌ها</h2>
-          <ul data-testid="owner-client-list" className="divide-y divide-border">
+        <section aria-labelledby="owner-client-list-title" className="flex flex-col gap-3">
+          <header className="flex items-center justify-between gap-3">
+            <div>
+              <h2 id="owner-client-list-title" className="text-base font-bold text-text">
+                دفترچه مشتری‌ها
+              </h2>
+              <p className="mt-1 text-sm text-muted">
+                اطلاعات هر مشتری و سابقه مراجعه در کارت خودش قرار دارد.
+              </p>
+            </div>
+            <span className="shrink-0 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">
+              {toPersianDigits(clients.length)} نفر
+            </span>
+          </header>
+          <ul data-testid="owner-client-list" className="flex flex-col gap-3">
             {clients.map((client) => (
-              <li key={client.id} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex size-11 shrink-0 items-center justify-center rounded-pill bg-primary/10 text-sm font-bold text-primary">
-                    {displayName(client).slice(0, 1)}
-                  </span>
-                  <div className="min-w-0">
-                    <div className="flex min-w-0 flex-wrap items-center gap-2">
-                      <p className="truncate font-bold text-text">{displayName(client)}</p>
-                      {client.visits >= 3 && (
-                        <span className="inline-flex shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-[0.65rem] font-bold text-success">
-                          مشتری وفادار
-                        </span>
-                      )}
+              <Card
+                as="li"
+                elevated
+                key={client.id}
+                className="owner-client-record flex flex-col gap-4 rounded-2xl p-3 sm:p-4"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex size-11 shrink-0 items-center justify-center rounded-pill bg-primary/10 text-sm font-bold text-primary">
+                      {displayName(client).slice(0, 1)}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex min-w-0 flex-wrap items-center gap-2">
+                        <h3 className="truncate font-bold text-text">{displayName(client)}</h3>
+                        {client.visits >= 3 && (
+                          <span className="inline-flex shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-[0.65rem] font-bold text-success">
+                            مشتری وفادار
+                          </span>
+                        )}
+                      </div>
+                      <a
+                        href={`tel:${client.phone}`}
+                        dir="ltr"
+                        className="mt-0.5 inline-flex items-center gap-1 text-sm text-muted no-underline hover:text-primary"
+                      >
+                        <Phone className="size-3.5" aria-hidden="true" />
+                        {toPersianDigits(client.phone)}
+                      </a>
                     </div>
-                    <a
-                      href={`tel:${client.phone}`}
-                      dir="ltr"
-                      className="mt-0.5 inline-flex items-center gap-1 text-sm text-muted no-underline hover:text-primary"
-                    >
-                      <Phone className="size-3.5" aria-hidden="true" />
-                      {toPersianDigits(client.phone)}
-                    </a>
                   </div>
-                </div>
-                <div className="flex items-center justify-between gap-3 text-sm sm:justify-end">
-                  <span className="text-muted">
-                    {toPersianDigits(client.visits)} مراجعه
-                    <span className="mx-1" aria-hidden="true">·</span>
-                    {formatLastVisit(client.lastVisitAt)}
-                  </span>
                   <Link
                     to="/owner/calendar"
-                    className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border bg-surface px-3 text-sm font-medium text-text no-underline transition-colors hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                    className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 text-sm font-bold text-primary no-underline transition-colors hover:bg-primary/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus sm:w-auto"
                   >
                     <CalendarPlus className="size-4" aria-hidden="true" />
                     ثبت نوبت
                   </Link>
                 </div>
-              </li>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-col gap-1 rounded-xl border border-border bg-surface px-3 py-2.5">
+                    <span className="text-xs text-muted">تعداد مراجعه</span>
+                    <span className="text-sm font-bold text-text">
+                      {toPersianDigits(client.visits)} مراجعه
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1 rounded-xl border border-border bg-surface px-3 py-2.5">
+                    <span className="text-xs text-muted">آخرین مراجعه</span>
+                    <span className="text-sm font-bold text-text">
+                      {formatLastVisit(client.lastVisitAt)}
+                    </span>
+                  </div>
+                </div>
+              </Card>
             ))}
           </ul>
-        </Card>
+        </section>
       )}
 
       <Dialog

@@ -738,7 +738,7 @@ export function MoveAppointmentDialog({
             <>
               <section
                 aria-labelledby="move-appointment-time-title"
-                className="rounded-2xl border border-border bg-elevated/60 p-3 sm:p-4"
+                className="rounded-2xl border border-border bg-elevated p-3 shadow-1 sm:p-4"
               >
                 <div className="mb-3">
                   <h3 id="move-appointment-time-title" className="m-0 text-sm font-bold text-text">

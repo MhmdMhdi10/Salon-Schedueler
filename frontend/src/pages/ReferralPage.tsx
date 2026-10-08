@@ -198,7 +198,7 @@ export function ReferralPage() {
             <li className="flex gap-3"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-on-primary">۲</span><span>سالن با همان لینک ثبت‌نام و فعال می‌شود.</span></li>
             <li className="flex gap-3"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-on-primary">۳</span><span>بعد از سه رزرو تکمیل‌شده، اعتبار برایت آماده می‌شود.</span></li>
           </ol>
-          <p className="mt-6 rounded-lg border border-border bg-surface/70 p-3 text-xs leading-6 text-muted">
+          <p className="mt-6 rounded-lg border border-border bg-surface p-3 text-xs leading-6 text-muted">
             اعتبار فقط یک‌بار، در همان سالن و تا ۳۰ روز بعد از فعال‌شدن قابل استفاده است.
           </p>
         </Card>

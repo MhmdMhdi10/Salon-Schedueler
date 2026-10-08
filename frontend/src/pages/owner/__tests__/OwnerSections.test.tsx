@@ -201,22 +201,21 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
     ).toBeTruthy();
   });
 
-  it('keeps booking visible and opens secondary calendar actions in a sheet', async () => {
+  it('shows direct, clearly labeled mobile controls for weekly hours and a date closure', async () => {
     renderOwnerApp('Owner', '/owner/calendar');
 
     await screen.findByTestId('owner-calendar-page');
     expect(screen.getByRole('button', { name: 'ثبت نوبت حضوری' })).toBeInTheDocument();
-    fireEvent.click(await screen.findByTestId('owner-calendar-manage-trigger'));
+    const manage = await screen.findByTestId('owner-calendar-mobile-manage');
+    expect(manage).toHaveTextContent('مدیریت ساعت و تعطیلی');
+    expect(manage).toHaveTextContent('تغییر ساعت برای همه‌ی');
+    expect(within(manage).getByTestId('owner-calendar-manage-weekly-trigger')).toHaveAccessibleName(
+      /ویرایش ساعت کاری هفتگی/,
+    );
+    expect(within(manage).getByTestId('owner-calendar-manage-day-trigger')).toHaveAccessibleName(
+      /تعطیلی یا محدودیت ساعت برای/,
+    );
 
-    const sheet = await screen.findByTestId('owner-calendar-action-sheet');
-    expect(sheet).toHaveTextContent('مدیریت روز');
-    expect(within(sheet).getByRole('button', { name: 'ساعات کاری' })).toBeInTheDocument();
-    expect(
-      within(sheet).getByRole('button', { name: 'تعطیلی‌ها و محدودیت‌ها' }),
-    ).toBeInTheDocument();
-    expect(
-      within(sheet).queryByRole('button', { name: 'بستن فوری امروز' }),
-    ).not.toBeInTheDocument();
   });
 
   it('closes availability after reopening a day instead of re-adding the closure', async () => {
@@ -227,9 +226,7 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
     });
 
     renderOwnerApp('Owner', '/owner/calendar');
-    fireEvent.click(await screen.findByTestId('owner-calendar-manage-trigger'));
-    const sheet = await screen.findByTestId('owner-calendar-action-sheet');
-    fireEvent.click(within(sheet).getByRole('button', { name: 'تعطیلی‌ها و محدودیت‌ها' }));
+    fireEvent.click(await screen.findByTestId('owner-calendar-manage-day-trigger'));
 
     fireEvent.click(await screen.findByRole('button', { name: 'باز کردن دوباره' }));
 
@@ -241,15 +238,18 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
     );
   });
 
-  it('opens recurring weekly hours on a separate page with back navigation', async () => {
+  it('opens recurring weekly hours focused on the selected calendar weekday', async () => {
     renderOwnerApp('Owner', '/owner/calendar');
-    fireEvent.click(await screen.findByRole('button', { name: 'ساعات کاری هفتگی' }));
+    fireEvent.click(await screen.findByTestId('owner-calendar-manage-weekly-trigger'));
     expect(await screen.findByTestId('owner-working-hours-page')).toBeInTheDocument();
-    expect(await screen.findByTestId('owner-weekly-schedule')).toHaveTextContent(
-      'برنامه کاری هفتگی',
-    );
+    const schedule = await screen.findByTestId('owner-weekly-schedule');
+    expect(schedule).toHaveTextContent('برنامه کاری هفتگی');
+    expect(within(schedule).getByText('روز انتخاب‌شده')).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'بازگشت به تقویم' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'بازگشت به تقویم' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('?date='),
+    );
     await waitFor(() => expect(getSalonWorkingHours).toHaveBeenCalled());
     expect(screen.getByText('پنجشنبه و جمعه تعطیل')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('link', { name: 'بازگشت به تقویم' }));

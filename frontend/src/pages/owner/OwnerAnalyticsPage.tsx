@@ -610,7 +610,7 @@ function StatusDistribution({ summary }: { summary: Summary }) {
   return (
     <div data-testid="analytics-status" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
       {items.map((item) => (
-        <div key={item.key} className="rounded-md border border-border bg-elevated/40 p-3">
+        <div key={item.key} className="rounded-xl border border-border bg-elevated p-3 shadow-1">
           <div className={'flex items-center gap-2 text-xs ' + item.className}>
             {item.icon}
             <span className="truncate text-muted">{item.label}</span>
@@ -649,16 +649,16 @@ function ServicePerformance({ rows }: { rows: ServiceRow[] }) {
           className="py-6"
         />
       ) : (
-        <div className="flex min-w-0 flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-3">
           {pagination.pageItems.map((row) => (
-            <div key={row.id} className="min-w-0 rounded-md border border-border bg-elevated/30 p-3">
+            <div key={row.id} className="min-w-0 rounded-xl border border-border bg-elevated p-3 shadow-1">
               <div className="flex min-w-0 items-start justify-between gap-3">
                 <p className="min-w-0 break-words text-sm font-medium text-text">{row.name}</p>
                 <span className="shrink-0 text-xs text-muted">
                   <Num value={row.bookings} /> رزرو
                 </span>
               </div>
-              <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+              <div className="mt-3 grid grid-cols-3 gap-2 border-t border-border/70 pt-3 text-xs">
                 <div>
                   <p className="text-muted">انجام‌شده</p>
                   <p className="mt-1 font-bold text-text"><Num value={row.completed} /></p>
@@ -715,14 +715,14 @@ function StaffPerformance({ rows }: { rows: StaffRow[] }) {
           className="py-6"
         />
       ) : (
-        <div className="flex min-w-0 flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-3">
           {pagination.pageItems.map((row) => (
-            <div key={row.id} className="min-w-0 rounded-md border border-border bg-elevated/30 p-3">
+            <div key={row.id} className="min-w-0 rounded-xl border border-border bg-elevated p-3 shadow-1">
               <div className="flex min-w-0 items-center justify-between gap-3">
                 <p className="min-w-0 break-words text-sm font-medium text-text">{row.name}</p>
                 <span className="shrink-0 text-xs text-muted"><Num value={row.bookings} /> رزرو</span>
               </div>
-              <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+              <div className="mt-3 grid grid-cols-3 gap-2 border-t border-border/70 pt-3 text-xs">
                 <div>
                   <p className="text-muted">انجام‌شده</p>
                   <p className="mt-1 font-bold text-text"><Num value={row.completed} /></p>
@@ -779,11 +779,11 @@ function CustomerPerformance({
         </CardTitle>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-md border border-border bg-elevated/30 p-3">
+        <div className="rounded-xl border border-border bg-elevated p-3 shadow-1">
           <p className="text-xs text-muted">{t('owner.analytics.uniqueCustomers', { defaultValue: 'مشتری یکتا' })}</p>
           <p className="mt-2 text-xl font-bold text-text"><Num value={uniqueCustomers} /></p>
         </div>
-        <div className="rounded-md border border-border bg-elevated/30 p-3">
+        <div className="rounded-xl border border-border bg-elevated p-3 shadow-1">
           <p className="text-xs text-muted">{t('owner.analytics.repeatCustomers', { defaultValue: 'مشتری تکراری' })}</p>
           <p className="mt-2 text-xl font-bold text-text">
             <Num value={repeatCustomers} />
@@ -800,9 +800,9 @@ function CustomerPerformance({
           className="py-6"
         />
       ) : (
-        <div data-testid="analytics-customer-list" className="mt-4 space-y-2">
+        <div data-testid="analytics-customer-list" className="mt-4 flex flex-col gap-3">
           {pagination.pageItems.map((row) => (
-            <article key={row.id} className="min-w-0 rounded-md border border-border bg-elevated/30 p-3">
+            <article key={row.id} className="min-w-0 rounded-2xl border border-border bg-elevated p-3 shadow-1 sm:p-4">
               <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h3 className="truncate text-sm font-semibold text-text">
@@ -814,7 +814,7 @@ function CustomerPerformance({
                   <Num value={row.visits} /> {t('owner.analytics.customerVisits', { defaultValue: 'مراجعه' })}
                 </span>
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+              <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border/70 pt-3 text-xs sm:grid-cols-4">
                 <div>
                   <p className="text-muted">{t('owner.analytics.customerReservations', { defaultValue: 'کل رزرو' })}</p>
                   <p className="mt-1 font-bold text-text"><Num value={row.reservations} /></p>
@@ -988,7 +988,7 @@ export function OwnerAnalyticsPageContent({ salonId: salonIdProp }: { salonId?: 
             <p className="mt-1 truncate text-sm font-medium text-text">{formatRangeLabel(range)}</p>
           </div>
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <div className="flex min-w-0 flex-1 rounded-md border border-border bg-elevated/40 p-1 sm:flex-none">
+            <div className="flex min-w-0 flex-1 rounded-md border border-border bg-bg p-1 sm:flex-none">
               {rangeOptions.map((option) => (
                 <button
                   key={option.value}
@@ -1229,7 +1229,7 @@ export function OwnerAnalyticsPageContent({ salonId: salonIdProp }: { salonId?: 
               </div>
               <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 {model.sources.map((row) => (
-                  <div key={row.source} className="flex min-w-0 items-center justify-between gap-3 rounded-md border border-border bg-elevated/30 p-3">
+                  <div key={row.source} className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-border bg-elevated p-3 shadow-1">
                     <span className="truncate text-sm text-text">{sourceLabel(row.source)}</span>
                     <span className="shrink-0 text-sm font-bold text-text"><Num value={row.bookings} /></span>
                   </div>

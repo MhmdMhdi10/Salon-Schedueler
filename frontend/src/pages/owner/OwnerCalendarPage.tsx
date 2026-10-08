@@ -2054,11 +2054,14 @@ export function WeeklySchedulePage({
   staff,
   onCancel,
   onSaved,
+  focusWeekday,
 }: {
   salonId: string;
   staff: SalonStaff[];
   onCancel: () => void;
   onSaved: () => void;
+  /** Iranian week index (Saturday = 0) selected in the calendar. */
+  focusWeekday?: number;
 }) {
   const [target, setTarget] = useState('salon');
   const [hours, setHours] = useState<WeeklyWorkingHour[]>([]);
@@ -2220,7 +2223,9 @@ export function WeeklySchedulePage({
               <span className="mb-0.5 block text-[0.7rem] font-bold text-primary sm:mb-1 sm:text-xs">تنظیمات تقویم سالن</span>
               <h1 className="text-xl font-black text-text sm:text-3xl">برنامه کاری هفتگی</h1>
               <p className="mt-1 max-w-2xl text-xs leading-5 text-muted sm:text-sm sm:leading-6">
-                روزهای کاری و ساعت رزرو مشتری را تنظیم کن.
+                {focusWeekday === undefined
+                  ? 'روزهای کاری و ساعت رزرو مشتری را تنظیم کن.'
+                  : `ساعت‌های ${PERSIAN_WEEKDAYS[focusWeekday]} را از ردیف مشخص‌شده تغییر بده؛ این برنامه هر هفته تکرار می‌شود.`}
               </p>
             </div>
           </div>
@@ -2329,15 +2334,28 @@ export function WeeklySchedulePage({
               </header>
               {IRANIAN_WEEKDAY_NUMBERS.map((weekday, index) => {
                 const row = rowFor(weekday);
+                const isFocusedDay = focusWeekday !== undefined && focusWeekday === index;
                 return (
                   <div
                     key={weekday}
+                    aria-current={isFocusedDay ? 'date' : undefined}
                     className={cn(
                       'grid grid-cols-2 items-center gap-3 border-b border-border/70 p-4 transition-colors last:border-b-0 sm:grid-cols-[7.5rem_6.5rem_minmax(0,1fr)_minmax(0,1fr)] sm:px-5',
-                      row ? 'bg-surface' : 'bg-bg/50 opacity-70',
+                      isFocusedDay
+                        ? 'border-s-4 border-s-primary bg-primary/10'
+                        : row
+                          ? 'bg-surface'
+                          : 'bg-bg/50 opacity-70',
                     )}
                   >
-                    <strong className="text-sm text-text">{PERSIAN_WEEKDAYS[index]}</strong>
+                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                      <strong className="text-sm text-text">{PERSIAN_WEEKDAYS[index]}</strong>
+                      {isFocusedDay && (
+                        <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[0.65rem] font-bold text-primary">
+                          روز انتخاب‌شده
+                        </span>
+                      )}
+                    </div>
                     <ScheduleSwitch
                       checked={Boolean(row)}
                       onChange={(checked) => setDay(weekday, checked ? {} : null)}
@@ -2751,12 +2769,10 @@ function DateNav({
   view,
   anchor,
   onNavigate,
-  onManage,
 }: {
   view: CalendarView;
   anchor: Date;
   onNavigate: (dir: -1 | 0 | 1) => void;
-  onManage: () => void;
 }) {
   const { t } = useTranslation();
   const jalali = jalaliDayDisplay(anchor);
@@ -2825,15 +2841,6 @@ function DateNav({
         {t('owner.calendar.today', { defaultValue: 'امروز' })}
       </Button>
 
-      <Button
-        variant="ghost"
-        size="md"
-        aria-label="مدیریت روز"
-        onClick={onManage}
-        className="owner-calendar-manage-inline sm:hidden"
-      >
-        <Settings2 className="h-4 w-4" aria-hidden="true" />
-      </Button>
     </nav>
   );
 }
@@ -4287,100 +4294,32 @@ function QuickApprovalPolicy({ salonId, className }: { salonId: string; classNam
   );
 }
 
-function CalendarActionsSheet({
+function CalendarApprovalSheet({
   salonId,
   open,
   onOpenChange,
-  onWorkingHours,
-  onAvailability,
-  showApprovalPolicy,
 }: {
   salonId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onWorkingHours: () => void;
-  onAvailability: () => void;
-  showApprovalPolicy: boolean;
 }) {
-  const [approvalOpen, setApprovalOpen] = useState(false);
-
-  const handleOpenChange = (nextOpen: boolean) => {
-    onOpenChange(nextOpen);
-    if (!nextOpen) setApprovalOpen(false);
-  };
-
   return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        data-testid="owner-calendar-action-sheet"
+        data-testid="owner-calendar-approval-sheet"
         className="owner-calendar-action-sheet !p-4 sm:!p-5"
       >
-        {approvalOpen ? (
-          <>
-            <div className="flex items-center gap-2 pe-10">
-              <Button
-                variant="ghost"
-                size="md"
-                startIcon={<ChevronRight className="h-4 w-4 rtl:-scale-x-100" />}
-                onClick={() => setApprovalOpen(false)}
-                className="!px-2"
-              >
-                بازگشت
-              </Button>
-              <SheetTitle className="text-xl font-bold">تأیید رزروهای جدید</SheetTitle>
-            </div>
-            <SheetDescription>
-              انتخاب کن رزروهای جدید خودکار قطعی شوند یا قبل از ثبت نهایی تأییدشان کنی.
-            </SheetDescription>
-            <QuickApprovalPolicy
-              salonId={salonId}
-              className="mt-4 !rounded-xl !border-border/70 !bg-surface !p-3 !shadow-none sm:!p-3.5"
-            />
-          </>
-        ) : (
-          <>
-            <div className="pe-10">
-              <SheetTitle className="text-xl font-bold">مدیریت روز</SheetTitle>
-              <SheetDescription>
-                اقدام‌های روزانه را از اینجا انتخاب کن؛ تقویم همیشه خلوت و قابل‌خواندن می‌ماند.
-              </SheetDescription>
-            </div>
-
-            <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              <Button
-                variant="primary"
-                size="md"
-                startIcon={<Clock className="h-4 w-4" />}
-                onClick={onWorkingHours}
-                className="min-h-12 w-full justify-start"
-              >
-                ساعات کاری
-              </Button>
-              <Button
-                variant="secondary"
-                size="md"
-                startIcon={<CalendarOff className="h-4 w-4" />}
-                onClick={onAvailability}
-                className="min-h-12 w-full justify-start"
-              >
-                تعطیلی‌ها و محدودیت‌ها
-              </Button>
-              {showApprovalPolicy && (
-                <Button
-                  variant="secondary"
-                  size="md"
-                  startIcon={<CheckCircle2 className="h-4 w-4" />}
-                  onClick={() => setApprovalOpen(true)}
-                  data-testid="owner-calendar-approval-policy-trigger"
-                  className="min-h-12 w-full justify-start sm:col-span-2"
-                >
-                  تأیید رزروهای جدید
-                </Button>
-              )}
-            </div>
-          </>
-        )}
+        <div className="pe-10">
+          <SheetTitle className="text-xl font-bold">تأیید رزروهای جدید</SheetTitle>
+          <SheetDescription>
+            انتخاب کن رزروهای جدید خودکار قطعی شوند یا قبل از ثبت نهایی تأییدشان کنی.
+          </SheetDescription>
+        </div>
+        <QuickApprovalPolicy
+          salonId={salonId}
+          className="mt-4 !rounded-xl !border-border/70 !bg-surface !p-3 !shadow-none sm:!p-3.5"
+        />
       </SheetContent>
     </Sheet>
   );
@@ -4407,7 +4346,7 @@ export function OwnerCalendarPage() {
   const [staff, setStaff] = useState<SalonStaff[]>([]);
   const [staffCalendarBlocks, setStaffCalendarBlocks] = useState<StaffCalendarBlock[]>([]);
   const [closureReloadToken, setClosureReloadToken] = useState(0);
-  const [manageActionsOpen, setManageActionsOpen] = useState(false);
+  const [approvalPolicyOpen, setApprovalPolicyOpen] = useState(false);
   const [availabilityOpen, setAvailabilityOpen] = useState(false);
   const [availabilityDate, setAvailabilityDate] = useState<Date>(() => new Date());
   const [availabilityStart, setAvailabilityStart] = useState<string | undefined>();
@@ -4855,6 +4794,11 @@ export function OwnerCalendarPage() {
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
+  const anchorJalali = jalaliDayDisplay(anchor);
+  const anchorLabel = `${PERSIAN_WEEKDAYS[iranianDayIndex(anchor)]}، ${toPersianDigits(
+    anchorJalali.jd,
+  )} ${getJalaliMonthName(anchorJalali.jm)} ${toPersianDigits(anchorJalali.jy)}`;
+
   return (
     <section
       data-testid="owner-calendar-page"
@@ -4887,8 +4831,86 @@ export function OwnerCalendarPage() {
               view={view}
               anchor={anchor}
               onNavigate={handleNavigate}
-              onManage={() => setManageActionsOpen(true)}
             />
+          </div>
+          <div className="owner-calendar-mobile-manage">
+            <section
+              aria-labelledby="owner-calendar-mobile-manage-title"
+              data-testid="owner-calendar-mobile-manage"
+              className="rounded-2xl border border-primary/25 bg-primary/5 p-3 shadow-1"
+            >
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Settings2 className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <h2 id="owner-calendar-mobile-manage-title" className="m-0 text-sm font-extrabold text-text">
+                    مدیریت ساعت و تعطیلی
+                  </h2>
+                  <p className="m-0 mt-1 text-xs font-semibold text-primary">{anchorLabel}</p>
+                </div>
+              </div>
+              <p className="mb-0 mt-2 text-xs leading-5 text-muted">
+                تغییر ساعت برای همه‌ی {PERSIAN_WEEKDAYS[iranianDayIndex(anchor)]}های هفته اعمال می‌شود؛ تعطیلی فقط برای همین تاریخ است.
+              </p>
+
+              <div className="mt-3 flex flex-col gap-2">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  startIcon={<Clock className="h-4 w-4" />}
+                  endIcon={<ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
+                  onClick={() =>
+                    navigate(
+                      `/owner/calendar/working-hours?weekday=${iranianDayIndex(anchor)}&date=${dateKey(anchor)}`,
+                    )
+                  }
+                  aria-label={`ویرایش ساعت کاری هفتگی ${PERSIAN_WEEKDAYS[iranianDayIndex(anchor)]}`}
+                  data-testid="owner-calendar-manage-weekly-trigger"
+                  className="owner-calendar-mobile-manage-action min-h-[4.25rem] !justify-start !rounded-xl !px-3 !py-2.5 !text-start !whitespace-normal"
+                >
+                  <span className="owner-calendar-mobile-manage-copy">
+                    <span className="text-sm font-bold">تغییر ساعت کاری هفتگی</span>
+                    <span className="text-xs font-normal leading-5 text-primary-contrast/80">
+                      ساعت {PERSIAN_WEEKDAYS[iranianDayIndex(anchor)]}های هر هفته
+                    </span>
+                  </span>
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  fullWidth
+                  startIcon={<CalendarOff className="h-4 w-4 text-warning" />}
+                  endIcon={<ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
+                  onClick={() => openAvailability(anchor)}
+                  aria-label={`تعطیلی یا محدودیت ساعت برای ${anchorLabel}`}
+                  data-testid="owner-calendar-manage-day-trigger"
+                  className="owner-calendar-mobile-manage-action min-h-[4.25rem] !justify-start !rounded-xl !px-3 !py-2.5 !text-start !whitespace-normal"
+                >
+                  <span className="owner-calendar-mobile-manage-copy">
+                    <span className="text-sm font-bold">تعطیلی یا محدودیت این روز</span>
+                    <span className="text-xs font-normal leading-5 text-muted">
+                      کل روز را ببند یا فقط یک بازه‌ی ساعت را انتخاب کن
+                    </span>
+                  </span>
+                </Button>
+                {(role === 'Owner' || role === 'Admin' || role === 'PlatformAdmin') && (
+                  <Button
+                    variant="ghost"
+                    size="md"
+                    startIcon={<CheckCircle2 className="h-4 w-4 text-primary" />}
+                    endIcon={<ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
+                    onClick={() => setApprovalPolicyOpen(true)}
+                    aria-haspopup="dialog"
+                    data-testid="owner-calendar-approval-policy-trigger"
+                    className="min-h-11 w-full justify-start !px-2 text-xs"
+                  >
+                    روش تأیید رزروهای جدید
+                  </Button>
+                )}
+              </div>
+            </section>
           </div>
           <div className="owner-calendar-actions">
             <Button
@@ -4907,7 +4929,11 @@ export function OwnerCalendarPage() {
                 variant="primary"
                 size="md"
                 startIcon={<Clock className="h-4 w-4" />}
-                onClick={() => navigate('/owner/calendar/working-hours')}
+                onClick={() =>
+                  navigate(
+                    `/owner/calendar/working-hours?weekday=${iranianDayIndex(anchor)}&date=${dateKey(anchor)}`,
+                  )
+                }
                 aria-label="ساعات کاری هفتگی"
               >
                 ساعات کاری هفتگی
@@ -4922,17 +4948,6 @@ export function OwnerCalendarPage() {
                 تعطیلی و عدم حضور
               </Button>
             </div>
-            <Button
-              variant="secondary"
-              size="md"
-              startIcon={<Settings2 className="h-4 w-4" />}
-              aria-label="مدیریت روز"
-              data-testid="owner-calendar-manage-trigger"
-              className="owner-calendar-manage-trigger"
-              onClick={() => setManageActionsOpen(true)}
-            >
-              مدیریت روز
-            </Button>
           </div>
         </div>
       </div>
@@ -4984,19 +4999,10 @@ export function OwnerCalendarPage() {
         />
       )}
 
-      <CalendarActionsSheet
+      <CalendarApprovalSheet
         salonId={salonId}
-        open={manageActionsOpen}
-        onOpenChange={setManageActionsOpen}
-        onWorkingHours={() => {
-          setManageActionsOpen(false);
-          navigate('/owner/calendar/working-hours');
-        }}
-        onAvailability={() => {
-          setManageActionsOpen(false);
-          openAvailability(anchor);
-        }}
-        showApprovalPolicy={role === 'Owner' || role === 'Admin' || role === 'PlatformAdmin'}
+        open={approvalPolicyOpen}
+        onOpenChange={setApprovalPolicyOpen}
       />
 
       {/* Calendar content with animated transitions */}

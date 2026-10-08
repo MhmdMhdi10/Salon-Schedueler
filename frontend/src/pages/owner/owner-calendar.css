@@ -1,5 +1,4 @@
-/* On phones, date/calendar are the primary reading path; management actions
-   follow the schedule instead of pushing it below the first screen. */
+/* Keep day controls beside the selected date; quick booking stays in the dock. */
 .owner-calendar-actions {
   display: flex;
   flex-wrap: wrap;
@@ -15,12 +14,23 @@
   gap: 0.5rem;
 }
 
-.owner-calendar-manage-trigger {
+.owner-calendar-mobile-manage {
   display: none;
 }
 
-.owner-calendar-manage-inline {
-  display: none;
+.owner-calendar-mobile-manage-action > span:first-child {
+  inline-size: 100%;
+  justify-content: space-between;
+}
+
+.owner-calendar-mobile-manage-copy {
+  display: flex;
+  min-inline-size: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  white-space: normal;
 }
 
 /* Keep manual booking compact on phones without exposing a second scrollbar. */
@@ -85,12 +95,16 @@
     order: 3;
   }
 
-  .owner-calendar-view-toggle {
+  .owner-calendar-mobile-manage {
     order: 4;
   }
 
-  .owner-calendar-filters {
+  .owner-calendar-view-toggle {
     order: 5;
+  }
+
+  .owner-calendar-filters {
+    order: 6;
   }
 
   .owner-calendar-filters {
@@ -126,20 +140,20 @@
   }
 
   .owner-calendar-content {
-    order: 6;
+    order: 7;
     min-block-size: 0;
   }
 
   .owner-calendar-actions {
-    order: 7;
-  }
-
-  .owner-calendar-policy {
     order: 8;
   }
 
-  .owner-calendar-approval {
+  .owner-calendar-policy {
     order: 9;
+  }
+
+  .owner-calendar-approval {
+    order: 10;
   }
 }
 
@@ -147,8 +161,7 @@
   display: none;
 }
 
-/* Mobile keeps one primary booking CTA and one compact management entry point
-   above the floating tab bar. The secondary actions stay in a sheet. */
+/* Mobile keeps quick booking in the dock and exposes date management in the toolbar. */
 @media (max-width: 63.9375rem) {
   /* Keep every calendar FAB above the same bottom inset used by
      OwnerBottomTabs. Android Chrome can report both safe-area and visual
@@ -199,7 +212,8 @@
     min-block-size: 3rem;
     padding-inline: 0.75rem;
     overflow: hidden;
-    border: 0.0625rem solid color-mix(in srgb, var(--color-primary-contrast) 35%, var(--color-primary));
+    border: 0.0625rem solid
+      color-mix(in srgb, var(--color-primary-contrast) 35%, var(--color-primary));
     box-shadow: 0 0.75rem 1.75rem rgba(0, 0, 0, 0.22);
   }
 
@@ -226,6 +240,11 @@
     display: none;
   }
 
+  .owner-calendar-mobile-manage {
+    display: block;
+    inline-size: 100%;
+  }
+
   .owner-calendar-booking-action {
     display: inline-flex;
     min-block-size: 3.5rem;
@@ -238,11 +257,5 @@
 
   .owner-calendar-booking-label {
     display: none;
-  }
-
-  .owner-calendar-manage-inline {
-    display: inline-flex;
-    width: auto;
-    min-block-size: 2.5rem;
   }
 }
