@@ -273,6 +273,15 @@ test('platform admin UX contract across every section', async ({ page }) => {
   for (const route of PLATFORM_ADMIN_ROUTES) {
     await page.goto(route, { waitUntil: 'domcontentloaded' });
     await assertUx(page, route);
+    if (route === '/platform-admin/salons') {
+      const tableHint = page.getByRole('note', { name: 'راهنمای پیمایش جدول' });
+      await expect(page.locator('.platform-admin-table-name strong').first()).toHaveAttribute('dir', 'auto');
+      if ((page.viewportSize()?.width ?? 0) < 768) {
+        await expect(tableHint).toBeVisible();
+      } else {
+        await expect(tableHint).toBeHidden();
+      }
+    }
     if (route === '/platform-admin/card-orders') {
       await expect(page.getByRole('region', { name: 'جدول سفارش کارت چاپی' })).toHaveAttribute(
         'tabindex',

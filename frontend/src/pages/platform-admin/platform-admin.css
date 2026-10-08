@@ -495,6 +495,10 @@
   width: min(100%, var(--platform-size-360));
 }
 
+.platform-admin-root .platform-admin-mobile-table-hint {
+  display: none;
+}
+
 .platform-admin-root .platform-admin-table-name {
   display: grid;
   min-width: 0;
@@ -994,6 +998,38 @@
 
   .platform-admin-root .ant-layout-content {
     padding: var(--platform-size-18) var(--space-4) var(--platform-size-28);
+  }
+
+  .platform-admin-root .platform-admin-mobile-table-hint {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-2);
+    border: var(--platform-size-1) solid var(--platform-border);
+    border-radius: var(--space-2);
+    background: var(--platform-surface-alt);
+    padding: var(--space-2) var(--space-3);
+    color: var(--platform-text-muted);
+    font-size: var(--platform-font-small);
+    line-height: 1.5;
+  }
+
+  .platform-admin-root .platform-admin-mobile-table-hint > span:first-child {
+    flex: 0 0 auto;
+    color: var(--platform-primary);
+    font-size: var(--platform-font-body);
+    font-weight: 900;
+  }
+
+  .platform-admin-root .platform-admin-table-name strong {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: start;
   }
 
   .platform-admin-root .platform-admin-header__context-copy,

@@ -457,6 +457,12 @@ function ResourceListPage<T extends { id: string }>({
         </div>
       </Card>
       {actionError && <Alert className="mb-4" type="error" showIcon message={actionError} />}
+      {result && (
+        <p className="platform-admin-mobile-table-hint" role="note" aria-label="راهنمای پیمایش جدول">
+          <span aria-hidden="true">↔</span>
+          <span>برای دیدن ستون‌های بیشتر، جدول را به چپ یا راست بکشید.</span>
+        </p>
+      )}
       {status === 'error' ? <ErrorState title="بارگذاری ناموفق بود" description={error} onRetry={reload} /> : status === 'loading' && !result ? <TableSkeleton /> : result ? (
         <Table<T>
           rowKey="id"
@@ -551,7 +557,7 @@ export function PlatformSalonsPage() {
   const [refreshToken, setRefreshToken] = useState(0);
   return <>
   <ResourceListPage resource="salons" refreshToken={refreshToken} title="سالن‌ها" subtitle="همه tenantهای آرا، وضعیت اشتراک، مالک و سلامت عملیاتی هر سالن." loader={loader} createAction={<Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setEditorOpen(true); }}>ثبت سالن</Button>} statusOptions={[{ value: 'active', label: 'فعال' }, { value: 'suspended', label: 'تعلیق‌شده' }, { value: 'trial', label: 'آزمایشی' }, { value: 'expired', label: 'منقضی' }]} columns={[
-    { key: 'name', title: 'سالن', render: (row: PlatformSalonRow) => <div className="platform-admin-table-name"><strong>{row.name}</strong><span>{row.timezone} · {row.qrToken}</span></div> },
+    { key: 'name', title: 'سالن', render: (row: PlatformSalonRow) => <div className="platform-admin-table-name"><strong dir="auto">{row.name}</strong><span>{row.timezone} · {row.qrToken}</span></div> },
     { key: 'owner', title: 'مالک', render: (row) => <div className="platform-admin-table-name"><strong>{personName(row.owner?.fullName, row.owner?.phone)}</strong><span dir="ltr">{row.owner?.phone ?? 'بدون تلفن'}</span></div> },
     { key: 'subscription', title: 'اشتراک', render: (row) => row.subscription ? <div className="platform-admin-table-name"><StatusTag value={row.subscription.status} /><span>{label(row.subscription.planKind)} تا {dateLabel(row.subscription.expiresAt)}</span></div> : '—' },
     { key: 'counts', title: 'مصرف', render: (row) => `${faNumber.format(row.counts.staffMembers)} عضو تیم · ${faNumber.format(row.counts.appointments)} نوبت` },
