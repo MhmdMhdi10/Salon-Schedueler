@@ -1,4 +1,4 @@
-/* Keep day controls beside the selected date; quick booking stays in the dock. */
+/* Keep desktop date controls and calendar actions grouped together. */
 .owner-calendar-actions {
   display: flex;
   flex-wrap: wrap;
@@ -161,60 +161,28 @@
   display: none;
 }
 
-/* Mobile keeps quick booking in the dock and exposes date management in the toolbar. */
+/* Keep calendar actions in document flow on phones so they never cover day
+   controls or appointment details. */
 @media (max-width: 63.9375rem) {
-  /* Keep every calendar FAB above the same bottom inset used by
-     OwnerBottomTabs. Android Chrome can report both safe-area and visual
-     viewport insets as zero, so the runtime Android fallback must be shared
-     here instead of only moving the dock. */
   .owner-calendar-page {
-    --owner-calendar-bottom-inset: max(
-      env(safe-area-inset-bottom),
-      var(--visual-viewport-bottom-inset, 0rem),
-      var(--android-navigation-inset, 0rem)
-    );
-    padding-block-end: calc(7rem + var(--owner-calendar-bottom-inset));
-    scroll-padding-block-end: calc(7rem + var(--owner-calendar-bottom-inset));
-    /* OwnerBottomTabs is ~66px tall and sits 12px above the viewport edge.
-       Keep calendar CTAs above its upper edge with a visible 24px breathing
-       gap, including Android system navigation and devices with a bottom safe
-       area. */
-    --owner-calendar-actions-bottom: calc(6.5rem + var(--owner-calendar-bottom-inset));
+    scroll-padding-block-end: 2rem;
   }
 
   .owner-calendar-actions {
-    position: fixed;
-    inset-inline-end: 1rem;
-    inset-inline-start: auto;
-    bottom: var(--owner-calendar-actions-bottom);
-    z-index: var(--z-nav);
-    display: block;
-    inline-size: auto;
-    max-inline-size: 30rem;
-    margin-inline: auto;
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
+    display: none;
   }
 
   .owner-calendar-pending-fab {
-    position: fixed;
-    inset-inline-start: 1rem;
-    inset-inline-end: auto;
-    bottom: var(--owner-calendar-actions-bottom);
-    z-index: var(--z-nav);
+    position: static;
     display: inline-flex;
-    max-inline-size: calc(100vw - 8rem);
+    inline-size: 100%;
+    max-inline-size: none;
     min-block-size: 3rem;
     padding-inline: 0.75rem;
-    overflow: hidden;
+    overflow: visible;
     border: 0.0625rem solid
       color-mix(in srgb, var(--color-primary-contrast) 35%, var(--color-primary));
-    box-shadow: 0 0.75rem 1.75rem rgba(0, 0, 0, 0.22);
+    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.14);
   }
 
   .owner-calendar-pending-fab-label {
@@ -245,17 +213,4 @@
     inline-size: 100%;
   }
 
-  .owner-calendar-booking-action {
-    display: inline-flex;
-    min-block-size: 3.5rem;
-    min-inline-size: 3.5rem;
-    width: 3.5rem;
-    padding-inline: 0;
-    border-radius: var(--radius-pill);
-    justify-content: center;
-  }
-
-  .owner-calendar-booking-label {
-    display: none;
-  }
 }

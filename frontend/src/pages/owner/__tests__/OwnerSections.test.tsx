@@ -205,17 +205,24 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
     renderOwnerApp('Owner', '/owner/calendar');
 
     await screen.findByTestId('owner-calendar-page');
-    expect(screen.getByRole('button', { name: 'ثبت نوبت حضوری' })).toBeInTheDocument();
+    expect(screen.getByTestId('owner-calendar-mobile-booking-action')).toHaveAccessibleName(
+      'ثبت نوبت حضوری',
+    );
     const manage = await screen.findByTestId('owner-calendar-mobile-manage');
-    expect(manage).toHaveTextContent('مدیریت ساعت و تعطیلی');
-    expect(manage).toHaveTextContent('تغییر ساعت برای همه‌ی');
+    expect(
+      within(manage).getByRole('heading', { name: 'مدیریت برنامه‌ی کاری سالن' }),
+    ).toBeInTheDocument();
+    expect(manage).toHaveTextContent('روز انتخاب‌شده:');
+    expect(manage).toHaveTextContent('برای همه‌ی');
+    expect(manage).toHaveTextContent('تعطیل‌کردن یا بستن ساعت');
     expect(within(manage).getByTestId('owner-calendar-manage-weekly-trigger')).toHaveAccessibleName(
       /ویرایش ساعت کاری هفتگی/,
     );
     expect(within(manage).getByTestId('owner-calendar-manage-day-trigger')).toHaveAccessibleName(
       /تعطیلی یا محدودیت ساعت برای/,
     );
-
+    fireEvent.click(screen.getByTestId('owner-calendar-mobile-booking-action'));
+    expect(await screen.findByRole('heading', { name: 'ثبت نوبت حضوری' })).toBeInTheDocument();
   });
 
   it('closes availability after reopening a day instead of re-adding the closure', async () => {
