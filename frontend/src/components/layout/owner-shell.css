@@ -1,7 +1,10 @@
-/* Keep owner content inside its app frame instead of leaking a second page
- * scrollbar to the document. The RTL main pane owns vertical scrolling. */
+/* Mobile scrolls the document; desktop keeps the owner app frame. */
 [data-shell='owner'] {
-  contain: paint;
+  min-height: 100vh;
+}
+
+@media (min-width: 64rem) {
+  [data-shell='owner'] { contain: paint; }
 }
 
 /* Keep owner pane scrollbar on the physical right while preserving RTL in

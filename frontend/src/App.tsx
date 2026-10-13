@@ -224,6 +224,9 @@ const PlatformQrScansPage = lazy(() =>
 const PlatformAuditPage = lazy(() =>
   import('./pages/platform-admin/PlatformAdminPages').then((m) => ({ default: m.PlatformAuditPage })),
 );
+const PlatformSmsDeliveriesPage = lazy(() =>
+  import('./pages/platform-admin/PlatformAdminPages').then((m) => ({ default: m.PlatformSmsDeliveriesPage })),
+);
 const PlatformCardOrdersPage = lazy(() =>
   import('./pages/platform-admin/PlatformAdminPages').then((m) => ({ default: m.PlatformCardOrdersPage })),
 );
@@ -315,6 +318,7 @@ export function App() {
                       <Route path="waitlist" element={<PlatformWaitlistPage />} />
                       <Route path="qr-scans" element={<PlatformQrScansPage />} />
                       <Route path="audit-logs" element={<PlatformAuditPage />} />
+                      <Route path="sms-deliveries" element={<PlatformSmsDeliveriesPage />} />
                       <Route path="card-orders" element={<PlatformCardOrdersPage />} />
                       <Route path="support" element={<PlatformSupportPage />} />
                     </Route>

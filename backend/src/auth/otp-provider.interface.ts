@@ -6,7 +6,7 @@
  * services may ignore it and return their own four-digit code instead.
  */
 export interface OtpProvider {
-  sendOtp(phone: string, code?: string): Promise<OtpDeliveryResult>;
+  sendOtp(phone: string, code?: string, options?: { expiresAt?: Date }): Promise<OtpDeliveryResult>;
 }
 
 export type OtpDeliveryResult =

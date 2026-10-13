@@ -7,7 +7,9 @@ export interface SmsProvider {
    * Send an SMS message to the given phone number.
    * @returns a delivery result indicating success or failure.
    */
-  send(phone: string, message: string): Promise<SmsDeliveryResult>;
+  send(phone: string, message: string, options?: { expiresAt?: Date }): Promise<SmsDeliveryResult>;
+  /** Optional carrier delivery report. An unknown result must not trigger resend. */
+  getDeliveryStatus?(providerId: string): Promise<'delivered' | 'failed' | 'pending' | 'unknown'>;
 }
 
 /**
@@ -23,5 +25,5 @@ export interface SmsTemplateProvider {
 }
 
 export type SmsDeliveryResult =
-  | { ok: true; providerId: string }
+  | { ok: true; providerId: string; queued?: boolean }
   | { ok: false; error: string };

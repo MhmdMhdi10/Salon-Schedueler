@@ -72,13 +72,23 @@ function bootstrap(): void {
     console.log(`Salon Booking System API listening on port ${config.port}`);
   });
 
+  let shuttingDown = false;
   const shutdown = (signal: string): void => {
+    if (shuttingDown) return;
+    shuttingDown = true;
     // eslint-disable-next-line no-console
     console.log(`Received ${signal}, shutting down...`);
     clearInterval(sweep);
     stopNotificationCron();
     wss.close();
+    // Keep watch restarts from hanging on a long-lived HTTP connection.
+    const deadline = setTimeout(() => {
+      server.closeAllConnections();
+      void prisma.$disconnect().finally(() => process.exit(0));
+    }, 5_000);
+    deadline.unref();
     server.close(() => {
+      clearTimeout(deadline);
       void prisma.$disconnect().finally(() => process.exit(0));
     });
   };

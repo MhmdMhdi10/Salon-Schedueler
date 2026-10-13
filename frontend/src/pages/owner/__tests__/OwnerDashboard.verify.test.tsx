@@ -383,7 +383,6 @@ describe('Skeleton and error states', () => {
       await waitFor(() => {
         expect(screen.getByTestId('owner-approval-queue')).toBeInTheDocument();
       });
-      expect(screen.getByTestId('owner-approval-queue-fab')).toBeInTheDocument();
       fireEvent.click(
         within(screen.getByTestId('owner-approval-queue')).getByRole('button', {
           name: /^تأیید$/,

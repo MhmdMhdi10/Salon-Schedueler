@@ -1036,40 +1036,7 @@ export function CustomerDashboardPage() {
           <h1 className="text-display text-2xl font-bold text-text sm:text-3xl">
             برنامه نوبت‌های من
           </h1>
-          <p className="max-w-xl text-sm leading-7 text-muted">
-            نوبت‌های آینده‌ات را ببین و از سالن‌های موردعلاقه‌ات دوباره رزرو کن.
-          </p>
         </header>
-
-        <Card
-          as="section"
-          data-testid="customer-workspace-card"
-          className="border-primary/20 bg-primary/[0.04]"
-        >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 items-start gap-3">
-              <span
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
-                aria-hidden="true"
-              >
-                {isStaff ? <Building2 className="h-5 w-5" /> : <Store className="h-5 w-5" />}
-              </span>
-              <div className="min-w-0">
-                <h2 className="text-base font-bold text-text">
-                  {isStaff
-                    ? 'رزرو شخصی و پنل سالن، هر دو در دسترس توست'
-                    : 'سالن داری؟ از همین‌جا ثبتش کن'}
-                </h2>
-                <p className="mt-1 text-sm leading-6 text-muted">
-                  {isStaff
-                    ? 'برای رزرو نوبت از این حساب استفاده کن؛ برای مدیریت سالن به پنل سالن برو.'
-                    : 'با ثبت سالن، پنل مدیریت و لینک رزرو اختصاصی خودت را بساز.'}
-                </p>
-              </div>
-            </div>
-            <WorkspaceSwitcher variant="card" />
-          </div>
-        </Card>
 
         {actionError && (
           <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
@@ -1236,9 +1203,6 @@ export function CustomerDashboardPage() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div className="min-w-0 flex-1">
                 <h2 className="text-base font-bold text-text">نامت را ثبت کن</h2>
-                <p className="mt-1 text-sm leading-6 text-muted">
-                  فقط یک‌بار ذخیره می‌شود تا سالن‌ها رزروهایت را با نامت بشناسند.
-                </p>
                 <TextField
                   containerClassName="mt-3"
                   label="نام و نام خانوادگی"
@@ -1319,7 +1283,6 @@ export function CustomerDashboardPage() {
               >
                 <div>
                   <h2 className="text-lg font-bold text-text">تقویم من</h2>
-                  <p className="mt-1 text-xs text-muted">روزهای دارای نوبت با نقطه مشخص شده‌اند.</p>
                 </div>
                 <div
                   className="flex items-center gap-1 rounded-pill border border-border bg-bg p-1"
@@ -1414,7 +1377,6 @@ export function CustomerDashboardPage() {
               >
                 <div>
                   <h2 className="text-lg font-bold text-text">نوبت‌های پیش‌رو</h2>
-                  <p className="mt-1 text-xs text-muted">نزدیک‌ترین برنامه‌هایت اینجا هستند.</p>
                 </div>
                 <CalendarDays className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
               </div>
@@ -1478,7 +1440,6 @@ export function CustomerDashboardPage() {
               >
                 <div>
                   <h2 className="text-lg font-bold text-text">سوابق نوبت‌ها</h2>
-                  <p className="mt-1 text-xs text-muted">نوبت‌های انجام‌شده و لغوشده حذف نمی‌شوند.</p>
                 </div>
                 <Clock3 className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
               </div>
@@ -1508,9 +1469,6 @@ export function CustomerDashboardPage() {
           >
             <div>
               <h2 className="text-lg font-bold text-text">سالن‌های من</h2>
-              <p className="mt-1 text-xs leading-6 text-muted">
-                سالن‌هایی که با اسکن QR ذخیره کرده‌ای یا قبلاً از آن‌ها نوبت داشته‌ای.
-              </p>
             </div>
             <Store className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
           </div>
@@ -1545,9 +1503,24 @@ export function CustomerDashboardPage() {
               className="px-1 py-8"
               icon={<QrCode className="h-10 w-10" />}
               title="هنوز سالنی به حسابت اضافه نشده"
-              description="کد QR سالن موردنظرت را اسکن کن یا اولین نوبتت را ثبت کن تا اینجا نمایش داده شود."
+              description="پس از اولین رزرو یا اسکن QR، سالن اینجا نمایش داده می‌شود."
             />
           )}
+        </Card>
+
+        <Card as="section" data-testid="customer-workspace-card" className="border-primary/20 bg-primary/[0.04]">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary" aria-hidden="true">
+                {isStaff ? <Building2 className="h-5 w-5" /> : <Store className="h-5 w-5" />}
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-base font-bold text-text">{isStaff ? 'پنل سالن' : 'سالن داری؟'}</h2>
+                <p className="mt-1 text-sm leading-6 text-muted">{isStaff ? 'مدیریت نوبت‌ها و خدمات سالن' : 'سالن خودت را در آرا ثبت کن.'}</p>
+              </div>
+            </div>
+            <WorkspaceSwitcher variant="card" />
+          </div>
         </Card>
       </div>
     </div>

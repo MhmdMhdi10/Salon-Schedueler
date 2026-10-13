@@ -91,6 +91,24 @@ export class KavenegarSmsAdapter implements SmsProvider {
     }
   }
 
+  async getDeliveryStatus(providerId: string): Promise<'delivered' | 'failed' | 'pending' | 'unknown'> {
+    if (!/^\d+$/.test(providerId)) return 'unknown';
+    try {
+      const url = `${this.baseUrl}/v1/${this.apiKey}/sms/status.json?messageid=${providerId}`;
+      const response = await fetchWithTimeout(url, { method: 'GET' }, this.timeoutMs);
+      if (!response.ok) return 'unknown';
+      const data = await response.json() as { return?: { status?: number }; entries?: Array<{ status?: number }> };
+      if (data.return?.status !== 200) return 'unknown';
+      const status = data.entries?.[0]?.status;
+      if (status === 10) return 'delivered';
+      if (status === 6 || status === 11 || status === 13 || status === 14) return 'failed';
+      if (status === 1 || status === 2 || status === 4 || status === 5) return 'pending';
+      return 'unknown';
+    } catch {
+      return 'unknown';
+    }
+  }
+
   private ok(target: string, providerId: string): SmsDeliveryResult {
     logDeliveryOutcome({ provider: 'kavenegar', target, ok: true, providerId });
     return { ok: true, providerId };

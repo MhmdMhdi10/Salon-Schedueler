@@ -108,6 +108,12 @@ describe('MelliPayamakSharedOtpAdapter', () => {
     expect(errorSpy).toHaveBeenCalled();
   });
 
+  it('does not report acceptance when the provider omits the record id', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue(jsonResponse({ status: '' }));
+    const result = await new MelliPayamakSharedOtpAdapter({ endpointUrl }).sendOtp('09304116941', '1234');
+    expect(result).toEqual({ ok: false, error: 'Melli Payamak did not return a record id' });
+  });
+
   it('does not send an invalid code', async () => {
     const result = await new MelliPayamakSharedOtpAdapter({ endpointUrl }).sendOtp(
       '09304116941',

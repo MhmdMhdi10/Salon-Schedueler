@@ -131,6 +131,15 @@ const REQUIRED_IN_PRODUCTION: { key: string; label: string }[] = [
   { key: 'PAYMENT_CALLBACK_BASE_URL', label: 'PAYMENT_CALLBACK_BASE_URL' },
 ];
 
+function positiveIntegerEnv(value: string | undefined, fallback: number, name: string): number {
+  if (value === undefined) return fallback;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new Error(`${name} must be a positive integer`);
+  }
+  return parsed;
+}
+
 /**
  * Read and validate configuration from an environment map.
  *
@@ -203,12 +212,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     devUseRealOtp: env.DEV_USE_REAL_OTP === 'true',
     publicBaseUrl: env.PUBLIC_BASE_URL,
     rabbitmqUrl: env.RABBITMQ_URL,
-    smsQueueMaxAttempts: env.SMS_QUEUE_MAX_ATTEMPTS
-      ? Number(env.SMS_QUEUE_MAX_ATTEMPTS)
-      : 5,
-    smsQueueRetryDelayMs: env.SMS_QUEUE_RETRY_DELAY_MS
-      ? Number(env.SMS_QUEUE_RETRY_DELAY_MS)
-      : 30000,
+    smsQueueMaxAttempts: positiveIntegerEnv(env.SMS_QUEUE_MAX_ATTEMPTS, 5, 'SMS_QUEUE_MAX_ATTEMPTS'),
+    smsQueueRetryDelayMs: positiveIntegerEnv(env.SMS_QUEUE_RETRY_DELAY_MS, 30000, 'SMS_QUEUE_RETRY_DELAY_MS'),
     reminderIntervalMs: env.REMINDER_INTERVAL_MS
       ? Number(env.REMINDER_INTERVAL_MS)
       : 60_000,

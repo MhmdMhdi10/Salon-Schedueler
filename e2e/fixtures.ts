@@ -197,18 +197,16 @@ export async function registerSalonViaUi(
 
   const isResumingOnboarding = page.url().includes('/business/register');
   if (!isResumingOnboarding) await page.goto('/business/register');
-  await page.getByTestId('work-mode-solo').click();
-  await page.getByRole('button', { name: 'ادامه', exact: true }).click();
-
-  await page.locator('#workspace').click();
-  await page.getByRole('option', { name: 'سالن یا محل ثابت خودم', exact: true }).click();
-  await page.getByRole('button', { name: 'ادامه', exact: true }).click();
-
   await page.getByTestId('business-type-hair_salon').click();
   await page.getByRole('button', { name: 'ادامه', exact: true }).click();
 
   await page.locator('#salonName').fill(salonName);
   await page.locator('#ownerName').fill(ownerName);
+  if (isResumingOnboarding) {
+    await expect(page.locator('#phone')).toHaveValue(ownerPhone);
+  } else {
+    await page.locator('#phone').fill(ownerPhone);
+  }
   await page.getByRole('button', { name: 'ادامه', exact: true }).click();
 
   await page.locator('#svcName').fill(serviceName);
@@ -219,14 +217,6 @@ export async function registerSalonViaUi(
   await page.locator('#svcPrice').fill('500000');
   await page.getByRole('button', { name: 'افزودن خدمت', exact: true }).click();
   await expect(page.getByText(serviceName, { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'ادامه', exact: true }).click();
-
-  if (isResumingOnboarding) {
-    await expect(page.locator('#phone')).toHaveValue(ownerPhone);
-  } else {
-    await page.locator('#phone').fill(ownerPhone);
-  }
-  await page.locator('#chairCount').fill('1');
   const registrationResponse = page.waitForResponse(
     (response) =>
       response.url().includes('/api/register/salon') && response.request().method() === 'POST',

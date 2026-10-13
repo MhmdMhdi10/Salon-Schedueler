@@ -235,7 +235,7 @@ export class SalonRegistration {
       }
 
       return { salon, ownerStaffId: owner.id };
-    });
+    }, { timeout: 20_000 });
   }
 
   /**

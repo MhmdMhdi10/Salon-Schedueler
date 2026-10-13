@@ -32,7 +32,8 @@ for migration in \
   backend/prisma/migrations/00000000000025_qa_workflows/migration.sql \
   backend/prisma/migrations/00000000000026_platform_admin_customer_lifecycle/migration.sql \
   backend/prisma/migrations/00000000000027_staff_phone_per_salon/migration.sql \
-  backend/prisma/migrations/00000000000028_booking_start_offset_days/migration.sql
+  backend/prisma/migrations/00000000000028_booking_start_offset_days/migration.sql \
+  backend/prisma/migrations/00000000000033_sms_delivery_tracking/migration.sql
 do
   psql "$cli_database_url" -v ON_ERROR_STOP=1 -f "$migration" >/dev/null
 done

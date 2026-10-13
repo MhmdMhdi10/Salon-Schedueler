@@ -7,6 +7,7 @@ import { normalizeDigits } from '@salon/shared';
 import {
   ApiError,
   authApi,
+  customerApi,
   registrationApi,
   setAccessToken,
   type RegisterSalonServiceInput,
@@ -17,27 +18,21 @@ import { BrandLogo } from '../../components/brand';
 import { ThemeToggle } from '../../components/theme/ThemeToggle';
 import {
   Button,
-  Checkbox,
   DurationStepper,
-  Select,
   TextField,
   cn,
   toPersianDigits,
   useToast,
 } from '../../components/ui';
-import { ACCENTS, accentVars } from '../../components/theme/accents';
 import { filterPhoneInput, normalizePhone, PHONE_PATTERN } from '../../auth/phone';
+import { formatPriceInput } from '../../components/ui/price-input';
 import {
   BarberIcon,
   BrowsIcon,
   HaircutIcon,
   MakeupIcon,
   NailsIcon,
-  OnboardingProfileIcon,
-  OnboardingRouteIcon,
-  OnboardingSalonIcon,
   OnboardingSecurityIcon,
-  OnboardingTeamIcon,
   SkinIcon,
   TattooIcon,
 } from '../../components/icons';
@@ -51,69 +46,14 @@ const OTP_LENGTH = 4;
 const RESEND_SECONDS = 45;
 
 /** The visible onboarding steps, in order. `otp` is the final sign-in step. */
-type Step = 'profile' | 'context' | 'category' | 'info' | 'services' | 'setup' | 'otp';
+type Step = 'category' | 'info' | 'services' | 'otp';
 const STEP_ORDER: readonly Step[] = [
-  'profile',
-  'context',
   'category',
   'info',
   'services',
-  'setup',
   'otp',
 ] as const;
 
-type WorkMode = 'solo' | 'team' | 'salon' | 'starting';
-type Workspace = 'fixed_salon' | 'rented_chair' | 'home' | 'mobile' | 'not_decided';
-type TeamRange = '2_3' | '4_8' | '9_plus';
-type SalonCapacityRange = '1_3' | '4_8' | '9_plus';
-type MainGoal = 'online_booking' | 'calendar' | 'client_management' | 'all';
-
-const WORKSPACES: readonly Workspace[] = [
-  'fixed_salon',
-  'rented_chair',
-  'home',
-  'mobile',
-  'not_decided',
-] as const;
-const TEAM_RANGES: readonly TeamRange[] = ['2_3', '4_8', '9_plus'] as const;
-const SALON_CAPACITY_RANGES: readonly SalonCapacityRange[] = ['1_3', '4_8', '9_plus'] as const;
-const MAIN_GOALS: readonly MainGoal[] = [
-  'online_booking',
-  'calendar',
-  'client_management',
-  'all',
-] as const;
-
-const CHAIR_COUNT_BY_TEAM_RANGE: Record<TeamRange, string> = {
-  '2_3': '3',
-  '4_8': '6',
-  '9_plus': '10',
-};
-
-const CHAIR_COUNT_BY_SALON_CAPACITY: Record<SalonCapacityRange, string> = {
-  '1_3': '3',
-  '4_8': '6',
-  '9_plus': '10',
-};
-
-const TEAM_MEMBER_LIMIT_BY_RANGE: Record<TeamRange, number> = {
-  '2_3': 3,
-  '4_8': 8,
-  '9_plus': 10,
-};
-
-const WORK_MODES: readonly { key: WorkMode; icon: React.ComponentType<CategoryIconProps> }[] = [
-  { key: 'solo', icon: OnboardingProfileIcon },
-  { key: 'team', icon: OnboardingTeamIcon },
-  { key: 'salon', icon: OnboardingSalonIcon },
-  { key: 'starting', icon: OnboardingRouteIcon },
-] as const;
-
-/**
- * Normalizes a raw phone entry to canonical `09xxxxxxxxx` before validation:
- * localizes digits, strips spacing/punctuation, rewrites `+98`/`0098`/`98`
- * country-code prefixes to a leading `0` (mirrors AuthPage, ui-ux §7).
- */
 /** Format remaining seconds as `m:ss` in Persian digits (resend timer). */
 function formatCountdown(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
@@ -137,16 +77,13 @@ interface DraftService extends RegisterSalonServiceInput {
  * onboarding). A short, skippable questionnaire that provisions the salon and
  * lands the owner straight in their panel:
  *
- *   1. شناخت مسیر — solo, team, salon owner, or starting out
- *   2. سؤال مرتبط — workspace, team size, or salon capacity, based on the selected path
- *   3. حوزه کاری — business type + primary specialty (skippable)
- *   4. مشخصات    — salon name + owner name + phone (required)
- *   5. خدمات     — add the services the salon offers (skippable)
- *   6. راه‌اندازی — chairs + brand colour, then a summary + submit (skippable)
- *   7. ورود      — OTP sign-in with the phone just registered → owner panel
+ *   1. حوزه کاری — business type + primary specialty
+ *   2. مشخصات — salon name + owner name + phone
+ *   3. خدمات — choose services and optionally refine duration and price
+ *   4. ورود — OTP sign-in with the phone just registered
  *
  * On submit it creates the salon, its Owner staff member, a free trial, and the
- * answered services/chairs/accent (so the panel is pre-filled), then sends an
+ * answered services (so the panel is pre-filled), then sends an
  * OTP to the phone. Verifying it signs the owner in (an Owner token scoped to
  * the new salon) and routes to `/owner`.
  *
@@ -166,15 +103,7 @@ function RegisterSalonContent() {
   const { success } = useToast();
   const { refresh: refreshAuth } = useAuth();
 
-  const [step, setStep] = useState<Step>('profile');
-  const [workMode, setWorkMode] = useState<WorkMode | ''>('');
-  const [workspace, setWorkspace] = useState<Workspace | ''>('');
-  const [teamRange, setTeamRange] = useState<TeamRange | ''>('');
-  const [salonCapacity, setSalonCapacity] = useState<SalonCapacityRange | ''>('');
-  const [teamMembersEnabled, setTeamMembersEnabled] = useState(false);
-  const [teamMemberNames, setTeamMemberNames] = useState<string[]>([]);
-  const [mainGoal, setMainGoal] = useState<MainGoal | ''>('');
-  const [category, setCategory] = useState('');
+  const [step, setStep] = useState<Step>('category');
   const [categories, setCategories] = useState<string[]>([]);
   const [specialties, setSpecialties] = useState<string[]>([]);
 
@@ -194,7 +123,7 @@ function RegisterSalonContent() {
   // Services questionnaire.
   const [services, setServices] = useState<DraftService[]>([]);
   const [svcName, setSvcName] = useState('');
-  const [svcDuration, setSvcDuration] = useState('');
+  const [svcDuration, setSvcDuration] = useState('30');
   const [svcPrice, setSvcPrice] = useState('');
   const [svcError, setSvcError] = useState('');
   const [editingService, setEditingService] = useState<{
@@ -205,13 +134,11 @@ function RegisterSalonContent() {
   } | null>(null);
   const [serviceEditError, setServiceEditError] = useState('');
   const [servicePresetQuery, setServicePresetQuery] = useState('');
-
-  // Setup questionnaire.
-  const [chairCount, setChairCount] = useState('1');
-  const [accentKey, setAccentKey] = useState('');
+  const [showAllPresets, setShowAllPresets] = useState(false);
 
   // Submit + OTP.
   const [submitting, setSubmitting] = useState(false);
+  const [registered, setRegistered] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [otpLength, setOtpLength] = useState(OTP_LENGTH);
   const [code, setCode] = useState<string[]>(() => Array(OTP_LENGTH).fill(''));
@@ -222,20 +149,15 @@ function RegisterSalonContent() {
 
   useEffect(() => {
     setServicePresetQuery('');
+    setShowAllPresets(false);
   }, [categories]);
 
   const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
   const autoSubmittedOtp = useRef('');
-  const specialtiesRef = useRef<HTMLDivElement | null>(null);
   const normalizedPhone = useMemo(() => normalizePhone(phone), [phone]);
-  const selectedProfiles = useMemo(
-    () => BUSINESS_PROFILES.filter((profile) => categories.includes(profile.key)),
-    [categories],
-  );
   const codeValue = code.join('');
   const codeIsComplete = codeValue.length === otpLength;
   const stepIndex = STEP_ORDER.indexOf(step);
-  const isMobileWorkspace = workspace === 'mobile';
   const prefersReducedMotion = useReducedMotion();
 
   const applyOtpResponse = (response?: { devOtp?: string; otpLength?: number }) => {
@@ -263,43 +185,6 @@ function RegisterSalonContent() {
     window.scrollTo({ top: 0, behavior: 'auto' });
   }, [step]);
 
-  const handleWorkModeSelect = (value: WorkMode) => {
-    setWorkMode(value);
-    setWorkspace('');
-    setTeamRange('');
-    setSalonCapacity('');
-    setTeamMembersEnabled(false);
-    setTeamMemberNames([]);
-    setMainGoal('');
-    // Give the final setup step a useful starting point even if the follow-up
-    // question is skipped. The owner can still edit it before submitting.
-    setChairCount(value === 'team' || value === 'salon' ? '3' : '1');
-  };
-
-  const contextAnswerReady =
-    workMode === 'solo' || workMode === 'starting'
-      ? Boolean(workspace)
-      : workMode === 'team'
-        ? Boolean(teamRange)
-        : workMode === 'salon'
-          ? Boolean(salonCapacity)
-          : false;
-
-  const handleContextNext = () => {
-    if (workMode === 'team') {
-      setChairCount(teamRange ? CHAIR_COUNT_BY_TEAM_RANGE[teamRange] : '3');
-    } else if (workMode === 'salon') {
-      setChairCount(salonCapacity ? CHAIR_COUNT_BY_SALON_CAPACITY[salonCapacity] : '3');
-    } else if (workspace === 'mobile') {
-      // Mobile work has no physical chair. The backend creates one private
-      // mobile capacity lane for the owner instead.
-      setChairCount('0');
-    } else {
-      setChairCount('1');
-    }
-    setStep('category');
-  };
-
   // ── Identity: validate required fields, then advance ─────────────────────
   const handleInfoNext = () => {
     const errors: typeof infoErrors = {};
@@ -307,6 +192,8 @@ function RegisterSalonContent() {
       errors.salonName = t('business.register.errors.salonNameRequired');
     if (ownerName.trim().length < 1)
       errors.ownerName = t('business.register.errors.ownerNameRequired');
+    if (!PHONE_PATTERN.test(normalizedPhone))
+      errors.phone = t('business.register.errors.invalidPhone');
     setInfoErrors(errors);
     if (Object.keys(errors).length === 0) setStep('services');
   };
@@ -332,7 +219,7 @@ function RegisterSalonContent() {
       },
     ]);
     setSvcName('');
-    setSvcDuration('');
+    setSvcDuration('30');
     setSvcPrice('');
     setSvcError('');
   };
@@ -432,29 +319,27 @@ function RegisterSalonContent() {
     }
     setSubmitting(true);
     setSubmitError('');
+    let salonCreated = registered;
     try {
-      await registrationApi.registerSalon({
-        salonName: salonName.trim(),
-        ownerName: ownerName.trim(),
-        phone: normalizedPhone,
-        businessType: categories[0] || category || undefined,
-        businessTypes: categories,
-        specialties,
-        brandAccent: accentKey || undefined,
-        workMode:
-          workMode === 'solo' || workMode === 'starting'
-            ? workspace || 'not_decided'
-            : 'fixed_salon',
-        services: services.map(({ name, durationMinutes, priceRial }) => ({
-          name,
-          ...(durationMinutes ? { durationMinutes } : {}),
-          ...(priceRial ? { priceRial: priceRial * 10 } : {}),
-        })),
-        teamMembers: teamMemberNames
-          .map((fullName) => ({ fullName: fullName.trim() }))
-          .filter((member) => member.fullName.length > 0),
-        chairCount: isMobileWorkspace ? 0 : toIntOrZero(chairCount),
-      });
+      if (!registered) {
+        await registrationApi.registerSalon({
+          salonName: salonName.trim(),
+          ownerName: ownerName.trim(),
+          phone: normalizedPhone,
+          businessType: categories[0] || undefined,
+          businessTypes: categories,
+          specialties,
+          workMode: 'not_decided',
+          services: services.map(({ name, durationMinutes, priceRial }) => ({
+            name,
+            ...(durationMinutes ? { durationMinutes } : {}),
+            ...(priceRial ? { priceRial: priceRial * 10 } : {}),
+          })),
+          chairCount: 1,
+        });
+        salonCreated = true;
+        setRegistered(true);
+      }
       // Salon created — send the OTP so the owner can sign straight in.
       const response = await authApi.requestOtp(normalizedPhone);
       applyOtpResponse(response);
@@ -463,8 +348,10 @@ function RegisterSalonContent() {
       success({ title: t('auth.otpSent') });
       window.setTimeout(() => otpRefs.current[0]?.focus(), 0);
     } catch (err) {
-      if (err instanceof ApiError && err.code === 'PHONE_TAKEN') {
+      if (err instanceof ApiError && err.code === 'PHONE_TAKEN' && !salonCreated) {
         setSubmitError('این شماره قابل استفاده نیست؛ دوباره تلاش کنید.');
+      } else if (salonCreated) {
+        setSubmitError(t('business.register.errors.requestFailed'));
       } else {
         setSubmitError(t('business.register.errors.generic'));
       }
@@ -497,6 +384,14 @@ function RegisterSalonContent() {
       const result = await authApi.verifyOtp(normalizedPhone, codeValue);
       setAccessToken(result.accessToken);
       await refreshAuth();
+      try {
+        const profile = await customerApi.getProfile();
+        if (!profile.customer.fullName?.trim()) {
+          await customerApi.updateProfile(ownerName.trim());
+        }
+      } catch {
+        // A profile update must not delay entry after OTP verification.
+      }
       navigate('/owner');
     } catch {
       setOtpError(t('business.register.errors.invalidOtp'));
@@ -607,226 +502,25 @@ function RegisterSalonContent() {
               مرحله {toPersianDigits(stepIndex + 1)} از {toPersianDigits(STEP_ORDER.length)}
             </p>
             <h1 className="mt-3 text-2xl leading-display text-display text-text">
-              {step === 'profile'
-                ? t('business.register.profile.title')
-                : step === 'context'
-                  ? t(`business.register.context.${workMode || 'starting'}.title`)
-                  : step === 'category'
-                    ? t('business.register.category.title')
-                    : step === 'info'
-                      ? t('business.register.info.title')
-                      : step === 'services'
-                        ? t('business.register.services.title')
-                        : step === 'setup'
-                          ? t('business.register.setup.title')
-                          : t('business.register.verify.title')}
+              {step === 'category'
+                ? t('business.register.category.title')
+                : step === 'info'
+                  ? t('business.register.info.title')
+                  : step === 'services'
+                    ? t('business.register.services.title')
+                    : t('business.register.verify.title')}
             </h1>
             <p className="mt-2 text-sm text-muted">
-              {step === 'profile'
-                ? t('business.register.profile.subtitle')
-                : step === 'context'
-                  ? t(`business.register.context.${workMode || 'starting'}.subtitle`)
-                  : step === 'category'
-                    ? t('business.register.category.subtitle')
-                    : step === 'services'
-                      ? t('business.register.services.subtitle')
-                      : t('business.register.subtitle')}
+              {step === 'category'
+                ? t('business.register.category.subtitle')
+                : step === 'info'
+                  ? t('business.register.info.subtitle')
+                  : step === 'services'
+                    ? t('business.register.services.subtitle')
+                    : t('business.register.subtitle')}
             </p>
 
-            {step === 'profile' ? (
-              <section className="flex flex-1 flex-col pt-8">
-                <StepHeading
-                  icon={<OnboardingProfileIcon className="h-5 w-5" aria-hidden="true" />}
-                  title={t('business.register.profile.question')}
-                  subtitle={t('business.register.profile.helper')}
-                />
-                <div className="mt-5 grid gap-3 sm:grid-cols-2" role="group">
-                  {WORK_MODES.map((mode) => (
-                    <ChoiceCard
-                      key={mode.key}
-                      icon={mode.icon}
-                      label={t(`business.register.profile.modes.${mode.key}.label`)}
-                      description={t(`business.register.profile.modes.${mode.key}.description`)}
-                      selected={workMode === mode.key}
-                      onSelect={() => handleWorkModeSelect(mode.key)}
-                      testId={`work-mode-${mode.key}`}
-                    />
-                  ))}
-                </div>
-                <StepNav
-                  onBack={() => navigate('/')}
-                  onNext={() => setStep('context')}
-                  onSkip={() => setStep('category')}
-                  nextLabel={t('business.register.next')}
-                  skipLabel={t('business.register.skip')}
-                  backLabel={t('business.register.back')}
-                  nextDisabled={!workMode}
-                />
-              </section>
-            ) : step === 'context' ? (
-              <section className="flex flex-col pt-8">
-                <StepHeading
-                  icon={
-                    workMode === 'salon' ? (
-                      <OnboardingSalonIcon className="h-5 w-5" aria-hidden="true" />
-                    ) : workMode === 'team' ? (
-                      <OnboardingTeamIcon className="h-5 w-5" aria-hidden="true" />
-                    ) : (
-                      <OnboardingRouteIcon className="h-5 w-5" aria-hidden="true" />
-                    )
-                  }
-                  title={t('business.register.context.question')}
-                  subtitle={t('business.register.context.helper')}
-                />
-
-                {(workMode === 'solo' || workMode === 'starting') && (
-                  <Select
-                    id="workspace"
-                    label={t('business.register.context.workspaceLabel')}
-                    value={workspace}
-                    onValueChange={(value) => setWorkspace(value as Workspace)}
-                    options={WORKSPACES.map((option) => ({
-                      value: option,
-                      label: t(`business.register.context.workspaceOptions.${option}`),
-                    }))}
-                    placeholder={t('business.register.context.workspacePlaceholder')}
-                    containerClassName="mt-5"
-                  />
-                )}
-
-                {workMode === 'team' && (
-                  <>
-                    <Select
-                      id="teamRange"
-                      label={t('business.register.context.teamSizeTeamLabel')}
-                      value={teamRange}
-                      onValueChange={(value) => {
-                        const nextRange = value as TeamRange;
-                        setTeamRange(nextRange);
-                        setTeamMemberNames((previous) =>
-                          previous.slice(0, TEAM_MEMBER_LIMIT_BY_RANGE[nextRange]),
-                        );
-                      }}
-                      options={TEAM_RANGES.map((option) => ({
-                        value: option,
-                        label: t(`business.register.context.teamSizeTeamOptions.${option}`),
-                      }))}
-                      placeholder={t('business.register.context.teamSizeTeamPlaceholder')}
-                      containerClassName="mt-5"
-                    />
-
-                    <div className="mt-4 rounded-md border border-border bg-bg p-3">
-                      <Checkbox
-                        id="teamMembersEnabled"
-                        checked={teamMembersEnabled}
-                        onCheckedChange={(checked) => {
-                          const enabled = checked === true;
-                          setTeamMembersEnabled(enabled);
-                          if (enabled) {
-                            setTeamMemberNames((previous) => (previous.length ? previous : ['']));
-                          } else {
-                            setTeamMemberNames([]);
-                          }
-                        }}
-                        label={t('business.register.context.teamMembersToggle')}
-                        helperText={t('business.register.context.teamMembersHelper')}
-                      />
-
-                      {teamMembersEnabled && (
-                        <div className="mt-3 flex flex-col gap-3 border-t border-border pt-3">
-                          {teamMemberNames.map((name, index) => (
-                            <div key={index} className="flex items-end gap-2">
-                              <TextField
-                                id={`teamMember-${index}`}
-                                label={t('business.register.context.teamMemberLabel', {
-                                  number: toPersianDigits(index + 1),
-                                })}
-                                placeholder={t('business.register.context.teamMemberPlaceholder')}
-                                containerClassName="min-w-0 flex-1"
-                                value={name}
-                                onChange={(event) => {
-                                  const nextName = event.target.value;
-                                  setTeamMemberNames((previous) =>
-                                    previous.map((member, memberIndex) =>
-                                      memberIndex === index ? nextName : member,
-                                    ),
-                                  );
-                                }}
-                              />
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                aria-label={t('business.register.context.removeTeamMember', {
-                                  number: toPersianDigits(index + 1),
-                                })}
-                                onClick={() =>
-                                  setTeamMemberNames((previous) =>
-                                    previous.filter((_, memberIndex) => memberIndex !== index),
-                                  )
-                                }
-                              >
-                                <Trash2 className="h-4 w-4" aria-hidden="true" />
-                              </Button>
-                            </div>
-                          ))}
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            startIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
-                            disabled={
-                              !teamRange ||
-                              teamMemberNames.length >= TEAM_MEMBER_LIMIT_BY_RANGE[teamRange]
-                            }
-                            onClick={() => setTeamMemberNames((previous) => [...previous, ''])}
-                            className="w-full sm:w-fit"
-                          >
-                            {t('business.register.context.addTeamMember')}
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-
-                {workMode === 'salon' && (
-                  <Select
-                    id="salonCapacity"
-                    label={t('business.register.context.salonCapacityLabel')}
-                    value={salonCapacity}
-                    onValueChange={(value) => setSalonCapacity(value as SalonCapacityRange)}
-                    options={SALON_CAPACITY_RANGES.map((option) => ({
-                      value: option,
-                      label: t(`business.register.context.salonCapacityOptions.${option}`),
-                    }))}
-                    placeholder={t('business.register.context.salonCapacityPlaceholder')}
-                    containerClassName="mt-5"
-                  />
-                )}
-
-                <Select
-                  id="mainGoal"
-                  label={t('business.register.context.goalLabel')}
-                  value={mainGoal}
-                  onValueChange={(value) => setMainGoal(value as MainGoal)}
-                  options={MAIN_GOALS.map((option) => ({
-                    value: option,
-                    label: t(`business.register.context.goalOptions.${option}`),
-                  }))}
-                  placeholder={t('business.register.context.goalPlaceholder')}
-                  containerClassName="mt-4"
-                />
-
-                <StepNav
-                  onBack={() => setStep('profile')}
-                  onNext={handleContextNext}
-                  onSkip={handleContextNext}
-                  nextLabel={t('business.register.next')}
-                  skipLabel={t('business.register.skip')}
-                  backLabel={t('business.register.back')}
-                  nextDisabled={!contextAnswerReady}
-                />
-              </section>
-            ) : step === 'category' ? (
+            {step === 'category' ? (
               <section className="flex flex-col pt-8">
                 <div className="grid gap-3 sm:grid-cols-2">
                   {BUSINESS_PROFILES.map((profile) => {
@@ -841,7 +535,6 @@ function RegisterSalonContent() {
                             ? categories.filter((key) => key !== profile.key)
                             : [...categories, profile.key];
                           setCategories(nextCategories);
-                          setCategory(nextCategories[0] ?? '');
                           setSpecialties((previous) => {
                             const allowed = nextCategories.flatMap(
                               (key) =>
@@ -857,14 +550,6 @@ function RegisterSalonContent() {
                               ? [...retained, defaultSpecialty]
                               : retained;
                           });
-                          if (window.matchMedia('(max-width: 47.9375rem)').matches) {
-                            window.requestAnimationFrame(() => {
-                              specialtiesRef.current?.scrollIntoView({
-                                behavior: prefersReducedMotion ? 'auto' : 'smooth',
-                                block: 'start',
-                              });
-                            });
-                          }
                         }}
                         aria-pressed={selected}
                         data-testid={`business-type-${profile.key}`}
@@ -891,53 +576,8 @@ function RegisterSalonContent() {
                     );
                   })}
                 </div>
-                {selectedProfiles.length > 0 && (
-                  <div
-                    ref={specialtiesRef}
-                    className="register-specialties-panel mt-4 flex flex-col gap-2 rounded-xl border border-border bg-bg p-4"
-                  >
-                    <p className="text-sm font-bold text-text">
-                      {t('business.register.category.specialtyTitle')}
-                    </p>
-                    <p className="text-xs leading-5 text-muted">
-                      {t('business.register.category.specialtySubtitle')}
-                    </p>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {selectedProfiles.flatMap((profile) =>
-                        profile.specialties.map((specialty) => {
-                          const checked = specialties.includes(specialty.key);
-                          return (
-                            <label
-                              key={`${profile.key}-${specialty.key}`}
-                              className={cn(
-                                'flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm',
-                                checked
-                                  ? 'border-primary bg-primary/5 text-primary'
-                                  : 'border-border text-text',
-                              )}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() =>
-                                  setSpecialties((previous) =>
-                                    checked
-                                      ? previous.filter((key) => key !== specialty.key)
-                                      : [...previous, specialty.key],
-                                  )
-                                }
-                                className="size-4 accent-primary"
-                              />
-                              <span>{specialty.label}</span>
-                            </label>
-                          );
-                        }),
-                      )}
-                    </div>
-                  </div>
-                )}
                 <StepNav
-                  onBack={() => setStep(workMode ? 'context' : 'profile')}
+                  onBack={() => navigate('/')}
                   onNext={() => setStep('info')}
                   onSkip={() => setStep('info')}
                   nextLabel={t('business.register.next')}
@@ -956,11 +596,6 @@ function RegisterSalonContent() {
                       handleInfoNext();
                     }}
                   >
-                    <StepHeading
-                      icon={<OnboardingSalonIcon className="h-5 w-5" aria-hidden="true" />}
-                      title={t('business.register.info.title')}
-                      subtitle={t('business.register.info.subtitle')}
-                    />
                     <TextField
                       id="salonName"
                       label={t('business.register.info.salonNameLabel')}
@@ -983,6 +618,22 @@ function RegisterSalonContent() {
                         setOwnerName(e.target.value);
                         if (infoErrors.ownerName)
                           setInfoErrors((p) => ({ ...p, ownerName: undefined }));
+                      }}
+                    />
+                    <TextField
+                      id="phone"
+                      label={t('business.register.info.phoneLabel')}
+                      error={infoErrors.phone}
+                      type="tel"
+                      inputMode="tel"
+                      dir="ltr"
+                      autoComplete="tel"
+                      maxLength={14}
+                      placeholder={t('auth.phonePlaceholder')}
+                      value={phone}
+                      onChange={(e) => {
+                        setPhone(filterPhoneInput(e.target.value));
+                        if (infoErrors.phone) setInfoErrors((p) => ({ ...p, phone: undefined }));
                       }}
                     />
                     <Button type="submit" size="lg" fullWidth>
@@ -1046,6 +697,7 @@ function RegisterSalonContent() {
                           ariaLabel={t('business.register.services.durationLabel')}
                           value={svcDuration}
                           onChange={setSvcDuration}
+                          step={15}
                           allowEmpty
                           className="min-w-0 w-full"
                         />
@@ -1062,7 +714,7 @@ function RegisterSalonContent() {
                           className="min-h-14"
                           containerClassName="min-w-0 w-full"
                           value={svcPrice}
-                          onChange={(e) => setSvcPrice(e.target.value)}
+                          onChange={(e) => setSvcPrice(formatPriceInput(e.target.value))}
                         />
                         <Button
                           type="submit"
@@ -1083,7 +735,7 @@ function RegisterSalonContent() {
                       )}
                     </form>
 
-                    <div className="flex h-[48rem] shrink-0 flex-col rounded-xl border border-border bg-bg p-3 sm:h-[32rem] sm:shrink">
+                    <div className="rounded-xl border border-border bg-bg p-3">
                       <div className="flex shrink-0 items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-sm font-bold text-text">
@@ -1117,12 +769,12 @@ function RegisterSalonContent() {
                         />
                       </label>
                       <div
-                        className="mt-3 min-h-[40rem] flex-1 overflow-y-auto overscroll-contain pe-1 sm:min-h-0"
+                        className="mt-3 pe-1"
                         data-testid="suggested-services-list"
                       >
                         {filteredServicePresets.length > 0 ? (
                           <div className="grid gap-2 sm:grid-cols-2">
-                            {filteredServicePresets.map((preset) => {
+                            {(servicePresetQuery || showAllPresets ? filteredServicePresets : filteredServicePresets.slice(0, 6)).map((preset) => {
                               const name = preset.label;
                               const checked = services.some(
                                 (service) => service.key === `preset-${preset.key}`,
@@ -1157,6 +809,11 @@ function RegisterSalonContent() {
                           </p>
                         )}
                       </div>
+                      {!servicePresetQuery && filteredServicePresets.length > 6 && (
+                        <button type="button" className="mt-3 min-h-11 text-sm font-semibold text-primary" onClick={() => setShowAllPresets((value) => !value)}>
+                          {showAllPresets ? 'نمایش کمتر' : `نمایش همهٔ ${toPersianDigits(filteredServicePresets.length)} خدمت`}
+                        </button>
+                      )}
                     </div>
 
                     {services.length > 0 && (
@@ -1197,6 +854,7 @@ function RegisterSalonContent() {
                                         current ? { ...current, duration: value } : current,
                                       )
                                     }
+                                    step={15}
                                     allowEmpty
                                   />
                                   <TextField
@@ -1209,7 +867,7 @@ function RegisterSalonContent() {
                                     onChange={(event) =>
                                       setEditingService((current) =>
                                         current
-                                          ? { ...current, price: event.target.value }
+                                          ? { ...current, price: formatPriceInput(event.target.value) }
                                           : current,
                                       )
                                     }
@@ -1330,185 +988,10 @@ function RegisterSalonContent() {
                       </p>
                     )}
 
+                    {submitError && <p className="text-sm text-danger" role="alert">{submitError}</p>}
+
                     <StepNav
                       onBack={() => setStep('info')}
-                      onNext={() => setStep('setup')}
-                      onSkip={() => setStep('setup')}
-                      nextLabel={t('business.register.next')}
-                      skipLabel={t('business.register.skip')}
-                      backLabel={t('business.register.back')}
-                      nextDisabled={services.length === 0}
-                    />
-                  </div>
-                )}
-
-                {step === 'setup' && (
-                  <div className="flex flex-col gap-5">
-                    <StepHeading
-                      icon={<OnboardingSalonIcon className="h-5 w-5" aria-hidden="true" />}
-                      title={t('business.register.setup.title')}
-                      subtitle={t('business.register.setup.subtitle')}
-                    />
-
-                    <TextField
-                      id="phone"
-                      label={t('business.register.info.phoneLabel')}
-                      helperText={t('business.register.info.phoneHelper')}
-                      error={infoErrors.phone}
-                      type="tel"
-                      inputMode="tel"
-                      dir="ltr"
-                      autoComplete="tel"
-                      maxLength={14}
-                      placeholder={t('auth.phonePlaceholder')}
-                      value={phone}
-                      onChange={(e) => {
-                        setPhone(filterPhoneInput(e.target.value));
-                        if (infoErrors.phone) setInfoErrors((p) => ({ ...p, phone: undefined }));
-                      }}
-                    />
-
-                    <TextField
-                      id="chairCount"
-                      label={t('business.register.setup.chairsLabel')}
-                      helperText={
-                        isMobileWorkspace
-                          ? 'برای خدمات سیار صندلی فیزیکی لازم نیست؛ مسیر اختصاصی عضو تیم ساخته می‌شود.'
-                          : t('business.register.setup.chairsHelper')
-                      }
-                      inputMode="numeric"
-                      dir="ltr"
-                      placeholder="۳"
-                      containerClassName="max-w-[10rem]"
-                      value={chairCount}
-                      onChange={(e) => setChairCount(e.target.value)}
-                      disabled={isMobileWorkspace}
-                    />
-
-                    {/* Brand-accent picker — themes the storefront + booking funnel. */}
-                    <div className="flex flex-col gap-2">
-                      <span className="text-xs font-medium text-muted">
-                        {t('business.register.setup.accentLabel')}
-                      </span>
-                      <div
-                        className="flex flex-wrap gap-2"
-                        role="radiogroup"
-                        aria-label={t('business.register.setup.accentLabel')}
-                      >
-                        <AccentSwatch
-                          selected={accentKey === ''}
-                          onSelect={() => setAccentKey('')}
-                          label={t('business.register.setup.accentDefault')}
-                        />
-                        {ACCENTS.map((accent) => (
-                          <AccentSwatch
-                            key={accent.key}
-                            accentStyle={accentVars(accent)}
-                            selected={accentKey === accent.key}
-                            onSelect={() => setAccentKey(accent.key)}
-                            label={t(`admin.config.brand.accents.${accent.key}`, accent.key)}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Compact summary so the owner can confirm before submitting. */}
-                    <dl className="flex flex-col gap-2 rounded-md border border-border bg-bg p-3 text-sm">
-                      <SummaryRow label={t('business.register.review.salon')} value={salonName} />
-                      <SummaryRow
-                        label={t('business.register.review.workMode')}
-                        value={
-                          workMode
-                            ? t(`business.register.profile.modes.${workMode}.label`)
-                            : t('business.register.review.none')
-                        }
-                      />
-                      <SummaryRow
-                        label={t('business.register.review.context')}
-                        value={
-                          workspace
-                            ? t(`business.register.context.workspaceOptions.${workspace}`)
-                            : workMode === 'team' && teamRange
-                              ? t(`business.register.context.teamSizeTeamOptions.${teamRange}`)
-                              : workMode === 'salon' && salonCapacity
-                                ? t(
-                                    `business.register.context.salonCapacityOptions.${salonCapacity}`,
-                                  )
-                                : t('business.register.review.none')
-                        }
-                      />
-                      {workMode === 'team' && (
-                        <SummaryRow
-                          label={t('business.register.review.team')}
-                          value={
-                            teamMemberNames.filter((name) => name.trim().length > 0).length > 0
-                              ? t('business.register.review.teamCount', {
-                                  count: toPersianDigits(
-                                    teamMemberNames.filter((name) => name.trim().length > 0).length,
-                                  ),
-                                })
-                              : t('business.register.review.none')
-                          }
-                        />
-                      )}
-                      {workMode === 'salon' && salonCapacity && (
-                        <SummaryRow
-                          label={t('business.register.review.capacity')}
-                          value={t(
-                            `business.register.context.salonCapacityOptions.${salonCapacity}`,
-                          )}
-                        />
-                      )}
-                      <SummaryRow
-                        label={t('business.register.review.goal')}
-                        value={
-                          mainGoal
-                            ? t(`business.register.context.goalOptions.${mainGoal}`)
-                            : t('business.register.review.none')
-                        }
-                      />
-                      <SummaryRow
-                        label={t('business.register.review.category')}
-                        value={
-                          selectedProfiles.map((profile) => profile.label).join('، ') ||
-                          category ||
-                          t('business.register.review.none')
-                        }
-                      />
-                      <SummaryRow
-                        label={t('business.register.review.specialty')}
-                        value={
-                          specialties.length > 0
-                            ? specialtyLabels(categories, specialties)
-                            : t('business.register.review.none')
-                        }
-                      />
-                      <SummaryRow label={t('business.register.review.owner')} value={ownerName} />
-                      <SummaryRow
-                        label={t('business.register.review.phone')}
-                        value={toPersianDigits(normalizedPhone)}
-                        dir="ltr"
-                      />
-                      <SummaryRow
-                        label={t('business.register.review.services')}
-                        value={
-                          services.length > 0
-                            ? t('business.register.review.servicesCount', {
-                                count: toPersianDigits(services.length),
-                              })
-                            : t('business.register.review.none')
-                        }
-                      />
-                    </dl>
-
-                    {submitError && (
-                      <p className="flex items-center gap-1 text-sm text-danger" role="alert">
-                        {submitError}
-                      </p>
-                    )}
-
-                    <StepNav
-                      onBack={() => setStep('services')}
                       onNext={() => void handleSubmit()}
                       onSkip={() => void handleSubmit()}
                       nextLabel={t('business.register.submit')}
@@ -1613,12 +1096,12 @@ function RegisterSalonContent() {
             )}
 
             {/* Already have an account? */}
-            {step !== 'otp' && step !== 'profile' && (
+            {step !== 'otp' && (
               <p className="mt-6 shrink-0 pb-1 text-center text-sm text-muted">
                 {t('business.register.haveAccount')}{' '}
                 <Link
                   to="/auth"
-                  className="font-medium text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                  className="inline-flex min-h-10 items-center px-2 font-medium text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                 >
                   {t('business.register.signIn')}
                 </Link>
@@ -1646,6 +1129,17 @@ interface SuggestedService {
 
 const BUSINESS_PROFILES: readonly BusinessProfile[] = [
   {
+    key: 'barber',
+    label: 'آرایشگاه مردانه',
+    description: 'کوتاهی، اصلاح و استایل آقایان',
+    icon: BarberIcon,
+    specialties: [
+      { key: 'mens_haircut', label: 'کوتاهی مردانه' },
+      { key: 'beard', label: 'اصلاح صورت و ریش' },
+      { key: 'fade', label: 'فید و استایل' },
+    ],
+  },
+  {
     key: 'hair_salon',
     label: 'سالن مو و زیبایی',
     description: 'مو، رنگ، براشینگ و خدمات زیبایی',
@@ -1655,17 +1149,6 @@ const BUSINESS_PROFILES: readonly BusinessProfile[] = [
       { key: 'color', label: 'رنگ و مش' },
       { key: 'blowout', label: 'براشینگ' },
       { key: 'bridal', label: 'شینیون و عروس' },
-    ],
-  },
-  {
-    key: 'barber',
-    label: 'آرایشگاه مردانه',
-    description: 'کوتاهی، اصلاح و استایل آقایان',
-    icon: BarberIcon,
-    specialties: [
-      { key: 'mens_haircut', label: 'کوتاهی مردانه' },
-      { key: 'beard', label: 'اصلاح صورت و ریش' },
-      { key: 'fade', label: 'فید و استایل' },
     ],
   },
   {
@@ -1808,55 +1291,6 @@ const SERVICE_PRESETS_BY_PROFILE: Record<string, readonly string[]> = {
 };
 const ONBOARDING_SERVICE_PAGE_SIZE = 5;
 
-/** Large, touch-friendly choice used for the first adaptive onboarding question. */
-function ChoiceCard({
-  icon: Icon,
-  label,
-  description,
-  selected,
-  onSelect,
-  testId,
-}: {
-  icon: React.ComponentType<CategoryIconProps>;
-  label: string;
-  description: string;
-  selected: boolean;
-  onSelect: () => void;
-  testId?: string;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      data-testid={testId}
-      onClick={onSelect}
-      className={cn(
-        'flex min-h-[5.5rem] items-start gap-3 rounded-xl border-2 bg-elevated p-4 text-start text-text transition-colors duration-fast',
-        'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
-        selected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/60',
-      )}
-    >
-      <span
-        className={cn(
-          'flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary',
-          selected && 'bg-primary text-primary-contrast',
-        )}
-      >
-        <Icon className="size-5" aria-hidden="true" />
-      </span>
-      <span className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="font-bold">{label}</span>
-        <span className="text-xs leading-5 text-muted">{description}</span>
-      </span>
-      {selected ? (
-        <Check className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-      ) : (
-        <span className="size-4 shrink-0" aria-hidden="true" />
-      )}
-    </button>
-  );
-}
-
 /** A step heading: small accent icon chip + title + subtitle. */
 function StepHeading({
   icon,
@@ -1941,51 +1375,6 @@ function StepNav({
         </div>
       </div>
       <div className="register-step-nav-spacer" aria-hidden="true" />
-    </div>
-  );
-}
-
-/** A selectable brand-accent swatch (the default option carries no colour). */
-function AccentSwatch({
-  accentStyle,
-  selected,
-  onSelect,
-  label,
-}: {
-  accentStyle?: React.CSSProperties;
-  selected: boolean;
-  onSelect: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={selected}
-      aria-label={label}
-      title={label}
-      onClick={onSelect}
-      style={accentStyle}
-      className={cn(
-        'flex h-10 w-10 items-center justify-center rounded-pill border-2 transition-transform duration-fast ease-standard',
-        accentStyle ? 'bg-[var(--asset-from)]' : 'bg-surface',
-        selected ? 'scale-110 border-text' : 'border-border',
-        'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
-      )}
-    >
-      {selected && !accentStyle && <Check className="h-4 w-4 text-text" aria-hidden="true" />}
-    </button>
-  );
-}
-
-/** One labelled row in the confirmation summary list. */
-function SummaryRow({ label, value, dir }: { label: string; value: string; dir?: 'ltr' | 'rtl' }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <dt className="text-muted">{label}</dt>
-      <dd className="font-medium text-text" dir={dir}>
-        {value || '—'}
-      </dd>
     </div>
   );
 }

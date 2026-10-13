@@ -114,6 +114,19 @@ function addUtcDays(value: Date, days: number): Date {
 export class PlatformAdminService {
   constructor(private readonly prisma: PrismaClient) {}
 
+  async listSmsDeliveries(query: PlatformListQuery) {
+    const { page, limit, skip } = pageOf(query);
+    const where = {
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.search ? { phone: { contains: normalizePhone(query.search) } } : {}),
+    };
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.smsDelivery.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take: limit }),
+      this.prisma.smsDelivery.count({ where }),
+    ]);
+    return { data: rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString(), nextRetryAt: iso(row.nextRetryAt) })), meta: pageMeta(page, limit, total) };
+  }
+
   async isActiveAdmin(id: string): Promise<boolean> {
     const admin = await this.prisma.platformAdmin.findUnique({
       where: { id },
@@ -495,6 +508,9 @@ export class PlatformAdminService {
   async getDetail(resource: string, id: string) {
     let record: unknown;
     switch (resource) {
+      case 'sms-deliveries':
+        record = await this.prisma.smsDelivery.findUnique({ where: { id }, include: { history: { orderBy: { createdAt: 'asc' } } } });
+        break;
       case 'salons':
         record = await this.getSalon(id);
         break;

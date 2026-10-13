@@ -244,6 +244,7 @@ describe('AuthService', () => {
       expect(otpProvider.sendOtp).toHaveBeenCalledWith(
         '09123456789',
         expect.stringMatching(/^\d{4}$/),
+        { expiresAt: expect.any(Date) },
       );
       expect(smsProvider.send).not.toHaveBeenCalled();
       expect(prisma.otp.create).toHaveBeenCalledWith({

@@ -54,8 +54,8 @@ html.ara-scroll-android .ara-scroll-landing-footer {
   position: relative;
   width: 100%;
   min-height: 100%;
-  overflow-x: hidden;
-  overscroll-behavior-y: none;
+  overflow-x: clip;
+  overscroll-behavior-y: auto;
   background:
     radial-gradient(circle at 14% 7%, rgba(119, 167, 255, 0.11), transparent 30rem),
     radial-gradient(circle at 78% 31%, rgba(45, 224, 190, 0.08), transparent 34rem),
@@ -77,7 +77,11 @@ html.ara-scroll-android .ara-scroll-landing-footer {
 .ara-scroll-main {
   position: relative;
   isolation: isolate;
-  overflow: hidden;
+  overflow: clip;
+}
+
+@media (max-width: 63.9375rem) {
+  html:has(.ara-scroll-page) { scroll-snap-type: none; }
 }
 
 .ara-scroll-main::before {
@@ -1263,7 +1267,7 @@ html.ara-scroll-android .ara-scroll-landing-footer {
   background: var(--ara-scroll-teal);
   box-shadow: 0 14px 28px color-mix(in srgb, var(--ara-scroll-teal) 22%, transparent);
   color: #ffffff;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 950;
   text-align: center;
   transition:
@@ -2389,7 +2393,7 @@ html.ara-scroll-android .ara-scroll-landing-footer {
   .ara-scroll-hero-copy > p {
     max-width: 530px;
     margin: 16px auto 0;
-    font-size: 12px;
+    font-size: 14px;
     line-height: 1.95;
   }
 
@@ -2401,14 +2405,14 @@ html.ara-scroll-android .ara-scroll-landing-footer {
   .ara-scroll-button {
     min-height: 44px;
     padding-inline: 14px;
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .ara-scroll-hero-trust {
     justify-content: center;
     gap: 7px 12px;
     margin-top: 15px;
-    font-size: 9px;
+    font-size: 11px;
   }
 
   .ara-scroll-hero-visual {
@@ -2525,7 +2529,7 @@ html.ara-scroll-android .ara-scroll-landing-footer {
   }
 
   .ara-scroll-final-cta p {
-    font-size: 12px;
+    font-size: 14px;
   }
 
   .ara-scroll-progress {
@@ -2546,7 +2550,7 @@ html.ara-scroll-android .ara-scroll-landing-footer {
   }
 
   .ara-scroll-hero-copy > p {
-    font-size: 11px;
+    font-size: 14px;
   }
 
   .ara-scroll-hero-actions {
@@ -2556,7 +2560,7 @@ html.ara-scroll-android .ara-scroll-landing-footer {
   .ara-scroll-button {
     min-height: 44px;
     padding-inline: 11px;
-    font-size: 9px;
+    font-size: 12px;
   }
 
   .ara-scroll-hero-trust span:last-child {
@@ -2759,11 +2763,11 @@ html.ara-scroll-android .ara-scroll-landing-footer {
   }
 
   .ara-scroll-feature-copy > p {
-    font-size: 11px;
+    font-size: 14px;
   }
 
   .ara-scroll-feature-copy li {
-    font-size: 9px;
+    font-size: 12px;
   }
 
   .ara-scroll-final-cta {
@@ -7287,8 +7291,8 @@ html[data-theme='light'] .ara-calendar-hero-scene {
   .ara-scroll-header-start {
     min-height: 44px;
     gap: 4px;
-    padding-inline: 9px;
-    font-size: 9px;
+    padding-inline: 8px;
+    font-size: 11px;
   }
 
   .ara-scroll-header-start svg {
@@ -7298,8 +7302,8 @@ html[data-theme='light'] .ara-calendar-hero-scene {
 
   .ara-scroll-login {
     min-height: 44px;
-    padding-inline: 11px;
-    font-size: 9px;
+    padding-inline: 9px;
+    font-size: 11px;
   }
 
   .ara-scroll-theme-toggle {

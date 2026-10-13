@@ -59,6 +59,7 @@ psql -v ON_ERROR_STOP=1 -f backend/prisma/migrations/00000000000025_qa_workflows
 psql -v ON_ERROR_STOP=1 -f backend/prisma/migrations/00000000000026_platform_admin_customer_lifecycle/migration.sql
 psql -v ON_ERROR_STOP=1 -f backend/prisma/migrations/00000000000027_staff_phone_per_salon/migration.sql
 psql -v ON_ERROR_STOP=1 -f backend/prisma/migrations/00000000000028_booking_start_offset_days/migration.sql
+psql -v ON_ERROR_STOP=1 -f backend/prisma/migrations/00000000000033_sms_delivery_tracking/migration.sql
 
 # 5. Apply the occupancy range + exclusion/CHECK constraints (idempotent).
 echo "[backend] applying exclusion constraints (idempotent)..."

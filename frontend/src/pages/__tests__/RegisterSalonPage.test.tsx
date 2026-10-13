@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import '../../i18n';
+import { authApi, customerApi, registrationApi } from '../../api/client';
 
 vi.mock('../../api/client', () => {
   class ApiError extends Error {
@@ -14,6 +15,10 @@ vi.mock('../../api/client', () => {
     authApi: {
       requestOtp: vi.fn(),
       verifyOtp: vi.fn(),
+    },
+    customerApi: {
+      getProfile: vi.fn(),
+      updateProfile: vi.fn(),
     },
     registrationApi: {
       registerSalon: vi.fn(),
@@ -45,11 +50,6 @@ function renderRegister() {
 async function reachServicesStep() {
   renderRegister();
 
-  fireEvent.click(screen.getByTestId('work-mode-starting'));
-  fireEvent.click(screen.getByRole('button', { name: 'ادامه' }));
-  await screen.findByRole('heading', { level: 1, name: 'برای شروع چه شرایطی دارید؟' });
-  fireEvent.click(screen.getByRole('button', { name: 'رد کردن این مرحله' }));
-
   await screen.findByRole('heading', { level: 1, name: 'حوزه کاری‌تان چیست؟' });
   fireEvent.click(screen.getByRole('button', { name: 'رد کردن این مرحله' }));
 
@@ -58,6 +58,7 @@ async function reachServicesStep() {
   fireEvent.change(screen.getByLabelText('نام شما (مدیر سالن)'), {
     target: { value: 'سارا محمدی' },
   });
+  fireEvent.change(screen.getByLabelText('شماره موبایل'), { target: { value: '09123456789' } });
   fireEvent.click(screen.getByRole('button', { name: 'ادامه' }));
 
   return screen.findByTestId('register-services-step');
@@ -66,11 +67,6 @@ async function reachServicesStep() {
 async function reachInfoStep() {
   renderRegister();
 
-  fireEvent.click(screen.getByTestId('work-mode-starting'));
-  fireEvent.click(screen.getByRole('button', { name: 'ادامه' }));
-  await screen.findByRole('heading', { level: 1, name: 'برای شروع چه شرایطی دارید؟' });
-  fireEvent.click(screen.getByRole('button', { name: 'رد کردن این مرحله' }));
-
   await screen.findByRole('heading', { level: 1, name: 'حوزه کاری‌تان چیست؟' });
   fireEvent.click(screen.getByRole('button', { name: 'رد کردن این مرحله' }));
 
@@ -78,6 +74,7 @@ async function reachInfoStep() {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
   window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
 });
 
@@ -87,6 +84,49 @@ afterEach(() => {
 });
 
 describe('RegisterSalonPage services step', () => {
+  it('registers after four concise steps without requiring a service or repeated phone entry', async () => {
+    await reachServicesStep();
+    expect(screen.getByText('مرحله ۳ از ۴')).toBeInTheDocument();
+    vi.mocked(registrationApi.registerSalon).mockResolvedValueOnce({} as never);
+    vi.mocked(authApi.requestOtp).mockResolvedValueOnce({} as never);
+
+    fireEvent.click(screen.getByRole('button', { name: 'بعداً تکمیل می‌کنم' }));
+
+    expect(await screen.findByText('مرحله ۴ از ۴')).toBeInTheDocument();
+    expect(registrationApi.registerSalon).toHaveBeenCalledWith(expect.objectContaining({
+      phone: '09123456789',
+      services: [],
+    }));
+  });
+
+  it('retries OTP delivery without registering the salon again', async () => {
+    await reachServicesStep();
+    vi.mocked(registrationApi.registerSalon).mockResolvedValueOnce({} as never);
+    vi.mocked(authApi.requestOtp)
+      .mockRejectedValueOnce(new Error('temporary outage'))
+      .mockResolvedValueOnce({} as never);
+
+    fireEvent.click(screen.getByRole('button', { name: 'بعداً تکمیل می‌کنم' }));
+    expect(await screen.findByText('ارسال کد ناموفق بود — دوباره تلاش کنید.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'بعداً تکمیل می‌کنم' }));
+
+    expect(await screen.findByText('مرحله ۴ از ۴')).toBeInTheDocument();
+    expect(registrationApi.registerSalon).toHaveBeenCalledTimes(1);
+    expect(authApi.requestOtp).toHaveBeenCalledTimes(2);
+  });
+
+  it('reuses the verified owner name for an empty customer profile', async () => {
+    await reachServicesStep();
+    vi.mocked(registrationApi.registerSalon).mockResolvedValueOnce({} as never);
+    vi.mocked(authApi.requestOtp).mockResolvedValueOnce({ devOtp: '1234' } as never);
+    vi.mocked(authApi.verifyOtp).mockResolvedValueOnce({ accessToken: 'test-token' } as never);
+    vi.mocked(customerApi.getProfile).mockResolvedValueOnce({ customer: { fullName: null } } as never);
+    vi.mocked(customerApi.updateProfile).mockResolvedValueOnce({} as never);
+
+    fireEvent.click(screen.getByRole('button', { name: 'بعداً تکمیل می‌کنم' }));
+
+    await waitFor(() => expect(customerApi.updateProfile).toHaveBeenCalledWith('سارا محمدی'));
+  });
   it('lets the user go back from the salon information step', async () => {
     await reachInfoStep();
 
@@ -107,15 +147,16 @@ describe('RegisterSalonPage services step', () => {
       target: { value: 'کوتاهی ویژه' },
     });
     const durationControl = within(addForm).getByRole('group', { name: /مدت/ });
-    const increaseDuration = within(durationControl).getByRole('button', { name: 'افزایش ۳۰ دقیقه' });
-    const decreaseDuration = within(durationControl).getByRole('button', { name: 'کاهش ۳۰ دقیقه' });
+    const increaseDuration = within(durationControl).getByRole('button', { name: 'افزایش ۱۵ دقیقه' });
+    const decreaseDuration = within(durationControl).getByRole('button', { name: 'کاهش ۱۵ دقیقه' });
     fireEvent.click(increaseDuration);
-    expect(within(durationControl).getByText('۳۰')).toBeInTheDocument();
+    expect(within(durationControl).getByText('۴۵')).toBeInTheDocument();
     fireEvent.click(increaseDuration);
     expect(within(durationControl).getByText('۶۰')).toBeInTheDocument();
     fireEvent.click(decreaseDuration);
-    expect(within(durationControl).getByText('۳۰')).toBeInTheDocument();
+    expect(within(durationControl).getByText('۴۵')).toBeInTheDocument();
     fireEvent.change(within(addForm).getByLabelText(/هزینه/), { target: { value: '۲۵۰۰۰۰' } });
+    expect(within(addForm).getByLabelText(/هزینه/)).toHaveValue('250,000');
     fireEvent.submit(addForm);
 
     expect(await within(step).findByText('کوتاهی ویژه')).toBeInTheDocument();
@@ -149,17 +190,16 @@ describe('RegisterSalonPage services step', () => {
     expect(screen.getByRole('button', { name: 'ویرایش کوتاهی VIP' })).toBeInTheDocument();
   });
 
-  it('keeps suggested services in a fixed scroll area and filters them by search', async () => {
+  it('uses page scroll for suggested services and filters them by search', async () => {
     const step = await reachServicesStep();
     const search = within(step).getByRole('searchbox', {
       name: 'جست‌وجوی خدمت پیشنهادی',
     });
     const list = within(step).getByTestId('suggested-services-list');
 
-    expect(list).toHaveClass('overflow-y-auto');
-    expect(list.parentElement).toHaveClass('h-[48rem]', 'shrink-0');
-    expect(list).toHaveClass('min-h-[40rem]');
-    expect(within(list).getByRole('checkbox', { name: 'کراتین مو' })).toBeInTheDocument();
+    expect(list).not.toHaveClass('overflow-y-auto');
+    expect(list.parentElement).not.toHaveClass('h-[48rem]');
+    expect(within(list).queryByRole('checkbox', { name: 'کراتین مو' })).not.toBeInTheDocument();
 
     fireEvent.change(search, { target: { value: 'کراتین' } });
 

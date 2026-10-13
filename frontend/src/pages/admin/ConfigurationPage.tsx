@@ -1,3 +1,4 @@
+import { formatPriceInput, parsePriceInput } from '../../components/ui/price-input';
 import { useCallback, useEffect, useMemo, useState, FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -314,7 +315,7 @@ function ServicesSection({
     onAdd({
       name: trimmed,
       durationMinutes: Number.parseInt(duration, 10) || 0,
-      priceRial: Number.parseInt(price, 10) || 0,
+      priceRial: parsePriceInput(price),
     });
     setName('');
     setDuration('');
@@ -395,7 +396,7 @@ function ServicesSection({
             inputMode="numeric"
             dir="ltr"
             value={price}
-            onChange={(e) => setPrice(e.target.value)}
+            onChange={(e) => setPrice(formatPriceInput(e.target.value))}
             containerClassName="sm:flex-1"
           />
         </div>

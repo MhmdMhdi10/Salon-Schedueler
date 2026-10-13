@@ -95,6 +95,27 @@ export class SmsIrAdapter implements SmsProvider {
     }
   }
 
+  async getDeliveryStatus(providerId: string): Promise<'delivered' | 'failed' | 'pending' | 'unknown'> {
+    if (!/^\d+$/.test(providerId)) return 'unknown';
+    try {
+      const response = await fetchWithTimeout(
+        `${this.baseUrl}/v1/send/${providerId}`,
+        { headers: { Accept: 'application/json', 'x-api-key': this.apiKey } },
+        this.timeoutMs,
+      );
+      if (!response.ok) return 'unknown';
+      const report = (await response.json()) as { status?: number; data?: { deliveryState?: number } };
+      if (report.status !== 1) return 'unknown';
+      const state = report.data?.deliveryState;
+      if (state === 1) return 'delivered';
+      if (state === 2 || state === 4 || state === 6 || state === 7) return 'failed';
+      if (state === 3 || state === 5) return 'pending';
+      return 'unknown';
+    } catch {
+      return 'unknown';
+    }
+  }
+
   private ok(target: string, providerId: string): SmsDeliveryResult {
     logDeliveryOutcome({ provider: 'smsir', target, ok: true, providerId });
     return { ok: true, providerId };

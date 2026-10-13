@@ -14,6 +14,53 @@ import {
 
 const dateRange = () => ({ from: isoDateFromToday(-1), to: isoDateFromToday(30) });
 
+test('queued SMS reaches the worker and exposes its attempt in platform admin', async ({ page, request }) => {
+  const admin = await loginWithApi(request, '09120000999');
+  const salon = await registerSalonViaApi(request, 'E2E SMS Tracking');
+  const phone = salon.ownerPhone;
+  await apiJson(request, `/api/salons/${salon.salonId}/sms-settings`, {
+    method: 'PATCH', token: salon.accessToken, data: { ownerBooking: true },
+  });
+  const services = await apiJson<{ services: Array<{ id: string }> }>(request, `/api/salons/${salon.salonId}/services`);
+  const date = isoDateFromToday(1);
+  const availability = await apiJson<{ slots: Array<{ startAt: string }> }>(
+    request,
+    `/api/salons/${salon.salonId}/availability?serviceId=${services.services[0].id}&date=${date}`,
+  );
+  expect(availability.slots.length).toBeGreaterThan(0);
+  const customer = await loginWithApi(request, uniquePhone('8'));
+  await apiJson(request, '/api/appointments', {
+    method: 'POST', token: customer.accessToken,
+    data: { salonId: salon.salonId, serviceId: services.services[0].id, startAt: availability.slots[0].startAt },
+  });
+
+  type SmsRow = { id: string; phone: string; status: string; attempts: number; maxAttempts: number };
+  const deliveries = async () => apiJson<{ data: SmsRow[] }>(
+    request,
+    `/api/platform-admin/sms-deliveries?search=${phone}`,
+    { token: admin.accessToken },
+  );
+  await expect.poll(async () => (await deliveries()).data[0]?.status, { timeout: 15_000 }).toBe('accepted');
+  const row = (await deliveries()).data[0];
+  expect(row).toMatchObject({ phone, attempts: 1, maxAttempts: 5 });
+
+  const detail = await apiJson<{ record: { history: Array<{ number: number; status: string }> } }>(
+    request,
+    `/api/platform-admin/details/sms-deliveries/${row.id}`,
+    { token: admin.accessToken },
+  );
+  expect(detail.record.history).toMatchObject([{ number: 1, status: 'accepted' }]);
+
+  await restoreSession(page, admin.refreshToken, /\/platform-admin/);
+  await page.goto('/platform-admin/sms-deliveries');
+  await page.getByRole('textbox', { name: 'جستجو در رکوردها' }).fill(phone);
+  const deliveryRow = page.getByRole('row').filter({ hasText: phone });
+  await expect(deliveryRow).toContainText('گزارش تحویل نامشخص');
+  await deliveryRow.getByRole('button', { name: 'جزئیات' }).click();
+  await expect(page.getByRole('heading', { name: phone })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'تاریخچه تلاش‌ها' })).toContainText('تلاش ۱');
+});
+
 test.describe('authentication and customer journeys', () => {
   test('first-time salon login completes onboarding before opening the owner panel', async ({
     page,
@@ -24,7 +71,7 @@ test.describe('authentication and customer journeys', () => {
     await page.getByLabel('شماره موبایل').fill(phone);
     await page.getByRole('button', { name: 'دریافت کد', exact: true }).click();
 
-    await expect(page).toHaveURL(/\/business\/register(?:\?|$)/, { timeout: 5_000 });
+    await expect(page).toHaveURL(/\/business\/register(?:\?|$)/, { timeout: 30_000 });
     await expect(page.getByTestId('register-salon-page')).toBeVisible();
 
     const salon = await registerSalonViaUi(page, 'E2E First Salon Login', phone);

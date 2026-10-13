@@ -1,3 +1,4 @@
+import { formatPriceInput, parsePriceInput } from '../../components/ui/price-input';
 import { cloneElement, isValidElement, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -51,6 +52,7 @@ import {
   type PlatformPaymentRow,
   type PlatformQrScanRow,
   type PlatformSalonRow,
+  type PlatformSmsDeliveryRow,
   type PlatformServiceRow,
   type PlatformSalonResourceRow,
   type PlatformStaffRow,
@@ -78,6 +80,7 @@ const dateFormatter = new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium' });
 const dateTimeFormatter = new Intl.DateTimeFormat('fa-IR', { dateStyle: 'short', timeStyle: 'short' });
 
 const STATUS_LABEL: Record<string, string> = {
+  queued: 'در صف', sending: 'در حال ارسال', retrying: 'در انتظار تلاش دوباره', accepted: 'پذیرفته‌شده توسط سرویس‌دهنده', delivered: 'تحویل‌شده به گیرنده',
   active: 'فعال', trial: 'آزمایشی', grace: 'مهلت تمدید', expired: 'منقضی', suspended: 'تعلیق‌شده', inactive: 'غیرفعال', deleted: 'حذف‌شده',
   pending: 'در انتظار', held: 'موقت', confirmed: 'تأییدشده', completed: 'انجام‌شده', cancelled: 'لغوشده', no_show: 'عدم مراجعه',
   received: 'دریافت‌شده', contacted: 'تماس گرفته شد', in_print: 'در حال چاپ', shipped: 'ارسال‌شده',
@@ -93,10 +96,10 @@ function label(value: string | null | undefined): string {
 }
 
 function tagColor(value: string | null | undefined): string {
-  if (['active', 'paid', 'confirmed', 'completed', 'fulfilled'].includes(value ?? '')) return 'green';
-  if (['pending', 'trial', 'grace', 'held', 'waiting', 'notified', 'received', 'contacted', 'open', 'triaged', 'normal'].includes(value ?? '')) return 'gold';
+  if (['active', 'paid', 'confirmed', 'completed', 'fulfilled', 'delivered'].includes(value ?? '')) return 'green';
+  if (['pending', 'trial', 'grace', 'held', 'waiting', 'notified', 'received', 'contacted', 'open', 'triaged', 'normal', 'retrying'].includes(value ?? '')) return 'gold';
   if (['expired', 'suspended', 'inactive', 'deleted', 'cancelled', 'no_show', 'failed', 'urgent'].includes(value ?? '')) return 'red';
-  if (['mobile', 'web', 'bot', 'annual', 'Owner'].includes(value ?? '')) return 'blue';
+  if (['mobile', 'web', 'bot', 'annual', 'Owner', 'queued', 'sending', 'accepted'].includes(value ?? '')) return 'blue';
   return 'default';
 }
 
@@ -505,7 +508,7 @@ export function PlatformDashboardPage() {
     <div className="platform-admin-page">
       <PageHeader
         title="مرکز عملیات"
-        subtitle="وضعیت لحظه‌ای سالن‌ها، رزروها، درآمد و نقاط نیازمند پیگیری در کل آرا."
+        subtitle="نمای کلی سالن‌ها، نوبت‌ها و درآمد"
         onRefresh={load}
         loading={status === 'loading'}
       />
@@ -556,7 +559,7 @@ export function PlatformSalonsPage() {
   const [editing, setEditing] = useState<PlatformSalonRow | undefined>();
   const [refreshToken, setRefreshToken] = useState(0);
   return <>
-  <ResourceListPage resource="salons" refreshToken={refreshToken} title="سالن‌ها" subtitle="همه tenantهای آرا، وضعیت اشتراک، مالک و سلامت عملیاتی هر سالن." loader={loader} createAction={<Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setEditorOpen(true); }}>ثبت سالن</Button>} statusOptions={[{ value: 'active', label: 'فعال' }, { value: 'suspended', label: 'تعلیق‌شده' }, { value: 'trial', label: 'آزمایشی' }, { value: 'expired', label: 'منقضی' }]} columns={[
+  <ResourceListPage resource="salons" refreshToken={refreshToken} title="سالن‌ها" subtitle="سالن‌ها و وضعیت اشتراک آن‌ها" loader={loader} createAction={<Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setEditorOpen(true); }}>ثبت سالن</Button>} statusOptions={[{ value: 'active', label: 'فعال' }, { value: 'suspended', label: 'تعلیق‌شده' }, { value: 'trial', label: 'آزمایشی' }, { value: 'expired', label: 'منقضی' }]} columns={[
     { key: 'name', title: 'سالن', render: (row: PlatformSalonRow) => <div className="platform-admin-table-name"><strong dir="auto">{row.name}</strong><span>{row.timezone} · {row.qrToken}</span></div> },
     { key: 'owner', title: 'مالک', render: (row) => <div className="platform-admin-table-name"><strong>{personName(row.owner?.fullName, row.owner?.phone)}</strong><span dir="ltr">{row.owner?.phone ?? 'بدون تلفن'}</span></div> },
     { key: 'subscription', title: 'اشتراک', render: (row) => row.subscription ? <div className="platform-admin-table-name"><StatusTag value={row.subscription.status} /><span>{label(row.subscription.planKind)} تا {dateLabel(row.subscription.expiresAt)}</span></div> : '—' },
@@ -581,7 +584,7 @@ export function PlatformCustomersPage() {
   const [editing, setEditing] = useState<PlatformCustomerRow | undefined>();
   const [refreshToken, setRefreshToken] = useState(0);
   return <>
-  <ResourceListPage resource="customers" refreshToken={refreshToken} title="مشتری‌ها" subtitle="مدیریت کامل کاربران نهایی؛ ویرایش، مسدودسازی، رفع مسدودی و حذف نرم با حفظ تاریخچه." loader={loader} createAction={<Button type="primary" icon={<UserAddOutlined />} onClick={() => { setEditing(undefined); setEditorOpen(true); }}>ثبت مشتری</Button>} statusOptions={[{ value: 'active', label: 'فعال' }, { value: 'blocked', label: 'مسدود' }, { value: 'deleted', label: 'حذف‌شده' }]} columns={[
+  <ResourceListPage resource="customers" refreshToken={refreshToken} title="مشتری‌ها" subtitle="مشتری‌ها و وضعیت حسابشان" loader={loader} createAction={<Button type="primary" icon={<UserAddOutlined />} onClick={() => { setEditing(undefined); setEditorOpen(true); }}>ثبت مشتری</Button>} statusOptions={[{ value: 'active', label: 'فعال' }, { value: 'blocked', label: 'مسدود' }, { value: 'deleted', label: 'حذف‌شده' }]} columns={[
     { key: 'customer', title: 'مشتری', render: (row: PlatformCustomerRow) => <div className="platform-admin-table-name"><strong>{personName(row.fullName)}</strong><span dir="ltr">{row.phone}</span></div> },
     { key: 'appointments', title: 'نوبت‌ها', render: (row) => faNumber.format(row._count.appointments) },
     { key: 'waitlist', title: 'صف انتظار', render: (row) => faNumber.format(row._count.waitlistEntries) },
@@ -608,7 +611,7 @@ export function PlatformStaffPage() {
   const [editing, setEditing] = useState<PlatformStaffRow | undefined>();
   const [refreshToken, setRefreshToken] = useState(0);
   return <>
-  <ResourceListPage resource="staff" refreshToken={refreshToken} title="تیم سالن‌ها" subtitle="مدیریت اعضای تیم در سراسر tenantها؛ ویرایش نقش، کنترل ورود، حذف نرم و بازیابی." loader={loader} createAction={<Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setEditorOpen(true); }}>افزودن عضو تیم</Button>} statusOptions={[{ value: 'active', label: 'فعال' }, { value: 'inactive', label: 'غیرفعال' }, { value: 'deleted', label: 'حذف‌شده' }, { value: 'Owner', label: 'مالک' }, { value: 'Admin', label: 'ادمین' }, { value: 'Stylist', label: 'عضو تیم' }]} columns={[
+  <ResourceListPage resource="staff" refreshToken={refreshToken} title="تیم سالن‌ها" subtitle="اعضای تیم و دسترسی آن‌ها" loader={loader} createAction={<Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setEditorOpen(true); }}>افزودن عضو تیم</Button>} statusOptions={[{ value: 'active', label: 'فعال' }, { value: 'inactive', label: 'غیرفعال' }, { value: 'deleted', label: 'حذف‌شده' }, { value: 'Owner', label: 'مالک' }, { value: 'Admin', label: 'ادمین' }, { value: 'Stylist', label: 'عضو تیم' }]} columns={[
     { key: 'staff', title: 'عضو تیم', render: (row: PlatformStaffRow) => <div className="platform-admin-table-name"><strong>{row.fullName}</strong><span dir="ltr">{row.phone ?? 'بدون ورود OTP'}</span></div> },
     { key: 'salon', title: 'سالن', render: (row) => row.salon.name },
     { key: 'role', title: 'نقش', render: (row) => <StatusTag value={row.role}>{label(row.role)}</StatusTag> },
@@ -648,7 +651,7 @@ function PlatformServiceEditor({ row, open, onClose, onSaved }: { row?: Platform
   }, [open, row?.id, row?.name, row?.durationMin, row?.priceRial, row?.salonId]);
   const submit = async () => {
     const durationMinutes = Number(duration);
-    const priceRial = Number(price);
+    const priceRial = parsePriceInput(price);
     if (!name.trim() || !salonId) { setError('نام خدمت و سالن را وارد کنید.'); return; }
     if (!Number.isInteger(durationMinutes) || durationMinutes < 5 || durationMinutes > 480) { setError('مدت خدمت باید بین ۵ تا ۴۸۰ دقیقه باشد.'); return; }
     if (!Number.isInteger(priceRial) || priceRial < 0) { setError('قیمت معتبر نیست.'); return; }
@@ -663,7 +666,7 @@ function PlatformServiceEditor({ row, open, onClose, onSaved }: { row?: Platform
     {!row && <FormField label="سالن"><Select showSearch optionFilterProp="label" loading={loadingSalons} value={salonId || undefined} onChange={setSalonId} options={salons.map((salon) => ({ value: salon.id, label: salon.name }))} placeholder="انتخاب سالن" /></FormField>}
     <FormField label="نام خدمت"><Input value={name} onChange={(event) => setName(event.target.value)} maxLength={160} autoFocus /></FormField>
     <FormField label="مدت (دقیقه)"><Input dir="ltr" type="number" min={5} max={480} value={duration} onChange={(event) => setDuration(event.target.value)} /></FormField>
-    <FormField label="قیمت (ریال)"><Input dir="ltr" type="number" min={0} value={price} onChange={(event) => setPrice(event.target.value)} /></FormField>
+    <FormField label="قیمت (ریال)"><Input dir="ltr" inputMode="numeric" value={price} onChange={(event) => setPrice(formatPriceInput(event.target.value))} /></FormField>
   </CrudModal>;
 }
 
@@ -710,7 +713,7 @@ export function PlatformServicesPage() {
   const [editing, setEditing] = useState<PlatformServiceRow | undefined>();
   const [refreshToken, setRefreshToken] = useState(0);
   return <>
-    <ResourceListPage resource="services" refreshToken={refreshToken} title="خدمات سالن‌ها" subtitle="مدیریت متمرکز کاتالوگ خدمات، مدت، قیمت و وضعیت انتشار در همه سالن‌ها." loader={loader} createAction={<Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setEditorOpen(true); }}>ثبت خدمت</Button>} statusOptions={[{ value: 'active', label: 'فعال' }, { value: 'deleted', label: 'حذف‌شده' }]} columns={[
+    <ResourceListPage resource="services" refreshToken={refreshToken} title="خدمات سالن‌ها" subtitle="خدمات، مدت و قیمت در سالن‌ها" loader={loader} createAction={<Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setEditorOpen(true); }}>ثبت خدمت</Button>} statusOptions={[{ value: 'active', label: 'فعال' }, { value: 'deleted', label: 'حذف‌شده' }]} columns={[
       { key: 'service', title: 'خدمت', render: (row: PlatformServiceRow) => <div className="platform-admin-table-name"><strong>{row.name}</strong><span>{row.salon.name} · {faNumber.format(row.durationMin)} دقیقه</span></div> },
       { key: 'price', title: 'قیمت', render: (row) => `${formatToman(row.priceRial)} تومان` },
       { key: 'staff', title: 'ارائه‌دهنده', render: (row) => faNumber.format(row._count.serviceStaff) },
@@ -726,11 +729,11 @@ export function PlatformServicesPage() {
 }
 
 export function PlatformChairsPage() {
-  return <PlatformSalonResourcePage resource="chairs" title="صندلی‌ها" subtitle="ظرفیت فیزیکی و سیار سالن‌ها را از مرکز مدیریت کنترل کنید." />;
+  return <PlatformSalonResourcePage resource="chairs" title="صندلی‌ها" subtitle="ظرفیت سالن‌ها" />;
 }
 
 export function PlatformEquipmentPage() {
-  return <PlatformSalonResourcePage resource="equipment" title="تجهیزات" subtitle="تجهیزات ثبت‌شده سالن‌ها؛ حذف نرم، بازیابی و ویرایش نام بدون ازبین‌بردن تاریخچه." />;
+  return <PlatformSalonResourcePage resource="equipment" title="تجهیزات" subtitle="تجهیزات سالن‌ها" />;
 }
 
 function PlatformSalonResourcePage({ resource, title, subtitle }: { resource: 'chairs' | 'equipment'; title: string; subtitle: string }) {
@@ -762,7 +765,7 @@ export function PlatformAdminsPage() {
   const [editing, setEditing] = useState<PlatformAdminRow | undefined>();
   const [refreshToken, setRefreshToken] = useState(0);
   return <>
-    <ResourceListPage resource="platform-admins" refreshToken={refreshToken} title="مدیران پلتفرم" subtitle="مدیریت مدیران سراسری با جلوگیری از حذف خودکار آخرین مدیر فعال." loader={loader} createAction={<Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setEditorOpen(true); }}>افزودن مدیر</Button>} statusOptions={[{ value: 'active', label: 'فعال' }, { value: 'inactive', label: 'غیرفعال' }]} columns={[
+    <ResourceListPage resource="platform-admins" refreshToken={refreshToken} title="مدیران پلتفرم" subtitle="مدیران و دسترسی پلتفرم" loader={loader} createAction={<Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setEditorOpen(true); }}>افزودن مدیر</Button>} statusOptions={[{ value: 'active', label: 'فعال' }, { value: 'inactive', label: 'غیرفعال' }]} columns={[
       { key: 'admin', title: 'مدیر', render: (row: PlatformAdminRow) => <div className="platform-admin-table-name"><strong>{row.fullName}</strong><span dir="ltr">{row.phone}</span></div> },
       { key: 'role', title: 'نقش', render: (row) => <StatusTag value="Owner">{row.role}</StatusTag> },
       { key: 'status', title: 'وضعیت', render: (row) => <StatusTag value={row.active ? 'active' : 'inactive'} /> },
@@ -846,7 +849,7 @@ export function PlatformAppointmentsPage() {
   const [editing, setEditing] = useState<PlatformAppointmentRow | undefined>();
   const [refreshToken, setRefreshToken] = useState(0);
   return <>
-  <ResourceListPage resource="appointments" refreshToken={refreshToken} title="نوبت‌ها" subtitle="ثبت نوبت حضوری، ویرایش یادداشت، چرخه تأیید و لغو امن با حفظ تاریخچه." loader={loader} createAction={<Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setEditorOpen(true); }}>ثبت نوبت حضوری</Button>} statusOptions={['pending', 'held', 'confirmed', 'completed', 'cancelled', 'no_show'].map((value) => ({ value, label: label(value) }))} columns={[
+  <ResourceListPage resource="appointments" refreshToken={refreshToken} title="نوبت‌ها" subtitle="نوبت‌ها و وضعیت آن‌ها" loader={loader} createAction={<Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setEditorOpen(true); }}>ثبت نوبت حضوری</Button>} statusOptions={['pending', 'held', 'confirmed', 'completed', 'cancelled', 'no_show'].map((value) => ({ value, label: label(value) }))} columns={[
     { key: 'time', title: 'زمان', render: (row: PlatformAppointmentRow) => <div className="platform-admin-table-name"><strong>{dateLabel(row.startAt, true)}</strong><span>تا {dateLabel(row.endAt, true)}</span></div> },
     { key: 'customer', title: 'مشتری', render: (row) => <div className="platform-admin-table-name"><strong>{personName(row.customer.fullName, row.customer.phone)}</strong><span dir="ltr">{row.customer.phone}</span></div> },
     { key: 'salon', title: 'سالن / خدمت', render: (row) => <div className="platform-admin-table-name"><strong>{row.salon.name}</strong><span>{row.service.name} · {formatToman(row.service.priceRial)} تومان</span></div> },
@@ -894,7 +897,7 @@ export function PlatformSubscriptionsPage() {
   const [editing, setEditing] = useState<PlatformSubscriptionRow | undefined>();
   const [refreshToken, setRefreshToken] = useState(0);
   return <>
-  <ResourceListPage resource="subscriptions" refreshToken={refreshToken} title="اشتراک‌ها" subtitle="ویرایش lifecycle و انقضا از اینجا؛ پرداخت‌های ثبت‌شده و تاریخچه مالی حذف نمی‌شوند." loader={loader} statusOptions={['trial', 'active', 'grace', 'expired'].map((value) => ({ value, label: label(value) }))} columns={[
+  <ResourceListPage resource="subscriptions" refreshToken={refreshToken} title="اشتراک‌ها" subtitle="اشتراک‌ها و تاریخ انقضا" loader={loader} statusOptions={['trial', 'active', 'grace', 'expired'].map((value) => ({ value, label: label(value) }))} columns={[
     { key: 'salon', title: 'سالن', render: (row: PlatformSubscriptionRow) => row.salon.name },
     { key: 'plan', title: 'پلن', render: (row) => label(row.planKind) },
     { key: 'status', title: 'وضعیت', render: (row) => <StatusTag value={row.status} /> },
@@ -912,7 +915,7 @@ export function PlatformSubscriptionsPage() {
 export function PlatformPaymentsPage() {
   const loader = useCallback((options: PlatformListOptions) => platformAdminApi.listPayments(options), []);
   const confirm = usePlatformConfirm();
-  return <ResourceListPage resource="payments" title="پرداخت‌ها" subtitle="دفتر مالی یکپارچه؛ وضعیت قابل اصلاح برای reconciliation است، حذف رکورد مالی عمداً ممنوع است." loader={loader} statusOptions={['pending', 'paid', 'refunded', 'retained', 'failed'].map((value) => ({ value, label: label(value) }))} columns={[
+  return <ResourceListPage resource="payments" title="پرداخت‌ها" subtitle="پرداخت‌ها و وضعیت تسویه" loader={loader} statusOptions={['pending', 'paid', 'refunded', 'retained', 'failed'].map((value) => ({ value, label: label(value) }))} columns={[
     { key: 'kind', title: 'نوع', render: (row: PlatformPaymentRow) => <StatusTag value="web">{row.kind === 'appointment' ? 'رزرو' : 'اشتراک'}</StatusTag> },
     { key: 'salon', title: 'سالن', render: (row) => row.salon.name },
     { key: 'subject', title: 'شرح', render: (row) => <div className="platform-admin-table-name"><strong>{label(row.subject)}</strong><span>{row.customer ? personName(row.customer.fullName, row.customer.phone) : '—'}</span></div> },
@@ -929,7 +932,7 @@ export function PlatformPaymentsPage() {
 export function PlatformWaitlistPage() {
   const loader = useCallback((options: PlatformListOptions) => platformAdminApi.listWaitlist(options), []);
   const confirm = usePlatformConfirm();
-  return <ResourceListPage resource="waitlist" title="صف انتظار" subtitle="تقاضاهای بدون slot آزاد؛ وضعیت و لغو هر ورودی از همین فهرست قابل مدیریت است." loader={loader} statusOptions={['waiting', 'notified', 'fulfilled', 'cancelled'].map((value) => ({ value, label: label(value) }))} columns={[
+  return <ResourceListPage resource="waitlist" title="صف انتظار" subtitle="درخواست‌های منتظر وقت خالی" loader={loader} statusOptions={['waiting', 'notified', 'fulfilled', 'cancelled'].map((value) => ({ value, label: label(value) }))} columns={[
     { key: 'customer', title: 'مشتری', render: (row: PlatformWaitlistRow) => <div className="platform-admin-table-name"><strong>{personName(row.customer.fullName, row.customer.phone)}</strong><span dir="ltr">{row.customer.phone}</span></div> },
     { key: 'salon', title: 'سالن / خدمت', render: (row) => <div className="platform-admin-table-name"><strong>{row.salon.name}</strong><span>{row.service.name}</span></div> },
     { key: 'window', title: 'بازه مطلوب', render: (row) => `${dateLabel(row.windowStart, true)} – ${dateLabel(row.windowEnd, true)}` },
@@ -943,7 +946,7 @@ export function PlatformWaitlistPage() {
 
 export function PlatformQrScansPage() {
   const loader = useCallback((options: PlatformListOptions) => platformAdminApi.listQrScans(options), []);
-  return <ResourceListPage resource="qr-scans" title="اسکن‌های QR" subtitle="عملکرد کمپین‌های QR هر سالن؛ مناسب برای سنجش کانال جذب در MVP بدون marketplace." loader={loader} columns={[
+  return <ResourceListPage resource="qr-scans" title="اسکن‌های QR" subtitle="آمار اسکن QR سالن‌ها" loader={loader} columns={[
     { key: 'salon', title: 'سالن', render: (row: PlatformQrScanRow) => row.salon.name },
     { key: 'source', title: 'منبع کمپین', render: (row) => <StatusTag value="web">{row.source}</StatusTag> },
     { key: 'created', title: 'زمان اسکن', render: (row) => dateLabel(row.createdAt, true) },
@@ -953,12 +956,25 @@ export function PlatformQrScansPage() {
 
 export function PlatformAuditPage() {
   const loader = useCallback((options: PlatformListOptions) => platformAdminApi.listAuditLogs(options), []);
-  return <ResourceListPage resource="audit-logs" title="گزارش تغییرات" subtitle="ردیابی تغییرات مدیر پلتفرم؛ برای عیب‌یابی و پاسخ‌گویی، metadata به‌صورت ساختاری ذخیره می‌شود." loader={loader} columns={[
+  return <ResourceListPage resource="audit-logs" title="گزارش تغییرات" subtitle="تاریخچه تغییرات مدیران" loader={loader} columns={[
     { key: 'action', title: 'عملیات', render: (row: PlatformAuditRow) => <Typography.Text code>{row.action}</Typography.Text> },
     { key: 'entity', title: 'رکورد', render: (row) => <div className="platform-admin-table-name"><strong>{row.entityType}</strong><span>{idLabel(row.entityId)}</span></div> },
     { key: 'admin', title: 'مدیر', render: (row) => personName(row.admin.fullName, row.admin.phone) },
     { key: 'metadata', title: 'جزئیات', render: (row) => <Typography.Text ellipsis={{ tooltip: row.metadata ? JSON.stringify(row.metadata) : '—' }}>{row.metadata ? JSON.stringify(row.metadata) : '—'}</Typography.Text> },
     { key: 'date', title: 'زمان', render: (row) => dateLabel(row.createdAt, true) },
+  ]} />;
+}
+
+export function PlatformSmsDeliveriesPage() {
+  const loader = useCallback((options: PlatformListOptions) => platformAdminApi.listSmsDeliveries(options), []);
+  return <ResourceListPage resource="sms-deliveries" title="پیامک‌ها" subtitle="وضعیت تلاش‌های ارسال و گزارش تحویل سرویس‌دهنده." loader={loader} statusOptions={['queued', 'sending', 'retrying', 'accepted', 'delivered', 'failed'].map((value) => ({ value, label: label(value) }))} columns={[
+    { key: 'phone', title: 'گیرنده', render: (row: PlatformSmsDeliveryRow) => <Typography.Text copyable={{ text: row.phone }} dir="ltr">{row.phone}</Typography.Text> },
+    { key: 'status', title: 'وضعیت', render: (row: PlatformSmsDeliveryRow) => <StatusTag value={row.status}>{row.status === 'accepted' ? (row.nextRetryAt ? 'در انتظار گزارش تحویل' : 'گزارش تحویل نامشخص') : label(row.status)}</StatusTag> },
+    { key: 'attempts', title: 'تلاش‌ها', render: (row) => `${faNumber.format(row.attempts)} از ${faNumber.format(row.maxAttempts)}` },
+    { key: 'provider', title: 'شناسه سرویس‌دهنده', render: (row) => row.providerId ? <Typography.Text copyable={{ text: row.providerId }}>{row.providerId}</Typography.Text> : '—' },
+    { key: 'retry', title: 'بررسی / تلاش بعدی', render: (row) => dateLabel(row.nextRetryAt, true) },
+    { key: 'error', title: 'خطای آخر', render: (row) => <Typography.Text ellipsis={{ tooltip: row.error ?? '' }}>{row.error ?? '—'}</Typography.Text> },
+    { key: 'created', title: 'ایجاد', render: (row) => dateLabel(row.createdAt, true) },
   ]} />;
 }
 
@@ -1110,7 +1126,7 @@ export function PlatformCardOrdersPage() {
 
   return (
     <div ref={pageRootRef} className="platform-admin-page">
-      <PageHeader title="سفارش کارت چاپی" subtitle="اطلاعات تماس، تعداد و مشخصات تولید در یک گزارش قابل چاپ؛ پیگیری ادامه کار از طریق inbox سالن انجام می‌شود." onRefresh={() => void load()} loading={loading} />
+      <PageHeader title="سفارش کارت چاپی" subtitle="سفارش‌ها و مشخصات چاپ" onRefresh={() => void load()} loading={loading} />
       <div className="mb-4 flex flex-wrap justify-end gap-2">
         <Button icon={<PrinterOutlined />} onClick={() => window.print()}>چاپ گزارش</Button>
       </div>
@@ -1295,7 +1311,7 @@ export function PlatformSupportPage() {
 
   return (
     <div className="platform-admin-page">
-      <PageHeader title="پشتیبانی و گزارش خطا" subtitle="هر گزارش با شناسه، کاربر، مسیر، اقدام، request ID و context دستگاه قابل پیگیری و resolve است." onRefresh={() => void load()} loading={loading} />
+      <PageHeader title="پشتیبانی و گزارش خطا" subtitle="گزارش‌های کاربران و وضعیت پیگیری" onRefresh={() => void load()} loading={loading} />
       <Card className="platform-admin-filter-card">
         <div className="platform-admin-filter-row">
           <Select allowClear value={statusFilter || undefined} onChange={(value) => { setStatusFilter(value ?? ''); setPage(1); }} placeholder="همه وضعیت‌ها" options={SUPPORT_STATUS_OPTIONS} style={{ minWidth: 220 }} aria-label="فیلتر وضعیت تیکت" />

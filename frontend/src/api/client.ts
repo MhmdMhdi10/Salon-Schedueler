@@ -1490,6 +1490,19 @@ export interface PlatformAuditRow {
   admin: { id: string; fullName: string; phone: string };
 }
 
+export interface PlatformSmsDeliveryRow {
+  id: string;
+  phone: string;
+  status: 'queued' | 'sending' | 'retrying' | 'accepted' | 'delivered' | 'failed';
+  attempts: number;
+  maxAttempts: number;
+  providerId: string | null;
+  error: string | null;
+  nextRetryAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PlatformCardOrderRow {
   id: string;
   orderNumber: string;
@@ -1546,6 +1559,8 @@ function platformQuery(options: PlatformListOptions = {}): string {
 
 export const platformAdminApi = {
   getDashboard: () => request<PlatformDashboard>('/platform-admin/dashboard'),
+  listSmsDeliveries: (options?: PlatformListOptions) =>
+    request<PlatformPage<PlatformSmsDeliveryRow>>(`/platform-admin/sms-deliveries${platformQuery(options)}`),
   listSalons: (options?: PlatformListOptions) =>
     request<PlatformPage<PlatformSalonRow>>(`/platform-admin/salons${platformQuery(options)}`),
   createSalon: (body: { salonName: string; ownerName: string; phone: string; timezone?: string; businessType?: string; workMode?: string }) =>

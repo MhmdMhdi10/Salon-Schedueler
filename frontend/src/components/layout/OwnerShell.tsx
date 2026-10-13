@@ -140,6 +140,10 @@ export function OwnerShell({
     // Restore after routed content has been committed, before the next paint.
     // Other owner sections intentionally start at the top.
     const frame = window.requestAnimationFrame(() => {
+      if (!isDesktop) {
+        window.scrollTo({ top: savedPosition?.top ?? 0, behavior: 'auto' });
+        return;
+      }
       const target = contentRef.current;
       if (!target) return;
       const top = savedPosition?.top ?? 0;
@@ -157,16 +161,23 @@ export function OwnerShell({
     return () => {
       window.cancelAnimationFrame(frame);
     };
-  }, [pathname, routeKey]);
+  }, [pathname, routeKey, isDesktop]);
+
+  useEffect(() => {
+    if (isDesktop || !pathname.startsWith('/owner/profile')) return;
+    const save = () => { profileScrollPositionRef.current = { top: window.scrollY, left: 0 }; };
+    window.addEventListener('scroll', save, { passive: true });
+    return () => window.removeEventListener('scroll', save);
+  }, [isDesktop, pathname]);
 
   return (
     <ThemeScope
       theme={theme}
       data-shell="owner"
       className={cn(
-        // Booksy Biz app frame: the shell never page-scrolls — panes scroll
-        // internally (design directive §h.1).
-        'flex h-screen h-[100dvh] min-h-0 flex-col overflow-hidden bg-bg text-text',
+        // Mobile uses document scrolling so Android browser chrome and pull-to-refresh
+        // remain stable. Desktop keeps the pane-scrolling app frame.
+        'flex flex-col bg-bg text-text lg:h-screen lg:h-[100dvh] lg:min-h-0 lg:overflow-hidden',
         className,
       )}
     >
@@ -189,8 +200,8 @@ export function OwnerShell({
         onSignOut={onSignOut}
       />
 
-      {/* Content area: sidebar (desktop) + main — panes scroll internally */}
-      <div className="flex min-h-0 flex-1">
+      {/* Content area: sidebar on desktop; main uses document scroll on mobile. */}
+      <div className="flex flex-1 lg:min-h-0">
         {/* Desktop sidebar — visible only on lg+ */}
         {isDesktop && (
           <OwnerSidebar
@@ -209,7 +220,7 @@ export function OwnerShell({
           tabIndex={0}
           onScroll={handleContentScroll}
           className={cn(
-            'min-w-0 flex-1 overscroll-contain overflow-x-clip overflow-y-auto px-3 py-4 sm:px-4 sm:py-5',
+            'min-w-0 flex-1 overflow-x-clip px-3 py-4 sm:px-4 sm:py-5 lg:overscroll-contain lg:overflow-y-auto',
             isDesktop && 'w-full',
             // On mobile, reserve the rendered tab bar plus a generous breathing
             // room so the last card and its actions scroll completely above fixed nav.

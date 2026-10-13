@@ -109,7 +109,7 @@ export class MelliPayamakSharedOtpAdapter implements OtpProvider, SmsTemplatePro
       }
 
       const providerId = data?.recId ?? data?.recID ?? data?.messageId ?? data?.messageID;
-      if (providerId !== undefined && providerId !== null) {
+      if (providerId !== undefined && providerId !== null && String(providerId).trim()) {
         return this.ok(phone, String(providerId));
       }
 
@@ -118,7 +118,7 @@ export class MelliPayamakSharedOtpAdapter implements OtpProvider, SmsTemplatePro
         return this.fail(phone, providerStatus);
       }
 
-      return this.ok(phone, 'melipayamak-shared');
+      return this.fail(phone, 'Melli Payamak did not return a record id');
     } catch (err) {
       return this.fail(phone, toErrorMessage(err));
     }

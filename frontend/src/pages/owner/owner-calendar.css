@@ -203,10 +203,6 @@
   }
 }
 
-.owner-calendar-pending-fab {
-  display: none;
-}
-
 /* Keep calendar actions in document flow on phones so they never cover day
    controls or appointment details. */
 @media (max-width: 63.9375rem) {
@@ -216,38 +212,6 @@
 
   .owner-calendar-actions {
     display: none;
-  }
-
-  .owner-calendar-pending-fab {
-    position: static;
-    display: inline-flex;
-    inline-size: 100%;
-    max-inline-size: none;
-    min-block-size: 3rem;
-    padding-inline: 0.75rem;
-    overflow: visible;
-    border: 0.0625rem solid
-      color-mix(in srgb, var(--color-primary-contrast) 35%, var(--color-primary));
-    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.14);
-  }
-
-  .owner-calendar-pending-fab-label {
-    min-inline-size: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .owner-calendar-pending-fab-count {
-    display: inline-flex;
-    min-inline-size: 1.5rem;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-pill);
-    background: color-mix(in srgb, var(--color-primary-contrast) 18%, transparent);
-    padding-inline: 0.35rem;
-    font-size: 0.75rem;
-    font-weight: 800;
   }
 
   .owner-calendar-desktop-actions {

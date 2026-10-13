@@ -123,6 +123,8 @@ services:
       MELIPAYAMAK_SIMPLE_FROM: "${MELIPAYAMAK_SIMPLE_FROM-${MELIPAYAMAK_FROM-}}"
       # Legacy generated-code endpoint fallback.
       MELIPAYAMAK_OTP_URL: "${MELIPAYAMAK_OTP_URL-}"
+      KAVENEGAR_API_KEY: "${KAVENEGAR_API_KEY-}"
+      SMSIR_API_KEY: "${SMSIR_API_KEY-}"
       # Consumed by pg_isready + psql in the dev entrypoint.
       PGHOST: postgres
       PGPORT: "5432"
@@ -174,7 +176,12 @@ services:
       DATABASE_URL: "postgresql://salon:salon@postgres:5432/salon_dev?schema=public"
       RABBITMQ_URL: "amqp://salon:salon@rabbitmq:5672"
       DEV_SMS_INBOX_URL: "http://sms-inbox:4000"
-      # SMS provider keys intentionally unset -> dev/log delivery (logs here).
+      MELIPAYAMAK_URL: "${MELIPAYAMAK_URL-}"
+      MELIPAYAMAK_BODY_ID: "${MELIPAYAMAK_BODY_ID:-523232}"
+      MELIPAYAMAK_SIMPLE_URL: "${MELIPAYAMAK_SIMPLE_URL-}"
+      MELIPAYAMAK_SIMPLE_FROM: "${MELIPAYAMAK_SIMPLE_FROM-${MELIPAYAMAK_FROM-}}"
+      KAVENEGAR_API_KEY: "${KAVENEGAR_API_KEY-}"
+      SMSIR_API_KEY: "${SMSIR_API_KEY-}"
     volumes:
       - ./:/app
       - backend-root-node-modules:/app/node_modules
@@ -201,6 +208,10 @@ services:
       PAYMENT_CALLBACK_BASE_URL: "http://localhost:3000"
       RABBITMQ_URL: "amqp://salon:salon@rabbitmq:5672"
       DEV_SMS_INBOX_URL: "http://sms-inbox:4000"
+      MELIPAYAMAK_URL: "${MELIPAYAMAK_URL-}"
+      MELIPAYAMAK_BODY_ID: "${MELIPAYAMAK_BODY_ID:-523232}"
+      MELIPAYAMAK_SIMPLE_URL: "${MELIPAYAMAK_SIMPLE_URL-}"
+      MELIPAYAMAK_SIMPLE_FROM: "${MELIPAYAMAK_SIMPLE_FROM-${MELIPAYAMAK_FROM-}}"
       REMINDER_INTERVAL_MS: "60000"
       REMINDER_LEAD_TIME_MINUTES: "60"
     volumes:

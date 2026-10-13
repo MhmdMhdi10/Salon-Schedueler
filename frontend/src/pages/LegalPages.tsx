@@ -23,15 +23,15 @@ export function AboutPage() {
   const points = [
     {
       title: 'اطرافتان را ببینید',
-      body: 'آرا پیدا کردن وقت آزاد متخصصان زیبایی، سلامت و مراقبت نزدیک شما را ساده می‌کند. سالن محبوبتان را پیدا کنید یا گزینه‌های تازه را در بازار آرا ببینید.',
+      body: 'وقت‌های آزاد نزدیک خود را ببینید.',
     },
     {
       title: 'هر زمان، هر قرار',
-      body: 'خدمت دلخواهتان را همان لحظه در وب‌اپ آرا رزرو کنید و تماس‌های رفت‌وبرگشتی ساعت کاری را کنار بگذارید.',
+      body: 'خدمت و زمان دلخواه را آنلاین رزرو کنید.',
     },
     {
       title: 'به‌موقع باخبر شوید',
-      body: 'یادآوری خودکار باعث می‌شود هیچ نوبتی را فراموش نکنید. قرارها را در وب‌اپ تغییر دهید و مدیریت کنید.',
+      body: 'یادآوری بگیرید و نوبت‌هایتان را مدیریت کنید.',
     },
   ];
 
@@ -89,7 +89,6 @@ export function AboutPage() {
           <h2 className="text-2xl text-display leading-display sm:text-3xl">
             قرار بعدی‌تان را در چند ثانیه رزرو کنید
           </h2>
-          <p className="text-ink-muted">بدون تماس تلفنی — همین حالا آنلاین نوبت بگیرید.</p>
           <Link
             to="/auth"
             className="rounded-md bg-primary px-8 py-3 text-sm font-semibold text-primary-contrast no-underline transition-opacity duration-fast ease-standard hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"

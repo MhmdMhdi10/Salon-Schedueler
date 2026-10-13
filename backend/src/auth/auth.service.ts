@@ -178,13 +178,13 @@ export class AuthService {
     const generatedCode = this.generateOtpCode();
     let code: string = generatedCode;
     if (this.otpProvider) {
-      const delivery = await this.otpProvider.sendOtp(phone, generatedCode);
+      const delivery = await this.otpProvider.sendOtp(phone, generatedCode, { expiresAt });
       if (!delivery.ok) {
         throw new AuthError('OTP_DELIVERY_FAILED', delivery.error);
       }
       code = delivery.code;
     } else {
-      const delivery = await this.smsProvider.send(phone, `Your verification code is: ${code}`);
+      const delivery = await this.smsProvider.send(phone, `Your verification code is: ${code}`, { expiresAt });
       if (!delivery.ok) {
         throw new AuthError('OTP_DELIVERY_FAILED', delivery.error);
       }

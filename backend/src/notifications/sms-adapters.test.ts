@@ -83,6 +83,19 @@ describe('KavenegarSmsAdapter', () => {
     sender: '10004346',
   });
 
+  it('distinguishes delivered, rejected and pending carrier reports', async () => {
+    let status = 10;
+    mockFetch(async () => jsonResponse({ return: { status: 200 }, entries: [{ status }] }));
+    expect(await adapter.getDeliveryStatus('8792343')).toBe('delivered');
+    status = 11;
+    expect(await adapter.getDeliveryStatus('8792343')).toBe('failed');
+    status = 1;
+    expect(await adapter.getDeliveryStatus('8792343')).toBe('pending');
+    status = 100;
+    expect(await adapter.getDeliveryStatus('8792343')).toBe('unknown');
+    expect(await adapter.getDeliveryStatus('invalid')).toBe('unknown');
+  });
+
   it('POSTs to the send.json endpoint with the api key in the path and the message in the body', async () => {
     let seenUrl = '';
     let seenInit: RequestInit | undefined;
@@ -158,6 +171,23 @@ describe('SmsIrAdapter', () => {
   const adapter = new SmsIrAdapter({
     apiKey: 'smsir-test-key',
     lineNumber: '30007',
+  });
+
+  it('checks the message report and distinguishes delivered, failed and pending states', async () => {
+    let state = 1;
+    mockFetch(async (url, init) => {
+      expect(url).toBe('https://api.sms.ir/v1/send/1234567');
+      expect((init?.headers as Record<string, string>)['x-api-key']).toBe('smsir-test-key');
+      return jsonResponse({ status: 1, data: { deliveryState: state } });
+    });
+    expect(await adapter.getDeliveryStatus('1234567')).toBe('delivered');
+    state = 2;
+    expect(await adapter.getDeliveryStatus('1234567')).toBe('failed');
+    state = 3;
+    expect(await adapter.getDeliveryStatus('1234567')).toBe('pending');
+    state = 8;
+    expect(await adapter.getDeliveryStatus('1234567')).toBe('unknown');
+    expect(await adapter.getDeliveryStatus('invalid')).toBe('unknown');
   });
 
   it('POSTs to /v1/send/bulk with the x-api-key header and a JSON payload', async () => {

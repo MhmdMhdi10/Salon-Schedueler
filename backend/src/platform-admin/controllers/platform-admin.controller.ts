@@ -58,6 +58,7 @@ const DETAIL_RESOURCES = new Set([
   'platform-admins',
   'qr-scans',
   'audit-logs',
+  'sms-deliveries',
 ]);
 
 /** Global, tenant-independent operations center for آرا. */
@@ -83,6 +84,10 @@ export function platformAdminRouter(
 
   router.get('/platform-admin/dashboard', readLimit, asyncRoute(async (_req, res) => {
     res.status(200).json(await platformAdminService.dashboard());
+  }));
+
+  router.get('/platform-admin/sms-deliveries', readLimit, asyncRoute(async (req, res) => {
+    res.status(200).json(await platformAdminService.listSmsDeliveries(queryOf(req)));
   }));
 
   router.get('/platform-admin/salons', readLimit, asyncRoute(async (req, res) => {

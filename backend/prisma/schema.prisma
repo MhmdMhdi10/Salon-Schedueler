@@ -696,6 +696,38 @@ model NotificationLog {
   @@map("notification_log")
 }
 
+model SmsDelivery {
+  id          String    @id @default(uuid()) @db.Uuid
+  phone       String
+  status      String    @default("queued") // queued | sending | retrying | accepted | delivered | failed
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(5) @map("max_attempts")
+  providerId  String?   @map("provider_id")
+  error       String?
+  nextRetryAt DateTime? @map("next_retry_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  history     SmsDeliveryAttempt[]
+
+  @@index([status, createdAt])
+  @@index([phone, createdAt])
+  @@map("sms_delivery")
+}
+
+model SmsDeliveryAttempt {
+  id          String      @id @default(uuid()) @db.Uuid
+  deliveryId  String      @map("delivery_id") @db.Uuid
+  number      Int
+  status      String      // accepted | failed
+  providerId  String?     @map("provider_id")
+  error       String?
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  delivery    SmsDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  @@index([deliveryId, createdAt])
+  @@map("sms_delivery_attempt")
+}
+
 // Per-salon SMS audience preferences. Stylist notifications are enabled by
 // default; owner notifications are opt-in so busy salon owners do not receive
 // duplicate traffic for every appointment.

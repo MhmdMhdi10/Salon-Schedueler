@@ -58,12 +58,13 @@ import { CardOrderService } from './card-order/services/index.js';
 import { SupportTicketService } from './support/index.js';
 
 // Provider ports + adapters.
-import type { SmsProvider } from './auth/sms-provider.interface.js';
+import type { SmsProvider, SmsTemplateProvider } from './auth/sms-provider.interface.js';
 import type { OtpProvider } from './auth/otp-provider.interface.js';
 import type { PushProvider } from './notifications/push-provider.interface.js';
 import { DevLogSmsProvider, DevLogPushProvider } from './http/dev-providers.js';
 import { RabbitMqSmsPublisher } from './messaging/sms-queue.js';
-import { QueueingSmsProvider } from './messaging/queueing-sms-provider.js';
+import { QueueingSmsProvider, QueueingTemplateProvider, TrackingOtpProvider } from './messaging/queueing-sms-provider.js';
+import { SmsDeliveryStore } from './messaging/sms-delivery-store.js';
 import {
   PrismaNotificationRepository,
   PrismaWaitlistRepository,
@@ -133,14 +134,14 @@ function selectSmsProvider(config: AppConfig): SmsProvider {
   if (config.kavenegarApiKey) {
     return new KavenegarSmsAdapter({
       apiKey: config.kavenegarApiKey,
-      baseUrl: config.kavenegarBaseUrl,
+      baseUrl: config.kavenegarBaseUrl || undefined,
       sender: config.kavenegarSender,
     });
   }
   if (config.smsirApiKey) {
     return new SmsIrAdapter({
       apiKey: config.smsirApiKey,
-      baseUrl: config.smsirBaseUrl,
+      baseUrl: config.smsirBaseUrl || undefined,
       lineNumber: config.smsirLineNumber,
     });
   }
@@ -160,7 +161,7 @@ function selectSmsProvider(config: AppConfig): SmsProvider {
  */
 function selectOtpProvider(
   config: AppConfig,
-  sharedTemplateProvider?: MelliPayamakSharedOtpAdapter,
+  sharedTemplateProvider?: OtpProvider,
 ): OtpProvider | undefined {
   // Development login must remain usable when production provider credentials
   // happen to be present in a local .env file. Real delivery is an explicit
@@ -198,14 +199,14 @@ function selectOtpProvider(
  *
  * Exported so the SMS worker can build the same real provider for delivery.
  */
-export function selectApiSmsProvider(config: AppConfig): SmsProvider {
+export function selectApiSmsProvider(config: AppConfig, store?: SmsDeliveryStore): SmsProvider {
   const direct = selectSmsProvider(config);
   if (!config.rabbitmqUrl) return direct;
   const publisher = new RabbitMqSmsPublisher(config.rabbitmqUrl, {
     maxAttempts: config.smsQueueMaxAttempts,
     retryDelayMs: config.smsQueueRetryDelayMs,
   });
-  return new QueueingSmsProvider(publisher, direct);
+  return new QueueingSmsProvider(publisher, direct, store);
 }
 
 /** Build the real/dev SMS provider used by the worker to actually deliver. */
@@ -269,18 +270,33 @@ export function buildContainer(overrides: Partial<AppConfig> = {}): Container {
   });
 
   // External providers / gateways.
-  const smsProvider = selectApiSmsProvider(config);
+  const smsStore = new SmsDeliveryStore(prisma);
+  const smsProvider = selectApiSmsProvider(config, smsStore);
   const authSmsProvider =
     config.nodeEnv !== 'production' && !config.devUseRealOtp
       ? new DevLogSmsProvider()
       : smsProvider;
-  const sharedTemplateProvider = config.melliPayamakUrl
+  const directTemplateProvider = config.melliPayamakUrl
     ? new MelliPayamakSharedOtpAdapter({
         endpointUrl: config.melliPayamakUrl,
         bodyId: config.melliPayamakBodyId,
       })
     : undefined;
-  const otpProvider = selectOtpProvider(config, sharedTemplateProvider);
+  const sharedTemplateProvider: (SmsTemplateProvider & OtpProvider) | undefined = directTemplateProvider && config.rabbitmqUrl
+    ? new QueueingTemplateProvider(
+        new RabbitMqSmsPublisher(config.rabbitmqUrl, {
+          maxAttempts: config.smsQueueMaxAttempts,
+          retryDelayMs: config.smsQueueRetryDelayMs,
+        }),
+        directTemplateProvider,
+        config.melliPayamakBodyId,
+        smsStore,
+      )
+    : directTemplateProvider;
+  const selectedOtpProvider = selectOtpProvider(config, sharedTemplateProvider);
+  const otpProvider = selectedOtpProvider instanceof MelliPayamakOtpAdapter
+    ? new TrackingOtpProvider(selectedOtpProvider, smsStore)
+    : selectedOtpProvider;
   const pushProvider = selectPushProvider(config);
   const botAdapters = selectBotAdapters(config);
   const gateway = selectGateway(config);

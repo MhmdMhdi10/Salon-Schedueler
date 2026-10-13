@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, useReducedMotion } from 'framer-motion';
@@ -71,11 +70,8 @@ export interface OwnerBottomTabsProps {
  *
  * Accessibility: nav landmark with Persian aria-label, aria-current on the
  * active tab, visible Persian labels, and touch targets ≥ 56×44px.
- * Safe-area: respects env(safe-area-inset-bottom) and the visual viewport
- * bottom inset reported by Android Chrome when system navigation overlays the
- * layout viewport. Android browsers that report zero for both values receive
- * a conservative system-navigation fallback so the dock cannot sit beneath
- * three-button or gesture navigation controls.
+ * Safe-area: respects env(safe-area-inset-bottom) without changing position
+ * during visual viewport scroll events on Android.
  */
 export function OwnerBottomTabs({ className, role = 'Owner' }: OwnerBottomTabsProps) {
   const { t } = useTranslation();
@@ -84,40 +80,6 @@ export function OwnerBottomTabs({ className, role = 'Owner' }: OwnerBottomTabsPr
   const visibleTabs = TABS.filter((tab) => tab.roles.includes(role));
   const activeIndex = visibleTabs.findIndex((tab) => pathname.startsWith(tab.to));
 
-  useEffect(() => {
-    const root = document.documentElement;
-    const isAndroid = /android/i.test(navigator.userAgent);
-    if (isAndroid) {
-      root.style.setProperty('--android-navigation-inset', '3.5rem');
-    }
-
-    const viewport = window.visualViewport;
-    if (!viewport) {
-      return () => {
-        root.style.removeProperty('--android-navigation-inset');
-      };
-    }
-
-    const updateBottomInset = () => {
-      const layoutHeight = Math.max(window.innerHeight, root.clientHeight);
-      const visualViewportBottom = viewport.offsetTop + viewport.height;
-      const bottomInset = Math.max(0, layoutHeight - visualViewportBottom);
-      root.style.setProperty('--visual-viewport-bottom-inset', `${Math.round(bottomInset)}px`);
-    };
-
-    updateBottomInset();
-    viewport.addEventListener('resize', updateBottomInset);
-    viewport.addEventListener('scroll', updateBottomInset);
-    window.addEventListener('resize', updateBottomInset);
-
-    return () => {
-      viewport.removeEventListener('resize', updateBottomInset);
-      viewport.removeEventListener('scroll', updateBottomInset);
-      window.removeEventListener('resize', updateBottomInset);
-      root.style.removeProperty('--visual-viewport-bottom-inset');
-      root.style.removeProperty('--android-navigation-inset');
-    };
-  }, []);
 
   return (
     <nav

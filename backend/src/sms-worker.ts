@@ -9,6 +9,9 @@
 import { loadConfig } from './config.js';
 import { selectDeliverySmsProvider } from './composition-root.js';
 import { startSmsWorker } from './messaging/sms-queue.js';
+import { SmsDeliveryStore } from './messaging/sms-delivery-store.js';
+import { PrismaClient } from '@prisma/client';
+import { MelliPayamakSharedOtpAdapter } from './notifications/melipayamak-shared-otp.adapter.js';
 
 async function bootstrap(): Promise<void> {
   const config = loadConfig();
@@ -22,6 +25,10 @@ async function bootstrap(): Promise<void> {
   }
 
   const smsProvider = selectDeliverySmsProvider(config);
+  const templateProvider = config.melliPayamakUrl
+    ? new MelliPayamakSharedOtpAdapter({ endpointUrl: config.melliPayamakUrl, bodyId: config.melliPayamakBodyId })
+    : undefined;
+  const prisma = new PrismaClient({ datasources: { db: { url: config.databaseUrl } } });
 
   // eslint-disable-next-line no-console
   console.log('[sms-worker] starting; connecting to broker...');
@@ -33,12 +40,14 @@ async function bootstrap(): Promise<void> {
       retryDelayMs: config.smsQueueRetryDelayMs,
     },
     console,
+    new SmsDeliveryStore(prisma),
+    templateProvider,
   );
 
   const shutdown = (signal: string): void => {
     // eslint-disable-next-line no-console
     console.log(`[sms-worker] received ${signal}, shutting down...`);
-    void stop().finally(() => process.exit(0));
+    void stop().finally(() => prisma.$disconnect().finally(() => process.exit(0)));
   };
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));

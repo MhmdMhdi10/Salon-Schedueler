@@ -249,12 +249,12 @@ export class PrismaNotificationRepository implements NotificationRepository {
     const row = await (
       this.prisma.notificationLog as unknown as {
         findFirst(args: {
-          where: { appointmentId: string; type: string; channel: string; status: string };
+          where: { appointmentId: string; type: string; channel: string; status: { in: string[] } };
           select: { id: true };
         }): Promise<{ id: string } | null>;
       }
     ).findFirst({
-      where: { appointmentId, type, channel, status: 'sent' },
+      where: { appointmentId, type, channel, status: { in: ['queued', 'sent'] } },
       select: { id: true },
     });
     return Boolean(row);

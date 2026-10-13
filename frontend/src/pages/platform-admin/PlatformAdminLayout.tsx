@@ -99,6 +99,7 @@ const NAV_GROUPS: NavGroup[] = [
     icon: <SettingOutlined />,
     children: [
       { key: '/platform-admin/audit-logs', label: 'گزارش تغییرات', icon: <SafetyCertificateOutlined /> },
+      { key: '/platform-admin/sms-deliveries', label: 'پیامک‌ها', icon: <MessageOutlined /> },
       { key: '/platform-admin/support', label: 'پشتیبانی و خطاها', icon: <MessageOutlined /> },
     ],
   },

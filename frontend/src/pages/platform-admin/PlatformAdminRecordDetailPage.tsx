@@ -19,14 +19,18 @@ import './platform-admin.css';
 
 type DetailRecord = Record<string, unknown> & { id?: string };
 type Entry = [string, unknown];
+type SmsAttempt = { id: string; number: number; status: string; providerId: string | null; error: string | null; createdAt: string };
+type SmsDetail = { phone: string; status: string; attempts: number; maxAttempts: number; providerId: string | null; error: string | null; nextRetryAt: string | null; createdAt: string; updatedAt: string; history: SmsAttempt[] };
 
 const RESOURCE_LABEL: Record<string, string> = {
   salons: 'سالن‌ها', customers: 'مشتری‌ها', staff: 'تیم', appointments: 'نوبت‌ها', subscriptions: 'اشتراک‌ها',
   payments: 'پرداخت‌ها', waitlist: 'صف انتظار', services: 'خدمات', chairs: 'صندلی‌ها', equipment: 'تجهیزات',
   'platform-admins': 'مدیران پلتفرم', 'qr-scans': 'اسکن‌های QR', 'audit-logs': 'گزارش تغییرات',
+  'sms-deliveries': 'پیامک‌ها',
 };
 
 const STATUS_LABEL: Record<string, string> = {
+  queued: 'در صف', sending: 'در حال ارسال', retrying: 'در انتظار تلاش دوباره', accepted: 'پذیرفته‌شده توسط سرویس‌دهنده', delivered: 'تحویل‌شده به گیرنده',
   active: 'فعال', trial: 'آزمایشی', grace: 'مهلت تمدید', expired: 'منقضی', suspended: 'تعلیق‌شده', inactive: 'غیرفعال', deleted: 'حذف‌شده',
   pending: 'در انتظار', held: 'موقت', confirmed: 'تأییدشده', completed: 'انجام‌شده', cancelled: 'لغوشده', no_show: 'عدم مراجعه',
   paid: 'پرداخت‌شده', refunded: 'مستردشده', retained: 'نگه‌داشته‌شده', failed: 'ناموفق', waiting: 'در صف', notified: 'اطلاع داده‌شده', fulfilled: 'تکمیل‌شده',
@@ -46,13 +50,14 @@ function fieldLabel(field: string): string {
     durationMin: 'مدت (دقیقه)', bufferMin: 'فاصله (دقیقه)', requiresDeposit: 'نیازمند ودیعه', entityType: 'نوع رکورد', entityId: 'شناسه رکورد',
     action: 'عملیات', metadata: 'جزئیات ساختاری', salon: 'سالن', customer: 'مشتری', staffMember: 'عضو تیم', service: 'خدمت', payments: 'پرداخت‌ها',
     appointments: 'نوبت‌ها', waitlistEntries: 'صف انتظار', customerNotes: 'یادداشت‌ها', preferredStaff: 'عضو تیم منتخب', subscription: 'اشتراک', admin: 'مدیر',
+    attempts: 'تعداد تلاش', maxAttempts: 'حداکثر تلاش', providerId: 'شناسه سرویس‌دهنده', nextRetryAt: 'بررسی / تلاش بعدی', error: 'آخرین خطا', history: 'تاریخچه تلاش‌ها', number: 'شماره تلاش', deliveryId: 'شناسه پیامک',
   };
   return labels[field] ?? field.replaceAll(/([a-z])([A-Z])/g, '$1 $2').replaceAll('_', ' ');
 }
 
 function statusColor(value: string): string {
-  if (['active', 'paid', 'confirmed', 'completed', 'fulfilled'].includes(value)) return 'green';
-  if (['pending', 'trial', 'grace', 'held', 'waiting', 'notified'].includes(value)) return 'gold';
+  if (['active', 'paid', 'confirmed', 'completed', 'fulfilled', 'delivered'].includes(value)) return 'green';
+  if (['pending', 'trial', 'grace', 'held', 'waiting', 'notified', 'retrying'].includes(value)) return 'gold';
   if (['expired', 'suspended', 'inactive', 'deleted', 'cancelled', 'no_show', 'failed'].includes(value)) return 'red';
   return 'default';
 }
@@ -182,6 +187,46 @@ export function PlatformAdminRecordDetailPage() {
 
   if (!record && loading) return <div className="platform-admin-detail-page"><Card><Typography.Title level={1}>در حال بارگذاری جزئیات</Typography.Title><Skeleton active paragraph={{ rows: 12 }} /></Card></div>;
   if (!record) return <div className="platform-admin-detail-page"><Card><Typography.Title level={1}>جزئیات رکورد</Typography.Title><Empty description="رکوردی برای نمایش وجود ندارد."><Button icon={<ArrowRightOutlined />} onClick={goBack}>بازگشت به فهرست</Button></Empty></Card></div>;
+
+  if (resource === 'sms-deliveries') {
+    const sms = record as SmsDetail;
+    const statusText = sms.status === 'accepted'
+      ? (sms.nextRetryAt ? 'در انتظار گزارش تحویل' : 'گزارش تحویل نامشخص')
+      : (STATUS_LABEL[sms.status] ?? sms.status);
+    return <div className="platform-admin-detail-page">
+      <header className="platform-admin-detail-hero">
+        <div className="platform-admin-detail-hero__copy">
+          <span className="platform-admin-detail-hero__eyebrow">پیامک</span>
+          <h1 dir="ltr">{sms.phone}</h1>
+          <Tag color={statusColor(sms.status)}>{statusText}</Tag>
+        </div>
+        <Space wrap><Button icon={<ReloadOutlined />} loading={loading} onClick={() => void load()}>بازخوانی</Button><Button icon={<ArrowRightOutlined />} onClick={goBack}>بازگشت</Button></Space>
+      </header>
+      {remoteFailed && <Alert className="mb-4" type="warning" showIcon message="دریافت وضعیت تازه ممکن نشد؛ آخرین نسخهٔ ذخیره‌شده نمایش داده می‌شود." />}
+      <section className="platform-admin-detail-section p-4 sm:p-6" aria-label="وضعیت پیامک">
+        <h2 className="mb-4 text-lg font-bold">وضعیت ارسال</h2>
+        <Descriptions bordered size="small" column={{ xs: 1, sm: 2 }}>
+          <Descriptions.Item label="وضعیت"><Tag color={statusColor(sms.status)}>{statusText}</Tag></Descriptions.Item>
+          <Descriptions.Item label="تلاش‌ها">{faNumber.format(sms.attempts)} از {faNumber.format(sms.maxAttempts)}</Descriptions.Item>
+          <Descriptions.Item label="شناسه سرویس‌دهنده">{sms.providerId || '—'}</Descriptions.Item>
+          <Descriptions.Item label="اقدام بعدی">{sms.nextRetryAt ? dateTimeFormatter.format(new Date(sms.nextRetryAt)) : '—'}</Descriptions.Item>
+          <Descriptions.Item label="خطای آخر">{sms.error || '—'}</Descriptions.Item>
+          <Descriptions.Item label="زمان ثبت">{dateTimeFormatter.format(new Date(sms.createdAt))}</Descriptions.Item>
+        </Descriptions>
+        {sms.status === 'accepted' && !sms.nextRetryAt && <p className="mt-4 text-sm text-muted">سرویس‌دهنده پیامک را پذیرفته، اما گزارش قطعی تحویل به گیرنده موجود نیست.</p>}
+      </section>
+      <section className="platform-admin-detail-section mt-4 p-4 sm:p-6" aria-label="تاریخچه تلاش‌ها">
+        <h2 className="mb-4 text-lg font-bold">تاریخچه تلاش‌ها</h2>
+        {sms.history?.length ? <ol className="m-0 flex list-none flex-col gap-3 p-0">
+          {sms.history.map((attempt) => <li key={attempt.id} className="rounded-lg border border-border p-3">
+            <div className="flex flex-wrap items-center gap-2"><strong>تلاش {faNumber.format(attempt.number)}</strong><Tag color={statusColor(attempt.status)}>{STATUS_LABEL[attempt.status] ?? attempt.status}</Tag><time className="text-muted" dateTime={attempt.createdAt}>{dateTimeFormatter.format(new Date(attempt.createdAt))}</time></div>
+            {attempt.providerId && <p className="mt-2 text-sm">شناسه سرویس‌دهنده: <span dir="ltr">{attempt.providerId}</span></p>}
+            {attempt.error && <p className="mt-2 text-sm text-danger">{attempt.error}</p>}
+          </li>)}
+        </ol> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="هنوز تلاشی ثبت نشده است." />}
+      </section>
+    </div>;
+  }
 
   return (
     <div className="platform-admin-detail-page">

@@ -706,14 +706,14 @@ function AppointmentBlock({
     !Number.isNaN(appointmentStartMs) &&
     appointmentStartMs <= Date.now();
   const statusClass = isPending
-    ? 'bg-warning/15 text-warning'
+    ? 'bg-warning/15 text-text'
     : isCancelled
-      ? 'bg-danger/10 text-danger'
-      : 'bg-success/10 text-success';
+      ? 'bg-danger/10 text-text'
+      : 'bg-success/10 text-text';
   const statusBadge = (
     <span
       className={cn(
-        'inline-flex w-fit shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[0.6rem] font-medium leading-tight',
+        'inline-flex w-fit shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-xs font-medium leading-tight',
         statusClass,
       )}
     >
@@ -919,7 +919,7 @@ function AppointmentBlock({
         <span className="flex items-center justify-between gap-2">
           {statusBadge}
           {hasPendingReschedule && (
-            <span className="inline-flex items-center rounded-full bg-warning/15 px-1.5 py-0.5 text-[0.6rem] font-medium leading-tight text-warning">
+            <span className="inline-flex items-center rounded-full bg-warning/15 px-1.5 py-0.5 text-xs font-medium leading-tight text-text">
               تغییر زمان در انتظار تأیید مشتری
             </span>
           )}
@@ -927,12 +927,12 @@ function AppointmentBlock({
             {appt.depositReceiptStatus && (
               <span
                 className={cn(
-                  'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[0.6rem] font-medium leading-tight',
+                  'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs font-medium leading-tight',
                   appt.depositReceiptStatus === 'pending'
-                    ? 'bg-warning/15 text-warning'
+                    ? 'bg-warning/15 text-text'
                     : appt.depositReceiptStatus === 'approved'
-                      ? 'bg-success/10 text-success'
-                      : 'bg-danger/10 text-danger',
+                      ? 'bg-success/10 text-text'
+                      : 'bg-danger/10 text-text',
                 )}
                 title="وضعیت رسید بیعانه"
               >
@@ -1228,7 +1228,7 @@ function DayView({
                     'sticky start-0 z-sticky flex w-16 shrink-0 items-start justify-end',
                     'border-e border-border/30 bg-surface pe-2 pt-1',
                     'text-xs tabular-nums',
-                    isHour ? 'font-medium text-text' : 'text-muted/60',
+                    isHour ? 'font-medium text-text' : 'text-muted',
                   )}
                   style={{ height: `${SLOT_HEIGHT}px` }}
                 >
@@ -3650,25 +3650,6 @@ function ApprovalQueue({
 
   return (
     <div className={cn('flex flex-col gap-3', className)}>
-      {pending.length > 0 && (
-        <Button
-          variant="primary"
-          size="md"
-          startIcon={<Hourglass className="h-4 w-4" />}
-          onClick={openApprovalDialog}
-          aria-haspopup="dialog"
-          aria-expanded={approvalDialogOpen}
-          data-testid="owner-approval-queue-fab"
-          className="owner-calendar-pending-fab"
-        >
-          <span className="owner-calendar-pending-fab-label">
-            {t('owner.calendar.approvalQueue', { defaultValue: 'نوبت‌های در انتظار تأیید' })}
-          </span>
-          <span className="owner-calendar-pending-fab-count">
-            <Num value={pending.length} />
-          </span>
-        </Button>
-      )}
       {actionError && (
         <p role="alert" className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
           {actionError}
@@ -4978,7 +4959,7 @@ export function OwnerCalendarPage() {
       </div>
 
       <p className="owner-calendar-hint -mt-3 hidden text-xs text-muted sm:block">
-        روی ساعت خالی بزن تا همان‌جا نوبت ثبت کنی؛ برای تعطیلی از «برنامه حضور» استفاده کن.
+        برای ثبت نوبت، روی ساعت خالی بزن.
       </p>
 
       <CalendarFilters

@@ -57,7 +57,7 @@ export interface NotificationLogEntry {
     | 'reschedule'
     | 'booking_notice'
     | 'generic';
-  status: 'sent' | 'failed';
+  status: 'queued' | 'sent' | 'failed';
   error: string | null;
   createdAt: Date;
 }
@@ -204,7 +204,7 @@ export class NotificationService {
       appointmentId,
       channel: 'sms',
       type: 'confirmation',
-      status: result.ok ? 'sent' : 'failed',
+      status: result.ok ? (result.queued ? 'queued' : 'sent') : 'failed',
       error: result.ok ? null : result.error,
     });
     await this.writeCustomerNotification(
@@ -244,7 +244,7 @@ export class NotificationService {
         appointmentId,
         channel: 'sms',
         type: 'booking_notice',
-        status: result.ok ? 'sent' : 'failed',
+        status: result.ok ? (result.queued ? 'queued' : 'sent') : 'failed',
         error: result.ok ? null : result.error,
       });
     }
@@ -275,7 +275,7 @@ export class NotificationService {
       appointmentId,
       channel: 'sms',
       type: 'generic',
-      status: result.ok ? 'sent' : 'failed',
+      status: result.ok ? (result.queued ? 'queued' : 'sent') : 'failed',
       error: result.ok ? null : result.error,
     });
     return result;
@@ -317,7 +317,7 @@ export class NotificationService {
       appointmentId,
       channel: 'sms',
       type: 'reschedule',
-      status: result.ok ? 'sent' : 'failed',
+      status: result.ok ? (result.queued ? 'queued' : 'sent') : 'failed',
       error: result.ok ? null : result.error,
     });
     await this.writeCustomerNotification(
@@ -352,7 +352,7 @@ export class NotificationService {
       appointmentId,
       channel: 'sms',
       type: 'rejection',
-      status: result.ok ? 'sent' : 'failed',
+      status: result.ok ? (result.queued ? 'queued' : 'sent') : 'failed',
       error: result.ok ? null : result.error,
     });
     await this.writeCustomerNotification(
@@ -398,7 +398,7 @@ export class NotificationService {
       appointmentId,
       channel: 'sms',
       type: 'cancellation',
-      status: result.ok ? 'sent' : 'failed',
+      status: result.ok ? (result.queued ? 'queued' : 'sent') : 'failed',
       error: result.ok ? null : result.error,
     });
     await this.writeCustomerNotification(
@@ -473,7 +473,7 @@ export class NotificationService {
         appointmentId,
         channel: 'sms',
         type: 'reminder',
-        status: smsResult.ok ? 'sent' : 'failed',
+        status: smsResult.ok ? (smsResult.queued ? 'queued' : 'sent') : 'failed',
         error: smsResult.ok ? null : smsResult.error,
       });
 
@@ -636,7 +636,7 @@ export class NotificationService {
         appointmentId: appointment.id,
         channel: 'sms',
         type: event,
-        status: result.ok ? 'sent' : 'failed',
+        status: result.ok ? (result.queued ? 'queued' : 'sent') : 'failed',
         error: result.ok ? null : result.error,
       });
     }

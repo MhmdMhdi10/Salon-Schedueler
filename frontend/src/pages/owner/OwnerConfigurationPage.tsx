@@ -1,3 +1,4 @@
+import { formatPriceInput } from '../../components/ui/price-input';
 import { useCallback, useEffect, useMemo, useState, FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -1113,6 +1114,7 @@ function ServicesSection({
             ariaLabel={t('admin.config.services.durationLabel')}
             value={duration}
             onChange={setDuration}
+            step={15}
             className="sm:flex-1"
           />
           <TextField
@@ -1121,7 +1123,7 @@ function ServicesSection({
             inputMode="numeric"
             dir="ltr"
             value={price}
-            onChange={(e) => setPrice(e.target.value)}
+            onChange={(e) => setPrice(formatPriceInput(e.target.value))}
             className="min-h-14"
             containerClassName="sm:flex-1"
           />
@@ -1192,7 +1194,7 @@ function ServicesSection({
                 inputMode="numeric"
                 dir="ltr"
                 value={deposit}
-                onChange={(e) => setDeposit(e.target.value)}
+                onChange={(e) => setDeposit(formatPriceInput(e.target.value))}
               />
             )}
           </>
@@ -1234,6 +1236,7 @@ function ServicesSection({
                   ariaLabel="مدت (دقیقه)"
                   value={drafts[editingService.id]?.durationMinutes ?? String(editingService.durationMinutes)}
                   onChange={(value) => updateDraft(editingService.id, { durationMinutes: value })}
+                  step={15}
                 />
                 <TextField
                   label="فاصله بین نوبت‌ها (دقیقه)"
@@ -1248,7 +1251,7 @@ function ServicesSection({
                   dir="ltr"
                   className="min-h-14"
                   value={drafts[editingService.id]?.priceRial ?? String(Math.floor(editingService.priceRial / 10))}
-                  onChange={(event) => updateDraft(editingService.id, { priceRial: event.target.value })}
+                  onChange={(event) => updateDraft(editingService.id, { priceRial: formatPriceInput(event.target.value) })}
                 />
               </div>
               <Select
@@ -1313,7 +1316,7 @@ function ServicesSection({
                       inputMode="numeric"
                       dir="ltr"
                       value={drafts[editingService.id]?.depositRial ?? String(editingService.depositRial == null ? '' : Math.floor(editingService.depositRial / 10))}
-                      onChange={(event) => updateDraft(editingService.id, { depositRial: event.target.value })}
+                      onChange={(event) => updateDraft(editingService.id, { depositRial: formatPriceInput(event.target.value) })}
                     />
                   )}
                 </>
@@ -2042,20 +2045,6 @@ function OwnerConfigPageContent({
       {/* Success: collapsible card sections */}
       {status === 'success' && (
         <div className="flex flex-col gap-4">
-          {view === 'team' && (
-            <div
-              data-testid="owner-team-intro"
-              className="flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/10 p-3"
-            >
-              <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-contrast">
-                <Users className="h-5 w-5" aria-hidden="true" />
-              </span>
-              <div className="min-w-0">
-                <p className="m-0 text-sm font-bold text-text">{t('owner.team.flowTitle')}</p>
-                <p className="mt-1 text-xs leading-6 text-muted">{t('owner.team.flowBody')}</p>
-              </div>
-            </div>
-          )}
           {isTeamView && (
             <StaffSection
               staff={staff}

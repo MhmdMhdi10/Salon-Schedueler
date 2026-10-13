@@ -357,7 +357,7 @@ export function OwnerProfilePage() {
             <LogOut className="h-5 w-5 shrink-0 rtl:-scale-x-100" aria-hidden="true" />
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-bold">{t('owner.signOut')}</span>
-              <span className="mt-1 block text-xs opacity-75">{t('owner.profile.signOutHint')}</span>
+              <span className="mt-1 block text-xs">{t('owner.profile.signOutHint')}</span>
             </span>
             {/* RTL-native: this trailing chevron points toward the sign-out action. */}
             <ChevronLeft className="h-4 w-4 shrink-0" aria-hidden="true" />

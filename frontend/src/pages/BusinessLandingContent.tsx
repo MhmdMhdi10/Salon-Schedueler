@@ -720,8 +720,7 @@ function BusinessInspiredVariant() {
               سالن شما، <span className="text-primary">یک قدم جلوتر.</span>
             </h1>
             <p className="mt-6 max-w-xl text-md leading-8 text-muted sm:text-lg">
-              آرا تقویم، صفحهٔ رزرو و پروندهٔ مشتری‌ها را در یک فضای فارسی جمع می‌کند؛ تا شما
-              به‌جای جواب‌دادن به پیام‌های تکراری، روی تجربهٔ سالن تمرکز کنید.
+              تقویم، رزرو آنلاین و مشتری‌ها؛ همه در یک پنل فارسی.
             </p>
             <HeroActions primaryLabel="رایگان شروع کنید" />
             <div className="mt-7">
@@ -756,7 +755,7 @@ function BusinessInspiredVariant() {
             dark
             eyebrow="یک پلتفرم، سه کار اصلی"
             title="هر چیزی که صاحب سالن برای رشد لازم دارد، در یک مسیر"
-            body="ساختار صفحه مثل بهترین نرم‌افزارهای سالن است؛ اما زبان، مسیر شروع و دغدغه‌هایش برای سالن‌دار ایرانی طراحی شده است."
+            body="نوبت‌ها، مشتری‌ها و خدمات را از یک جا اداره کنید."
           />
           <div className="mt-10 grid gap-4 md:grid-cols-3">
             {[
@@ -786,15 +785,6 @@ function BusinessInspiredVariant() {
               </article>
             ))}
           </div>
-          <div className="mt-8 flex flex-wrap gap-2 text-xs text-ink-muted">
-            {['سالن زیبایی', 'آرایشگر مستقل', 'میکاپ آرتیست', 'سالن چندنفره', 'خدمات عروس'].map(
-              (item) => (
-                <span key={item} className="rounded-pill border border-ink-border px-3 py-2">
-                  {item}
-                </span>
-              ),
-            )}
-          </div>
         </div>
       </section>
 
@@ -806,25 +796,6 @@ function BusinessInspiredVariant() {
             body="سه بخش اصلی را لمس کنید و ببینید هرکدام چه مشکلی از روز سالن حل می‌کند."
           />
           <BusinessFeatureTour />
-          <div className="mt-6 flex flex-wrap gap-2">
-            {[
-              'تقویم تیمی',
-              'رزرو آنلاین',
-              'پروندهٔ مشتری',
-              'یادآوری',
-              'QR اختصاصی',
-              'گزارش ظرفیت',
-              'مشتری وفادار',
-            ].map((item) => (
-              <span
-                key={item}
-                className="rounded-pill border border-border bg-surface px-3 py-2 text-xs font-semibold text-muted"
-              >
-                <Check className="me-1 inline-block size-3.5 text-primary" aria-hidden="true" />
-                {item}
-              </span>
-            ))}
-          </div>
         </div>
       </section>
 
