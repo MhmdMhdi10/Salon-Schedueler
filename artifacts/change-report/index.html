@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>گزارش بهبود تجربهٔ آرا</title>
+    <style>
+      :root {
+        font-family: Vazirmatn, IRANSans, Tahoma, sans-serif;
+        color: #18313a;
+        background: #f4f7f6;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; line-height: 1.8; }
+      a { color: #087f70; }
+      .wrap { width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
+      header { padding: 52px 0 28px; }
+      .eyebrow { color: #078675; font-size: .86rem; font-weight: 700; }
+      h1 { margin: 4px 0 8px; font-size: clamp(1.65rem, 4vw, 2.5rem); line-height: 1.35; }
+      .lead { max-width: 720px; margin: 0; color: #60737a; }
+      .summary { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+      .pill { border: 1px solid #d9e5e2; border-radius: 999px; padding: 4px 12px; background: #fff; font-size: .83rem; }
+      main { padding-bottom: 52px; }
+      .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+      article { min-width: 0; overflow: hidden; border: 1px solid #e0e9e6; border-radius: 18px; background: #fff; box-shadow: 0 6px 24px #173c3410; }
+      article.wide { grid-column: 1 / -1; }
+      .copy { padding: 20px 22px 12px; }
+      .number { display: inline-grid; width: 28px; height: 28px; place-items: center; margin-left: 8px; border-radius: 50%; color: #087f70; background: #e4f4f0; font-size: .8rem; font-weight: 700; }
+      h2 { display: inline; margin: 0; font-size: 1.08rem; }
+      p { margin: 8px 0 0; color: #566b72; font-size: .94rem; }
+      figure { margin: 0; padding: 10px 16px 16px; }
+      figure img { display: block; width: 100%; height: auto; border: 1px solid #edf1f0; border-radius: 12px; background: #f6f8f7; }
+      figcaption { margin-top: 6px; color: #78898e; font-size: .78rem; }
+      .shots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      .sources { margin-top: 16px; padding: 18px 22px; border: 1px solid #e0e9e6; border-radius: 16px; background: #fff; }
+      .sources h2 { font-size: 1rem; }
+      .links { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 8px; font-size: .88rem; }
+      .note { margin-top: 16px; padding: 12px 16px; border-right: 3px solid #d5a044; border-radius: 8px; color: #665834; background: #fff9ea; font-size: .88rem; }
+      footer { padding: 14px 0 30px; color: #718287; font-size: .8rem; }
+      @media (max-width: 720px) {
+        header { padding-top: 32px; }
+        .grid { grid-template-columns: 1fr; }
+        article.wide { grid-column: auto; }
+        .shots { grid-template-columns: 1fr; }
+        .copy { padding-inline: 16px; }
+        figure { padding-inline: 12px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="wrap">
+      <span class="eyebrow">گزارش تغییرات رابط کاربری و پیامک</span>
+      <h1>تجربهٔ ساده‌تر برای سالن و مشتری</h1>
+      <p class="lead">خلاصهٔ تغییرهای انجام‌شده با تصویرهای واقعی از نسخهٔ آزمایشی برنامه.</p>
+      <div class="summary" aria-label="نتیجهٔ تست‌ها">
+        <span class="pill">فرانت‌اند: ۱٬۲۰۳ تست در ۱۱۶ فایل</span>
+        <span class="pill">بک‌اند: ۶۷۶ تست + ۸ تست هدفمند</span>
+        <span class="pill">Playwright: ۱۶ ریسپانسیو، ۹ کاربردی + ۲ ورود</span>
+        <span class="pill">Build: موفق</span>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <section class="grid" aria-label="تغییرها">
+        <article class="wide">
+          <div class="copy">
+            <span class="number">۱</span><h2>پیگیری دقیق پیامک</h2>
+            <p>ارسال ناموفق در ورکر تا ۵ بار تلاش می‌شود. پنل وضعیت، تعداد تلاش، زمان تلاش بعدی، خطا و تاریخچه را نشان می‌دهد.</p>
+          </div>
+          <div class="shots">
+            <figure><img src="screenshots/sms-admin-list.png" alt="فهرست پنل مدیریت پیامک و تعداد تلاش" /><figcaption>فهرست پیامک‌ها و وضعیت هر ارسال</figcaption></figure>
+            <figure><img src="screenshots/sms-admin-detail.png" alt="جزئیات وضعیت و تاریخچه تلاش‌های پیامک" /><figcaption>جزئیات ارسال و تاریخچهٔ تلاش‌ها</figcaption></figure>
+          </div>
+        </article>
+
+        <article>
+          <div class="copy">
+            <span class="number">۲</span><h2>صفحه‌ها و متن‌های خلوت‌تر</h2>
+            <p>پیام اصلی و اقدام بعدی در لندینگ واضح‌تر شده؛ متن‌های توضیحی کوتاه‌ترند تا انتخاب‌ها سریع‌تر فهمیده شوند.</p>
+          </div>
+          <figure><img src="screenshots/landing-desktop.png" alt="نمای دسکتاپ صفحهٔ اصلی آرا" /><figcaption>لندینگ دسکتاپ</figcaption></figure>
+        </article>
+
+        <article>
+          <div class="copy">
+            <span class="number">۳</span><h2>ثبت‌نام کوتاه‌تر</h2>
+            <p>اطلاعات تکراری حذف شده و مراحل به حوزهٔ کاری، مشخصات، خدمات و ورود محدود شده‌اند. خدمت را می‌توان بعداً هم کامل کرد.</p>
+          </div>
+          <figure><img src="screenshots/onboarding-category-mobile.png" alt="مرحلهٔ انتخاب حوزهٔ کاری در موبایل" /><figcaption>مرحلهٔ اول ثبت‌نام در موبایل</figcaption></figure>
+        </article>
+
+        <article>
+          <div class="copy">
+            <span class="number">۴</span><h2>آرایشگاه مردانه در اول فهرست</h2>
+            <p>گزینهٔ «آرایشگاه مردانه» انتخاب اول صفحهٔ حوزهٔ کاری است.</p>
+          </div>
+          <figure><img src="screenshots/onboarding-category-mobile.png" alt="آرایشگاه مردانه به‌عنوان نخستین حوزهٔ کاری" /><figcaption>ترتیب گزینه‌های حوزهٔ کاری</figcaption></figure>
+        </article>
+
+        <article>
+          <div class="copy">
+            <span class="number">۵</span><h2>خدمات، مدت و قیمت ساده‌تر</h2>
+            <p>فهرست خدمات با اسکرول عادی صفحه کار می‌کند؛ مدت با دکمه‌های کم‌وزیاد و قیمت به‌صورت اختیاری وارد می‌شود.</p>
+          </div>
+          <figure><img src="screenshots/onboarding-services-mobile.png" alt="فهرست خدمات پیشنهادی در ثبت‌نام موبایل" /><figcaption>فهرست خدمات پیشنهادی و جست‌وجو</figcaption></figure>
+        </article>
+
+        <article>
+          <div class="copy">
+            <span class="number">۶</span><h2>جداکنندهٔ قیمت حین تایپ</h2>
+            <p>رقم‌ها حین تایپ گروه‌بندی می‌شوند؛ قالب مشترک در قیمت خدمت، تنظیمات سالن و پنل مدیریت استفاده شده است.</p>
+          </div>
+          <figure><img src="screenshots/onboarding-price-duration-mobile.png" alt="ورودی قیمت گروه‌بندی‌شده در کنار مدت خدمت" /><figcaption>ورودی قیمت و مدت خدمت</figcaption></figure>
+        </article>
+
+        <article class="wide">
+          <div class="copy">
+            <span class="number">۷</span><h2>نوبار موبایل و اسکرول صفحه</h2>
+            <p>اسکرول روی خود صفحه انجام می‌شود و هدر و نوبار در جای خود می‌مانند. بررسی موبایل بعد از اسکرول: ۱٬۱۷۶ پیکسل.</p>
+          </div>
+          <figure><img src="screenshots/owner-mobile-scroll-nav.png" alt="پنل موبایل بعد از اسکرول، با هدر و نوبار پایین ثابت" /><figcaption>پنل در موبایل، پس از اسکرول تا انتهای تنظیمات</figcaption></figure>
+        </article>
+      </section>
+
+      <section class="sources" aria-label="نمونه‌های بررسی‌شده">
+        <h2>نمونه‌های بررسی‌شده برای الگوی رابط</h2>
+        <div class="links">
+          <a href="https://www.fresha.com/" target="_blank" rel="noreferrer">Fresha</a>
+          <a href="https://www.booksy.com/" target="_blank" rel="noreferrer">Booksy</a>
+          <a href="https://squareup.com/us/en/appointments" target="_blank" rel="noreferrer">Square Appointments</a>
+          <a href="https://www.vagaro.com/" target="_blank" rel="noreferrer">Vagaro</a>
+        </div>
+        <p>تمرکز الگوگیری: رزرو سریع، مراحل کوتاه، اقدام اصلی روشن و پنل کم‌ازدحام.</p>
+      </section>
+
+      <p class="note"><strong>تست پیامک:</strong> ارسال از ورکر و پنل آزمایشی با سرویس <span dir="ltr">dev-log</span> بررسی شد؛ وضعیت نمونه «پذیرفته‌شده، تلاش ۱ از ۵» است. گزارش تحویل به گوشی در این سرویس موجود نیست و ارسال واقعی به اپراتور انجام نشد.</p>
+      <footer>گزارش تصویری نسخهٔ آزمایشی آرا · ۱۴ اکتبر ۲۰۲۶</footer>
+    </main>
+  </body>
+</html>
