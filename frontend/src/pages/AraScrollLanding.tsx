@@ -19,7 +19,14 @@ import {
   UserRound,
   UsersRound,
 } from 'lucide-react';
-import { motion, useInView, useReducedMotion, useScroll, useTransform } from 'framer-motion';
+import {
+  motion,
+  useInView,
+  useMotionValueEvent,
+  useReducedMotion,
+  useScroll,
+  useTransform,
+} from 'framer-motion';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -40,7 +47,6 @@ interface ScrollFeature {
   eyebrow: string;
   title: string;
   description: string;
-  bullets: string[];
   cta: string;
   accent: string;
 }
@@ -49,52 +55,39 @@ const SCROLL_FEATURES: ScrollFeature[] = [
   {
     id: 'calendar',
     number: '۰۱',
-    eyebrow: 'تقویم شمسی، برای روز واقعی سالن',
-    title: 'به‌جای حدس‌زدن، کل روزت را یک‌جا ببین.',
-    description: 'نوبت‌های حضوری و آنلاین، ساعت‌های خالی و تداخل‌ها را یک‌جا ببین.',
-    bullets: [
-      'نمای روز، هفته و ماه',
-      'نوبت‌های حضوری و آنلاین در یک تقویم',
-    ],
+    eyebrow: 'تقویم سالن',
+    title: 'کل روز سالن، یک‌جا.',
+    description:
+      'نمای روز، هفته یا ماه را ببین؛ نوبت‌های حضوری و آنلاین، ساعت‌های خالی و تداخل‌ها کنار هم‌اند.',
     cta: 'تقویم سالنم را راه می‌اندازم',
     accent: 'teal',
   },
   {
     id: 'booking',
     number: '۰۲',
-    eyebrow: 'لینک رزرو سالن',
-    title: 'مشتری لازم نیست برای هر نوبت تماس بگیرد.',
-    description: 'لینک یا QR را به مشتری بده؛ خدمت و زمان را خودش انتخاب می‌کند.',
-    bullets: [
-      'رزرو بدون نصب اپ و تماس تلفنی',
-      'لینک و QR برای کارت، سالن و پیام‌رسان‌ها',
-    ],
+    eyebrow: 'لینک و QR رزرو',
+    title: 'رزرو را به مشتری بسپار.',
+    description:
+      'لینک یا QR را در بیو، پیام‌رسان یا کارت سالن بگذار؛ مشتری بدون نصب اپ خدمت و زمان را انتخاب می‌کند.',
     cta: 'لینک رزروم را می‌سازم',
     accent: 'violet',
   },
   {
     id: 'services',
     number: '۰۳',
-    eyebrow: 'خدمات و قیمت‌ها',
-    title: 'قبل از تماس، مشتری می‌داند چه می‌گیرد.',
-    description: 'مدت و قیمت هر خدمت را پیش از رزرو روشن نشان بده.',
-    bullets: [
-      'ساخت منوی خدمات در چند دقیقه',
-      'زمان و قیمت جدا برای هر خدمت',
-    ],
+    eyebrow: 'منوی خدمات سالن',
+    title: 'منوی خدماتت را روشن بچین.',
+    description: 'مدت و قیمت هر خدمت پیش از رزرو به مشتری نشان داده می‌شود.',
     cta: 'منوی خدماتم را آماده می‌کنم',
     accent: 'blue',
   },
   {
     id: 'clients',
     number: '۰۴',
-    eyebrow: 'مشتری‌ها و بازگشت',
-    title: 'مشتری را برای نوبت بعدی از یاد نبر.',
-    description: 'سابقه و یادداشت‌های مشتری را برای مراجعهٔ بعدی کنار هم داشته باش.',
-    bullets: [
-      'پروفایل و سابقهٔ هر مشتری',
-      'یادآوری نوبت و پیگیری ساده',
-    ],
+    eyebrow: 'مشتری‌ها و مراجعه‌هایشان',
+    title: 'سابقه و سلیقهٔ هر مشتری، یک‌جا.',
+    description:
+      'یادداشت‌ها و مراجعه‌های قبلی را کنار هم داشته باش تا دفعهٔ بعد از اول شروع نکنی.',
     cta: 'مشتری‌هایم را منظم می‌کنم',
     accent: 'rose',
   },
@@ -119,9 +112,20 @@ const FEATURE_LIFESTYLE_IMAGES: Record<ScrollFeatureId, { src: string; alt: stri
   },
 };
 
-function AraScrollBrandRail() {
+function AraScrollBrandRail({ hidden }: { hidden: boolean }) {
+  const railRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    railRef.current?.toggleAttribute('inert', hidden);
+  }, [hidden]);
+
   return (
-    <header className="ara-scroll-brand-rail" aria-label="دسترسی‌های آرا">
+    <header
+      ref={railRef}
+      className={`ara-scroll-brand-rail ${hidden ? 'is-hidden' : ''}`}
+      aria-label="دسترسی‌های آرا"
+      aria-hidden={hidden}
+    >
       <Link to="/" className="ara-scroll-brand-logo" aria-label="صفحهٔ اصلی آرا">
         <img
           className="ara-scroll-brand-logo-light"
@@ -143,11 +147,11 @@ function AraScrollBrandRail() {
         />
       </Link>
       <div className="ara-scroll-brand-actions">
-        <Link to="/search" className="ara-scroll-login">
+        <Link to="/search" className="ara-scroll-login ara-scroll-customer-link">
           رزرو نوبت
         </Link>
         <Link to="/business/register" className="ara-scroll-header-start">
-          ثبت سالن <ArrowUpLeft aria-hidden="true" />
+          شروع رایگان <ArrowUpLeft aria-hidden="true" />
         </Link>
         <Link to="/auth" className="ara-scroll-login">
           ورود
@@ -156,13 +160,6 @@ function AraScrollBrandRail() {
       </div>
     </header>
   );
-}
-
-function ScrollFeatureIcon({ id }: { id: ScrollFeatureId }) {
-  if (id === 'calendar') return <CalendarDays aria-hidden="true" />;
-  if (id === 'booking') return <Link2 aria-hidden="true" />;
-  if (id === 'services') return <Scissors aria-hidden="true" />;
-  return <UsersRound aria-hidden="true" />;
 }
 
 function FeatureLifestylePhoto({ id }: { id: ScrollFeatureId }) {
@@ -804,19 +801,13 @@ function AraScrollFeatureSection({
         transition={{ duration: 0.86, ease: [0.22, 1, 0.36, 1] }}
       >
         <span className={`ara-scroll-feature-eyebrow is-${feature.accent}`}>
-          <ScrollFeatureIcon id={feature.id} />
+          <span className="ara-scroll-feature-order" aria-hidden="true">
+            {feature.number}
+          </span>
           {feature.eyebrow}
         </span>
         <h2 id={`ara-scroll-${feature.id}-title`}>{feature.title}</h2>
         <p>{feature.description}</p>
-        <ul>
-          {feature.bullets.map((bullet) => (
-            <li key={bullet}>
-              <Check aria-hidden="true" />
-              <span>{bullet}</span>
-            </li>
-          ))}
-        </ul>
         <div className={`ara-scroll-feature-cta is-${feature.accent}`}>
           <Link to="/business/register" className="ara-scroll-feature-link">
             {feature.cta} <ArrowUpLeft aria-hidden="true" />
@@ -832,22 +823,42 @@ export function AraScrollLanding() {
   const { theme } = useTheme();
   const landingTheme = theme === 'light' ? '04' : '01';
   const [activeFeatureId, setActiveFeatureId] = useState<ScrollFeatureId | null>(null);
-  const { scrollYProgress } = useScroll();
+  const [brandRailHidden, setBrandRailHidden] = useState(false);
+  const { scrollY, scrollYProgress } = useScroll();
   const prefersReducedMotion = useReducedMotion();
   const heroY = useTransform(scrollYProgress, [0, 0.16], [0, 68]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.16], [1, 0.15]);
   const progressScale = useTransform(scrollYProgress, [0, 1], [0, 1]);
+  const previousScrollY = useRef(0);
+  const scrollDirection = useRef<'down' | 'up' | null>(null);
+  const directionDistance = useRef(0);
 
-  useEffect(() => {
-    // Android browsers can trap touch scrolling when mandatory snap is
-    // combined with always-stop sections. Keep the desktop/iOS interaction
-    // unchanged and let Android use native vertical touch scrolling.
-    const root = document.documentElement;
-    if (!/Android/i.test(navigator.userAgent)) return;
+  useMotionValueEvent(scrollY, 'change', (latest) => {
+    const delta = latest - previousScrollY.current;
+    previousScrollY.current = latest;
 
-    root.classList.add('ara-scroll-android');
-    return () => root.classList.remove('ara-scroll-android');
-  }, []);
+    if (latest <= 64) {
+      scrollDirection.current = null;
+      directionDistance.current = 0;
+      setBrandRailHidden(false);
+      return;
+    }
+
+    if (Math.abs(delta) < 1) return;
+
+    const nextDirection = delta > 0 ? 'down' : 'up';
+    if (scrollDirection.current !== nextDirection) {
+      scrollDirection.current = nextDirection;
+      directionDistance.current = 0;
+    }
+    directionDistance.current += Math.abs(delta);
+
+    if (nextDirection === 'down' && directionDistance.current >= 12) {
+      setBrandRailHidden(true);
+    } else if (nextDirection === 'up' && directionDistance.current >= 8) {
+      setBrandRailHidden(false);
+    }
+  });
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -905,119 +916,6 @@ export function AraScrollLanding() {
     };
   }, []);
 
-  useEffect(() => {
-    const landing = landingRef.current;
-    if (!landing) return;
-
-    let isLocked = false;
-    let unlockTimer: number | undefined;
-    let sectionMetrics:
-      | {
-          sections: HTMLElement[];
-          tops: number[];
-        }
-      | undefined;
-
-    const getSectionMetrics = () => {
-      if (sectionMetrics) return sectionMetrics;
-
-      const sections = Array.from(
-        landing.querySelectorAll<HTMLElement>('[data-ara-scroll-section]'),
-      );
-      sectionMetrics = {
-        sections,
-        tops: sections.map((section) => section.getBoundingClientRect().top + window.scrollY),
-      };
-      return sectionMetrics;
-    };
-
-    const getCurrentSectionIndex = (tops: number[]) => {
-      const currentScroll = window.scrollY;
-      return tops.reduce((closestIndex, top, index) => {
-        const currentDistance = Math.abs(top - currentScroll);
-        const closestDistance = Math.abs(tops[closestIndex] - currentScroll);
-        return currentDistance < closestDistance ? index : closestIndex;
-      }, 0);
-    };
-
-    const isTypingTarget = (target: EventTarget | null) => {
-      if (!(target instanceof HTMLElement)) return false;
-      return (
-        target.isContentEditable ||
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.tagName === 'SELECT'
-      );
-    };
-
-    const moveBySection = (direction: 1 | -1) => {
-      if (isLocked) return;
-
-      const { sections, tops } = getSectionMetrics();
-      if (sections.length === 0) return;
-
-      const currentIndex = getCurrentSectionIndex(tops);
-      const nextIndex = Math.min(Math.max(currentIndex + direction, 0), sections.length - 1);
-      if (nextIndex === currentIndex) return;
-
-      isLocked = true;
-      window.scrollTo({
-        top: tops[nextIndex],
-        behavior: prefersReducedMotion ? 'auto' : 'smooth',
-      });
-
-      window.clearTimeout(unlockTimer);
-      unlockTimer = window.setTimeout(
-        () => {
-          isLocked = false;
-        },
-        prefersReducedMotion ? 120 : 860,
-      );
-    };
-
-    const handleWheel = (event: WheelEvent) => {
-      if (event.ctrlKey || event.deltaY === 0 || isTypingTarget(event.target)) return;
-      if (isLocked) {
-        event.preventDefault();
-        return;
-      }
-
-      event.preventDefault();
-      moveBySection(event.deltaY > 0 ? 1 : -1);
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const activeElement = document.activeElement;
-      if (
-        (activeElement !== document.body && !landing.contains(activeElement)) ||
-        isTypingTarget(event.target)
-      ) {
-        return;
-      }
-
-      const downKeys = new Set(['ArrowDown', 'PageDown', ' ']);
-      const upKeys = new Set(['ArrowUp', 'PageUp']);
-      if (!downKeys.has(event.key) && !upKeys.has(event.key)) return;
-
-      event.preventDefault();
-      moveBySection(downKeys.has(event.key) ? 1 : -1);
-    };
-
-    landing.addEventListener('wheel', handleWheel, { passive: false });
-    window.addEventListener('keydown', handleKeyDown);
-    const handleResize = () => {
-      sectionMetrics = undefined;
-    };
-    window.addEventListener('resize', handleResize, { passive: true });
-
-    return () => {
-      landing.removeEventListener('wheel', handleWheel);
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('resize', handleResize);
-      window.clearTimeout(unlockTimer);
-    };
-  }, [prefersReducedMotion]);
-
   return (
     <div
       ref={landingRef}
@@ -1047,7 +945,7 @@ export function AraScrollLanding() {
         ]}
       />
 
-      <AraScrollBrandRail />
+      <AraScrollBrandRail hidden={brandRailHidden} />
 
       <main className="ara-scroll-main">
         <section
@@ -1063,19 +961,21 @@ export function AraScrollLanding() {
               transition={{ duration: 0.72, ease: [0.22, 1, 0.36, 1] }}
             >
               <span className="ara-scroll-eyebrow">
-                <i aria-hidden="true" /> برای سالن‌دارهایی که هر روز پاسخ‌گوی تماس‌اند
+                <i aria-hidden="true" /> نوبت‌دهی آنلاین برای سالن‌های زیبایی
               </span>
               <h1 id="ara-scroll-hero-title">
-                از تماس‌های تکراری تا رزرو قطعی،
-                <span>در یک لینک.</span>
+                نوبت‌ها از یک لینک.
+                <span>تقویم سالن، شمسی و مرتب.</span>
               </h1>
-              <p>مشتری خدمت و زمان را انتخاب می‌کند؛ نوبت در تقویم شمسی تو ثبت می‌شود.</p>
+              <p>
+                مشتری خدمت و زمان را انتخاب می‌کند؛ رزرو مستقیم در تقویم شمسی سالن ثبت می‌شود.
+              </p>
               <div className="ara-scroll-hero-actions">
                 <Link
                   to="/business/register"
                   className="ara-scroll-button ara-scroll-button-primary"
                 >
-                  راه‌اندازی رایگان سالن <ArrowUpLeft aria-hidden="true" />
+                  شروع ۱۴ روز رایگان <ArrowUpLeft aria-hidden="true" />
                 </Link>
                 <a
                   href="#ara-scroll-calendar"
@@ -1108,14 +1008,6 @@ export function AraScrollLanding() {
               <AraScrollHeroObject />
             </motion.div>
           </div>
-          <a
-            href="#ara-scroll-calendar"
-            className="ara-scroll-scroll-hint"
-            aria-label="رفتن به فیچر تقویم"
-          >
-            <span>اسکرول کن</span>
-            <ArrowDownLeft aria-hidden="true" />
-          </a>
         </section>
 
         <div className="ara-scroll-story-intro" aria-hidden="true">
@@ -1146,7 +1038,7 @@ export function AraScrollLanding() {
           </h2>
           <p>۱۴ روز رایگان امتحان کن؛ بدون کارت بانکی و بدون نصب اپ برای مشتری.</p>
           <Link to="/business/register" className="ara-scroll-button ara-scroll-button-primary">
-            راه‌اندازی رایگان سالن <ArrowUpLeft aria-hidden="true" />
+            شروع ۱۴ روز رایگان <ArrowUpLeft aria-hidden="true" />
           </Link>
         </section>
       </main>

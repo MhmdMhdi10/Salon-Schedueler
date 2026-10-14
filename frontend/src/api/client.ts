@@ -501,7 +501,7 @@ export interface RegisterSalonInput {
   businessType?: string;
   /** Multiple business categories selected during onboarding. */
   businessTypes?: string[];
-  /** Skills selected during the first onboarding step. */
+  /** Optional service specialties provided by registration clients. */
   specialties?: string[];
   timezone?: string;
   /** Storefront brand-accent key (optional). */

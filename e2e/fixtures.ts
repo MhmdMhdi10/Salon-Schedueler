@@ -209,14 +209,19 @@ export async function registerSalonViaUi(
   }
   await page.getByRole('button', { name: 'ادامه', exact: true }).click();
 
-  await page.locator('#svcName').fill(serviceName);
-  await page
+  await page.getByRole('button', { name: 'افزودن خدمت', exact: true }).click();
+  const serviceCatalog = page.getByRole('dialog');
+  await serviceCatalog.getByRole('button', { name: 'ساخت خدمت دلخواه' }).click();
+  const addServiceForm = page.getByTestId('add-service-form');
+  await addServiceForm.locator('#svcName').fill(serviceName);
+  await addServiceForm
     .getByRole('group', { name: /مدت/ })
     .getByRole('button', { name: /افزایش/ })
     .click();
-  await page.locator('#svcPrice').fill('500000');
-  await page.getByRole('button', { name: 'افزودن خدمت', exact: true }).click();
+  await addServiceForm.locator('#svcPrice').fill('500000');
+  await addServiceForm.getByRole('button', { name: 'افزودن خدمت', exact: true }).click();
   await expect(page.getByText(serviceName, { exact: true })).toBeVisible();
+  await serviceCatalog.getByRole('button', { name: 'تمام شد' }).click();
   const registrationResponse = page.waitForResponse(
     (response) =>
       response.url().includes('/api/register/salon') && response.request().method() === 'POST',

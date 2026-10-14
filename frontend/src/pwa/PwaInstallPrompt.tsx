@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Download, Smartphone } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Button,
@@ -8,7 +7,6 @@ import {
   DialogContent,
   DialogDescription,
   DialogTitle,
-  cn,
 } from '../components/ui';
 import { usePwaInstall, type PwaInstallPlatform } from './usePwaInstall';
 
@@ -23,20 +21,22 @@ const instructionKeys: Record<PwaInstallPlatform, string> = {
 };
 
 /**
- * PWA invitation shown on the landing page.
+ * PWA invitation available from the landing page and owner workspace.
  *
  * Browsers do not allow `beforeinstallprompt.prompt()` without a user gesture,
  * so the floating CTA triggers the native browser install sheet directly when
  * available. Browsers without that event get device-specific manual instructions
  * after the user opens the CTA.
  */
-export function PwaInstallPrompt() {
+export function PwaInstallPrompt({
+  placement = 'workspace',
+}: {
+  placement?: 'landing' | 'workspace';
+}) {
   const { t } = useTranslation();
-  const { pathname } = useLocation();
   const { installed, canPrompt, secureContext, platform, promptInstall } = usePwaInstall();
   const [open, setOpen] = useState(false);
   const [showManualHelp, setShowManualHelp] = useState(false);
-  const isRegistrationRoute = pathname === '/business/register';
 
   const instructions = t(`app.pwaInstall.instructions.${instructionKeys[platform]}`, {
     returnObjects: true,
@@ -78,10 +78,11 @@ export function PwaInstallPrompt() {
     <>
       {!installed && installAvailable && (
         <div
-          className={cn(
-            'pointer-events-none fixed end-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-nav flex justify-end sm:end-5 sm:bottom-5',
-            isRegistrationRoute && 'max-sm:hidden',
-          )}
+          className={`pointer-events-none fixed end-3 z-nav flex justify-end sm:end-5 ${
+            placement === 'landing'
+              ? 'bottom-[calc(0.5rem+env(safe-area-inset-bottom))] sm:bottom-2'
+              : 'bottom-[calc(5.5rem+env(safe-area-inset-bottom))]'
+          }`}
         >
           <Button
             className="pointer-events-auto shadow-2"

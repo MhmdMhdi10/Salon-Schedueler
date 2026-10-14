@@ -1,5 +1,7 @@
 .register-form-content {
-  padding-bottom: 2rem;
+  /* The form is a vertical flex stack: stretch each step across its column. */
+  align-items: stretch;
+  padding-block-end: 2rem;
 }
 
 /* Keep outer page scrollbar on physical right; restore Persian direction in
@@ -12,19 +14,19 @@
   direction: rtl;
 }
 
-.register-specialties-panel {
-  scroll-margin-block: 1rem 8rem;
+.register-info-primary {
+  width: 100%;
 }
 
 .register-step-progress__track {
-  width: min(64%, 18rem);
+  width: min(52%, 18rem);
 }
 
 /* Reserve room for the logo and theme control on narrow phone headers. The
  * track remains centered in the header without covering either control. */
 @media (max-width: 47.9375rem) {
   .register-step-progress__track {
-    width: min(64%, calc(100% - 10.5rem));
+    width: min(64%, calc(100% - 12rem));
   }
 }
 
@@ -37,6 +39,10 @@
 }
 
 @media (max-width: 47.9375rem) {
+  .register-form-content {
+    padding-block-end: 0;
+  }
+
   .register-step-nav {
     position: fixed;
     inset-inline: 0;
@@ -55,6 +61,10 @@
      mobile reserve after each step so its final content remains scrollable. */
   .register-step-nav-spacer {
     display: block;
+    height: calc(5rem + env(safe-area-inset-bottom));
+  }
+
+  .register-step-nav-shell.has-secondary .register-step-nav-spacer {
     height: calc(8rem + env(safe-area-inset-bottom));
   }
 
@@ -63,22 +73,14 @@
     max-width: 40rem;
     margin-inline: auto;
   }
-
-  .register-fixed-primary {
-    position: fixed;
-    inset-inline: 0.75rem;
-    bottom: 0.75rem;
-    bottom: max(0.75rem, env(safe-area-inset-bottom));
-    z-index: var(--z-nav);
-    width: calc(100% - 1.5rem);
-    max-width: 40rem;
-    margin-inline: auto;
-    box-shadow: 0 0.75rem 1.75rem color-mix(in srgb, var(--color-primary) 20%, transparent);
-  }
 }
 
 @media (min-width: 48rem) {
   .register-step-nav {
     margin-block-start: 0.75rem;
+  }
+
+  .register-info-primary {
+    width: auto;
   }
 }

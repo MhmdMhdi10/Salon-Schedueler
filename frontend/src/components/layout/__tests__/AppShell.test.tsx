@@ -215,10 +215,14 @@ describe('AppShell', () => {
     expect(within(main).getByTestId('page-body')).toBeInTheDocument();
   });
 
-  it('does not expose marketplace navigation during the owner-first launch', () => {
+  it('exposes the customer booking entry point without adding marketplace categories', () => {
     renderShell();
+    const footer = screen.getByRole('contentinfo');
+    expect(within(footer).getByRole('link', { name: 'رزرو نوبت' })).toHaveAttribute(
+      'href',
+      '/search',
+    );
     expect(screen.queryByRole('navigation', { name: 'دسته‌بندی خدمات' })).not.toBeInTheDocument();
-    expect(document.querySelector('a[href="/search"]')).not.toBeInTheDocument();
     expect(document.querySelector('a[href^="/services/"]')).not.toBeInTheDocument();
   });
 

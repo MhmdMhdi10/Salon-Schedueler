@@ -282,10 +282,13 @@ function AuthenticatedRoute() {
   return <Outlet />;
 }
 
-function LandingPwaInstallPrompt() {
+function AppPwaInstallPrompt() {
   const { pathname } = useLocation();
+  const isOwnerWorkspace = pathname === '/owner' || pathname.startsWith('/owner/');
+  const isLanding = pathname === '/';
 
-  return pathname === '/' ? <PwaInstallPrompt /> : null;
+  if (isLanding) return <PwaInstallPrompt placement="landing" />;
+  return isOwnerWorkspace ? <PwaInstallPrompt /> : null;
 }
 
 export function App() {
@@ -447,7 +450,7 @@ export function App() {
                     </Route>
                   </Routes>
                 </Suspense>
-                <LandingPwaInstallPrompt />
+                <AppPwaInstallPrompt />
               </div>
             </ToastProvider>
           </AuthProvider>

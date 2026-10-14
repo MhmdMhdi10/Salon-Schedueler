@@ -148,22 +148,31 @@ test('platform admin exposes SMS delivery states and attempt history entry point
   await expect(page.getByRole('columnheader', { name: 'بررسی / تلاش بعدی' })).toBeVisible();
 });
 
-test('mobile salon registration uses native page scrolling for services', async ({
+test('mobile salon registration keeps its service catalog scrollable', async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile-responsive', 'mobile-only service list check');
 
   await page.goto('/business/register');
   await expect(page.getByRole('heading', { name: 'حوزه کاری‌تان چیست؟' })).toBeVisible();
-  await page.getByRole('button', { name: 'رد کردن این مرحله' }).click();
+  await page.getByTestId('business-type-hair_salon').click();
+  await page.getByRole('button', { name: 'ادامه', exact: true }).click();
   await page.locator('#salonName').fill('سالن QA');
   await page.locator('#ownerName').fill('مدیر QA');
   await page.locator('#phone').fill('09123456789');
   await page.getByRole('button', { name: 'ادامه', exact: true }).click();
 
-  const list = page.getByTestId('suggested-services-list');
+  await page.getByRole('button', { name: 'افزودن خدمت', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: /نمایش همه/ }).click();
+  const list = dialog.getByTestId('suggested-services-list');
   await expect(list).toBeVisible();
-  expect(await list.evaluate((element) => getComputedStyle(element).overflowY)).not.toBe('auto');
-  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  expect(await list.evaluate((element) => getComputedStyle(element).overflowY)).toBe('auto');
+  expect(await list.evaluate((element) => element.scrollHeight)).toBeGreaterThan(
+    await list.evaluate((element) => element.clientHeight),
+  );
+  await list.hover();
+  await page.mouse.wheel(0, 450);
+  await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
 });

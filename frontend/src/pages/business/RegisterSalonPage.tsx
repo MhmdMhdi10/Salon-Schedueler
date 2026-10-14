@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { ArrowRight, Check, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { ArrowRight, Check, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { normalizeDigits } from '@salon/shared';
 import {
   ApiError,
@@ -14,11 +14,16 @@ import {
 } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { SeoHead } from '../../components/seo';
-import { BrandLogo } from '../../components/brand';
+import { BrandLogo, Motif } from '../../components/brand';
 import { ThemeToggle } from '../../components/theme/ThemeToggle';
 import {
   Button,
   DurationStepper,
+  IconButton,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
   TextField,
   cn,
   toPersianDigits,
@@ -32,7 +37,6 @@ import {
   HaircutIcon,
   MakeupIcon,
   NailsIcon,
-  OnboardingSecurityIcon,
   SkinIcon,
   TattooIcon,
 } from '../../components/icons';
@@ -47,12 +51,8 @@ const RESEND_SECONDS = 45;
 
 /** The visible onboarding steps, in order. `otp` is the final sign-in step. */
 type Step = 'category' | 'info' | 'services' | 'otp';
-const STEP_ORDER: readonly Step[] = [
-  'category',
-  'info',
-  'services',
-  'otp',
-] as const;
+type ServiceSheetMode = 'catalog' | 'custom' | 'edit' | null;
+const STEP_ORDER: readonly Step[] = ['category', 'info', 'services', 'otp'] as const;
 
 /** Format remaining seconds as `m:ss` in Persian digits (resend timer). */
 function formatCountdown(totalSeconds: number): string {
@@ -77,7 +77,7 @@ interface DraftService extends RegisterSalonServiceInput {
  * onboarding). A short, skippable questionnaire that provisions the salon and
  * lands the owner straight in their panel:
  *
- *   1. حوزه کاری — business type + primary specialty
+ *   1. حوزه کاری — business type, used to tailor service suggestions
  *   2. مشخصات — salon name + owner name + phone
  *   3. خدمات — choose services and optionally refine duration and price
  *   4. ورود — OTP sign-in with the phone just registered
@@ -105,7 +105,6 @@ function RegisterSalonContent() {
 
   const [step, setStep] = useState<Step>('category');
   const [categories, setCategories] = useState<string[]>([]);
-  const [specialties, setSpecialties] = useState<string[]>([]);
 
   // Identity — required before provisioning the salon.
   const [salonName, setSalonName] = useState('');
@@ -122,6 +121,7 @@ function RegisterSalonContent() {
 
   // Services questionnaire.
   const [services, setServices] = useState<DraftService[]>([]);
+  const [serviceSheetMode, setServiceSheetMode] = useState<ServiceSheetMode>(null);
   const [svcName, setSvcName] = useState('');
   const [svcDuration, setSvcDuration] = useState('30');
   const [svcPrice, setSvcPrice] = useState('');
@@ -145,7 +145,6 @@ function RegisterSalonContent() {
   const [otpError, setOtpError] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
-  const [servicePage, setServicePage] = useState(0);
 
   useEffect(() => {
     setServicePresetQuery('');
@@ -198,6 +197,31 @@ function RegisterSalonContent() {
     if (Object.keys(errors).length === 0) setStep('services');
   };
 
+  const closeServiceSheet = () => {
+    setServiceSheetMode(null);
+    setEditingService(null);
+    setServiceEditError('');
+    setSvcError('');
+    setSvcName('');
+    setSvcDuration('30');
+    setSvcPrice('');
+    setServicePresetQuery('');
+    setShowAllPresets(false);
+  };
+
+  const openServiceCatalog = () => {
+    setSvcError('');
+    setServiceEditError('');
+    setServicePresetQuery('');
+    setShowAllPresets(false);
+    setServiceSheetMode('catalog');
+  };
+
+  const openCustomServiceForm = () => {
+    setSvcError('');
+    setServiceSheetMode('custom');
+  };
+
   // ── Services: add / edit / remove a service ──────────────────────────────
   // Only the name is required — duration/price are optional and default
   // server-side (30 min / 0 Rial) when left blank, so an owner can quickly
@@ -222,6 +246,7 @@ function RegisterSalonContent() {
     setSvcDuration('30');
     setSvcPrice('');
     setSvcError('');
+    setServiceSheetMode('catalog');
   };
 
   const handleTogglePresetService = (preset: SuggestedService) => {
@@ -229,7 +254,6 @@ function RegisterSalonContent() {
     const name = preset.label;
     const existing = services.find((service) => service.key === key);
     if (existing) {
-      if (editingService?.key === existing.key) cancelEditingService();
       setServices((previous) => previous.filter((service) => service.key !== existing.key));
     } else {
       setServices((previous) => [...previous, { key, name, durationMinutes: 30, priceRial: 0 }]);
@@ -245,11 +269,7 @@ function RegisterSalonContent() {
       price: service.priceRial ? String(service.priceRial) : '',
     });
     setServiceEditError('');
-  };
-
-  const cancelEditingService = () => {
-    setEditingService(null);
-    setServiceEditError('');
+    setServiceSheetMode('edit');
   };
 
   const handleSaveService = () => {
@@ -273,28 +293,30 @@ function RegisterSalonContent() {
           : service,
       ),
     );
-    cancelEditingService();
+    closeServiceSheet();
   };
 
   const handleRemoveService = (key: string) => {
-    if (editingService?.key === key) cancelEditingService();
     setServices((prev) => prev.filter((s) => s.key !== key));
   };
 
   const suggestedServices = useMemo(() => {
-    const profileKeys = categories.length > 0 ? categories : ['hair_salon'];
-    const keys = profileKeys.flatMap((profileKey) => SERVICE_PRESETS_BY_PROFILE[profileKey] ?? []);
-    return [...new Set(keys)].map((key) => {
-      const specialty = BUSINESS_PROFILES.flatMap((profile) => profile.specialties).find(
-        (item) => item.key === key,
-      );
-      return {
-        key,
-        label: t(`business.register.services.presets.${key}`, {
-          defaultValue: specialty?.label ?? key,
-        }),
-      };
-    });
+    const keys =
+      categories.length > 0
+        ? categories.flatMap((profileKey) => SERVICE_PRESETS_BY_PROFILE[profileKey] ?? [])
+        : [
+            'haircut',
+            'manicure',
+            'mens_haircut',
+            'brows',
+            'makeup',
+            'facial',
+            ...Object.values(SERVICE_PRESETS_BY_PROFILE).flat(),
+          ];
+    return [...new Set(keys)].map((key) => ({
+      key,
+      label: t(`business.register.services.presets.${key}`, { defaultValue: key }),
+    }));
   }, [categories, t]);
   const filteredServicePresets = useMemo(() => {
     const query = servicePresetQuery.trim().toLocaleLowerCase('fa-IR');
@@ -303,11 +325,6 @@ function RegisterSalonContent() {
       service.label.toLocaleLowerCase('fa-IR').includes(query),
     );
   }, [servicePresetQuery, suggestedServices]);
-  const visibleServices = services.slice(
-    servicePage * ONBOARDING_SERVICE_PAGE_SIZE,
-    (servicePage + 1) * ONBOARDING_SERVICE_PAGE_SIZE,
-  );
-
   // ── Submit registration, then send the OTP ───────────────────────────────
   const handleSubmit = async () => {
     if (!PHONE_PATTERN.test(normalizedPhone)) {
@@ -328,7 +345,6 @@ function RegisterSalonContent() {
           phone: normalizedPhone,
           businessType: categories[0] || undefined,
           businessTypes: categories,
-          specialties,
           workMode: 'not_decided',
           services: services.map(({ name, durationMinutes, priceRial }) => ({
             name,
@@ -422,6 +438,19 @@ function RegisterSalonContent() {
 
   const handleOtpChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = normalizeDigits(e.target.value).replace(/\D/g, '');
+    if (raw.length > 1) {
+      const pasted = raw.slice(0, otpLength - index).split('');
+      setOtpError('');
+      setCode((previous) => {
+        const next = [...previous];
+        pasted.forEach((digit, offset) => {
+          next[index + offset] = digit;
+        });
+        return next;
+      });
+      otpRefs.current[Math.min(index + pasted.length, otpLength - 1)]?.focus();
+      return;
+    }
     setDigit(index, raw ? raw[raw.length - 1] : '');
   };
 
@@ -456,7 +485,7 @@ function RegisterSalonContent() {
       <SeoHead title={t('business.register.title')} />
 
       <header className="register-page-header border-b border-border bg-elevated" dir="rtl">
-        <div className="relative mx-auto flex h-14 w-full max-w-2xl items-center justify-between gap-2 px-3 sm:gap-5 sm:px-4">
+        <div className="relative mx-auto flex h-16 w-full max-w-3xl items-center justify-between gap-2 px-4 sm:gap-5 sm:px-8">
           <Link
             to="/"
             aria-label="آرا"
@@ -466,8 +495,15 @@ function RegisterSalonContent() {
           </Link>
           <div
             className="register-step-progress pointer-events-none absolute inset-0 flex items-center justify-center"
-            role="group"
+            role="progressbar"
             aria-label={t('business.register.progressLabel')}
+            aria-valuemin={1}
+            aria-valuemax={STEP_ORDER.length}
+            aria-valuenow={stepIndex + 1}
+            aria-valuetext={t('business.register.progress', {
+              current: toPersianDigits(stepIndex + 1),
+              total: toPersianDigits(STEP_ORDER.length),
+            })}
           >
             <div className="register-step-progress__track flex gap-1">
               {STEP_ORDER.map((item, index) => (
@@ -486,7 +522,7 @@ function RegisterSalonContent() {
         </div>
       </header>
 
-      <div className="register-form-content mx-auto flex w-full max-w-2xl flex-1 flex-col px-3 py-6 sm:px-4 sm:py-10">
+      <div className="register-form-content mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-7 sm:px-8 sm:py-10">
         <AnimatePresence initial={false} mode="wait">
           <motion.div
             key={step}
@@ -499,7 +535,10 @@ function RegisterSalonContent() {
             className="min-w-0"
           >
             <p className="text-sm font-medium text-primary">
-              مرحله {toPersianDigits(stepIndex + 1)} از {toPersianDigits(STEP_ORDER.length)}
+              {t('business.register.progress', {
+                current: toPersianDigits(stepIndex + 1),
+                total: toPersianDigits(STEP_ORDER.length),
+              })}
             </p>
             <h1 className="mt-3 text-2xl leading-display text-display text-text">
               {step === 'category'
@@ -510,20 +549,25 @@ function RegisterSalonContent() {
                     ? t('business.register.services.title')
                     : t('business.register.verify.title')}
             </h1>
-            <p className="mt-2 text-sm text-muted">
+            <p className="mt-2 max-w-[38rem] text-sm leading-6 text-muted">
               {step === 'category'
                 ? t('business.register.category.subtitle')
                 : step === 'info'
                   ? t('business.register.info.subtitle')
                   : step === 'services'
                     ? t('business.register.services.subtitle')
-                    : t('business.register.subtitle')}
+                    : t('business.register.verify.subtitle', {
+                        phone: toPersianDigits(normalizedPhone),
+                      })}
             </p>
 
             {step === 'category' ? (
-              <section className="flex flex-col pt-8">
+              <section className="flex flex-col pt-7">
+                <p className="mb-3 text-sm text-muted">
+                  {t('business.register.category.selectionHint')}
+                </p>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {BUSINESS_PROFILES.map((profile) => {
+                  {BUSINESS_PROFILES.map((profile, index) => {
                     const Icon = profile.icon;
                     const selected = categories.includes(profile.key);
                     return (
@@ -535,53 +579,54 @@ function RegisterSalonContent() {
                             ? categories.filter((key) => key !== profile.key)
                             : [...categories, profile.key];
                           setCategories(nextCategories);
-                          setSpecialties((previous) => {
-                            const allowed = nextCategories.flatMap(
-                              (key) =>
-                                BUSINESS_PROFILES.find((item) => item.key === key)?.specialties.map(
-                                  (item) => item.key,
-                                ) ?? [],
-                            );
-                            const retained = previous.filter((key) => allowed.includes(key));
-                            const defaultSpecialty = !selected
-                              ? profile.specialties[0]?.key
-                              : undefined;
-                            return defaultSpecialty && !retained.includes(defaultSpecialty)
-                              ? [...retained, defaultSpecialty]
-                              : retained;
-                          });
                         }}
                         aria-pressed={selected}
                         data-testid={`business-type-${profile.key}`}
                         className={cn(
-                          'flex min-h-[5.25rem] items-center gap-3 rounded-xl border-2 bg-elevated px-4 text-start text-text transition-colors duration-fast',
-                          selected ? 'border-primary bg-primary/5' : 'border-border',
+                          'flex min-h-[4.5rem] items-center gap-3 rounded-xl border px-3 py-3 text-start text-text transition-colors duration-fast focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus sm:px-4',
+                          selected
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border bg-elevated hover:border-primary/50',
+                          index === BUSINESS_PROFILES.length - 1 &&
+                            'sm:col-span-2 sm:w-1/2 sm:justify-self-center',
                         )}
                       >
                         <span
                           className={cn(
-                            'flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary',
-                            selected && 'bg-primary text-primary-contrast',
+                            'flex size-9 shrink-0 items-center justify-center rounded-lg',
+                            selected
+                              ? 'bg-primary text-primary-contrast'
+                              : 'bg-surface text-primary',
                           )}
                         >
-                          <Icon className="size-5" aria-hidden="true" />
+                          <Icon className="size-[1.125rem]" aria-hidden="true" />
                         </span>
-                        <span className="flex min-w-0 flex-col gap-0.5">
-                          <span className="font-bold">{profile.label}</span>
-                          <span className="text-xs leading-5 text-muted">
-                            {profile.description}
+                        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <span className="text-sm font-semibold">
+                            {t(`business.register.category.profiles.${profile.key}.label`)}
                           </span>
+                          <span className="text-xs leading-5 text-muted">
+                            {t(`business.register.category.profiles.${profile.key}.description`)}
+                          </span>
+                        </span>
+                        <span
+                          className={cn(
+                            'flex size-6 shrink-0 items-center justify-center rounded-full border',
+                            selected
+                              ? 'border-primary bg-primary text-primary-contrast'
+                              : 'border-border text-transparent',
+                          )}
+                          aria-hidden="true"
+                        >
+                          <Check className="size-4" />
                         </span>
                       </button>
                     );
                   })}
                 </div>
                 <StepNav
-                  onBack={() => navigate('/')}
                   onNext={() => setStep('info')}
-                  onSkip={() => setStep('info')}
                   nextLabel={t('business.register.next')}
-                  skipLabel={t('business.register.skip')}
                   backLabel={t('business.register.back')}
                   nextDisabled={categories.length === 0}
                 />
@@ -590,7 +635,7 @@ function RegisterSalonContent() {
               <section className="mt-8 flex flex-col gap-5">
                 {step === 'info' && (
                   <form
-                    className="flex flex-col gap-4"
+                    className="grid gap-5 sm:grid-cols-2"
                     onSubmit={(e) => {
                       e.preventDefault();
                       handleInfoNext();
@@ -620,33 +665,35 @@ function RegisterSalonContent() {
                           setInfoErrors((p) => ({ ...p, ownerName: undefined }));
                       }}
                     />
-                    <TextField
-                      id="phone"
-                      label={t('business.register.info.phoneLabel')}
-                      error={infoErrors.phone}
-                      type="tel"
-                      inputMode="tel"
-                      dir="ltr"
-                      autoComplete="tel"
-                      maxLength={14}
-                      placeholder={t('auth.phonePlaceholder')}
-                      value={phone}
-                      onChange={(e) => {
-                        setPhone(filterPhoneInput(e.target.value));
-                        if (infoErrors.phone) setInfoErrors((p) => ({ ...p, phone: undefined }));
-                      }}
-                    />
-                    <Button type="submit" size="lg" fullWidth>
-                      {t('business.register.next')}
-                    </Button>
-                    <div className="flex justify-start">
+                    <div className="sm:col-span-2">
+                      <TextField
+                        id="phone"
+                        label={t('business.register.info.phoneLabel')}
+                        helperText={t('business.register.info.phoneHelper')}
+                        error={infoErrors.phone}
+                        type="tel"
+                        inputMode="tel"
+                        dir="ltr"
+                        autoComplete="tel"
+                        maxLength={14}
+                        placeholder={t('auth.phonePlaceholder')}
+                        value={phone}
+                        onChange={(e) => {
+                          setPhone(filterPhoneInput(e.target.value));
+                          if (infoErrors.phone) setInfoErrors((p) => ({ ...p, phone: undefined }));
+                        }}
+                      />
+                    </div>
+                    <div className="register-info-actions flex flex-col gap-2 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
+                      <Button type="submit" size="lg" className="register-info-primary sm:min-w-44">
+                        {t('business.register.next')}
+                      </Button>
                       <Button
                         type="button"
                         variant="ghost"
                         size="md"
-                        startIcon={
-                          <ArrowRight className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />
-                        }
+                        // RTL-native: the back action points visually right.
+                        startIcon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
                         onClick={() => setStep('category')}
                       >
                         {t('business.register.back')}
@@ -656,369 +703,429 @@ function RegisterSalonContent() {
                 )}
 
                 {step === 'services' && (
-                  <div className="flex flex-col gap-4" data-testid="register-services-step">
-                    <form
-                      className="rounded-xl border border-primary/20 bg-elevated p-4"
-                      data-testid="add-service-form"
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        handleAddService();
-                      }}
-                    >
-                      <div className="flex items-start gap-3">
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill bg-primary/10 text-primary">
-                          <Plus className="h-5 w-5" aria-hidden="true" />
-                        </span>
+                  <div className="flex flex-col gap-5" data-testid="register-services-step">
+                    <section className="rounded-2xl border border-border bg-elevated p-4 sm:p-5">
+                      <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="text-sm font-bold text-text">
-                            {t('business.register.services.formTitle')}
-                          </p>
-                          <p className="mt-1 text-xs leading-5 text-muted">
-                            {t('business.register.services.formHelper')}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="mt-4 grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-[minmax(0,1fr)_8.5rem_9.5rem_auto] sm:items-end">
-                        <div className="col-span-2 min-w-0 sm:col-span-1">
-                          <TextField
-                            id="svcName"
-                            label={t('business.register.services.nameLabel')}
-                            placeholder={t('business.register.services.namePlaceholder')}
-                            value={svcName}
-                            onChange={(e) => setSvcName(e.target.value)}
-                          />
-                        </div>
-                        <DurationStepper
-                          label={
-                            <span className="whitespace-nowrap">
-                              {t('business.register.services.durationLabel')}
-                            </span>
-                          }
-                          ariaLabel={t('business.register.services.durationLabel')}
-                          value={svcDuration}
-                          onChange={setSvcDuration}
-                          step={15}
-                          allowEmpty
-                          className="min-w-0 w-full"
-                        />
-                        <TextField
-                          id="svcPrice"
-                          label={
-                            <span className="whitespace-nowrap">
-                              {t('business.register.services.priceLabel')}
-                            </span>
-                          }
-                          inputMode="numeric"
-                          dir="ltr"
-                          placeholder="۵۰۰۰۰۰"
-                          className="min-h-14"
-                          containerClassName="min-w-0 w-full"
-                          value={svcPrice}
-                          onChange={(e) => setSvcPrice(formatPriceInput(e.target.value))}
-                        />
-                        <Button
-                          type="submit"
-                          variant="secondary"
-                          startIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
-                          className="col-span-2 w-full sm:col-span-1 sm:w-auto"
-                        >
-                          {t('business.register.services.addCta')}
-                        </Button>
-                      </div>
-                      {svcError && (
-                        <p
-                          className="mt-3 flex items-center gap-1 text-sm text-danger"
-                          role="alert"
-                        >
-                          {svcError}
-                        </p>
-                      )}
-                    </form>
-
-                    <div className="rounded-xl border border-border bg-bg p-3">
-                      <div className="flex shrink-0 items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-text">
-                            {t('business.register.services.presetsLabel')}
-                          </p>
-                          <p className="mt-1 text-xs text-muted">
-                            {t('business.register.services.presetsHelper')}
-                          </p>
-                        </div>
-                        <span className="shrink-0 text-xs text-muted">
-                          {t('business.register.services.presetsCount', {
-                            count: toPersianDigits(filteredServicePresets.length),
-                          })}
-                        </span>
-                      </div>
-                      <label className="relative mt-3 block shrink-0">
-                        <span className="sr-only">
-                          {t('business.register.services.presetsSearchLabel')}
-                        </span>
-                        <Search
-                          className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted"
-                          aria-hidden="true"
-                        />
-                        <input
-                          id="suggested-service-search"
-                          type="search"
-                          value={servicePresetQuery}
-                          onChange={(event) => setServicePresetQuery(event.target.value)}
-                          placeholder={t('business.register.services.presetsSearchPlaceholder')}
-                          className="min-h-11 w-full rounded-lg border border-border bg-elevated pe-10 ps-3 text-sm text-text outline-none placeholder:text-muted focus:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus"
-                        />
-                      </label>
-                      <div
-                        className="mt-3 pe-1"
-                        data-testid="suggested-services-list"
-                      >
-                        {filteredServicePresets.length > 0 ? (
-                          <div className="grid gap-2 sm:grid-cols-2">
-                            {(servicePresetQuery || showAllPresets ? filteredServicePresets : filteredServicePresets.slice(0, 6)).map((preset) => {
-                              const name = preset.label;
-                              const checked = services.some(
-                                (service) => service.key === `preset-${preset.key}`,
-                              );
-                              return (
-                                <label
-                                  key={preset.key}
-                                  className={cn(
-                                    'flex min-h-16 cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm sm:min-h-11',
-                                    checked
-                                      ? 'border-primary bg-primary/5 text-primary'
-                                      : 'border-border text-text',
-                                  )}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={checked}
-                                    onChange={() => handleTogglePresetService(preset)}
-                                    className="size-4 accent-primary"
-                                  />
-                                  <span>{name}</span>
-                                </label>
-                              );
+                          <h2 className="text-sm font-semibold text-text">
+                            {t('business.register.services.listLabel')}
+                          </h2>
+                          <p className="mt-1 text-xs text-muted" role="status">
+                            {t('business.register.services.selectedCount', {
+                              count: toPersianDigits(services.length),
                             })}
-                          </div>
-                        ) : (
-                          <p
-                            className="rounded-lg border border-dashed border-border p-4 text-center text-xs leading-5 text-muted"
-                            role="status"
-                          >
-                            {t('business.register.services.presetsNoResults')}
                           </p>
+                        </div>
+                        {services.length > 0 && (
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="md"
+                            startIcon={<Plus className="size-4" aria-hidden="true" />}
+                            onClick={openServiceCatalog}
+                            className="shrink-0"
+                          >
+                            {t('business.register.services.addCta')}
+                          </Button>
                         )}
                       </div>
-                      {!servicePresetQuery && filteredServicePresets.length > 6 && (
-                        <button type="button" className="mt-3 min-h-11 text-sm font-semibold text-primary" onClick={() => setShowAllPresets((value) => !value)}>
-                          {showAllPresets ? 'نمایش کمتر' : `نمایش همهٔ ${toPersianDigits(filteredServicePresets.length)} خدمت`}
-                        </button>
-                      )}
-                    </div>
 
-                    {services.length > 0 && (
-                      <ul
-                        className="flex flex-col gap-2"
-                        aria-label={t('business.register.services.listLabel')}
-                      >
-                        {visibleServices.map((s) => (
-                          <li key={s.key} className="rounded-md border border-border bg-bg p-3">
-                            {editingService?.key === s.key ? (
-                              <form
-                                className="flex flex-col gap-3"
-                                data-testid={`edit-service-${s.key}`}
-                                onSubmit={(event) => {
-                                  event.preventDefault();
-                                  handleSaveService();
-                                }}
-                              >
-                                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_8.5rem_9.5rem]">
-                                  <TextField
-                                    id={`edit-svc-name-${s.key}`}
-                                    label={t('business.register.services.nameLabel')}
-                                    value={editingService.name}
-                                    onChange={(event) =>
-                                      setEditingService((current) =>
-                                        current
-                                          ? { ...current, name: event.target.value }
-                                          : current,
-                                      )
-                                    }
-                                  />
-                                  <DurationStepper
-                                    label={t('business.register.services.durationLabel')}
-                                    ariaLabel={t('business.register.services.durationLabel')}
-                                    value={editingService.duration}
-                                    onChange={(value) =>
-                                      setEditingService((current) =>
-                                        current ? { ...current, duration: value } : current,
-                                      )
-                                    }
-                                    step={15}
-                                    allowEmpty
-                                  />
-                                  <TextField
-                                    id={`edit-svc-price-${s.key}`}
-                                    label={t('business.register.services.priceLabel')}
-                                    inputMode="numeric"
-                                    dir="ltr"
-                                    className="min-h-14"
-                                    value={editingService.price}
-                                    onChange={(event) =>
-                                      setEditingService((current) =>
-                                        current
-                                          ? { ...current, price: formatPriceInput(event.target.value) }
-                                          : current,
-                                      )
-                                    }
-                                  />
-                                </div>
-                                {serviceEditError && (
-                                  <p
-                                    className="flex items-center gap-1 text-sm text-danger"
-                                    role="alert"
-                                  >
-                                    {serviceEditError}
-                                  </p>
-                                )}
-                                <div className="flex flex-wrap justify-end gap-2">
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="md"
-                                    startIcon={<X className="h-4 w-4" aria-hidden="true" />}
-                                    onClick={cancelEditingService}
-                                  >
-                                    {t('business.register.services.cancel')}
-                                  </Button>
-                                  <Button
-                                    type="submit"
-                                    size="md"
-                                    startIcon={<Check className="h-4 w-4" aria-hidden="true" />}
-                                  >
-                                    {t('business.register.services.save')}
-                                  </Button>
-                                </div>
-                              </form>
-                            ) : (
-                              <div className="flex flex-wrap items-center justify-between gap-3">
-                                <span className="flex min-w-0 flex-col">
-                                  <span className="text-sm font-medium text-text">{s.name}</span>
-                                  <span className="text-xs text-muted">
-                                    {t('business.register.services.summary', {
-                                      minutes: toPersianDigits(s.durationMinutes ?? 30),
-                                      price: toPersianDigits(
-                                        (s.priceRial ?? 0).toLocaleString('en-US'),
-                                      ),
-                                    })}
-                                  </span>
-                                </span>
-                                <div className="flex shrink-0 items-center gap-1">
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="md"
-                                    startIcon={<Pencil className="h-4 w-4" aria-hidden="true" />}
-                                    aria-label={t('business.register.services.edit', {
-                                      name: s.name,
-                                    })}
-                                    onClick={() => startEditingService(s)}
-                                  >
-                                    {t('business.register.services.editAction')}
-                                  </Button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveService(s.key)}
-                                    aria-label={t('business.register.services.remove', {
-                                      name: s.name,
-                                    })}
-                                    className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted transition-colors duration-fast ease-standard hover:bg-surface hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                                  >
-                                    <Trash2 className="h-4 w-4" aria-hidden="true" />
-                                  </button>
-                                </div>
+                      {services.length === 0 ? (
+                        <div className="mt-4 flex flex-col items-center rounded-xl border border-dashed border-border px-4 py-7 text-center">
+                          <span className="flex size-11 items-center justify-center rounded-full bg-surface text-primary">
+                            <Motif variant="mark" className="size-6" aria-hidden />
+                          </span>
+                          <h3 className="mt-3 text-sm font-semibold text-text">
+                            {t('business.register.services.emptyTitle')}
+                          </h3>
+                          <p className="mt-1 max-w-sm text-xs leading-5 text-muted">
+                            {t('business.register.services.emptyHint')}
+                          </p>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="md"
+                            startIcon={<Plus className="size-4" aria-hidden="true" />}
+                            onClick={openServiceCatalog}
+                            className="mt-4"
+                          >
+                            {t('business.register.services.addCta')}
+                          </Button>
+                        </div>
+                      ) : (
+                        <ul
+                          className="mt-3 divide-y divide-border"
+                          aria-label={t('business.register.services.listLabel')}
+                        >
+                          {services.map((service) => (
+                            <li
+                              key={service.key}
+                              className="flex min-h-16 items-center justify-between gap-3 py-2"
+                            >
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium text-text">
+                                  {service.name}
+                                </p>
+                                <p className="mt-1 text-xs text-muted">
+                                  {service.priceRial
+                                    ? t('business.register.services.summary', {
+                                        minutes: toPersianDigits(service.durationMinutes ?? 30),
+                                        price: toPersianDigits(
+                                          service.priceRial.toLocaleString('en-US'),
+                                        ),
+                                      })
+                                    : t('business.register.services.summaryNoPrice', {
+                                        minutes: toPersianDigits(service.durationMinutes ?? 30),
+                                      })}
+                                </p>
                               </div>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                              <div className="flex shrink-0 items-center gap-1">
+                                <IconButton
+                                  aria-label={t('business.register.services.edit', {
+                                    name: service.name,
+                                  })}
+                                  onClick={() => startEditingService(service)}
+                                >
+                                  <Pencil className="size-4" />
+                                </IconButton>
+                                <IconButton
+                                  variant="danger"
+                                  aria-label={t('business.register.services.remove', {
+                                    name: service.name,
+                                  })}
+                                  onClick={() => handleRemoveService(service.key)}
+                                >
+                                  <Trash2 className="size-4" />
+                                </IconButton>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </section>
 
-                    {services.length > ONBOARDING_SERVICE_PAGE_SIZE && (
-                      <div className="flex items-center justify-between gap-2">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="md"
-                          disabled={servicePage === 0}
-                          onClick={() => setServicePage((page) => Math.max(0, page - 1))}
-                        >
-                          قبلی
-                        </Button>
-                        <span className="text-xs text-muted">
-                          {toPersianDigits(
-                            `${servicePage + 1}/${Math.ceil(services.length / ONBOARDING_SERVICE_PAGE_SIZE)}`,
-                          )}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="md"
-                          disabled={
-                            servicePage >=
-                            Math.ceil(services.length / ONBOARDING_SERVICE_PAGE_SIZE) - 1
-                          }
-                          onClick={() =>
-                            setServicePage((page) =>
-                              Math.min(
-                                Math.ceil(services.length / ONBOARDING_SERVICE_PAGE_SIZE) - 1,
-                                page + 1,
-                              ),
-                            )
-                          }
-                        >
-                          بعدی
-                        </Button>
-                      </div>
-                    )}
-
-                    {services.length === 0 && (
-                      <p className="text-xs leading-5 text-muted" role="status">
-                        {t('business.register.services.emptyHint')}
+                    {submitError && (
+                      <p className="text-sm text-danger" role="alert">
+                        {submitError}
                       </p>
                     )}
-
-                    {submitError && <p className="text-sm text-danger" role="alert">{submitError}</p>}
 
                     <StepNav
                       onBack={() => setStep('info')}
                       onNext={() => void handleSubmit()}
-                      onSkip={() => void handleSubmit()}
                       nextLabel={t('business.register.submit')}
-                      skipLabel={t('business.register.skipSetup')}
                       backLabel={t('business.register.back')}
                       loading={submitting}
                     />
+
+                    <Sheet
+                      open={serviceSheetMode !== null}
+                      onOpenChange={(open) => {
+                        if (!open) closeServiceSheet();
+                      }}
+                    >
+                      <SheetContent
+                        side="bottom"
+                        className="mx-auto flex h-[min(90dvh,48rem)] max-h-[100dvh] w-full max-w-2xl flex-col overflow-hidden p-0 sm:rounded-t-2xl"
+                      >
+                        <header className="shrink-0 border-b border-border px-5 pb-4 pe-16 pt-6">
+                          <span
+                            className="mx-auto mb-4 block h-1 w-9 rounded-full bg-border sm:hidden"
+                            aria-hidden="true"
+                          />
+                          <SheetTitle className="text-base font-semibold">
+                            {serviceSheetMode === 'edit'
+                              ? t('business.register.services.editTitle')
+                              : serviceSheetMode === 'custom'
+                                ? t('business.register.services.formTitle')
+                                : t('business.register.services.presetsLabel')}
+                          </SheetTitle>
+                          <SheetDescription className="leading-6">
+                            {serviceSheetMode === 'edit'
+                              ? t('business.register.services.editDescription')
+                              : serviceSheetMode === 'custom'
+                                ? t('business.register.services.formHelper')
+                                : t('business.register.services.presetsHelper')}
+                          </SheetDescription>
+                        </header>
+
+                        {serviceSheetMode === 'catalog' && (
+                          <div className="flex min-h-0 flex-1 flex-col">
+                            <div className="shrink-0 space-y-3 px-5 pb-3 pt-4">
+                              <label className="relative block">
+                                <span className="sr-only">
+                                  {t('business.register.services.presetsSearchLabel')}
+                                </span>
+                                <Search
+                                  className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted"
+                                  aria-hidden="true"
+                                />
+                                <input
+                                  id="suggested-service-search"
+                                  type="search"
+                                  value={servicePresetQuery}
+                                  onChange={(event) => setServicePresetQuery(event.target.value)}
+                                  placeholder={t(
+                                    'business.register.services.presetsSearchPlaceholder',
+                                  )}
+                                  className="min-h-11 w-full rounded-lg border border-border bg-surface pe-10 ps-3 text-sm text-text outline-none placeholder:text-muted focus:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus"
+                                />
+                              </label>
+                              <div className="flex items-center justify-between gap-3 text-xs text-muted">
+                                <span>
+                                  {t('business.register.services.presetsCount', {
+                                    count: toPersianDigits(filteredServicePresets.length),
+                                  })}
+                                </span>
+                                <span className="font-medium text-primary" role="status">
+                                  {t('business.register.services.selectedCount', {
+                                    count: toPersianDigits(services.length),
+                                  })}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div
+                              className="min-h-0 flex-1 overflow-y-auto px-5 pb-4"
+                              data-testid="suggested-services-list"
+                            >
+                              {filteredServicePresets.length > 0 ? (
+                                <div className="flex flex-col gap-2">
+                                  {(servicePresetQuery || showAllPresets
+                                    ? filteredServicePresets
+                                    : filteredServicePresets.slice(0, 6)
+                                  ).map((preset) => {
+                                    const checked = services.some(
+                                      (service) => service.key === `preset-${preset.key}`,
+                                    );
+                                    return (
+                                      <button
+                                        key={preset.key}
+                                        type="button"
+                                        aria-pressed={checked}
+                                        onClick={() => handleTogglePresetService(preset)}
+                                        className={cn(
+                                          'flex min-h-12 items-center gap-3 rounded-xl border px-3 text-start text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+                                          checked
+                                            ? 'border-primary bg-primary/5 text-primary'
+                                            : 'border-border bg-elevated text-text hover:border-primary/40',
+                                        )}
+                                      >
+                                        <span
+                                          className={cn(
+                                            'flex size-5 shrink-0 items-center justify-center rounded-full border',
+                                            checked
+                                              ? 'border-primary bg-primary text-primary-contrast'
+                                              : 'border-border text-transparent',
+                                          )}
+                                          aria-hidden="true"
+                                        >
+                                          {checked && <Check className="size-3.5" />}
+                                        </span>
+                                        <span className="min-w-0 flex-1">{preset.label}</span>
+                                      </button>
+                                    );
+                                  })}
+                                  {!servicePresetQuery && filteredServicePresets.length > 6 && (
+                                    <button
+                                      type="button"
+                                      className="min-h-11 rounded-lg px-3 text-sm font-medium text-primary transition-colors hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                                      onClick={() => setShowAllPresets((value) => !value)}
+                                    >
+                                      {showAllPresets
+                                        ? t('business.register.services.showLess')
+                                        : t('business.register.services.showAll', {
+                                            count: toPersianDigits(filteredServicePresets.length),
+                                          })}
+                                    </button>
+                                  )}
+                                </div>
+                              ) : (
+                                <p
+                                  className="rounded-xl border border-dashed border-border p-4 text-center text-sm leading-6 text-muted"
+                                  role="status"
+                                >
+                                  {t('business.register.services.presetsNoResults')}
+                                </p>
+                              )}
+                            </div>
+
+                            <footer className="shrink-0 border-t border-border px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:pb-4">
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="md"
+                                  startIcon={<Plus className="size-4" aria-hidden="true" />}
+                                  onClick={openCustomServiceForm}
+                                  className="min-w-0 flex-1"
+                                >
+                                  {t('business.register.services.customCta')}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="md"
+                                  onClick={closeServiceSheet}
+                                  className="min-w-0 flex-1"
+                                >
+                                  {t('business.register.services.done')}
+                                </Button>
+                              </div>
+                            </footer>
+                          </div>
+                        )}
+
+                        {serviceSheetMode === 'custom' && (
+                          <form
+                            className="flex min-h-0 flex-1 flex-col"
+                            data-testid="add-service-form"
+                            onSubmit={(event) => {
+                              event.preventDefault();
+                              handleAddService();
+                            }}
+                          >
+                            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5">
+                              <TextField
+                                id="svcName"
+                                label={t('business.register.services.nameLabel')}
+                                placeholder={t('business.register.services.namePlaceholder')}
+                                value={svcName}
+                                onChange={(event) => setSvcName(event.target.value)}
+                                autoFocus
+                              />
+                              <DurationStepper
+                                label={t('business.register.services.durationLabel')}
+                                ariaLabel={t('business.register.services.durationLabel')}
+                                value={svcDuration}
+                                onChange={setSvcDuration}
+                                step={15}
+                                allowEmpty
+                              />
+                              <TextField
+                                id="svcPrice"
+                                label={t('business.register.services.priceLabel')}
+                                inputMode="numeric"
+                                dir="ltr"
+                                placeholder="۵۰۰۰۰۰"
+                                value={svcPrice}
+                                onChange={(event) =>
+                                  setSvcPrice(formatPriceInput(event.target.value))
+                                }
+                              />
+                              {svcError && (
+                                <p className="text-sm text-danger" role="alert">
+                                  {svcError}
+                                </p>
+                              )}
+                            </div>
+                            <footer className="shrink-0 border-t border-border px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:pb-4">
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="md"
+                                  onClick={openServiceCatalog}
+                                  className="min-w-0 flex-1"
+                                >
+                                  {t('business.register.services.backToCatalog')}
+                                </Button>
+                                <Button type="submit" size="md" className="min-w-0 flex-1">
+                                  {t('business.register.services.addCta')}
+                                </Button>
+                              </div>
+                            </footer>
+                          </form>
+                        )}
+
+                        {serviceSheetMode === 'edit' && editingService && (
+                          <form
+                            className="flex min-h-0 flex-1 flex-col"
+                            data-testid={`edit-service-${editingService.key}`}
+                            onSubmit={(event) => {
+                              event.preventDefault();
+                              handleSaveService();
+                            }}
+                          >
+                            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5">
+                              <TextField
+                                id="edit-svc-name"
+                                label={t('business.register.services.nameLabel')}
+                                value={editingService.name}
+                                onChange={(event) =>
+                                  setEditingService((current) =>
+                                    current ? { ...current, name: event.target.value } : current,
+                                  )
+                                }
+                                autoFocus
+                              />
+                              <DurationStepper
+                                label={t('business.register.services.durationLabel')}
+                                ariaLabel={t('business.register.services.durationLabel')}
+                                value={editingService.duration}
+                                onChange={(value) =>
+                                  setEditingService((current) =>
+                                    current ? { ...current, duration: value } : current,
+                                  )
+                                }
+                                step={15}
+                                allowEmpty
+                              />
+                              <TextField
+                                id="edit-svc-price"
+                                label={t('business.register.services.priceLabel')}
+                                inputMode="numeric"
+                                dir="ltr"
+                                value={editingService.price}
+                                onChange={(event) =>
+                                  setEditingService((current) =>
+                                    current
+                                      ? {
+                                          ...current,
+                                          price: formatPriceInput(event.target.value),
+                                        }
+                                      : current,
+                                  )
+                                }
+                              />
+                              {serviceEditError && (
+                                <p className="text-sm text-danger" role="alert">
+                                  {serviceEditError}
+                                </p>
+                              )}
+                            </div>
+                            <footer className="shrink-0 border-t border-border px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:pb-4">
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="md"
+                                  onClick={closeServiceSheet}
+                                  className="min-w-0 flex-1"
+                                >
+                                  {t('business.register.services.cancel')}
+                                </Button>
+                                <Button type="submit" size="md" className="min-w-0 flex-1">
+                                  {t('business.register.services.save')}
+                                </Button>
+                              </div>
+                            </footer>
+                          </form>
+                        )}
+                      </SheetContent>
+                    </Sheet>
                   </div>
                 )}
 
                 {step === 'otp' && (
                   <form
-                    className="flex flex-col gap-4"
+                    className="flex flex-col gap-5"
                     onSubmit={(e) => {
                       e.preventDefault();
                       handleVerifyOtp();
                     }}
                   >
-                    <StepHeading
-                      icon={<OnboardingSecurityIcon className="h-5 w-5" aria-hidden="true" />}
-                      title={t('business.register.verify.title')}
-                      subtitle={t('business.register.verify.subtitle', {
-                        phone: toPersianDigits(normalizedPhone),
-                      })}
-                    />
                     <fieldset className="m-0 border-0 p-0">
-                      <legend className="mb-1 block text-xs font-medium text-text">
+                      <legend className="mb-3 block text-sm font-semibold text-text">
                         {t('auth.otpLabel')}
                       </legend>
                       <div
@@ -1034,9 +1141,9 @@ function RegisterSalonContent() {
                             }}
                             type="text"
                             inputMode="numeric"
-                            autoComplete="off"
+                            autoComplete={index === 0 ? 'one-time-code' : 'off'}
                             dir="ltr"
-                            maxLength={1}
+                            maxLength={index === 0 ? otpLength : 1}
                             aria-label={t('auth.otpDigitLabel', {
                               index: toPersianDigits(index + 1),
                             })}
@@ -1045,8 +1152,7 @@ function RegisterSalonContent() {
                             onPaste={(e) => handleOtpPaste(index, e)}
                             onKeyDown={(e) => handleOtpKeyDown(index, e)}
                             className={cn(
-                              'h-12 rounded-md border bg-bg text-center text-lg font-bold text-text',
-                              otpLength > 6 ? 'w-9' : 'w-11',
+                              'h-14 w-14 rounded-xl border bg-bg text-center text-xl font-bold text-text sm:h-16 sm:w-16',
                               'transition-colors duration-fast ease-standard',
                               'outline-none focus-visible:outline focus-visible:outline-2',
                               'focus-visible:outline-offset-2 focus-visible:outline-focus',
@@ -1116,10 +1222,7 @@ function RegisterSalonContent() {
 
 interface BusinessProfile {
   key: string;
-  label: string;
-  description: string;
   icon: React.ComponentType<CategoryIconProps>;
-  specialties: readonly { key: string; label: string }[];
 }
 
 interface SuggestedService {
@@ -1130,92 +1233,33 @@ interface SuggestedService {
 const BUSINESS_PROFILES: readonly BusinessProfile[] = [
   {
     key: 'barber',
-    label: 'آرایشگاه مردانه',
-    description: 'کوتاهی، اصلاح و استایل آقایان',
     icon: BarberIcon,
-    specialties: [
-      { key: 'mens_haircut', label: 'کوتاهی مردانه' },
-      { key: 'beard', label: 'اصلاح صورت و ریش' },
-      { key: 'fade', label: 'فید و استایل' },
-    ],
   },
   {
     key: 'hair_salon',
-    label: 'سالن مو و زیبایی',
-    description: 'مو، رنگ، براشینگ و خدمات زیبایی',
     icon: HaircutIcon,
-    specialties: [
-      { key: 'haircut', label: 'کوتاهی مو' },
-      { key: 'color', label: 'رنگ و مش' },
-      { key: 'blowout', label: 'براشینگ' },
-      { key: 'bridal', label: 'شینیون و عروس' },
-    ],
   },
   {
     key: 'nails',
-    label: 'ناخن',
-    description: 'مانیکور، پدیکور و طراحی ناخن',
     icon: NailsIcon,
-    specialties: [
-      { key: 'manicure', label: 'مانیکور' },
-      { key: 'pedicure', label: 'پدیکور' },
-      { key: 'nail_art', label: 'طراحی ناخن' },
-      { key: 'extensions', label: 'کاشت و ترمیم' },
-    ],
   },
   {
     key: 'brows_lashes',
-    label: 'ابرو و مژه',
-    description: 'زیبایی چشم و فرم‌دهی ابرو',
     icon: BrowsIcon,
-    specialties: [
-      { key: 'brows', label: 'اصلاح و قرینه‌سازی ابرو' },
-      { key: 'lash_lift', label: 'لیفت مژه' },
-      { key: 'lash_extension', label: 'اکستنشن مژه' },
-    ],
   },
   {
     key: 'makeup',
-    label: 'میکاپ و گریم',
-    description: 'میکاپ روز، مجلسی و عروس',
     icon: MakeupIcon,
-    specialties: [
-      { key: 'makeup', label: 'میکاپ' },
-      { key: 'bridal_makeup', label: 'میکاپ عروس' },
-      { key: 'skin_prep', label: 'پاکسازی و آماده‌سازی پوست' },
-    ],
   },
   {
     key: 'spa',
-    label: 'اسپا و سلامت',
-    description: 'ماساژ، مراقبت پوست و آرامش',
     icon: SkinIcon,
-    specialties: [
-      { key: 'massage', label: 'ماساژ' },
-      { key: 'facial', label: 'فیشال و مراقبت پوست' },
-      { key: 'spa', label: 'اسپا' },
-    ],
   },
   {
     key: 'tattoo',
-    label: 'تتو و پیرسینگ',
-    description: 'تتو، میکروپیگمنتیشن و پیرسینگ',
     icon: TattooIcon,
-    specialties: [
-      { key: 'tattoo', label: 'تتو' },
-      { key: 'microblading', label: 'میکروبلیدینگ' },
-      { key: 'piercing', label: 'پیرسینگ' },
-    ],
   },
 ] as const;
-
-function specialtyLabels(categories: string[], keys: string[]): string {
-  const labels = BUSINESS_PROFILES.filter((item) => categories.includes(item.key))
-    .flatMap((item) => item.specialties)
-    .filter((item) => keys.includes(item.key))
-    .map((item) => item.label);
-  return labels.join('، ') || '—';
-}
 
 /** Quick-add service presets adapt to every selected business profile. */
 const SERVICE_PRESETS_BY_PROFILE: Record<string, readonly string[]> = {
@@ -1289,69 +1333,42 @@ const SERVICE_PRESETS_BY_PROFILE: Record<string, readonly string[]> = {
     'piercing_change',
   ],
 };
-const ONBOARDING_SERVICE_PAGE_SIZE = 5;
-
-/** A step heading: small accent icon chip + title + subtitle. */
-function StepHeading({
-  icon,
-  title,
-  subtitle,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  subtitle: string;
-}) {
-  return (
-    <div className="flex items-start gap-3">
-      <span
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill bg-primary/10 text-primary"
-        aria-hidden="true"
-      >
-        {icon}
-      </span>
-      <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-bold text-text">{title}</h2>
-        <p className="text-sm text-muted">{subtitle}</p>
-      </div>
-    </div>
-  );
-}
-
-/** Bottom navigation for an onboarding step: primary next + (back · optional skip). */
+/** Bottom navigation for an onboarding step. */
 function StepNav({
   onBack,
   onNext,
-  onSkip,
   nextLabel,
-  skipLabel,
   backLabel,
   nextDisabled,
   loading,
 }: {
   onBack?: () => void;
   onNext: () => void;
-  onSkip?: () => void;
   nextLabel: string;
-  skipLabel?: string;
   backLabel: string;
   nextDisabled?: boolean;
   loading?: boolean;
 }) {
   return (
-    <div className="register-step-nav-shell">
-      <div className="register-step-nav flex flex-col gap-3 pt-1">
+    <div
+      className={cn(
+        'register-step-nav-shell',
+        onBack && 'has-secondary',
+      )}
+    >
+      <div className="register-step-nav flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:items-center sm:justify-between">
         <Button
           type="button"
           size="lg"
-          fullWidth
           onClick={onNext}
           loading={loading}
           disabled={nextDisabled || loading}
+          className="sm:min-w-44"
         >
           {nextLabel}
         </Button>
-        <div className="flex items-center justify-between gap-2">
-          {onBack ? (
+        {onBack && (
+          <div className="flex items-center justify-between gap-2 sm:min-w-0">
             <Button
               type="button"
               variant="ghost"
@@ -1362,17 +1379,8 @@ function StepNav({
             >
               {backLabel}
             </Button>
-          ) : (
-            <span aria-hidden="true" />
-          )}
-          {onSkip && skipLabel ? (
-            <Button type="button" variant="ghost" size="md" onClick={onSkip} disabled={loading}>
-              {skipLabel}
-            </Button>
-          ) : (
-            <span aria-hidden="true" />
-          )}
-        </div>
+          </div>
+        )}
       </div>
       <div className="register-step-nav-spacer" aria-hidden="true" />
     </div>

@@ -246,6 +246,7 @@ export function PublicFooter() {
       <div className="mx-auto max-w-7xl px-4">
         <div className="flex flex-col gap-8 border-b border-ink-border py-10 md:flex-row md:items-center md:justify-between">
           <nav aria-label={t('app.footerNav.label')} className="flex flex-wrap gap-x-6 gap-y-3">
+            <FooterLink to="/search">رزرو نوبت</FooterLink>
             <FooterLink to="/about">{t('app.footerNav.about')}</FooterLink>
             <FooterLink to="/contact">{t('app.footerNav.contact')}</FooterLink>
             <FooterLink to="/privacy">{t('app.footerNav.privacy')}</FooterLink>

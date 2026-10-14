@@ -47,11 +47,12 @@ function renderRegister() {
   );
 }
 
-async function reachServicesStep() {
+async function reachServicesStep(profile = 'barber') {
   renderRegister();
 
   await screen.findByRole('heading', { level: 1, name: 'حوزه کاری‌تان چیست؟' });
-  fireEvent.click(screen.getByRole('button', { name: 'رد کردن این مرحله' }));
+  fireEvent.click(screen.getByTestId(`business-type-${profile}`));
+  fireEvent.click(screen.getByRole('button', { name: /^ادامه$/ }));
 
   const salonName = await screen.findByLabelText('نام سالن');
   fireEvent.change(salonName, { target: { value: 'سالن رز' } });
@@ -68,7 +69,8 @@ async function reachInfoStep() {
   renderRegister();
 
   await screen.findByRole('heading', { level: 1, name: 'حوزه کاری‌تان چیست؟' });
-  fireEvent.click(screen.getByRole('button', { name: 'رد کردن این مرحله' }));
+  fireEvent.click(screen.getByTestId('business-type-barber'));
+  fireEvent.click(screen.getByRole('button', { name: /^ادامه$/ }));
 
   return screen.findByLabelText('نام سالن');
 }
@@ -90,7 +92,7 @@ describe('RegisterSalonPage services step', () => {
     vi.mocked(registrationApi.registerSalon).mockResolvedValueOnce({} as never);
     vi.mocked(authApi.requestOtp).mockResolvedValueOnce({} as never);
 
-    fireEvent.click(screen.getByRole('button', { name: 'بعداً تکمیل می‌کنم' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ثبت سالن و دریافت کد' }));
 
     expect(await screen.findByText('مرحله ۴ از ۴')).toBeInTheDocument();
     expect(registrationApi.registerSalon).toHaveBeenCalledWith(expect.objectContaining({
@@ -106,9 +108,9 @@ describe('RegisterSalonPage services step', () => {
       .mockRejectedValueOnce(new Error('temporary outage'))
       .mockResolvedValueOnce({} as never);
 
-    fireEvent.click(screen.getByRole('button', { name: 'بعداً تکمیل می‌کنم' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ثبت سالن و دریافت کد' }));
     expect(await screen.findByText('ارسال کد ناموفق بود — دوباره تلاش کنید.')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'بعداً تکمیل می‌کنم' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ثبت سالن و دریافت کد' }));
 
     expect(await screen.findByText('مرحله ۴ از ۴')).toBeInTheDocument();
     expect(registrationApi.registerSalon).toHaveBeenCalledTimes(1);
@@ -123,7 +125,7 @@ describe('RegisterSalonPage services step', () => {
     vi.mocked(customerApi.getProfile).mockResolvedValueOnce({ customer: { fullName: null } } as never);
     vi.mocked(customerApi.updateProfile).mockResolvedValueOnce({} as never);
 
-    fireEvent.click(screen.getByRole('button', { name: 'بعداً تکمیل می‌کنم' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ثبت سالن و دریافت کد' }));
 
     await waitFor(() => expect(customerApi.updateProfile).toHaveBeenCalledWith('سارا محمدی'));
   });
@@ -137,9 +139,12 @@ describe('RegisterSalonPage services step', () => {
     ).toBeInTheDocument();
   });
 
-  it('keeps add service action attached to its form and edits a custom service inline', async () => {
+  it('keeps custom service creation and editing inside the service sheet', async () => {
     const step = await reachServicesStep();
-    const addForm = within(step).getByTestId('add-service-form');
+    fireEvent.click(within(step).getByRole('button', { name: /^افزودن خدمت$/ }));
+    const catalog = await screen.findByRole('dialog');
+    fireEvent.click(within(catalog).getByRole('button', { name: 'ساخت خدمت دلخواه' }));
+    const addForm = await within(catalog).findByTestId('add-service-form');
 
     expect(within(addForm).getByRole('button', { name: 'افزودن خدمت' })).toBeInTheDocument();
 
@@ -160,9 +165,10 @@ describe('RegisterSalonPage services step', () => {
     fireEvent.submit(addForm);
 
     expect(await within(step).findByText('کوتاهی ویژه')).toBeInTheDocument();
+    fireEvent.click(within(catalog).getByRole('button', { name: 'تمام شد' }));
     fireEvent.click(screen.getByRole('button', { name: 'ویرایش کوتاهی ویژه' }));
 
-    const editForm = within(step).getByTestId(/edit-service-/);
+    const editForm = screen.getByTestId(/edit-service-/);
     fireEvent.change(within(editForm).getByLabelText('نام خدمت'), {
       target: { value: 'کوتاهی کلاسیک' },
     });
@@ -173,37 +179,43 @@ describe('RegisterSalonPage services step', () => {
   });
 
   it('keeps preset selection linked while allowing its saved service to be edited', async () => {
-    const step = await reachServicesStep();
-    const preset = within(step).getByRole('checkbox', { name: 'کوتاهی مو' });
-
-    fireEvent.click(preset);
+    const step = await reachServicesStep('hair_salon');
+    fireEvent.click(within(step).getByRole('button', { name: /^افزودن خدمت$/ }));
+    const catalog = await screen.findByRole('dialog');
+    fireEvent.click(within(catalog).getByRole('button', { name: 'کوتاهی مو' }));
+    fireEvent.click(within(catalog).getByRole('button', { name: 'تمام شد' }));
     fireEvent.click(screen.getByRole('button', { name: 'ویرایش کوتاهی مو' }));
 
-    const editForm = within(step).getByTestId('edit-service-preset-haircut');
+    const editForm = screen.getByTestId('edit-service-preset-haircut');
     fireEvent.change(within(editForm).getByLabelText('نام خدمت'), {
       target: { value: 'کوتاهی VIP' },
     });
     fireEvent.click(within(editForm).getByRole('button', { name: 'ذخیره تغییرات' }));
 
     expect(await within(step).findByText('کوتاهی VIP')).toBeInTheDocument();
-    expect(preset).toBeChecked();
     expect(screen.getByRole('button', { name: 'ویرایش کوتاهی VIP' })).toBeInTheDocument();
+    fireEvent.click(within(step).getByRole('button', { name: /^افزودن خدمت$/ }));
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'کوتاهی مو' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
   });
 
-  it('uses page scroll for suggested services and filters them by search', async () => {
-    const step = await reachServicesStep();
-    const search = within(step).getByRole('searchbox', {
+  it('keeps the service catalog scrollable and filters suggestions by search', async () => {
+    const step = await reachServicesStep('hair_salon');
+    fireEvent.click(within(step).getByRole('button', { name: /^افزودن خدمت$/ }));
+    const catalog = await screen.findByRole('dialog');
+    const search = within(catalog).getByRole('searchbox', {
       name: 'جست‌وجوی خدمت پیشنهادی',
     });
-    const list = within(step).getByTestId('suggested-services-list');
+    const list = within(catalog).getByTestId('suggested-services-list');
 
-    expect(list).not.toHaveClass('overflow-y-auto');
-    expect(list.parentElement).not.toHaveClass('h-[48rem]');
-    expect(within(list).queryByRole('checkbox', { name: 'کراتین مو' })).not.toBeInTheDocument();
+    expect(list).toHaveClass('overflow-y-auto');
+    expect(within(list).queryByRole('button', { name: 'کراتین مو' })).not.toBeInTheDocument();
 
     fireEvent.change(search, { target: { value: 'کراتین' } });
 
-    expect(within(list).getByRole('checkbox', { name: 'کراتین مو' })).toBeInTheDocument();
-    expect(within(list).queryByRole('checkbox', { name: 'کوتاهی مو' })).not.toBeInTheDocument();
+    expect(within(list).getByRole('button', { name: 'کراتین مو' })).toBeInTheDocument();
+    expect(within(list).queryByRole('button', { name: 'کوتاهی مو' })).not.toBeInTheDocument();
   });
 });

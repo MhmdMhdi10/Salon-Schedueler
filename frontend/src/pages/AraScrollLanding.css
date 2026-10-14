@@ -1,41 +1,17 @@
 /* -------------------------------------------------------------------------
  * Ara scroll-story landing
  *
- * The default landing is a single calendar composition. This second route is
- * a vertical product story: one feature per viewport, with a physical-looking
- * 3D object and the explanation beside it.
+ * The default landing is a single calendar composition. This route is a
+ * vertically scrolling product story with a visual beside each explanation.
  * ------------------------------------------------------------------------- */
 
 html:has(.ara-scroll-page) {
-  scroll-snap-type: y proximity;
-  scroll-padding-block-start: 0;
+  scroll-behavior: smooth;
+  scroll-padding-block-start: 76px;
 }
 
 html:has(.ara-scroll-page) body {
   overflow-x: clip;
-}
-
-/* Android Chrome/WebView may refuse a touch gesture when a full-page story
-   combines mandatory snap with `scroll-snap-stop: always`. Keep snap as a
-   gentle landing aid, but leave gesture ownership with the page. */
-html.ara-scroll-android:has(.ara-scroll-page) {
-  scroll-snap-type: y proximity;
-}
-
-html.ara-scroll-android:has(.ara-scroll-page) body {
-  overscroll-behavior-y: auto;
-}
-
-html.ara-scroll-android .ara-scroll-page {
-  touch-action: pan-y;
-  overscroll-behavior-y: auto;
-}
-
-html.ara-scroll-android .ara-scroll-hero,
-html.ara-scroll-android .ara-scroll-feature,
-html.ara-scroll-android .ara-scroll-final-cta,
-html.ara-scroll-android .ara-scroll-landing-footer {
-  scroll-snap-stop: normal;
 }
 
 .ara-scroll-page {
@@ -80,10 +56,6 @@ html.ara-scroll-android .ara-scroll-landing-footer {
   overflow: clip;
 }
 
-@media (max-width: 63.9375rem) {
-  html:has(.ara-scroll-page) { scroll-snap-type: none; }
-}
-
 .ara-scroll-main::before {
   position: absolute;
   inset: 0;
@@ -102,18 +74,8 @@ html.ara-scroll-android .ara-scroll-landing-footer {
   pointer-events: none;
 }
 
-.ara-scroll-hero,
-.ara-scroll-feature,
-.ara-scroll-final-cta,
-.ara-scroll-landing-footer {
-  scroll-snap-align: start;
-  scroll-snap-stop: normal;
-}
-
 .ara-scroll-brand-rail {
-  /* This is the single persistent landing header. It stays available while
-     the product story moves underneath it, so the primary CTA never
-     disappears after the first viewport. */
+  /* Keep navigation out of the way on downward scroll; reveal on upward scroll. */
   position: fixed;
   top: 0;
   right: max(20px, 4vw);
@@ -124,6 +86,25 @@ html.ara-scroll-android .ara-scroll-landing-footer {
   justify-content: space-between;
   min-height: 76px;
   padding: 8px 0;
+  pointer-events: none;
+  transition:
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease;
+}
+
+.ara-scroll-brand-rail.is-hidden {
+  transform: translate3d(0, calc(-100% - 14px), 0);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease,
+    visibility 0s linear 280ms;
+}
+
+.ara-scroll-brand-rail.is-hidden .ara-scroll-brand-logo,
+.ara-scroll-brand-rail.is-hidden .ara-scroll-brand-actions {
   pointer-events: none;
 }
 
@@ -710,29 +691,6 @@ html.ara-scroll-android .ara-scroll-landing-footer {
   content: '';
 }
 
-.ara-scroll-scroll-hint {
-  position: absolute;
-  bottom: 30px;
-  left: 50%;
-  display: inline-flex;
-  min-width: 44px;
-  min-height: 44px;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  color: var(--ara-scroll-muted);
-  font-size: 10px;
-  font-weight: 800;
-  transform: translateX(-50%);
-}
-
-.ara-scroll-scroll-hint svg {
-  width: 17px;
-  height: 17px;
-  color: var(--ara-scroll-teal);
-  animation: ara-scroll-nudge 1.8s ease-in-out infinite;
-}
-
 .ara-scroll-story-intro {
   display: none;
 }
@@ -1216,32 +1174,6 @@ html.ara-scroll-android .ara-scroll-landing-footer {
   font-size: 14px;
   font-weight: 650;
   line-height: 2.08;
-}
-
-.ara-scroll-feature-copy ul {
-  display: grid;
-  gap: 9px;
-  margin: 24px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.ara-scroll-feature-copy li {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  color: var(--ara-scroll-copy);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.ara-scroll-feature-copy li svg {
-  width: 16px;
-  height: 16px;
-  padding: 3px;
-  border-radius: 50%;
-  background: rgba(45, 224, 190, 0.11);
-  color: var(--ara-scroll-teal);
 }
 
 .ara-scroll-feature-cta {
@@ -2176,17 +2108,6 @@ html.ara-scroll-android .ara-scroll-landing-footer {
   }
 }
 
-@keyframes ara-scroll-nudge {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(5px);
-  }
-}
-
 [data-theme='light'] .ara-scroll-page {
   --ara-scroll-bg: #f2f7fa;
   --ara-scroll-bg-soft: #eaf3f6;
@@ -2317,6 +2238,10 @@ html.ara-scroll-android .ara-scroll-landing-footer {
 }
 
 @media (max-width: 820px) {
+  html:has(.ara-scroll-page) {
+    scroll-padding-block-start: 64px;
+  }
+
   .ara-scroll-brand-rail {
     min-height: 64px;
     padding: 6px 0;
@@ -2433,10 +2358,6 @@ html.ara-scroll-android .ara-scroll-landing-footer {
     bottom: -4px;
   }
 
-  .ara-scroll-scroll-hint {
-    bottom: 19px;
-  }
-
   .ara-scroll-story-intro {
     width: min(620px, calc(100% - 40px));
     padding-bottom: 10px;
@@ -2447,7 +2368,7 @@ html.ara-scroll-android .ara-scroll-landing-footer {
     grid-template-columns: 1fr;
     gap: 8px;
     width: min(620px, calc(100% - 40px));
-    min-height: 100svh;
+    min-height: auto;
     padding: 42px 0 38px;
   }
 
@@ -2500,12 +2421,6 @@ html.ara-scroll-android .ara-scroll-landing-footer {
     line-height: 1.95;
   }
 
-  .ara-scroll-feature-copy ul {
-    width: fit-content;
-    margin: 20px auto 0;
-    text-align: right;
-  }
-
   .ara-scroll-feature-cta {
     margin-top: 22px;
     align-items: stretch;
@@ -2520,7 +2435,7 @@ html.ara-scroll-android .ara-scroll-landing-footer {
 
   .ara-scroll-final-cta {
     width: min(620px, calc(100% - 40px));
-    min-height: 100svh;
+    min-height: auto;
     padding: 90px 0 140px;
   }
 
@@ -2588,7 +2503,7 @@ html.ara-scroll-android .ara-scroll-landing-footer {
 
   .ara-scroll-feature {
     width: calc(100% - 28px);
-    min-height: 100svh;
+    min-height: auto;
     padding: 40px 0 36px;
   }
 
@@ -2766,13 +2681,9 @@ html.ara-scroll-android .ara-scroll-landing-footer {
     font-size: 14px;
   }
 
-  .ara-scroll-feature-copy li {
-    font-size: 12px;
-  }
-
   .ara-scroll-final-cta {
     width: calc(100% - 28px);
-    min-height: 100svh;
+    min-height: auto;
     padding-bottom: 125px;
   }
 
@@ -6519,19 +6430,19 @@ html.ara-scroll-android .ara-scroll-landing-footer {
   gap: 2px;
   overflow: hidden;
   padding: 4px 3px;
-  border-inline-start: 2px solid var(--ara-ui-primary);
+  border-inline-start: 2px solid #6f8977;
   border-radius: 3px;
-  background: var(--ara-ui-primary-soft);
+  background: color-mix(in srgb, #6f8977 18%, var(--ara-ui-panel));
 }
 
 .ara-scroll-real-calendar-day-appointment.is-violet {
-  border-inline-start-color: var(--ara-ui-violet);
-  background: color-mix(in srgb, var(--ara-ui-violet) 15%, transparent);
+  border-inline-start-color: #887d98;
+  background: color-mix(in srgb, #887d98 18%, var(--ara-ui-panel));
 }
 
 .ara-scroll-real-calendar-day-appointment.is-rose {
-  border-inline-start-color: var(--ara-ui-rose);
-  background: color-mix(in srgb, var(--ara-ui-rose) 15%, transparent);
+  border-inline-start-color: #b27d70;
+  background: color-mix(in srgb, #b27d70 18%, var(--ara-ui-panel));
 }
 
 .ara-scroll-real-calendar-day-appointment strong,
@@ -7264,6 +7175,10 @@ html[data-theme='light'] .ara-calendar-hero-scene {
 }
 
 @media (max-width: 520px) {
+  html:has(.ara-scroll-page) {
+    scroll-padding-block-start: 52px;
+  }
+
   .ara-scroll-brand-rail {
     top: env(safe-area-inset-top);
     right: 14px;
@@ -7971,11 +7886,6 @@ html[data-theme='light'] .ara-calendar-hero-scene {
     text-align: right;
   }
 
-  .ara-scroll-feature-calendar .ara-scroll-feature-copy ul,
-  .ara-scroll-feature-services .ara-scroll-feature-copy ul {
-    margin-right: 0;
-    margin-left: auto;
-  }
 }
 
 /* Minimal bio cue for the opening hero. It keeps the profile recognizable
@@ -8654,4 +8564,382 @@ html[data-theme='light'] .ara-calendar-hero-scene {
 .ara-scroll-feature:not(.is-visible) .ara-scroll-real-client-sheet,
 .ara-scroll-feature:not(.is-visible) .ara-scroll-real-client-return {
   will-change: auto;
+}
+
+/* Keep the customer route available without giving it the same weight as the
+   salon sign-up action. The business landing has one clear primary action. */
+.ara-scroll-page[data-scroll-theme] .ara-scroll-customer-link {
+  min-height: 44px;
+  padding-inline: 5px !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--ara-scroll-copy) !important;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  backdrop-filter: none;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-customer-link:hover {
+  color: var(--ara-scroll-ink) !important;
+}
+
+.ara-scroll-brand-actions a:focus-visible,
+.ara-scroll-brand-actions button:focus-visible {
+  outline: 2px solid var(--ara-scroll-teal);
+  outline-offset: 3px;
+}
+
+@media (max-width: 360px) {
+  .ara-scroll-customer-link {
+    display: none;
+  }
+
+  .ara-scroll-brand-rail {
+    right: 8px;
+    left: 8px;
+  }
+
+  .ara-scroll-brand-logo {
+    width: 72px;
+  }
+
+  .ara-scroll-brand-logo img {
+    width: 68px;
+  }
+
+  .ara-scroll-brand-actions {
+    gap: 4px;
+  }
+
+  .ara-scroll-header-start {
+    padding-inline: 6px;
+    font-size: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ara-scroll-brand-rail,
+  .ara-scroll-brand-rail.is-hidden {
+    transition: none;
+  }
+}
+
+/* Art direction: an editorial, product-led identity for ARA. */
+.ara-scroll-page[data-scroll-theme='04'] {
+  --ara-scroll-bg: #f7f5ef;
+  --ara-scroll-bg-soft: #efeee6;
+  --ara-scroll-surface: #fffefa;
+  --ara-scroll-surface-strong: #f1f0e8;
+  --ara-scroll-border: rgba(35, 57, 46, 0.14);
+  --ara-scroll-ink: #1b3028;
+  --ara-scroll-copy: #596b60;
+  --ara-scroll-muted: #838d82;
+  --ara-scroll-teal: #2d7057;
+  --ara-scroll-blue: #9c7454;
+  --ara-scroll-violet: #758079;
+  --ara-scroll-rose: #9d716b;
+  --ara-ui-panel: #fffefa;
+  --ara-ui-panel-raised: #f8f7f1;
+  --ara-ui-panel-soft: #eeeee6;
+  --ara-ui-border: rgba(35, 57, 46, 0.12);
+  --ara-ui-border-strong: rgba(35, 57, 46, 0.25);
+  --ara-ui-ink: #1b3028;
+  --ara-ui-muted: #718076;
+  --ara-ui-primary: #2d7057;
+  --ara-ui-primary-soft: rgba(45, 112, 87, 0.1);
+  --ara-ui-blue: #9c7454;
+  --ara-ui-violet: #758079;
+  --ara-ui-rose: #9d716b;
+  background:
+    radial-gradient(circle at 50% -18%, rgba(213, 205, 179, 0.22), transparent 38rem),
+    var(--ara-scroll-bg);
+}
+
+.ara-scroll-page[data-scroll-theme='01'] {
+  --ara-scroll-bg: #111915;
+  --ara-scroll-bg-soft: #18221c;
+  --ara-scroll-surface: #202c24;
+  --ara-scroll-surface-strong: #29382e;
+  --ara-scroll-border: rgba(209, 224, 208, 0.14);
+  --ara-scroll-ink: #f2f0e7;
+  --ara-scroll-copy: #bdc6ba;
+  --ara-scroll-muted: #8d998d;
+  --ara-scroll-teal: #83b394;
+  --ara-scroll-blue: #c39a72;
+  --ara-scroll-violet: #a3ab9f;
+  --ara-scroll-rose: #c48d86;
+  --ara-ui-panel: #1d2921;
+  --ara-ui-panel-raised: #25352a;
+  --ara-ui-panel-soft: #2b3c30;
+  --ara-ui-border: rgba(209, 224, 208, 0.13);
+  --ara-ui-border-strong: rgba(209, 224, 208, 0.25);
+  --ara-ui-ink: #f2f0e7;
+  --ara-ui-muted: #a4b0a3;
+  --ara-ui-primary: #83b394;
+  --ara-ui-primary-soft: rgba(131, 179, 148, 0.12);
+  --ara-ui-blue: #c39a72;
+  --ara-ui-violet: #a3ab9f;
+  --ara-ui-rose: #c48d86;
+  background:
+    radial-gradient(circle at 78% 0%, rgba(75, 112, 83, 0.2), transparent 36rem),
+    var(--ara-scroll-bg);
+}
+
+.ara-scroll-page[data-scroll-theme='01'] .ara-scroll-main::before,
+.ara-scroll-page[data-scroll-theme='04'] .ara-scroll-main::before {
+  display: none;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-header-start {
+  box-shadow: none;
+  font-weight: 800;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-login:not(.ara-scroll-customer-link) {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none;
+  font-weight: 700;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-theme-toggle {
+  box-shadow: none !important;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-button,
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature-link {
+  border-radius: 12px;
+  font-weight: 750;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-button-primary,
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature-link {
+  box-shadow: none;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature-cta {
+  justify-content: flex-start;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature-link {
+  display: inline-flex;
+  width: auto;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-inline: 16px;
+  border: 1px solid var(--ara-ui-border-strong);
+  border-radius: 12px;
+  background: var(--ara-ui-panel);
+  color: var(--ara-scroll-teal);
+  text-decoration: none;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature-link:hover {
+  border-color: var(--ara-scroll-teal);
+  background: color-mix(in srgb, var(--ara-scroll-teal) 7%, var(--ara-ui-panel));
+  color: var(--ara-scroll-teal);
+  text-decoration: none;
+  transform: none;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature-link:focus-visible {
+  outline: 2px solid var(--ara-scroll-teal);
+  outline-offset: 3px;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-button-secondary {
+  background: transparent;
+}
+
+@media (max-width: 520px) {
+  .ara-scroll-page[data-scroll-theme] .ara-scroll-feature-link {
+    width: 100%;
+  }
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-hero-copy h1,
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature-copy h2,
+.ara-scroll-page[data-scroll-theme] .ara-scroll-final-cta h2 {
+  font-weight: 780;
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-hero-copy h1 {
+  max-width: 640px;
+  margin-top: 22px;
+  font-size: clamp(46px, 5.4vw, 70px);
+  line-height: 1.25;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-hero-copy > p {
+  max-width: 480px;
+  margin-top: 20px;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.95;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-eyebrow {
+  color: var(--ara-scroll-muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-eyebrow i {
+  width: 16px;
+  height: 1px;
+  border-radius: 0;
+  background: var(--ara-scroll-teal);
+  box-shadow: none;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-hero-actions {
+  gap: 12px;
+  margin-top: 25px;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature-eyebrow {
+  gap: 10px;
+  color: var(--ara-scroll-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature-eyebrow.is-violet,
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature-eyebrow.is-blue,
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature-eyebrow.is-rose {
+  color: var(--ara-scroll-muted);
+}
+
+.ara-scroll-feature-order {
+  display: inline-flex;
+  min-height: 20px;
+  align-items: center;
+  color: var(--ara-scroll-teal);
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.ara-scroll-feature-order::after {
+  width: 16px;
+  height: 1px;
+  margin-inline-start: 10px;
+  background: currentColor;
+  content: '';
+  opacity: 0.38;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature-copy h2 {
+  max-width: 560px;
+  margin-top: 17px;
+  font-size: clamp(32px, 3.6vw, 46px);
+  line-height: 1.34;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature-copy > p {
+  margin-top: 17px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.95;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature::before {
+  border-color: color-mix(in srgb, var(--ara-scroll-ink) 5%, transparent);
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature.is-visible::after {
+  opacity: 0.18;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature-stage-glow {
+  opacity: 0.38;
+  filter: blur(54px);
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature-lifestyle-photo {
+  border-radius: 18px;
+  box-shadow: 0 18px 42px color-mix(in srgb, var(--ara-scroll-ink) 13%, transparent);
+  animation: none !important;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature-lifestyle-photo::after,
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature-lifestyle-photo-backdrop {
+  display: none;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature-lifestyle-photo.is-calendar {
+  transform: translateZ(110px) rotateZ(-1.5deg);
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature-lifestyle-photo.is-booking,
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature-lifestyle-photo.is-clients {
+  transform: translateZ(110px) rotateZ(1.5deg);
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-feature-lifestyle-photo.is-services {
+  transform: translateZ(110px) rotateZ(-1.5deg);
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-final-cta h2 {
+  font-size: clamp(38px, 4.5vw, 62px);
+  line-height: 1.28;
+}
+
+.ara-scroll-page[data-scroll-theme] .ara-scroll-final-cta p {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.9;
+}
+
+@media (max-width: 820px) {
+  .ara-scroll-page[data-scroll-theme] .ara-scroll-hero-copy h1 {
+    font-size: clamp(33px, 7.6vw, 43px);
+    line-height: 1.3;
+  }
+
+  .ara-scroll-page[data-scroll-theme] .ara-scroll-hero-copy > p {
+    max-width: 42ch;
+    font-size: 14px;
+  }
+
+  .ara-scroll-page[data-scroll-theme] .ara-scroll-feature-copy h2 {
+    font-size: clamp(28px, 6.1vw, 35px);
+    line-height: 1.38;
+  }
+
+  .ara-scroll-page[data-scroll-theme] .ara-scroll-feature-calendar .ara-scroll-feature-copy {
+    margin-top: 8px;
+  }
+
+  .ara-scroll-page[data-scroll-theme] .ara-scroll-feature-booking .ara-scroll-feature-copy {
+    margin-top: 37px;
+  }
+
+  .ara-scroll-page[data-scroll-theme] .ara-scroll-feature-services .ara-scroll-feature-copy {
+    margin-top: 28px;
+  }
+
+  .ara-scroll-page[data-scroll-theme] .ara-scroll-feature-clients .ara-scroll-feature-copy {
+    margin-top: 2px;
+  }
+
+  .ara-scroll-page[data-scroll-theme] .ara-scroll-feature-cta {
+    align-items: center;
+    justify-content: center;
+    flex-direction: row;
+  }
+
+  .ara-scroll-page[data-scroll-theme] .ara-scroll-final-cta h2 {
+    font-size: clamp(31px, 7vw, 42px);
+    line-height: 1.32;
+  }
 }
