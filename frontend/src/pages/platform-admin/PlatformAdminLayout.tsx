@@ -255,7 +255,7 @@ function PlatformHeader({ collapsed, mobile, mobileOpen, onToggleCollapsed, onSi
           {!mobile && searchButton}
           <OwnerThemeToggle theme={theme} onToggle={toggleTheme} />
           {mobile ? (
-            <UiButton variant="ghost" size="md" startIcon={<LogOut className="h-4 w-4" />} className="shrink-0 !px-1" aria-label="خروج از حساب" onClick={onSignOut} />
+            <UiButton variant="ghost" size="md" startIcon={<LogOut className="h-4 w-4 rtl:-scale-x-100" />} className="shrink-0 !px-1 sm:!px-5" aria-label="خروج از حساب" onClick={onSignOut} />
           ) : (
             <Dropdown
               menu={{ items: [{ key: 'logout', icon: <MessageOutlined />, label: 'خروج از پنل', onClick: onSignOut }] }}

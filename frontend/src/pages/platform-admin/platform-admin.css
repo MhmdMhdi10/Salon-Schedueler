@@ -954,7 +954,7 @@ html:has([data-shell='platform-admin']) {
 
 @media (max-width: 47.5rem) {
   .platform-admin-root .ant-layout-header {
-    height: 3.3125rem;
+    height: 4.5rem;
     padding-inline: 0.75rem;
     border-bottom-color: var(--color-border);
     background: var(--color-surface) !important;
