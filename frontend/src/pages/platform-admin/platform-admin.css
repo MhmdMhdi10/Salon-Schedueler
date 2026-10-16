@@ -1,15 +1,24 @@
 .platform-admin-root {
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
   color: var(--platform-text);
   background: var(--platform-canvas);
 }
 
+.platform-admin-root .ant-app {
+  height: 100%;
+  min-height: 0;
+}
+
 .platform-admin-root .ant-layout {
-  min-height: 100dvh;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
   background: var(--platform-canvas);
 }
 
 .platform-admin-root .ant-layout-sider {
+  overflow-y: auto;
   border-inline-start: var(--platform-size-1) solid var(--platform-border);
   border-inline-end: 0;
   background: var(--platform-surface) !important;
@@ -44,6 +53,8 @@
 }
 
 .platform-admin-root .ant-layout-header {
+  position: relative;
+  flex: none;
   min-width: 0;
   z-index: 10;
   height: var(--platform-size-72);
@@ -55,7 +66,14 @@
 }
 
 .platform-admin-root .ant-layout-content {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
   padding: var(--space-5) var(--platform-size-28) var(--space-6);
+}
+
+html:has([data-shell='platform-admin']) {
+  overflow-y: hidden;
 }
 
 .platform-admin-root .ant-menu {
@@ -936,14 +954,15 @@
 
 @media (max-width: 47.5rem) {
   .platform-admin-root .ant-layout-header {
-    position: sticky;
-    top: 0;
-    padding-inline: var(--space-4);
+    height: 3.3125rem;
+    padding-inline: 0.75rem;
+    border-bottom-color: var(--color-border);
+    background: var(--color-surface) !important;
   }
 
   .platform-admin-root .platform-admin-header {
-    gap: var(--space-2);
-    overflow: hidden;
+    height: 100%;
+    gap: 0.25rem;
   }
 
   .platform-admin-root .platform-admin-header__context {
@@ -957,28 +976,10 @@
     display: none;
   }
 
-  .platform-admin-root .platform-admin-header__menu-trigger {
-    min-width: var(--platform-size-58);
-    padding-inline: var(--space-2);
-    border: var(--platform-size-1) solid color-mix(in srgb, var(--platform-primary) 34%, var(--platform-border));
-    border-radius: var(--platform-size-10);
-    background: var(--platform-primary-soft);
-    color: var(--platform-primary);
-    font-size: var(--platform-font-micro);
-    font-weight: 800;
-  }
-
   .platform-admin-root .platform-admin-header__tools {
     flex: 1 1 auto;
-    justify-content: flex-start;
-    gap: 0;
-    overflow: hidden;
-  }
-
-  .platform-admin-root .platform-admin-header__search {
-    width: var(--platform-size-40);
-    min-width: var(--platform-size-40);
-    padding-inline: 0;
+    justify-content: flex-end;
+    gap: 0.25rem;
   }
 
   .platform-admin-root .platform-admin-header__search kbd {
@@ -1097,12 +1098,6 @@
 
   .platform-admin-root .platform-admin-detail-hero__actions .ant-btn {
     flex: 1;
-  }
-}
-
-@media (max-width: 22.5rem) {
-  .platform-admin-root .platform-admin-header__search {
-    display: none;
   }
 }
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { LogOut, Menu as MenuIcon, Search as SearchIcon } from 'lucide-react';
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   App as AntdApp,
@@ -25,7 +26,6 @@ import {
   DatabaseOutlined,
   DownOutlined,
   MenuFoldOutlined,
-  MenuOutlined,
   MenuUnfoldOutlined,
   MessageOutlined,
   MoonOutlined,
@@ -50,6 +50,8 @@ import { ThemeScope, useTheme, OwnerThemeToggle } from '../../components/theme';
 import { SeoHead } from '../../components/seo';
 import { getPlatformAdminTheme } from './PlatformAdminTheme';
 import { PanelAccessNav } from '../../components/layout/PanelAccessNav';
+import { IconButton } from '../../components/ui/IconButton';
+import { Button as UiButton } from '../../components/ui/Button';
 import './platform-admin.css';
 import 'antd/dist/reset.css';
 
@@ -194,6 +196,11 @@ function PlatformHeader({ collapsed, mobile, mobileOpen, onToggleCollapsed, onSi
   const { pathname } = useLocation();
   const [commandOpen, setCommandOpen] = useState(false);
   const label = routeLabel(pathname);
+  const searchButton = (
+    <Button type="text" className="platform-admin-header__search" aria-label="جستجوی بخش‌ها" icon={<SearchOutlined />} onClick={() => setCommandOpen(true)}>
+      <span>جستجو</span><kbd>⌘ K</kbd>
+    </Button>
+  );
 
   useEffect(() => {
     const open = () => setCommandOpen(true);
@@ -215,40 +222,52 @@ function PlatformHeader({ collapsed, mobile, mobileOpen, onToggleCollapsed, onSi
     <>
       <div className="platform-admin-header">
         <div className="platform-admin-header__context">
-          <Tooltip title={mobile ? 'باز کردن منو' : collapsed ? 'باز کردن منو' : 'جمع کردن منو'}>
-            <Button
-              type="text"
-              className="platform-admin-header__menu-trigger"
-              aria-label={mobile ? 'باز کردن منوی مدیریت' : collapsed ? 'باز کردن منو' : 'جمع کردن منو'}
-              aria-expanded={mobile ? mobileOpen : undefined}
-              icon={mobile ? <MenuOutlined /> : collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-              onClick={onToggleCollapsed}
-            >
-              {mobile && <span>منو</span>}
-            </Button>
-          </Tooltip>
-          <span className="platform-admin-header__context-icon"><SafetyCertificateOutlined /></span>
-          <span className="platform-admin-header__context-copy">
-            <strong>{label}</strong>
-            <small>مدیریت سراسری آرا</small>
-          </span>
+          {mobile ? (
+            <>
+              <IconButton aria-label="باز کردن منوی مدیریت" aria-expanded={mobileOpen} onClick={onToggleCollapsed}>
+                <MenuIcon className="h-5 w-5" />
+              </IconButton>
+              <IconButton aria-label="جستجوی بخش‌ها" onClick={() => setCommandOpen(true)}>
+                <SearchIcon className="h-5 w-5" />
+              </IconButton>
+            </>
+          ) : (
+            <>
+              <Tooltip title={collapsed ? 'باز کردن منو' : 'جمع کردن منو'}>
+                <Button
+                  type="text"
+                  className="platform-admin-header__menu-trigger"
+                  aria-label={collapsed ? 'باز کردن منو' : 'جمع کردن منو'}
+                  icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                  onClick={onToggleCollapsed}
+                />
+              </Tooltip>
+              <span className="platform-admin-header__context-icon"><SafetyCertificateOutlined /></span>
+              <span className="platform-admin-header__context-copy">
+                <strong>{label}</strong>
+                <small>مدیریت سراسری آرا</small>
+              </span>
+            </>
+          )}
         </div>
         <div className="platform-admin-header__tools">
-          <PanelAccessNav tone="platform" />
-          <Button type="text" className="platform-admin-header__search" aria-label="جستجوی بخش‌ها" icon={<SearchOutlined />} onClick={() => setCommandOpen(true)}>
-            <span>جستجو</span><kbd>⌘ K</kbd>
-          </Button>
+          <PanelAccessNav tone={mobile ? 'app' : 'platform'} />
+          {!mobile && searchButton}
           <OwnerThemeToggle theme={theme} onToggle={toggleTheme} />
-          <Dropdown
-            menu={{ items: [{ key: 'logout', icon: <MessageOutlined />, label: 'خروج از پنل', onClick: onSignOut }] }}
-            placement="bottomLeft"
-          >
-            <button type="button" className="platform-admin-header__profile" aria-label="منوی مدیر">
-              <Avatar className="platform-admin-header__avatar" icon={<UserOutlined />} />
-              <span className="platform-admin-header__profile-copy"><strong>مدیر پلتفرم</strong><small>super_admin</small></span>
-              <DownOutlined aria-hidden />
-            </button>
-          </Dropdown>
+          {mobile ? (
+            <UiButton variant="ghost" size="md" startIcon={<LogOut className="h-4 w-4" />} className="shrink-0 !px-1" aria-label="خروج از حساب" onClick={onSignOut} />
+          ) : (
+            <Dropdown
+              menu={{ items: [{ key: 'logout', icon: <MessageOutlined />, label: 'خروج از پنل', onClick: onSignOut }] }}
+              placement="bottomLeft"
+            >
+              <button type="button" className="platform-admin-header__profile" aria-label="منوی مدیر">
+                <Avatar className="platform-admin-header__avatar" icon={<UserOutlined />} />
+                <span className="platform-admin-header__profile-copy"><strong>مدیر پلتفرم</strong><small>super_admin</small></span>
+                <DownOutlined aria-hidden />
+              </button>
+            </Dropdown>
+          )}
         </div>
       </div>
       <AppCommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} />

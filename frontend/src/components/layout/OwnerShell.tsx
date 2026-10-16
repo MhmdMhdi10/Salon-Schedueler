@@ -19,6 +19,7 @@ export const OWNER_CONTENT_ID = 'owner-content';
 
 /** localStorage key for sidebar collapsed state. */
 const SIDEBAR_COLLAPSED_KEY = 'owner-sidebar-collapsed';
+const ownerRouteScrollPositions = new Map<string, number>();
 
 /** Kept as a compatibility export; owner and public surfaces now share one theme. */
 export const OWNER_THEME_STORAGE_KEY = THEME_STORAGE_KEY;
@@ -92,18 +93,15 @@ export function OwnerShell({
   const routeKey = `${location.pathname}${location.search}`;
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const contentRef = useRef<HTMLElement | null>(null);
-  const profileScrollPositionRef = useRef<{ top: number; left: number } | null>(null);
+  const restoringScrollRef = useRef(false);
 
   const handleContentScroll = useCallback(
     (event: UIEvent<HTMLElement>) => {
-      if (!pathname.startsWith('/owner/profile')) return;
-      const target = event.currentTarget;
-      profileScrollPositionRef.current = {
-        top: target.scrollTop,
-        left: target.scrollLeft,
-      };
+      if (!restoringScrollRef.current) {
+        ownerRouteScrollPositions.set(routeKey, event.currentTarget.scrollTop);
+      }
     },
-    [pathname],
+    [routeKey],
   );
 
   // Sidebar collapsed state — persisted to localStorage
@@ -134,50 +132,43 @@ export function OwnerShell({
   }, []);
 
   useLayoutEffect(() => {
-    const isProfileRoute = pathname.startsWith('/owner/profile');
-    const savedPosition = isProfileRoute ? profileScrollPositionRef.current : null;
-
-    // Restore after routed content has been committed, before the next paint.
-    // Other owner sections intentionally start at the top.
-    const frame = window.requestAnimationFrame(() => {
-      if (!isDesktop) {
-        window.scrollTo({ top: savedPosition?.top ?? 0, behavior: 'auto' });
-        return;
+    const target = contentRef.current;
+    if (!target) return;
+    const savedTop = ownerRouteScrollPositions.get(routeKey) ?? 0;
+    restoringScrollRef.current = true;
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(restore);
+    function restore() {
+      if (!restoringScrollRef.current) return;
+      target!.scrollLeft = 0;
+      target!.scrollTop = savedTop;
+      if (target!.scrollTop >= savedTop - 1) {
+        restoringScrollRef.current = false;
+        observer?.disconnect();
       }
-      const target = contentRef.current;
-      if (!target) return;
-      const top = savedPosition?.top ?? 0;
-      const left = savedPosition?.left ?? 0;
-      if (typeof target.scrollTo === 'function') {
-        target.scrollTo({ top, left, behavior: 'auto' });
-      } else {
-        // jsdom does not implement Element.scrollTo; direct assignment keeps
-        // the same behavior in tests and older embedded webviews.
-        target.scrollTop = top;
-        target.scrollLeft = left;
-      }
-    });
-
+    }
+    restore();
+    if (restoringScrollRef.current && target.firstElementChild) observer?.observe(target.firstElementChild);
+    const frame = window.requestAnimationFrame(restore);
+    const cancelRestore = () => {
+      restoringScrollRef.current = false;
+      observer?.disconnect();
+    };
+    target.addEventListener('touchstart', cancelRestore, { passive: true });
+    target.addEventListener('wheel', cancelRestore, { passive: true });
     return () => {
       window.cancelAnimationFrame(frame);
+      observer?.disconnect();
+      target.removeEventListener('touchstart', cancelRestore);
+      target.removeEventListener('wheel', cancelRestore);
     };
   }, [pathname, routeKey, isDesktop]);
-
-  useEffect(() => {
-    if (isDesktop || !pathname.startsWith('/owner/profile')) return;
-    const save = () => { profileScrollPositionRef.current = { top: window.scrollY, left: 0 }; };
-    window.addEventListener('scroll', save, { passive: true });
-    return () => window.removeEventListener('scroll', save);
-  }, [isDesktop, pathname]);
 
   return (
     <ThemeScope
       theme={theme}
       data-shell="owner"
       className={cn(
-        // Mobile uses document scrolling so Android browser chrome and pull-to-refresh
-        // remain stable. Desktop keeps the pane-scrolling app frame.
-        'flex flex-col bg-bg text-text lg:h-screen lg:h-[100dvh] lg:min-h-0 lg:overflow-hidden',
+        'flex h-screen h-[100dvh] min-h-0 flex-col overflow-hidden bg-bg text-text',
         className,
       )}
     >
@@ -197,11 +188,11 @@ export function OwnerShell({
         surface="owner"
         brandLabel={salonName || t('owner.title')}
         themeControl={<OwnerThemeToggle theme={theme} onToggle={toggleTheme} />}
-        onSignOut={onSignOut}
+        onSignOut={() => { ownerRouteScrollPositions.clear(); onSignOut(); }}
       />
 
-      {/* Content area: sidebar on desktop; main uses document scroll on mobile. */}
-      <div className="flex flex-1 lg:min-h-0">
+      {/* The pane below the header owns scrolling on every screen size. */}
+      <div className="flex min-h-0 flex-1">
         {/* Desktop sidebar — visible only on lg+ */}
         {isDesktop && (
           <OwnerSidebar
@@ -220,7 +211,7 @@ export function OwnerShell({
           tabIndex={0}
           onScroll={handleContentScroll}
           className={cn(
-            'min-w-0 flex-1 overflow-x-clip px-3 py-4 sm:px-4 sm:py-5 lg:overscroll-contain lg:overflow-y-auto',
+            'min-w-0 flex-1 overflow-x-clip overflow-y-auto overscroll-contain px-3 py-4 sm:px-4 sm:py-5',
             isDesktop && 'w-full',
             // On mobile, reserve the rendered tab bar plus a generous breathing
             // room so the last card and its actions scroll completely above fixed nav.

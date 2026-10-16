@@ -7,6 +7,8 @@ import { PanelHeader } from './PanelHeader';
 import { toPersianDigits } from '../ui/Num';
 import { cn } from '../ui/cn';
 
+import './AppShell.css';
+
 /** Stable id the skip link targets and the `<main>` exposes. */
 export const MAIN_CONTENT_ID = 'main-content';
 
@@ -76,12 +78,14 @@ export function AppShell({ children, className, headerVariant }: AppShellProps) 
   const variant = headerVariant ?? derived;
   const isBare = variant === 'bare';
   const hideFooter = pathname === '/account';
+  const fixedViewport = pathname === '/auth' || pathname === '/business/register';
 
   return (
     <div
       className={cn(
         'flex min-h-screen min-h-[100dvh] flex-col text-text',
         'overflow-x-clip',
+        fixedViewport && 'app-shell-fixed-viewport',
         isBare ? 'bg-surface' : 'bg-bg',
         className,
       )}

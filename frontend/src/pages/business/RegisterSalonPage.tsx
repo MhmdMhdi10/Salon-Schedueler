@@ -14,7 +14,7 @@ import {
 } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { SeoHead } from '../../components/seo';
-import { BrandLogo, Motif } from '../../components/brand';
+import { BrandLogo } from '../../components/brand';
 import { ThemeToggle } from '../../components/theme/ThemeToggle';
 import {
   Button,
@@ -70,6 +70,27 @@ function toIntOrZero(raw: string): number {
 /** A service captured in the questionnaire (with a stable key for the list). */
 interface DraftService extends RegisterSalonServiceInput {
   key: string;
+}
+
+/** Keep a visible scroll thumb in sync on iOS, where native scrollbars fade away. */
+function syncScrollRail(element: HTMLElement | null) {
+  if (!element) return;
+  const frame = element.parentElement;
+  if (!frame?.classList.contains('register-scroll-frame')) return;
+
+  const viewport = element.clientHeight;
+  if (viewport <= 0 || element.scrollHeight <= 0) {
+    frame.dataset.scrollable = 'false';
+    return;
+  }
+  const range = element.scrollHeight - viewport;
+  const thumbHeight = Math.min(viewport, Math.max(24, (viewport * viewport) / element.scrollHeight));
+  frame.dataset.scrollable = range > 1 ? 'true' : 'false';
+  frame.style.setProperty('--scroll-thumb-height', `${thumbHeight}px`);
+  frame.style.setProperty(
+    '--scroll-thumb-top',
+    `${range > 0 ? ((viewport - thumbHeight) * element.scrollTop) / range : 0}px`,
+  );
 }
 
 /**
@@ -152,6 +173,9 @@ function RegisterSalonContent() {
   }, [categories]);
 
   const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const serviceSheetTitleRef = useRef<HTMLHeadingElement | null>(null);
+  const selectedServicesRef = useRef<HTMLUListElement | null>(null);
+  const suggestedServicesRef = useRef<HTMLDivElement | null>(null);
   const autoSubmittedOtp = useRef('');
   const normalizedPhone = useMemo(() => normalizePhone(phone), [phone]);
   const codeValue = code.join('');
@@ -181,7 +205,17 @@ function RegisterSalonContent() {
   // Every step is a new reading surface. Start it at the top so a short
   // mobile viewport never opens halfway through the next form.
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'auto' });
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) {
+      mainContent.scrollLeft = 0;
+      mainContent.scrollTop = 0;
+    }
+    const formContent = document.querySelector<HTMLElement>('.register-form-content');
+    if (formContent) {
+      formContent.scrollLeft = 0;
+      formContent.scrollTop = 0;
+    }
+    window.scrollTo({ left: 0, top: 0, behavior: 'auto' });
   }, [step]);
 
   // ── Identity: validate required fields, then advance ─────────────────────
@@ -214,7 +248,11 @@ function RegisterSalonContent() {
     setServiceEditError('');
     setServicePresetQuery('');
     setShowAllPresets(false);
+    const returningFromCustom = serviceSheetMode === 'custom';
     setServiceSheetMode('catalog');
+    if (returningFromCustom) {
+      window.requestAnimationFrame(() => serviceSheetTitleRef.current?.focus({ preventScroll: true }));
+    }
   };
 
   const openCustomServiceForm = () => {
@@ -246,7 +284,7 @@ function RegisterSalonContent() {
     setSvcDuration('30');
     setSvcPrice('');
     setSvcError('');
-    setServiceSheetMode('catalog');
+    closeServiceSheet();
   };
 
   const handleTogglePresetService = (preset: SuggestedService) => {
@@ -325,6 +363,22 @@ function RegisterSalonContent() {
       service.label.toLocaleLowerCase('fa-IR').includes(query),
     );
   }, [servicePresetQuery, suggestedServices]);
+
+  useEffect(() => {
+    const scrollAreas = [selectedServicesRef.current, suggestedServicesRef.current].filter(
+      (element): element is HTMLUListElement | HTMLDivElement => element !== null,
+    );
+    const update = () => scrollAreas.forEach(syncScrollRail);
+    const frame = window.requestAnimationFrame(update);
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update);
+    scrollAreas.forEach((element) => observer?.observe(element));
+    window.addEventListener('resize', update);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer?.disconnect();
+      window.removeEventListener('resize', update);
+    };
+  }, [services.length, serviceSheetMode, filteredServicePresets.length, servicePresetQuery, showAllPresets]);
   // ── Submit registration, then send the OTP ───────────────────────────────
   const handleSubmit = async () => {
     if (!PHONE_PATTERN.test(normalizedPhone)) {
@@ -522,7 +576,10 @@ function RegisterSalonContent() {
         </div>
       </header>
 
-      <div className="register-form-content mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-7 sm:px-8 sm:py-10">
+      <div
+        className="register-form-content mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-7 sm:px-8 sm:py-10"
+        data-register-step={step}
+      >
         <AnimatePresence initial={false} mode="wait">
           <motion.div
             key={step}
@@ -532,15 +589,35 @@ function RegisterSalonContent() {
             transition={
               prefersReducedMotion ? { duration: 0 } : { duration: 0.22, ease: [0.2, 0, 0, 1] }
             }
-            className="min-w-0"
+            className={cn('min-w-0', step === 'category' && 'register-category-motion')}
           >
-            <p className="text-sm font-medium text-primary">
-              {t('business.register.progress', {
-                current: toPersianDigits(stepIndex + 1),
-                total: toPersianDigits(STEP_ORDER.length),
-              })}
-            </p>
-            <h1 className="mt-3 text-2xl leading-display text-display text-text">
+            <div className="register-step-topbar flex min-h-11 items-center justify-between">
+              {step === 'info' || step === 'services' ? (
+                <IconButton
+                  type="button"
+                  aria-label={t('business.register.back')}
+                  title={t('business.register.back')}
+                  onClick={() => setStep(step === 'info' ? 'category' : 'info')}
+                  className="rounded-full text-muted hover:text-text"
+                >
+                  <ArrowRight className="size-5" />
+                </IconButton>
+              ) : (
+                <span className="size-11" aria-hidden="true" />
+              )}
+              <p className="register-step-count text-sm font-medium text-primary">
+                {t('business.register.progress', {
+                  current: toPersianDigits(stepIndex + 1),
+                  total: toPersianDigits(STEP_ORDER.length),
+                })}
+              </p>
+            </div>
+            <h1
+              className={cn(
+                'register-step-title mt-3 text-2xl leading-display text-display text-text',
+                step === 'category' && 'register-category-title',
+              )}
+            >
               {step === 'category'
                 ? t('business.register.category.title')
                 : step === 'info'
@@ -549,7 +626,12 @@ function RegisterSalonContent() {
                     ? t('business.register.services.title')
                     : t('business.register.verify.title')}
             </h1>
-            <p className="mt-2 max-w-[38rem] text-sm leading-6 text-muted">
+            <p
+              className={cn(
+                'register-step-subtitle mt-2 max-w-[38rem] text-sm leading-6 text-muted',
+                step === 'category' && 'register-category-subtitle',
+              )}
+            >
               {step === 'category'
                 ? t('business.register.category.subtitle')
                 : step === 'info'
@@ -562,11 +644,11 @@ function RegisterSalonContent() {
             </p>
 
             {step === 'category' ? (
-              <section className="flex flex-col pt-7">
-                <p className="mb-3 text-sm text-muted">
+              <section className="register-category-step flex flex-col pt-7">
+                <p className="register-category-hint mb-3 text-sm text-muted">
                   {t('business.register.category.selectionHint')}
                 </p>
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="register-category-grid grid grid-cols-2 gap-2 sm:gap-3">
                   {BUSINESS_PROFILES.map((profile, index) => {
                     const Icon = profile.icon;
                     const selected = categories.includes(profile.key);
@@ -583,17 +665,16 @@ function RegisterSalonContent() {
                         aria-pressed={selected}
                         data-testid={`business-type-${profile.key}`}
                         className={cn(
-                          'flex min-h-[4.5rem] items-center gap-3 rounded-xl border px-3 py-3 text-start text-text transition-colors duration-fast focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus sm:px-4',
+                          'register-category-option flex min-h-12 items-center gap-1.5 rounded-lg border px-2 py-2 text-start text-text transition-colors duration-fast focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus sm:min-h-[4.5rem] sm:gap-3 sm:rounded-xl sm:px-4 sm:py-3',
                           selected
                             ? 'border-primary bg-primary/5'
                             : 'border-border bg-elevated hover:border-primary/50',
-                          index === BUSINESS_PROFILES.length - 1 &&
-                            'sm:col-span-2 sm:w-1/2 sm:justify-self-center',
+                          index === BUSINESS_PROFILES.length - 1 && 'register-category-option-last',
                         )}
                       >
                         <span
                           className={cn(
-                            'flex size-9 shrink-0 items-center justify-center rounded-lg',
+                            'flex size-7 shrink-0 items-center justify-center rounded-lg sm:size-9',
                             selected
                               ? 'bg-primary text-primary-contrast'
                               : 'bg-surface text-primary',
@@ -602,40 +683,35 @@ function RegisterSalonContent() {
                           <Icon className="size-[1.125rem]" aria-hidden="true" />
                         </span>
                         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                          <span className="text-sm font-semibold">
+                          <span className="text-xs font-semibold leading-4 sm:text-sm sm:leading-normal">
                             {t(`business.register.category.profiles.${profile.key}.label`)}
                           </span>
-                          <span className="text-xs leading-5 text-muted">
+                          <span className="hidden text-xs leading-5 text-muted sm:block">
                             {t(`business.register.category.profiles.${profile.key}.description`)}
                           </span>
                         </span>
                         <span
                           className={cn(
-                            'flex size-6 shrink-0 items-center justify-center rounded-full border',
+                            'flex size-5 shrink-0 items-center justify-center rounded-full border sm:size-6',
                             selected
                               ? 'border-primary bg-primary text-primary-contrast'
                               : 'border-border text-transparent',
                           )}
                           aria-hidden="true"
                         >
-                          <Check className="size-4" />
+                          <Check className="size-3 sm:size-4" />
                         </span>
                       </button>
                     );
                   })}
                 </div>
-                <StepNav
-                  onNext={() => setStep('info')}
-                  nextLabel={t('business.register.next')}
-                  backLabel={t('business.register.back')}
-                  nextDisabled={categories.length === 0}
-                />
               </section>
             ) : (
-              <section className="mt-8 flex flex-col gap-5">
+              <section className="register-step-section mt-8 flex flex-col gap-5">
                 {step === 'info' && (
                   <form
-                    className="grid gap-5 sm:grid-cols-2"
+                    id="register-info-form"
+                    className="register-info-form grid gap-5 sm:grid-cols-2"
                     onSubmit={(e) => {
                       e.preventDefault();
                       handleInfoNext();
@@ -684,27 +760,15 @@ function RegisterSalonContent() {
                         }}
                       />
                     </div>
-                    <div className="register-info-actions flex flex-col gap-2 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
-                      <Button type="submit" size="lg" className="register-info-primary sm:min-w-44">
-                        {t('business.register.next')}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="md"
-                        // RTL-native: the back action points visually right.
-                        startIcon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
-                        onClick={() => setStep('category')}
-                      >
-                        {t('business.register.back')}
-                      </Button>
-                    </div>
                   </form>
                 )}
 
                 {step === 'services' && (
-                  <div className="flex flex-col gap-5" data-testid="register-services-step">
-                    <section className="rounded-2xl border border-border bg-elevated p-4 sm:p-5">
+                  <div
+                    className="register-services-step flex flex-col gap-5"
+                    data-testid="register-services-step"
+                  >
+                    <section className="register-services-card rounded-2xl border border-border bg-elevated p-4 sm:p-5">
                       <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
                           <h2 className="text-sm font-semibold text-text">
@@ -721,24 +785,27 @@ function RegisterSalonContent() {
                             type="button"
                             variant="secondary"
                             size="md"
+                            aria-label={t('business.register.services.addCta')}
                             startIcon={<Plus className="size-4" aria-hidden="true" />}
                             onClick={openServiceCatalog}
                             className="shrink-0"
                           >
-                            {t('business.register.services.addCta')}
+                            <span className="register-service-add-long">
+                              {t('business.register.services.addCta')}
+                            </span>
+                            <span className="register-service-add-short">
+                              {t('business.register.services.addCtaShort')}
+                            </span>
                           </Button>
                         )}
                       </div>
 
                       {services.length === 0 ? (
-                        <div className="mt-4 flex flex-col items-center rounded-xl border border-dashed border-border px-4 py-7 text-center">
-                          <span className="flex size-11 items-center justify-center rounded-full bg-surface text-primary">
-                            <Motif variant="mark" className="size-6" aria-hidden />
-                          </span>
-                          <h3 className="mt-3 text-sm font-semibold text-text">
+                        <div className="register-services-empty mt-4 flex flex-col items-center rounded-xl border border-dashed border-border px-4 py-7 text-center">
+                          <h3 className="register-services-empty-title text-sm font-semibold text-text">
                             {t('business.register.services.emptyTitle')}
                           </h3>
-                          <p className="mt-1 max-w-sm text-xs leading-5 text-muted">
+                          <p className="register-services-empty-hint mt-1 max-w-sm text-xs leading-5 text-muted">
                             {t('business.register.services.emptyHint')}
                           </p>
                           <Button
@@ -747,17 +814,20 @@ function RegisterSalonContent() {
                             size="md"
                             startIcon={<Plus className="size-4" aria-hidden="true" />}
                             onClick={openServiceCatalog}
-                            className="mt-4"
+                            className="register-services-empty-cta mt-4"
                           >
                             {t('business.register.services.addCta')}
                           </Button>
                         </div>
                       ) : (
-                        <ul
-                          className="mt-3 divide-y divide-border"
-                          aria-label={t('business.register.services.listLabel')}
-                        >
-                          {services.map((service) => (
+                        <div className="register-scroll-frame mt-3">
+                          <ul
+                            ref={selectedServicesRef}
+                            onScroll={(event) => syncScrollRail(event.currentTarget)}
+                            className="register-services-list divide-y divide-border"
+                            aria-label={t('business.register.services.listLabel')}
+                          >
+                            {services.map((service) => (
                             <li
                               key={service.key}
                               className="flex min-h-16 items-center justify-between gap-3 py-2"
@@ -799,8 +869,12 @@ function RegisterSalonContent() {
                                 </IconButton>
                               </div>
                             </li>
-                          ))}
-                        </ul>
+                            ))}
+                          </ul>
+                          <span className="register-scroll-rail" aria-hidden="true">
+                            <span className="register-scroll-thumb" />
+                          </span>
+                        </div>
                       )}
                     </section>
 
@@ -809,14 +883,6 @@ function RegisterSalonContent() {
                         {submitError}
                       </p>
                     )}
-
-                    <StepNav
-                      onBack={() => setStep('info')}
-                      onNext={() => void handleSubmit()}
-                      nextLabel={t('business.register.submit')}
-                      backLabel={t('business.register.back')}
-                      loading={submitting}
-                    />
 
                     <Sheet
                       open={serviceSheetMode !== null}
@@ -827,13 +893,23 @@ function RegisterSalonContent() {
                       <SheetContent
                         side="bottom"
                         className="mx-auto flex h-[min(90dvh,48rem)] max-h-[100dvh] w-full max-w-2xl flex-col overflow-hidden p-0 sm:rounded-t-2xl"
+                        onOpenAutoFocus={(event) => {
+                          if (serviceSheetMode === 'catalog') {
+                            event.preventDefault();
+                            serviceSheetTitleRef.current?.focus({ preventScroll: true });
+                          }
+                        }}
                       >
                         <header className="shrink-0 border-b border-border px-5 pb-4 pe-16 pt-6">
                           <span
                             className="mx-auto mb-4 block h-1 w-9 rounded-full bg-border sm:hidden"
                             aria-hidden="true"
                           />
-                          <SheetTitle className="text-base font-semibold">
+                          <SheetTitle
+                            ref={serviceSheetTitleRef}
+                            tabIndex={-1}
+                            className="text-base font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                          >
                             {serviceSheetMode === 'edit'
                               ? t('business.register.services.editTitle')
                               : serviceSheetMode === 'custom'
@@ -885,10 +961,13 @@ function RegisterSalonContent() {
                               </div>
                             </div>
 
-                            <div
-                              className="min-h-0 flex-1 overflow-y-auto px-5 pb-4"
-                              data-testid="suggested-services-list"
-                            >
+                            <div className="register-scroll-frame min-h-0 flex-1">
+                              <div
+                                ref={suggestedServicesRef}
+                                onScroll={(event) => syncScrollRail(event.currentTarget)}
+                                className="register-suggested-services-list h-full min-h-0 overflow-y-auto px-5 pb-4"
+                                data-testid="suggested-services-list"
+                              >
                               {filteredServicePresets.length > 0 ? (
                                 <div className="flex flex-col gap-2">
                                   {(servicePresetQuery || showAllPresets
@@ -948,25 +1027,38 @@ function RegisterSalonContent() {
                                   {t('business.register.services.presetsNoResults')}
                                 </p>
                               )}
+                              </div>
+                              <span className="register-scroll-rail" aria-hidden="true">
+                                <span className="register-scroll-thumb" />
+                              </span>
                             </div>
 
                             <footer className="shrink-0 border-t border-border px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:pb-4">
-                              <div className="flex items-center gap-2">
+                              <div className="register-service-sheet-actions flex items-center gap-2">
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="md"
+                                  aria-label={t('business.register.services.customCta')}
                                   startIcon={<Plus className="size-4" aria-hidden="true" />}
                                   onClick={openCustomServiceForm}
-                                  className="min-w-0 flex-1"
+                                  className="min-w-0 flex-1 whitespace-nowrap px-2 sm:px-4"
                                 >
-                                  {t('business.register.services.customCta')}
+                                  <span className="register-service-custom-short sm:hidden">
+                                    {t('business.register.services.customCtaShort')}
+                                  </span>
+                                  <span className="register-service-custom-compact sm:hidden">
+                                    {t('business.register.services.customCtaCompact')}
+                                  </span>
+                                  <span className="hidden sm:inline">
+                                    {t('business.register.services.customCta')}
+                                  </span>
                                 </Button>
                                 <Button
                                   type="button"
                                   size="md"
                                   onClick={closeServiceSheet}
-                                  className="min-w-0 flex-1"
+                                  className="min-w-0 flex-1 whitespace-nowrap px-2 sm:px-4"
                                 >
                                   {t('business.register.services.done')}
                                 </Button>
@@ -1019,17 +1111,27 @@ function RegisterSalonContent() {
                               )}
                             </div>
                             <footer className="shrink-0 border-t border-border px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:pb-4">
-                              <div className="flex items-center gap-2">
+                              <div className="register-service-sheet-actions flex items-center gap-2">
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="md"
+                                  aria-label={t('business.register.services.backToCatalog')}
                                   onClick={openServiceCatalog}
-                                  className="min-w-0 flex-1"
+                                  className="min-w-0 flex-1 whitespace-nowrap px-2 sm:px-4"
                                 >
-                                  {t('business.register.services.backToCatalog')}
+                                  <span className="sm:hidden">
+                                    {t('business.register.services.backToCatalogShort')}
+                                  </span>
+                                  <span className="hidden sm:inline">
+                                    {t('business.register.services.backToCatalog')}
+                                  </span>
                                 </Button>
-                                <Button type="submit" size="md" className="min-w-0 flex-1">
+                                <Button
+                                  type="submit"
+                                  size="md"
+                                  className="min-w-0 flex-1 whitespace-nowrap px-2 sm:px-4"
+                                >
                                   {t('business.register.services.addCta')}
                                 </Button>
                               </div>
@@ -1118,6 +1220,7 @@ function RegisterSalonContent() {
 
                 {step === 'otp' && (
                   <form
+                    id="register-otp-form"
                     className="flex flex-col gap-5"
                     onSubmit={(e) => {
                       e.preventDefault();
@@ -1163,16 +1266,6 @@ function RegisterSalonContent() {
                       </div>
                     </fieldset>
 
-                    <Button
-                      type="submit"
-                      size="lg"
-                      fullWidth
-                      loading={otpLoading}
-                      disabled={!codeIsComplete}
-                    >
-                      {t('business.register.verify.cta')}
-                    </Button>
-
                     <div className="flex items-center justify-center">
                       {secondsLeft > 0 ? (
                         <span className="text-xs text-muted" aria-live="polite">
@@ -1201,20 +1294,37 @@ function RegisterSalonContent() {
               </section>
             )}
 
-            {/* Already have an account? */}
-            {step !== 'otp' && (
-              <p className="mt-6 shrink-0 pb-1 text-center text-sm text-muted">
-                {t('business.register.haveAccount')}{' '}
-                <Link
-                  to="/auth"
-                  className="inline-flex min-h-10 items-center px-2 font-medium text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                >
-                  {t('business.register.signIn')}
-                </Link>
-              </p>
-            )}
           </motion.div>
         </AnimatePresence>
+
+        <StepNav
+          showSignIn={step !== 'otp'}
+          onNext={
+            step === 'category'
+              ? () => setStep('info')
+              : step === 'services'
+                ? () => void handleSubmit()
+                : undefined
+          }
+          formId={
+            step === 'info'
+              ? 'register-info-form'
+              : step === 'otp'
+                ? 'register-otp-form'
+                : undefined
+          }
+          nextLabel={
+            step === 'services'
+              ? t('business.register.submit')
+              : step === 'otp'
+                ? t('business.register.verify.cta')
+                : t('business.register.next')
+          }
+          nextDisabled={
+            step === 'category' ? categories.length === 0 : step === 'otp' ? !codeIsComplete : undefined
+          }
+          loading={step === 'services' ? submitting : step === 'otp' ? otpLoading : undefined}
+        />
       </div>
     </div>
   );
@@ -1335,52 +1445,46 @@ const SERVICE_PRESETS_BY_PROFILE: Record<string, readonly string[]> = {
 };
 /** Bottom navigation for an onboarding step. */
 function StepNav({
-  onBack,
+  showSignIn,
   onNext,
+  formId,
   nextLabel,
-  backLabel,
   nextDisabled,
   loading,
 }: {
-  onBack?: () => void;
-  onNext: () => void;
+  showSignIn: boolean;
+  onNext?: () => void;
+  formId?: string;
   nextLabel: string;
-  backLabel: string;
   nextDisabled?: boolean;
   loading?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
-    <div
-      className={cn(
-        'register-step-nav-shell',
-        onBack && 'has-secondary',
-      )}
-    >
-      <div className="register-step-nav flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:items-center sm:justify-between">
+    <div className={cn('register-step-nav-shell', showSignIn && 'has-sign-in')}>
+      <div className="register-step-nav flex flex-col items-stretch gap-1 pt-1">
+        {showSignIn && (
+          <p className="register-have-account m-0 text-center text-xs text-muted">
+            {t('business.register.haveAccount')}{' '}
+            <Link
+              to="/auth"
+              className="inline-flex min-h-8 items-center px-1 font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            >
+              {t('business.register.signIn')}
+            </Link>
+          </p>
+        )}
         <Button
-          type="button"
+          type={formId ? 'submit' : 'button'}
+          form={formId}
           size="lg"
-          onClick={onNext}
+          onClick={formId ? undefined : onNext}
           loading={loading}
           disabled={nextDisabled || loading}
-          className="sm:min-w-44"
+          className="min-w-0 flex-1 sm:min-w-44 sm:flex-none sm:self-start"
         >
           {nextLabel}
         </Button>
-        {onBack && (
-          <div className="flex items-center justify-between gap-2 sm:min-w-0">
-            <Button
-              type="button"
-              variant="ghost"
-              size="md"
-              // RTL-native: back affordance intentionally points visually right.
-              startIcon={<ArrowRight className="h-4 w-4" />}
-              onClick={onBack}
-            >
-              {backLabel}
-            </Button>
-          </div>
-        )}
       </div>
       <div className="register-step-nav-spacer" aria-hidden="true" />
     </div>

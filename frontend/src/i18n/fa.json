@@ -592,7 +592,10 @@
         "showAll": "نمایش همهٔ {{count}} خدمت",
         "showLess": "نمایش کمتر",
         "customCta": "ساخت خدمت دلخواه",
+        "customCtaShort": "خدمت دلخواه",
+        "customCtaCompact": "دلخواه",
         "backToCatalog": "بازگشت به پیشنهادها",
+        "backToCatalogShort": "پیشنهادها",
         "done": "تمام شد",
         "presets": {
           "haircut": "کوتاهی مو",
@@ -656,6 +659,7 @@
         "durationLabel": "مدت (دقیقه) — اختیاری",
         "priceLabel": "هزینه (تومان) — اختیاری",
         "addCta": "افزودن خدمت",
+        "addCtaShort": "افزودن",
         "listLabel": "خدمات قابل رزرو",
         "summary": "{{minutes}} دقیقه • {{price}} تومان",
         "summaryNoPrice": "{{minutes}} دقیقه • قیمت ثبت نشده",

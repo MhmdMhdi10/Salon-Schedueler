@@ -3,7 +3,7 @@
   "short_name": "آرا",
   "description": "دسترسی سریع به سالن‌های ذخیره‌شده و رزرو آنلاین نوبت",
   "id": "/",
-  "start_url": "/account",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",

@@ -85,7 +85,7 @@ export function OwnerBottomTabs({ className, role = 'Owner' }: OwnerBottomTabsPr
     <nav
       aria-label={t('owner.tabBar')}
       data-testid="owner-bottom-tabs"
-      className={cn('owner-bottom-tabs fixed z-nav', 'pb-[env(safe-area-inset-bottom)]', className)}
+      className={cn('owner-bottom-tabs fixed z-nav', className)}
     >
       <ul className="relative z-[1] mx-auto flex w-full max-w-container items-stretch justify-around px-1 py-0">
         {visibleTabs.map((tab, index) => {

@@ -1,6 +1,6 @@
 import { Building2, ShieldCheck, UserRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '../ui/cn';
 
 export type PanelAccessNavTone = 'app' | 'platform';
@@ -19,6 +19,12 @@ const PANEL_LINKS = [
 /** Direct access to every application panel for a platform administrator. */
 export function PanelAccessNav({ tone = 'app', className }: PanelAccessNavProps) {
   const { t } = useTranslation();
+  const { pathname } = useLocation();
+  const currentPanel = pathname.startsWith('/platform-admin')
+    ? 'admin'
+    : pathname === '/owner' || pathname.startsWith('/owner/')
+      ? 'salon'
+      : 'user';
 
   return (
     <nav
@@ -29,12 +35,13 @@ export function PanelAccessNav({ tone = 'app', className }: PanelAccessNavProps)
         className,
       )}
     >
-      {PANEL_LINKS.map(({ key, to, labelKey, Icon }) => {
+      {PANEL_LINKS.filter(({ key }) => key !== currentPanel).map(({ key, to, labelKey, Icon }) => {
         const label = t(labelKey);
         return (
           <NavLink
             key={key}
             to={to}
+            data-panel-switch-link
             title={label}
             aria-label={label}
             className={({ isActive }) =>

@@ -1,0 +1,56 @@
+.pwa-pull-refresh {
+  position: fixed;
+  z-index: 1200;
+  inset-block-start: calc(env(safe-area-inset-top, 0px) + 4px);
+  left: 50%;
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 140ms ease, visibility 0s linear 140ms, border-color 140ms ease;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.pwa-pull-refresh.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.pwa-pull-refresh.is-ready {
+  border-color: var(--color-primary);
+}
+
+.pwa-pull-refresh-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--color-primary);
+}
+
+.pwa-pull-refresh.is-refreshing .pwa-pull-refresh-icon {
+  animation: pwa-refresh-spin 700ms linear infinite;
+}
+
+@keyframes pwa-refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pwa-pull-refresh {
+    transition: none;
+  }
+
+  .pwa-pull-refresh.is-refreshing .pwa-pull-refresh-icon {
+    animation-duration: 1.4s;
+  }
+}

@@ -139,7 +139,7 @@ describe('RegisterSalonPage services step', () => {
     ).toBeInTheDocument();
   });
 
-  it('keeps custom service creation and editing inside the service sheet', async () => {
+  it('returns a newly added custom service to the visible list for editing', async () => {
     const step = await reachServicesStep();
     fireEvent.click(within(step).getByRole('button', { name: /^افزودن خدمت$/ }));
     const catalog = await screen.findByRole('dialog');
@@ -165,7 +165,7 @@ describe('RegisterSalonPage services step', () => {
     fireEvent.submit(addForm);
 
     expect(await within(step).findByText('کوتاهی ویژه')).toBeInTheDocument();
-    fireEvent.click(within(catalog).getByRole('button', { name: 'تمام شد' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'ویرایش کوتاهی ویژه' }));
 
     const editForm = screen.getByTestId(/edit-service-/);

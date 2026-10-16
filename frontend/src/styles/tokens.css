@@ -371,7 +371,10 @@
     /* Keep the document scrollbar on the physical right while app content
        remains Persian/RTL through the app root and page surfaces. */
     direction: ltr;
-    overflow-x: clip;
+    /* `clip` still lets iOS WebKit pan the top-level viewport when a route
+       briefly lays out wider than the screen. Keep page-level horizontal
+       scrolling disabled; intentional inner scrollers keep their own rules. */
+    overflow-x: hidden;
   }
 
   body {
@@ -380,6 +383,7 @@
     margin: 0;
     direction: rtl;
     overflow-x: clip;
+    overscroll-behavior-x: none;
     /* Persian-first font stack + taller line height for Farsi runs */
     font-family: var(--font-family-sans);
     font-size: var(--font-sm);
@@ -577,4 +581,21 @@ html.app-route-loading::-webkit-scrollbar-thumb,
 html.app-route-loading::-webkit-scrollbar-track {
   border-color: transparent;
   background: transparent;
+}
+
+/* iOS can keep :hover after a tap, falsely marking the destination panel active. */
+@media (hover: none) {
+  [data-panel-switch-link]:hover {
+    background-color: transparent !important;
+  }
+}
+
+/* iOS zooms the visual viewport when a focused control is below 16px.
+   Keep this outside Tailwind's base layer so utility font sizes cannot undo it. */
+@media (max-width: 63.9375rem) and (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  select,
+  textarea {
+    font-size: max(1rem, 16px);
+  }
 }

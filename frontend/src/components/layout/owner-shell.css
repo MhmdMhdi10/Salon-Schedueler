@@ -1,6 +1,6 @@
-/* Mobile scrolls the document; desktop keeps the owner app frame. */
+/* The owner content pane scrolls below the header on every screen. */
 [data-shell='owner'] {
-  min-height: 100vh;
+  height: 100dvh;
 }
 
 @media (min-width: 64rem) {
@@ -17,6 +17,7 @@
  * on the far edge once its page overflow is contained. */
 html:has([data-shell='owner']) {
   scrollbar-gutter: auto;
+  overflow-y: hidden;
 }
 
 [data-shell='owner'] #owner-content > div {

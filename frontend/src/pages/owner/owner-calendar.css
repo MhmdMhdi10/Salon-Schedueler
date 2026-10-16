@@ -79,15 +79,27 @@
   background: var(--color-surface);
 }
 
-/* Keep manual booking compact on phones without exposing a second scrollbar. */
+/* Keep manual booking shorter than the phone viewport and scroll its content. */
 .manual-booking-dialog {
-  -ms-overflow-style: none;
   overscroll-behavior-y: contain;
-  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-color: var(--color-primary) transparent;
+  scrollbar-width: thin;
 }
 
 .manual-booking-dialog::-webkit-scrollbar {
-  display: none;
+  width: 0.3125rem;
+}
+
+.manual-booking-dialog::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--color-primary);
+}
+
+@media (max-width: 47.9375rem) {
+  .manual-booking-dialog {
+    max-height: min(80dvh, 38rem);
+  }
 }
 
 /* Date values can wrap to two lines; keep their paired time trigger aligned. */

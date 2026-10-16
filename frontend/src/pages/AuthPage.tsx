@@ -120,6 +120,21 @@ export function AuthPage({
   const codeValue = code.join('');
   const codeIsComplete = codeValue.length === otpLength;
 
+  useEffect(() => {
+    if (bookingMode) return;
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) {
+      mainContent.scrollLeft = 0;
+      mainContent.scrollTop = 0;
+    }
+    const authCard = document.querySelector<HTMLElement>('.auth-page-card');
+    if (authCard) {
+      authCard.scrollLeft = 0;
+      authCard.scrollTop = 0;
+    }
+    window.scrollTo({ left: 0, top: 0, behavior: 'auto' });
+  }, [bookingMode, step]);
+
   const applyOtpResponse = (response?: { devOtp?: string; otpLength?: number }) => {
     setOtpLength(OTP_LENGTH);
     setCode(
@@ -362,7 +377,7 @@ export function AuthPage({
         </div>
       )}
 
-      <div className="w-full overflow-hidden rounded-2xl border border-border bg-elevated p-4 shadow-1 sm:p-8">
+      <div className="auth-page-card w-full overflow-hidden rounded-2xl border border-border bg-elevated p-4 shadow-1 sm:p-8">
         <AnimatePresence mode="wait" initial={false} custom={direction}>
           {step === 'phone' ? (
             <motion.div
@@ -374,14 +389,18 @@ export function AuthPage({
               exit="exit"
               transition={stepTransition}
             >
-              <div className="mb-5 text-start">
+              <div className="auth-step-intro mb-5 text-start">
                 <h1 className="text-lg font-bold leading-display text-text">
                   {bookingMode
                     ? t('auth.bookingTitle', { defaultValue: 'برای ادامه رزرو وارد شوید' })
                     : t('auth.title')}
                 </h1>
                 {!bookingMode && (
-                  <div className="mt-4 grid grid-cols-2 gap-2" role="tablist" aria-label="نوع ورود">
+                  <div
+                    className="auth-audience-tabs mt-4 grid grid-cols-2 gap-2"
+                    role="tablist"
+                    aria-label="نوع ورود"
+                  >
                     <button
                       type="button"
                       role="tab"
@@ -412,7 +431,7 @@ export function AuthPage({
                     </button>
                   </div>
                 )}
-                <p className="mt-1 text-sm leading-5 text-muted">
+                <p className="auth-phone-subtitle mt-1 text-sm leading-5 text-muted">
                   {bookingMode || hasBookingReturnIntent
                     ? t('auth.bookingIntentSubtitle')
                     : audience === 'salon'
@@ -421,7 +440,7 @@ export function AuthPage({
                 </p>
               </div>
               <form
-                className="flex flex-col gap-4"
+                className="auth-phone-form flex flex-col gap-4"
                 onSubmit={(e) => {
                   e.preventDefault();
                   handleRequestOtp();
@@ -460,7 +479,7 @@ export function AuthPage({
                   {error}
                 </p>
               )}
-              <p className="mt-5 flex flex-wrap items-center justify-center gap-x-1 text-center text-2xs leading-5 text-muted">
+              <p className="auth-consent mt-5 flex flex-wrap items-center justify-center gap-x-1 text-center text-2xs leading-5 text-muted">
                 <Trans
                   i18nKey="auth.consent"
                   components={{
@@ -482,7 +501,7 @@ export function AuthPage({
               {!bookingMode && (
                 <section
                   aria-labelledby="auth-register-salon-title"
-                  className="mt-5 rounded-xl border border-primary/25 bg-primary/5 p-3 text-center sm:p-4"
+                  className="auth-register-salon mt-5 rounded-xl border border-primary/25 bg-primary/5 p-3 text-center sm:p-4"
                 >
                   <p id="auth-register-salon-title" className="m-0 text-sm text-muted">
                     صاحب سالن هستید؟
@@ -490,7 +509,7 @@ export function AuthPage({
                   <Link
                     to="/business/register"
                     data-testid="auth-register-salon"
-                    className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-pill bg-primary px-4 py-2 text-sm font-bold text-primary-contrast no-underline transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                    className="auth-register-salon-link mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-pill bg-primary px-4 py-2 text-sm font-bold text-primary-contrast no-underline transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                   >
                     {t('app.workspace.registerSalon')}
                   </Link>
@@ -507,7 +526,7 @@ export function AuthPage({
               exit="exit"
               transition={stepTransition}
             >
-              <div className="mb-5 text-start">
+              <div className="auth-step-intro mb-5 text-start">
                 <h1 className="text-lg font-bold leading-display text-text">
                   {bookingMode
                     ? t('auth.bookingOtpLabel', { defaultValue: 'کد تایید رزرو' })

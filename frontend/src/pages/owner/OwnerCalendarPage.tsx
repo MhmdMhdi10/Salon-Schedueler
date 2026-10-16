@@ -1225,8 +1225,8 @@ function DayView({
                 <div
                   role="rowheader"
                   className={cn(
-                    'sticky start-0 z-sticky flex w-16 shrink-0 items-start justify-end',
-                    'border-e border-border/30 bg-surface pe-2 pt-1',
+                    'flex w-16 shrink-0 items-start justify-end',
+                    'border-e border-border/30 pe-2 pt-1',
                     'text-xs tabular-nums',
                     isHour ? 'font-medium text-text' : 'text-muted',
                   )}
@@ -2843,6 +2843,7 @@ function ManualBookingDialog({
   onOpenChange: (open: boolean) => void;
   onChanged: () => void;
 }) {
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const [services, setServices] = useState<
     Array<{
       id: string;
@@ -3144,8 +3145,14 @@ function ManualBookingDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !saving && onOpenChange(next)}>
-      <DialogContent className="manual-booking-dialog !w-[calc(100%-1rem)] !max-w-lg !max-h-[calc(100dvh-1rem)] !rounded-2xl !p-4 sm:!p-5">
-        <DialogTitle className="!text-xl !font-bold tracking-tight">ثبت نوبت حضوری</DialogTitle>
+      <DialogContent
+        className="manual-booking-dialog !w-[calc(100%-1rem)] !max-w-lg !rounded-2xl !p-4 sm:!p-5"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          titleRef.current?.focus({ preventScroll: true });
+        }}
+      >
+        <DialogTitle ref={titleRef} tabIndex={-1} className="!text-xl !font-bold tracking-tight">ثبت نوبت حضوری</DialogTitle>
         <DialogDescription className="!mt-2 max-w-xl leading-6">
           نوبت حضوری هم از همان ظرفیت عضو تیم و صندلی استفاده می‌کند؛ بنابراین رزرو هم‌زمان ثبت نمی‌شود.
         </DialogDescription>

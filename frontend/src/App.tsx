@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useLayoutEffect } from 'react';
 import { HelmetProvider } from 'react-helmet-async';
 import {
   BrowserRouter,
@@ -15,6 +15,7 @@ import { PageTransition } from './components/ui/Motion';
 import { ToastProvider } from './components/ui/Toast';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { PwaInstallPrompt } from './pwa/PwaInstallPrompt';
+import { PullToRefresh } from './pwa/PullToRefresh';
 
 /**
  * Root component for the Salon Booking PWA.
@@ -256,16 +257,32 @@ function AdminEntryPage() {
   return <Navigate to={isStaff ? '/owner' : '/account'} replace />;
 }
 
+// Older installed icons may still launch /account even after the manifest changes.
+let legacyPwaAccountLaunch =
+  typeof window !== 'undefined' &&
+  window.location.pathname === '/account' &&
+  (window.matchMedia?.('(display-mode: standalone)').matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true);
+
 /** Customer-facing self-service surface. Staff can use it for personal bookings too. */
 function CustomerOnlyRoute() {
   const { status, isCustomer, isStaff, isPlatformAdmin } = useAuth();
   const location = useLocation();
+
+  useLayoutEffect(() => {
+    if (status !== 'loading') legacyPwaAccountLaunch = false;
+  }, [status]);
 
   if (status === 'loading') return <RouteLoader />;
 
   if (status === 'anonymous') {
     const returnTo = `${location.pathname}${location.search}${location.hash}`;
     return <Navigate to="/auth" state={{ returnTo }} replace />;
+  }
+
+  if (legacyPwaAccountLaunch && location.pathname === '/account') {
+    if (isStaff) return <Navigate to="/owner" replace />;
+    if (isPlatformAdmin) return <Navigate to="/platform-admin" replace />;
   }
 
   if (!isCustomer && !isPlatformAdmin) {
@@ -291,6 +308,38 @@ function AppPwaInstallPrompt() {
   return isOwnerWorkspace ? <PwaInstallPrompt /> : null;
 }
 
+function ResetHorizontalScrollOnRouteChange() {
+  const { pathname } = useLocation();
+
+  useLayoutEffect(() => {
+    const focused = document.activeElement;
+    if (focused instanceof HTMLElement && focused.matches('input, select, textarea, [contenteditable="true"]')) {
+      focused.blur();
+    }
+
+    if (pathname === '/auth' || pathname === '/business/register') {
+      const mainContent = document.getElementById('main-content');
+      if (mainContent) {
+        mainContent.scrollLeft = 0;
+        mainContent.scrollTop = 0;
+      }
+      window.scrollTo({ left: 0, top: 0, behavior: 'auto' });
+    }
+
+    document.documentElement.scrollLeft = 0;
+    document.body.scrollLeft = 0;
+    window.scrollTo({ left: 0, top: window.scrollY, behavior: 'auto' });
+    const frame = window.requestAnimationFrame(() => {
+      document.documentElement.scrollLeft = 0;
+      document.body.scrollLeft = 0;
+      window.scrollTo({ left: 0, top: window.scrollY, behavior: 'auto' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [pathname]);
+
+  return null;
+}
+
 export function App() {
   return (
     <HelmetProvider>
@@ -302,6 +351,8 @@ export function App() {
              * their own nested ToastProvider — the nearest provider wins and
              * a nested one would silo its toasts to that page.) */}
             <ToastProvider>
+              <PullToRefresh />
+              <ResetHorizontalScrollOnRouteChange />
               <div dir="rtl" lang="fa" className="app-root">
                 <Suspense fallback={<RouteLoader />}>
                   <Routes>

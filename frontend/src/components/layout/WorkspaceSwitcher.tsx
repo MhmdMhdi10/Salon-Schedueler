@@ -81,7 +81,7 @@ export function WorkspaceSwitcher({
       data-testid={testId}
       className={cn('flex shrink-0 items-center', className)}
     >
-      <Link to={destination.to} className={linkClass} aria-label={destination.label}>
+      <Link to={destination.to} className={linkClass} aria-label={destination.label} data-panel-switch-link>
         <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
         <span
           className={

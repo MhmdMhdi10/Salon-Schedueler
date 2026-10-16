@@ -147,11 +147,8 @@ function AraScrollBrandRail({ hidden }: { hidden: boolean }) {
         />
       </Link>
       <div className="ara-scroll-brand-actions">
-        <Link to="/search" className="ara-scroll-login ara-scroll-customer-link">
-          رزرو نوبت
-        </Link>
         <Link to="/business/register" className="ara-scroll-header-start">
-          شروع رایگان <ArrowUpLeft aria-hidden="true" />
+          ثبت سالن <ChevronLeft aria-hidden="true" />
         </Link>
         <Link to="/auth" className="ara-scroll-login">
           ورود
@@ -853,7 +850,7 @@ export function AraScrollLanding() {
     }
     directionDistance.current += Math.abs(delta);
 
-    if (nextDirection === 'down' && directionDistance.current >= 12) {
+    if (nextDirection === 'down' && directionDistance.current >= 32) {
       setBrandRailHidden(true);
     } else if (nextDirection === 'up' && directionDistance.current >= 8) {
       setBrandRailHidden(false);
