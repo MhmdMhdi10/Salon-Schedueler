@@ -19,7 +19,8 @@ import type { SchedulingEngine } from '../scheduling/scheduling-engine';
 
 export interface PaymentCallbackPayload {
   authority: string;
-  status: string; // gateway-specific status indicator (e.g., 'OK' or 'NOK')
+  /** Informational only; caller-controlled callback status is never trusted. */
+  status: string;
 }
 
 export interface PaymentServiceOptions {
@@ -528,7 +529,7 @@ export class PaymentService {
    * Requirements: R10.3, R10.6
    */
   async handleCallback(payload: PaymentCallbackPayload): Promise<{ confirmed: boolean }> {
-    const { authority, status } = payload;
+    const { authority } = payload;
 
     // Find the payment record by authority
     const payment = await this.prisma.payment.findFirst({
@@ -545,16 +546,9 @@ export class PaymentService {
       return { confirmed: payment.status === 'paid' };
     }
 
-    // If gateway indicated failure, mark as failed
-    if (status !== 'OK' && status !== '100' && status !== '101') {
-      await this.prisma.payment.update({
-        where: { id: payment.id },
-        data: { status: 'failed' },
-      });
-      return { confirmed: false };
-    }
-
-    // Verify with gateway
+    // Callback query/body fields are customer-controlled. Always ask the
+    // gateway directly before changing a pending payment, even for a reported
+    // failure; this prevents forged callbacks from canceling real payments.
     const amountRial = Number(payment.amountRial);
     const verifyResult = await this.gateway.verify(authority, amountRial);
 

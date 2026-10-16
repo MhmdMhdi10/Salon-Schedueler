@@ -218,10 +218,9 @@ export function buildApp(opts: BuildAppOptions): Express {
   // They are mounted under /api (the client base path) except /healthz.
   app.use(new HealthController().router());
   app.use('/api', new AuthController(services).router());
-  // Public salon self-registration (creates salon + Owner + trial). Mounted
-  // before the protected router so an owner can sign their salon up without an
-  // account; they then sign in via OTP with the phone they registered.
-  app.use('/api', new RegistrationController(services).router());
+  // The phone availability check is public; creating a salon requires the
+  // caller to first verify that same phone through OTP.
+  app.use('/api', new RegistrationController(services, requireAuth).router());
   app.use('/api', new SalonController(services, optionalAuth).router());
   app.use('/api', new ReferralController(services, requireRole).publicRouter());
   app.use('/api', new PaymentController(services).callbackRouter());

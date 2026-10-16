@@ -268,7 +268,7 @@ async function createControllerFixture(
   if (!me.body?.principal?.id)
     throw new Error(`Controller fixture customer was not created: ${JSON.stringify(me.body)}`);
   world.vars.customerId = String(me.body.principal.id);
-  if (withAppointment || withHeldAppointment) await world.bookAvailable('salon', 'customer');
+  if (withAppointment) await world.bookAvailable('salon', 'customer');
   await world.createPlatformAdmin('platform');
   world.activeActor = 'owner';
 }
@@ -286,6 +286,10 @@ async function exercise(world: BackendWorld, method: string, template: string): 
         `Controller fixture approval failed: ${approved.status} ${JSON.stringify(approved.body)}`,
       );
     }
+    await world.rawRequest('POST', `/api/appointments/${FAKE_ID}/no-show`, {}, '');
+    await world.rawRequest('POST', '/api/appointments/{{appointmentId}}/no-show', {}, 'customer');
+    await world.rawRequest('POST', `/api/appointments/${FAKE_ID}/no-show`, {}, 'owner');
+    await world.rawRequest('POST', '/api/appointments/{{appointmentId}}/no-show', {}, 'stylist');
   }
 
   let concrete = concretePath(world, template);
@@ -327,6 +331,17 @@ async function exercise(world: BackendWorld, method: string, template: string): 
     body = { phone: world.vars.ownerPhone, code: otp.body?.devOtp };
   } else if (template === '/auth/refresh') {
     body = { refreshToken: world.actors.get('owner')?.refreshToken };
+  } else if (template === '/auth/logout') {
+    const previousClient = world.requestHeaders['X-Auth-Client'];
+    world.requestHeaders['X-Auth-Client'] = 'mobile';
+    await world.rawRequest(
+      'POST',
+      '/api/auth/logout',
+      { refreshToken: world.actors.get('owner')?.refreshToken },
+      '',
+    );
+    if (previousClient === undefined) delete world.requestHeaders['X-Auth-Client'];
+    else world.requestHeaders['X-Auth-Client'] = previousClient;
   }
 
   // DELETE /waitlist/:id needs a real customer-owned entry to reach its success
@@ -348,6 +363,19 @@ async function exercise(world: BackendWorld, method: string, template: string): 
     body,
     actor,
   );
+
+  if (
+    template === '/auth/refresh' &&
+    response.status === 200 &&
+    typeof response.body?.accessToken === 'string' &&
+    typeof response.body?.refreshToken === 'string'
+  ) {
+    const owner = world.actors.get('owner');
+    if (owner) {
+      owner.accessToken = response.body.accessToken;
+      owner.refreshToken = response.body.refreshToken;
+    }
+  }
 
   if (template === '/salons/:id/holidays' && response.body?.holiday?.id)
     world.vars.holidayId = String(response.body.holiday.id);
@@ -433,7 +461,56 @@ Given('I have a controller fixture with an appointment', async function (this: B
 });
 
 Given('I have a controller fixture with a held appointment', async function (this: BackendWorld) {
-  await createControllerFixture(this, false, true);
+  await createControllerFixture(this, true, true);
+});
+
+Given('I act as actor {string}', function (this: BackendWorld, actorName: string) {
+  if (actorName === 'anonymous') {
+    this.activeActor = '';
+    return;
+  }
+  if (!this.actors.has(actorName)) {
+    throw new Error(`Actor '${actorName}' is not available in this scenario`);
+  }
+  this.activeActor = actorName;
+});
+
+Given('I have a fresh test phone stored as {string}', function (
+  this: BackendWorld,
+  variable: string,
+) {
+  this.vars[variable] = this.newTestPhone();
+});
+
+Given('I re-authenticate as actor {string}', async function (
+  this: BackendWorld,
+  actorName: string,
+) {
+  const actor = this.actors.get(actorName);
+  if (!actor) throw new Error(`Actor '${actorName}' is not available in this scenario`);
+  this.actors.set(actorName, await this.authenticate(actor.phone));
+  this.activeActor = actorName;
+});
+
+Given('I create a second customer actor named {string}', async function (
+  this: BackendWorld,
+  actorName: string,
+) {
+  if (this.actors.has(actorName)) throw new Error(`Actor '${actorName}' already exists`);
+  const previousActor = this.activeActor;
+  await this.createCustomer(actorName);
+  this.activeActor = previousActor;
+});
+
+Given('I create an administrator actor named {string}', async function (
+  this: BackendWorld,
+  actorName: string,
+) {
+  if (this.actors.has(actorName)) throw new Error(`Actor '${actorName}' already exists`);
+  const previousActor = this.activeActor;
+  this.activeActor = 'owner';
+  await this.createStaff(actorName, 'Admin');
+  this.activeActor = previousActor;
 });
 
 When(
@@ -459,6 +536,45 @@ When(
 );
 
 When(
+  'I make a {string} request to {string} with JSON body:',
+  async function (this: BackendWorld, method: string, path: string, body: string) {
+    const resolvedBody = this.resolve(body);
+    let parsedBody: unknown;
+    try {
+      parsedBody = JSON.parse(resolvedBody);
+    } catch (error) {
+      throw new Error(`Request body is not valid JSON: ${String(error)}`);
+    }
+    await this.rawRequest(method, path, parsedBody);
+  },
+);
+
+When(
+  'I save response field {string} as {string}',
+  function (this: BackendWorld, field: string, variable: string) {
+    assert.ok(this.lastResponse, 'No response received');
+    const value = field
+      .split('.')
+      .reduce<any>((current, part) => current?.[part], this.lastResponse.body);
+    assert.notEqual(value, undefined, `Field '${field}' not found`);
+    this.vars[variable] = String(value);
+  },
+);
+
+When('I verify the latest OTP incorrectly {int} times', async function (
+  this: BackendWorld,
+  attempts: number,
+) {
+  const phone = this.vars.otpPhone;
+  const correctCode = this.vars.otpCode;
+  if (!phone || !correctCode) throw new Error('Request and save an OTP before testing wrong codes');
+  const wrongCode = String((Number(correctCode) + 1) % 10_000).padStart(4, '0');
+  for (let index = 0; index < attempts; index += 1) {
+    await this.rawRequest('POST', '/api/auth/otp/verify', { phone, code: wrongCode }, '');
+  }
+});
+
+When(
   'I set the request header {string} to {string}',
   function (this: BackendWorld, header: string, value: string) {
     this.requestHeaders[header] = value;
@@ -477,6 +593,67 @@ Then(
       .split('.')
       .reduce<any>((current, part) => current?.[part], this.lastResponse.body);
     assert.notEqual(value, undefined, `Field '${field}' not found`);
+  },
+);
+
+Then(
+  'response field {string} should equal {string}',
+  function (this: BackendWorld, field: string, expected: string) {
+    assert.ok(this.lastResponse, 'No response received');
+    const actual = field
+      .split('.')
+      .reduce<any>((current, part) => current?.[part], this.lastResponse.body);
+    assert.notEqual(actual, undefined, `Field '${field}' not found`);
+    assert.equal(String(actual), this.resolve(expected));
+  },
+);
+
+Then(
+  'response field {string} should not equal {string}',
+  function (this: BackendWorld, field: string, unexpected: string) {
+    assert.ok(this.lastResponse, 'No response received');
+    const actual = field
+      .split('.')
+      .reduce<any>((current, part) => current?.[part], this.lastResponse.body);
+    assert.notEqual(actual, undefined, `Field '${field}' not found`);
+    assert.notEqual(String(actual), this.resolve(unexpected));
+  },
+);
+
+Then(
+  'response array {string} should contain at least {int} items',
+  function (this: BackendWorld, field: string, minimum: number) {
+    assert.ok(this.lastResponse, 'No response received');
+    const value = field
+      .split('.')
+      .reduce<any>((current, part) => current?.[part], this.lastResponse.body);
+    assert.ok(Array.isArray(value), `Field '${field}' is not an array`);
+    assert.ok(value.length >= minimum, `Expected '${field}' to contain at least ${minimum} items`);
+  },
+);
+
+Then(
+  'response array {string} should contain item with field {string} equal to {string}',
+  function (this: BackendWorld, arrayField: string, itemField: string, expected: string) {
+    assert.ok(this.lastResponse, 'No response received');
+    const values = arrayField
+      .split('.')
+      .reduce<any>((current, part) => current?.[part], this.lastResponse.body);
+    assert.ok(Array.isArray(values), `Field '${arrayField}' is not an array`);
+    assert.ok(
+      values.some((item: any) => String(item?.[itemField]) === this.resolve(expected)),
+      `No item in '${arrayField}' has ${itemField}='${this.resolve(expected)}'`,
+    );
+  },
+);
+
+Then(
+  'response header {string} should include {string}',
+  function (this: BackendWorld, header: string, expected: string) {
+    assert.ok(this.lastResponse, 'No response received');
+    const value = this.lastResponse.headers[header.toLowerCase()];
+    assert.ok(value, `Response header '${header}' is missing`);
+    assert.ok(String(value).includes(this.resolve(expected)));
   },
 );
 

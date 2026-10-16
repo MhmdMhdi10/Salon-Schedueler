@@ -139,6 +139,45 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
     void authorizeAppointment(req, res, next, true);
   };
 
+  // No-show management is limited to salon managers and platform admins, but
+  // the authorization decision must include the appointment's owning salon.
+  const requireCanMarkNoShow: RequestHandler = (req, res, next) => {
+    const principal = req.principal;
+    if (!principal) {
+      res.status(401).json({ code: 'UNAUTHORIZED' });
+      return;
+    }
+    if (!principal.role) {
+      res.status(403).json({ code: 'FORBIDDEN' });
+      return;
+    }
+    const principalRole = principal.role;
+    void services.calendarService
+      .getAppointmentById(req.params.id)
+      .then((appointment) => {
+        if (!appointment) {
+          res.status(404).json({ code: 'NOT_FOUND' });
+          return;
+        }
+        const allowed = services.authorizer.can(
+          {
+            id: principal.id,
+            role: principalRole,
+            staffMemberId: principal.staffMemberId,
+            salonId: principal.salonId,
+          },
+          'manage_appointments',
+          { salonId: appointment.salonId },
+        );
+        if (!allowed) {
+          res.status(403).json({ code: 'FORBIDDEN' });
+          return;
+        }
+        next();
+      })
+      .catch(next);
+  };
+
   const requireCustomerAppointment: RequestHandler = (req, res, next) => {
     const principal = req.principal;
     if (!principal || (principal.role && principal.role !== 'PlatformAdmin')) {
@@ -625,7 +664,7 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
 
   router.post(
     '/appointments/:id/no-show',
-    requireRole('manage_appointments'),
+    requireCanMarkNoShow,
     appointmentMutationLimit,
     asyncRoute(async (req, res) => {
       const appointment = await services.cancellationService.markNoShow(req.params.id);

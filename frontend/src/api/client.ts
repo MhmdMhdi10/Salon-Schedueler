@@ -472,10 +472,9 @@ export const referralApi = {
 };
 
 // ─── Salon registration (public onboarding) ─────────────────────────────────
-// Self-service salon sign-up from the marketing landing. Creates the salon, its
-// Owner staff member (the `phone` becomes the OTP login that mints an Owner
-// token), starts the free trial, and provisions the optional questionnaire
-// answers. Only salonName/ownerName/phone are required — the rest is skippable.
+// Self-service salon sign-up from the marketing landing. The backend requires
+// an OTP-authenticated session for the same phone before creating the salon,
+// its Owner membership, free trial, and optional questionnaire answers.
 
 /** One service captured in the onboarding questionnaire. */
 export interface RegisterSalonServiceInput {
@@ -524,9 +523,7 @@ export interface RegisterSalonResponse {
 
 export const registrationApi = {
   /**
-   * Register a new salon. On success the owner signs in via OTP with the same
-   * `phone` to enter the panel. A phone already in use surfaces as an
-   * `ApiError` with `code === 'PHONE_TAKEN'` (HTTP 409).
+   * Register a new salon after OTP verification for the same `phone`.
    */
   registerSalon: (input: RegisterSalonInput) =>
     request<RegisterSalonResponse>('/register/salon', {

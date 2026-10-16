@@ -654,6 +654,22 @@ async function exerciseAppointmentBranches(): Promise<void> {
     data: Buffer.from('img'),
   };
 
+  const noShowRouter = () => appointmentRouter(services as Services, allowRole);
+  await hit(appFor(noShowRouter()), 'POST', '/appointments/appointment-1/no-show');
+  await hit(appFor(noShowRouter(), CUSTOMER), 'POST', '/appointments/appointment-1/no-show');
+  appointment = null;
+  await hit(appFor(noShowRouter(), OWNER), 'POST', '/appointments/appointment-1/no-show');
+  appointment = {
+    id: 'appointment-1',
+    salonId: 'salon-1',
+    customerId: CUSTOMER.id,
+    staffMemberId: 'staff-1',
+    status: 'pending',
+  };
+  allowed = false;
+  await hit(appFor(noShowRouter(), OWNER), 'POST', '/appointments/appointment-1/no-show');
+  allowed = true;
+
   await hit(adminApp, 'POST', '/appointments/appointment-1/no-show');
   await hit(adminApp, 'POST', '/appointments/appointment-1/approve');
   await hit(adminApp, 'POST', '/appointments/appointment-1/reject');
@@ -3338,8 +3354,13 @@ async function exerciseRegistrationBranches(): Promise<void> {
       isPhoneTaken: async () => taken,
     },
     subscriptionService: { startTrial: async () => undefined },
+    authService: { subjectOwnsPhone: async () => true },
   };
-  const app = appFor(registrationRouter(services as Services));
+  const attachPrincipal = (req: any, _res: any, next: () => void) => {
+    req.principal = { id: 'registration-branch-owner' };
+    next();
+  };
+  const app = appFor(registrationRouter(services as Services, attachPrincipal));
   await hit(app, 'POST', '/register/salon', { website: 'bot' });
   await hit(app, 'POST', '/register/salon', {});
   await hit(app, 'POST', '/register/salon', validRegistrationBody());
@@ -3370,11 +3391,22 @@ async function exerciseRegistrationBranches(): Promise<void> {
   taken = true;
   await hit(app, 'GET', '/register/check-phone?phone=09121110009');
 
+  const unverifiedServices = {
+    ...services,
+    authService: { subjectOwnsPhone: async () => false },
+  };
+  await hit(
+    appFor(registrationRouter(unverifiedServices as Services, attachPrincipal)),
+    'POST',
+    '/register/salon',
+    validRegistrationBody({ phone: '09121110010' }),
+  );
+
   const previousNodeEnv = process.env.NODE_ENV;
   const previousLimit = process.env.E2E_REGISTRATION_IP_LIMIT;
   process.env.NODE_ENV = 'test';
   delete process.env.E2E_REGISTRATION_IP_LIMIT;
-  registrationRouter(services as Services);
+  registrationRouter(services as Services, attachPrincipal);
   if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
   else process.env.NODE_ENV = previousNodeEnv;
   if (previousLimit === undefined) delete process.env.E2E_REGISTRATION_IP_LIMIT;

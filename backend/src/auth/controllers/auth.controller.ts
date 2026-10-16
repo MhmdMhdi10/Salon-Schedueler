@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { Services } from '../../http/app.js';
 import { asyncRoute, validateRequired } from '../../common/http/route-helpers.js';
 import {
+  createSharedRateLimit,
   createRateLimit,
   phoneRateLimitKey,
 } from '../../http/middleware/rate-limit.js';
@@ -47,7 +48,12 @@ export function authRouter(services: Services): Router {
       : fallback;
   };
 
-  const otpRequestIpLimit = createRateLimit({
+  const authRateLimit = (options: Parameters<typeof createRateLimit>[0]) =>
+    typeof services.authService.consumeRateLimit === 'function'
+      ? createSharedRateLimit(services.authService, options)
+      : createRateLimit(options);
+
+  const otpRequestIpLimit = authRateLimit({
     name: 'otp-request-ip',
     // SMS cost is additionally bounded per phone below. A wider IP window
     // keeps shared offices and the automated onboarding matrix from colliding
@@ -55,20 +61,20 @@ export function authRouter(services: Services): Router {
     max: devLimit('E2E_OTP_REQUEST_IP_LIMIT', 60),
     windowMs: 60_000,
   });
-  const otpRequestPhoneLimit = createRateLimit({
+  const otpRequestPhoneLimit = authRateLimit({
     name: 'otp-request-phone',
     max: devLimit('E2E_OTP_REQUEST_PHONE_LIMIT', 5),
     windowMs: 10 * 60_000,
     keyGenerator: phoneRateLimitKey,
   });
-  const otpVerifyIpLimit = createRateLimit({
+  const otpVerifyIpLimit = authRateLimit({
     name: 'otp-verify-ip',
     // Keep brute-force protection per phone below; this IP cap accounts for
     // shared offices and multi-user onboarding from one network.
     max: devLimit('E2E_OTP_VERIFY_IP_LIMIT', 40),
     windowMs: 10 * 60_000,
   });
-  const otpVerifyPhoneLimit = createRateLimit({
+  const otpVerifyPhoneLimit = authRateLimit({
     name: 'otp-verify-phone',
     max: devLimit('E2E_OTP_VERIFY_PHONE_LIMIT', 10),
     windowMs: 10 * 60_000,
@@ -156,10 +162,17 @@ export function authRouter(services: Services): Router {
     }),
   );
 
-  router.post('/auth/logout', (_req, res) => {
-    clearRefreshCookie(res);
-    res.status(204).end();
-  });
+  router.post(
+    '/auth/logout',
+    asyncRoute(async (req, res) => {
+      const refreshToken = isMobileClient(req) ? req.body?.refreshToken : readRefreshCookie(req);
+      await services.authService.logout(
+        typeof refreshToken === 'string' ? refreshToken : undefined,
+      );
+      clearRefreshCookie(res);
+      res.status(204).end();
+    }),
+  );
 
   return router;
 }

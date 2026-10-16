@@ -2,13 +2,8 @@ import type { Request, RequestHandler } from 'express';
 import { createHash } from 'node:crypto';
 
 /**
- * Small fixed-window limiter for the MVP.
- *
- * It deliberately lives in the API process so the project has no Redis
- * dependency while it is still single-instance. The limits are fail-closed
- * per process, bounded in memory, and expose standard response headers. Once
- * the API is deployed behind multiple replicas, replace the store with a
- * shared Redis/edge limiter; route contracts stay unchanged.
+ * Small fixed-window limiter for non-critical routes. Authentication routes
+ * use createSharedRateLimit so abuse controls remain consistent across replicas.
  */
 export interface RateLimitOptions {
   name: string;
@@ -99,6 +94,47 @@ export function createRateLimit(options: RateLimitOptions): RequestHandler {
 
     cleanup();
     next();
+  };
+}
+
+/** PostgreSQL-backed fixed-window limiter for security-critical auth routes. */
+export function createSharedRateLimit(
+  store: {
+    consumeRateLimit(
+      name: string,
+      key: string,
+      max: number,
+      windowMs: number,
+    ): Promise<{ allowed: boolean; remaining: number; resetAt: number }>;
+  },
+  options: RateLimitOptions,
+): RequestHandler {
+  return (req, res, next) => {
+    if (options.skip?.(req)) {
+      next();
+      return;
+    }
+
+    const key = options.keyGenerator?.(req) ?? defaultKey(req);
+    void store
+      .consumeRateLimit(options.name, key, options.max, options.windowMs)
+      .then((bucket) => {
+        const resetSeconds = Math.max(1, Math.ceil((bucket.resetAt - Date.now()) / 1000));
+        res.setHeader('RateLimit-Limit', String(options.max));
+        res.setHeader('RateLimit-Remaining', String(bucket.remaining));
+        res.setHeader('RateLimit-Reset', String(Math.ceil(bucket.resetAt / 1000)));
+        if (!bucket.allowed) {
+          res.setHeader('Retry-After', String(resetSeconds));
+          res.status(429).json({
+            code: 'RATE_LIMITED',
+            limit: options.name,
+            retryAfterSeconds: resetSeconds,
+          });
+          return;
+        }
+        next();
+      })
+      .catch(next);
   };
 }
 

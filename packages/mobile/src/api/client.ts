@@ -73,6 +73,11 @@ export const authApi = {
       method: 'POST',
       body: { refreshToken },
     }),
+  logout: (refreshToken: string) =>
+    request<void>('/auth/logout', {
+      method: 'POST',
+      body: { refreshToken },
+    }),
 };
 
 // Salon endpoints

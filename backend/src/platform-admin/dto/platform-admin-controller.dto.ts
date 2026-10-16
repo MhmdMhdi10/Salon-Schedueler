@@ -31,6 +31,7 @@ const route = controllerRouteDto.bind(null, 'PlatformAdminController');
 
 export const PLATFORM_ADMIN_CONTROLLER_DTO_DEFINITIONS = [
   route('platform-admin.dashboard.read', 'GET', '/api/platform-admin/dashboard'),
+  route('platform-admin.sms-deliveries.list', 'GET', '/api/platform-admin/sms-deliveries', EmptyDto, PlatformAdminQueryDto),
   route('platform-admin.salons.list', 'GET', '/api/platform-admin/salons', EmptyDto, PlatformAdminQueryDto),
   route('platform-admin.salons.create', 'POST', '/api/platform-admin/salons', EmptyDto, AnyQueryDto, PlatformSalonCreateDto),
   route('platform-admin.salons.read', 'GET', '/api/platform-admin/salons/:id', PlatformAdminIdDto),

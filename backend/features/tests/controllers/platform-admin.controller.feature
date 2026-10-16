@@ -2,6 +2,7 @@ Feature: Platform-admin controller HTTP contracts
   Scenario: exercise operations-center routes
     Given I have a controller fixture with an appointment
     When I exercise controller endpoint "GET /platform-admin/dashboard"
+    When I exercise controller endpoint "GET /platform-admin/sms-deliveries"
     When I exercise controller endpoint "GET /platform-admin/salons"
     When I exercise controller endpoint "POST /platform-admin/salons"
     When I exercise controller endpoint "GET /platform-admin/salons/:id"

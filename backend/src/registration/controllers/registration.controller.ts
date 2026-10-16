@@ -1,8 +1,12 @@
-import { Router } from 'express';
+import { Router, type RequestHandler } from 'express';
 import { RegisterSalonSchema } from '@salon/shared';
 import type { Services } from '../../http/app.js';
 import { asyncRoute } from '../../common/http/route-helpers.js';
-import { createRateLimit, phoneRateLimitKey } from '../../http/middleware/rate-limit.js';
+import {
+  createRateLimit,
+  createSharedRateLimit,
+  phoneRateLimitKey,
+} from '../../http/middleware/rate-limit.js';
 
 /**
  * True when an error is a Prisma unique-constraint violation (P2002). Kept for
@@ -28,7 +32,10 @@ const isUniqueViolation = (err: unknown): boolean =>
  * answer is optional so the questionnaire can be skipped. A phone may belong to
  * another salon; invalid input yields 400.
  */
-export function registrationRouter(services: Services): Router {
+export function registrationRouter(
+  services: Services,
+  requireAuth: RequestHandler = (_req, _res, next) => next(),
+): Router {
   const router = Router();
 
   // The dev Cucumber matrix creates one isolated salon per scenario. Keep the
@@ -42,14 +49,18 @@ export function registrationRouter(services: Services): Router {
       ? configuredDevLimit
       : 15;
 
-  const registrationIpLimit = createRateLimit({
+  const registrationRateLimit = {
     name: 'salon-registration-ip',
     // Registration is expensive and protected by phone uniqueness/OTP, but
     // legitimate teams may create several test or branch salons from one
     // office IP. Keep the hourly cap meaningful without blocking that flow.
     max: registrationIpMax,
     windowMs: 60 * 60_000,
-  });
+  };
+  const registrationIpLimit =
+    typeof services.authService?.consumeRateLimit === 'function'
+      ? createSharedRateLimit(services.authService, registrationRateLimit)
+      : createRateLimit(registrationRateLimit);
   const checkPhoneLimit = createRateLimit({
     name: 'registration-phone-check',
     max: 20,
@@ -59,6 +70,7 @@ export function registrationRouter(services: Services): Router {
 
   router.post(
     '/register/salon',
+    requireAuth,
     registrationIpLimit,
     asyncRoute(async (req, res) => {
       if (typeof req.body?.website === 'string' && req.body.website.trim() !== '') {
@@ -77,6 +89,14 @@ export function registrationRouter(services: Services): Router {
       }
 
       const input = parsed.data;
+
+      if (
+        !req.principal ||
+        !(await services.authService.subjectOwnsPhone(req.principal.id, input.phone))
+      ) {
+        res.status(403).json({ code: 'PHONE_VERIFICATION_REQUIRED' });
+        return;
+      }
 
       try {
         const { salon } = await services.salonRegistration.registerSalon({
@@ -131,9 +151,12 @@ export function registrationRouter(services: Services): Router {
 }
 
 export class RegistrationController {
-  public constructor(private readonly services: Services) {}
+  public constructor(
+    private readonly services: Services,
+    private readonly requireAuth?: RequestHandler,
+  ) {}
 
   public router(): Router {
-    return registrationRouter(this.services);
+    return registrationRouter(this.services, this.requireAuth);
   }
 }

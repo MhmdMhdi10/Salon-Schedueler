@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>گزارش بازبینی بک‌اند Salon Scheduler</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07111c;
+      --surface: #101d2a;
+      --surface-2: #142536;
+      --line: #26394b;
+      --text: #eef5fb;
+      --muted: #a5b6c6;
+      --cyan: #5fe1d1;
+      --red: #ff7b83;
+      --orange: #ffc36f;
+      --yellow: #f6dc83;
+      --green: #7fe0a4;
+      --blue: #8ec8ff;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at 82% -12%, rgba(49, 157, 158, .2), transparent 38%),
+        radial-gradient(ellipse at 4% 25%, rgba(39, 88, 139, .12), transparent 32%),
+        var(--bg);
+      font: 15px/1.9 Tahoma, Arial, sans-serif;
+    }
+    a { color: var(--cyan); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code, .mono { direction: ltr; unicode-bidi: isolate; font: 13px/1.8 ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .wrap { width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: 34px 0 64px; }
+    .eyebrow { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-bottom: 13px; color: var(--cyan); font-size: 12px; font-weight: 800; letter-spacing: .04em; }
+    .eyebrow span { border: 1px solid #28534f; background: #102b2b; padding: 3px 9px; border-radius: 999px; }
+    h1 { margin: 0; font-size: clamp(27px, 5vw, 43px); line-height: 1.45; letter-spacing: -.035em; }
+    .subtitle { max-width: 780px; margin: 9px 0 0; color: var(--muted); font-size: 16px; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px 19px; margin-top: 20px; color: var(--muted); font-size: 13px; }
+    .meta b { color: var(--text); font-weight: 700; }
+    .banner { display: grid; grid-template-columns: auto 1fr; gap: 13px; align-items: start; margin: 28px 0 22px; padding: 17px 19px; border: 1px solid #614b35; border-radius: 16px; background: linear-gradient(115deg, rgba(130, 88, 34, .19), rgba(16, 29, 42, .94)); }
+    .banner .icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; background: #4a351e; color: var(--orange); font-weight: 900; }
+    .banner strong { display: block; margin-bottom: 3px; color: #ffe2b3; }
+    .banner p { margin: 0; color: #d9d6cf; font-size: 14px; }
+    .banner.resolved { border-color: #28534f; background: linear-gradient(115deg, rgba(27, 114, 91, .2), rgba(16, 29, 42, .94)); }
+    .banner.resolved .icon { background: #153b35; color: var(--green); }
+    .banner.resolved strong { color: #b8f2cf; }
+    .banner.resolved p { color: #d0e9dc; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 22px 0 28px; }
+    .stat { padding: 15px 17px; border: 1px solid var(--line); border-radius: 15px; background: rgba(16, 29, 42, .87); }
+    .stat strong { display: block; font-size: 25px; line-height: 1.4; }
+    .stat span { color: var(--muted); font-size: 12px; }
+    .stat.high strong { color: var(--red); }
+    .stat.medium strong { color: var(--orange); }
+    .stat.low strong { color: var(--yellow); }
+    .stat.note strong { color: var(--blue); }
+    .section { margin-top: 35px; }
+    .section h2 { margin: 0 0 14px; font-size: 22px; }
+    .section-lead { margin: -5px 0 15px; color: var(--muted); }
+    .findings { display: grid; gap: 13px; }
+    .finding { overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(145deg, rgba(255,255,255,.025), transparent 52%), var(--surface); }
+    .finding-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; padding: 16px 19px 12px; border-bottom: 1px solid rgba(38, 57, 75, .8); }
+    .finding-header h3 { margin: 0; font-size: 17px; line-height: 1.7; }
+    .finding-id { color: #7f96aa; margin-inline-end: 7px; font: 700 12px ui-monospace, monospace; direction: ltr; unicode-bidi: isolate; }
+    .badge { flex: 0 0 auto; display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 900; white-space: nowrap; }
+    .badge.high { color: #ffc4c8; background: #49252c; border: 1px solid #713740; }
+    .badge.medium { color: #ffdbad; background: #49381e; border: 1px solid #70542b; }
+    .badge.low { color: #f6e8a8; background: #403d25; border: 1px solid #625d35; }
+    .badge.info { color: #bfdeff; background: #223a54; border: 1px solid #345b80; }
+    .finding-body { padding: 13px 19px 18px; }
+    .finding-body p { margin: 7px 0; color: #dce6ee; }
+    .finding-body strong { color: #fff; }
+    .finding-body ul { margin: 8px 0 2px; padding-right: 21px; color: #d2dee8; }
+    .finding-body li { margin: 4px 0; }
+    .evidence { margin-top: 12px !important; color: var(--muted) !important; font-size: 12px; }
+    .fix { margin-top: 12px !important; padding: 10px 12px; border-right: 3px solid var(--cyan); border-radius: 8px; background: #0c2025; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+    .panel { padding: 18px 19px; border: 1px solid var(--line); border-radius: 15px; background: rgba(16, 29, 42, .88); }
+    .panel h3 { margin: 0 0 7px; font-size: 16px; }
+    .panel p { margin: 5px 0; color: #d2dee8; }
+    .panel ul { margin: 7px 0 0; padding-right: 21px; color: #d2dee8; }
+    .ok { color: var(--green); }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; }
+    table { width: 100%; border-collapse: collapse; min-width: 620px; background: rgba(16, 29, 42, .88); }
+    th, td { text-align: right; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: #cde0ef; font-size: 12px; background: #142536; }
+    td { color: #d7e2eb; font-size: 13px; }
+    tr:last-child td { border-bottom: 0; }
+    .footer { margin-top: 35px; padding-top: 17px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    .footer p { margin: 5px 0; }
+    @media (max-width: 760px) {
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .two-col { grid-template-columns: 1fr; }
+      .finding-header { flex-direction: column; }
+      .wrap { width: min(100% - 22px, 1120px); padding-top: 23px; }
+    }
+    @media print {
+      :root { color-scheme: light; --text:#14202b; --muted:#4e5b66; --line:#cbd5de; }
+      body { color: #14202b; background: #fff; }
+      .finding, .panel, .stat, table { color: #14202b; background: #fff; break-inside: avoid; }
+      .finding-body p, .finding-body ul, .panel p, .panel ul, td { color: #263746; }
+      a { color: #075e68; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <div class="eyebrow"><span>بازبینی امنیتی بک‌اند</span><span>گزارش ایستا</span></div>
+      <h1>Salon Scheduler</h1>
+      <p class="subtitle">بررسی احراز هویت، مجوزهای سالن‌ها، پرداخت، ثبت‌نام، محدودسازی درخواست‌ها، تنظیمات Docker و وابستگی‌های بک‌اند.</p>
+      <div class="meta">
+        <span><b>تاریخ:</b> ۱۶ اکتبر ۲۰۲۶</span>
+        <span><b>شاخه:</b> <code>main</code></span>
+        <span><b>نسخهٔ بررسی‌شده:</b> <code>e23d709</code></span>
+        <span><b>وضعیت اصلاح:</b> <code>working tree · ۱۶ اکتبر ۲۰۲۶</code></span>
+        <span><b>مسیر:</b> <code>/home/mti/Desktop/Salon-Schedueler</code></span>
+      </div>
+    </header>
+
+    <aside class="banner" aria-label="محدودیت اجرای PentAGI">
+      <div class="icon">!</div>
+      <div>
+        <strong>اسکن PentAGI عملاً اجرا نشد</strong>
+        <p>سرویس PentAGI روی میزبان پیدا شد، اما برای ساخت و اجرای Flow به نشست واردشده نیاز داشت و مرورگر نیز گواهی محلی را نپذیرفت. برای ادامه، هشدار TLS را دور نزدم و از رمز پیش‌فرض استفاده نکردم. بنابراین این فایل گزارش بازبینی ایستای سورس و تنظیمات به‌همراه ممیزی وابستگی‌هاست؛ خروجی اجرای PentAGI یا تست نفوذ زنده نیست.</p>
+      </div>
+    </aside>
+
+    <aside class="banner resolved" aria-label="وضعیت اصلاح یافته‌ها">
+      <div class="icon">✓</div>
+      <div>
+        <strong>هر ۹ یافتهٔ کد و پیکربندی اصلاح شد</strong>
+        <p>اصلاح‌ها در سورس و migration ثبت شده‌اند: کنترل دسترسی بین سالن‌ها، سخت‌گیری config تولید، نشست‌های refresh، محدودیت مشترک OTP، ثبت‌نام پس از تأیید شماره، callback پرداخت، bind پورت‌های توسعه و ارتقای وابستگی‌ها. migration به دیتابیس توسعهٔ درحال اجرا اعمال شد و entrypointهای توسعه/تولید هم آن را هنگام راه‌اندازی اعمال می‌کنند. اجرای <code>test:e2e:backend:cov</code> پس از اصلاح‌ها موفق بود: ۷۸/۷۸ سناریو، ۸۰۵/۸۰۵ قدم، پوشش ۱۰۰٪ برای خطوط، شاخه‌ها، توابع و دستورهای controller بک‌اند و ۱۷۳/۱۷۳ route. همهٔ ۱۷۴ تعریف DTO هم پوشش داده شدند. PentAGI در بررسی اولیه Flow را اجرا نکرده بود.</p>
+      </div>
+    </aside>
+
+    <section class="stats" aria-label="خلاصه">
+      <div class="stat high"><strong>۲</strong><span>ریسک بالا در نسخهٔ پیش از اصلاح</span></div>
+      <div class="stat medium"><strong>۴</strong><span>یافتهٔ متوسط در نسخهٔ پیش از اصلاح</span></div>
+      <div class="stat low"><strong>۲</strong><span>ریسک کم در نسخهٔ پیش از اصلاح</span></div>
+      <div class="stat note"><strong>۱</strong><span>یافتهٔ وابستگی در نسخهٔ پیش از اصلاح</span></div>
+    </section>
+
+    <section class="section">
+      <h2>جمع‌بندی اجرایی</h2>
+      <div class="panel">
+        <p>یافته‌ها در نسخهٔ اولیهٔ بررسی‌شده ثبت شده بودند و اکنون اصلاح‌های متناظر در working tree انجام شده‌اند. مسیر عدم حضور به سالن appointment محدود شد؛ تنظیم تولید، secrets، refresh tokenها و OTP در سمت سرور کنترل می‌شوند.</p>
+        <p>ثبت سالن حالا پس از OTP همان شماره انجام می‌شود، callback پرداخت همیشه درگاه را استعلام می‌کند، پورت‌های زیرساخت توسعه فقط روی localhost هستند و وابستگی‌های آسیب‌دیده override شده‌اند. migration تازه به‌صورت idempotent در entrypointهای توسعه و تولید اعمال می‌شود.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>یافته‌ها</h2>
+      <p class="section-lead">شدت «بالا» برای مواردی است که با یک تنظیم تولید ناامن به سوءاستفادهٔ مستقیم تبدیل می‌شوند. شرط و محدودیت هر یافته در متن آمده است.</p>
+      <div class="findings">
+        <article class="finding">
+          <div class="finding-header">
+            <h3><span class="finding-id">F-01</span>دورزدن محدودهٔ سالن در ثبت عدم حضور</h3>
+            <span class="badge medium">متوسط · دسترسی بین‌سالن</span>
+          </div>
+          <div class="finding-body">
+            <p>مسیر <code>POST /api/appointments/:id/no-show</code> فقط نقش کلی <code>manage_appointments</code> را می‌سنجد. شناسهٔ سالن appointment به Authorizer داده نمی‌شود و سرویس هم فقط با شناسهٔ appointment رکورد را می‌خواند و تغییر می‌دهد.</p>
+            <p><strong>اثر:</strong> مدیر احراز‌شدهٔ یک سالن که شناسهٔ appointment سالن دیگری را به‌دست آورد می‌تواند آن را «عدم حضور» ثبت کند. این تغییر شمارندهٔ عدم حضور مشتری را زیاد می‌کند و appointment را از رزرو منابع خارج می‌کند. دسترسی به شناسه لازم است؛ این مسیر به‌تنهایی شناسه‌ها را افشا نمی‌کند.</p>
+            <p class="evidence">شواهد: <code>backend/src/appointment/controllers/appointment.controller.ts:626-632</code>، <code>backend/src/http/middleware/rbac.ts:37-56</code>، <code>backend/src/scheduling/cancellation.ts:208-238</code>.</p>
+            <p class="fix"><strong>انجام شد:</strong> نگهبان async حالا appointment را می‌خواند و <code>manage_appointments</code> را با <code>salonId</code> همان رکورد بررسی می‌کند؛ دسترسی Stylist همچنان رد می‌شود.</p>
+          </div>
+        </article>
+
+        <article class="finding">
+          <div class="finding-header">
+            <h3><span class="finding-id">F-02</span>قابلیت برگرداندن OTP می‌تواند در تولید روشن شود</h3>
+            <span class="badge high">بالا · مشروط به تنظیم محیط</span>
+          </div>
+          <div class="finding-body">
+            <p>درخواست OTP عمومی همیشه گزینهٔ <code>exposeCode: true</code> را می‌فرستد. اگر <code>DEV_OTP_AUTO_FILL=true</code> باشد، کد تأیید در پاسخ همان endpoint قرار می‌گیرد؛ پیکربندی برنامه این گزینه را در <code>NODE_ENV=production</code> رد نمی‌کند.</p>
+            <p><strong>اثر:</strong> با روشن‌شدن این متغیر در تولید، مهاجم می‌تواند برای شمارهٔ قربانی OTP بگیرد، کد را از پاسخ بخواند و وارد حساب او شود. Compose تولید مقدار پیش‌فرض را <code>false</code> گذاشته و اسکریپت آمادگی تولید هم آن را بررسی می‌کند؛ اما برنامه و Compose شروع سرویس این شرط را قطعی نمی‌کنند.</p>
+            <p class="evidence">شواهد: <code>backend/src/auth/controllers/auth.controller.ts:87-101</code>، <code>backend/src/auth/auth.service.ts:204-211</code>، <code>backend/src/config.ts:150-163,211</code>، <code>docker-compose.server.yml:42-45</code>، <code>ops/production-readiness.sh:28-29</code>.</p>
+            <p class="fix"><strong>انجام شد:</strong> بارگذاری config در production با <code>DEV_OTP_AUTO_FILL=true</code> خطا می‌دهد؛ پاسخ OTP دیگر با تنظیم اشتباه تولید نمی‌تواند کد را افشا کند.</p>
+          </div>
+        </article>
+
+        <article class="finding">
+          <div class="finding-header">
+            <h3><span class="finding-id">F-03</span>کلیدهای JWT تولید از نظر قدرت بررسی نمی‌شوند</h3>
+            <span class="badge high">بالا · مشروط به کلید ضعیف</span>
+          </div>
+          <div class="finding-body">
+            <p>در production فقط خالی‌نبودن <code>JWT_ACCESS_SECRET</code> و <code>JWT_REFRESH_SECRET</code> اجباری است. مقدارهای شناخته‌شدهٔ توسعه در Compose و نمونهٔ env وجود دارند، اما خود برنامه آن‌ها یا کلیدهای کوتاه را رد نمی‌کند.</p>
+            <p><strong>اثر:</strong> اگر این مقدار توسعه در محیط واقعی استفاده شود، هر کسی که ریپو را می‌بیند می‌تواند JWT معتبر بسازد و با هویت/نقش دلخواه به API دسترسی بگیرد. اسکریپت <code>production-readiness.sh</code> حداقل طول ۳۲ نویسه را بررسی می‌کند، اما در مسیر بارگذاری config اجرا نمی‌شود و فقط طول را می‌سنجد.</p>
+            <p class="evidence">شواهد: <code>backend/src/config.ts:126-163,173-176</code>، <code>docker-compose.yml:89-90</code>، <code>backend/.env.example:16-18</code>، <code>ops/production-readiness.sh:43-45</code>.</p>
+            <p class="fix"><strong>انجام شد:</strong> config تولید کلیدهای کمتر از ۳۲ بایت، مقدارهای پیش‌فرض توسعه و کلیدهای access/refresh یکسان را رد می‌کند.</p>
+          </div>
+        </article>
+
+        <article class="finding">
+          <div class="finding-header">
+            <h3><span class="finding-id">F-04</span>خروج از حساب refresh token را باطل نمی‌کند</h3>
+            <span class="badge medium">متوسط · ماندگاری نشست</span>
+          </div>
+          <div class="finding-body">
+            <p>توکن‌های refresh به شکل JWT بدون رکورد نشست/شناسهٔ قابل‌ابطال ساخته می‌شوند. مسیر logout فقط کوکی را پاک می‌کند. متد refresh هر توکن معتبر را می‌پذیرد و جفت تازه صادر می‌کند؛ نسخهٔ قبلی هم تا انقضا قابل استفاده می‌ماند.</p>
+            <p><strong>اثر:</strong> اگر refresh token از مرورگر یا کلاینت موبایل سرقت شود، خروج کاربر آن را باطل نمی‌کند. توکن پیش‌فرض تا ۳۰ روز اعتبار دارد و دارنده می‌تواند پیش از انقضا توکن تازه بگیرد.</p>
+            <p class="evidence">شواهد: <code>backend/src/auth/controllers/auth.controller.ts:159-161</code>، <code>backend/src/auth/auth.service.ts:79-84,346-405,581-589</code>، <code>backend/src/auth/auth-cookie.ts:7-36</code>.</p>
+            <p class="fix"><strong>انجام شد:</strong> refresh token با شناسهٔ تصادفی صادر و hash شناسه در دیتابیس ثبت می‌شود؛ چرخش و logout نشست را revoke می‌کنند. API موبایل هم logout سمت سرور را فراهم می‌کند. توکن‌های قدیمی فاقد شناسهٔ نشست پس از انتشار نیاز به ورود دوباره دارند.</p>
+          </div>
+        </article>
+
+        <article class="finding">
+          <div class="finding-header">
+            <h3><span class="finding-id">F-05</span>محدودیت OTP فقط در حافظهٔ هر پردازه است</h3>
+            <span class="badge medium">متوسط · هنگام مقیاس‌دادن</span>
+          </div>
+          <div class="finding-body">
+            <p>کد OTP چهاررقمی است و محدودیت تلاش برای هر شماره ۱۰ بار در هر ۱۰ دقیقه است. شمارنده‌ها در <code>Map</code> محلی نگهداری می‌شوند؛ با چند replica، هر پردازه سهمیهٔ جدا دارد و بازراه‌اندازی هم وضعیت را پاک می‌کند.</p>
+            <p><strong>اثر:</strong> در استقرار چندنمونه‌ای، محدودیت کلی تلاش‌ها قابل دورزدن می‌شود و OTP کم‌فضا در برابر حدس توزیع‌شده ضعیف‌تر است. پنجرهٔ OTP تولید ۱۲۰ ثانیه است؛ این یافته به‌تنهایی به معنی امکان ورود فوری نیست.</p>
+            <p class="evidence">شواهد: <code>backend/src/auth/auth.service.ts:80-84,119-128</code>، <code>backend/src/auth/controllers/auth.controller.ts:64-74</code>، <code>backend/src/http/middleware/rate-limit.ts:5-11,51-80</code>.</p>
+            <p class="fix"><strong>انجام شد:</strong> شمارنده‌های درخواست OTP برای IP و شماره در PostgreSQL به‌صورت اتمیک و مشترک بین replicaها ثبت می‌شوند؛ سقف verify شماره مشترک است و هر challenge پس از ۵ حدس ناموفق باطل می‌شود. کد چهاررقمی به‌دلیل قرارداد فعلی provider حفظ شده است؛ محدودیت‌های تلاش احتمال حدس را پایین می‌آورند. migration به entrypointهای توسعه و تولید اضافه شد.</p>
+          </div>
+        </article>
+
+        <article class="finding">
+          <div class="finding-header">
+            <h3><span class="finding-id">F-06</span>Compose توسعه پورت‌های حساس را روی شبکه منتشر می‌کند</h3>
+            <span class="badge medium">متوسط · فقط محیط توسعه</span>
+          </div>
+          <div class="finding-body">
+            <p>مقادیر پیش‌فرض Compose توسعه پورت Postgres، RabbitMQ و پنل مدیریت آن، صندوق پیامک و بک‌اند را بدون محدودکردن IP میزبان منتشر می‌کنند. صندوق پیامک endpoint بدون احراز هویت دارد که پیام‌ها و کدهای OTP را از <code>/api/messages</code> برمی‌گرداند. Postgres و RabbitMQ نیز اعتبارهای ثابت توسعه دارند.</p>
+            <p><strong>اثر:</strong> اگر Compose توسعه روی دستگاهی اجرا شود که شبکهٔ محلی آن قابل اعتماد نیست، کاربران همان شبکه می‌توانند به سرویس‌های توسعه دسترسی بگیرند؛ endpoint صندوق پیامک OTPهای تست را افشا می‌کند. این تنظیم در Compose تولید با حذف پورت‌های زیرساخت override شده است.</p>
+            <p class="evidence">شواهد: <code>docker-compose.yml</code>، <code>docker-compose.override.yml:11-14</code>، <code>docker/sms-inbox.mjs:108-145</code>؛ محدودیت تولید: <code>docker-compose.server.yml:4-16</code>.</p>
+            <p class="fix"><strong>انجام شد:</strong> همهٔ پورت‌های میزبان توسعه، از دیتابیس تا API، وب، Metro و صندوق پیامک، به‌طور پیش‌فرض فقط روی <code>127.0.0.1</code> bind می‌شوند. برای تست با گوشی فیزیکی، <code>DEV_BIND_HOST=0.0.0.0</code> را فقط روی شبکهٔ محلی مورد اعتماد تنظیم کنید.</p>
+          </div>
+        </article>
+
+        <article class="finding">
+          <div class="finding-header">
+            <h3><span class="finding-id">F-07</span>ثبت‌نام سالن پیش از اثبات مالکیت شماره انجام می‌شود</h3>
+            <span class="badge low">کم · سوءاستفاده از هویت/آزمایشی</span>
+          </div>
+          <div class="finding-body">
+            <p>endpoint عمومی ثبت‌نام سالن، شمارهٔ ارائه‌شده را به‌عنوان شمارهٔ Owner ذخیره می‌کند، سالن و trial را می‌سازد و پیش از آن OTP یا اثبات مالکیت شماره نمی‌خواهد. محدودیت اصلی ثبت‌نام، شمارش IP در هر پردازه است.</p>
+            <p><strong>اثر:</strong> کاربر می‌تواند سالن‌های آزمایشی با شمارهٔ متعلق به شخص دیگری ثبت کند و عضویت Owner ناخواسته به آن شماره اضافه شود. بررسی انجام‌شده نشان نداد که این کار به‌تنهایی امکان ورود مهاجم به حساب دارندهٔ شماره را می‌دهد؛ مسئلهٔ اصلی انتساب هویت و سوءاستفاده از ثبت‌نام/trial است.</p>
+            <p class="evidence">شواهد: <code>backend/src/registration/controllers/registration.controller.ts:60-103</code>، <code>backend/src/registration/salon-registration.ts:53-66,90-115</code>.</p>
+            <p class="fix"><strong>انجام شد:</strong> endpoint ساخت سالن به نشست OTP نیاز دارد و شمارهٔ payload را با شمارهٔ صاحب نشست تطبیق می‌دهد. فرم ابتدا OTP می‌گیرد و فقط پس از تأیید سالن و trial را می‌سازد؛ سقف ثبت‌نام IP هم بین replicaها مشترک شد.</p>
+          </div>
+        </article>
+
+        <article class="finding">
+          <div class="finding-header">
+            <h3><span class="finding-id">F-08</span>callback ناموفق پرداخت بدون تأیید درگاه تراکنش را می‌بندد</h3>
+            <span class="badge low">کم · تمامیت پرداخت</span>
+          </div>
+          <div class="finding-body">
+            <p>callback عمومی وقتی status را ناموفق تشخیص دهد، پرداخت را مستقیماً <code>failed</code> می‌کند؛ برای این شاخه از درگاه استعلام نمی‌گیرد. callback بعدی برای همان authority چون رکورد دیگر pending نیست، پرداخت را پردازش نمی‌کند.</p>
+            <p><strong>اثر:</strong> کسی که authority همان پرداخت را بداند می‌تواند قبل از callback موفق، آن را از مسیر برنامه خارج کند. اثر مستقیم محتمل، اختلال در ثبت booking یا نیاز به رسیدگی دستی است؛ از این بررسی شواهدی برای برداشت وجه یا تأیید رزرو بدون پرداخت پیدا نشد.</p>
+            <p class="evidence">شواهد: <code>backend/src/payment/controllers/payment.controller.ts:85-113,132-133</code>، <code>backend/src/payment/payment.service.ts:530-566</code>.</p>
+            <p class="fix"><strong>انجام شد:</strong> status callback دیگر مبنای بستن پرداخت نیست؛ حتی callback ناموفق هم با درگاه verify می‌شود و فقط پاسخ verify وضعیت پرداخت را تغییر می‌دهد.</p>
+          </div>
+        </article>
+
+        <article class="finding">
+          <div class="finding-header">
+            <h3><span class="finding-id">F-09</span>هشدارهای وابستگی در زنجیرهٔ Express</h3>
+            <span class="badge info">اطلاعاتی · ممیزی npm</span>
+          </div>
+          <div class="finding-body">
+            <p>در lockfile پیشین، بک‌اند از <code>express@4.22.2</code> استفاده می‌کرد که <code>proxy-addr@2.0.7</code> و <code>qs@6.15.2</code> را می‌آورد. نسخه‌های فعلی قفل‌شدهٔ بک‌اند <code>proxy-addr@2.0.8</code> و <code>qs@6.16.0</code> هستند؛ <code>body-parser@1.20.6</code> بدون تغییر مانده و اکنون نسخهٔ اصلاح‌شدهٔ qs را دریافت می‌کند.</p>
+            <p>هشدار proxy-addr مشخصاً وقتی قابل سوءاستفاده است که trust subnet به شکل IPv4-mapped IPv6 با prefix کوتاه تعریف شده باشد. سورس فعلی به‌جای subnet از <code>trust proxy: 1</code> استفاده می‌کند؛ بنابراین آن شرط سوءاستفاده در تنظیم فعلی مشاهده نشد. همچنین برای آسیب‌پذیری qs، مسیر parse→stringify از ورودی مهاجم در سورس بک‌اند پیدا نشد. این‌ها هشدارهای ارتقای وابستگی‌اند، نه اثبات exploit در نسخهٔ فعلی.</p>
+            <p>مراجع: <a href="https://github.com/advisories/GHSA-jqcg-44mw-7w3h" target="_blank" rel="noopener">هشدار proxy-addr و نسخهٔ اصلاح‌شده</a>، <a href="https://github.com/advisories/GHSA-4mjr-xmp4-gh2g" target="_blank" rel="noopener">هشدار qs</a>؛ شواهد پروژه: <code>package-lock.json</code>، <code>backend/package.json</code>، <code>backend/src/http/app.ts:149</code>، <code>docker-compose.server.yml:52-55</code>.</p>
+            <p class="fix"><strong>انجام شد:</strong> overrideهای root و lockfile نسخه‌های <code>proxy-addr@2.0.8</code> و <code>qs@6.16.0</code> را اعمال می‌کنند. شمارش advisories کل lockfile همچنان مربوط به چند workspace است.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>کنترل‌های مثبت مشاهده‌شده</h2>
+      <div class="two-col">
+        <div class="panel">
+          <h3 class="ok">احراز هویت و مجوز</h3>
+          <ul>
+            <li>روترهای خصوصی پس از middleware احراز هویت نصب شده‌اند.</li>
+            <li>الگوریتم JWT محدود به HS256 است و نوع access/refresh بررسی می‌شود.</li>
+            <li>اکثر عملیات appointment شناسهٔ مشتری یا سالن را پیش از تغییر بررسی می‌کنند.</li>
+            <li>refresh cookie دارای HttpOnly، SameSite=Lax، Secure در production و مسیر محدود است.</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3 class="ok">HTTP و پرداخت</h3>
+          <ul>
+            <li>در production، CORS از فهرست مجاز می‌آید؛ headerهای پایهٔ ضد MIME sniffing و frame هم تنظیم شده‌اند.</li>
+            <li>تأیید پرداخت موفق از طریق API درگاه انجام می‌شود؛ callback خودش به‌تنهایی پرداخت موفق ثبت نمی‌کند.</li>
+            <li>رسید انتقال بانکی از نظر MIME، اندازه و امضای فایل تصویر بررسی می‌شود.</li>
+            <li>Compose تولید پورت دیتابیس، RabbitMQ و صندوق پیامک توسعه را حذف می‌کند.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>روش و محدوده</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>بخش</th><th>کاری که انجام شد</th><th>محدودیت</th></tr></thead>
+          <tbody>
+            <tr><td>کد بک‌اند</td><td>مرور مسیرها، سرویس‌ها، احراز هویت، نقش‌ها، OTP، پرداخت، ثبت‌نام و چندسالن.</td><td>اجرای درخواست مخرب یا تست زنده انجام نشد.</td></tr>
+            <tr><td>تنظیمات اجرا</td><td>مرور Compose توسعه/تولید، reverse proxy و readiness gate.</td><td>مقادیر واقعی فایل‌های env یا Secret Manager خوانده نشدند.</td></tr>
+            <tr><td>وابستگی‌ها</td><td>بررسی lockfile و ممیزی advisory؛ نسخه‌های اصلاح‌شدهٔ زنجیرهٔ بک‌اند با npm ls تطبیق داده شد.</td><td>تطبیق exploitability با همهٔ مسیرهای runtime به‌صورت زنده انجام نشد.</td></tr>
+            <tr><td>PentAGI</td><td>وجود سرویس محلی بررسی شد.</td><td>Flow اجرا نشد؛ نشست ورود در دسترس نبود و مرورگر گواهی محلی را نپذیرفت.</td></tr>
+            <tr><td>تغییرات</td><td>اصلاح بک‌اند، جریان ثبت‌نام فرانت‌اند، API خروج موبایل، bind پورت‌های Compose، lockfile و migration نشست/محدودیت OTP اضافه شد؛ typecheck سه workspace موفق بود. E2E بک‌اند نیز ۷۸/۷۸ سناریو و ۸۰۵/۸۰۵ قدم را با پوشش ۱۰۰٪ خطوط، شاخه‌ها، توابع و دستورها گذراند.</td><td>migration در دیتابیس توسعه اعمال شد و entrypoint هر دو محیط آن را اجرا می‌کند؛ ۱۷۳/۱۷۳ route و ۱۷۴/۱۷۴ تعریف DTO پوشش داده شد.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p>یافته‌های اولیه مربوط به commit <code>e23d709</code> هستند؛ اصلاح‌ها در working tree فعلی ثبت شده‌اند و هنوز commit نشده‌اند. این گزارش نتیجهٔ بازبینی ایستا است و جایگزین اجرای کنترل‌شده در staging نیست.</p>
+      <p>برای اجرای واقعی PentAGI باید کاربر در UI وارد شود و Flow با دامنهٔ هدف مجاز ساخته شود؛ راهنمای رسمی: <a href="https://github.com/vxcontrol/pentagi/blob/main/backend/docs/flow_execution.md" target="_blank" rel="noopener">PentAGI flow execution</a>.</p>
+    </footer>
+  </main>
+</body>
+</html>

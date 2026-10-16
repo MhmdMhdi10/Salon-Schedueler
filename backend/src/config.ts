@@ -161,6 +161,29 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
         `Set these environment variables before starting the server in production.`,
       );
     }
+
+    if (env.DEV_OTP_AUTO_FILL === 'true') {
+      throw new Error('DEV_OTP_AUTO_FILL must be disabled in production.');
+    }
+
+    const accessSecret = env.JWT_ACCESS_SECRET ?? '';
+    const refreshSecret = env.JWT_REFRESH_SECRET ?? '';
+    const weakSecrets: string[] = [];
+    if (Buffer.byteLength(accessSecret, 'utf8') < 32 || accessSecret === DEV_DEFAULTS.jwtAccessSecret) {
+      weakSecrets.push('JWT_ACCESS_SECRET');
+    }
+    if (Buffer.byteLength(refreshSecret, 'utf8') < 32 || refreshSecret === DEV_DEFAULTS.jwtRefreshSecret) {
+      weakSecrets.push('JWT_REFRESH_SECRET');
+    }
+    if (accessSecret === refreshSecret) {
+      weakSecrets.push('JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different');
+    }
+    if (weakSecrets.length > 0) {
+      throw new Error(
+        `Invalid production JWT configuration: ${weakSecrets.join(', ')}. ` +
+        'Use two different secrets with at least 32 UTF-8 bytes each.',
+      );
+    }
   }
 
   const paymentGateway: PaymentGatewayName =

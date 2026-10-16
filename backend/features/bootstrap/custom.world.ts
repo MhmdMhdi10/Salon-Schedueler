@@ -77,6 +77,10 @@ export class BackendWorld {
     return actor?.accessToken;
   }
 
+  newTestPhone(prefix = '3'): string {
+    return uniquePhone(prefix);
+  }
+
   async rawRequest(
     method: string,
     path: string,
@@ -89,7 +93,13 @@ export class BackendWorld {
     const req = request(app.app)[verb](resolvedPath);
 
     for (const [key, value] of Object.entries(this.requestHeaders)) req.set(key, value);
-    if (resolvedPath.endsWith('/auth/otp/verify') || resolvedPath.endsWith('/auth/refresh')) {
+    const hasExplicitAuthClient = Object.keys(this.requestHeaders).some(
+      (name) => name.toLowerCase() === 'x-auth-client',
+    );
+    if (
+      !hasExplicitAuthClient &&
+      (resolvedPath.endsWith('/auth/otp/verify') || resolvedPath.endsWith('/auth/refresh'))
+    ) {
       req.set('X-Auth-Client', 'mobile');
     }
     const token = this.tokenFor(actorName);
@@ -126,7 +136,8 @@ export class BackendWorld {
 
     return {
       phone,
-      role: 'Customer',
+      role: verified.body?.staffContexts?.[0]?.role ?? 'Customer',
+      staffId: verified.body?.staffContexts?.[0]?.staffMemberId,
       accessToken: String(verified.body.accessToken),
       refreshToken: String(verified.body.refreshToken),
     };
@@ -134,6 +145,11 @@ export class BackendWorld {
 
   async registerSalon(workMode: string, label: string): Promise<void> {
     const ownerPhone = uniquePhone('8');
+    // Registration now requires a verified phone. Authenticate before creating
+    // the salon, then sign in again afterward to receive the Owner context.
+    const verifiedOwner = await this.authenticate(ownerPhone);
+    this.actors.set('owner', verifiedOwner);
+    this.activeActor = 'owner';
     const created = await this.rawRequest('POST', '/api/register/salon', {
       salonName: `${label} ${Date.now()}`,
       ownerName: `${label} مالک`,
@@ -170,6 +186,7 @@ export class BackendWorld {
   async createCustomer(name: string): Promise<void> {
     const actor = await this.authenticate(uniquePhone('1'));
     this.actors.set(name, actor);
+    this.vars[`${name}Phone`] = actor.phone;
     this.activeActor = name;
   }
 
@@ -196,6 +213,7 @@ export class BackendWorld {
     actor.staffId = String(created.body.staff.id);
     this.actors.set(name, actor);
     this.vars[`${name}Id`] = actor.staffId;
+    this.vars[`${name}Phone`] = phone;
   }
 
   async bookAvailable(locationType: 'salon' | 'customer', customerName: string): Promise<void> {
@@ -237,6 +255,8 @@ export class BackendWorld {
       throw new Error(`Booking failed: ${JSON.stringify(booked.body)}`);
     }
     this.vars.appointmentId = String(booked.body.appointment.id);
+    this.vars.appointmentStartAt = String(slot.startAt);
+    this.vars.locationType = locationType;
   }
 
   async close(): Promise<void> {

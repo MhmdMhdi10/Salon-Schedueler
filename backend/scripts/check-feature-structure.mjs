@@ -95,7 +95,7 @@ for (const feature of controllerFeatures) {
   }
 }
 
-console.log(`V-House feature structure: ${controllerFeatures.length}/${controllerFeatures.length} features checked`);
+console.log(`Salon Booking System feature structure: ${controllerFeatures.length}/${controllerFeatures.length} features checked`);
 console.log(`Required folders per controller feature: ${requiredDirectories.join(', ')}`);
 console.log(`Feature-local controller DTO files: ${controllerFeatures.length}/${controllerFeatures.length}`);
 

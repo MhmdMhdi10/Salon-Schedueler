@@ -67,5 +67,9 @@
   "//react-hoist": "Mixed React versions are intentional: web PWA uses React 18 and the Expo (SDK 57) mobile app uses React 19 + react-native 0.86. Metro pins each bundle to one React runtime; npm keeps the mobile copy nested so native and web do not share incompatible renderers.",
   "engines": {
     "node": ">=20.0.0"
+  },
+  "overrides": {
+    "proxy-addr": "2.0.8",
+    "qs": "6.16.0"
   }
 }

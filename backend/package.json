@@ -20,6 +20,7 @@
     "e2e:cucumber:coverage:run": "c8 --clean --config ./c8-e2e.config.json node scripts/run-cucumber.mjs",
     "e2e:cucumber:coverage": "node scripts/run-e2e-coverage.mjs",
     "test:e2e:cov": "npm run e2e:cucumber:coverage",
+    "test:e2e:backend:cov": "npm run e2e:cucumber:coverage",
     "start:cron": "node dist/notification-cron.js",
     "start:worker": "node dist/sms-worker.js",
     "test": "jest --passWithNoTests",

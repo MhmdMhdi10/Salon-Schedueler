@@ -59,7 +59,7 @@ export interface AuthServiceConfig {
   jwtRefreshSecret: string;
   /** Access token expiry in seconds (default 900 = 15min) */
   accessExpirySeconds: number;
-  /** Refresh token expiry in seconds (default 604800 = 7 days) */
+  /** Refresh token expiry in seconds (default 2592000 = 30 days) */
   refreshExpirySeconds: number;
   /** OTP validity window in seconds (default 120) */
   otpWindowSeconds: number;
@@ -84,6 +84,9 @@ const DEFAULT_CONFIG: AuthServiceConfig = {
   devOtpAutoFill: false,
 };
 
+const MAX_OTP_ATTEMPTS = 5;
+const MAX_AUTH_RATE_LIMIT_BUCKETS = 20_000;
+
 /**
  * AuthService handles OTP-based authentication for customers.
  *
@@ -103,6 +106,8 @@ export class AuthService {
   private readonly smsProvider: SmsProvider;
   private readonly otpProvider?: OtpProvider;
   private readonly config: AuthServiceConfig;
+  private readonly localRateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
+  private rateLimitCallCount = 0;
 
   constructor(
     prisma: PrismaClient,
@@ -114,6 +119,90 @@ export class AuthService {
     this.smsProvider = smsProvider;
     this.otpProvider = otpProvider;
     this.config = { ...DEFAULT_CONFIG, ...config };
+  }
+
+  /**
+   * Consume a shared, atomic fixed-window bucket for authentication endpoints.
+   * The in-memory path is only for lightweight unit fakes without Prisma raw SQL;
+   * application instances use PostgreSQL so replicas share the same limits.
+   */
+  async consumeRateLimit(
+    name: string,
+    key: string,
+    max: number,
+    windowMs: number,
+  ): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
+    const bucketKey = crypto.createHash('sha256').update(`${name}:${key}`).digest('hex');
+    const prismaWithRawQuery = this.prisma as unknown as {
+      $queryRaw?: <T = unknown>(query: TemplateStringsArray, ...values: unknown[]) => Promise<T>;
+    };
+    const queryRaw = prismaWithRawQuery.$queryRaw?.bind(this.prisma);
+
+    if (queryRaw) {
+      const rows = await queryRaw<Array<{ count: number; reset_at: Date }>>`
+        INSERT INTO "auth_rate_limit_bucket" ("key", "window_started_at", "count")
+        VALUES (${bucketKey}, NOW(), 1)
+        ON CONFLICT ("key") DO UPDATE SET
+          "window_started_at" = CASE
+            WHEN "auth_rate_limit_bucket"."window_started_at" + (${windowMs} * INTERVAL '1 millisecond') <= NOW()
+              THEN NOW()
+            ELSE "auth_rate_limit_bucket"."window_started_at"
+          END,
+          "count" = CASE
+            WHEN "auth_rate_limit_bucket"."window_started_at" + (${windowMs} * INTERVAL '1 millisecond') <= NOW()
+              THEN 1
+            ELSE LEAST("auth_rate_limit_bucket"."count" + 1, ${max + 1})
+          END
+        RETURNING "count", "window_started_at" + (${windowMs} * INTERVAL '1 millisecond') AS reset_at
+      `;
+      const bucket = rows[0];
+      if (!bucket) throw new Error('Unable to consume authentication rate-limit bucket');
+
+      this.rateLimitCallCount += 1;
+      if (this.rateLimitCallCount % 100 === 0) {
+        void queryRaw<Array<{ key: string }>>`
+          DELETE FROM "auth_rate_limit_bucket"
+          WHERE "window_started_at" < NOW() - INTERVAL '1 day'
+          RETURNING "key"
+        `.catch(() => undefined);
+        void queryRaw<Array<{ token_id_hash: string }>>`
+          DELETE FROM "auth_refresh_session"
+          WHERE "expires_at" < NOW() - INTERVAL '1 day'
+          RETURNING "token_id_hash"
+        `.catch(() => undefined);
+      }
+
+      const resetAt = new Date(bucket.reset_at).getTime();
+      return {
+        allowed: bucket.count <= max,
+        remaining: Math.max(0, max - bucket.count),
+        resetAt,
+      };
+    }
+
+    const now = Date.now();
+    let bucket = this.localRateLimitBuckets.get(bucketKey);
+    if (!bucket || bucket.resetAt <= now) {
+      bucket = { count: 0, resetAt: now + windowMs };
+      this.localRateLimitBuckets.set(bucketKey, bucket);
+    }
+    bucket.count = Math.min(max + 1, bucket.count + 1);
+    if (this.localRateLimitBuckets.size > MAX_AUTH_RATE_LIMIT_BUCKETS) {
+      for (const [storedKey, storedBucket] of this.localRateLimitBuckets) {
+        if (storedBucket.resetAt <= now) this.localRateLimitBuckets.delete(storedKey);
+      }
+    }
+    return {
+      allowed: bucket.count <= max,
+      remaining: Math.max(0, max - bucket.count),
+      resetAt: bucket.resetAt,
+    };
+  }
+
+  /** Verify that an authenticated OTP identity owns the supplied phone. */
+  async subjectOwnsPhone(subjectId: string, phone: string): Promise<boolean> {
+    const customer = await this.findCustomerById(subjectId);
+    return customer?.phone === phone;
   }
 
   /**
@@ -202,6 +291,7 @@ export class AuthService {
         issuedAt: now,
         expiresAt,
         invalidated: false,
+        attemptCount: 0,
       },
     });
 
@@ -244,17 +334,19 @@ export class AuthService {
       throw new AuthError('OTP_EXPIRED', 'OTP has expired. Please request a new one.');
     }
 
-    // Check code match (R1.4)
+    // Check code match. Failed attempts are counted in the database so all API
+    // replicas share the same five-guess ceiling for this challenge.
     const codeHash = this.hashCode(code);
     if (codeHash !== otp.codeHash) {
+      await this.recordOtpFailure(otp.id, otp.attemptCount ?? 0);
       throw new AuthError('OTP_MISMATCH', 'Invalid OTP code');
     }
 
-    // Mark as consumed (R1.2)
-    await this.prisma.otp.update({
-      where: { id: otp.id },
-      data: { consumedAt: now },
-    });
+    // Atomically consume the challenge so a replay or a concurrent successful
+    // request cannot mint more than one authenticated session.
+    if (!(await this.consumeOtp(otp.id, now))) {
+      throw new AuthError('OTP_MISMATCH', 'Invalid OTP code');
+    }
 
     // Platform admin identities are global, but the shared header can also
     // open the customer and salon panels. Resolve the same customer/staff
@@ -265,7 +357,7 @@ export class AuthService {
       const customer = await this.findOrCreateCustomer(phone, true);
       const staffContexts = await this.findStaffContextsByPhone(phone);
       const staff = staffContexts[0];
-      const tokens = this.issueTokens(customer.id, {
+      const tokens = await this.issueTokens(customer.id, {
         role: 'PlatformAdmin',
         platformAdminId: platformAdmin.id,
         staffMemberId: staff?.staffMemberId,
@@ -284,7 +376,7 @@ export class AuthService {
     const staff = staffContexts[0];
 
     // Issue tokens
-    const tokens = this.issueTokens(customer.id, staff);
+    const tokens = await this.issueTokens(customer.id, staff);
     return staffContexts.length ? { ...tokens, staffContexts } : tokens;
   }
 
@@ -321,12 +413,13 @@ export class AuthService {
     }
 
     const staffContexts = await this.findStaffContextsByPhone(customer.phone);
+    const tokens = await this.issueTokens(customer.id, {
+      role: staff.role,
+      staffMemberId: staff.id,
+      salonId: staff.salonId,
+    });
     return {
-      ...this.issueTokens(customer.id, {
-        role: staff.role,
-        staffMemberId: staff.id,
-        salonId: staff.salonId,
-      }),
+      ...tokens,
       staffContexts,
     };
   }
@@ -352,7 +445,8 @@ export class AuthService {
       if (
         typeof decoded === 'string' ||
         decoded.type !== 'refresh' ||
-        typeof decoded.sub !== 'string'
+        typeof decoded.sub !== 'string' ||
+        typeof decoded.jti !== 'string'
       ) {
         throw new AuthError('INVALID_TOKEN', 'Invalid refresh token');
       }
@@ -362,6 +456,34 @@ export class AuthService {
         throw err;
       }
       throw new AuthError('INVALID_TOKEN', 'Invalid or expired refresh token');
+    }
+    const refreshTokenId = payload.jti;
+    if (typeof refreshTokenId !== 'string') {
+      throw new AuthError('INVALID_TOKEN', 'Invalid refresh token');
+    }
+
+    // Consume the persisted session before minting its replacement. This makes
+    // refresh rotation single-use across API replicas and lets logout revoke it.
+    const refreshSessionDelegate = (
+      this.prisma as unknown as {
+        authRefreshSession?: {
+          updateMany?: (args: unknown) => Promise<{ count: number }>;
+        };
+      }
+    ).authRefreshSession;
+    if (refreshSessionDelegate?.updateMany) {
+      const result = await refreshSessionDelegate.updateMany({
+        where: {
+          tokenIdHash: this.hashRefreshTokenId(refreshTokenId),
+          subjectId: payload.sub,
+          revokedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+        data: { revokedAt: new Date() },
+      });
+      if (result.count !== 1) {
+        throw new AuthError('INVALID_TOKEN', 'Refresh session is no longer active');
+      }
     }
 
     const subjectId = payload.sub as string;
@@ -383,7 +505,7 @@ export class AuthService {
       const customer = await this.findOrCreateCustomer(admin.phone, true);
       const staffContexts = await this.findStaffContextsByPhone(admin.phone);
       const staff = staffContexts[0];
-      const tokens = this.issueTokens(customer.id, {
+      const tokens = await this.issueTokens(customer.id, {
         role: 'PlatformAdmin',
         platformAdminId: admin.id,
         staffMemberId: staff?.staffMemberId,
@@ -400,8 +522,112 @@ export class AuthService {
     }
     const staffContexts = await this.findStaffContextsByPhone(customer.phone);
     const staff = staffContexts[0];
-    const tokens = this.issueTokens(customer.id, staff);
+    const tokens = await this.issueTokens(customer.id, staff);
     return staffContexts.length ? { ...tokens, staffContexts } : tokens;
+  }
+
+  /** Revoke the refresh session presented when a user logs out. */
+  async logout(refreshToken?: string): Promise<void> {
+    if (!refreshToken) return;
+    let payload: jwt.JwtPayload;
+    try {
+      const decoded = jwt.verify(refreshToken, this.config.jwtRefreshSecret, {
+        algorithms: ['HS256'],
+      });
+      if (
+        typeof decoded === 'string' ||
+        decoded.type !== 'refresh' ||
+        typeof decoded.sub !== 'string' ||
+        typeof decoded.jti !== 'string'
+      )
+        return;
+      payload = decoded;
+    } catch {
+      return;
+    }
+    const refreshTokenId = payload.jti;
+    if (typeof refreshTokenId !== 'string') return;
+
+    const refreshSessionDelegate = (
+      this.prisma as unknown as {
+        authRefreshSession?: {
+          updateMany?: (args: unknown) => Promise<{ count: number }>;
+        };
+      }
+    ).authRefreshSession;
+    if (!refreshSessionDelegate?.updateMany) return;
+    await refreshSessionDelegate.updateMany({
+      where: {
+        tokenIdHash: this.hashRefreshTokenId(refreshTokenId),
+        subjectId: payload.sub,
+        revokedAt: null,
+      },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  private hashRefreshTokenId(tokenId: string): string {
+    return crypto.createHash('sha256').update(tokenId).digest('hex');
+  }
+
+  private async recordOtpFailure(otpId: string, currentAttemptCount: number): Promise<void> {
+    const prismaWithRawQuery = this.prisma as unknown as {
+      $queryRaw?: <T = unknown>(query: TemplateStringsArray, ...values: unknown[]) => Promise<T>;
+    };
+    const queryRaw = prismaWithRawQuery.$queryRaw?.bind(this.prisma);
+    if (queryRaw) {
+      const updated = await queryRaw<Array<{ attempt_count: number }>>`
+        UPDATE "otp"
+        SET "attempt_count" = "attempt_count" + 1,
+            "invalidated" = ("attempt_count" + 1 >= ${MAX_OTP_ATTEMPTS})
+        WHERE "id" = ${otpId}::uuid
+          AND "invalidated" = false
+          AND "consumed_at" IS NULL
+          AND "expires_at" > NOW()
+          AND "attempt_count" < ${MAX_OTP_ATTEMPTS}
+        RETURNING "attempt_count"
+      `;
+      if (!updated.length) {
+        throw new AuthError('OTP_MISMATCH', 'OTP challenge is no longer active');
+      }
+      return;
+    }
+
+    // Lightweight in-memory Prisma fakes do not implement atomic SQL updates.
+    const nextAttemptCount = currentAttemptCount + 1;
+    await this.prisma.otp.updateMany({
+      where: { id: otpId, invalidated: false, consumedAt: null },
+      data: {
+        attemptCount: nextAttemptCount,
+        ...(nextAttemptCount >= MAX_OTP_ATTEMPTS ? { invalidated: true } : {}),
+      },
+    });
+  }
+
+  private async consumeOtp(otpId: string, now: Date): Promise<boolean> {
+    const prismaWithRawQuery = this.prisma as unknown as {
+      $queryRaw?: <T = unknown>(query: TemplateStringsArray, ...values: unknown[]) => Promise<T>;
+    };
+    const queryRaw = prismaWithRawQuery.$queryRaw?.bind(this.prisma);
+    if (queryRaw) {
+      const consumed = await queryRaw<Array<{ id: string }>>`
+        UPDATE "otp"
+        SET "consumed_at" = ${now}
+        WHERE "id" = ${otpId}::uuid
+          AND "invalidated" = false
+          AND "consumed_at" IS NULL
+          AND "expires_at" > NOW()
+          AND "attempt_count" < ${MAX_OTP_ATTEMPTS}
+        RETURNING "id"
+      `;
+      return consumed.length === 1;
+    }
+
+    const result = await this.prisma.otp.updateMany({
+      where: { id: otpId, invalidated: false, consumedAt: null },
+      data: { consumedAt: now },
+    });
+    return result.count === 1;
   }
 
   /**
@@ -565,15 +791,16 @@ export class AuthService {
   }
 
   /**
-   * Issue a JWT access token (15min) and refresh token (7d).
+   * Issue a JWT access token (15min) and refresh token (30d).
    *
    * When `staff` claims are supplied (the phone belongs to an active staff
    * member), both tokens carry `role` + `staffMemberId` so the principal built
    * by the auth middleware is subject to the RBAC matrix. Plain customers get a
    * roleless token.
    */
-  private issueTokens(subjectId: string, claims?: TokenClaims): AuthTokens {
+  private async issueTokens(subjectId: string, claims?: TokenClaims): Promise<AuthTokens> {
     const tokenClaims = claims ? { ...claims } : {};
+    const refreshTokenId = crypto.randomUUID();
 
     const accessToken = jwt.sign(
       { sub: subjectId, type: 'access', ...tokenClaims },
@@ -582,10 +809,27 @@ export class AuthService {
     );
 
     const refreshToken = jwt.sign(
-      { sub: subjectId, type: 'refresh', ...tokenClaims },
+      { sub: subjectId, type: 'refresh', jti: refreshTokenId, ...tokenClaims },
       this.config.jwtRefreshSecret,
       { expiresIn: this.config.refreshExpirySeconds },
     );
+
+    const refreshSessionDelegate = (
+      this.prisma as unknown as {
+        authRefreshSession?: {
+          create?: (args: unknown) => Promise<unknown>;
+        };
+      }
+    ).authRefreshSession;
+    if (refreshSessionDelegate?.create) {
+      await refreshSessionDelegate.create({
+        data: {
+          tokenIdHash: this.hashRefreshTokenId(refreshTokenId),
+          subjectId,
+          expiresAt: new Date(Date.now() + this.config.refreshExpirySeconds * 1000),
+        },
+      });
+    }
 
     return { accessToken, refreshToken };
   }

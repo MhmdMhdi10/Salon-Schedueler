@@ -5,12 +5,12 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, Check, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { normalizeDigits } from '@salon/shared';
 import {
-  ApiError,
   authApi,
   customerApi,
   registrationApi,
   setAccessToken,
   type RegisterSalonServiceInput,
+  type RegisterSalonResponse,
 } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { SeoHead } from '../../components/seo';
@@ -101,12 +101,10 @@ function syncScrollRail(element: HTMLElement | null) {
  *   1. حوزه کاری — business type, used to tailor service suggestions
  *   2. مشخصات — salon name + owner name + phone
  *   3. خدمات — choose services and optionally refine duration and price
- *   4. ورود — OTP sign-in with the phone just registered
+ *   4. ورود — verify the phone, then create the salon under that identity
  *
- * On submit it creates the salon, its Owner staff member, a free trial, and the
- * answered services (so the panel is pre-filled), then sends an
- * OTP to the phone. Verifying it signs the owner in (an Owner token scoped to
- * the new salon) and routes to `/owner`.
+ * On submit it sends an OTP. Only after the phone is verified does it create
+ * the salon, its Owner membership, free trial, and the answered services.
  *
  * Signature, tokens-only, RTL (logical properties); all copy from `fa.json`
  * (`business.register.*`). Noindex (a form flow, not a search surface).
@@ -159,7 +157,8 @@ function RegisterSalonContent() {
 
   // Submit + OTP.
   const [submitting, setSubmitting] = useState(false);
-  const [registered, setRegistered] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [registeredSalon, setRegisteredSalon] = useState<RegisterSalonResponse | null>(null);
   const [submitError, setSubmitError] = useState('');
   const [otpLength, setOtpLength] = useState(OTP_LENGTH);
   const [code, setCode] = useState<string[]>(() => Array(OTP_LENGTH).fill(''));
@@ -379,7 +378,7 @@ function RegisterSalonContent() {
       window.removeEventListener('resize', update);
     };
   }, [services.length, serviceSheetMode, filteredServicePresets.length, servicePresetQuery, showAllPresets]);
-  // ── Submit registration, then send the OTP ───────────────────────────────
+  // ── Request OTP before any salon data is created ─────────────────────────
   const handleSubmit = async () => {
     if (!PHONE_PATTERN.test(normalizedPhone)) {
       setInfoErrors((previous) => ({
@@ -390,41 +389,17 @@ function RegisterSalonContent() {
     }
     setSubmitting(true);
     setSubmitError('');
-    let salonCreated = registered;
     try {
-      if (!registered) {
-        await registrationApi.registerSalon({
-          salonName: salonName.trim(),
-          ownerName: ownerName.trim(),
-          phone: normalizedPhone,
-          businessType: categories[0] || undefined,
-          businessTypes: categories,
-          workMode: 'not_decided',
-          services: services.map(({ name, durationMinutes, priceRial }) => ({
-            name,
-            ...(durationMinutes ? { durationMinutes } : {}),
-            ...(priceRial ? { priceRial: priceRial * 10 } : {}),
-          })),
-          chairCount: 1,
-        });
-        salonCreated = true;
-        setRegistered(true);
-      }
-      // Salon created — send the OTP so the owner can sign straight in.
       const response = await authApi.requestOtp(normalizedPhone);
+      setOtpVerified(false);
+      setRegisteredSalon(null);
       applyOtpResponse(response);
       setStep('otp');
       setSecondsLeft(RESEND_SECONDS);
       success({ title: t('auth.otpSent') });
       window.setTimeout(() => otpRefs.current[0]?.focus(), 0);
-    } catch (err) {
-      if (err instanceof ApiError && err.code === 'PHONE_TAKEN' && !salonCreated) {
-        setSubmitError('این شماره قابل استفاده نیست؛ دوباره تلاش کنید.');
-      } else if (salonCreated) {
-        setSubmitError(t('business.register.errors.requestFailed'));
-      } else {
-        setSubmitError(t('business.register.errors.generic'));
-      }
+    } catch {
+      setSubmitError(t('business.register.errors.requestFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -450,9 +425,41 @@ function RegisterSalonContent() {
   const handleVerifyOtp = async () => {
     setOtpLoading(true);
     setOtpError('');
+    let identityVerified = otpVerified;
     try {
-      const result = await authApi.verifyOtp(normalizedPhone, codeValue);
-      setAccessToken(result.accessToken);
+      if (!identityVerified) {
+        const result = await authApi.verifyOtp(normalizedPhone, codeValue);
+        setAccessToken(result.accessToken);
+        setOtpVerified(true);
+        identityVerified = true;
+      }
+
+      let salon = registeredSalon;
+      if (!salon) {
+        salon = await registrationApi.registerSalon({
+          salonName: salonName.trim(),
+          ownerName: ownerName.trim(),
+          phone: normalizedPhone,
+          businessType: categories[0] || undefined,
+          businessTypes: categories,
+          workMode: 'not_decided',
+          services: services.map(({ name, durationMinutes, priceRial }) => ({
+            name,
+            ...(durationMinutes ? { durationMinutes } : {}),
+            ...(priceRial ? { priceRial: priceRial * 10 } : {}),
+          })),
+          chairCount: 1,
+        });
+        setRegisteredSalon(salon);
+      }
+
+      const contexts = await authApi.getContexts();
+      const ownerContext = contexts.staffContexts.find(
+        (context) => context.salonId === salon?.salonId && context.role === 'Owner',
+      );
+      if (!ownerContext) throw new Error('Owner membership was not created');
+      const scopedSession = await authApi.selectContext(ownerContext.staffMemberId);
+      setAccessToken(scopedSession.accessToken);
       await refreshAuth();
       try {
         const profile = await customerApi.getProfile();
@@ -464,7 +471,11 @@ function RegisterSalonContent() {
       }
       navigate('/owner');
     } catch {
-      setOtpError(t('business.register.errors.invalidOtp'));
+      setOtpError(
+        identityVerified
+          ? t('business.register.errors.generic')
+          : t('business.register.errors.invalidOtp'),
+      );
     } finally {
       setOtpLoading(false);
     }
@@ -1246,6 +1257,7 @@ function RegisterSalonContent() {
                             inputMode="numeric"
                             autoComplete={index === 0 ? 'one-time-code' : 'off'}
                             dir="ltr"
+                            disabled={otpVerified}
                             maxLength={index === 0 ? otpLength : 1}
                             aria-label={t('auth.otpDigitLabel', {
                               index: toPersianDigits(index + 1),
@@ -1266,7 +1278,14 @@ function RegisterSalonContent() {
                       </div>
                     </fieldset>
 
-                    <div className="flex items-center justify-center">
+                    {otpVerified && (
+                      <p className="text-center text-sm text-success" role="status">
+                        {t('business.register.verify.phoneVerified')}
+                      </p>
+                    )}
+
+                    {!otpVerified && (
+                      <div className="flex items-center justify-center">
                       {secondsLeft > 0 ? (
                         <span className="text-xs text-muted" aria-live="polite">
                           {t('auth.resendIn', { time: formatCountdown(secondsLeft) })}
@@ -1282,7 +1301,8 @@ function RegisterSalonContent() {
                           {t('auth.resend')}
                         </Button>
                       )}
-                    </div>
+                      </div>
+                    )}
 
                     {otpError && (
                       <p className="mt-1 flex items-center gap-1 text-sm text-danger" role="alert">
@@ -1317,7 +1337,9 @@ function RegisterSalonContent() {
             step === 'services'
               ? t('business.register.submit')
               : step === 'otp'
-                ? t('business.register.verify.cta')
+                ? otpVerified
+                  ? t('business.register.submit')
+                  : t('business.register.verify.cta')
                 : t('business.register.next')
           }
           nextDisabled={

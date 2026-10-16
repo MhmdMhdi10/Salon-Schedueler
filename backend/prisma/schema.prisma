@@ -662,8 +662,30 @@ model Otp {
   expiresAt   DateTime  @map("expires_at") @db.Timestamptz
   consumedAt  DateTime? @map("consumed_at") @db.Timestamptz
   invalidated Boolean   @default(false)
+  attemptCount Int      @default(0) @map("attempt_count")
 
   @@map("otp")
+}
+
+model AuthRefreshSession {
+  tokenIdHash String    @id @map("token_id_hash")
+  subjectId   String    @map("subject_id") @db.Uuid
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz
+  revokedAt   DateTime? @map("revoked_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([subjectId, revokedAt])
+  @@index([expiresAt])
+  @@map("auth_refresh_session")
+}
+
+model AuthRateLimitBucket {
+  key             String   @id
+  windowStartedAt DateTime @map("window_started_at") @db.Timestamptz
+  count           Int      @default(0)
+
+  @@index([windowStartedAt])
+  @@map("auth_rate_limit_bucket")
 }
 
 // ─── Device Token ──────────────────────────────────────────────────────────────

@@ -19,7 +19,7 @@ services:
       # Host port is overridable so it doesn't collide with a Postgres already
       # running on the host. Override via POSTGRES_HOST_PORT (see .env). The
       # backend always reaches the DB over the compose network at postgres:5432.
-      - "${POSTGRES_HOST_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/postgres/initdb:/docker-entrypoint-initdb.d:ro
@@ -38,8 +38,8 @@ services:
       RABBITMQ_DEFAULT_USER: salon
       RABBITMQ_DEFAULT_PASS: salon
     ports:
-      - "${RABBITMQ_HOST_PORT:-5673}:5672"
-      - "${RABBITMQ_MGMT_PORT:-15673}:15672"
+      - "127.0.0.1:${RABBITMQ_HOST_PORT:-5673}:5672"
+      - "127.0.0.1:${RABBITMQ_MGMT_PORT:-15673}:15672"
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     healthcheck:
@@ -58,7 +58,7 @@ services:
       PORT: "4000"
       SMS_INBOX_DATA_FILE: "/data/messages.json"
     ports:
-      - "${SMS_INBOX_HOST_PORT:-8025}:4000"
+      - "127.0.0.1:${SMS_INBOX_HOST_PORT:-8025}:4000"
     volumes:
       - ./docker/sms-inbox.mjs:/app/sms-inbox.mjs:ro
       - sms-inbox-data:/data
@@ -133,7 +133,7 @@ services:
       PGDATABASE: salon_dev
       # SMS/push provider keys are intentionally unset -> dev/log adapters are used.
     ports:
-      - "3000:3000"
+      - "${DEV_BIND_HOST:-127.0.0.1}:3000:3000"
     volumes:
       - ./:/app
       - backend-root-node-modules:/app/node_modules
@@ -248,7 +248,7 @@ services:
       VITE_DEV_POLLING: "1"
       CHOKIDAR_USEPOLLING: "1"
     ports:
-      - "5173:5173"
+      - "${DEV_BIND_HOST:-127.0.0.1}:5173:5173"
     volumes:
       - ./:/app
       - frontend-root-node-modules:/app/node_modules
@@ -257,7 +257,7 @@ services:
     restart: unless-stopped
 
   # Expo / React Native dev server (Metro). Start it with the `mobile` profile:
-  #   HOST_LAN_IP=192.168.1.199 docker compose --profile mobile up
+  #   HOST_LAN_IP=192.168.1.199 DEV_BIND_HOST=0.0.0.0 docker compose --profile mobile up
   #
   # IMPORTANT: a physical phone running Expo Go connects back to the dev machine
   # over the LAN, so Metro must advertise the HOST's IP (not the container IP).
@@ -283,9 +283,9 @@ services:
       CHOKIDAR_USEPOLLING: "1"
       EXPO_NO_TELEMETRY: "1"
     ports:
-      - "8081:8081"      # Metro bundler
-      - "19000:19000"    # Expo dev server
-      - "19001:19001"    # Expo dev server (legacy/manifest)
+      - "${DEV_BIND_HOST:-127.0.0.1}:8081:8081"      # Metro bundler
+      - "${DEV_BIND_HOST:-127.0.0.1}:19000:19000"    # Expo dev server
+      - "${DEV_BIND_HOST:-127.0.0.1}:19001:19001"    # Expo dev server (legacy/manifest)
     volumes:
       - ./:/app
       - mobile-root-node-modules:/app/node_modules
@@ -300,7 +300,7 @@ services:
     depends_on:
       - postgres
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     environment:
       ADMINER_DEFAULT_SERVER: postgres
     restart: unless-stopped
