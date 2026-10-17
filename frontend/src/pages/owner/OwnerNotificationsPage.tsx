@@ -44,7 +44,7 @@ function relativeTime(
 export function OwnerNotificationsPage() {
   const { t } = useTranslation();
   const salonId = useSalonId();
-  const { lastEvent, connected } = useInboxWs(salonId);
+  const { lastEvent, connected, resumeVersion } = useInboxWs(salonId);
   const [filter, setFilter] = useState<Filter>('all');
   const [status, setStatus] = useState<Status>('loading');
   const [items, setItems] = useState<SalonNotification[]>([]);
@@ -106,7 +106,7 @@ export function OwnerNotificationsPage() {
     return () => {
       active = false;
     };
-  }, [salonId, filter, page, reloadToken, t]);
+  }, [salonId, filter, page, reloadToken, resumeVersion, t]);
 
   // Live events get prepended; matches the bell behavior so the page reflects WS.
   useEffect(() => {

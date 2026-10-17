@@ -47,9 +47,8 @@ import { PullToRefresh } from './pwa/PullToRefresh';
  * collapse into one cohesive code-split group.
  *
  * `<Routes>` is wrapped in a single `<Suspense>` whose fallback is the
- * `RouteLoader`: a layout-reserving skeleton (not a blocking spinner) that
- * occupies roughly the routed page's footprint, so swapping it for the page
- * causes no cumulative layout shift (CLS).
+ * `RouteLoader`: a consistent full-viewport branded loading screen that keeps
+ * the app mark centered while route chunks are fetched.
  */
 
 // Customer funnel + public pages — each its own chunk.
@@ -301,11 +300,7 @@ function AuthenticatedRoute() {
 
 function AppPwaInstallPrompt() {
   const { pathname } = useLocation();
-  const isOwnerWorkspace = pathname === '/owner' || pathname.startsWith('/owner/');
-  const isLanding = pathname === '/';
-
-  if (isLanding) return <PwaInstallPrompt placement="landing" />;
-  return isOwnerWorkspace ? <PwaInstallPrompt /> : null;
+  return pathname === '/' ? <PwaInstallPrompt placement="landing" /> : null;
 }
 
 function ResetHorizontalScrollOnRouteChange() {

@@ -1503,7 +1503,7 @@ function StepNav({
           onClick={formId ? undefined : onNext}
           loading={loading}
           disabled={nextDisabled || loading}
-          className="min-w-0 flex-1 sm:min-w-44 sm:flex-none sm:self-start"
+          className="min-w-0 flex-1 sm:min-w-44 sm:flex-none sm:self-center"
         >
           {nextLabel}
         </Button>

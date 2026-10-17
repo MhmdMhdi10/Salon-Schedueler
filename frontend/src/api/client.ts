@@ -911,6 +911,20 @@ export interface CustomerAppointmentRecord {
   } | null;
 }
 
+export interface SalonCustomerProfile {
+  customer: {
+    id: string;
+    phone: string;
+    fullName: string | null;
+    noShowCount: number;
+    preferredStaff: { id: string; fullName: string; role: string } | null;
+  };
+  appointments: Array<CustomerAppointmentRecord & {
+    service?: { name: string };
+    staffMember?: { fullName: string };
+  }>;
+}
+
 export interface AppointmentCustomerOverview {
   customer: {
     id: string;
@@ -967,6 +981,17 @@ export interface SalonEquipment {
 }
 
 export const adminApi = {
+  getSalonCustomerProfile: async (salonId: string, customerId: string): Promise<SalonCustomerProfile> => {
+    const profile = await request<SalonCustomerProfile>(`/salons/${salonId}/customers/${customerId}`);
+    return {
+      ...profile,
+      appointments: profile.appointments.map((appointment) => ({
+        ...appointment,
+        serviceName: appointment.serviceName ?? appointment.service?.name,
+        staffName: appointment.staffName ?? appointment.staffMember?.fullName,
+      })),
+    };
+  },
   getCalendar: (
     salonId: string,
     from: string,

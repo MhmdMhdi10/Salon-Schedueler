@@ -38,20 +38,19 @@ export class SalonClientService {
 
   async list(salonId: string, search?: string): Promise<SalonClientListItem[]> {
     const normalizedSearch = search?.trim();
+    const customerFilter = normalizedSearch
+      ? {
+          OR: [
+            { fullName: { contains: normalizedSearch, mode: 'insensitive' as const } },
+            { phone: { contains: normalizedSearch } },
+          ],
+        }
+      : undefined;
     const clientBook = (this.prisma as PrismaWithClientBook).salonClient;
     const rows = await clientBook.findMany({
       where: {
         salonId,
-        ...(normalizedSearch
-          ? {
-              customer: {
-                OR: [
-                  { fullName: { contains: normalizedSearch, mode: 'insensitive' } },
-                  { phone: { contains: normalizedSearch } },
-                ],
-              },
-            }
-          : {}),
+        ...(customerFilter ? { customer: customerFilter } : {}),
       },
       select: {
         createdAt: true,
@@ -63,14 +62,22 @@ export class SalonClientService {
       take: 200,
     });
 
-    const customerIds = rows.map((row) => row.customer.id);
-    const appointments = customerIds.length
-      ? await this.prisma.appointment.findMany({
-          where: { salonId, customerId: { in: customerIds }, status: 'completed' },
-          select: { customerId: true, status: true, startAt: true },
-          orderBy: { startAt: 'desc' },
-        })
-      : [];
+    // Older/imported bookings and a failed membership upsert must not hide a
+    // salon's customers. Appointments themselves also establish membership.
+    const appointments = await this.prisma.appointment.findMany({
+      where: { salonId, ...(customerFilter ? { customer: customerFilter } : {}) },
+      select: {
+        customerId: true, status: true, startAt: true, createdAt: true,
+        customer: { select: { id: true, fullName: true, phone: true, noShowCount: true } },
+      },
+      orderBy: { startAt: 'desc' },
+    });
+    const customerIds = new Set(rows.map((row) => row.customer.id));
+    for (const appointment of appointments) {
+      if (customerIds.has(appointment.customerId)) continue;
+      rows.push({ createdAt: appointment.createdAt, customer: appointment.customer });
+      customerIds.add(appointment.customerId);
+    }
 
     const visits = new Map<string, { count: number; lastVisitAt: Date | null }>();
     for (const appointment of appointments) {
@@ -101,7 +108,8 @@ export class SalonClientService {
         const aDate = a.lastVisitAt?.getTime() ?? a.createdAt.getTime();
         const bDate = b.lastVisitAt?.getTime() ?? b.createdAt.getTime();
         return bDate - aDate;
-      });
+      })
+      .slice(0, 200);
   }
 
   async add(

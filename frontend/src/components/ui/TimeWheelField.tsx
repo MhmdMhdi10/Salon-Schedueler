@@ -29,11 +29,13 @@ export function TimeWheelField({
   value,
   onChange,
   disabled = false,
+  minuteStep = 1,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  minuteStep?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [hour, setHour] = useState(Number(value.split(':')[0] ?? 0));
@@ -43,19 +45,23 @@ export function TimeWheelField({
   const hourRef = useRef<HTMLDivElement>(null);
   const minuteRef = useRef<HTMLDivElement>(null);
   const hours = useMemo(() => Array.from({ length: 24 }, (_, index) => index), []);
-  const minutes = useMemo(() => Array.from({ length: 60 }, (_, index) => index), []);
+  const minutes = useMemo(
+    () => Array.from({ length: 60 / minuteStep }, (_, index) => index * minuteStep),
+    [minuteStep],
+  );
 
   useLayoutEffect(() => {
     if (!open) return;
     const nextHour = Number(value.split(':')[0] ?? 0);
-    const nextMinute = Number(value.split(':')[1] ?? 0);
+    const rawMinute = Number(value.split(':')[1] ?? 0);
+    const nextMinute = minutes[Math.max(0, Math.min(minutes.length - 1, Math.floor(rawMinute / minuteStep)))];
     selectedHourRef.current = nextHour;
     selectedMinuteRef.current = nextMinute;
     setHour(nextHour);
     setMinute(nextMinute);
     setTimeWheelPosition(hourRef.current, nextHour);
-    setTimeWheelPosition(minuteRef.current, nextMinute);
-  }, [open, value]);
+    setTimeWheelPosition(minuteRef.current, minutes.indexOf(nextMinute));
+  }, [open, value, minutes, minuteStep]);
 
   const wheel = (
     values: number[],
@@ -96,7 +102,7 @@ export function TimeWheelField({
             onClick={() => {
               selectedRef.current = item;
               setSelected(item);
-              setTimeWheelPosition(ref.current, item);
+              setTimeWheelPosition(ref.current, values.indexOf(item));
             }}
           >
             <Num value={String(item).padStart(2, '0')} />

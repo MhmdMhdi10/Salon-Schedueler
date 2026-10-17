@@ -31,7 +31,7 @@ function relativeTime(iso: string): string {
 /** Customer account notification bell shown in the `/account` header. */
 export function CustomerInboxBell() {
   const navigate = useNavigate();
-  const { lastEvent } = useInboxWs(null, 'customer');
+  const { lastEvent, resumeVersion } = useInboxWs(null, 'customer');
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<CustomerNotification[]>([]);
   const [loading, setLoading] = useState(false);
@@ -55,7 +55,7 @@ export function CustomerInboxBell() {
     void refresh();
     const interval = window.setInterval(() => void refresh(), 60_000);
     return () => window.clearInterval(interval);
-  }, [refresh]);
+  }, [refresh, resumeVersion]);
 
   useEffect(() => {
     const handleChanged = () => void refresh();

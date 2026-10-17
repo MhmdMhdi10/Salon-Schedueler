@@ -276,6 +276,7 @@ describe('CalendarService', () => {
           }),
         },
         appointment: { findMany: jest.fn().mockResolvedValue([]) },
+        salonClient: { findUnique: jest.fn().mockResolvedValue(null) },
       } as any;
 
       const service = new CalendarService(mockPrisma);

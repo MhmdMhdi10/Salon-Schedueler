@@ -212,6 +212,15 @@ export default {
           '0%': { opacity: '0', transform: 'translateY(16px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        // Bottom sheets travel from outside the viewport, then ease into place.
+        'sheet-in': {
+          '0%': { transform: 'translate3d(0, 100%, 0)' },
+          '100%': { transform: 'translate3d(0, 0, 0)' },
+        },
+        'sheet-out': {
+          '0%': { transform: 'translate3d(0, 0, 0)' },
+          '100%': { transform: 'translate3d(0, 100%, 0)' },
+        },
         // Press feedback — a quick scale-down pulse for tap targets.
         'tap-pulse': {
           '0%': { transform: 'scale(1)' },
@@ -285,6 +294,8 @@ export default {
         'slide-in-end': 'slide-in-end var(--dur-base) var(--ease-standard) both',
         shimmer: 'shimmer 1.6s var(--ease-standard) infinite',
         'toast-in': 'toast-in var(--dur-base) var(--ease-emphasized) both',
+        'sheet-in': 'sheet-in var(--dur-enter) var(--ease-decelerate) both',
+        'sheet-out': 'sheet-out var(--dur-exit) var(--ease-standard) both',
         'tap-pulse': 'tap-pulse var(--dur-fast) var(--ease-standard)',
         'fade-out': 'fade-out var(--dur-exit) var(--ease-standard) both',
         'scale-out': 'scale-out var(--dur-exit) var(--ease-standard) both',

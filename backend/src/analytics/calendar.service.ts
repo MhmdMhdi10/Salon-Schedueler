@@ -172,7 +172,15 @@ export class CalendarService {
       take: 30,
     });
 
-    if (appointments.length === 0) return null;
+    const isSalonClient = appointments.length > 0 || (!staffMemberId && await (
+      this.prisma as PrismaClient & {
+        salonClient: { findUnique(args: unknown): Promise<unknown> };
+      }
+    ).salonClient.findUnique({
+      where: { salonId_customerId: { salonId, customerId } },
+      select: { customerId: true },
+    }));
+    if (!isSalonClient) return null;
 
     return { customer, appointments };
   }

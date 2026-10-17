@@ -12,17 +12,14 @@ export interface RouteLoaderProps {
 }
 
 /**
- * Non-blocking route loading indicator shown as the `<Suspense>` fallback while
- * a lazily-loaded route chunk is fetched (R3.7, R9.3; ui-ux §6/§12).
- *
- * On desktop it reserves the routed page's layout with a static skeleton.
- * On compact screens it uses a centered, full-viewport loading state so the
- * title and placeholders do not appear clipped or off-center during navigation.
+ * Full-viewport loading screen shown while a lazily-loaded route chunk or
+ * authenticated route is being prepared (R3.7, R9.3; ui-ux §6/§12).
+ * The centered brand mark stays consistent across viewport sizes and routes.
  *
  * Accessibility: the region is a polite live region with `aria-busy` and an
  * accessible name, so assistive tech announces the in-flight load once without
- * being spammed by the individual (decorative) skeleton blocks. It does not
- * trap focus or block the rest of the shell — it is purely transient.
+ * being spammed by the individual decorative elements. It does not move focus
+ * and disappears as soon as route content is ready.
  */
 export function RouteLoader({ className }: RouteLoaderProps) {
   const { t } = useTranslation();
@@ -39,17 +36,13 @@ export function RouteLoader({ className }: RouteLoaderProps) {
       aria-busy="true"
       aria-live="polite"
       aria-label={t('app.routeLoading')}
-      // Reserve a realistic content height so swapping the loader for the page
-      // does not shift surrounding layout (sticky footer, etc.). Mirrors the
-      // routed pages' centered container + page padding so the skeleton sits
-      // where the content will land.
       className={cn(
         'route-loader mx-auto flex min-h-[60vh] w-full max-w-container flex-col gap-5 px-4 py-8',
         className,
       )}
     >
-      <div className="route-loader__mobile" aria-hidden="true">
-        <span className="route-loader__mobile-mark">
+      <div className="route-loader__content" aria-hidden="true">
+        <span className="route-loader__mark">
           <img
             src="/icons/icon-192.png"
             width={52}
@@ -57,31 +50,8 @@ export function RouteLoader({ className }: RouteLoaderProps) {
             alt=""
           />
         </span>
-        <span className="route-loader__mobile-label">در حال آماده‌سازی صفحه…</span>
-        <span className="route-loader__mobile-track" />
-      </div>
-
-      <div className="route-loader__desktop" aria-hidden="true">
-        <div className="mb-1 flex items-center gap-3">
-          <span className="relative flex h-12 w-12 items-center justify-center">
-            <span className="absolute inset-0 rounded-xl border-2 border-primary/20" />
-            <img
-              src="/icons/icon-192.png"
-              width={48}
-              height={48}
-              alt=""
-              className="relative h-10 w-10 rounded-lg"
-            />
-          </span>
-          <span className="text-sm font-semibold text-text">در حال آماده‌سازی صفحه…</span>
-        </div>
-
-        <div className="h-7 w-1/2 max-w-xs rounded-sm bg-border" />
-        <div className="flex flex-col gap-3">
-          <div className="h-12 rounded-md bg-border" />
-          <div className="h-12 rounded-md bg-border" />
-          <div className="h-32 rounded-md bg-border" />
-        </div>
+        <span className="route-loader__label">در حال آماده‌سازی صفحه…</span>
+        <span className="route-loader__track" />
       </div>
 
       {/* Visually-hidden status text for AT (the skeletons are aria-hidden). */}

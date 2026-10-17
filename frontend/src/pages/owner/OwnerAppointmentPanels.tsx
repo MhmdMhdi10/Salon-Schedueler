@@ -302,304 +302,308 @@ export function AppointmentDetailsSheet({
 
   return (
     <Sheet open={open && Boolean(appointment)} onOpenChange={onOpenChange}>
-      <SheetContent side="inline-end" className="sm:w-[min(27rem,100vw)]">
-        <div className="pe-8">
+      <SheetContent
+        side="inline-end"
+        className="owner-appointment-details-sheet md:w-[min(27rem,100vw)]"
+      >
+        <div className="shrink-0 border-b border-border/60 pb-4 pe-10" dir="rtl">
           <SheetTitle className="flex items-center gap-2">
             <UserRound className="h-5 w-5 text-primary" aria-hidden="true" />
             {customer?.fullName || appointment?.customerName || 'جزئیات مشتری'}
           </SheetTitle>
-          <SheetDescription>
-            اطلاعات مشتری و سابقه نوبت‌های او
-          </SheetDescription>
+          <SheetDescription>اطلاعات مشتری و سابقه نوبت‌های او</SheetDescription>
         </div>
-
-        {appointment && (
-          <section className="mt-5 rounded-xl border border-primary/20 bg-primary/5 p-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <strong className="block truncate text-sm text-text">
-                  {appointment.serviceName || 'خدمت'}
-                </strong>
-                <span className="mt-1 flex items-center gap-1.5 text-xs text-muted">
-                  <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
-                  {dateLabel(appointment.startAt)} · <Num value={timeLabel(appointment.startAt)} />
-                </span>
-              </div>
-              <span className="shrink-0 rounded-full bg-success/10 px-2 py-1 text-[0.68rem] font-bold text-success">
-                {statusLabel(appointment.status)}
-              </span>
-            </div>
-            {appointment.staffName && (
-              <p className="m-0 mt-2 text-xs text-muted">عضو تیم: {appointment.staffName}</p>
-            )}
-            {appointment.customerNote && (
-              <p className="m-0 mt-2 rounded-lg border border-border bg-bg p-2 text-xs leading-6 text-muted">
-                یادداشت مشتری: {appointment.customerNote}
-              </p>
-            )}
-            <Button
-              type="button"
-              variant="primary"
-              size="md"
-              className="mt-3 w-full"
-              startIcon={<Move className="h-4 w-4" />}
-              onClick={() => onMove(appointment)}
-              disabled={
-                !canMoveAppointment ||
-                ['cancelled', 'rejected', 'no_show', 'completed'].includes(appointment.status ?? '')
-              }
-            >
-              {appointment.pendingReschedule?.startAt
-                ? 'در انتظار پاسخ مشتری'
-                : 'تغییر زمان نوبت'}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              size="md"
-              className="mt-2 w-full"
-              startIcon={<CalendarPlus className="h-4 w-4" />}
-              onClick={() => onRebook(appointment)}
-              disabled={!phone || ['cancelled', 'rejected', 'no_show'].includes(appointment.status || '')}
-            >
-              رزرو مجدد
-            </Button>
-            {onCancel && ['pending', 'held', 'confirmed', 'approved'].includes(appointment.status ?? '') && (
-              <Button
-                type="button"
-                variant="danger"
-                size="md"
-                className="mt-2 w-full"
-                startIcon={<TriangleAlert className="h-4 w-4" />}
-                onClick={() => onCancel(appointment)}
-              >
-                {appointment.status === 'pending' ? 'رد و لغو درخواست' : 'لغو نوبت'}
-              </Button>
-            )}
-            {onReportCustomer && appointment.customerId && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="md"
-                className="mt-2 w-full text-danger"
-                startIcon={<TriangleAlert className="h-4 w-4" />}
-                onClick={() => onReportCustomer(appointment)}
-              >
-                گزارش مشتری / مسدودکردن
-              </Button>
-            )}
-          </section>
-        )}
-
-        <section className="mt-4 rounded-xl border border-border bg-surface p-3">
-          <h3 className="m-0 text-sm font-bold text-text">راه ارتباطی</h3>
-          <p className="mt-1 text-sm tabular-nums text-muted" dir="ltr">
-            {phone || 'شماره ثبت نشده'}
-          </p>
-          <div className="mt-3 flex gap-2">
-            <a
-              href={phone ? 'tel:' + phone : undefined}
-              aria-disabled={!phone}
-              className={cn(
-                actionLinkClass,
-                phone
-                  ? 'border-success/30 bg-success/10 text-success hover:bg-success/15'
-                  : 'cursor-not-allowed border-border bg-bg text-muted/50',
-              )}
-            >
-              <Phone className="h-4 w-4" aria-hidden="true" />
-              تماس
-            </a>
-          </div>
-        </section>
-
-        {loading && (
-          <p className="mt-4 rounded-lg border border-border bg-bg p-3 text-sm text-muted">
-            در حال دریافت سابقه مشتری…
-          </p>
-        )}
-        {loadError && <p role="alert" className="mt-4 text-sm text-danger">{loadError}</p>}
-        {overview && (
-          <>
-            {overview.deposit?.required && (
-              <section className="mt-4 rounded-xl border border-primary/25 bg-primary/5 p-3">
+        <div dir="ltr" className="owner-appointment-details-scroll">
+          <div dir="rtl">
+            {appointment && (
+              <section className="mt-1 rounded-xl border border-primary/20 bg-primary/5 p-3">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="m-0 flex items-center gap-2 text-sm font-bold text-text">
-                      <CreditCard className="h-4 w-4 text-primary" aria-hidden="true" />
-                      بیعانه رزرو
-                    </h3>
-                    <p className="mt-1 text-xs text-muted">
-                      مبلغ: <Money amountRial={overview.deposit.amountRial ?? 0} unit="toman" />
-                    </p>
+                  <div className="min-w-0">
+                    <strong className="block truncate text-sm text-text">
+                      {appointment.serviceName || 'خدمت'}
+                    </strong>
+                    <span className="mt-1 flex items-center gap-1.5 text-xs text-muted">
+                      <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
+                      {dateLabel(appointment.startAt)} · <Num value={timeLabel(appointment.startAt)} />
+                    </span>
                   </div>
-                  <span
-                    className={cn(
-                      'rounded-full px-2 py-1 text-[0.68rem] font-bold',
-                      overview.deposit.receiptStatus === 'approved'
-                        ? 'bg-success/10 text-success'
-                        : overview.deposit.receiptStatus === 'rejected' || overview.deposit.receiptStatus === 'expired'
-                          ? 'bg-danger/10 text-danger'
-                          : 'bg-warning/15 text-warning',
-                    )}
-                  >
-                    {overview.deposit.receiptStatus === 'approved'
-                      ? 'تأیید شده'
-                      : overview.deposit.receiptStatus === 'rejected'
-                        ? 'رد شده'
-                        : overview.deposit.receiptStatus === 'expired'
-                          ? 'منقضی شده'
-                          : overview.deposit.receiptStatus === 'pending'
-                            ? 'در انتظار بررسی'
-                            : overview.deposit.method === 'gateway'
-                              ? 'پرداخت درگاه'
-                              : 'رسید ارسال نشده'}
+                  <span className="shrink-0 rounded-full bg-success/10 px-2 py-1 text-[0.68rem] font-bold text-success">
+                    {statusLabel(appointment.status)}
                   </span>
                 </div>
-
-                {overview.deposit.method === 'card_transfer' && (
-                  <p className="m-0 mt-2 text-xs text-muted">روش: کارت‌به‌کارت</p>
+                {appointment.staffName && (
+                  <p className="m-0 mt-2 text-xs text-muted">عضو تیم: {appointment.staffName}</p>
                 )}
-                {receiptLoading && <p className="m-0 mt-3 text-xs text-muted">در حال دریافت تصویر رسید…</p>}
-                {receipt && (
-                  <div className="mt-3 overflow-hidden rounded-lg border border-border bg-bg">
-                    <img
-                      src={`data:${receipt.mimeType};base64,${receipt.dataBase64}`}
-                      alt="رسید واریز بیعانه مشتری"
-                      className="max-h-72 w-full object-contain"
-                    />
-                    <p className="m-0 border-t border-border px-2.5 py-2 text-xs text-muted">{receipt.fileName}</p>
-                  </div>
+                {appointment.customerNote && (
+                  <p className="m-0 mt-2 rounded-lg border border-border bg-bg p-2 text-xs leading-6 text-muted">
+                    یادداشت مشتری: {appointment.customerNote}
+                  </p>
                 )}
-                {overview.deposit.receiptStatus === 'pending' && (
-                  <>
-                    <TextField
-                      label="یادداشت بررسی (اختیاری)"
-                      value={reviewNote}
-                      onChange={(event) => setReviewNote(event.target.value)}
-                      maxLength={500}
-                      containerClassName="mt-3"
-                    />
-                    <div className="mt-3 flex gap-2">
-                      <Button
-                        type="button"
-                        variant="primary"
-                        size="md"
-                        loading={receiptReviewing}
-                        disabled={receiptReviewing}
-                        startIcon={<CheckCircle2 className="h-4 w-4" />}
-                        onClick={() => void reviewReceipt('approved')}
-                        className="flex-1"
-                      >
-                        تأیید رسید
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="danger"
-                        size="md"
-                        loading={receiptReviewing}
-                        disabled={receiptReviewing}
-                        onClick={() => void reviewReceipt('rejected')}
-                        className="flex-1"
-                      >
-                        رد رسید
-                      </Button>
-                    </div>
-                  </>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  className="mt-3 w-full"
+                  startIcon={<Move className="h-4 w-4" />}
+                  onClick={() => onMove(appointment)}
+                  disabled={
+                    !canMoveAppointment ||
+                    ['cancelled', 'rejected', 'no_show', 'completed'].includes(appointment.status ?? '')
+                  }
+                >
+                  {appointment.pendingReschedule?.startAt
+                    ? 'در انتظار پاسخ مشتری'
+                    : 'تغییر زمان نوبت'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="md"
+                  className="mt-2 w-full"
+                  startIcon={<CalendarPlus className="h-4 w-4" />}
+                  onClick={() => onRebook(appointment)}
+                  disabled={!phone || ['cancelled', 'rejected', 'no_show'].includes(appointment.status || '')}
+                >
+                  رزرو مجدد
+                </Button>
+                {onCancel && ['pending', 'held', 'confirmed', 'approved'].includes(appointment.status ?? '') && (
+                  <Button
+                    type="button"
+                    variant="danger"
+                    size="md"
+                    className="mt-2 w-full"
+                    startIcon={<TriangleAlert className="h-4 w-4" />}
+                    onClick={() => onCancel(appointment)}
+                  >
+                    {appointment.status === 'pending' ? 'رد و لغو درخواست' : 'لغو نوبت'}
+                  </Button>
                 )}
-                {receiptError && <p role="alert" className="m-0 mt-2 text-xs text-danger">{receiptError}</p>}
+                {onReportCustomer && appointment.customerId && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="md"
+                    className="mt-2 w-full text-danger"
+                    startIcon={<TriangleAlert className="h-4 w-4" />}
+                    onClick={() => onReportCustomer(appointment)}
+                  >
+                    گزارش مشتری / مسدودکردن
+                  </Button>
+                )}
               </section>
             )}
-            <section className="mt-4 grid grid-cols-2 gap-2">
-              <div className="rounded-xl border border-border bg-surface p-3">
-                <span className="block text-xs text-muted">عدم حضور</span>
-                <strong className="mt-1 block text-xl text-text tabular-nums">
-                  <Num value={String(customer?.noShowCount ?? 0)} />
-                </strong>
-              </div>
-              <div className="rounded-xl border border-border bg-surface p-3">
-                <span className="block text-xs text-muted">سابقه نوبت</span>
-                <strong className="mt-1 block text-xl text-text tabular-nums">
-                  <Num value={String(overview.appointments.length)} />
-                </strong>
+
+            <section className="mt-4 rounded-xl border border-border bg-surface p-3">
+              <h3 className="m-0 text-sm font-bold text-text">راه ارتباطی</h3>
+              <p className="mt-1 text-sm tabular-nums text-muted" dir="ltr">
+                {phone || 'شماره ثبت نشده'}
+              </p>
+              <div className="mt-3 flex gap-2">
+                <a
+                  href={phone ? 'tel:' + phone : undefined}
+                  aria-disabled={!phone}
+                  className={cn(
+                    actionLinkClass,
+                    phone
+                      ? 'border-success/30 bg-success/10 text-success hover:bg-success/15'
+                      : 'cursor-not-allowed border-border bg-bg text-muted/50',
+                  )}
+                >
+                  <Phone className="h-4 w-4" aria-hidden="true" />
+                  تماس
+                </a>
               </div>
             </section>
 
-            <section className="mt-4">
-              <h3 className="flex items-center gap-2 text-sm font-bold text-text">
-                <History className="h-4 w-4 text-primary" aria-hidden="true" />
-                آخرین نوبت‌ها
-              </h3>
-              {history.length === 0 ? (
-                <p className="mt-2 rounded-lg border border-border bg-bg p-3 text-xs text-muted">
-                  سابقه‌ای ثبت نشده است.
-                </p>
-              ) : (
-                <ul className="mt-2 flex flex-col gap-1.5" role="list">
-                  {history.map((item) => (
-                    <li key={item.id} className="rounded-lg border border-border bg-surface p-2.5">
-                      <div className="flex items-center justify-between gap-2 text-xs">
-                        <strong className="truncate text-text">{item.serviceName || 'خدمت'}</strong>
-                        <span className="shrink-0 text-muted">{statusLabel(item.status)}</span>
+            {loading && (
+              <p className="mt-4 rounded-lg border border-border bg-bg p-3 text-sm text-muted">
+                در حال دریافت سابقه مشتری…
+              </p>
+            )}
+            {loadError && <p role="alert" className="mt-4 text-sm text-danger">{loadError}</p>}
+            {overview && (
+              <>
+                {overview.deposit?.required && (
+                  <section className="mt-4 rounded-xl border border-primary/25 bg-primary/5 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="m-0 flex items-center gap-2 text-sm font-bold text-text">
+                          <CreditCard className="h-4 w-4 text-primary" aria-hidden="true" />
+                          بیعانه رزرو
+                        </h3>
+                        <p className="mt-1 text-xs text-muted">
+                          مبلغ: <Money amountRial={overview.deposit.amountRial ?? 0} unit="toman" />
+                        </p>
                       </div>
-                      <p className="m-0 mt-1 text-[0.68rem] text-muted">
-                        {dateLabel(item.startAt)} · <Num value={timeLabel(item.startAt)} />
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
+                      <span
+                        className={cn(
+                          'rounded-full px-2 py-1 text-[0.68rem] font-bold',
+                          overview.deposit.receiptStatus === 'approved'
+                            ? 'bg-success/10 text-success'
+                            : overview.deposit.receiptStatus === 'rejected' || overview.deposit.receiptStatus === 'expired'
+                              ? 'bg-danger/10 text-danger'
+                              : 'bg-warning/15 text-warning',
+                        )}
+                      >
+                        {overview.deposit.receiptStatus === 'approved'
+                          ? 'تأیید شده'
+                          : overview.deposit.receiptStatus === 'rejected'
+                            ? 'رد شده'
+                            : overview.deposit.receiptStatus === 'expired'
+                              ? 'منقضی شده'
+                              : overview.deposit.receiptStatus === 'pending'
+                                ? 'در انتظار بررسی'
+                                : overview.deposit.method === 'gateway'
+                                  ? 'پرداخت درگاه'
+                                  : 'رسید ارسال نشده'}
+                      </span>
+                    </div>
 
-            <section className="mt-4">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-bold text-text">یادداشت‌ها</h3>
-                <span className="text-xs text-muted"><Num value={String(overview.notes.length)} /> یادداشت</span>
-              </div>
-              <form onSubmit={(event) => void addNote(event)} className="mt-2 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
-                <textarea
-                  value={noteDraft}
-                  onChange={(event) => {
-                    setNoteDraft(event.target.value);
-                    setNoteError('');
-                  }}
-                  maxLength={1000}
-                  rows={2}
-                  disabled={noteSaving}
-                  aria-label="یادداشت جدید مشتری"
-                  placeholder="مثلاً: رنگ مورد علاقه یا حساسیت مشتری…"
-                  className="w-full resize-none rounded-md border border-border bg-bg px-2.5 py-2 text-xs text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
-                />
-                <div className="mt-2 flex items-center justify-between gap-2">
-                  <span className="text-[0.68rem] text-muted"><Num value={String(noteDraft.length)} /> / <Num value="1000" /></span>
-                  <Button
-                    type="submit"
-                    size="md"
-                    variant="secondary"
-                    loading={noteSaving}
-                    disabled={noteSaving || !noteDraft.trim()}
-                  >
-                    ثبت یادداشت
-                  </Button>
-                </div>
-              </form>
-              {noteError && <p role="alert" className="mt-2 text-xs text-danger">{noteError}</p>}
-              {overview.notes.length === 0 ? (
-                <p className="mt-2 rounded-lg border border-border bg-bg p-3 text-xs text-muted">
-                  هنوز یادداشتی ثبت نشده است.
-                </p>
-              ) : (
-                <ul className="mt-2 flex flex-col gap-1.5" role="list">
-                  {overview.notes.slice(0, 4).map((note) => (
-                    <li key={note.id} className="rounded-lg border border-border bg-bg p-2.5 text-xs text-text">
-                      {note.body}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          </>
-        )}
+                    {overview.deposit.method === 'card_transfer' && (
+                      <p className="m-0 mt-2 text-xs text-muted">روش: کارت‌به‌کارت</p>
+                    )}
+                    {receiptLoading && <p className="m-0 mt-3 text-xs text-muted">در حال دریافت تصویر رسید…</p>}
+                    {receipt && (
+                      <div className="mt-3 overflow-hidden rounded-lg border border-border bg-bg">
+                        <img
+                          src={`data:${receipt.mimeType};base64,${receipt.dataBase64}`}
+                          alt="رسید واریز بیعانه مشتری"
+                          className="max-h-72 w-full object-contain"
+                        />
+                        <p className="m-0 border-t border-border px-2.5 py-2 text-xs text-muted">{receipt.fileName}</p>
+                      </div>
+                    )}
+                    {overview.deposit.receiptStatus === 'pending' && (
+                      <>
+                        <TextField
+                          label="یادداشت بررسی (اختیاری)"
+                          value={reviewNote}
+                          onChange={(event) => setReviewNote(event.target.value)}
+                          maxLength={500}
+                          containerClassName="mt-3"
+                        />
+                        <div className="mt-3 flex gap-2">
+                          <Button
+                            type="button"
+                            variant="primary"
+                            size="md"
+                            loading={receiptReviewing}
+                            disabled={receiptReviewing}
+                            startIcon={<CheckCircle2 className="h-4 w-4" />}
+                            onClick={() => void reviewReceipt('approved')}
+                            className="flex-1"
+                          >
+                            تأیید رسید
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="danger"
+                            size="md"
+                            loading={receiptReviewing}
+                            disabled={receiptReviewing}
+                            onClick={() => void reviewReceipt('rejected')}
+                            className="flex-1"
+                          >
+                            رد رسید
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                    {receiptError && <p role="alert" className="m-0 mt-2 text-xs text-danger">{receiptError}</p>}
+                  </section>
+                )}
+                <section className="mt-4 grid grid-cols-2 gap-2">
+                  <div className="rounded-xl border border-border bg-surface p-3">
+                    <span className="block text-xs text-muted">عدم حضور</span>
+                    <strong className="mt-1 block text-xl text-text tabular-nums">
+                      <Num value={String(customer?.noShowCount ?? 0)} />
+                    </strong>
+                  </div>
+                  <div className="rounded-xl border border-border bg-surface p-3">
+                    <span className="block text-xs text-muted">سابقه نوبت</span>
+                    <strong className="mt-1 block text-xl text-text tabular-nums">
+                      <Num value={String(overview.appointments.length)} />
+                    </strong>
+                  </div>
+                </section>
+
+                <section className="mt-4">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-text">
+                    <History className="h-4 w-4 text-primary" aria-hidden="true" />
+                    آخرین نوبت‌ها
+                  </h3>
+                  {history.length === 0 ? (
+                    <p className="mt-2 rounded-lg border border-border bg-bg p-3 text-xs text-muted">
+                      سابقه‌ای ثبت نشده است.
+                    </p>
+                  ) : (
+                    <ul className="mt-2 flex flex-col gap-1.5" role="list">
+                      {history.map((item) => (
+                        <li key={item.id} className="rounded-lg border border-border bg-surface p-2.5">
+                          <div className="flex items-center justify-between gap-2 text-xs">
+                            <strong className="truncate text-text">{item.serviceName || 'خدمت'}</strong>
+                            <span className="shrink-0 text-muted">{statusLabel(item.status)}</span>
+                          </div>
+                          <p className="m-0 mt-1 text-[0.68rem] text-muted">
+                            {dateLabel(item.startAt)} · <Num value={timeLabel(item.startAt)} />
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+
+                <section className="mt-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-sm font-bold text-text">یادداشت‌ها</h3>
+                    <span className="text-xs text-muted"><Num value={String(overview.notes.length)} /> یادداشت</span>
+                  </div>
+                  <form onSubmit={(event) => void addNote(event)} className="mt-2 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
+                    <textarea
+                      value={noteDraft}
+                      onChange={(event) => {
+                        setNoteDraft(event.target.value);
+                        setNoteError('');
+                      }}
+                      maxLength={1000}
+                      rows={2}
+                      disabled={noteSaving}
+                      aria-label="یادداشت جدید مشتری"
+                      placeholder="مثلاً: رنگ مورد علاقه یا حساسیت مشتری…"
+                      className="w-full resize-none rounded-md border border-border bg-bg px-2.5 py-2 text-xs text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
+                    />
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <span className="text-[0.68rem] text-muted"><Num value={String(noteDraft.length)} /> / <Num value="1000" /></span>
+                      <Button
+                        type="submit"
+                        size="md"
+                        variant="secondary"
+                        loading={noteSaving}
+                        disabled={noteSaving || !noteDraft.trim()}
+                      >
+                        ثبت یادداشت
+                      </Button>
+                    </div>
+                  </form>
+                  {noteError && <p role="alert" className="mt-2 text-xs text-danger">{noteError}</p>}
+                  {overview.notes.length === 0 ? (
+                    <p className="mt-2 rounded-lg border border-border bg-bg p-3 text-xs text-muted">
+                      هنوز یادداشتی ثبت نشده است.
+                    </p>
+                  ) : (
+                    <ul className="mt-2 flex flex-col gap-1.5" role="list">
+                      {overview.notes.slice(0, 4).map((note) => (
+                        <li key={note.id} className="rounded-lg border border-border bg-bg p-2.5 text-xs text-text">
+                          {note.body}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              </>
+            )}
+          </div>
+        </div>
       </SheetContent>
     </Sheet>
   );

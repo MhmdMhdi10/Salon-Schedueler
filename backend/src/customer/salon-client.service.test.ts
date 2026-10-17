@@ -14,6 +14,31 @@ function createPrismaMock() {
 }
 
 describe('SalonClientService', () => {
+  it('includes pending and confirmed customers even without a client-book membership', async () => {
+    const prisma = createPrismaMock();
+    prisma.salonClient.findMany.mockResolvedValue([]);
+    const createdAt = new Date('2026-10-17T08:00:00Z');
+    prisma.appointment.findMany.mockResolvedValue([
+      ...['pending', 'confirmed'].map((status) => ({
+        customerId: 'booked-customer',
+        customer: { id: 'booked-customer', fullName: 'مشتری رزرو', phone: '09120000001', noShowCount: 0 },
+        status,
+        startAt: new Date('2026-10-18T08:00:00Z'),
+        createdAt,
+      })),
+    ]);
+
+    const clients = await new SalonClientService(prisma).list('salon-1');
+
+    expect(clients).toEqual([{
+      id: 'booked-customer', fullName: 'مشتری رزرو', phone: '09120000001',
+      visits: 0, lastVisitAt: null, noShowCount: 0, createdAt,
+    }]);
+    expect(prisma.appointment.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { salonId: 'salon-1' },
+    }));
+  });
+
   it('counts completed appointments as visits and keeps reservations out of history', async () => {
     const prisma = createPrismaMock();
     const completedAt = new Date('2026-08-01T10:00:00.000Z');

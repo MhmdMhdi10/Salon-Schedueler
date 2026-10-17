@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, render, screen, waitFor, cleanup, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { ThemeProvider } from '../../../components/theme';
 import { ToastProvider } from '../../../components/ui';
@@ -9,6 +9,8 @@ import '../../../i18n';
 const listClients = vi.fn();
 const addClient = vi.fn();
 const getSalonQr = vi.fn();
+const getClientProfile = vi.fn();
+const createManualAppointment = vi.fn();
 
 vi.mock('../../../auth/useSalonId', () => ({
   useSalonId: () => 'salon-1',
@@ -32,6 +34,15 @@ vi.mock('../../../api/client', () => {
       list: (...args: unknown[]) => listClients(...args),
       add: (...args: unknown[]) => addClient(...args),
     },
+    adminApi: {
+      getSalonCustomerProfile: (...args: unknown[]) => getClientProfile(...args),
+      createManualAppointment: (...args: unknown[]) => createManualAppointment(...args),
+    },
+    salonApi: {
+      getServices: async () => ({ services: [{ id: 'service-1', name: 'کوتاهی مو', durationMinutes: 60 }] }),
+      getBookingPolicy: async () => ({ locationTypes: ['salon'] }),
+    },
+    getApiErrorMessage: (_error: unknown, fallback: string) => fallback,
     qrApi: {
       getSalonQr: (...args: unknown[]) => getSalonQr(...args),
     },
@@ -42,13 +53,18 @@ vi.mock('../../../api/client', () => {
 import { OwnerClientsPage } from '../OwnerClientsPage';
 import { OwnerMarketingPage } from '../OwnerMarketingPage';
 
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="current-route">{location.pathname}</output>;
+}
+
 function renderPage(page: React.ReactNode, path: string) {
   return render(
     <HelmetProvider>
       <ThemeProvider defaultTheme="light">
         <ToastProvider>
           <div dir="rtl" lang="fa" className="app-root">
-            <MemoryRouter initialEntries={[path]}>{page}</MemoryRouter>
+            <MemoryRouter initialEntries={[path]}>{page}<LocationProbe /></MemoryRouter>
           </div>
         </ToastProvider>
       </ThemeProvider>
@@ -87,11 +103,44 @@ beforeEach(() => {
     url: 'https://book.salon.app/s/salon-1?utm_source=qr',
     salonName: 'سالن آرا',
   });
+  getClientProfile.mockResolvedValue({
+    customer: { id: 'client-1', fullName: 'سارا محمدی', phone: '09123456789', noShowCount: 0, preferredStaff: null },
+    appointments: [{ id: 'appt-1', startAt: '2026-08-01T10:00:00.000Z', status: 'completed', serviceName: 'کوتاهی مو', staffName: 'زهرا رضایی' }],
+  });
+  createManualAppointment.mockResolvedValue({ status: 'confirmed', appointment: { id: 'new-appt' } });
 });
 
 afterEach(() => cleanup());
 
 describe('OwnerClientsPage', () => {
+  it('opens customer history in a bottom sheet without replacing the full visit count', async () => {
+    renderPage(<OwnerClientsPage />, '/owner/clients');
+    fireEvent.click(await screen.findByRole('button', { name: 'مشاهده جزئیات سارا محمدی' }));
+    const sheet = screen.getByRole('dialog');
+    expect(await within(sheet).findByText('کوتاهی مو')).toBeInTheDocument();
+    expect(within(sheet).getByText('۳')).toBeInTheDocument();
+    expect(getClientProfile).toHaveBeenCalledWith('salon-1', 'client-1');
+    expect(sheet).toHaveClass('bottom-0');
+    expect(screen.getByTestId('current-route')).toHaveTextContent('/owner/clients');
+  });
+
+  it('books for the selected customer directly on the clients page', async () => {
+    renderPage(<OwnerClientsPage />, '/owner/clients');
+    await screen.findByRole('button', { name: 'مشاهده جزئیات سارا محمدی' });
+    fireEvent.click(screen.getByRole('button', { name: 'ثبت نوبت' }));
+    const sheet = screen.getByRole('dialog');
+    expect(within(sheet).getByText('سارا محمدی')).toBeInTheDocument();
+    const submit = within(sheet).getByRole('button', { name: /^ثبت نوبت$/ });
+    await waitFor(() => expect(submit).toBeEnabled());
+    fireEvent.click(submit);
+    await waitFor(() => expect(createManualAppointment).toHaveBeenCalledWith('salon-1', expect.objectContaining({
+      serviceId: 'service-1', phone: '09123456789', fullName: 'سارا محمدی',
+    })));
+    expect(screen.getByTestId('current-route')).toHaveTextContent('/owner/clients');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await waitFor(() => expect(listClients).toHaveBeenCalledTimes(2));
+  });
+
   it('loads a salon-scoped client list', async () => {
     renderPage(<OwnerClientsPage />, '/owner/clients');
 

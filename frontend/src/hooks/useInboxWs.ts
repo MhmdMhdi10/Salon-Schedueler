@@ -32,6 +32,8 @@ export interface UseInboxWsResult {
   connected: boolean;
   /** The last error encountered (auth/upgrade). Null on a clean state. */
   error: string | null;
+  /** Increments whenever the page returns to the foreground or network comes back. */
+  resumeVersion: number;
 }
 
 /**
@@ -69,12 +71,40 @@ export function useInboxWs(
   const [lastEvent, setLastEvent] = useState<InboxNotification | null>(null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resumeVersion, setResumeVersion] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
   const retryRef = useRef<number>(0);
+  const retryTimerRef = useRef<number | null>(null);
+  const lastResumeAtRef = useRef(0);
   const cleanRef = useRef(false);
+  const connectRef = useRef<() => void>(() => {});
+
+  const clearRetryTimer = useCallback(() => {
+    if (retryTimerRef.current === null) return;
+    window.clearTimeout(retryTimerRef.current);
+    retryTimerRef.current = null;
+  }, []);
+
+  const scheduleReconnect = useCallback(() => {
+    if (cleanRef.current || retryTimerRef.current !== null) return;
+    retryRef.current += 1;
+    const delay = Math.min(30000, 1000 * 2 ** Math.min(retryRef.current, 5));
+    retryTimerRef.current = window.setTimeout(() => {
+      retryTimerRef.current = null;
+      connectRef.current();
+    }, delay);
+  }, []);
 
   const connect = useCallback(() => {
     if (cleanRef.current) return;
+    const activeSocket = wsRef.current;
+    if (
+      activeSocket &&
+      (activeSocket.readyState === WebSocket.CONNECTING ||
+        activeSocket.readyState === WebSocket.OPEN)
+    ) {
+      return;
+    }
     const token = getAccessToken();
     if (!token || (channel === 'salon' && !salonId)) {
       setError('no-auth');
@@ -84,21 +114,22 @@ export function useInboxWs(
     let ws: WebSocket;
     try {
       ws = new WebSocket(url);
-    } catch (e) {
+    } catch {
       setError('ws-init-failed');
-      retryRef.current += 1;
-      const delay = Math.min(15000, 1000 * 2 ** retryRef.current);
-      setTimeout(connect, delay);
+      scheduleReconnect();
       return;
     }
     wsRef.current = ws;
 
     ws.onopen = () => {
+      if (wsRef.current !== ws) return;
+      clearRetryTimer();
       retryRef.current = 0;
       setConnected(true);
       setError(null);
     };
     ws.onmessage = (msg) => {
+      if (wsRef.current !== ws) return;
       try {
         const data = JSON.parse(msg.data);
         const eventType = channel === 'customer' ? 'customer-notification' : 'notification';
@@ -115,23 +146,62 @@ export function useInboxWs(
       }
     };
     ws.onclose = () => {
+      if (wsRef.current !== ws) return;
+      wsRef.current = null;
       setConnected(false);
-      if (cleanRef.current) return;
-      // exponential backoff, capped at 30s
-      retryRef.current += 1;
-      const delay = Math.min(30000, 1000 * 2 ** Math.min(retryRef.current, 5));
-      setTimeout(connect, delay);
+      scheduleReconnect();
     };
     ws.onerror = () => {
+      if (wsRef.current !== ws) return;
       setError('ws-error');
     };
-  }, [salonId, channel]);
+  }, [salonId, channel, clearRetryTimer, scheduleReconnect]);
+
+  connectRef.current = connect;
 
   useEffect(() => {
     cleanRef.current = false;
     connect();
+
+    const reconnectOnResume = () => {
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (now - lastResumeAtRef.current < 1000) return;
+      lastResumeAtRef.current = now;
+      setResumeVersion((version) => version + 1);
+      clearRetryTimer();
+      retryRef.current = 0;
+
+      const previousSocket = wsRef.current;
+      wsRef.current = null;
+      if (previousSocket) {
+        previousSocket.onopen = null;
+        previousSocket.onmessage = null;
+        previousSocket.onerror = null;
+        previousSocket.onclose = null;
+        try {
+          previousSocket.close();
+        } catch {
+          // The browser may already have discarded a suspended socket.
+        }
+      }
+
+      setConnected(false);
+      connectRef.current();
+    };
+
+    document.addEventListener('visibilitychange', reconnectOnResume);
+    window.addEventListener('pageshow', reconnectOnResume);
+    window.addEventListener('focus', reconnectOnResume);
+    window.addEventListener('online', reconnectOnResume);
+
     return () => {
       cleanRef.current = true;
+      clearRetryTimer();
+      document.removeEventListener('visibilitychange', reconnectOnResume);
+      window.removeEventListener('pageshow', reconnectOnResume);
+      window.removeEventListener('focus', reconnectOnResume);
+      window.removeEventListener('online', reconnectOnResume);
       const ws = wsRef.current;
       if (ws) {
         ws.onclose = null;
@@ -145,8 +215,9 @@ export function useInboxWs(
         }
       }
       wsRef.current = null;
+      setConnected(false);
     };
-  }, [connect]);
+  }, [connect, clearRetryTimer]);
 
-  return { lastEvent, connected, error };
+  return { lastEvent, connected, error, resumeVersion };
 }

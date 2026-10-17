@@ -12,7 +12,6 @@ import {
   CalendarClock,
   CalendarOff,
   Coffee,
-  ContactRound,
   CreditCard,
   ChevronDown,
   ChevronLeft,
@@ -36,13 +35,11 @@ import {
   adminApi,
   approvalPolicyApi,
   bookingPolicyApi,
-  clientBookApi,
   holidaysApi,
   salonApi,
   staffAvailabilityApi,
   workingHoursApi,
   type SalonClosure,
-  type SalonClient,
   type SalonStaff,
   type OwnerWaitlistEntry,
   type WeeklyWorkingHour,
@@ -59,7 +56,7 @@ import { useSalonId } from '../../auth/useSalonId';
 import { usePagination } from '../../hooks/usePagination';
 import { useHashScroll } from '../../hooks/useHashScroll';
 import { useInboxWs } from '../../hooks/useInboxWs';
-import { gregorianToJalali, getJalaliMonthName } from '@salon/shared';
+import { gregorianToJalali, getJalaliMonthName, normalizeDigits as normalizeContactDigits } from '@salon/shared';
 import {
   Button,
   Dialog,
@@ -86,6 +83,7 @@ import {
 } from '../../components/ui';
 import { easings } from '../../lib/motion-variants';
 
+import { ManualBookingSheet, normalizeIranianMobile } from './ManualBookingSheet';
 import './owner-calendar.css';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -303,65 +301,6 @@ function localDateKey(iso: string, timezone?: string): string | null {
   const parts = calendarDateTimeParts(iso, timezone);
   if (!parts) return null;
   return `${parts.year}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`;
-}
-
-type ContactPickerContact = {
-  name?: string[];
-  tel?: string[];
-};
-
-type ContactPicker = {
-  select: (
-    properties: string[],
-    options?: { multiple?: boolean },
-  ) => Promise<ContactPickerContact[]>;
-};
-
-/** Normalize Persian/Arabic digits before validating an Iranian mobile number. */
-function normalizeContactDigits(value: string): string {
-  const persian = '۰۱۲۳۴۵۶۷۸۹';
-  const arabic = '٠١٢٣٤٥٦٧٨٩';
-  return value
-    .replace(/[۰-۹]/g, (digit) => String(persian.indexOf(digit)))
-    .replace(/[٠-٩]/g, (digit) => String(arabic.indexOf(digit)));
-}
-
-/** Convert common local/international formats to the backend's 09xxxxxxxxx shape. */
-function normalizeIranianMobile(value: string): string | null {
-  let digits = normalizeContactDigits(value.trim()).replace(/[^0-9+]/g, '');
-  if (digits.startsWith('+98')) digits = '0' + digits.slice(3);
-  else if (digits.startsWith('0098')) digits = '0' + digits.slice(4);
-  else if (digits.startsWith('98') && digits.length === 12) digits = '0' + digits.slice(2);
-  else if (digits.startsWith('9') && digits.length === 10) digits = '0' + digits;
-  return /^09\d{9}$/.test(digits) ? digits : null;
-}
-
-function getContactPicker(): ContactPicker | null {
-  if (typeof window === 'undefined' || typeof navigator === 'undefined') return null;
-  if (!window.isSecureContext) return null;
-  const candidate = (navigator as Navigator & { contacts?: ContactPicker }).contacts;
-  return candidate && typeof candidate.select === 'function' ? candidate : null;
-}
-
-/** Read common FN/TEL fields from a vCard exported by a phone contact app. */
-function parseVCard(text: string): { name?: string; phones: string[] } {
-  const lines = text.replace(/\r?\n[ \t]/g, '').split(/\r?\n/);
-  let name: string | undefined;
-  const phones: string[] = [];
-  const decode = (value: string) =>
-    value
-      .replace(/\\n/gi, '\n')
-      .replace(/\\,/g, ',')
-      .replace(/\\;/g, ';')
-      .trim();
-
-  for (const line of lines) {
-    const nameMatch = /^(?:item\d+\.)?FN(?:;[^:]*)?:(.*)$/i.exec(line);
-    if (nameMatch && !name) name = decode(nameMatch[1]);
-    const phoneMatch = /^(?:item\d+\.)?TEL(?:;[^:]*)?:(.*)$/i.exec(line);
-    if (phoneMatch) phones.push(decode(phoneMatch[1]));
-  }
-  return { name, phones };
 }
 
 /** Minutes since midnight in the salon timezone from an ISO string. */
@@ -693,10 +632,12 @@ function AppointmentBlock({
   const service = appt.serviceName ?? '—';
   const customer = appt.customerName;
   const { icon: statusIcon, label: statusLabel, ariaState } = statusIndicator(appt.status);
+  const compactLong = positioned && Boolean(appt.startAt && appt.endAt) &&
+    (new Date(appt.endAt!).getTime() - new Date(appt.startAt!).getTime()) >= 90 * 60_000;
   // Keep appointment content readable while collapsing only the actions when
   // a short timeline block cannot accommodate two text labels.
   const compact = compactView || (positioned && (height ?? 0) < 70);
-  const compactActions = compactView || (positioned && (height ?? 0) < 180);
+  const compactActions = compactView || compactLong || (positioned && (height ?? 0) < 180);
   const canDragAppointment = Boolean(draggableId) && !hasPendingReschedule;
   const canCancel = ['pending', 'held', 'confirmed', 'approved'].includes(appt.status ?? '');
   const appointmentStartMs = appt.startAt ? new Date(appt.startAt).getTime() : Number.NaN;
@@ -800,6 +741,94 @@ function AppointmentBlock({
       onDrop: () => onDragEnd?.(),
     });
   }, [draggableId, hasPendingReschedule, onDragEnd]);
+
+  if (compactLong) {
+    return (
+      <div
+        ref={draggableRef}
+        className={cn(
+          'absolute z-20 overflow-visible',
+          onOpen && 'cursor-pointer',
+          canDragAppointment && 'cursor-grab active:cursor-grabbing',
+        )}
+        style={positionStyle}
+        onClick={() => onOpen?.(appt)}
+        role="article"
+        aria-label={`${service} — ${customer ?? ''} — ${statusLabel}${hasPendingReschedule ? ' — تغییر زمان در انتظار تأیید مشتری' : ''}`}
+        data-status={ariaState}
+      >
+        <div
+          className={cn(
+            'relative z-10 flex h-full flex-col gap-1 overflow-hidden rounded-lg border border-border border-s-4 bg-surface px-2.5 py-1.5 text-text shadow-1 transition-all duration-fast ease-standard hover:-translate-y-px hover:border-primary/40 hover:shadow-2',
+            colorClass,
+          )}
+        >
+          <span className="flex min-w-0 items-center gap-1.5">
+            <Scissors className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+            {canDragAppointment && (
+              <span
+                ref={dragHandleRef}
+                role="img"
+                className="flex h-6 w-6 shrink-0 cursor-grab items-center justify-center touch-none text-muted/60"
+                aria-label="دسته جابه‌جایی نوبت"
+              >
+                <GripVertical className="h-3.5 w-3.5" aria-hidden="true" />
+              </span>
+            )}
+            <strong className="min-w-0 flex-1 truncate text-xs leading-tight">{service}</strong>
+            {start && (
+              <span className="shrink-0 rounded-full bg-bg px-1.5 py-0.5 text-[0.62rem] tabular-nums text-muted">
+                <Clock className="me-0.5 inline-block h-2.5 w-2.5" aria-hidden="true" />
+                <Num value={start} />
+                {end && <>–<Num value={end} /></>}
+              </span>
+            )}
+            {appointmentActions}
+          </span>
+          <span className="flex min-w-0 items-center justify-between gap-1">
+            {customer ? (
+              <span className="min-w-0 flex-1 truncate text-[0.68rem] leading-tight text-muted">
+                <User className="inline-block h-2.5 w-2.5 shrink-0 opacity-60" aria-hidden="true" />{' '}
+                {customer}
+              </span>
+            ) : (
+              <span className="min-w-0 flex-1" aria-hidden="true" />
+            )}
+            {statusBadge}
+          </span>
+          {(hasPendingReschedule || appt.depositReceiptStatus) && (
+            <span className="flex min-w-0 items-center gap-1 text-[0.65rem] leading-tight">
+              {hasPendingReschedule && (
+                <span className="truncate rounded-full bg-warning/15 px-1.5 py-0.5 text-text">
+                  تغییر زمان در انتظار تأیید مشتری
+                </span>
+              )}
+              {appt.depositReceiptStatus && (
+                <span
+                  className={cn(
+                    'inline-flex min-w-0 items-center gap-1 truncate rounded-full px-1.5 py-0.5',
+                    appt.depositReceiptStatus === 'pending'
+                      ? 'bg-warning/15 text-text'
+                      : appt.depositReceiptStatus === 'approved'
+                        ? 'bg-success/10 text-text'
+                        : 'bg-danger/10 text-text',
+                  )}
+                  title="وضعیت رسید بیعانه"
+                >
+                  <CreditCard className="h-3 w-3 shrink-0" aria-hidden="true" />
+                  {appt.depositReceiptStatus === 'pending'
+                    ? 'رسید بیعانه'
+                    : appt.depositReceiptStatus === 'approved'
+                      ? 'بیعانه تأیید شد'
+                      : 'رسید نیازمند بررسی'}
+                </span>
+              )}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (showShortLayout) {
     return (
@@ -1049,10 +1078,33 @@ function DayView({
   /** Grid starts at 07:00 = minute 420 */
   const gridStartMin = 7 * 60;
 
+  // Fold only the interior of long bookings. Keep every appointment's start,
+  // end and first hour visible, including bookings that overlap another one.
+  const foldedSlots = useMemo(() => TIME_SLOTS.map((slot) => {
+    const start = slot.hour * 60 + slot.minute;
+    const end = start + 30;
+    return positionedAppointments.some((item) =>
+      item.endMin - item.startMin >= 90 && start >= item.startMin + 60 && end <= item.endMin,
+    ) && positionedAppointments.every((item) =>
+      item.endMin <= start || item.startMin >= end ||
+      (item.startMin + 60 <= start && item.endMin >= end),
+    );
+  }), [positionedAppointments]);
+  const slotHeights = foldedSlots.map((folded, index) =>
+    folded ? (foldedSlots[index - 1] ? 0 : 16) : SLOT_HEIGHT,
+  );
+  const visibleSlotIndices = TIME_SLOTS.flatMap((_, index) => foldedSlots[index] ? [] : [index]);
+  const timelineOffset = (minute: number) => {
+    const offset = Math.max(0, minute - gridStartMin);
+    const index = Math.floor(offset / 30);
+    return slotHeights.slice(0, index).reduce((sum, height) => sum + height, 0) +
+      (offset % 30) / 30 * (slotHeights[index] ?? SLOT_HEIGHT);
+  };
+
   /** RTL vertical grid nav: ArrowUp/ArrowDown for time rows */
   const handleGridKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      const current = focusedRow ?? 0;
+      const current = visibleSlotIndices.indexOf(focusedRow ?? 0);
       let next = current;
 
       if (e.key === 'ArrowUp') {
@@ -1060,21 +1112,22 @@ function DayView({
         next = Math.max(current - 1, 0);
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
-        next = Math.min(current + 1, TIME_SLOTS.length - 1);
+        next = Math.min(current + 1, visibleSlotIndices.length - 1);
       } else if (e.key === 'Home') {
         e.preventDefault();
         next = 0;
       } else if (e.key === 'End') {
         e.preventDefault();
-        next = TIME_SLOTS.length - 1;
+        next = visibleSlotIndices.length - 1;
       } else {
         return;
       }
 
-      setFocusedRow(next);
-      rowRefs.current[next]?.focus();
+      const rowIndex = visibleSlotIndices[next];
+      setFocusedRow(rowIndex);
+      rowRefs.current[rowIndex]?.focus();
     },
-    [focusedRow],
+    [focusedRow, visibleSlotIndices],
   );
 
   const finishDrag = useCallback(() => {
@@ -1084,7 +1137,7 @@ function DayView({
   useEffect(() => {
     const cleanups = TIME_SLOTS.flatMap((slot, index) => {
       const element = rowRefs.current[index];
-      if (!element) return [];
+      if (!element || foldedSlots[index]) return [];
 
       const timeStr = `${String(slot.hour).padStart(2, '0')}:${String(slot.minute).padStart(2, '0')}`;
       return [
@@ -1111,7 +1164,7 @@ function DayView({
     });
 
     return () => cleanups.forEach((cleanup) => cleanup());
-  }, [anchor, dayAppts, onMove]);
+  }, [anchor, dayAppts, onMove, foldedSlots]);
 
   return (
     <div className="owner-calendar-day-view flex flex-col">
@@ -1179,6 +1232,15 @@ function DayView({
         >
           {/* Time rows */}
           {TIME_SLOTS.map((slot, idx) => {
+            const rowHeight = slotHeights[idx];
+            if (rowHeight === 0) return null;
+            if (foldedSlots[idx]) return (
+              <div key={`folded-${idx}`} role="row" aria-label="زمان میانی رزرو طولانی جمع شده"
+                className="flex items-center border-b border-dashed border-primary/25 bg-primary/5"
+                style={{ height: rowHeight }}>
+                <span className="w-16 text-center text-xs text-muted" aria-hidden="true">···</span>
+              </div>
+            );
             const timeStr = `${String(slot.hour).padStart(2, '0')}:${String(slot.minute).padStart(2, '0')}`;
             const isHour = slot.minute === 0;
             const isFocused = focusedRow === idx;
@@ -1219,7 +1281,7 @@ function DayView({
                   blocked && 'bg-danger/10 hover:bg-danger/15',
                   'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-focus',
                 )}
-                style={{ height: `${SLOT_HEIGHT}px` }}
+                style={{ height: `${rowHeight}px` }}
               >
                 {/* Time label */}
                 <div
@@ -1230,7 +1292,7 @@ function DayView({
                     'text-xs tabular-nums',
                     isHour ? 'font-medium text-text' : 'text-muted',
                   )}
-                  style={{ height: `${SLOT_HEIGHT}px` }}
+                  style={{ height: `${rowHeight}px` }}
                 >
                   <Num value={timeStr} />
                 </div>
@@ -1239,7 +1301,7 @@ function DayView({
                   role="gridcell"
                   aria-label={`${timeStr} زمان خالی`}
                   className="relative flex-1"
-                  style={{ height: `${SLOT_HEIGHT}px` }}
+                  style={{ height: `${rowHeight}px` }}
                 />
                 {blocked && (
                   <span className="pointer-events-none absolute end-3 mt-2 rounded-full bg-danger/15 px-2 py-1 text-[0.65rem] font-bold text-danger">
@@ -1259,10 +1321,9 @@ function DayView({
         {/* Positioned appointment blocks */}
         <div className="pointer-events-none absolute inset-0" style={{ insetInlineStart: '4rem' }}>
           {positionedAppointments.map(({ appt, lane, laneCount, startMin, endMin }) => {
-            const topPx = (startMin - gridStartMin) * PX_PER_MIN;
-            const duration = endMin - startMin;
-            const heightPx = Math.max(duration * PX_PER_MIN, 24);
-            if (topPx < 0) return null;
+            const topPx = timelineOffset(startMin);
+            const heightPx = Math.max(timelineOffset(endMin) - topPx, 24);
+            if (startMin < gridStartMin) return null;
             return (
               <div
                 key={appt.id}
@@ -2383,6 +2444,7 @@ function AvailabilityDialog({
   open,
   onOpenChange,
   onChanged,
+  inline = false,
 }: {
   salonId: string;
   date: Date;
@@ -2392,6 +2454,7 @@ function AvailabilityDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onChanged: () => void;
+  inline?: boolean;
 }) {
   const [mode, setMode] = useState<'full' | 'range'>(initialStart ? 'range' : 'full');
   const [start, setStart] = useState(initialStart ?? '09:00');
@@ -2486,14 +2549,25 @@ function AvailabilityDialog({
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={(next) => !busy && onOpenChange(next)}>
-      <DialogContent>
-        <DialogTitle>برنامه حضور این روز</DialogTitle>
-        <DialogDescription>
-          {PERSIAN_WEEKDAYS[iranianDayIndex(date)]}، {toPersianDigits(String(jalali.jd))}{' '}
-          {getJalaliMonthName(jalali.jm)} — ساعت‌های معمول سالن باز می‌مانند؛ فقط تعطیلی‌ها را مشخص کن.
-        </DialogDescription>
+  const content = (
+    <>
+      {inline ? (
+        <div className="mb-4">
+          <h3 className="m-0 text-lg font-bold text-text">برنامه حضور این روز</h3>
+          <p className="mt-1 text-sm leading-6 text-muted">
+            {PERSIAN_WEEKDAYS[iranianDayIndex(date)]}، {toPersianDigits(String(jalali.jd))}{' '}
+            {getJalaliMonthName(jalali.jm)} — ساعت‌های معمول سالن باز می‌مانند؛ فقط تعطیلی‌ها را مشخص کن.
+          </p>
+        </div>
+      ) : (
+        <>
+          <DialogTitle>برنامه حضور این روز</DialogTitle>
+          <DialogDescription>
+            {PERSIAN_WEEKDAYS[iranianDayIndex(date)]}، {toPersianDigits(String(jalali.jd))}{' '}
+            {getJalaliMonthName(jalali.jm)} — ساعت‌های معمول سالن باز می‌مانند؛ فقط تعطیلی‌ها را مشخص کن.
+          </DialogDescription>
+        </>
+      )}
 
         <div className="mt-4">
           <Select
@@ -2572,9 +2646,15 @@ function AvailabilityDialog({
         )}
         {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
         <div className="mt-5 flex justify-end gap-2">
-          <DialogClose asChild>
-            <Button type="button" variant="ghost" disabled={busy}>انصراف</Button>
-          </DialogClose>
+          {inline ? (
+            <Button type="button" variant="ghost" disabled={busy} onClick={() => onOpenChange(false)}>
+              بازگشت
+            </Button>
+          ) : (
+            <DialogClose asChild>
+              <Button type="button" variant="ghost" disabled={busy}>انصراف</Button>
+            </DialogClose>
+          )}
           <Button
             type="button"
             variant="primary"
@@ -2585,7 +2665,14 @@ function AvailabilityDialog({
             اعمال در تقویم
           </Button>
         </div>
-      </DialogContent>
+    </>
+  );
+
+  if (inline) return <div className="mt-4" data-testid="owner-calendar-availability-inline">{content}</div>;
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => !busy && onOpenChange(next)}>
+      <DialogContent>{content}</DialogContent>
     </Dialog>
   );
 }
@@ -2819,608 +2906,6 @@ function DateNav({
       </Button>
 
     </nav>
-  );
-}
-
-function ManualBookingDialog({
-  salonId,
-  date,
-  initialStart,
-  initialPhone,
-  initialFullName,
-  initialServiceId,
-  open,
-  onOpenChange,
-  onChanged,
-}: {
-  salonId: string;
-  date: Date;
-  initialStart?: string;
-  initialPhone?: string;
-  initialFullName?: string;
-  initialServiceId?: string;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onChanged: () => void;
-}) {
-  const titleRef = useRef<HTMLHeadingElement>(null);
-  const [services, setServices] = useState<
-    Array<{
-      id: string;
-      name: string;
-      durationMinutes: number;
-      durationMode?: 'fixed' | 'variable';
-      minDurationMinutes?: number | null;
-      maxDurationMinutes?: number | null;
-    }>
-  >([]);
-  const [serviceId, setServiceId] = useState('');
-  const [startAt, setStartAt] = useState('');
-  const [phone, setPhone] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [selectedClient, setSelectedClient] = useState<SalonClient | null>(null);
-  const [locationTypes, setLocationTypes] = useState<Array<'salon' | 'customer'>>(['salon']);
-  const [locationType, setLocationType] = useState<'salon' | 'customer'>('salon');
-  const [locationAddress, setLocationAddress] = useState('');
-  const [customerNote, setCustomerNote] = useState('');
-  const [durationOverride, setDurationOverride] = useState('');
-  const [clientSearch, setClientSearch] = useState('');
-  const [clientResults, setClientResults] = useState<SalonClient[]>([]);
-  const [clientSearchLoading, setClientSearchLoading] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [contactLoading, setContactLoading] = useState(false);
-  const [contactStatus, setContactStatus] = useState<
-    'idle' | 'success' | 'unsupported' | 'empty' | 'error'
-  >('idle');
-  const [error, setError] = useState('');
-
-  const toInputValue = useCallback(() => {
-    const value = new Date(date);
-    if (initialStart) {
-      const match = /^(\d{2}):(\d{2})$/.exec(initialStart);
-      if (match) value.setHours(Number(match[1]), Number(match[2]), 0, 0);
-    }
-    const pad = (part: number) => String(part).padStart(2, '0');
-    return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}`;
-  }, [date, initialStart]);
-
-  useEffect(() => {
-    if (!open) return;
-    setStartAt(toInputValue());
-    setPhone(initialPhone ?? '');
-    setFullName(initialFullName ?? '');
-    setSelectedClient(null);
-    setLocationTypes(['salon']);
-    setLocationType('salon');
-    setLocationAddress('');
-    setCustomerNote('');
-    setDurationOverride('');
-    setClientSearch('');
-    setClientResults([]);
-    setClientSearchLoading(false);
-    setContactStatus('idle');
-    setError('');
-    setLoading(true);
-    salonApi
-      .getServices(salonId)
-      .then((response) => {
-        const next = response.services.map((service) => ({
-          id: service.id,
-          name: service.name,
-          durationMinutes: service.durationMinutes,
-          durationMode: service.durationMode,
-          minDurationMinutes: service.minDurationMinutes,
-          maxDurationMinutes: service.maxDurationMinutes,
-        }));
-        setServices(next);
-        setServiceId(
-          initialServiceId && next.some((service) => service.id === initialServiceId)
-            ? initialServiceId
-            : next[0]?.id || '',
-        );
-        const selected = next.find((service) => service.id === (initialServiceId ?? next[0]?.id));
-        setDurationOverride(
-          selected?.durationMode === 'variable' && selected.minDurationMinutes
-            ? String(selected.minDurationMinutes)
-            : '',
-        );
-      })
-      .catch(() => {
-        setServices([]);
-        setError('دریافت فهرست خدمات انجام نشد.');
-      })
-      .finally(() => setLoading(false));
-  }, [
-    open,
-    salonId,
-    toInputValue,
-    initialPhone,
-    initialFullName,
-    initialServiceId,
-  ]);
-
-  useEffect(() => {
-    if (!open || typeof salonApi.getBookingPolicy !== 'function') return;
-    let active = true;
-    salonApi
-      .getBookingPolicy(salonId)
-      .then((policy) => {
-        if (!active) return;
-        const supported = (policy.locationTypes ?? []).filter(
-          (value): value is 'salon' | 'customer' => value === 'salon' || value === 'customer',
-        );
-        const nextTypes: Array<'salon' | 'customer'> =
-          supported.length > 0 ? supported : ['salon'];
-        setLocationTypes(nextTypes);
-        setLocationType((current) =>
-          nextTypes.includes(current) ? current : nextTypes[0] ?? 'salon',
-        );
-      })
-      .catch(() => {
-        if (active) {
-          setLocationTypes(['salon']);
-          setLocationType('salon');
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [open, salonId]);
-
-  // Booksy/Fresha-style client lookup: search only after two characters so the
-  // dialog stays fast on a phone and does not load the whole client book.
-  useEffect(() => {
-    const term = clientSearch.trim();
-    const searchTerm = normalizeContactDigits(term);
-    if (!open || selectedClient || term.length < 2) {
-      setClientResults([]);
-      setClientSearchLoading(false);
-      return;
-    }
-
-    let active = true;
-    const timer = window.setTimeout(() => {
-      setClientSearchLoading(true);
-      clientBookApi
-        .list(salonId, searchTerm)
-        .then((response) => {
-          if (active) setClientResults(response.clients.slice(0, 6));
-        })
-        .catch(() => {
-          if (active) setClientResults([]);
-        })
-        .finally(() => {
-          if (active) setClientSearchLoading(false);
-        });
-    }, 250);
-
-    return () => {
-      active = false;
-      window.clearTimeout(timer);
-    };
-  }, [clientSearch, open, salonId, selectedClient]);
-
-  const handleClientSelect = (client: SalonClient) => {
-    setSelectedClient(client);
-    setClientSearch('');
-    setClientResults([]);
-    setPhone(normalizeIranianMobile(client.phone) ?? client.phone);
-    setFullName(client.fullName?.trim() ?? '');
-    setError('');
-  };
-
-  const handleNewClient = () => {
-    setSelectedClient(null);
-    setClientSearch('');
-    setClientResults([]);
-    setPhone('');
-    setFullName('');
-    setError('');
-  };
-
-  const handleContactPick = async () => {
-    const picker = getContactPicker();
-    if (!picker) {
-      setContactStatus('unsupported');
-      return;
-    }
-
-    setContactLoading(true);
-    setContactStatus('idle');
-    try {
-      const contacts = await picker.select(['name', 'tel'], { multiple: false });
-      const contact = contacts[0];
-      const selectedPhone = (contact?.tel ?? [])
-        .map((value) => normalizeIranianMobile(value))
-        .find((value): value is string => Boolean(value));
-      if (!selectedPhone) {
-        setContactStatus('empty');
-        return;
-      }
-      setPhone(selectedPhone);
-      setClientSearch(selectedPhone);
-      setFullName(contact?.name?.find((value) => value.trim())?.trim() ?? '');
-      setContactStatus('success');
-    } catch (error) {
-      if ((error as DOMException)?.name !== 'AbortError') {
-        setContactStatus('error');
-      }
-    } finally {
-      setContactLoading(false);
-    }
-  };
-
-  const handleVCardImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-
-    setContactLoading(true);
-    setContactStatus('idle');
-    try {
-      const parsed = parseVCard(await file.text());
-      const selectedPhone = parsed.phones
-        .map((value) => normalizeIranianMobile(value))
-        .find((value): value is string => Boolean(value));
-      if (!selectedPhone) {
-        setContactStatus('empty');
-        return;
-      }
-      setPhone(selectedPhone);
-      setClientSearch(selectedPhone);
-      setFullName(parsed.name ?? '');
-      setContactStatus('success');
-    } catch {
-      setContactStatus('error');
-    } finally {
-      setContactLoading(false);
-    }
-  };
-
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const normalizedPhone = normalizeIranianMobile(phone);
-    if (!serviceId || !startAt || !normalizedPhone) {
-      setError('خدمت، زمان و شماره موبایل معتبر وارد کنید.');
-      return;
-    }
-    const normalizedAddress = locationAddress.trim();
-    if (locationType === 'customer' && normalizedAddress.length < 5) {
-      setError('آدرس مراجعه مشتری را کامل وارد کنید.');
-      return;
-    }
-    if (locationType === 'customer' && normalizedAddress.length > 300) {
-      setError('آدرس مراجعه نمی‌تواند بیشتر از ۳۰۰ نویسه باشد.');
-      return;
-    }
-    const selectedService = services.find((service) => service.id === serviceId);
-    const parsedDuration = durationOverride.trim() ? Number(durationOverride) : undefined;
-    if (selectedService?.durationMode === 'variable') {
-      if (
-        parsedDuration === undefined ||
-        !Number.isInteger(parsedDuration) ||
-        parsedDuration < (selectedService.minDurationMinutes ?? 5) ||
-        parsedDuration > (selectedService.maxDurationMinutes ?? 480)
-      ) {
-        setError(
-          `مدت خدمت باید بین ${toPersianDigits(String(selectedService.minDurationMinutes ?? 5))} تا ${toPersianDigits(String(selectedService.maxDurationMinutes ?? 480))} دقیقه باشد.`,
-        );
-        return;
-      }
-    }
-    if (customerNote.trim().length > 1000) {
-      setError('یادداشت مشتری نمی‌تواند بیشتر از ۱۰۰۰ نویسه باشد.');
-      return;
-    }
-    const start = new Date(startAt);
-    if (Number.isNaN(start.getTime())) {
-      setError('زمان انتخاب‌شده معتبر نیست.');
-      return;
-    }
-    setSaving(true);
-    setError('');
-    try {
-      await adminApi.createManualAppointment(salonId, {
-        serviceId,
-        startAt: start.toISOString(),
-        phone: normalizedPhone,
-        ...(fullName.trim() ? { fullName: fullName.trim() } : {}),
-        ...(locationType === 'customer'
-          ? { locationType: 'customer' as const, locationAddress: normalizedAddress }
-          : {}),
-        ...(customerNote.trim() ? { customerNote: customerNote.trim() } : {}),
-        ...(parsedDuration !== undefined ? { durationMinutes: parsedDuration } : {}),
-      });
-      onChanged();
-      onOpenChange(false);
-    } catch (reason) {
-      setError(getApiErrorMessage(reason, 'ثبت نوبت انجام نشد؛ این زمان احتمالاً پر شده است.'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const [startDate, startTime] = startAt.split('T');
-
-  return (
-    <Dialog open={open} onOpenChange={(next) => !saving && onOpenChange(next)}>
-      <DialogContent
-        className="manual-booking-dialog !w-[calc(100%-1rem)] !max-w-lg !rounded-2xl !p-4 sm:!p-5"
-        onOpenAutoFocus={(event) => {
-          event.preventDefault();
-          titleRef.current?.focus({ preventScroll: true });
-        }}
-      >
-        <DialogTitle ref={titleRef} tabIndex={-1} className="!text-xl !font-bold tracking-tight">ثبت نوبت حضوری</DialogTitle>
-        <DialogDescription className="!mt-2 max-w-xl leading-6">
-          نوبت حضوری هم از همان ظرفیت عضو تیم و صندلی استفاده می‌کند؛ بنابراین رزرو هم‌زمان ثبت نمی‌شود.
-        </DialogDescription>
-        <div className="mt-5 rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-start gap-2.5">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <User className="size-4" aria-hidden="true" />
-              </span>
-              <div className="min-w-0">
-                <h3 className="m-0 text-sm font-bold text-text">مشتری</h3>
-                <p className="m-0 mt-1 text-xs leading-5 text-muted">
-                  شماره را وارد کن؛ مشتری قبلی را انتخاب کن یا با همین شماره نوبت جدید ثبت کن.
-                </p>
-              </div>
-            </div>
-            {selectedClient && (
-              <Button type="button" variant="ghost" size="md" onClick={handleNewClient} disabled={saving}>
-                تغییر
-              </Button>
-            )}
-          </div>
-
-          {selectedClient ? (
-            <div className="mt-3 flex items-center gap-3 rounded-lg border border-primary/20 bg-bg p-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <User className="size-5" aria-hidden="true" />
-              </span>
-              <div className="min-w-0">
-                <strong className="block truncate text-sm text-text">
-                  {selectedClient.fullName?.trim() || 'مشتری بدون نام'}
-                </strong>
-                <span className="mt-0.5 block text-xs text-muted" dir="ltr">
-                  {toPersianDigits(normalizeIranianMobile(selectedClient.phone) ?? selectedClient.phone)}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
-                <div className="min-w-0 flex-1">
-                  <TextField
-                    label="شماره موبایل مشتری"
-                    placeholder="۰۹۱۲۳۴۵۶۷۸۹"
-                    value={clientSearch}
-                    onChange={(event) => {
-                      setClientSearch(event.target.value);
-                      setPhone(event.target.value);
-                      setSelectedClient(null);
-                      setError('');
-                    }}
-                    disabled={saving || loading}
-                    autoComplete="tel"
-                    inputMode="tel"
-                    dir="ltr"
-                  />
-                </div>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="md"
-                  className="w-full shrink-0 sm:w-auto"
-                  startIcon={<ContactRound className="h-4 w-4" />}
-                  onClick={() => void handleContactPick()}
-                  loading={contactLoading}
-                  disabled={saving || loading || contactLoading}
-                >
-                  از مخاطبین تلفن
-                </Button>
-              </div>
-              {clientSearch.trim().length >= 2 && (
-                <div className="mt-2">
-                  {clientSearchLoading && (
-                    <p className="m-0 px-1 text-xs text-muted" role="status">
-                      در حال جست‌وجو…
-                    </p>
-                  )}
-                  {!clientSearchLoading && clientResults.length > 0 && (
-                    <ul className="max-h-44 overflow-y-auto rounded-lg border border-border bg-bg">
-                      {clientResults.map((client) => (
-                        <li key={client.id} className="border-b border-border last:border-b-0">
-                          <button
-                            type="button"
-                            className="flex min-h-12 w-full items-center gap-3 px-3 py-2 text-start transition-colors hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
-                            onClick={() => handleClientSelect(client)}
-                          >
-                            <User className="size-4 shrink-0 text-primary" aria-hidden="true" />
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-sm font-bold text-text">
-                                {client.fullName?.trim() || 'مشتری بدون نام'}
-                              </span>
-                              <span className="block text-xs text-muted" dir="ltr">
-                                {toPersianDigits(normalizeIranianMobile(client.phone) ?? client.phone)}
-                              </span>
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {!clientSearchLoading && clientResults.length === 0 && (
-                    <p className="m-0 rounded-lg bg-bg px-3 py-2 text-xs leading-5 text-muted">
-                      مشتری با این شماره پیدا نشد؛ با ثبت نوبت به مشتری‌های این سالن اضافه می‌شود.
-                    </p>
-                  )}
-                </div>
-              )}
-              {!selectedClient && (
-                <TextField
-                  label="نام مشتری (اختیاری)"
-                  value={fullName}
-                  onChange={(event) => setFullName(event.target.value)}
-                  disabled={saving || loading}
-                  autoComplete="name"
-                />
-              )}
-              <div className="mt-2">
-                <label className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border bg-bg px-3 py-2 text-xs font-bold text-muted transition-colors hover:bg-elevated hover:text-text focus-within:outline focus-within:outline-2 focus-within:outline-focus">
-                  <input
-                    type="file"
-                    accept=".vcf,text/vcard"
-                    className="sr-only"
-                    onChange={(event) => void handleVCardImport(event)}
-                    disabled={saving || loading || contactLoading}
-                  />
-                  <ContactRound className="h-3.5 w-3.5" aria-hidden="true" />
-                  فایل مخاطب
-                </label>
-              </div>
-            </>
-          )}
-          {contactStatus === 'success' && (
-            <p role="status" className="m-0 mt-2 text-xs text-success">
-              اطلاعات مخاطب وارد شد؛ قبل از ثبت بررسی کن.
-            </p>
-          )}
-          {contactStatus === 'unsupported' && (
-            <p role="status" className="m-0 mt-2 text-xs text-muted">
-              انتخاب مستقیم مخاطبین فعال نیست؛ فایل .vcf مخاطب را انتخاب کن یا شماره را دستی وارد کن.
-            </p>
-          )}
-          {contactStatus === 'empty' && (
-            <p role="status" className="m-0 mt-2 text-xs text-warning">
-              این مخاطب شماره موبایل معتبر ندارد؛ شماره را دستی وارد کن.
-            </p>
-          )}
-          {contactStatus === 'error' && (
-            <p role="alert" className="m-0 mt-2 text-xs text-danger">
-              دریافت مخاطب انجام نشد؛ شماره را دستی وارد کن.
-            </p>
-          )}
-        </div>
-        <form onSubmit={(event) => void submit(event)} className="mt-5 flex flex-col gap-4">
-          <Select
-            label="خدمت"
-            value={serviceId}
-            onValueChange={(nextServiceId) => {
-              setServiceId(nextServiceId);
-              const nextService = services.find((service) => service.id === nextServiceId);
-              setDurationOverride(
-                nextService?.durationMode === 'variable' && nextService.minDurationMinutes
-                  ? String(nextService.minDurationMinutes)
-                  : '',
-              );
-            }}
-            options={services.map((service) => ({
-              value: service.id,
-              label: `${service.name} · ${toPersianDigits(String(service.durationMinutes))} دقیقه`,
-            }))}
-            placeholder={loading ? 'در حال دریافت خدمات…' : 'انتخاب خدمت'}
-            disabled={loading || saving}
-            emptyText="خدمتی ثبت نشده است"
-          />
-          {services.find((service) => service.id === serviceId)?.durationMode === 'variable' && (
-            <TextField
-              label="مدت این نوبت (دقیقه)"
-              type="number"
-              min={services.find((service) => service.id === serviceId)?.minDurationMinutes ?? 5}
-              max={services.find((service) => service.id === serviceId)?.maxDurationMinutes ?? 480}
-              step={5}
-              value={durationOverride}
-              onChange={(event) => setDurationOverride(event.target.value)}
-              disabled={saving}
-              helperText={`بین ${toPersianDigits(String(services.find((service) => service.id === serviceId)?.minDurationMinutes ?? 5))} تا ${toPersianDigits(String(services.find((service) => service.id === serviceId)?.maxDurationMinutes ?? 480))} دقیقه`}
-              dir="ltr"
-            />
-          )}
-          <section
-            aria-labelledby="manual-booking-start-title"
-            className="rounded-2xl border border-border bg-elevated/60 p-3 sm:p-4"
-          >
-            <div className="flex items-start gap-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <Clock className="size-4" aria-hidden="true" />
-              </span>
-              <div className="min-w-0">
-                <h3 id="manual-booking-start-title" className="m-0 text-sm font-bold text-text">
-                  زمان شروع نوبت
-                </h3>
-                <p className="m-0 mt-1 text-xs leading-5 text-muted">
-                  تاریخ و ساعت را از انتخاب‌گر فارسی مشخص کن.
-                </p>
-              </div>
-            </div>
-            <div className="owner-calendar-time-fields mt-3 grid gap-3 sm:grid-cols-2">
-              <MobileDatePicker
-                label="تاریخ نوبت"
-                value={startDate || null}
-                onChange={(nextDate) => setStartAt(`${nextDate}T${startTime || '09:00'}`)}
-                disabled={saving}
-              />
-              <TimeWheelField
-                label="ساعت شروع"
-                value={startTime || '09:00'}
-                onChange={(nextTime) => setStartAt(`${startDate}T${nextTime}`)}
-                disabled={saving}
-              />
-            </div>
-          </section>
-          <label className="flex flex-col gap-1.5 text-xs font-medium text-muted">
-            <span>یادداشت مشتری (اختیاری)</span>
-            <textarea
-              value={customerNote}
-              onChange={(event) => setCustomerNote(event.target.value)}
-              maxLength={1000}
-              rows={3}
-              disabled={saving}
-              aria-label="یادداشت مشتری (اختیاری)"
-              className="w-full resize-y rounded-lg border border-border bg-bg px-3 py-2.5 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
-            />
-            <span className="text-[0.68rem] font-normal text-muted">
-              {toPersianDigits(String(customerNote.length))} / ۱۰۰۰
-            </span>
-          </label>
-          {locationTypes.length > 1 && (
-            <Select
-              label="محل ارائه خدمت"
-              value={locationType}
-              onValueChange={(value) => setLocationType(value as 'salon' | 'customer')}
-              options={[
-                { value: 'salon', label: 'در سالن / محل کار' },
-                { value: 'customer', label: 'در محل مشتری' },
-              ].filter((option) => locationTypes.includes(option.value as 'salon' | 'customer'))}
-              disabled={saving}
-            />
-          )}
-          {locationType === 'customer' && (
-            <TextField
-              label="آدرس مراجعه مشتری"
-              placeholder="شهر، خیابان، کوچه، پلاک…"
-              value={locationAddress}
-              onChange={(event) => setLocationAddress(event.target.value)}
-              disabled={saving}
-              helperText="برای جلوگیری از ثبت اشتباه، آدرس را کامل بنویسید."
-            />
-          )}
-          {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-          <div className="mt-2 flex items-center justify-end gap-2">
-            <DialogClose asChild>
-              <Button type="button" variant="ghost" className="min-w-20" disabled={saving}>انصراف</Button>
-            </DialogClose>
-            <Button type="submit" className="min-w-28" loading={saving} disabled={saving || loading || !serviceId}>
-              ثبت نوبت
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -3723,18 +3208,21 @@ function ApprovalQueue({
         )}
       </div>
 
-      <Dialog open={approvalDialogOpen} onOpenChange={setApprovalDialogOpen}>
-        <DialogContent className="!max-w-xl !p-3 sm:!p-5">
+      <Sheet open={approvalDialogOpen} onOpenChange={setApprovalDialogOpen}>
+        <SheetContent
+          side="inline-end"
+          className="!p-4 sm:!p-5 md:!w-[min(38rem,100vw)]"
+        >
           <div className="pe-10">
-            <DialogTitle className="text-base sm:text-lg">
+            <SheetTitle className="text-base sm:text-lg">
               مدیریت نوبت‌های در انتظار تأیید
               <span className="ms-2 rounded-full bg-warning/15 px-2 py-0.5 text-xs font-bold text-warning tabular-nums">
                 <Num value={pending.length} />
               </span>
-            </DialogTitle>
-            <DialogDescription>
+            </SheetTitle>
+            <SheetDescription>
               هر نوبت را بررسی کن و تأیید یا ردش کن.
-            </DialogDescription>
+            </SheetDescription>
           </div>
           <div className="mt-4">
             <ul role="list" className="flex flex-col gap-1.5">
@@ -3752,12 +3240,16 @@ function ApprovalQueue({
             />
           </div>
           <div className="mt-3 flex justify-end border-t border-border pt-3">
-            <DialogClose asChild>
-              <Button variant="ghost" className="w-full sm:w-auto">بستن</Button>
-            </DialogClose>
+            <Button
+              variant="ghost"
+              className="w-full sm:w-auto"
+              onClick={() => setApprovalDialogOpen(false)}
+            >
+              بستن
+            </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
         </section>
       )}
 
@@ -4295,7 +3787,7 @@ export function OwnerCalendarPage() {
   const { role } = useAuth();
   const salonId = useSalonId();
   const location = useLocation();
-  const { lastEvent: inboxEvent } = useInboxWs(salonId);
+  const { lastEvent: inboxEvent, resumeVersion } = useInboxWs(salonId);
   useHashScroll();
   const navigate = useNavigate();
 
@@ -4312,6 +3804,7 @@ export function OwnerCalendarPage() {
   const [staffCalendarBlocks, setStaffCalendarBlocks] = useState<StaffCalendarBlock[]>([]);
   const [closureReloadToken, setClosureReloadToken] = useState(0);
   const [mobileManageOpen, setMobileManageOpen] = useState(false);
+  const [mobileAvailabilityOpen, setMobileAvailabilityOpen] = useState(false);
   const [approvalPolicyOpen, setApprovalPolicyOpen] = useState(false);
   const [availabilityOpen, setAvailabilityOpen] = useState(false);
   const [availabilityDate, setAvailabilityDate] = useState<Date>(() => new Date());
@@ -4349,11 +3842,12 @@ export function OwnerCalendarPage() {
     setView('day');
   }, [location.search]);
 
+
   useEffect(() => {
-    if (!inboxEvent) return;
+    if (!inboxEvent && resumeVersion === 0) return;
     setReloadToken((value) => value + 1);
     setApprovalReloadToken((value) => value + 1);
-  }, [inboxEvent?.id]);
+  }, [inboxEvent?.id, resumeVersion]);
 
 
   // Track direction for animations
@@ -4793,8 +4287,18 @@ export function OwnerCalendarPage() {
         </p>
       </header>
 
+      {/* Pending approval queue — surfaced directly below the calendar title
+          so owners can approve or reject bookings before the day schedule. */}
+      <ApprovalQueue
+        refreshKey={approvalReloadToken}
+        salonId={salonId}
+        onResolved={() => setReloadToken((n) => n + 1)}
+        onOpen={openAppointment}
+        className="owner-calendar-pending-approval"
+      />
+
       {moveNotice && (
-        <p role="status" className="m-0 rounded-xl border border-success/25 bg-success/10 px-3 py-2 text-sm text-success">
+        <p role="status" className="owner-calendar-move-notice m-0 rounded-xl border border-success/25 bg-success/10 px-3 py-2 text-sm text-success">
           {moveNotice}
         </p>
       )}
@@ -4814,23 +4318,23 @@ export function OwnerCalendarPage() {
           </div>
           <div className="owner-calendar-mobile-manage">
             <section
-              aria-label="مدیریت ساعت و تعطیلی"
+              aria-label="مدیریت ساعت، تعطیلی و تأیید رزرو"
               data-testid="owner-calendar-mobile-manage"
-              className="owner-calendar-mobile-manage-card rounded-2xl border-2 border-s-primary border-border bg-elevated p-2 shadow-2"
+              className="owner-calendar-mobile-manage-card rounded-2xl border-2 border-s-primary border-border bg-elevated p-1.5 shadow-2"
             >
               <button
                 type="button"
                 aria-expanded={mobileManageOpen}
                 aria-controls="owner-calendar-mobile-manage-options"
-                aria-label={`مدیریت ساعت و تعطیلی برای ${anchorLabel}`}
+                aria-label={`مدیریت ساعت و تعطیلی برای ${anchorLabel} و تنظیم تأیید رزرو`}
                 data-testid="owner-calendar-mobile-manage-toggle"
-                onClick={() => setMobileManageOpen((open) => !open)}
-                className="owner-calendar-mobile-manage-toggle flex min-h-[4.25rem] w-full items-center gap-3 rounded-xl px-2 py-2 text-start transition-colors hover:bg-primary/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+                onClick={() => setMobileManageOpen(true)}
+                className="owner-calendar-mobile-manage-toggle flex min-h-12 w-full items-center gap-2 rounded-xl px-2 py-1 text-start transition-colors hover:bg-primary/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
               >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-contrast shadow-1">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-contrast shadow-1">
                   <Settings2 className="h-5 w-5" aria-hidden="true" />
                 </span>
-                <span className="flex min-w-0 flex-1 flex-col gap-1">
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="text-sm font-extrabold text-text">مدیریت ساعت و تعطیلی</span>
                   <span className="truncate text-xs font-medium text-muted">
                     تنظیم ساعت هفتگی یا تعطیلی {anchorLabel}
@@ -4841,89 +4345,136 @@ export function OwnerCalendarPage() {
                   aria-hidden="true"
                 />
               </button>
-
-              <div
-                id="owner-calendar-mobile-manage-options"
-                hidden={!mobileManageOpen}
-                className="owner-calendar-mobile-manage-options mt-2 border-t border-border/70 pt-3"
-              >
-                <p className="m-0 text-xs leading-5 text-muted">
-                  ساعت‌های هر هفته را از گزینه اول؛ تعطیلی فقط همین تاریخ را از گزینه دوم تنظیم کن.
-                </p>
-                <div className="owner-calendar-mobile-manage-date mt-2 flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5">
-                  <CalendarClock className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-                  <span className="text-xs font-semibold text-muted">روز انتخاب‌شده:</span>
-                  <strong className="min-w-0 text-sm text-text">{anchorLabel}</strong>
-                </div>
-
-                <div className="mt-2 flex flex-col gap-2">
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    fullWidth
-                    startIcon={
-                      <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-contrast/15 text-primary-contrast">
-                        <Clock className="h-5 w-5" />
-                      </span>
-                    }
-                    endIcon={<ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
-                    onClick={() =>
-                      navigate(
-                        `/owner/calendar/working-hours?weekday=${iranianDayIndex(anchor)}&date=${dateKey(anchor)}`,
-                      )
-                    }
-                    aria-label={`تغییر ساعت کاری هفتگی برای همه‌ی ${PERSIAN_WEEKDAYS[iranianDayIndex(anchor)]}‌ها`}
-                    data-testid="owner-calendar-manage-weekly-trigger"
-                    className="owner-calendar-mobile-manage-action min-h-[4.5rem] !justify-start !rounded-2xl !px-3 !py-2.5 !text-start !whitespace-normal"
-                  >
-                    <span className="owner-calendar-mobile-manage-copy">
-                      <span className="text-sm font-extrabold">تغییر ساعت کاری</span>
-                      <span className="owner-calendar-mobile-manage-scope owner-calendar-mobile-manage-scope-weekly">
-                        <span className="owner-calendar-mobile-manage-scope-badge">هر هفته</span>
-                        <span>همه‌ی {PERSIAN_WEEKDAYS[iranianDayIndex(anchor)]}‌ها</span>
-                      </span>
-                    </span>
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="lg"
-                    fullWidth
-                    startIcon={
-                      <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning">
-                        <CalendarOff className="h-5 w-5" />
-                      </span>
-                    }
-                    endIcon={<ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
-                    onClick={() => openAvailability(anchor)}
-                    aria-label={`تعطیلی کامل یا بستن بخشی از ساعت فقط برای ${anchorLabel}`}
-                    data-testid="owner-calendar-manage-day-trigger"
-                    className="owner-calendar-mobile-manage-action !border-warning/40 !bg-warning/5 min-h-[4.5rem] !justify-start !rounded-2xl !px-3 !py-2.5 !text-start !whitespace-normal"
-                  >
-                    <span className="owner-calendar-mobile-manage-copy">
-                      <span className="text-sm font-extrabold">تعطیلی یا بستن ساعت</span>
-                      <span className="owner-calendar-mobile-manage-scope owner-calendar-mobile-manage-scope-date">
-                        <span className="owner-calendar-mobile-manage-scope-badge">فقط همین روز</span>
-                        <span>تعطیلی کامل یا بخشی از ساعت</span>
-                      </span>
-                    </span>
-                  </Button>
-                </div>
-              </div>
             </section>
-            {(role === 'Owner' || role === 'Admin' || role === 'PlatformAdmin') && (
-              <Button
-                variant="ghost"
-                size="md"
-                startIcon={<CheckCircle2 className="h-4 w-4 text-primary" />}
-                endIcon={<ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
-                onClick={() => setApprovalPolicyOpen(true)}
-                aria-haspopup="dialog"
-                data-testid="owner-calendar-approval-policy-trigger"
-                className="owner-calendar-mobile-policy min-h-11 w-full justify-start !rounded-xl !px-3 text-xs"
+            <Sheet
+              open={mobileManageOpen}
+              onOpenChange={(next) => {
+                setMobileManageOpen(next);
+                if (!next) setMobileAvailabilityOpen(false);
+              }}
+            >
+              <SheetContent
+                side="bottom"
+                id="owner-calendar-mobile-manage-options"
+                data-testid="owner-calendar-mobile-manage-sheet"
+                className="owner-calendar-action-sheet !p-4 sm:!p-5"
               >
-                تنظیم روش تأیید رزروهای جدید
-              </Button>
-            )}
+                <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" aria-hidden="true" />
+                <div className="pe-10">
+                  <SheetTitle className="text-xl font-bold">مدیریت ساعت و تعطیلی</SheetTitle>
+                  <SheetDescription>ساعت کاری، تعطیلی و روش تأیید رزرو را از اینجا مدیریت کن.</SheetDescription>
+                </div>
+                {mobileAvailabilityOpen ? (
+                  <AvailabilityDialog
+                    salonId={salonId}
+                    date={availabilityDate}
+                    initialStart={availabilityStart}
+                    closures={closures}
+                    staff={staff}
+                    open={mobileAvailabilityOpen}
+                    onOpenChange={setMobileAvailabilityOpen}
+                    onChanged={() => setClosureReloadToken((n) => n + 1)}
+                    inline
+                  />
+                ) : (
+                  <>
+                    <p className="mt-3 text-xs leading-5 text-muted">
+                      ساعت‌های هر هفته را از گزینه اول؛ تعطیلی فقط همین تاریخ را از گزینه دوم تنظیم کن.
+                    </p>
+                    <div className="owner-calendar-mobile-manage-date mt-2 flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5">
+                      <CalendarClock className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                      <span className="text-xs font-semibold text-muted">روز انتخاب‌شده:</span>
+                      <strong className="min-w-0 text-sm text-text">{anchorLabel}</strong>
+                    </div>
+
+                    <div className="mt-2 flex flex-col gap-2">
+                      <Button
+                        variant="primary"
+                        size="lg"
+                        fullWidth
+                        startIcon={
+                          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-contrast/15 text-primary-contrast">
+                            <Clock className="h-5 w-5" />
+                          </span>
+                        }
+                        endIcon={<ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
+                        onClick={() => {
+                          setMobileManageOpen(false);
+                          navigate(
+                            `/owner/calendar/working-hours?weekday=${iranianDayIndex(anchor)}&date=${dateKey(anchor)}`,
+                          );
+                        }}
+                        aria-label={`تغییر ساعت کاری هفتگی برای همه‌ی ${PERSIAN_WEEKDAYS[iranianDayIndex(anchor)]}‌ها`}
+                        data-testid="owner-calendar-manage-weekly-trigger"
+                        className="owner-calendar-mobile-manage-action min-h-[4.5rem] !justify-start !rounded-2xl !px-3 !py-2.5 !text-start !whitespace-normal"
+                      >
+                        <span className="owner-calendar-mobile-manage-copy">
+                          <span className="text-sm font-extrabold">تغییر ساعت کاری</span>
+                          <span className="owner-calendar-mobile-manage-scope owner-calendar-mobile-manage-scope-weekly">
+                            <span className="owner-calendar-mobile-manage-scope-badge">هر هفته</span>
+                            <span>همه‌ی {PERSIAN_WEEKDAYS[iranianDayIndex(anchor)]}‌ها</span>
+                          </span>
+                        </span>
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="lg"
+                        fullWidth
+                        startIcon={
+                          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning">
+                            <CalendarOff className="h-5 w-5" />
+                          </span>
+                        }
+                        endIcon={<ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
+                        onClick={() => {
+                          setAvailabilityDate(new Date(anchor));
+                          setAvailabilityStart(undefined);
+                          setMobileAvailabilityOpen(true);
+                        }}
+                        aria-label={`تعطیلی کامل یا بستن بخشی از ساعت فقط برای ${anchorLabel}`}
+                        data-testid="owner-calendar-manage-day-trigger"
+                        className="owner-calendar-mobile-manage-action !border-warning/40 !bg-warning/5 min-h-[4.5rem] !justify-start !rounded-2xl !px-3 !py-2.5 !text-start !whitespace-normal"
+                      >
+                        <span className="owner-calendar-mobile-manage-copy">
+                          <span className="text-sm font-extrabold">تعطیلی یا بستن ساعت</span>
+                          <span className="owner-calendar-mobile-manage-scope owner-calendar-mobile-manage-scope-date">
+                            <span className="owner-calendar-mobile-manage-scope-badge">فقط همین روز</span>
+                            <span>تعطیلی کامل یا بخشی از ساعت</span>
+                          </span>
+                        </span>
+                      </Button>
+                    </div>
+                    {(role === 'Owner' || role === 'Admin' || role === 'PlatformAdmin') && (
+                      <div className="mt-2">
+                        <Button
+                          variant="secondary"
+                          size="lg"
+                          fullWidth
+                          startIcon={
+                            <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                              <CheckCircle2 className="h-5 w-5" />
+                            </span>
+                          }
+                          endIcon={<ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
+                          onClick={() => {
+                            setMobileManageOpen(false);
+                            setApprovalPolicyOpen(true);
+                          }}
+                          aria-haspopup="dialog"
+                          data-testid="owner-calendar-approval-policy-trigger"
+                          className="owner-calendar-mobile-manage-action min-h-[4.5rem] !justify-start !rounded-2xl !border-primary/20 !bg-primary/5 !px-3 !py-2.5 !text-start !whitespace-normal"
+                        >
+                          <span className="owner-calendar-mobile-manage-copy">
+                            <span className="text-sm font-extrabold">تنظیم تأیید رزروهای جدید</span>
+                            <span className="text-xs font-medium text-muted">انتخاب تأیید خودکار یا دستی</span>
+                          </span>
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </SheetContent>
+            </Sheet>
           </div>
           <div className="owner-calendar-actions">
             <Button
@@ -4983,16 +4534,6 @@ export function OwnerCalendarPage() {
           setCalendarStaffId('all');
           setCalendarStatus('all');
         }}
-      />
-
-      {/* Pending approval queue — surfaced at top of calendar so owners can
-          one-tap Approve/Reject without leaving the calendar view. */}
-      <ApprovalQueue
-        refreshKey={approvalReloadToken}
-        salonId={salonId}
-        onResolved={() => setReloadToken((n) => n + 1)}
-        onOpen={openAppointment}
-        className="owner-calendar-pending-approval"
       />
 
       {role !== 'Stylist' && (
@@ -5113,7 +4654,7 @@ export function OwnerCalendarPage() {
         onOpenChange={setAvailabilityOpen}
         onChanged={() => setClosureReloadToken((n) => n + 1)}
       />
-      <ManualBookingDialog
+      <ManualBookingSheet
         salonId={salonId}
         date={manualDate}
         initialStart={manualStart}

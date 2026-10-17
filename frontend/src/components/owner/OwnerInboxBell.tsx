@@ -45,8 +45,8 @@ function relativeTime(
  * Header bell with unread badge + dropdown panel of recent notifications.
  *
  * Persistent state lives at the page level (`OwnerNotificationsPage`); the bell
- * is purely a quick glance — it polls unread-count on mount and refreshes
- * whenever a WS push arrives. Marking rows read here optimistically bumps the
+ * is purely a quick glance — it refreshes on mount/resume and polls as a
+ * fallback. Marking rows read here optimistically bumps the
  * badge down so the owner can clear approvals in a single tap without leaving
  * whatever dashboard page they're on.
  */
@@ -54,7 +54,7 @@ export function OwnerInboxBell() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const salonId = useSalonId();
-  const { lastEvent } = useInboxWs(salonId);
+  const { lastEvent, resumeVersion } = useInboxWs(salonId);
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const [recent, setRecent] = useState<SalonNotification[]>([]);
@@ -62,8 +62,21 @@ export function OwnerInboxBell() {
   const [busy, setBusy] = useState(false);
   const [liveAlert, setLiveAlert] = useState<SalonNotification | null>(null);
   const liveAlertTimerRef = useRef<number | null>(null);
+  const knownNotificationIdsRef = useRef<Set<string> | null>(null);
+  const inboxInitializedRef = useRef(false);
   const anchorRef = useRef<HTMLDivElement>(null);
   const readOnOpenRef = useRef(false);
+
+  const showLiveAlert = useCallback((notification: SalonNotification) => {
+    setLiveAlert(notification);
+    if (liveAlertTimerRef.current !== null) {
+      window.clearTimeout(liveAlertTimerRef.current);
+    }
+    liveAlertTimerRef.current = window.setTimeout(() => {
+      setLiveAlert(null);
+      liveAlertTimerRef.current = null;
+    }, 6500);
+  }, []);
 
   const refreshAll = useCallback(async () => {
     if (!salonId) return;
@@ -73,6 +86,17 @@ export function OwnerInboxBell() {
         inboxApi.unreadCount(salonId),
         inboxApi.list(salonId, { limit: 6 }),
       ]);
+      const knownIds = knownNotificationIdsRef.current;
+      if (inboxInitializedRef.current && knownIds) {
+        const missedNotification = list.notifications.find(
+          (notification) => !knownIds.has(notification.id) && !notification.readAt,
+        );
+        if (missedNotification) showLiveAlert(missedNotification);
+      }
+      knownNotificationIdsRef.current = new Set(
+        list.notifications.map((notification) => notification.id),
+      );
+      inboxInitializedRef.current = true;
       setUnread(count.count);
       setRecent(list.notifications);
     } catch {
@@ -80,12 +104,12 @@ export function OwnerInboxBell() {
     } finally {
       setLoading(false);
     }
-  }, [salonId]);
+  }, [salonId, showLiveAlert]);
 
-  // Initial load.
+  // Refresh the durable inbox immediately when a suspended page resumes.
   useEffect(() => {
-    refreshAll();
-  }, [refreshAll]);
+    void refreshAll();
+  }, [refreshAll, resumeVersion]);
 
   // Poll every 60s as a WS fallback (network drop, tab was backgrounded).
   useEffect(() => {
@@ -97,24 +121,21 @@ export function OwnerInboxBell() {
   // an accessible alert even when the notification panel is closed.
   useEffect(() => {
     if (!lastEvent) return;
+    const knownIds = knownNotificationIdsRef.current ?? new Set<string>();
+    if (knownIds.has(lastEvent.id)) return;
+    knownIds.add(lastEvent.id);
+    knownNotificationIdsRef.current = knownIds;
     setUnread((u) => u + 1);
     setRecent((list) => [lastEvent, ...list.filter((n) => n.id !== lastEvent.id)].slice(0, 6));
-    setLiveAlert(lastEvent);
-    if (liveAlertTimerRef.current !== null) {
-      window.clearTimeout(liveAlertTimerRef.current);
-    }
-    liveAlertTimerRef.current = window.setTimeout(() => {
-      setLiveAlert(null);
-      liveAlertTimerRef.current = null;
-    }, 6500);
+    showLiveAlert(lastEvent);
+  }, [lastEvent, showLiveAlert]);
 
-    return () => {
-      if (liveAlertTimerRef.current !== null) {
-        window.clearTimeout(liveAlertTimerRef.current);
-        liveAlertTimerRef.current = null;
-      }
-    };
-  }, [lastEvent]);
+  useEffect(
+    () => () => {
+      if (liveAlertTimerRef.current !== null) window.clearTimeout(liveAlertTimerRef.current);
+    },
+    [],
+  );
 
   // Close on outside click.
   useEffect(() => {

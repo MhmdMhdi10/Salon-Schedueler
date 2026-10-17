@@ -40,7 +40,7 @@
  * track remains centered in the header without covering either control. */
 @media (max-width: 47.9375rem) {
   .register-step-progress__track {
-    width: min(64%, calc(100% - 12rem));
+    width: min(52%, calc(100% - 12rem));
   }
 }
 

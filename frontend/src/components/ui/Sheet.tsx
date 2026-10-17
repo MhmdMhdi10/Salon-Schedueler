@@ -14,7 +14,7 @@ import { IconButton } from './IconButton';
  * On mobile it presents as a **bottom sheet** (slot/date pickers per the design
  * inventory) and is **safe-area aware**, padding the bottom by
  * `env(safe-area-inset-bottom)` so content clears the home indicator
- * (ui-ux §5). At `sm` and up it docks to the inline-end as a side drawer.
+ * (ui-ux §5). At `md` and up it docks to the inline-end as a side drawer.
  */
 export const Sheet = RadixDialog.Root;
 export const SheetTrigger = RadixDialog.Trigger;
@@ -53,7 +53,7 @@ export interface SheetContentProps extends React.ComponentPropsWithoutRef<
 > {
   /**
    * Placement. `bottom` (default) is a bottom sheet on all sizes; `inline-end`
-   * is a bottom sheet on mobile that becomes a side drawer at `sm`+.
+   * is a bottom sheet on mobile that becomes a side drawer at `md`+.
    */
   side?: SheetSide;
   /** Show the default close (✕) button. Defaults to true. */
@@ -73,9 +73,9 @@ const inlineEndClasses = cn(
   // Mobile: behaves like a bottom sheet…
   'inset-x-0 bottom-0 w-full rounded-t-lg border-t border-border',
   'pb-[max(var(--space-5),env(safe-area-inset-bottom))]',
-  // …promoting to an inline-end side drawer from `sm` up.
-  'sm:inset-y-0 sm:bottom-auto sm:start-auto sm:end-0 sm:h-full sm:w-80',
-  'sm:rounded-t-none sm:rounded-s-lg sm:border-t-0 sm:border-s sm:pb-5',
+  // …promoting to an inline-end side drawer from `md` up.
+  'md:inset-y-0 md:bottom-auto md:start-auto md:end-0 md:h-full md:w-80',
+  'md:rounded-t-none md:rounded-s-lg md:border-t-0 md:border-s md:pb-5',
 );
 
 export const SheetContent = forwardRef<
@@ -107,13 +107,11 @@ export const SheetContent = forwardRef<
         className={cn(
           'fixed z-dialog bg-elevated p-5 text-text shadow-3 outline-none',
           'max-h-[90dvh] overscroll-contain overflow-y-auto',
-          // Enter: bottom sheets slide up (`toast-in`), side drawers slide in
-          // from the inline-end; exits are an opacity fade. All motion-safe
-          // gated and clamped globally under prefers-reduced-motion.
+          // Bottom sheets enter and exit through the bottom edge. Side drawers
+          // retain their desktop motion. Respect the reduced-motion preference.
           side === 'bottom'
-            ? 'motion-safe:data-[state=open]:animate-toast-in'
-            : 'motion-safe:data-[state=open]:animate-slide-in-end',
-          'motion-safe:data-[state=closed]:animate-fade-out',
+            ? 'motion-safe:data-[state=open]:animate-sheet-in motion-safe:data-[state=closed]:animate-sheet-out'
+            : 'max-md:motion-safe:data-[state=open]:animate-sheet-in max-md:motion-safe:data-[state=closed]:animate-sheet-out md:motion-safe:data-[state=open]:animate-slide-in-end md:motion-safe:data-[state=closed]:animate-fade-out',
           side === 'bottom' ? bottomClasses : inlineEndClasses,
           className,
         )}
