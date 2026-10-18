@@ -191,11 +191,12 @@ describe('ConfigurationPage', () => {
 
     // Inline add: typing a staff name and submitting appends a list item.
     vi.mocked(staffApi.create).mockResolvedValue({
+      invitationStatus: 'sent',
       staff: {
         id: 's-new',
         fullName: 'سارا',
         role: 'Stylist',
-        phone: null,
+        phone: '09120000000',
         active: true,
         autoApprove: null,
         manageOwnAvailability: false,
@@ -203,6 +204,9 @@ describe('ConfigurationPage', () => {
     });
     const nameInput = screen.getByLabelText('نام عضو تیم');
     fireEvent.change(nameInput, { target: { value: 'سارا' } });
+    fireEvent.change(screen.getByLabelText('شماره موبایل عضو تیم'), {
+      target: { value: '09120000000' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'افزودن عضو تیم' }));
 
     await waitFor(() =>
@@ -211,7 +215,7 @@ describe('ConfigurationPage', () => {
     expect(staffApi.create).toHaveBeenCalledWith('salon-9', {
       fullName: 'سارا',
       role: 'Stylist',
-      phone: null,
+      phone: '09120000000',
     });
   });
 

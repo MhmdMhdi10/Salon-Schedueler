@@ -413,16 +413,20 @@ function StaffSection({
       return;
     }
     const trimmedPhone = normalizePhone(phone);
-    if (trimmedPhone && !STAFF_PHONE_RE.test(trimmedPhone)) {
+    if (!trimmedPhone) {
+      setFormError(t('admin.config.staff.phoneRequired'));
+      return;
+    }
+    if (!STAFF_PHONE_RE.test(trimmedPhone)) {
       setFormError(t('admin.config.staff.invalidPhone'));
       return;
     }
     setSaving(true);
     try {
-      const { staff: created } = await staffApi.create(salonId, {
+      const { staff: created, invitationStatus } = await staffApi.create(salonId, {
         fullName: name,
         role,
-        phone: trimmedPhone || null,
+        phone: trimmedPhone,
       });
       onChange((prev) => [...prev, created]);
       setFullName('');
@@ -430,10 +434,18 @@ function StaffSection({
       setPhone('');
       onStaffAdded();
       window.dispatchEvent(new Event('salon-config-changed'));
-      success({ title: t('admin.config.staff.added') });
+      if (invitationStatus === 'sent') {
+        success({ title: t('admin.config.staff.addedWithInvitation') });
+      } else if (invitationStatus === 'queued') {
+        success({ title: t('admin.config.staff.addedWithQueuedInvitation') });
+      } else {
+        toastError({ title: t('admin.config.staff.invitationFailed') });
+      }
     } catch (err) {
       if (err instanceof ApiError && err.code === 'PHONE_TAKEN') {
         setFormError(t('admin.config.staff.phoneTaken'));
+      } else if (err instanceof ApiError && err.code === 'PHONE_REQUIRED') {
+        setFormError(t('admin.config.staff.phoneRequired'));
       } else {
         toastError({ title: t('admin.config.staff.addFailed') });
       }
@@ -633,6 +645,7 @@ function StaffSection({
           maxLength={14}
           value={phone}
           onChange={(e) => setPhone(filterPhoneInput(e.target.value))}
+          required
         />
         {formError && (
           <p role="alert" className="text-sm text-danger">

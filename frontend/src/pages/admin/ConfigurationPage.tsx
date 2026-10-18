@@ -1133,7 +1133,7 @@ const STAFF_PHONE_RE = /^09\d{9}$/;
 
 /**
  * Staff / user management section: add a stylist, admin, or owner to the salon
- * and manage their role (RBAC access), optional login phone (OTP sign-in), and
+ * and manage their role (RBAC access), login phone (OTP sign-in), and
  * active flag. Wired to the owner endpoints (`GET/POST /salons/:id/staff`,
  * `PATCH /staff/:id`). The granular approval/availability permissions live in
  * the approval-policy section, so they are not duplicated here.
@@ -1173,25 +1173,37 @@ function StaffSection({
       return;
     }
     const trimmedPhone = normalizePhone(phone);
-    if (trimmedPhone && !STAFF_PHONE_RE.test(trimmedPhone)) {
+    if (!trimmedPhone) {
+      setFormError(t('admin.config.staff.phoneRequired'));
+      return;
+    }
+    if (!STAFF_PHONE_RE.test(trimmedPhone)) {
       setFormError(t('admin.config.staff.invalidPhone'));
       return;
     }
     setSaving(true);
     try {
-      const { staff: created } = await staffApi.create(salonId, {
+      const { staff: created, invitationStatus } = await staffApi.create(salonId, {
         fullName: name,
         role,
-        phone: trimmedPhone || null,
+        phone: trimmedPhone,
       });
       onChange((prev) => [...prev, created]);
       setFullName('');
       setRole('Stylist');
       setPhone('');
-      success({ title: t('admin.config.staff.added') });
+      if (invitationStatus === 'sent') {
+        success({ title: t('admin.config.staff.addedWithInvitation') });
+      } else if (invitationStatus === 'queued') {
+        success({ title: t('admin.config.staff.addedWithQueuedInvitation') });
+      } else {
+        toastError({ title: t('admin.config.staff.invitationFailed') });
+      }
     } catch (err) {
       if (err instanceof ApiError && err.code === 'PHONE_TAKEN') {
         setFormError(t('admin.config.staff.phoneTaken'));
+      } else if (err instanceof ApiError && err.code === 'PHONE_REQUIRED') {
+        setFormError(t('admin.config.staff.phoneRequired'));
       } else {
         toastError({ title: t('admin.config.staff.addFailed') });
       }
@@ -1304,6 +1316,7 @@ function StaffSection({
           maxLength={14}
           value={phone}
           onChange={(e) => setPhone(filterPhoneInput(e.target.value))}
+          required
         />
         {formError && (
           <p role="alert" className="text-sm text-danger">

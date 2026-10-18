@@ -53,6 +53,7 @@ import {
 } from './OwnerAppointmentPanels';
 import { useAuth } from '../../auth/AuthContext';
 import { useSalonId } from '../../auth/useSalonId';
+import { APPOINTMENT_RESCHEDULING_ENABLED } from '../../config/features';
 import { usePagination } from '../../hooks/usePagination';
 import { useHashScroll } from '../../hooks/useHashScroll';
 import { useInboxWs } from '../../hooks/useInboxWs';
@@ -638,7 +639,8 @@ function AppointmentBlock({
   // a short timeline block cannot accommodate two text labels.
   const compact = compactView || (positioned && (height ?? 0) < 70);
   const compactActions = compactView || compactLong || (positioned && (height ?? 0) < 180);
-  const canDragAppointment = Boolean(draggableId) && !hasPendingReschedule;
+  const canDragAppointment =
+    APPOINTMENT_RESCHEDULING_ENABLED && Boolean(draggableId) && !hasPendingReschedule;
   const canCancel = ['pending', 'held', 'confirmed', 'approved'].includes(appt.status ?? '');
   const appointmentStartMs = appt.startAt ? new Date(appt.startAt).getTime() : Number.NaN;
   const canNoShow =
@@ -729,7 +731,12 @@ function AppointmentBlock({
 
   useEffect(() => {
     const element = draggableRef.current;
-    if (!element || !draggableId || hasPendingReschedule) return;
+    if (
+      !APPOINTMENT_RESCHEDULING_ENABLED ||
+      !element ||
+      !draggableId ||
+      hasPendingReschedule
+    ) return;
 
     return draggable({
       element,
@@ -1135,6 +1142,7 @@ function DayView({
   }, []);
 
   useEffect(() => {
+    if (!APPOINTMENT_RESCHEDULING_ENABLED) return;
     const cleanups = TIME_SLOTS.flatMap((slot, index) => {
       const element = rowRefs.current[index];
       if (!element || foldedSlots[index]) return [];
@@ -3904,6 +3912,7 @@ export function OwnerCalendarPage() {
 
   const openMoveDialog = useCallback(
     (appointment: CalendarAppointmentLike, initialStartAt?: string) => {
+      if (!APPOINTMENT_RESCHEDULING_ENABLED) return;
       setSelectedAppointment(null);
       setMoveError('');
       setMoveNotice('');
@@ -3915,6 +3924,7 @@ export function OwnerCalendarPage() {
 
   const applyMove = useCallback(
     async (appointment: CalendarAppointmentLike, startAt: string) => {
+      if (!APPOINTMENT_RESCHEDULING_ENABLED) return;
       const nextStart = new Date(startAt);
       if (Number.isNaN(nextStart.getTime())) throw new Error('Invalid appointment time');
       if (
@@ -3956,6 +3966,7 @@ export function OwnerCalendarPage() {
 
   const handleGridMove = useCallback(
     (appointment: Appointment, date: Date, time: string) => {
+      if (!APPOINTMENT_RESCHEDULING_ENABLED) return;
       const nextStart = new Date(date);
       const [hour, minute] = time.split(':').map(Number);
       nextStart.setHours(hour, minute, 0, 0);
@@ -4693,7 +4704,7 @@ export function OwnerCalendarPage() {
         onReportCustomer={(appointment) => openReportCustomer(appointment as Appointment)}
       />
       <MoveAppointmentDialog
-        open={Boolean(moveAppointment)}
+        open={APPOINTMENT_RESCHEDULING_ENABLED && Boolean(moveAppointment)}
         appointment={moveAppointment}
         onOpenChange={(next) => {
           if (!next) {

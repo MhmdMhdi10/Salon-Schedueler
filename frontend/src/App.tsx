@@ -166,7 +166,6 @@ const OwnerServicesPage = lazy(() =>
 const OwnerSubscriptionPage = lazy(() =>
   import('./pages/owner').then((m) => ({ default: m.OwnerSubscriptionPage })),
 );
-const OwnerQrPage = lazy(() => import('./pages/owner').then((m) => ({ default: m.OwnerQrPage })));
 const OwnerTransactionsPage = lazy(() =>
   import('./pages/owner').then((m) => ({ default: m.OwnerTransactionsPage })),
 );
@@ -394,7 +393,7 @@ export function App() {
                       <Route path="subscription" element={<OwnerSubscriptionPage />} />
                       <Route path="transactions" element={<OwnerTransactionsPage />} />
                       <Route path="notifications" element={<OwnerNotificationsPage />} />
-                      <Route path="qr" element={<OwnerQrPage />} />
+                      <Route path="qr" element={<Navigate to="/owner/marketing#qr-studio" replace />} />
                       <Route path="*" element={<Navigate to="/owner/calendar" replace />} />
                     </Route>
 

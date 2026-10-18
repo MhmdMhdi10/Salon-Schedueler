@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import {
   Check,
   ChevronDown,
@@ -18,6 +18,7 @@ import { ApiError, cardOrderApi, qrApi, type SalonQrResponse } from '../../api/c
 import { useSalonId } from '../../auth/useSalonId';
 import { useHashScroll } from '../../hooks/useHashScroll';
 import { SeoHead } from '../../components/seo';
+import { copyToClipboard } from '../../utils/copyToClipboard';
 import {
   Button,
   Card,
@@ -252,18 +253,27 @@ function QrSkeleton() {
   );
 }
 
-export function OwnerQrPage() {
+export function OwnerQrPage({
+  embedded = false,
+  initialData,
+}: {
+  embedded?: boolean;
+  initialData?: SalonQrResponse;
+} = {}) {
   useHashScroll();
   const { t } = useTranslation();
+  const location = useLocation();
   const params = useParams<{ salonId?: string }>();
   const sessionSalonId = useSalonId();
   const salonId = params.salonId ?? sessionSalonId;
 
-  const [status, setStatus] = useState<LoadStatus>('loading');
+  const [status, setStatus] = useState<LoadStatus>(initialData ? 'success' : 'loading');
   const [error, setError] = useState('');
-  const [data, setData] = useState<SalonQrResponse | null>(null);
+  const [data, setData] = useState<SalonQrResponse | null>(initialData ?? null);
   const [reloadToken, setReloadToken] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
+  const [downloadState, setDownloadState] = useState<'idle' | 'asset' | 'svg' | 'png' | 'error'>('idle');
 
   // Studio state.
   const [kind, setKind] = useState<AssetKind>('card');
@@ -275,6 +285,13 @@ export function OwnerQrPage() {
   const [logoError, setLogoError] = useState('');
   const [showBrand, setShowBrand] = useState(true);
   const [customizationOpen, setCustomizationOpen] = useState(false);
+
+  useEffect(() => {
+    if (!initialData) return;
+    setData(initialData);
+    setStatus('success');
+    setError('');
+  }, [initialData]);
 
   // Print-order state.
   const [orderQty, setOrderQty] = useState('100');
@@ -291,8 +308,14 @@ export function OwnerQrPage() {
   const [orderStatus, setOrderStatus] = useState<OrderStatus>('idle');
   const [orderError, setOrderError] = useState('');
   const [orderId, setOrderId] = useState('');
+  const [orderOpen, setOrderOpen] = useState(() => !embedded || location.hash === '#qr-order-card');
 
   useEffect(() => {
+    if (location.hash === '#qr-order-card') setOrderOpen(true);
+  }, [location.hash]);
+
+  useEffect(() => {
+    if (initialData) return;
     let active = true;
     setStatus('loading');
     setError('');
@@ -313,7 +336,7 @@ export function OwnerQrPage() {
     return () => {
       active = false;
     };
-  }, [salonId, reloadToken, t]);
+  }, [salonId, reloadToken, t, initialData]);
 
   const accent = useMemo(() => resolveAccent(accentKey), [accentKey]);
   const activePayload = data?.payload ?? '';
@@ -345,12 +368,20 @@ export function OwnerQrPage() {
 
   const handleCopy = async () => {
     if (!data) return;
+    setCopyError(false);
+    const success = await copyToClipboard(data.url);
+    setCopied(success);
+    setCopyError(!success);
+    if (success) window.setTimeout(() => setCopied(false), 2000);
+  };
+
+  const runDownload = async (kind: 'asset' | 'svg' | 'png', action: () => void | Promise<void>) => {
+    setDownloadState(kind);
     try {
-      await navigator.clipboard.writeText(data.url);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
+      await action();
+      setDownloadState('idle');
     } catch {
-      // Clipboard can be unavailable; the URL is still selectable as text.
+      setDownloadState('error');
     }
   };
 
@@ -424,14 +455,14 @@ export function OwnerQrPage() {
     <section
       data-testid="owner-qr-page"
       data-print-kind={kind}
-      className="owner-qr-page flex flex-col gap-6"
+      className={cn('owner-qr-page flex flex-col gap-6', embedded && 'owner-qr-embedded')}
     >
-      <SeoHead title={t('owner.qr.title')} />
+      {!embedded && <SeoHead title={t('owner.qr.title')} />}
 
-      <header className="flex flex-col gap-2 owner-qr-screen-only">
+      {!embedded && <header className="flex flex-col gap-2 owner-qr-screen-only">
         <h1 className="text-xl text-display text-text">{t('owner.qr.title')}</h1>
         <p className="max-w-[60ch] text-sm text-muted">{t('owner.qr.subtitle')}</p>
-      </header>
+      </header>}
 
       {status === 'loading' && <QrSkeleton />}
 
@@ -534,8 +565,8 @@ export function OwnerQrPage() {
                         key={a.key}
                         type="button"
                         aria-pressed={accentKey === a.key}
-                        aria-label={t(`owner.qr.accent.${a.key}`)}
-                        title={t(`owner.qr.accent.${a.key}`)}
+                        aria-label={t(`owner.qr.accent.${a.key}`, { defaultValue: a.key === 'jade' ? 'یشمی' : a.key })}
+                        title={t(`owner.qr.accent.${a.key}`, { defaultValue: a.key === 'jade' ? 'یشمی' : a.key })}
                         className={cn(
                           'owner-qr-swatch',
                           accentKey === a.key && 'owner-qr-swatch--on',
@@ -651,8 +682,10 @@ export function OwnerQrPage() {
                     data-testid="qr-download-asset"
                     variant="secondary"
                     startIcon={<ImageIcon className="h-4 w-4" />}
+                    disabled={downloadState !== 'idle' && downloadState !== 'error'}
+                    loading={downloadState === 'asset'}
                     onClick={() =>
-                      void downloadAssetPng({
+                      void runDownload('asset', () => downloadAssetPng({
                         kind,
                         salonName: effectiveName,
                         tagline: effectiveTagline,
@@ -662,7 +695,7 @@ export function OwnerQrPage() {
                         logoDataUri: logoDataUri || undefined,
                         showBrand,
                         footer: t('owner.qr.cardFoot'),
-                      })
+                      }))
                     }
                   >
                     {t(`owner.qr.downloadAsset.${kind}`)}
@@ -670,18 +703,27 @@ export function OwnerQrPage() {
                   <Button
                     variant="secondary"
                     startIcon={<Download className="h-4 w-4" />}
-                    onClick={() => downloadQrSvg(activePayload, qrAlt, data.salonName)}
+                    disabled={downloadState !== 'idle' && downloadState !== 'error'}
+                    loading={downloadState === 'svg'}
+                    onClick={() => void runDownload('svg', () => downloadQrSvg(activePayload, qrAlt, data.salonName))}
                   >
                     {t('owner.qr.downloadSvg')}
                   </Button>
                   <Button
                     variant="secondary"
                     startIcon={<ImageIcon className="h-4 w-4" />}
-                    onClick={() => void downloadQrPng(activePayload, qrAlt, data.salonName)}
+                    disabled={downloadState !== 'idle' && downloadState !== 'error'}
+                    loading={downloadState === 'png'}
+                    onClick={() => void runDownload('png', () => downloadQrPng(activePayload, qrAlt, data.salonName))}
                   >
                     {t('owner.qr.downloadPng')}
                   </Button>
                 </div>
+                {downloadState === 'error' && (
+                  <p role="alert" className="text-sm text-danger">
+                    {t('owner.qr.downloadFailed', { defaultValue: 'ساخت فایل انجام نشد؛ دوباره تلاش کن.' })}
+                  </p>
+                )}
                 <p className="text-xs text-muted">{t('owner.qr.printHint')}</p>
               </div>
             </div>
@@ -756,9 +798,9 @@ export function OwnerQrPage() {
                 data-testid="qr-copy-status"
                 role="status"
                 aria-live="polite"
-                className="sr-only"
+                className={cn('text-sm', copyError ? 'text-danger' : 'text-success')}
               >
-                {copied ? t('owner.qr.copied') : ''}
+                {copied ? t('owner.qr.copied') : copyError ? t('owner.qr.copyFailed', { defaultValue: 'کپی انجام نشد؛ نشانی را انتخاب و کپی کن.' }) : ''}
               </span>
             </CardContent>
           </Card>
@@ -769,19 +811,25 @@ export function OwnerQrPage() {
 
       {/* Order printed cards — always available (not subscription-gated). */}
       {status !== 'loading' && status !== 'error' && (
-        <Card
-          as="section"
+        <details
           id="qr-order-card"
-          data-testid="qr-order-card"
-          className="owner-qr-screen-only scroll-mt-24 flex flex-col gap-4"
+          open={orderOpen}
+          onToggle={(event) => setOrderOpen(event.currentTarget.open)}
+          className="owner-qr-order-disclosure owner-qr-screen-only group scroll-mt-24 overflow-hidden rounded-2xl border border-border bg-surface"
         >
-          <div className="flex items-center gap-2">
-            <Package className="h-5 w-5 text-primary" aria-hidden="true" />
-            <CardTitle as="h2" className="text-lg font-bold text-text">
-              {t('owner.qr.order.title')}
-            </CardTitle>
-          </div>
+          <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 py-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus [&::-webkit-details-marker]:hidden">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Package className="size-4" aria-hidden="true" />
+            </span>
+            <span className="min-w-0 flex-1 text-sm font-bold text-text">{t('owner.qr.order.title')}</span>
+            <ChevronDown className="size-5 shrink-0 text-muted transition-transform group-open:rotate-180" aria-hidden="true" />
+          </summary>
 
+          <Card
+            as="section"
+            data-testid="qr-order-card"
+            className="flex flex-col gap-4 rounded-none border-0 border-t border-border shadow-none"
+          >
           {orderStatus === 'success' ? (
             <div data-testid="qr-order-success" role="status" className="owner-qr-order__done">
               <Check className="h-6 w-6" aria-hidden="true" />
@@ -942,7 +990,8 @@ export function OwnerQrPage() {
               </div>
             </form>
           )}
-        </Card>
+          </Card>
+        </details>
       )}
       {status === 'success' && data && (
         <>

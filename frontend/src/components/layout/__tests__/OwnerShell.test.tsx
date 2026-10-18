@@ -246,7 +246,6 @@ describe('ownerNavForRole (RBAC matrix)', () => {
       '/owner/clients',
       '/owner/marketing',
       '/owner/analytics',
-      '/owner/qr',
       '/owner/config',
       '/owner/transactions',
       '/owner/notifications',

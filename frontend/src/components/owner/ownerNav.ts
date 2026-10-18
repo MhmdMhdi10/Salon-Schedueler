@@ -5,7 +5,6 @@ import {
   Bell,
   Settings,
   CreditCard,
-  QrCode,
   Receipt,
   UserRound,
   UsersRound,
@@ -72,12 +71,6 @@ export const OWNER_NAV: readonly OwnerNavItem[] = [
     labelKey: 'owner.nav.analytics',
     to: '/owner/analytics',
     icon: BarChart3,
-    roles: ['Owner', 'Admin'],
-  },
-  {
-    labelKey: 'owner.nav.qr',
-    to: '/owner/qr',
-    icon: QrCode,
     roles: ['Owner', 'Admin'],
   },
   {

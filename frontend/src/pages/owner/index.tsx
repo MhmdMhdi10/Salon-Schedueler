@@ -166,7 +166,6 @@ export { OwnerTransactionsPage } from './OwnerTransactionsPage';
 export { OwnerNotificationsPage } from './OwnerNotificationsPage';
 
 /** QR + standee landing — real surface (task 5.4; R4.1, R4.3). */
-export { OwnerQrPage } from './QrPage';
 
 /** First-class account/profile surface for the owner panel. */
 export { OwnerProfilePage } from './OwnerProfilePage';

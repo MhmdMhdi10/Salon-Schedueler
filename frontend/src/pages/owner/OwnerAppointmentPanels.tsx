@@ -10,6 +10,7 @@ import {
   TriangleAlert,
   UserRound,
 } from 'lucide-react';
+import { APPOINTMENT_RESCHEDULING_ENABLED } from '../../config/features';
 import {
   ApiError,
   adminApi,
@@ -347,14 +348,24 @@ export function AppointmentDetailsSheet({
                   startIcon={<Move className="h-4 w-4" />}
                   onClick={() => onMove(appointment)}
                   disabled={
+                    !APPOINTMENT_RESCHEDULING_ENABLED ||
                     !canMoveAppointment ||
                     ['cancelled', 'rejected', 'no_show', 'completed'].includes(appointment.status ?? '')
                   }
                 >
-                  {appointment.pendingReschedule?.startAt
+                  {!APPOINTMENT_RESCHEDULING_ENABLED
+                    ? 'تغییر زمان غیرفعال'
+                    : appointment.pendingReschedule?.startAt
                     ? 'در انتظار پاسخ مشتری'
                     : 'تغییر زمان نوبت'}
                 </Button>
+                {!APPOINTMENT_RESCHEDULING_ENABLED && (
+                  <p className="m-0 mt-1 text-center text-xs text-muted">
+                    {appointment.pendingReschedule?.startAt
+                      ? 'پیشنهاد قبلی در نسخهٔ اولیه قابل پاسخ نیست؛ زمان فعلی برقرار است.'
+                      : 'تغییر زمان فعلاً در نسخهٔ اولیه غیرفعال است.'}
+                  </p>
+                )}
                 <Button
                   type="button"
                   variant="secondary"

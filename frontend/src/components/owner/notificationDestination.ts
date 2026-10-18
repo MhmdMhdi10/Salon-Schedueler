@@ -57,7 +57,7 @@ export function getNotificationDestination(
     type.startsWith('card-order.') ||
     type.startsWith('card_order.')
   ) {
-    return '/owner/qr#qr-order-card';
+    return '/owner/marketing#qr-order-card';
   }
   if (type.startsWith('subscription.')) {
     return '/owner/subscription';
@@ -80,7 +80,7 @@ export function getNotificationDestination(
     return calendarDestination('owner-calendar-content', notification.payload);
   }
   if (notification.payload?.orderId) {
-    return '/owner/qr#qr-order-card';
+    return '/owner/marketing#qr-order-card';
   }
   if (notification.payload?.customerId) {
     return '/owner/clients';

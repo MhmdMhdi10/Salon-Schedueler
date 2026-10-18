@@ -692,7 +692,7 @@ describe('Jalali dates', () => {
       expect(cancel).toHaveClass('h-11', 'w-11');
     });
 
-    it('moves an appointment in place without refetching the whole calendar', async () => {
+    it('keeps the appointment time-change action disabled in the MVP', async () => {
       const start = new Date();
       start.setDate(start.getDate() + 1);
       start.setHours(10, 0, 0, 0);
@@ -723,27 +723,13 @@ describe('Jalali dates', () => {
 
       const calendarFetchesBeforeMove = mockGetCalendar.mock.calls.length;
       fireEvent.click(screen.getByRole('article', { name: /کوتاهی مو/ }));
-      fireEvent.click(screen.getByRole('button', { name: /تغییر زمان نوبت/ }));
-      expect(screen.getByRole('button', { name: /تاریخ شروع جدید/ })).toBeInTheDocument();
-      fireEvent.click(screen.getByRole('button', { name: /ساعت شروع جدید/ }));
-      fireEvent.click(
-        within(screen.getByRole('listbox', { name: 'ساعت' })).getByRole('option', { name: '11' }),
-      );
-      fireEvent.click(screen.getByRole('button', { name: 'تأیید ساعت' }));
-      fireEvent.click(screen.getByRole('button', { name: 'بررسی تغییر زمان' }));
-      fireEvent.click(screen.getByRole('button', { name: 'تأیید نهایی تغییر زمان' }));
-
-      await waitFor(() => {
-        expect(mockRescheduleAppointment).toHaveBeenCalledWith(
-          'appt-1',
-          expect.any(String),
-          undefined,
-        );
-      });
+      expect(screen.getByRole('button', { name: 'تغییر زمان غیرفعال' })).toBeDisabled();
+      expect(screen.getByText('تغییر زمان فعلاً در نسخهٔ اولیه غیرفعال است.')).toBeInTheDocument();
+      expect(mockRescheduleAppointment).not.toHaveBeenCalled();
       expect(mockGetCalendar).toHaveBeenCalledTimes(calendarFetchesBeforeMove);
     });
 
-    it('supports day-view drag and drop without refreshing the calendar', async () => {
+    it('hides day-view drag handles while appointment rescheduling is disabled', async () => {
       const start = new Date();
       start.setDate(start.getDate() + 1);
       start.setHours(10, 0, 0, 0);
@@ -772,47 +758,9 @@ describe('Jalali dates', () => {
         expect(screen.getByRole('article', { name: /کوتاهی مو/ })).toBeInTheDocument();
       });
 
-      const dataTransfer = {
-        effectAllowed: 'move',
-        dropEffect: 'move',
-        types: ['text/plain'],
-        values: new Map<string, string>(),
-        setData(type: string, value: string) {
-          this.values.set(type, value);
-        },
-        getData(type: string) {
-          return this.values.get(type) ?? '';
-        },
-        setDragImage() {},
-      };
       const calendarFetchesBeforeMove = mockGetCalendar.mock.calls.length;
-      const appointmentCard = screen.getByRole('article', { name: /کوتاهی مو/ });
-      const dragHandle = screen.getByLabelText('دسته جابه‌جایی نوبت');
-      const targetRow = screen.getByRole('row', { name: '11:00' });
-      const elementsFromPoint = document.elementsFromPoint;
-      try {
-        document.elementsFromPoint = () => [dragHandle];
-        fireEvent.dragStart(appointmentCard, { dataTransfer, clientX: 1, clientY: 1 });
-        document.elementsFromPoint = () => [targetRow];
-        fireEvent.dragOver(targetRow, { dataTransfer, clientX: 1, clientY: 1 });
-        fireEvent.drop(targetRow, { dataTransfer, clientX: 1, clientY: 1 });
-      } finally {
-        document.elementsFromPoint = elementsFromPoint;
-      }
-
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'بررسی تغییر زمان' })).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByRole('button', { name: 'بررسی تغییر زمان' }));
-      fireEvent.click(screen.getByRole('button', { name: 'تأیید نهایی تغییر زمان' }));
-
-      await waitFor(() => {
-        expect(mockRescheduleAppointment).toHaveBeenCalledWith(
-          'appt-1',
-          expect.any(String),
-          undefined,
-        );
-      });
+      expect(screen.queryByLabelText('دسته جابه‌جایی نوبت')).not.toBeInTheDocument();
+      expect(mockRescheduleAppointment).not.toHaveBeenCalled();
       expect(mockGetCalendar).toHaveBeenCalledTimes(calendarFetchesBeforeMove);
     });
   });

@@ -173,18 +173,18 @@ describe('OwnerClientsPage', () => {
 });
 
 describe('OwnerMarketingPage', () => {
-  it('shows the large QR first, then the booking link and next setup actions', async () => {
+  it('shows the booking link and keeps QR tools inside a compact disclosure', async () => {
     renderPage(<OwnerMarketingPage />, '/owner/marketing');
 
     const pageHeading = await screen.findByRole('heading', { name: 'بازاریابی' });
-    const bookingHeading = screen.getByRole('heading', { name: 'رزرو آنلاین سالن' });
+    const bookingHeading = screen.getByRole('heading', { name: 'رزرو آنلاین آرا' });
     expect(screen.getByText('https://book.salon.app/s/salon-1?utm_source=qr')).toBeInTheDocument();
     const qr = screen.getByTestId('owner-marketing-qr');
     expect(qr).toHaveAttribute('alt', 'کد QR رزرو سالن آرا');
-    expect(qr).toHaveClass('size-56', 'sm:size-64');
-    expect(qr.compareDocumentPosition(pageHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(qr.compareDocumentPosition(bookingHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByRole('link', { name: /تنظیم و دانلود QR/ })).toHaveAttribute('href', '/owner/qr');
+    expect(qr).toHaveClass('size-12');
+    expect(bookingHeading.compareDocumentPosition(qr) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByText('کد QR و ابزارهای چاپ').closest('details')).not.toHaveAttribute('open');
+    expect(pageHeading.compareDocumentPosition(bookingHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole('combobox', { name: 'کانال انتشار' })).toBeInTheDocument();
     expect(screen.getByText('پیش‌نمایش پیام آماده').closest('details')).not.toHaveAttribute('open');
     expect(screen.getByRole('link', { name: /دعوت از مشتری‌ها/ })).toHaveAttribute('href', '/owner/clients');

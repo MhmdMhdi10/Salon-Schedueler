@@ -4,7 +4,6 @@ import { buildApp, type Services } from '../app.js';
 import { Authorizer } from '../../auth/index.js';
 import { AuthError } from '../../auth/index.js';
 import { RegistrationError } from '../../registration/index.js';
-import { RescheduleError } from '../../scheduling/scheduling-engine.js';
 
 /**
  * Route-level tests driven with supertest against the app built by `buildApp`,
@@ -1181,7 +1180,7 @@ describe('HTTP routes', () => {
       status: 'confirmed',
     };
 
-    it('moves an appointment in place for an Owner', async () => {
+    it('keeps appointment rescheduling disabled in the MVP', async () => {
       fake.calendarService.getAppointmentById.mockResolvedValue(currentAppointment);
       fake.schedulingEngine.reschedule.mockResolvedValue({
         ...currentAppointment,
@@ -1194,27 +1193,21 @@ describe('HTTP routes', () => {
         .send({ startAt: '2026-07-15T11:00:00.000Z' })
         .set('Authorization', `Bearer ${staffToken('Owner')}`);
 
-      expect(res.status).toBe(200);
-      expect(res.body.status).toBe('confirmed');
-      expect(fake.schedulingEngine.reschedule).toHaveBeenCalledWith({
-        appointmentId: 'appt-1',
-        startAt: '2026-07-15T11:00:00.000Z',
-      });
+      expect(res.status).toBe(503);
+      expect(res.body).toEqual({ code: 'FEATURE_DISABLED' });
+      expect(fake.schedulingEngine.reschedule).not.toHaveBeenCalled();
     });
 
-    it('returns a stable conflict code when the target slot is taken', async () => {
+    it('does not reach scheduling when the feature is disabled', async () => {
       fake.calendarService.getAppointmentById.mockResolvedValue(currentAppointment);
-      fake.schedulingEngine.reschedule.mockRejectedValue(
-        new RescheduleError('RESCHEDULE_CONFLICT'),
-      );
-
       const res = await request(app)
         .patch('/api/appointments/appt-1/reschedule')
         .send({ startAt: '2026-07-15T11:00:00.000Z' })
         .set('Authorization', `Bearer ${staffToken('Owner')}`);
 
-      expect(res.status).toBe(409);
-      expect(res.body).toEqual({ code: 'RESCHEDULE_CONFLICT' });
+      expect(res.status).toBe(503);
+      expect(res.body).toEqual({ code: 'FEATURE_DISABLED' });
+      expect(fake.schedulingEngine.reschedule).not.toHaveBeenCalled();
     });
   });
 

@@ -2,6 +2,7 @@ import { Router, type RequestHandler } from 'express';
 import type { Services } from '../../http/app.js';
 import type { RequireRole } from '../../common/http/require-role.js';
 import { asyncRoute, validateRequired } from '../../common/http/route-helpers.js';
+import { APPOINTMENT_RESCHEDULING_ENABLED } from '../../features.js';
 import type { ServiceCatalog } from '../../catalog/service-catalog.js';
 import { normalizeDigits, type StaffRole } from '@salon/shared';
 import type { CancellationDetails } from '../../scheduling/cancellation.js';
@@ -541,6 +542,10 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
     '/appointments/:id/reschedule-managed',
     requireCanManageAppointment,
     asyncRoute(async (req, res) => {
+      if (!APPOINTMENT_RESCHEDULING_ENABLED) {
+        res.status(503).json({ code: 'FEATURE_DISABLED' });
+        return;
+      }
       if (!services.appointmentManagementService) {
         res.status(503).json({ code: 'FEATURE_UNAVAILABLE' });
         return;
@@ -832,8 +837,8 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
   );
 
   // Add a staff member to the salon (Owner/Admin). Body: { fullName, role,
-  // phone? }. `role` sets their RBAC access (Owner/Admin/Stylist); an optional
-  // salon-scoped `phone` is their OTP login (matched in auth.service → staff JWT).
+  // phone }. `role` sets RBAC access; the required salon phone receives the
+  // team invitation and becomes the OTP login.
   router.post(
     '/salons/:id/staff',
     requireRole('configure_salon'),
@@ -850,7 +855,11 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         return;
       }
       const rawPhone = typeof body.phone === 'string' ? normalizeIranianPhone(body.phone) : '';
-      if (rawPhone && !PHONE_RE.test(rawPhone)) {
+      if (!rawPhone) {
+        res.status(400).json({ code: 'PHONE_REQUIRED', field: 'phone' });
+        return;
+      }
+      if (!PHONE_RE.test(rawPhone)) {
         res.status(400).json({ code: 'VALIDATION_ERROR', field: 'phone' });
         return;
       }
@@ -916,19 +925,27 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
           }
         }
         const current = await services.resourceRegistration.getStaffMember(created.id);
-        if (rawPhone && typeof services.notificationService.sendTeamInvitation === 'function') {
-          const salonBrand =
-            typeof services.salonRegistration.getSalonPublicBrand === 'function'
-              ? await services.salonRegistration.getSalonPublicBrand(req.params.id)
-              : { name: null };
-          await services.notificationService.sendTeamInvitation(
-            rawPhone,
-            salonBrand.name ?? 'سالن شما',
-            created.fullName,
-            created.role === 'Admin' ? 'مدیر' : created.role === 'Owner' ? 'مالک' : 'عضو تیم',
-          );
+        let invitationStatus: 'sent' | 'queued' | 'failed' | 'unavailable' = 'unavailable';
+        if (typeof services.notificationService.sendTeamInvitation === 'function') {
+          try {
+            const salonBrand =
+              typeof services.salonRegistration.getSalonPublicBrand === 'function'
+                ? await services.salonRegistration.getSalonPublicBrand(req.params.id)
+                : { name: null };
+            const result = await services.notificationService.sendTeamInvitation(
+              rawPhone,
+              salonBrand.name ?? 'سالن شما',
+              created.fullName,
+              created.role === 'Admin' ? 'مدیر' : created.role === 'Owner' ? 'مالک' : 'عضو تیم',
+            );
+            invitationStatus = result.ok ? (result.queued ? 'queued' : 'sent') : 'failed';
+          } catch {
+            // The staff record already exists; report delivery failure without
+            // making the owner retry creation and risk a duplicate member.
+            invitationStatus = 'failed';
+          }
         }
-        res.status(201).json({ staff: toStaffDto(current ?? created) });
+        res.status(201).json({ staff: toStaffDto(current ?? created), invitationStatus });
       } catch (err) {
         if (err instanceof StaffPhoneTakenError || isUniqueViolation(err)) {
           res.status(409).json({ code: 'PHONE_TAKEN', field: 'phone' });

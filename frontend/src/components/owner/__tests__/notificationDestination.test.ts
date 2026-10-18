@@ -20,7 +20,7 @@ describe('getNotificationDestination', () => {
 
   it('routes other notification models to their actionable sections', () => {
     expect(getNotificationDestination(notification('order.created'))).toBe(
-      '/owner/qr#qr-order-card',
+      '/owner/marketing#qr-order-card',
     );
     expect(getNotificationDestination(notification('new.customer'))).toBe('/owner/clients');
     expect(getNotificationDestination(notification('subscription.expiring'))).toBe(

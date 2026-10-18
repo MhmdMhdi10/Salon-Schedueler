@@ -127,8 +127,8 @@ import {
   OwnerAnalyticsPage,
   OwnerConfigurationPage,
   OwnerSubscriptionPage,
-  OwnerQrPage,
 } from '..';
+import { OwnerQrPage } from '../QrPage';
 
 const SUBSCRIPTION_STATUS = {
   status: 'active' as const,

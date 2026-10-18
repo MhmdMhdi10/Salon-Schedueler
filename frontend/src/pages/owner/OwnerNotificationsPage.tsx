@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Check, CheckCheck, Bell } from 'lucide-react';
+import {
+  Bell,
+  CalendarDays,
+  Check,
+  CheckCheck,
+  CircleDollarSign,
+  Package,
+  Sparkles,
+} from 'lucide-react';
 import { inboxApi, type SalonNotification } from '../../api/client';
 import { useSalonId } from '../../auth/useSalonId';
 import { useInboxWs } from '../../hooks/useInboxWs';
@@ -15,12 +23,12 @@ type Filter = 'all' | 'unread';
 type Status = 'loading' | 'success' | 'error';
 const NOTIFICATION_PAGE_SIZE = 10;
 
-function typeIcon(type: string): string {
-  if (type.startsWith('booking.')) return '🗓';
-  if (type.startsWith('order.')) return '📦';
-  if (type.startsWith('subscription.')) return '💳';
-  if (type.startsWith('new.')) return '✨';
-  return '🔔';
+function typeIcon(type: string) {
+  if (type.startsWith('booking.')) return CalendarDays;
+  if (type.startsWith('order.')) return Package;
+  if (type.startsWith('subscription.')) return CircleDollarSign;
+  if (type.startsWith('new.')) return Sparkles;
+  return Bell;
 }
 
 function relativeTime(
@@ -188,36 +196,45 @@ export function OwnerNotificationsPage() {
   return (
     <section
       data-testid="owner-notifications-page"
-      className="flex flex-col gap-5"
+      className="flex flex-col gap-4"
     >
       <SeoHead title={t('owner.inbox.pageTitle', { defaultValue: 'اعلان‌ها' })} />
 
-      <header className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <Bell className="h-5 w-5 text-primary" aria-hidden="true" />
-          <h1 className="text-xl text-display text-text">
-            {t('owner.inbox.pageTitle', { defaultValue: 'اعلان‌ها' })}
-          </h1>
-          {connected && (
-            <span
-              className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[0.65rem] font-medium text-success"
-              aria-label={t('owner.inbox.live', { defaultValue: 'اتصال زنده' })}
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-success" />
-              {t('owner.inbox.live', { defaultValue: 'زنده' })}
-            </span>
-          )}
+      <header className="flex items-start gap-3 rounded-2xl border border-primary/15 bg-primary/5 p-4 sm:p-5">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-surface text-primary shadow-1">
+          <Bell className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl text-display text-text sm:text-2xl">
+              {t('owner.inbox.pageTitle', { defaultValue: 'اعلان‌ها' })}
+            </h1>
+            {unreadCount > 0 && (
+              <span className="rounded-full bg-primary px-2.5 py-1 text-xs font-bold tabular-nums text-primary-contrast">
+                <Num value={unreadCount} /> خوانده‌نشده
+              </span>
+            )}
+            {connected && (
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full border border-success/20 bg-surface px-2.5 py-1 text-[0.68rem] font-semibold text-success"
+                aria-label={t('owner.inbox.live', { defaultValue: 'اتصال زنده' })}
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-success" />
+                {t('owner.inbox.live', { defaultValue: 'زنده' })}
+              </span>
+            )}
+          </div>
+          <p className="mt-1 text-sm leading-6 text-muted">
+            {t('owner.inbox.subtitle', {
+              defaultValue: 'رویدادهای سالن و نوبت‌های تازه را اینجا دنبال کن.',
+            })}
+          </p>
         </div>
-        <p className="text-sm text-muted">
-          {t('owner.inbox.subtitle', {
-            defaultValue: 'آخرین رویدادهای سالن — نوبت‌ها، سفارش‌ها و ...',
-          })}
-        </p>
       </header>
 
       {/* Toolbar: filter tabs + mark-all */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div role="tablist" className="inline-flex rounded-lg border border-border bg-bg p-1">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div role="tablist" aria-label="فیلتر اعلان‌ها" className="grid w-full grid-cols-2 rounded-xl border border-border bg-bg p-1 sm:w-auto">
           <button
             type="button"
             role="tab"
@@ -227,7 +244,7 @@ export function OwnerNotificationsPage() {
               setFilter('all');
             }}
             className={cn(
-              'rounded-md px-3 py-1.5 text-sm font-medium',
+              'min-h-11 rounded-lg px-4 py-2 text-sm font-semibold transition-colors',
               filter === 'all'
                 ? 'bg-primary text-primary-contrast shadow-1'
                 : 'text-muted hover:bg-elevated hover:text-text',
@@ -247,7 +264,7 @@ export function OwnerNotificationsPage() {
               setFilter('unread');
             }}
             className={cn(
-              'rounded-md px-3 py-1.5 text-sm font-medium',
+              'min-h-11 rounded-lg px-4 py-2 text-sm font-semibold transition-colors',
               filter === 'unread'
                 ? 'bg-primary text-primary-contrast shadow-1'
                 : 'text-muted hover:bg-elevated hover:text-text',
@@ -261,7 +278,7 @@ export function OwnerNotificationsPage() {
         </div>
 
         {unreadCount > 0 && (
-          <Button variant="secondary" size="md" onClick={markAll} disabled={busy}>
+          <Button variant="secondary" size="md" className="w-full sm:w-auto" onClick={markAll} disabled={busy}>
             <CheckCheck className="h-4 w-4" aria-hidden="true" />
             {t('owner.inbox.markAllRead', { defaultValue: 'خواندن همه' })}
           </Button>
@@ -295,19 +312,22 @@ export function OwnerNotificationsPage() {
       {status === 'success' && items.length === 0 && (
         <div
           data-testid="owner-notifications-empty"
-          className="flex flex-col items-center gap-2 rounded-lg border border-border bg-surface p-10 text-center"
+          className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-surface px-5 py-12 text-center"
         >
-          <span className="text-3xl">🔔</span>
-          <p className="text-sm text-muted">
+          <span className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <Bell className="size-6" aria-hidden="true" />
+          </span>
+          <p className="m-0 text-sm font-semibold text-text">
             {filter === 'unread'
               ? t('owner.inbox.noUnread', { defaultValue: 'اعلان خوانده‌نشده‌ای نیست' })
               : t('owner.inbox.empty', { defaultValue: 'اعلانی نیست' })}
           </p>
+          <p className="m-0 max-w-sm text-xs leading-5 text-muted">اعلان‌های رزرو و فعالیت سالن در همین صفحه نمایش داده می‌شوند.</p>
         </div>
       )}
 
       {status === 'success' && items.length > 0 && (
-        <ol data-testid="owner-notifications-list" className="flex flex-col gap-2">
+        <>
           {busy && (
             <div
               role="status"
@@ -318,14 +338,16 @@ export function OwnerNotificationsPage() {
               {t('common.saving')}
             </div>
           )}
+          <ol data-testid="owner-notifications-list" className="overflow-hidden rounded-2xl border border-border bg-surface shadow-1 divide-y divide-border">
           {items.map((n) => {
             const isUnread = !n.readAt;
+            const Icon = typeIcon(n.type);
             return (
               <li
                 key={n.id}
                 className={cn(
-                  'flex items-start gap-3 rounded-lg border p-3',
-                  isUnread ? 'border-primary/40 bg-primary/5' : 'border-border bg-surface',
+                  'flex items-start gap-3 px-3 py-3.5 transition-colors sm:px-4',
+                  isUnread ? 'bg-primary/[0.045]' : 'bg-surface hover:bg-elevated/50',
                 )}
               >
                 <Link
@@ -333,19 +355,22 @@ export function OwnerNotificationsPage() {
                   onClick={() => {
                     if (isUnread) void markOne(n.id);
                   }}
-                  className="flex min-w-0 flex-1 items-start gap-3 rounded-md text-start no-underline transition-colors hover:bg-elevated/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+                  className="flex min-w-0 flex-1 items-start gap-3 rounded-lg text-start no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
                   aria-label={n.title}
                 >
-                  <span className="mt-0.5 text-base">{typeIcon(n.type)}</span>
+                  <span className={cn('relative mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl', isUnread ? 'bg-primary/10 text-primary' : 'bg-elevated text-muted')}>
+                    <Icon className="size-[18px]" aria-hidden="true" />
+                    {isUnread && <span className="absolute -end-0.5 -top-0.5 size-2.5 rounded-full border-2 border-surface bg-primary" aria-hidden="true" />}
+                  </span>
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-semibold text-text">{n.title}</span>
-                      <span className="shrink-0 text-[0.65rem] tabular-nums text-muted">
+                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                      <span className="min-w-0 flex-1 break-words text-sm font-bold leading-5 text-text">{n.title}</span>
+                      <span className="shrink-0 text-xs tabular-nums text-muted">
                         <Num value={relativeTime(n.createdAt, t)} />
                       </span>
                     </div>
-                    <p className="text-xs text-muted">{n.body}</p>
-                    <div className="flex items-center gap-3 text-[0.65rem] text-muted">
+                    <p className="m-0 line-clamp-2 text-sm leading-6 text-muted">{n.body}</p>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
                       <span className="tabular-nums">
                         <JalaliDate value={new Date(n.createdAt).toISOString().slice(0, 10)} />
                       </span>
@@ -373,8 +398,9 @@ export function OwnerNotificationsPage() {
                     aria-label={t('owner.inbox.markRead', {
                       defaultValue: 'علامت‌گذاری به خوانده‌شده',
                     })}
+                    title={t('owner.inbox.markRead', { defaultValue: 'علامت‌گذاری به خوانده‌شده' })}
                     className={cn(
-                      'inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-md p-2 text-muted hover:bg-elevated hover:text-text',
+                      'inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-xl border border-transparent p-2 text-muted transition-colors hover:border-border hover:bg-elevated hover:text-text',
                       'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
                     )}
                   >
@@ -384,7 +410,8 @@ export function OwnerNotificationsPage() {
               </li>
             );
           })}
-        </ol>
+          </ol>
+        </>
       )}
 
       {status === 'success' && total > NOTIFICATION_PAGE_SIZE && (

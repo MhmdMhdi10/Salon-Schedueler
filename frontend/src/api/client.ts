@@ -1973,8 +1973,8 @@ export interface SalonStaff {
 export interface StaffCreateInput {
   fullName: string;
   role: StaffRole;
-  /** Optional Iranian login phone; omit for a non-login record. */
-  phone?: string | null;
+  /** Required Iranian login phone; the add flow sends a team invitation by SMS. */
+  phone: string;
 }
 
 export interface StaffUpdateInput {
@@ -1993,7 +1993,7 @@ export const staffApi = {
     request<{ staff: SalonStaff }>(`/staff/${staffId}`),
   /** Add a staff member (Owner/Admin). Returns the created record. */
   create: (salonId: string, input: StaffCreateInput) =>
-    request<{ staff: SalonStaff }>(`/salons/${salonId}/staff`, {
+    request<{ staff: SalonStaff; invitationStatus: 'sent' | 'queued' | 'failed' | 'unavailable' }>(`/salons/${salonId}/staff`, {
       method: 'POST',
       body: input,
     }),

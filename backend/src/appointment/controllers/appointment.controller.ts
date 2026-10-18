@@ -5,6 +5,7 @@ import type { StaffRole } from '@salon/shared';
 import { asyncRoute, validateRequired } from '../../common/http/route-helpers.js';
 import { safelyNotify } from '../../app/safely-notify.js';
 import { createRateLimit, principalOrIpRateLimitKey } from '../../http/middleware/rate-limit.js';
+import { APPOINTMENT_RESCHEDULING_ENABLED } from '../../features.js';
 
 /**
  * Factory type for the RBAC guard, supplied by `buildApp` (bound to the
@@ -584,6 +585,10 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
     requireCanCancelAppointment,
     appointmentMutationLimit,
     asyncRoute(async (req, res) => {
+      if (!APPOINTMENT_RESCHEDULING_ENABLED) {
+        res.status(503).json({ code: 'FEATURE_DISABLED' });
+        return;
+      }
       if (!services.appointmentManagementService) {
         res.status(503).json({ code: 'FEATURE_UNAVAILABLE' });
         return;
@@ -625,6 +630,10 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
     requireCustomerAppointment,
     appointmentMutationLimit,
     asyncRoute(async (req, res) => {
+      if (!APPOINTMENT_RESCHEDULING_ENABLED) {
+        res.status(503).json({ code: 'FEATURE_DISABLED' });
+        return;
+      }
       if (!services.appointmentManagementService) {
         res.status(503).json({ code: 'FEATURE_UNAVAILABLE' });
         return;
@@ -646,6 +655,10 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
     requireCustomerAppointment,
     appointmentMutationLimit,
     asyncRoute(async (req, res) => {
+      if (!APPOINTMENT_RESCHEDULING_ENABLED) {
+        res.status(503).json({ code: 'FEATURE_DISABLED' });
+        return;
+      }
       if (!services.appointmentManagementService) {
         res.status(503).json({ code: 'FEATURE_UNAVAILABLE' });
         return;
@@ -789,6 +802,10 @@ export function appointmentRouter(services: Services, requireRole: RequireRole):
     '/appointments/:id/reschedule',
     requireCanManageAppointment,
     asyncRoute(async (req, res) => {
+      if (!APPOINTMENT_RESCHEDULING_ENABLED) {
+        res.status(503).json({ code: 'FEATURE_DISABLED' });
+        return;
+      }
       if (!validateRequired(res, req.body, ['startAt'])) {
         return;
       }

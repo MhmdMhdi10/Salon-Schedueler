@@ -44,7 +44,7 @@ const PROFILE_SECTIONS: readonly ProfileSectionDefinition[] = [
     key: 'operations',
     titleKey: 'owner.profile.sections.operations',
     hintKey: 'owner.profile.sections.operationsHint',
-    routes: ['/owner/config', '/owner/qr'],
+    routes: ['/owner/config'],
   },
   {
     key: 'business',
@@ -64,7 +64,6 @@ const PROFILE_ITEM_HINTS: Record<string, string> = {
   '/owner/team': 'owner.profile.itemHints.team',
   '/owner/config': 'owner.profile.itemHints.configuration',
   '/owner/services': 'owner.profile.itemHints.services',
-  '/owner/qr': 'owner.profile.itemHints.qr',
   '/owner/analytics': 'owner.profile.itemHints.analytics',
   '/owner/transactions': 'owner.profile.itemHints.transactions',
   '/owner/subscription': 'owner.profile.itemHints.subscription',

@@ -34,7 +34,7 @@ const STAFF_NAV = [
   { labelKey: 'owner.nav.analytics', to: '/owner/analytics', roles: ['Owner', 'Admin'] },
   { labelKey: 'owner.nav.configuration', to: '/owner/config', roles: ['Owner', 'Admin'] },
   { labelKey: 'owner.nav.subscription', to: '/owner/subscription', roles: ['Owner', 'Admin'] },
-  { labelKey: 'owner.nav.qr', to: '/owner/qr', roles: ['Owner', 'Admin'] },
+  { labelKey: 'owner.nav.marketing', to: '/owner/marketing', roles: ['Owner', 'Admin'] },
 ] as const;
 
 /**

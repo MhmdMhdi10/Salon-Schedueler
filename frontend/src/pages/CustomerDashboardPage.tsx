@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { APPOINTMENT_RESCHEDULING_ENABLED } from '../config/features';
 import {
   ApiError,
   customerApi,
@@ -242,6 +243,7 @@ function AppointmentRow({
   onReschedule,
   onAcceptReschedule,
   onRejectReschedule,
+  reschedulingEnabled,
 }: {
   appointment: CustomerAppointment;
   actionBusy?: boolean;
@@ -255,6 +257,7 @@ function AppointmentRow({
   onReschedule?: (appointment: CustomerAppointment) => void;
   onAcceptReschedule?: (appointment: CustomerAppointment) => void;
   onRejectReschedule?: (appointment: CustomerAppointment) => void;
+  reschedulingEnabled: boolean;
 }) {
   const status = statusMeta(appointment.status);
   const start = parseDate(appointment.startAt);
@@ -408,7 +411,11 @@ function AppointmentRow({
               زمان پیشنهادی: <JalaliDate value={pendingStart} variant="numeric" /> · {clockTime(appointment.pendingReschedule?.startAt) || '—'}
             </p>
           </div>
-          {pendingExpired ? (
+          {!reschedulingEnabled ? (
+            <p className="m-0 text-xs leading-6 text-muted">
+              تغییر زمان فعلاً در نسخهٔ اولیه غیرفعال است؛ نوبت در زمان فعلی باقی می‌ماند.
+            </p>
+          ) : pendingExpired ? (
             <p className="m-0 text-xs leading-6 text-danger">
               مهلت این پیشنهاد گذشته است. برای پاک‌کردن آن می‌توانی ردش کنی.
             </p>
@@ -422,7 +429,7 @@ function AppointmentRow({
               type="button"
               variant="danger"
               size="md"
-              disabled={actionBusy}
+              disabled={actionBusy || !reschedulingEnabled}
               onClick={() => onRejectReschedule(appointment)}
             >
               رد زمان جدید
@@ -431,7 +438,7 @@ function AppointmentRow({
               type="button"
               size="md"
               loading={actionBusy}
-              disabled={actionBusy || pendingExpired}
+              disabled={actionBusy || pendingExpired || !reschedulingEnabled}
               onClick={() => onAcceptReschedule(appointment)}
             >
               تأیید زمان جدید
@@ -441,7 +448,7 @@ function AppointmentRow({
       )}
       {canManage && onCancel && onStartReschedule && (
         <div className="flex w-full flex-wrap items-center justify-end gap-2 border-t border-border/50 pt-3">
-          {rescheduleValue !== undefined ? (
+          {rescheduleValue !== undefined && reschedulingEnabled ? (
             rescheduleReview ? (
               <div className="flex w-full flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3" data-testid={`customer-reschedule-review-${appointment.id}`}>
                 <div>
@@ -502,11 +509,16 @@ function AppointmentRow({
                 type="button"
                 variant="secondary"
                 size="md"
-                disabled={actionBusy}
+                disabled={actionBusy || !reschedulingEnabled}
                 onClick={() => onStartReschedule(appointment)}
               >
                 تغییر زمان
               </Button>
+              {!reschedulingEnabled && (
+                <span className="w-full text-end text-xs text-muted">
+                  تغییر زمان فعلاً در دسترس نیست.
+                </span>
+              )}
               <Button
                 type="button"
                 variant="danger"
@@ -778,6 +790,7 @@ export function CustomerDashboardPage() {
 
   const saveReschedule = useCallback(
     async (appointment: CustomerAppointment) => {
+      if (!APPOINTMENT_RESCHEDULING_ENABLED) return;
       if (!rescheduleValue) return;
       const nextStart = new Date(rescheduleValue);
       if (Number.isNaN(nextStart.getTime()) || nextStart.getTime() <= Date.now()) {
@@ -803,6 +816,7 @@ export function CustomerDashboardPage() {
 
   const acceptReschedule = useCallback(
     async (appointment: CustomerAppointment) => {
+      if (!APPOINTMENT_RESCHEDULING_ENABLED) return false;
       if (!appointment.pendingReschedule?.startAt) return false;
       setActionBusyId(appointment.id);
       setActionError('');
@@ -828,6 +842,7 @@ export function CustomerDashboardPage() {
 
   const rejectReschedule = useCallback(
     async (appointment: CustomerAppointment) => {
+      if (!APPOINTMENT_RESCHEDULING_ENABLED) return;
       if (!appointment.pendingReschedule?.startAt) return;
       setActionBusyId(appointment.id);
       setActionError('');
@@ -1332,6 +1347,7 @@ export function CustomerDashboardPage() {
                       <AppointmentRow
                         key={appointment.id}
                         appointment={appointment}
+                        reschedulingEnabled={APPOINTMENT_RESCHEDULING_ENABLED}
                         actionBusy={actionBusyId === appointment.id}
                         rescheduleValue={
                           rescheduleId === appointment.id ? rescheduleValue : undefined
@@ -1391,6 +1407,7 @@ export function CustomerDashboardPage() {
                     <AppointmentRow
                       key={appointment.id}
                       appointment={appointment}
+                      reschedulingEnabled={APPOINTMENT_RESCHEDULING_ENABLED}
                       actionBusy={actionBusyId === appointment.id}
                       rescheduleValue={
                         rescheduleId === appointment.id ? rescheduleValue : undefined
@@ -1446,7 +1463,11 @@ export function CustomerDashboardPage() {
               {historyAppointments.length > 0 ? (
                 <div className="flex flex-col gap-2">
                   {historyPagination.pageItems.map((appointment) => (
-                    <AppointmentRow key={appointment.id} appointment={appointment} />
+                    <AppointmentRow
+                      key={appointment.id}
+                      appointment={appointment}
+                      reschedulingEnabled={APPOINTMENT_RESCHEDULING_ENABLED}
+                    />
                   ))}
                   <Pagination
                     page={historyPagination.page}

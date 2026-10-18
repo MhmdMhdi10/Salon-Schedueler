@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
   CalendarClock,
@@ -9,14 +10,19 @@ import {
   Link2,
   Megaphone,
   MessageCircle,
+  QrCode,
   Share2,
   Users,
 } from 'lucide-react';
 import { ApiError, qrApi, type SalonQrResponse } from '../../api/client';
 import { useSalonId } from '../../auth/useSalonId';
+import { useHashScroll } from '../../hooks/useHashScroll';
 import { SeoHead } from '../../components/seo';
 import { Button, Card, ErrorState, Select, Skeleton, useToast } from '../../components/ui';
+import { copyToClipboard } from '../../utils/copyToClipboard';
 import { qrImageDataUri } from './marketing-assets';
+
+const OwnerQrStudio = lazy(() => import('./QrPage').then((module) => ({ default: module.OwnerQrPage })));
 
 type CampaignSource = 'instagram_bio' | 'instagram_story' | 'whatsapp' | 'qr' | 'google';
 
@@ -30,13 +36,16 @@ const CAMPAIGN_SOURCES: Array<{ value: CampaignSource; label: string; hint: stri
 
 /** Owner activation surface: share, measure, and repeat the booking campaign. */
 export function OwnerMarketingPage() {
+  useHashScroll();
+  const location = useLocation();
   const salonId = useSalonId();
   const { success, error: showError } = useToast();
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [data, setData] = useState<SalonQrResponse | null>(null);
   const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
+  const [copiedAction, setCopiedAction] = useState<'booking' | 'campaign' | 'message' | null>(null);
   const [selectedSource, setSelectedSource] = useState<CampaignSource>('instagram_bio');
+  const [qrOpen, setQrOpen] = useState(() => location.hash.startsWith('#qr'));
 
   const load = useCallback(async () => {
     setStatus('loading');
@@ -63,12 +72,13 @@ export function OwnerMarketingPage() {
   }, [data?.url]);
 
   const bookingQrUri = useMemo(
-    () =>
-      data?.payload
-        ? qrImageDataUri(data.payload, `کد QR رزرو ${data.salonName}`)
-        : '',
+    () => data?.payload ? qrImageDataUri(data.payload, `کد QR رزرو ${data.salonName}`) : '',
     [data?.payload, data?.salonName],
   );
+
+  useEffect(() => {
+    if (location.hash.startsWith('#qr')) setQrOpen(true);
+  }, [location.hash]);
 
   const campaignUrl = useMemo(() => {
     if (!bookingUrl) return '';
@@ -89,21 +99,22 @@ export function OwnerMarketingPage() {
   const activeSource =
     CAMPAIGN_SOURCES.find((source) => source.value === selectedSource) ?? CAMPAIGN_SOURCES[0];
 
-  const copyText = async (value: string, title: string) => {
+  const copyText = async (value: string, title: string, action: 'booking' | 'campaign' | 'message') => {
     if (!value) return;
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
+    setCopiedAction(null);
+    const copiedSuccessfully = await copyToClipboard(value);
+    if (copiedSuccessfully) {
+      setCopiedAction(action);
       success({ title });
-      window.setTimeout(() => setCopied(false), 1800);
-    } catch {
-      setCopied(false);
+      window.setTimeout(() => setCopiedAction((current) => current === action ? null : current), 1800);
+    } else {
+      showError({ title: 'کپی انجام نشد؛ متن را انتخاب و کپی کن.' });
     }
   };
 
-  const copyLink = async () => copyText(bookingUrl, 'لینک رزرو کپی شد');
-  const copyCampaignLink = async () => copyText(campaignUrl, 'لینک کمپین کپی شد');
-  const copyCampaignMessage = async () => copyText(campaignMessage, 'متن آماده کپی شد');
+  const copyLink = async () => copyText(bookingUrl, 'لینک رزرو کپی شد', 'booking');
+  const copyCampaignLink = async () => copyText(campaignUrl, 'لینک کمپین کپی شد', 'campaign');
+  const copyCampaignMessage = async () => copyText(campaignMessage, 'متن آماده کپی شد', 'message');
 
   const shareLink = async () => {
     if (!bookingUrl) return;
@@ -129,17 +140,15 @@ export function OwnerMarketingPage() {
     >
       <SeoHead title="بازاریابی" />
 
-      {status !== 'ready' && (
-        <header className="flex items-start gap-3">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Megaphone className="size-5" aria-hidden="true" />
-          </span>
-          <div>
-            <h1 className="text-display text-2xl text-text sm:text-3xl">بازاریابی</h1>
-            <p className="mt-1 text-sm leading-6 text-muted">لینک رزرو را با مشتری‌ها به اشتراک بگذار.</p>
-          </div>
-        </header>
-      )}
+      <header className="flex items-start gap-3">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Megaphone className="size-5" aria-hidden="true" />
+        </span>
+        <div>
+          <h1 className="text-display text-2xl text-text sm:text-3xl">بازاریابی</h1>
+          <p className="mt-1 text-sm leading-6 text-muted">لینک رزرو، QR سالن و ابزارهای انتشار را یک‌جا مدیریت کن.</p>
+        </div>
+      </header>
 
       {status === 'loading' && (
         <Card data-testid="owner-marketing-loading" className="flex flex-col gap-4">
@@ -163,64 +172,39 @@ export function OwnerMarketingPage() {
           elevated
           className="overflow-hidden border-primary/25 bg-primary/5"
         >
-          <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_14rem] sm:items-center">
-            <aside className="flex min-w-0 flex-col items-center gap-2 rounded-xl border border-primary/20 bg-surface p-3">
-              <img
-                data-testid="owner-marketing-qr"
-                src={bookingQrUri}
-                alt={`کد QR رزرو ${data.salonName}`}
-                className="size-56 shrink-0 rounded-lg bg-white p-2 sm:size-64"
-              />
-              <p className="text-sm font-bold text-text">اسکن برای رزرو سریع</p>
-              <a href="/owner/qr" className="inline-flex min-h-10 items-center gap-1 font-bold text-primary no-underline hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus">
-                تنظیم و دانلود QR <ArrowLeft className="size-4 rtl:-scale-x-100" aria-hidden="true" />
-              </a>
-            </aside>
-            <div className="flex min-w-0 flex-col gap-3">
-              <header className="flex items-start gap-3">
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <Megaphone className="size-5" aria-hidden="true" />
-                </span>
-                <div>
-                  <h1 className="text-display text-2xl text-text sm:text-3xl">بازاریابی</h1>
-                  <p className="mt-1 text-sm leading-6 text-muted">لینک رزرو را با مشتری‌ها به اشتراک بگذار.</p>
-                </div>
-              </header>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-bold text-primary">لینک رزرو</p>
-                  <h2 className="mt-1 text-xl font-black text-text">رزرو آنلاین سالن</h2>
-                  <p className="mt-1 text-sm leading-6 text-muted">مشتری‌ها از این لینک خدمات را می‌بینند و وقت می‌گیرند.</p>
-                </div>
+          <div className="flex min-w-0 flex-col gap-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-primary">لینک رزرو</p>
+                <h2 className="mt-1 text-xl font-black text-text">رزرو آنلاین {data.salonName}</h2>
+                <p className="mt-1 text-sm leading-6 text-muted">مشتری‌ها خدمات را می‌بینند و مستقیم وقت می‌گیرند.</p>
               </div>
-              <div className="flex min-w-0 flex-col gap-2 rounded-lg border border-border bg-surface p-3">
-                <span className="block truncate text-sm text-text" dir="ltr" title={bookingUrl}>{bookingUrl}</span>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    onClick={() => void copyLink()}
-                    startIcon={copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                    className="min-w-0 basis-32 flex-1"
-                  >
-                    {copied ? 'کپی شد' : 'کپی لینک'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => void shareLink()}
-                    startIcon={<Share2 className="size-4" />}
-                    className="min-w-0 basis-32 flex-1"
-                  >
-                    اشتراک
-                  </Button>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+            </div>
+            <div className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-surface p-3">
+              <span className="block break-all text-sm text-text" dir="ltr" title={bookingUrl}>{bookingUrl}</span>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  onClick={() => void copyLink()}
+                  startIcon={copiedAction === 'booking' ? <Check className="size-4" /> : <Copy className="size-4" />}
+                  className="min-w-0 basis-32 flex-1"
+                >
+                  {copiedAction === 'booking' ? 'کپی شد' : 'کپی لینک'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void shareLink()}
+                  startIcon={<Share2 className="size-4" />}
+                  className="min-w-0 basis-32 flex-1"
+                >
+                  اشتراک
+                </Button>
                 <a
                   href={bookingUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex min-h-10 items-center gap-1 rounded-md px-1 font-medium text-primary no-underline hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+                  className="inline-flex min-h-11 flex-1 basis-40 items-center justify-center gap-1 rounded-lg border border-border px-3 text-sm font-medium text-primary no-underline hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
                 >
                   پیش‌نمایش صفحه رزرو <ExternalLink className="size-4" aria-hidden="true" />
                 </a>
@@ -228,6 +212,37 @@ export function OwnerMarketingPage() {
             </div>
           </div>
         </Card>
+      )}
+
+      {status === 'ready' && data && (
+        <details
+          id="qr-studio"
+          open={qrOpen}
+          onToggle={(event) => setQrOpen(event.currentTarget.open)}
+          className="group overflow-hidden rounded-2xl border border-border bg-surface shadow-1"
+        >
+          <summary className="flex min-h-16 cursor-pointer list-none items-center gap-3 px-4 py-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus [&::-webkit-details-marker]:hidden">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <QrCode className="size-5" aria-hidden="true" />
+            </span>
+            <img
+              data-testid="owner-marketing-qr"
+              src={bookingQrUri}
+              alt={`کد QR رزرو ${data.salonName}`}
+              className="size-12 shrink-0 rounded-lg border border-border bg-white p-0.5"
+            />
+            <span className="min-w-0 flex-1">
+              <strong className="block text-sm text-text">کد QR و ابزارهای چاپ</strong>
+              <span className="mt-0.5 block text-xs leading-5 text-muted">قالب، رنگ، دانلود و سفارش کارت را اینجا مدیریت کن.</span>
+            </span>
+            <ChevronDown className="size-5 shrink-0 text-muted transition-transform group-open:rotate-180" aria-hidden="true" />
+          </summary>
+          <div className="border-t border-border p-3 sm:p-4">
+            <Suspense fallback={<Skeleton variant="rect" className="h-72 rounded-xl" />}>
+              <OwnerQrStudio embedded initialData={data} />
+            </Suspense>
+          </div>
+        </details>
       )}
 
       {status === 'ready' && data && (
@@ -260,19 +275,19 @@ export function OwnerMarketingPage() {
               <Button
                 type="button"
                 onClick={() => void copyCampaignLink()}
-                startIcon={<Copy className="size-4" />}
+                startIcon={copiedAction === 'campaign' ? <Check className="size-4" /> : <Copy className="size-4" />}
                 className="min-w-0 basis-32 flex-1"
               >
-                کپی لینک
+                {copiedAction === 'campaign' ? 'کپی شد' : 'کپی لینک'}
               </Button>
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => void copyCampaignMessage()}
-                startIcon={<MessageCircle className="size-4" />}
+                startIcon={copiedAction === 'message' ? <Check className="size-4" /> : <MessageCircle className="size-4" />}
                 className="min-w-0 basis-32 flex-1"
               >
-                کپی متن
+                {copiedAction === 'message' ? 'کپی شد' : 'کپی متن'}
               </Button>
             </div>
           </div>

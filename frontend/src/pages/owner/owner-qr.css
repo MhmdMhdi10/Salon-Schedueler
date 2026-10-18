@@ -717,17 +717,22 @@
   }
   .owner-qr-actions {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
   }
   .owner-qr-actions > button:first-child {
-    grid-column: 1 / -1;
+    grid-column: auto;
   }
   .owner-qr-actions > button,
   .owner-qr-url-actions > button,
   .owner-qr-url-actions > a,
   .owner-qr-order-submit > button {
     inline-size: 100%;
+    min-inline-size: 0;
     justify-content: center;
+  }
+  .owner-qr-actions > button {
+    white-space: normal;
+    text-align: center;
   }
   .owner-qr-url-actions {
     display: grid;
