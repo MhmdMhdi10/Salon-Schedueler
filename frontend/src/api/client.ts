@@ -25,7 +25,8 @@ const API_ERROR_MESSAGES: Record<string, string> = {
   FINANCIAL_LEDGER_IMMUTABLE: 'رکورد مالی قابل حذف نیست؛ فقط وضعیت reconciliation قابل اصلاح است.',
   BOOKING_SLOT_UNAVAILABLE: 'این زمان در همین لحظه توسط رزرو دیگری گرفته شد؛ زمان دیگری انتخاب کن.',
   BOOKING_NO_AVAILABILITY: 'برای این خدمت در تاریخ انتخاب‌شده زمان خالی وجود ندارد.',
-  DEPOSIT_CARD_NOT_CONFIGURED: 'این سالن هنوز اطلاعات دریافت بیعانه را تکمیل نکرده است؛ خدمت دیگری انتخاب کن یا با سالن تماس بگیر.',
+  DEPOSIT_CARD_NOT_CONFIGURED:
+    'این سالن هنوز اطلاعات دریافت بیعانه را تکمیل نکرده است؛ خدمت دیگری انتخاب کن یا با سالن تماس بگیر.',
   CUSTOMER_BLOCKED: 'امکان ثبت رزرو در این سالن برای این حساب وجود ندارد.',
   SMS_FAILED: 'ارسال پیامک ناموفق بود؛ دوباره تلاش کن.',
   RESCHEDULE_CONFLICT: 'زمان جدید دیگر خالی نیست؛ یک زمان تازه انتخاب کن.',
@@ -34,8 +35,10 @@ const API_ERROR_MESSAGES: Record<string, string> = {
   ASSIGNED_CHAIR_TAKEN: 'این صندلی قبلاً به عضو دیگری اختصاص داده شده است.',
   SUBSCRIPTION_REQUIRED: 'اشتراک سالن منقضی شده است؛ ابتدا اشتراک را تمدید کن.',
   SUBSCRIPTION_PLAN_UNAVAILABLE: 'این پلن فعلاً برای خرید در دسترس نیست.',
-  SUBSCRIPTION_WINDOW_LIMIT_REACHED: 'با توجه به اشتراک فعلی، تمدید نباید تاریخ پایان را بیشتر از ۳ ماه آینده ببرد.',
-  SUBSCRIPTION_PAYMENT_PENDING: 'یک پرداخت اشتراک هنوز در حال بررسی است؛ تا مشخص‌شدن نتیجه، پرداخت دیگری شروع نکن.',
+  SUBSCRIPTION_WINDOW_LIMIT_REACHED:
+    'با توجه به اشتراک فعلی، تمدید نباید تاریخ پایان را بیشتر از ۳ ماه آینده ببرد.',
+  SUBSCRIPTION_PAYMENT_PENDING:
+    'یک پرداخت اشتراک هنوز در حال بررسی است؛ تا مشخص‌شدن نتیجه، پرداخت دیگری شروع نکن.',
   RATE_LIMITED: 'تعداد درخواست‌ها زیاد است؛ کمی بعد دوباره تلاش کن.',
   OTP_INVALID: 'کد ورود نادرست است.',
   OTP_EXPIRED: 'کد ورود منقضی شده است؛ کد تازه بگیر.',
@@ -76,7 +79,10 @@ function getFieldErrorMessage(code: string, field?: string): string | undefined 
   return undefined;
 }
 
-export function getApiErrorMessage(error: unknown, fallback = 'عملیات انجام نشد. دوباره تلاش کن.'): string {
+export function getApiErrorMessage(
+  error: unknown,
+  fallback = 'عملیات انجام نشد. دوباره تلاش کن.',
+): string {
   if (error instanceof ApiError) {
     return (
       getFieldErrorMessage(error.code, error.field) ||
@@ -270,6 +276,7 @@ export interface CustomerAppointment {
   id: string;
   salonId: string;
   salonName?: string;
+  timezone?: string;
   serviceId: string;
   serviceName?: string;
   staffMemberId: string;
@@ -348,8 +355,7 @@ export const customerApi = {
     }),
   getAppointments: () =>
     request<{ appointments: CustomerAppointment[] }>('/customers/me/appointments'),
-  getWaitlist: () =>
-    request<{ waitlist: CustomerWaitlistEntry[] }>('/customers/me/waitlist'),
+  getWaitlist: () => request<{ waitlist: CustomerWaitlistEntry[] }>('/customers/me/waitlist'),
   getNotifications: () =>
     request<{ notifications: CustomerNotification[] }>('/customers/me/notifications'),
   markNotificationRead: (id: string) =>
@@ -359,10 +365,9 @@ export const customerApi = {
   markAllNotificationsRead: () =>
     request<{ ok: boolean }>('/customers/me/notifications/read-all', { method: 'POST' }),
   cancelAppointment: (appointmentId: string) =>
-    request<{ status: string; appointment: unknown }>(
-      `/appointments/${appointmentId}/cancel`,
-      { method: 'POST' },
-    ),
+    request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/cancel`, {
+      method: 'POST',
+    }),
   getCancellation: (appointmentId: string) =>
     request<{ cancellation: CustomerAppointment['cancellation'] }>(
       `/appointments/${appointmentId}/cancellation`,
@@ -398,7 +403,11 @@ export const customerApi = {
     request<{ deposit: DepositOverview }>(`/appointments/${appointmentId}/deposit`),
   uploadDepositReceipt: (
     appointmentId: string,
-    input: { fileName: string; mimeType: 'image/jpeg' | 'image/png' | 'image/webp'; dataBase64: string },
+    input: {
+      fileName: string;
+      mimeType: 'image/jpeg' | 'image/png' | 'image/webp';
+      dataBase64: string;
+    },
   ) =>
     request<{ receipt: { receiptId: string; status: string } }>(
       `/appointments/${appointmentId}/deposit-receipt`,
@@ -574,10 +583,12 @@ export const salonApi = {
       `/salons/${salonId}/availability?serviceId=${serviceId}&date=${date}${
         staffId ? `&staffId=${encodeURIComponent(staffId)}` : ''
       }${locationType ? `&locationType=${locationType}` : ''}${
-        durationMinutes !== undefined ? `&durationMinutes=${durationMinutes}` : ''}${
+        durationMinutes !== undefined ? `&durationMinutes=${durationMinutes}` : ''
+      }${
         serviceIds && serviceIds.length > 1
           ? `&serviceIds=${encodeURIComponent(serviceIds.join(','))}`
-          : ''}`,
+          : ''
+      }`,
     ),
   getServices: (salonId: string) =>
     request<{
@@ -614,6 +625,7 @@ export const salonApi = {
     request<{
       bookingWindowDays: number;
       bookingStartOffsetDays?: number;
+      timezone?: string;
       workMode?: 'fixed_salon' | 'rented_chair' | 'home' | 'mobile' | 'hybrid' | 'not_decided';
       locationTypes?: Array<'salon' | 'customer'>;
     }>(`/salons/${salonId}/booking-policy`),
@@ -641,19 +653,16 @@ export const bookingApi = {
       appointment?: { id?: string } | unknown;
       paymentRedirectUrl?: string;
       deposit?: DepositInitiation;
-    }>(
-      '/appointments',
-      {
-        method: 'POST',
-        body,
-        headers: {
-          'Idempotency-Key':
-            typeof crypto !== 'undefined' && 'randomUUID' in crypto
-              ? crypto.randomUUID()
-              : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        },
+    }>('/appointments', {
+      method: 'POST',
+      body,
+      headers: {
+        'Idempotency-Key':
+          typeof crypto !== 'undefined' && 'randomUUID' in crypto
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       },
-    ),
+    }),
   cancel: (appointmentId: string) =>
     request<{ status: string; appointment: unknown }>(`/appointments/${appointmentId}/cancel`, {
       method: 'POST',
@@ -897,6 +906,7 @@ export interface CustomerAppointmentRecord {
   status: string;
   source: string;
   createdAt: string;
+  timezone?: string;
   customerNote?: string | null;
   durationMinOverride?: number | null;
   locationType?: 'salon' | 'customer';
@@ -919,10 +929,12 @@ export interface SalonCustomerProfile {
     noShowCount: number;
     preferredStaff: { id: string; fullName: string; role: string } | null;
   };
-  appointments: Array<CustomerAppointmentRecord & {
-    service?: { name: string };
-    staffMember?: { fullName: string };
-  }>;
+  appointments: Array<
+    CustomerAppointmentRecord & {
+      service?: { name: string };
+      staffMember?: { fullName: string };
+    }
+  >;
 }
 
 export interface AppointmentCustomerOverview {
@@ -966,6 +978,7 @@ export interface PendingDepositReceipt {
   appointmentStatus: string;
   startAt: string;
   endAt: string;
+  timezone?: string;
   serviceName: string;
   customerName: string | null;
   customerPhone: string;
@@ -981,8 +994,13 @@ export interface SalonEquipment {
 }
 
 export const adminApi = {
-  getSalonCustomerProfile: async (salonId: string, customerId: string): Promise<SalonCustomerProfile> => {
-    const profile = await request<SalonCustomerProfile>(`/salons/${salonId}/customers/${customerId}`);
+  getSalonCustomerProfile: async (
+    salonId: string,
+    customerId: string,
+  ): Promise<SalonCustomerProfile> => {
+    const profile = await request<SalonCustomerProfile>(
+      `/salons/${salonId}/customers/${customerId}`,
+    );
     return {
       ...profile,
       appointments: profile.appointments.map((appointment) => ({
@@ -1016,16 +1034,12 @@ export const adminApi = {
       sources?: unknown;
       campaignScans?: unknown;
       customers?: unknown;
-    }>(
-      `/salons/${salonId}/analytics?from=${from}&to=${to}`,
-    ),
+    }>(`/salons/${salonId}/analytics?from=${from}&to=${to}`),
   getStaff: (salonId: string) => request<{ staff: SalonStaff[] }>(`/salons/${salonId}/staff`),
-  getStaffMember: (staffId: string) =>
-    request<{ staff: SalonStaff }>(`/staff/${staffId}`),
+  getStaffMember: (staffId: string) => request<{ staff: SalonStaff }>(`/staff/${staffId}`),
   deleteStaffMember: (staffId: string) =>
     request<{ ok: boolean }>(`/staff/${staffId}`, { method: 'DELETE' }),
-  getSmsSettings: (salonId: string) =>
-    request<SmsSettings>(`/salons/${salonId}/sms-settings`),
+  getSmsSettings: (salonId: string) => request<SmsSettings>(`/salons/${salonId}/sms-settings`),
   updateSmsSettings: (salonId: string, patch: Partial<SmsSettings>) =>
     request<SmsSettings>(`/salons/${salonId}/sms-settings`, { method: 'PATCH', body: patch }),
   getDepositSettings: (salonId: string) =>
@@ -1044,15 +1058,15 @@ export const adminApi = {
       body,
     }),
   setEquipmentActive: (salonId: string, equipmentId: string, active: boolean) =>
-    request<{ equipment: SalonEquipment }>(
-      `/salons/${salonId}/equipment/${equipmentId}`,
-      { method: 'PATCH', body: { active } },
-    ),
+    request<{ equipment: SalonEquipment }>(`/salons/${salonId}/equipment/${equipmentId}`, {
+      method: 'PATCH',
+      body: { active },
+    }),
   updateEquipment: (salonId: string, equipmentId: string, name: string) =>
-    request<{ equipment: SalonEquipment }>(
-      `/salons/${salonId}/equipment/${equipmentId}`,
-      { method: 'PATCH', body: { name } },
-    ),
+    request<{ equipment: SalonEquipment }>(`/salons/${salonId}/equipment/${equipmentId}`, {
+      method: 'PATCH',
+      body: { name },
+    }),
   deleteEquipment: (salonId: string, equipmentId: string) =>
     request<{ ok: boolean }>(`/salons/${salonId}/equipment/${equipmentId}`, {
       method: 'DELETE',
@@ -1071,10 +1085,12 @@ export const adminApi = {
       durationMinutes?: number;
     },
   ) =>
-    request<{ status: string; appointment: unknown; paymentRedirectUrl?: string; deposit?: DepositInitiation }>(
-      `/salons/${salonId}/appointments/manual`,
-      { method: 'POST', body },
-    ),
+    request<{
+      status: string;
+      appointment: unknown;
+      paymentRedirectUrl?: string;
+      deposit?: DepositInitiation;
+    }>(`/salons/${salonId}/appointments/manual`, { method: 'POST', body }),
   /** The salon's bookings awaiting approval, oldest first (manage_appointments). */
   getPending: (salonId: string) =>
     request<{ appointments: unknown[]; canApproveOwnAppointments?: boolean }>(
@@ -1174,10 +1190,13 @@ export const adminApi = {
       { method: 'POST', body: { body } },
     ),
   sendCustomerMessage: (appointmentId: string, message: string) =>
-    request<{ status: 'sent'; providerId?: string; delivery?: 'accepted' }>('/appointments/' + appointmentId + '/message', {
-      method: 'POST',
-      body: { message },
-    }),
+    request<{ status: 'sent'; providerId?: string; delivery?: 'accepted' }>(
+      '/appointments/' + appointmentId + '/message',
+      {
+        method: 'POST',
+        body: { message },
+      },
+    ),
   getWaitlist: (salonId: string, from?: string, to?: string) => {
     const query = new URLSearchParams({
       ...(from ? { from } : {}),
@@ -1188,9 +1207,7 @@ export const adminApi = {
     );
   },
   getPendingDepositReceipts: (salonId: string) =>
-    request<{ receipts: PendingDepositReceipt[] }>(
-      `/salons/${salonId}/deposit-receipts/pending`,
-    ),
+    request<{ receipts: PendingDepositReceipt[] }>(`/salons/${salonId}/deposit-receipts/pending`),
 
   /** The salon's money transactions (appointment + subscription payments), newest-first. */
   getTransactions: (salonId: string) =>
@@ -1254,10 +1271,10 @@ export const adminApi = {
       approvalStaffId?: string | null;
     },
   ) =>
-    request<{ service: Record<string, unknown> }>(
-      `/salons/${salonId}/services/${serviceId}`,
-      { method: 'PATCH', body },
-    ),
+    request<{ service: Record<string, unknown> }>(`/salons/${salonId}/services/${serviceId}`, {
+      method: 'PATCH',
+      body,
+    }),
   setServiceStaff: (salonId: string, serviceId: string, staffIds: string[]) =>
     request<{ staffIds: string[] }>(`/salons/${salonId}/services/${serviceId}/staff`, {
       method: 'PUT',
@@ -1380,7 +1397,13 @@ export interface PlatformSalonRow {
   createdAt: string;
   owner: { fullName: string; phone: string | null } | null;
   subscription: { status: string; planKind: string; expiresAt: string } | null;
-  counts: { staffMembers: number; services: number; appointments: number; waitlistEntries: number; qrScanEvents: number };
+  counts: {
+    staffMembers: number;
+    services: number;
+    appointments: number;
+    waitlistEntries: number;
+    qrScanEvents: number;
+  };
 }
 
 export interface PlatformCustomerRow {
@@ -1582,120 +1605,319 @@ function platformQuery(options: PlatformListOptions = {}): string {
 export const platformAdminApi = {
   getDashboard: () => request<PlatformDashboard>('/platform-admin/dashboard'),
   listSmsDeliveries: (options?: PlatformListOptions) =>
-    request<PlatformPage<PlatformSmsDeliveryRow>>(`/platform-admin/sms-deliveries${platformQuery(options)}`),
+    request<PlatformPage<PlatformSmsDeliveryRow>>(
+      `/platform-admin/sms-deliveries${platformQuery(options)}`,
+    ),
   listSalons: (options?: PlatformListOptions) =>
     request<PlatformPage<PlatformSalonRow>>(`/platform-admin/salons${platformQuery(options)}`),
-  createSalon: (body: { salonName: string; ownerName: string; phone: string; timezone?: string; businessType?: string; workMode?: string }) =>
-    request<{ salon: { id: string; name: string; active: boolean } }>('/platform-admin/salons', { method: 'POST', body }),
-  getSalon: (id: string) => request<{ salon: Record<string, unknown> }>(`/platform-admin/salons/${id}`),
-  updateSalon: (id: string, body: Partial<{ name: string; timezone: string; businessType: string | null; brandAccent: string | null; workMode: string; autoApprove: boolean; bookingWindowDays: number; bookingStartOffsetDays: number; active: boolean }>) =>
-    request<{ salon: { id: string; name: string; timezone: string; active: boolean } }>(`/platform-admin/salons/${id}`, { method: 'PATCH', body }),
-  deleteSalon: (id: string) => request<{ salon: { id: string; name: string; active: boolean } }>(`/platform-admin/salons/${id}`, { method: 'DELETE' }),
+  createSalon: (body: {
+    salonName: string;
+    ownerName: string;
+    phone: string;
+    timezone?: string;
+    businessType?: string;
+    workMode?: string;
+  }) =>
+    request<{ salon: { id: string; name: string; active: boolean } }>('/platform-admin/salons', {
+      method: 'POST',
+      body,
+    }),
+  getSalon: (id: string) =>
+    request<{ salon: Record<string, unknown> }>(`/platform-admin/salons/${id}`),
+  updateSalon: (
+    id: string,
+    body: Partial<{
+      name: string;
+      timezone: string;
+      businessType: string | null;
+      brandAccent: string | null;
+      workMode: string;
+      autoApprove: boolean;
+      bookingWindowDays: number;
+      bookingStartOffsetDays: number;
+      active: boolean;
+    }>,
+  ) =>
+    request<{ salon: { id: string; name: string; timezone: string; active: boolean } }>(
+      `/platform-admin/salons/${id}`,
+      { method: 'PATCH', body },
+    ),
+  deleteSalon: (id: string) =>
+    request<{ salon: { id: string; name: string; active: boolean } }>(
+      `/platform-admin/salons/${id}`,
+      { method: 'DELETE' },
+    ),
   getDetail: (resource: string, id: string) =>
-    request<PlatformDetailResponse>(`/platform-admin/details/${encodeURIComponent(resource)}/${encodeURIComponent(id)}`),
+    request<PlatformDetailResponse>(
+      `/platform-admin/details/${encodeURIComponent(resource)}/${encodeURIComponent(id)}`,
+    ),
   setSalonActive: (id: string, active: boolean) =>
     request<{ salon: { id: string; active: boolean } }>(`/platform-admin/salons/${id}/status`, {
       method: 'PATCH',
       body: { active },
     }),
   listCustomers: (options?: PlatformListOptions) =>
-    request<PlatformPage<PlatformCustomerRow>>(`/platform-admin/customers${platformQuery(options)}`),
+    request<PlatformPage<PlatformCustomerRow>>(
+      `/platform-admin/customers${platformQuery(options)}`,
+    ),
   createCustomer: (body: { phone: string; fullName?: string | null }) =>
-    request<{ customer: PlatformCustomerRow }>('/platform-admin/customers', { method: 'POST', body }),
+    request<{ customer: PlatformCustomerRow }>('/platform-admin/customers', {
+      method: 'POST',
+      body,
+    }),
   updateCustomer: (id: string, body: Partial<{ phone: string; fullName: string | null }>) =>
-    request<{ customer: PlatformCustomerRow }>(`/platform-admin/customers/${id}`, { method: 'PATCH', body }),
+    request<{ customer: PlatformCustomerRow }>(`/platform-admin/customers/${id}`, {
+      method: 'PATCH',
+      body,
+    }),
   setCustomerActive: (id: string, active: boolean) =>
-    request<{ customer: PlatformCustomerRow }>(`/platform-admin/customers/${id}/status`, { method: 'PATCH', body: { active } }),
+    request<{ customer: PlatformCustomerRow }>(`/platform-admin/customers/${id}/status`, {
+      method: 'PATCH',
+      body: { active },
+    }),
   deleteCustomer: (id: string) =>
-    request<{ customer: PlatformCustomerRow }>(`/platform-admin/customers/${id}`, { method: 'DELETE' }),
+    request<{ customer: PlatformCustomerRow }>(`/platform-admin/customers/${id}`, {
+      method: 'DELETE',
+    }),
   listStaff: (options?: PlatformListOptions) =>
     request<PlatformPage<PlatformStaffRow>>(`/platform-admin/staff${platformQuery(options)}`),
   createStaff: (body: { salonId: string; fullName: string; role: string; phone?: string | null }) =>
     request<{ staff: PlatformStaffRow }>('/platform-admin/staff', { method: 'POST', body }),
-  updateStaff: (id: string, body: Partial<{ fullName: string; role: string; phone: string | null; active: boolean }>) =>
+  updateStaff: (
+    id: string,
+    body: Partial<{ fullName: string; role: string; phone: string | null; active: boolean }>,
+  ) =>
     request<{ staff: PlatformStaffRow }>(`/platform-admin/staff/${id}`, { method: 'PATCH', body }),
-  deleteStaff: (id: string) => request<{ staff: { id: string; active: boolean; deletedAt: string | null } }>(`/platform-admin/staff/${id}`, { method: 'DELETE' }),
+  deleteStaff: (id: string) =>
+    request<{ staff: { id: string; active: boolean; deletedAt: string | null } }>(
+      `/platform-admin/staff/${id}`,
+      { method: 'DELETE' },
+    ),
   setStaffActive: (id: string, active: boolean) =>
     request<{ staff: { id: string; active: boolean } }>(`/platform-admin/staff/${id}/status`, {
       method: 'PATCH',
       body: { active },
     }),
   listPlatformAdmins: (options?: PlatformListOptions) =>
-    request<PlatformPage<PlatformAdminRow>>(`/platform-admin/platform-admins${platformQuery(options)}`),
-  createPlatformAdmin: (body: { phone: string; fullName: string; role?: string; active?: boolean }) =>
-    request<{ admin: PlatformAdminRow }>('/platform-admin/platform-admins', { method: 'POST', body }),
-  updatePlatformAdmin: (id: string, body: Partial<{ phone: string; fullName: string; role: string; active: boolean }>) =>
-    request<{ admin: PlatformAdminRow }>(`/platform-admin/platform-admins/${id}`, { method: 'PATCH', body }),
+    request<PlatformPage<PlatformAdminRow>>(
+      `/platform-admin/platform-admins${platformQuery(options)}`,
+    ),
+  createPlatformAdmin: (body: {
+    phone: string;
+    fullName: string;
+    role?: string;
+    active?: boolean;
+  }) =>
+    request<{ admin: PlatformAdminRow }>('/platform-admin/platform-admins', {
+      method: 'POST',
+      body,
+    }),
+  updatePlatformAdmin: (
+    id: string,
+    body: Partial<{ phone: string; fullName: string; role: string; active: boolean }>,
+  ) =>
+    request<{ admin: PlatformAdminRow }>(`/platform-admin/platform-admins/${id}`, {
+      method: 'PATCH',
+      body,
+    }),
   deletePlatformAdmin: (id: string) =>
-    request<{ admin: PlatformAdminRow }>(`/platform-admin/platform-admins/${id}`, { method: 'DELETE' }),
+    request<{ admin: PlatformAdminRow }>(`/platform-admin/platform-admins/${id}`, {
+      method: 'DELETE',
+    }),
   listServices: (options?: PlatformListOptions) =>
     request<PlatformPage<PlatformServiceRow>>(`/platform-admin/services${platformQuery(options)}`),
-  createService: (body: { salonId: string; name: string; durationMinutes: number; durationMode?: string; minDurationMinutes?: number | null; maxDurationMinutes?: number | null; bufferMinutes?: number; priceRial?: number; requiresDeposit?: boolean; depositRial?: number | null; depositType?: string; depositPercent?: number | null }) =>
+  createService: (body: {
+    salonId: string;
+    name: string;
+    durationMinutes: number;
+    durationMode?: string;
+    minDurationMinutes?: number | null;
+    maxDurationMinutes?: number | null;
+    bufferMinutes?: number;
+    priceRial?: number;
+    requiresDeposit?: boolean;
+    depositRial?: number | null;
+    depositType?: string;
+    depositPercent?: number | null;
+  }) =>
     request<{ service: PlatformServiceRow }>('/platform-admin/services', { method: 'POST', body }),
-  updateService: (id: string, body: Partial<{ name: string; durationMinutes: number; durationMode: string; minDurationMinutes: number | null; maxDurationMinutes: number | null; bufferMinutes: number; priceRial: number; requiresDeposit: boolean; depositRial: number | null; depositType: string; depositPercent: number | null; active: boolean }>) =>
-    request<{ service: PlatformServiceRow }>(`/platform-admin/services/${id}`, { method: 'PATCH', body }),
-  deleteService: (id: string) => request<{ service: { id: string; active: boolean } }>(`/platform-admin/services/${id}`, { method: 'DELETE' }),
+  updateService: (
+    id: string,
+    body: Partial<{
+      name: string;
+      durationMinutes: number;
+      durationMode: string;
+      minDurationMinutes: number | null;
+      maxDurationMinutes: number | null;
+      bufferMinutes: number;
+      priceRial: number;
+      requiresDeposit: boolean;
+      depositRial: number | null;
+      depositType: string;
+      depositPercent: number | null;
+      active: boolean;
+    }>,
+  ) =>
+    request<{ service: PlatformServiceRow }>(`/platform-admin/services/${id}`, {
+      method: 'PATCH',
+      body,
+    }),
+  deleteService: (id: string) =>
+    request<{ service: { id: string; active: boolean } }>(`/platform-admin/services/${id}`, {
+      method: 'DELETE',
+    }),
   listChairs: (options?: PlatformListOptions) =>
-    request<PlatformPage<PlatformSalonResourceRow>>(`/platform-admin/chairs${platformQuery(options)}`),
+    request<PlatformPage<PlatformSalonResourceRow>>(
+      `/platform-admin/chairs${platformQuery(options)}`,
+    ),
   createChair: (body: { salonId: string; name: string; kind?: string }) =>
-    request<{ chair: PlatformSalonResourceRow }>('/platform-admin/chairs', { method: 'POST', body }),
+    request<{ chair: PlatformSalonResourceRow }>('/platform-admin/chairs', {
+      method: 'POST',
+      body,
+    }),
   updateChair: (id: string, body: Partial<{ name: string; active: boolean }>) =>
-    request<{ chair: PlatformSalonResourceRow }>(`/platform-admin/chairs/${id}`, { method: 'PATCH', body }),
-  deleteChair: (id: string) => request<{ chair: PlatformSalonResourceRow }>(`/platform-admin/chairs/${id}`, { method: 'DELETE' }),
+    request<{ chair: PlatformSalonResourceRow }>(`/platform-admin/chairs/${id}`, {
+      method: 'PATCH',
+      body,
+    }),
+  deleteChair: (id: string) =>
+    request<{ chair: PlatformSalonResourceRow }>(`/platform-admin/chairs/${id}`, {
+      method: 'DELETE',
+    }),
   listEquipment: (options?: PlatformListOptions) =>
-    request<PlatformPage<PlatformSalonResourceRow>>(`/platform-admin/equipment${platformQuery(options)}`),
+    request<PlatformPage<PlatformSalonResourceRow>>(
+      `/platform-admin/equipment${platformQuery(options)}`,
+    ),
   createEquipment: (body: { salonId: string; name: string }) =>
-    request<{ equipment: PlatformSalonResourceRow }>('/platform-admin/equipment', { method: 'POST', body }),
+    request<{ equipment: PlatformSalonResourceRow }>('/platform-admin/equipment', {
+      method: 'POST',
+      body,
+    }),
   updateEquipment: (id: string, body: Partial<{ name: string; active: boolean }>) =>
-    request<{ equipment: PlatformSalonResourceRow }>(`/platform-admin/equipment/${id}`, { method: 'PATCH', body }),
-  deleteEquipment: (id: string) => request<{ equipment: PlatformSalonResourceRow }>(`/platform-admin/equipment/${id}`, { method: 'DELETE' }),
+    request<{ equipment: PlatformSalonResourceRow }>(`/platform-admin/equipment/${id}`, {
+      method: 'PATCH',
+      body,
+    }),
+  deleteEquipment: (id: string) =>
+    request<{ equipment: PlatformSalonResourceRow }>(`/platform-admin/equipment/${id}`, {
+      method: 'DELETE',
+    }),
   listAppointments: (options?: PlatformListOptions) =>
-    request<PlatformPage<PlatformAppointmentRow>>(`/platform-admin/appointments${platformQuery(options)}`),
-  createAppointment: (body: { salonId: string; serviceId: string; startAt: string; phone: string; fullName?: string; preferredStaffId?: string; locationType?: 'salon' | 'customer'; locationAddress?: string; customerNote?: string; durationMinutes?: number }) =>
-    request<{ status: string; appointment: PlatformAppointmentRow }>('/platform-admin/appointments', { method: 'POST', body }),
-  updateAppointment: (id: string, body: Partial<{ customerNote: string | null; locationType: 'salon' | 'customer'; locationAddress: string | null }>) =>
-    request<{ appointment: PlatformAppointmentRow }>(`/platform-admin/appointments/${id}`, { method: 'PATCH', body }),
-  deleteAppointment: (id: string) => request<{ appointment: PlatformAppointmentRow }>(`/platform-admin/appointments/${id}`, { method: 'DELETE' }),
-  appointmentAction: (id: string, action: 'approve' | 'reject' | 'cancel' | 'no_show' | 'complete') =>
+    request<PlatformPage<PlatformAppointmentRow>>(
+      `/platform-admin/appointments${platformQuery(options)}`,
+    ),
+  createAppointment: (body: {
+    salonId: string;
+    serviceId: string;
+    startAt: string;
+    phone: string;
+    fullName?: string;
+    preferredStaffId?: string;
+    locationType?: 'salon' | 'customer';
+    locationAddress?: string;
+    customerNote?: string;
+    durationMinutes?: number;
+  }) =>
+    request<{ status: string; appointment: PlatformAppointmentRow }>(
+      '/platform-admin/appointments',
+      { method: 'POST', body },
+    ),
+  updateAppointment: (
+    id: string,
+    body: Partial<{
+      customerNote: string | null;
+      locationType: 'salon' | 'customer';
+      locationAddress: string | null;
+    }>,
+  ) =>
+    request<{ appointment: PlatformAppointmentRow }>(`/platform-admin/appointments/${id}`, {
+      method: 'PATCH',
+      body,
+    }),
+  deleteAppointment: (id: string) =>
+    request<{ appointment: PlatformAppointmentRow }>(`/platform-admin/appointments/${id}`, {
+      method: 'DELETE',
+    }),
+  appointmentAction: (
+    id: string,
+    action: 'approve' | 'reject' | 'cancel' | 'no_show' | 'complete',
+  ) =>
     request<{ appointment: PlatformAppointmentRow }>(`/platform-admin/appointments/${id}/action`, {
       method: 'POST',
       body: { action },
     }),
   listSubscriptions: (options?: PlatformListOptions) =>
-    request<PlatformPage<PlatformSubscriptionRow>>(`/platform-admin/subscriptions${platformQuery(options)}`),
-  updateSubscription: (id: string, body: Partial<{ status: string; planKind: string; expiresAt: string; graceUntil: string | null }>) =>
-    request<{ subscription: PlatformSubscriptionRow }>(`/platform-admin/subscriptions/${id}`, { method: 'PATCH', body }),
-  deleteSubscription: (id: string) => request<{ subscription: PlatformSubscriptionRow }>(`/platform-admin/subscriptions/${id}`, { method: 'DELETE' }),
+    request<PlatformPage<PlatformSubscriptionRow>>(
+      `/platform-admin/subscriptions${platformQuery(options)}`,
+    ),
+  updateSubscription: (
+    id: string,
+    body: Partial<{
+      status: string;
+      planKind: string;
+      expiresAt: string;
+      graceUntil: string | null;
+    }>,
+  ) =>
+    request<{ subscription: PlatformSubscriptionRow }>(`/platform-admin/subscriptions/${id}`, {
+      method: 'PATCH',
+      body,
+    }),
+  deleteSubscription: (id: string) =>
+    request<{ subscription: PlatformSubscriptionRow }>(`/platform-admin/subscriptions/${id}`, {
+      method: 'DELETE',
+    }),
   listPayments: (options?: PlatformListOptions) =>
     request<PlatformPage<PlatformPaymentRow>>(`/platform-admin/payments${platformQuery(options)}`),
   updatePayment: (id: string, kind: 'appointment' | 'subscription', status: string) =>
-    request<{ payment: { id: string; kind: string; status: string } }>(`/platform-admin/payments/${id}`, { method: 'PATCH', body: { kind, status } }),
+    request<{ payment: { id: string; kind: string; status: string } }>(
+      `/platform-admin/payments/${id}`,
+      { method: 'PATCH', body: { kind, status } },
+    ),
   listWaitlist: (options?: PlatformListOptions) =>
     request<PlatformPage<PlatformWaitlistRow>>(`/platform-admin/waitlist${platformQuery(options)}`),
-  updateWaitlist: (id: string, body: Partial<{ status: string; windowStart: string; windowEnd: string }>) =>
-    request<{ waitlist: PlatformWaitlistRow }>(`/platform-admin/waitlist/${id}`, { method: 'PATCH', body }),
-  deleteWaitlist: (id: string) => request<{ waitlist: PlatformWaitlistRow }>(`/platform-admin/waitlist/${id}`, { method: 'DELETE' }),
+  updateWaitlist: (
+    id: string,
+    body: Partial<{ status: string; windowStart: string; windowEnd: string }>,
+  ) =>
+    request<{ waitlist: PlatformWaitlistRow }>(`/platform-admin/waitlist/${id}`, {
+      method: 'PATCH',
+      body,
+    }),
+  deleteWaitlist: (id: string) =>
+    request<{ waitlist: PlatformWaitlistRow }>(`/platform-admin/waitlist/${id}`, {
+      method: 'DELETE',
+    }),
   listQrScans: (options?: PlatformListOptions) =>
     request<PlatformPage<PlatformQrScanRow>>(`/platform-admin/qr-scans${platformQuery(options)}`),
   listAuditLogs: (options?: PlatformListOptions) =>
     request<PlatformPage<PlatformAuditRow>>(`/platform-admin/audit-logs${platformQuery(options)}`),
   listCardOrders: (options?: PlatformListOptions) =>
-    request<{
-      orders: PlatformCardOrderRow[];
-      summary?: { orderCount: number; pieceCount: number };
-    } & PlatformResultPage<PlatformCardOrderRow>>(`/platform-admin/card-orders${platformQuery(options)}`),
+    request<
+      {
+        orders: PlatformCardOrderRow[];
+        summary?: { orderCount: number; pieceCount: number };
+      } & PlatformResultPage<PlatformCardOrderRow>
+    >(`/platform-admin/card-orders${platformQuery(options)}`),
   updateCardOrder: (id: string, status: string, note?: string) =>
     request<{ order: PlatformCardOrderRow }>(`/platform-admin/card-orders/${id}`, {
       method: 'PATCH',
       body: { status, ...(note !== undefined ? { note } : {}) },
     }),
   listSupportTickets: (options?: PlatformListOptions) =>
-    request<{ tickets: PlatformSupportTicketRow[] } & PlatformResultPage<PlatformSupportTicketRow>>(`/platform-admin/support/tickets${platformQuery(options)}`),
+    request<{ tickets: PlatformSupportTicketRow[] } & PlatformResultPage<PlatformSupportTicketRow>>(
+      `/platform-admin/support/tickets${platformQuery(options)}`,
+    ),
   getSupportTicket: (id: string) =>
     request<{ ticket: PlatformSupportTicketRow }>(`/platform-admin/support/tickets/${id}`),
   updateSupportTicket: (
     id: string,
-    input: { status?: string; priority?: string; resolution?: string; assignedAdminId?: string | null },
+    input: {
+      status?: string;
+      priority?: string;
+      resolution?: string;
+      assignedAdminId?: string | null;
+    },
   ) =>
     request<{ ticket: PlatformSupportTicketRow }>(`/platform-admin/support/tickets/${id}`, {
       method: 'PATCH',
@@ -1865,9 +2087,7 @@ export const workingHoursApi = {
       body: { hours },
     }),
   getStaff: (salonId: string, staffId: string) =>
-    request<{ hours: WeeklyWorkingHour[] }>(
-      `/salons/${salonId}/staff/${staffId}/working-hours`,
-    ),
+    request<{ hours: WeeklyWorkingHour[] }>(`/salons/${salonId}/staff/${staffId}/working-hours`),
   setStaff: (salonId: string, staffId: string, hours: WeeklyWorkingHour[]) =>
     request<{ ok: boolean; hours: WeeklyWorkingHour[] }>(
       `/salons/${salonId}/staff/${staffId}/working-hours`,
@@ -1989,14 +2209,16 @@ export interface StaffUpdateInput {
 
 export const staffApi = {
   /** Read one staff member (Owner/Admin). */
-  get: (staffId: string) =>
-    request<{ staff: SalonStaff }>(`/staff/${staffId}`),
+  get: (staffId: string) => request<{ staff: SalonStaff }>(`/staff/${staffId}`),
   /** Add a staff member (Owner/Admin). Returns the created record. */
   create: (salonId: string, input: StaffCreateInput) =>
-    request<{ staff: SalonStaff; invitationStatus: 'sent' | 'queued' | 'failed' | 'unavailable' }>(`/salons/${salonId}/staff`, {
-      method: 'POST',
-      body: input,
-    }),
+    request<{ staff: SalonStaff; invitationStatus: 'sent' | 'queued' | 'failed' | 'unavailable' }>(
+      `/salons/${salonId}/staff`,
+      {
+        method: 'POST',
+        body: input,
+      },
+    ),
   /** Update a staff member's identity / role / login / active flag (Owner/Admin). */
   update: (staffId: string, patch: StaffUpdateInput) =>
     request<{ staff: SalonStaff }>(`/staff/${staffId}`, {
@@ -2042,9 +2264,7 @@ export const inboxApi = {
       total: number;
       limit: number;
       offset: number;
-    }>(
-      `/salons/${salonId}/notifications${qs ? `?${qs}` : ''}`,
-    );
+    }>(`/salons/${salonId}/notifications${qs ? `?${qs}` : ''}`);
   },
   unreadCount: (salonId: string) =>
     request<{ count: number }>(`/salons/${salonId}/notifications/unread-count`),

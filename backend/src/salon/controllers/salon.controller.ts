@@ -51,9 +51,7 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
     '/salons/by-qr/:payload',
     publicReadLimit,
     asyncRoute(async (req, res) => {
-      const { salon, staff } = await services.salonRegistration.resolveQr(
-        req.params.payload,
-      );
+      const { salon, staff } = await services.salonRegistration.resolveQr(req.params.payload);
       // brandAccent is additive (signature-ui-system R4.1/R4.2): anonymous
       // storefront visitors receive the salon's accent so the funnel can theme
       // itself; null = signature default. Existing { id, name } shape preserved.
@@ -81,8 +79,9 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
       // Additive: `name` lets a deep-linked funnel show the salon as the
       // primary brand mark (R4.5) without a second request. Existing
       // `{ brandAccent }` consumers are unaffected.
-      const { name, brandAccent } =
-        await services.salonRegistration.getSalonPublicBrand(req.params.id);
+      const { name, brandAccent } = await services.salonRegistration.getSalonPublicBrand(
+        req.params.id,
+      );
       res.status(200).json({ brandAccent, name });
     }),
   );
@@ -93,9 +92,7 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
     '/salons/:id/stylists',
     publicReadLimit,
     asyncRoute(async (req, res) => {
-      const stylists = await services.resourceRegistration.listBookableStaff(
-        req.params.id,
-      );
+      const stylists = await services.resourceRegistration.listBookableStaff(req.params.id);
       res.status(200).json({
         stylists: stylists.map((s) => ({
           id: s.id,
@@ -112,7 +109,9 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
     '/salons/:id/booking-policy',
     publicReadLimit,
     asyncRoute(async (req, res) => {
-      const bookingWindowDays = await services.availabilityConfig.getBookingWindowDays(req.params.id);
+      const bookingWindowDays = await services.availabilityConfig.getBookingWindowDays(
+        req.params.id,
+      );
       const bookingStartOffsetDays =
         typeof services.availabilityConfig.getBookingStartOffsetDays === 'function'
           ? await services.availabilityConfig.getBookingStartOffsetDays(req.params.id)
@@ -121,9 +120,14 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
         typeof services.availabilityConfig.getSalonWorkMode === 'function'
           ? await services.availabilityConfig.getSalonWorkMode(req.params.id)
           : 'not_decided';
+      const timezone =
+        typeof services.availabilityConfig.getSalonTimezone === 'function'
+          ? await services.availabilityConfig.getSalonTimezone(req.params.id)
+          : 'Asia/Tehran';
       res.status(200).json({
         bookingWindowDays,
         bookingStartOffsetDays,
+        timezone,
         workMode,
         locationTypes: locationTypesForWorkMode(workMode),
       });
@@ -202,9 +206,7 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
         // ones that specific staff member can personally serve.
         staffId: req.query.staffId ? String(req.query.staffId) : undefined,
         durationMinutes:
-          req.query.durationMinutes === undefined
-            ? undefined
-            : Number(req.query.durationMinutes),
+          req.query.durationMinutes === undefined ? undefined : Number(req.query.durationMinutes),
         ...(rawLocationType ? { locationType: rawLocationType as 'salon' | 'customer' } : {}),
       });
       res.status(200).json({ slots });
@@ -222,13 +224,8 @@ export function salonRouter(services: Services, optionalAuth: RequestHandler): R
     scanLimit,
     asyncRoute(async (req, res) => {
       const body = (req.body ?? {}) as Record<string, unknown>;
-      const raw =
-        req.query.utm_source ??
-        req.query.source ??
-        body.utm_source ??
-        body.source;
-      const source =
-        raw === undefined || raw === null ? '' : String(raw).trim();
+      const raw = req.query.utm_source ?? req.query.source ?? body.utm_source ?? body.source;
+      const source = raw === undefined || raw === null ? '' : String(raw).trim();
       if (source !== '') {
         await services.qrService.recordScan(req.params.id, source);
       }

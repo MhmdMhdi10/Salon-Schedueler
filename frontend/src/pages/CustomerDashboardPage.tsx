@@ -25,7 +25,10 @@ import {
 } from '../api/client';
 import { usePagination } from '../hooks/usePagination';
 import { SeoHead } from '../components/seo';
-import { CUSTOMER_NOTIFICATIONS_CHANGED, announceCustomerNotificationsChanged } from '../utils/customerNotifications';
+import {
+  CUSTOMER_NOTIFICATIONS_CHANGED,
+  announceCustomerNotificationsChanged,
+} from '../utils/customerNotifications';
 import { WorkspaceSwitcher } from '../components/layout/WorkspaceSwitcher';
 import {
   Badge,
@@ -54,6 +57,7 @@ import {
   type SavedSalon,
 } from '../utils/savedSalons';
 import { writeSalonName } from '../utils/salonName';
+import { formatClockTime, localDateKey as zonedDateKey } from '../utils/date-time';
 
 const PERSIAN_WEEKDAYS = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
 const PERSIAN_WEEKDAY_SHORT = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
@@ -101,9 +105,8 @@ function parseDate(value: string | undefined): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function localDateKey(value: string | undefined): string | null {
-  const date = parseDate(value);
-  return date ? dateKey(date) : null;
+function localDateKey(value: string | undefined, timeZone?: string): string | null {
+  return value ? zonedDateKey(value, timeZone) : null;
 }
 
 function jalaliMonthOf(date: Date): JalaliMonth {
@@ -145,12 +148,9 @@ function buildMonthCells(month: JalaliMonth): Array<{ date: Date; day: number } 
   return cells;
 }
 
-function clockTime(value: string | undefined): string | null {
-  const date = parseDate(value);
-  if (!date) return null;
-  return toPersianDigits(
-    `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`,
-  );
+function clockTime(value: string | undefined, timeZone?: string): string | null {
+  const time = value ? formatClockTime(value, timeZone) : null;
+  return time ? toPersianDigits(time) : null;
 }
 
 function localDateTimeValue(value: string): string {
@@ -270,7 +270,9 @@ function AppointmentRow({
   const pendingExpired =
     Boolean(pendingStart) &&
     ((start?.getTime() ?? 0) <= Date.now() || (pendingStart?.getTime() ?? 0) <= Date.now());
-  const [refundProofState, setRefundProofState] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
+  const [refundProofState, setRefundProofState] = useState<'idle' | 'loading' | 'loaded' | 'error'>(
+    'idle',
+  );
   const [refundProof, setRefundProof] = useState<{
     fileName: string;
     mimeType: string;
@@ -296,7 +298,7 @@ function AppointmentRow({
 
   return (
     <article className="flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-bg p-3">
-        <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex min-w-0 items-start gap-3">
           <span
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
@@ -318,12 +320,18 @@ function AppointmentRow({
         <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 text-xs text-muted md:flex-col md:items-end md:gap-1">
           <span className="flex items-center gap-1 whitespace-nowrap">
             <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
-            {start ? <JalaliDate value={start} variant="numeric" /> : 'تاریخ نامشخص'}
-            {clockTime(appointment.startAt) ? ` · ${clockTime(appointment.startAt)}` : ''}
+            {start ? (
+              <JalaliDate value={start} variant="numeric" timeZone={appointment.timezone} />
+            ) : (
+              'تاریخ نامشخص'
+            )}
+            {clockTime(appointment.startAt, appointment.timezone)
+              ? ` · ${clockTime(appointment.startAt, appointment.timezone)}`
+              : ''}
           </span>
           <Badge status={status.variant}>{status.label}</Badge>
-          </div>
         </div>
+      </div>
       <p className="flex items-start gap-1.5 text-xs text-muted">
         <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
         <span>
@@ -340,10 +348,13 @@ function AppointmentRow({
       {appointment.status === 'cancelled' && appointment.cancellation && (
         <div className="rounded-lg border border-danger/25 bg-danger/5 p-3 text-xs leading-6">
           <strong className="block text-danger">این نوبت لغو شد</strong>
-          <span className="mt-1 block text-text">دلیل: {appointment.cancellation.reason || 'اعلام‌نشده'}</span>
+          <span className="mt-1 block text-text">
+            دلیل: {appointment.cancellation.reason || 'اعلام‌نشده'}
+          </span>
           {appointment.cancellation.refundDueAt && (
             <span className="mt-1 block text-muted">
-              بازپرداخت تا {new Date(appointment.cancellation.refundDueAt).toLocaleString('fa-IR')} پیگیری می‌شود.
+              بازپرداخت تا {new Date(appointment.cancellation.refundDueAt).toLocaleString('fa-IR')}{' '}
+              پیگیری می‌شود.
             </span>
           )}
           {appointment.cancellation.proof && (
@@ -393,7 +404,9 @@ function AppointmentRow({
                 to={`/booking/deposit/${appointment.id}`}
                 className="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-3 font-bold text-primary-contrast focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
               >
-                {appointment.depositReceiptStatus === 'rejected' ? 'ارسال رسید جدید' : 'ارسال رسید بیعانه'}
+                {appointment.depositReceiptStatus === 'rejected'
+                  ? 'ارسال رسید جدید'
+                  : 'ارسال رسید بیعانه'}
               </Link>
             )}
           </div>
@@ -406,9 +419,21 @@ function AppointmentRow({
           <div>
             <strong className="block text-sm text-text">سالن پیشنهاد تغییر زمان داده است</strong>
             <p className="m-0 mt-1 text-xs leading-6 text-muted">
-              زمان فعلی: {start ? <JalaliDate value={start} variant="numeric" /> : 'نامشخص'} · {clockTime(appointment.startAt) || '—'}
+              زمان فعلی:{' '}
+              {start ? (
+                <JalaliDate value={start} variant="numeric" timeZone={appointment.timezone} />
+              ) : (
+                'نامشخص'
+              )}{' '}
+              · {clockTime(appointment.startAt, appointment.timezone) || '—'}
               <br />
-              زمان پیشنهادی: <JalaliDate value={pendingStart} variant="numeric" /> · {clockTime(appointment.pendingReschedule?.startAt) || '—'}
+              زمان پیشنهادی:{' '}
+              <JalaliDate
+                value={pendingStart}
+                variant="numeric"
+                timeZone={appointment.timezone}
+              />{' '}
+              · {clockTime(appointment.pendingReschedule?.startAt, appointment.timezone) || '—'}
             </p>
           </div>
           {!reschedulingEnabled ? (
@@ -420,9 +445,7 @@ function AppointmentRow({
               مهلت این پیشنهاد گذشته است. برای پاک‌کردن آن می‌توانی ردش کنی.
             </p>
           ) : (
-            <p className="m-0 text-xs leading-6 text-muted">
-              زمان قبلی تا انتخاب تو برقرار است.
-            </p>
+            <p className="m-0 text-xs leading-6 text-muted">زمان قبلی تا انتخاب تو برقرار است.</p>
           )}
           <div className="flex flex-wrap justify-end gap-2">
             <Button
@@ -450,23 +473,48 @@ function AppointmentRow({
         <div className="flex w-full flex-wrap items-center justify-end gap-2 border-t border-border/50 pt-3">
           {rescheduleValue !== undefined && reschedulingEnabled ? (
             rescheduleReview ? (
-              <div className="flex w-full flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3" data-testid={`customer-reschedule-review-${appointment.id}`}>
+              <div
+                className="flex w-full flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3"
+                data-testid={`customer-reschedule-review-${appointment.id}`}
+              >
                 <div>
                   <strong className="block text-sm text-text">تأیید نهایی تغییر زمان</strong>
                   <p className="m-0 mt-1 text-xs leading-6 text-muted">
-                    زمان فعلی: {start ? <JalaliDate value={start} variant="numeric" /> : 'نامشخص'} · {clockTime(appointment.startAt) || '—'}
+                    زمان فعلی:{' '}
+                    {start ? (
+                      <JalaliDate value={start} variant="numeric" timeZone={appointment.timezone} />
+                    ) : (
+                      'نامشخص'
+                    )}{' '}
+                    · {clockTime(appointment.startAt, appointment.timezone) || '—'}
                     <br />
-                    زمان جدید: {parseDate(rescheduleValue) ? <JalaliDate value={parseDate(rescheduleValue)!} variant="numeric" /> : 'نامعتبر'} · {clockTime(rescheduleValue) || '—'}
+                    زمان جدید:{' '}
+                    {parseDate(rescheduleValue) ? (
+                      <JalaliDate value={parseDate(rescheduleValue)!} variant="numeric" />
+                    ) : (
+                      'نامعتبر'
+                    )}{' '}
+                    · {clockTime(rescheduleValue) || '—'}
                   </p>
                 </div>
                 <p className="m-0 text-xs leading-6 text-muted">
                   با تأیید، نوبت قبلی لغو و زمان جدید ثبت می‌شود.
                 </p>
                 <div className="flex justify-end gap-2">
-                  <Button type="button" variant="ghost" disabled={actionBusy} onClick={onBackReschedule}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={actionBusy}
+                    onClick={onBackReschedule}
+                  >
                     بازگشت
                   </Button>
-                  <Button type="button" loading={actionBusy} disabled={actionBusy} onClick={() => onReschedule?.(appointment)}>
+                  <Button
+                    type="button"
+                    loading={actionBusy}
+                    disabled={actionBusy}
+                    onClick={() => onReschedule?.(appointment)}
+                  >
                     تأیید نهایی تغییر زمان
                   </Button>
                 </div>
@@ -479,14 +527,18 @@ function AppointmentRow({
                     label="تاریخ جدید"
                     value={rescheduleDate || null}
                     min={dateKey(new Date())}
-                    onChange={(nextDate) => onRescheduleValueChange?.(`${nextDate}T${rescheduleTime || '09:00'}`)}
+                    onChange={(nextDate) =>
+                      onRescheduleValueChange?.(`${nextDate}T${rescheduleTime || '09:00'}`)
+                    }
                   />
                   <TextField
                     id={`reschedule-time-${appointment.id}`}
                     label="ساعت جدید"
                     type="time"
                     value={rescheduleTime || ''}
-                    onChange={(event) => onRescheduleValueChange?.(`${rescheduleDate}T${event.target.value}`)}
+                    onChange={(event) =>
+                      onRescheduleValueChange?.(`${rescheduleDate}T${event.target.value}`)
+                    }
                     dir="ltr"
                     step={900}
                     containerClassName="min-w-0"
@@ -552,7 +604,7 @@ function CalendarMonth({
   const byDate = useMemo(() => {
     const grouped = new Map<string, CustomerAppointment[]>();
     for (const appointment of appointments) {
-      const key = localDateKey(appointment.startAt);
+      const key = localDateKey(appointment.startAt, appointment.timezone);
       if (!key) continue;
       const items = grouped.get(key) ?? [];
       items.push(appointment);
@@ -570,7 +622,11 @@ function CalendarMonth({
           </span>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-1 max-[359px]:gap-0" role="group" aria-label="روزهای ماه">
+      <div
+        className="grid grid-cols-7 gap-1 max-[359px]:gap-0"
+        role="group"
+        aria-label="روزهای ماه"
+      >
         {buildMonthCells(month).map((cell, index) => {
           if (!cell) {
             return (
@@ -681,14 +737,17 @@ export function CustomerDashboardPage() {
   const [selectedDate, setSelectedDate] = useState(() => dateKey(new Date()));
   const [actionBusyId, setActionBusyId] = useState<string | null>(null);
   const [waitlistBusyId, setWaitlistBusyId] = useState<string | null>(null);
-  const [pendingConfirmation, setPendingConfirmation] = useState<CustomerConfirmationRequest | null>(null);
+  const [pendingConfirmation, setPendingConfirmation] =
+    useState<CustomerConfirmationRequest | null>(null);
   const [confirmationBusy, setConfirmationBusy] = useState(false);
   const [rescheduleId, setRescheduleId] = useState<string | null>(null);
   const [rescheduleReviewId, setRescheduleReviewId] = useState<string | null>(null);
   const [rescheduleValue, setRescheduleValue] = useState('');
   const [rescheduleConfirm, setRescheduleConfirm] = useState<CustomerAppointment | null>(null);
   const [actionError, setActionError] = useState('');
-  const [profileStatus, setProfileStatus] = useState<'idle' | 'loading' | 'needs-name' | 'ready'>('idle');
+  const [profileStatus, setProfileStatus] = useState<'idle' | 'loading' | 'needs-name' | 'ready'>(
+    'idle',
+  );
   const [profileName, setProfileName] = useState('');
   const [profileError, setProfileError] = useState('');
   const [profileSaving, setProfileSaving] = useState(false);
@@ -957,7 +1016,9 @@ export function CustomerDashboardPage() {
   const selectedAppointments = useMemo(
     () =>
       displayAppointments
-        .filter((appointment) => localDateKey(appointment.startAt) === selectedDate)
+        .filter(
+          (appointment) => localDateKey(appointment.startAt, appointment.timezone) === selectedDate,
+        )
         .sort(
           (a, b) => (parseDate(a.startAt)?.getTime() ?? 0) - (parseDate(b.startAt)?.getTime() ?? 0),
         ),
@@ -965,13 +1026,12 @@ export function CustomerDashboardPage() {
   );
 
   const salonSummaries = useMemo(() => {
-    const summaries: SalonSummary[] = savedSalons
-      .map((saved) => ({
-        id: saved.id,
-        name: saved.name,
-        staffId: saved.staffId,
-        staffName: saved.staffName,
-      }))
+    const summaries: SalonSummary[] = savedSalons.map((saved) => ({
+      id: saved.id,
+      name: saved.name,
+      staffId: saved.staffId,
+      staffName: saved.staffName,
+    }));
     for (const appointment of appointments) {
       if (!appointment.salonId || !appointment.salonName) continue;
       const visitAt = parseDate(appointment.startAt)?.toISOString();
@@ -980,13 +1040,18 @@ export function CustomerDashboardPage() {
         const existing = summaries[existingIndex];
         if (
           visitAt &&
-          (!existing.lastVisitAt || new Date(visitAt).getTime() > new Date(existing.lastVisitAt).getTime())
+          (!existing.lastVisitAt ||
+            new Date(visitAt).getTime() > new Date(existing.lastVisitAt).getTime())
         ) {
           summaries[existingIndex] = { ...existing, lastVisitAt: visitAt };
         }
         continue;
       }
-      summaries.push({ id: appointment.salonId, name: appointment.salonName, lastVisitAt: visitAt });
+      summaries.push({
+        id: appointment.salonId,
+        name: appointment.salonName,
+        lastVisitAt: visitAt,
+      });
     }
     return summaries.sort((a, b) => a.name.localeCompare(b.name, 'fa'));
   }, [appointments, savedSalons]);
@@ -1054,7 +1119,10 @@ export function CustomerDashboardPage() {
         </header>
 
         {actionError && (
-          <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+          <p
+            role="alert"
+            className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger"
+          >
             {actionError}
           </p>
         )}
@@ -1071,9 +1139,7 @@ export function CustomerDashboardPage() {
             closeLabel="انصراف"
             className="!max-w-sm !rounded-2xl !p-5"
           >
-            <DialogTitle className="!text-lg !font-bold">
-              {pendingConfirmation?.title}
-            </DialogTitle>
+            <DialogTitle className="!text-lg !font-bold">{pendingConfirmation?.title}</DialogTitle>
             <DialogDescription className="!mt-2 leading-6">
               {pendingConfirmation?.description}
             </DialogDescription>
@@ -1112,30 +1178,53 @@ export function CustomerDashboardPage() {
           >
             <DialogTitle className="!text-lg !font-bold">تأیید تغییر زمان نوبت</DialogTitle>
             <DialogDescription className="!mt-2 leading-6">
-              سالن برای این نوبت زمان جدید پیشنهاد داده است. با تأیید، زمان فعلی نوبت جابه‌جا می‌شود.
+              سالن برای این نوبت زمان جدید پیشنهاد داده است. با تأیید، زمان فعلی نوبت جابه‌جا
+              می‌شود.
             </DialogDescription>
             {rescheduleConfirm && (
               <div className="mt-4 flex flex-col gap-2 rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm">
                 <div className="flex items-center justify-between gap-3 text-muted">
                   <span>زمان فعلی</span>
                   <span className="font-bold text-text">
-                    {confirmCurrentStart ? <JalaliDate value={confirmCurrentStart} variant="numeric" /> : 'نامشخص'}
+                    {confirmCurrentStart ? (
+                      <JalaliDate
+                        value={confirmCurrentStart}
+                        variant="numeric"
+                        timeZone={rescheduleConfirm.timezone}
+                      />
+                    ) : (
+                      'نامشخص'
+                    )}
                     {' · '}
-                    {clockTime(rescheduleConfirm.startAt) || '—'}
+                    {clockTime(rescheduleConfirm.startAt, rescheduleConfirm.timezone) || '—'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3 text-muted">
                   <span>زمان جدید</span>
                   <span className="font-bold text-primary">
-                    {confirmNextStart ? <JalaliDate value={confirmNextStart} variant="numeric" /> : 'نامشخص'}
+                    {confirmNextStart ? (
+                      <JalaliDate
+                        value={confirmNextStart}
+                        variant="numeric"
+                        timeZone={rescheduleConfirm.timezone}
+                      />
+                    ) : (
+                      'نامشخص'
+                    )}
                     {' · '}
-                    {clockTime(rescheduleConfirm.pendingReschedule?.startAt) || '—'}
+                    {clockTime(
+                      rescheduleConfirm.pendingReschedule?.startAt,
+                      rescheduleConfirm.timezone,
+                    ) || '—'}
                   </span>
                 </div>
               </div>
             )}
             {actionError && (
-              <p role="alert" className="mt-3 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+              <p
+                role="alert"
+                className="mt-3 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger"
+              >
                 {actionError}
               </p>
             )}
@@ -1177,7 +1266,12 @@ export function CustomerDashboardPage() {
                 variant="ghost"
                 size="md"
                 onClick={() => {
-                  setNotifications((current) => current.map((item) => ({ ...item, readAt: item.readAt ?? new Date().toISOString() })));
+                  setNotifications((current) =>
+                    current.map((item) => ({
+                      ...item,
+                      readAt: item.readAt ?? new Date().toISOString(),
+                    })),
+                  );
                   void customerApi.markAllNotificationsRead?.();
                   announceCustomerNotificationsChanged();
                 }}
@@ -1191,7 +1285,9 @@ export function CustomerDashboardPage() {
                   key={notification.id}
                   className={cn(
                     'rounded-lg border p-3 text-sm',
-                    notification.readAt ? 'border-border bg-surface' : 'border-primary/30 bg-primary/5',
+                    notification.readAt
+                      ? 'border-border bg-surface'
+                      : 'border-primary/30 bg-primary/5',
                   )}
                 >
                   <button
@@ -1199,7 +1295,13 @@ export function CustomerDashboardPage() {
                     className="min-h-11 w-full rounded-md text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
                     onClick={() => {
                       if (notification.readAt) return;
-                      setNotifications((current) => current.map((item) => item.id === notification.id ? { ...item, readAt: new Date().toISOString() } : item));
+                      setNotifications((current) =>
+                        current.map((item) =>
+                          item.id === notification.id
+                            ? { ...item, readAt: new Date().toISOString() }
+                            : item,
+                        ),
+                      );
                       void customerApi.markNotificationRead?.(notification.id);
                       announceCustomerNotificationsChanged();
                     }}
@@ -1244,13 +1346,17 @@ export function CustomerDashboardPage() {
           </Card>
         )}
 
-        {waitlistEntries.some((entry) => entry.status === 'waiting' || entry.status === 'notified') && (
+        {waitlistEntries.some(
+          (entry) => entry.status === 'waiting' || entry.status === 'notified',
+        ) && (
           <Card as="section" data-testid="customer-waitlist">
             <div className="mb-3 flex items-center gap-2">
               <Clock3 className="h-5 w-5 text-primary" aria-hidden="true" />
               <div>
                 <h2 className="text-lg font-bold text-text">لیست‌های انتظار من</h2>
-                <p className="mt-1 text-xs text-muted">با آزادشدن زمان، پیامک اطلاع‌رسانی می‌فرستیم.</p>
+                <p className="mt-1 text-xs text-muted">
+                  با آزادشدن زمان، پیامک اطلاع‌رسانی می‌فرستیم.
+                </p>
               </div>
             </div>
             <div className="flex flex-col gap-2">
@@ -1292,10 +1398,12 @@ export function CustomerDashboardPage() {
           </Card>
         ) : (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.8fr)]">
-            <Card as="section" className="min-w-0 max-[359px]:p-2" data-testid="customer-calendar-card">
-              <div
-                className="mb-4 flex flex-wrap items-center justify-between gap-3"
-              >
+            <Card
+              as="section"
+              className="min-w-0 max-[359px]:p-2"
+              data-testid="customer-calendar-card"
+            >
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-bold text-text">تقویم من</h2>
                 </div>
@@ -1388,9 +1496,7 @@ export function CustomerDashboardPage() {
             </Card>
 
             <Card as="section" className="min-w-0" data-testid="customer-upcoming">
-              <div
-                className="mb-4 flex items-start justify-between gap-3"
-              >
+              <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-bold text-text">نوبت‌های پیش‌رو</h2>
                 </div>
@@ -1452,9 +1558,7 @@ export function CustomerDashboardPage() {
             </Card>
 
             <Card as="section" className="min-w-0 lg:col-span-2" data-testid="customer-history">
-              <div
-                className="mb-4 flex items-start justify-between gap-3"
-              >
+              <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-bold text-text">سوابق نوبت‌ها</h2>
                 </div>
@@ -1485,9 +1589,7 @@ export function CustomerDashboardPage() {
         )}
 
         <Card as="section" data-testid="customer-salons">
-          <div
-            className="mb-4 flex flex-wrap items-start justify-between gap-3"
-          >
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-bold text-text">سالن‌های من</h2>
             </div>
@@ -1497,17 +1599,17 @@ export function CustomerDashboardPage() {
             <>
               <div className="grid gap-3 md:grid-cols-2">
                 {salonPagination.pageItems.map((salon) => {
-                const saved = savedSalons.some((item) => item.id === salon.id);
-                return (
-                  <SalonCard
-                    key={salon.id}
-                    salon={salon}
-                    onRemove={
-                      saved
-                        ? () => setSavedSalons(removeSavedSalon(salon.id, salon.staffId))
-                        : undefined
-                    }
-                  />
+                  const saved = savedSalons.some((item) => item.id === salon.id);
+                  return (
+                    <SalonCard
+                      key={salon.id}
+                      salon={salon}
+                      onRemove={
+                        saved
+                          ? () => setSavedSalons(removeSavedSalon(salon.id, salon.staffId))
+                          : undefined
+                      }
+                    />
                   );
                 })}
               </div>
@@ -1529,15 +1631,26 @@ export function CustomerDashboardPage() {
           )}
         </Card>
 
-        <Card as="section" data-testid="customer-workspace-card" className="border-primary/20 bg-primary/[0.04]">
+        <Card
+          as="section"
+          data-testid="customer-workspace-card"
+          className="border-primary/20 bg-primary/[0.04]"
+        >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-start gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary" aria-hidden="true">
+              <span
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                aria-hidden="true"
+              >
                 {isStaff ? <Building2 className="h-5 w-5" /> : <Store className="h-5 w-5" />}
               </span>
               <div className="min-w-0">
-                <h2 className="text-base font-bold text-text">{isStaff ? 'پنل سالن' : 'سالن داری؟'}</h2>
-                <p className="mt-1 text-sm leading-6 text-muted">{isStaff ? 'مدیریت نوبت‌ها و خدمات سالن' : 'سالن خودت را در آرا ثبت کن.'}</p>
+                <h2 className="text-base font-bold text-text">
+                  {isStaff ? 'پنل سالن' : 'سالن داری؟'}
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-muted">
+                  {isStaff ? 'مدیریت نوبت‌ها و خدمات سالن' : 'سالن خودت را در آرا ثبت کن.'}
+                </p>
               </div>
             </div>
             <WorkspaceSwitcher variant="card" />

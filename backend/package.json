@@ -5,6 +5,7 @@
   "description": "Express HTTP API and domain services for the Salon Booking System",
   "main": "./dist/main.js",
   "scripts": {
+    "prebuild": "npm run prisma:generate",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
     "start:dev": "ts-node -r tsconfig-paths/register src/main.ts",

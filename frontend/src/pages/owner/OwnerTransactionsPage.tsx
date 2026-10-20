@@ -78,7 +78,9 @@ export function OwnerTransactionsPage() {
     adminApi
       .getTransactions(salonId)
       .then((res) => {
-        setTransactions(res.transactions);
+        // The API excludes pending payments; keep this guard so stale clients
+        // or an older backend cannot surface an in-flight payment to owners.
+        setTransactions(res.transactions.filter((transaction) => transaction.status !== 'pending'));
         resetPage();
         setStatus('ready');
       })

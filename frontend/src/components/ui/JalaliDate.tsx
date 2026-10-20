@@ -2,6 +2,7 @@ import { forwardRef } from 'react';
 import { gregorianToJalali, getJalaliMonthName } from '@salon/shared';
 import { cn } from './cn';
 import { toPersianDigits } from './Num';
+import { dateForDisplay } from '../../utils/date-time';
 
 /**
  * Persian weekday names indexed by the JS `Date.getDay()` value
@@ -34,6 +35,8 @@ export interface JalaliDateProps extends React.HTMLAttributes<HTMLElement> {
   variant?: JalaliDateStyle;
   /** Prefix the weekday name, e.g. «چهارشنبه ۱۷ اردیبهشت ۱۴۰۴». */
   withWeekday?: boolean;
+  /** IANA timezone used to turn an ISO instant into the salon's calendar date. */
+  timeZone?: string;
 }
 
 function toDate(value: Date | string | number): Date {
@@ -53,8 +56,9 @@ export function formatJalaliDisplay(
   value: Date | string | number,
   variant: JalaliDateStyle = 'long',
   withWeekday = false,
+  timeZone?: string,
 ): string {
-  const date = toDate(value);
+  const date = dateForDisplay(value, timeZone) ?? toDate(value);
   const jalali = gregorianToJalali({
     year: date.getFullYear(),
     month: date.getMonth() + 1,
@@ -90,11 +94,11 @@ export function formatJalaliDisplay(
  *   <JalaliDate value="2025-05-07" variant="numeric" />
  */
 export const JalaliDate = forwardRef<HTMLTimeElement, JalaliDateProps>(function JalaliDate(
-  { value, variant = 'long', withWeekday = false, className, ...rest },
+  { value, variant = 'long', withWeekday = false, timeZone, className, ...rest },
   ref,
 ) {
   const date = toDate(value);
-  const display = formatJalaliDisplay(value, variant, withWeekday);
+  const display = formatJalaliDisplay(value, variant, withWeekday, timeZone);
   // Machine-readable ISO date (YYYY-MM-DD) for the `datetime` attribute.
   const iso = Number.isNaN(date.getTime())
     ? undefined

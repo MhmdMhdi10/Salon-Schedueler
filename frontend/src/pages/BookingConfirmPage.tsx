@@ -3,10 +3,17 @@ import { useParams, useLocation, useNavigate, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next';
 import { CalendarClock, Clock, CreditCard, MapPin, Scissors, Store } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { bookingApi, customerApi, getAccessToken, getApiErrorMessage, salonApi } from '../api/client';
+import {
+  bookingApi,
+  customerApi,
+  getAccessToken,
+  getApiErrorMessage,
+  salonApi,
+} from '../api/client';
 import { SeoHead } from '../components/seo';
 import { FunnelShell } from '../components/layout';
 import { readSalonName } from '../utils/salonName';
+import { formatClockTime } from '../utils/date-time';
 import {
   Button,
   ErrorState,
@@ -30,6 +37,7 @@ interface ConfirmSelection {
   locationAddress?: string;
   customerNote?: string;
   durationMinutes?: number;
+  timezone?: string;
 }
 
 type ConfirmPageState = ConfirmSelection & { autoConfirm?: boolean };
@@ -71,6 +79,7 @@ function readPersistedSelection(salonId?: string): ConfirmPageState | null {
           ? parsed.locationType
           : undefined,
       durationMinutes,
+      timezone: typeof parsed.timezone === 'string' ? parsed.timezone : undefined,
     };
   } catch {
     return null;
@@ -107,9 +116,8 @@ type DetailsStatus = 'loading' | 'error' | 'ready';
 type ConfirmStatus = 'idle' | 'submitting' | 'redirecting' | 'error';
 
 /** Formats an ISO instant to an `HH:mm` label; digits are localized for display. */
-function timeLabel(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+function timeLabel(iso: string, timeZone?: string): string {
+  return formatClockTime(iso, timeZone) ?? '';
 }
 
 /** Performs the gateway hand-off. Extracted so it can be stubbed in tests. */
@@ -177,6 +185,7 @@ export function BookingConfirmPage() {
     state?.durationMinutes ? String(state.durationMinutes) : '',
   );
   const [durationError, setDurationError] = useState('');
+  const [salonTimezone, setSalonTimezone] = useState(state?.timezone ?? 'Asia/Tehran');
 
   const redirectedToAuthRef = useRef(false);
   const profileCheckedRef = useRef(false);
@@ -236,6 +245,24 @@ export function BookingConfirmPage() {
     loadDetails();
   }, [loadDetails]);
 
+  useEffect(() => {
+    if (!salonId || state?.timezone || typeof salonApi.getBookingPolicy !== 'function') {
+      return undefined;
+    }
+    let active = true;
+    salonApi
+      .getBookingPolicy(salonId)
+      .then((policy) => {
+        if (active && policy.timezone) setSalonTimezone(policy.timezone);
+      })
+      .catch(() => {
+        // The fallback timezone keeps legacy/deep-link confirmation usable.
+      });
+    return () => {
+      active = false;
+    };
+  }, [salonId, state?.timezone]);
+
   const didAutoConfirmRef = useRef(false);
   useEffect(() => {
     if (!didAutoConfirmRef.current && state?.autoConfirm && detailsStatus === 'ready') {
@@ -263,7 +290,9 @@ export function BookingConfirmPage() {
         setProfileError(
           getApiErrorMessage(
             error,
-            t('booking.profileError', { defaultValue: 'ذخیره اطلاعات مشتری انجام نشد؛ دوباره تلاش کنید.' }),
+            t('booking.profileError', {
+              defaultValue: 'ذخیره اطلاعات مشتری انجام نشد؛ دوباره تلاش کنید.',
+            }),
           ),
         );
         throw error;
@@ -297,7 +326,9 @@ export function BookingConfirmPage() {
       setProfileError(
         getApiErrorMessage(
           error,
-          t('booking.profileError', { defaultValue: 'ذخیره اطلاعات مشتری انجام نشد؛ دوباره تلاش کنید.' }),
+          t('booking.profileError', {
+            defaultValue: 'ذخیره اطلاعات مشتری انجام نشد؛ دوباره تلاش کنید.',
+          }),
         ),
       );
       throw error;
@@ -345,9 +376,12 @@ export function BookingConfirmPage() {
       primaryDurationMinutes = primaryDuration;
       durationMinutes = selectedServices.reduce(
         (total, item, index) =>
-          total + (index === 0 ? primaryDuration : item.durationMode === 'variable'
-            ? item.minDurationMinutes ?? item.durationMinutes
-            : item.durationMinutes),
+          total +
+          (index === 0
+            ? primaryDuration
+            : item.durationMode === 'variable'
+              ? (item.minDurationMinutes ?? item.durationMinutes)
+              : item.durationMinutes),
         0,
       );
     }
@@ -407,10 +441,10 @@ export function BookingConfirmPage() {
             status: result.status,
             serviceName: selectedServices.map((item) => item.name).join('، ') || service?.name,
             startAt: state.startAt,
+            timezone: salonTimezone,
             salonName: readSalonName(salonId) ?? undefined,
             locationType: bookingLocation,
-            locationAddress:
-              bookingLocation === 'customer' ? locationAddress.trim() : undefined,
+            locationAddress: bookingLocation === 'customer' ? locationAddress.trim() : undefined,
           },
         });
       } else {
@@ -428,10 +462,10 @@ export function BookingConfirmPage() {
               serviceId: state.serviceId,
               serviceIds: state.serviceIds,
               startAt: state.startAt,
+              timezone: salonTimezone,
               preferredStaffId: state.preferredStaffId,
               locationType: bookingLocation,
-              locationAddress:
-                bookingLocation === 'customer' ? locationAddress : undefined,
+              locationAddress: bookingLocation === 'customer' ? locationAddress : undefined,
               customerNote: customerNote.trim() || undefined,
               // `durationMinutes` is the aggregate occupancy for a combined
               // booking. Auth resume must restore only the primary variable
@@ -463,28 +497,32 @@ export function BookingConfirmPage() {
     );
   }
 
-  const time = toPersianDigits(timeLabel(state.startAt));
+  const time = toPersianDigits(timeLabel(state.startAt, salonTimezone));
   const summaryServices = selectedServices.length > 0 ? selectedServices : service ? [service] : [];
   const totalPriceRial = summaryServices.reduce((total, item) => total + item.priceRial, 0);
   const totalDurationMinutes = summaryServices.reduce((total, item, index) => {
     if (index === 0 && item.durationMode === 'variable' && requestedDuration) {
       return total + Number(requestedDuration);
     }
-    return total + (item.durationMode === 'variable'
-      ? item.minDurationMinutes ?? item.durationMinutes
-      : item.durationMinutes);
+    return (
+      total +
+      (item.durationMode === 'variable'
+        ? (item.minDurationMinutes ?? item.durationMinutes)
+        : item.durationMinutes)
+    );
   }, 0);
   // Older salon records may omit the additive deposit flag. Treat an omitted
   // value as unknown (and keep the existing secure-gateway copy) while an
   // explicit `false` is the only signal that no deposit is required.
-  const depositNotice =
-    !summaryServices.some((item) => item.requiresDeposit !== false)
-      ? t('booking.noDepositNotice', { defaultValue: 'برای این خدمت بیعانه‌ای لازم نیست.' })
-      : service?.depositMethod === 'cash'
-        ? t('booking.cashDepositNotice', { defaultValue: 'بیعانه در محل سالن دریافت می‌شود.' })
-        : service?.depositMethod === 'card_transfer'
-          ? t('booking.cardTransferDepositNotice', { defaultValue: 'روش پرداخت بیعانه پس از ثبت رزرو به شما اعلام می‌شود.' })
-          : t('booking.depositNotice');
+  const depositNotice = !summaryServices.some((item) => item.requiresDeposit !== false)
+    ? t('booking.noDepositNotice', { defaultValue: 'برای این خدمت بیعانه‌ای لازم نیست.' })
+    : service?.depositMethod === 'cash'
+      ? t('booking.cashDepositNotice', { defaultValue: 'بیعانه در محل سالن دریافت می‌شود.' })
+      : service?.depositMethod === 'card_transfer'
+        ? t('booking.cardTransferDepositNotice', {
+            defaultValue: 'روش پرداخت بیعانه پس از ثبت رزرو به شما اعلام می‌شود.',
+          })
+        : t('booking.depositNotice');
 
   // Sticky CTA button rendered in FunnelShell's thumb-zone bar
   const ctaButton = (
@@ -584,7 +622,7 @@ export function BookingConfirmPage() {
                     {t('booking.dateLabel')}
                   </dt>
                   <dd className="text-sm font-semibold text-text">
-                    <JalaliDate value={state.startAt} withWeekday />
+                    <JalaliDate value={state.startAt} withWeekday timeZone={salonTimezone} />
                   </dd>
                 </div>
 
@@ -627,7 +665,9 @@ export function BookingConfirmPage() {
                         <Store className="h-4 w-4 shrink-0" aria-hidden="true" />
                         {t('booking.salonLabel')}
                       </dt>
-                      <dd className="max-w-full break-words text-sm font-semibold text-text sm:text-end">{salonName}</dd>
+                      <dd className="max-w-full break-words text-sm font-semibold text-text sm:text-end">
+                        {salonName}
+                      </dd>
                     </div>
                   </>
                 )}
@@ -650,9 +690,7 @@ export function BookingConfirmPage() {
 
               {/* Deposit/payment notice */}
               <div className="border-t border-dashed border-border px-4 py-4 sm:px-6">
-                <p className="rounded-md bg-surface p-3 text-xs text-muted">
-                  {depositNotice}
-                </p>
+                <p className="rounded-md bg-surface p-3 text-xs text-muted">{depositNotice}</p>
               </div>
             </motion.div>
           )}
@@ -704,7 +742,9 @@ export function BookingConfirmPage() {
                 {t('booking.nameTitle', { defaultValue: 'نام برای رزرو' })}
               </h2>
               <p className="mt-1 text-sm text-muted">
-                {t('booking.nameBody', { defaultValue: 'برای اینکه سالن شما را درست بشناسد، نام را فقط یک‌بار ثبت کنید.' })}
+                {t('booking.nameBody', {
+                  defaultValue: 'برای اینکه سالن شما را درست بشناسد، نام را فقط یک‌بار ثبت کنید.',
+                })}
               </p>
             </div>
             <TextField
@@ -718,7 +758,9 @@ export function BookingConfirmPage() {
               error={nameError}
               helperText={
                 !nameError
-                  ? t('booking.nameHelper', { defaultValue: 'این نام برای رزروهای بعدی ذخیره می‌شود.' })
+                  ? t('booking.nameHelper', {
+                      defaultValue: 'این نام برای رزروهای بعدی ذخیره می‌شود.',
+                    })
                   : undefined
               }
               autoComplete="name"
@@ -752,7 +794,11 @@ export function BookingConfirmPage() {
               inputMode="numeric"
               dir="ltr"
               error={durationError}
-              helperText={!durationError ? `${service.minDurationMinutes ?? service.durationMinutes} تا ${service.maxDurationMinutes ?? service.durationMinutes} دقیقه` : undefined}
+              helperText={
+                !durationError
+                  ? `${service.minDurationMinutes ?? service.durationMinutes} تا ${service.maxDurationMinutes ?? service.durationMinutes} دقیقه`
+                  : undefined
+              }
             />
           </section>
         )}
@@ -765,7 +811,9 @@ export function BookingConfirmPage() {
             {t('booking.noteTitle', { defaultValue: 'توضیحات برای سالن' })}
           </h2>
           <p className="mt-1 text-sm text-muted">
-            {t('booking.noteHint', { defaultValue: 'اگر نکته‌ای دربارهٔ خدمت یا شرایط خود داری، اینجا بنویس.' })}
+            {t('booking.noteHint', {
+              defaultValue: 'اگر نکته‌ای دربارهٔ خدمت یا شرایط خود داری، اینجا بنویس.',
+            })}
           </p>
           <Textarea
             className="mt-3"

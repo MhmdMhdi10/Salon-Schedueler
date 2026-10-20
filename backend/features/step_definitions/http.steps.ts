@@ -403,7 +403,9 @@ async function exercise(world: BackendWorld, method: string, template: string): 
       world.vars.referralToken = String(response.body.referral.claimToken);
   }
 
-  if (response.status >= 500) {
+  const expectedDisabledFeature =
+    response.status === 503 && response.body?.code === 'FEATURE_DISABLED';
+  if (response.status >= 500 && !expectedDisabledFeature) {
     throw new Error(
       `${method} ${template} returned ${response.status}: ${JSON.stringify(response.body)}`,
     );

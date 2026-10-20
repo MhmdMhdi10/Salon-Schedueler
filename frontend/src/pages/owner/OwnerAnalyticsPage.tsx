@@ -84,7 +84,6 @@ interface Summary {
   retainedRial: number;
   collectedRial: number;
   refundedRial: number;
-  pendingPaymentRial: number;
   failedPaymentRial: number;
   cancellationRate: number;
   noShowRate: number;
@@ -231,7 +230,6 @@ function toModel(raw: {
     retainedRial: num(summary.retainedRial) ?? 0,
     collectedRial: num(summary.collectedRial) ?? revenueTotal ?? 0,
     refundedRial: num(summary.refundedRial) ?? 0,
-    pendingPaymentRial: num(summary.pendingPaymentRial) ?? 0,
     failedPaymentRial: num(summary.failedPaymentRial) ?? 0,
     cancellationRate: num(summary.cancellationRate) ?? 0,
     noShowRate: num(summary.noShowRate) ?? 0,
@@ -1210,10 +1208,6 @@ export function OwnerAnalyticsPageContent({ salonId: salonIdProp }: { salonId?: 
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-muted">{t('owner.analytics.refundedLabel', { defaultValue: 'برگشتی' })}</span>
                   <Money amountRial={model.summary.refundedRial} unit="toman" />
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted">{t('owner.analytics.pendingPaymentLabel', { defaultValue: 'در انتظار پرداخت' })}</span>
-                  <Money amountRial={model.summary.pendingPaymentRial} unit="toman" />
                 </div>
               </div>
             </Card>

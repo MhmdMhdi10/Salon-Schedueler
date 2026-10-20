@@ -23,6 +23,7 @@ import {
 } from '../components/ui';
 import { gregorianToJalali, getJalaliMonthName, normalizeDigits } from '@salon/shared';
 import { readSalonName } from '../utils/salonName';
+import { formatClockTime } from '../utils/date-time';
 
 /** A bookable service as returned by the salon services endpoint (unchanged contract). */
 interface Service {
@@ -74,6 +75,7 @@ interface PersistedSelection {
   staffId?: string;
   locationType?: 'salon' | 'customer';
   durationMinutes?: number;
+  timezone?: string;
 }
 
 function selectionKey(salonId: string): string {
@@ -110,6 +112,7 @@ function readSelection(salonId: string | undefined): PersistedSelection | null {
         typeof parsed.durationMinutes === 'number' && Number.isInteger(parsed.durationMinutes)
           ? parsed.durationMinutes
           : undefined,
+      timezone: typeof parsed.timezone === 'string' ? parsed.timezone : undefined,
     };
   } catch {
     return null;
@@ -186,9 +189,8 @@ function addDaysISO(date: string, days: number): string {
 }
 
 /** Formats an ISO instant to an `HH:mm` label; SlotChip localizes the digits. */
-function slotLabel(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+function slotLabel(iso: string, timeZone?: string): string {
+  return formatClockTime(iso, timeZone) ?? '';
 }
 
 /**
@@ -253,18 +255,12 @@ export function AvailabilityPage() {
     () => addDaysISO(today, bookingStartOffsetDays),
     [bookingStartOffsetDays, today],
   );
-  const maxDate = useMemo(
-    () => addDaysISO(today, bookingWindowDays),
-    [bookingWindowDays, today],
-  );
+  const maxDate = useMemo(() => addDaysISO(today, bookingWindowDays), [bookingWindowDays, today]);
   const [weekOffset, setWeekOffset] = useState(0);
   const upcomingDays = useMemo(
     () =>
       buildUpcomingDays(
-        Math.min(
-          7,
-          Math.max(0, bookingWindowDays - bookingStartOffsetDays - weekOffset * 7 + 1),
-        ),
+        Math.min(7, Math.max(0, bookingWindowDays - bookingStartOffsetDays - weekOffset * 7 + 1)),
         addDaysISO(minDate, weekOffset * 7),
       ),
     [bookingStartOffsetDays, bookingWindowDays, minDate, weekOffset],
@@ -280,7 +276,11 @@ export function AvailabilityPage() {
   const [servicesStatus, setServicesStatus] = useState<Status>('idle');
   const [selectedService, setSelectedService] = useState(restored?.serviceId ?? '');
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(
-    restored?.serviceIds?.length ? restored.serviceIds : restored?.serviceId ? [restored.serviceId] : [],
+    restored?.serviceIds?.length
+      ? restored.serviceIds
+      : restored?.serviceId
+        ? [restored.serviceId]
+        : [],
   );
   const [multiServiceSelection, setMultiServiceSelection] = useState(
     Boolean(restored?.serviceIds && restored.serviceIds.length > 1),
@@ -303,6 +303,7 @@ export function AvailabilityPage() {
   );
   const [durationError, setDurationError] = useState('');
   const [workMode, setWorkMode] = useState<BookingWorkMode>('not_decided');
+  const [salonTimezone, setSalonTimezone] = useState(restored?.timezone ?? 'Asia/Tehran');
   // Do not use a stale sessionStorage date until the salon's current booking
   // policy has arrived. Otherwise a changed lower/upper bound can trigger a
   // guaranteed 400 from availability before the picker is corrected.
@@ -313,18 +314,26 @@ export function AvailabilityPage() {
     [services, selectedService],
   );
   const selectedServiceDetailsList = useMemo(
-    () => selectedServiceIds.map((id) => services.find((service) => service.id === id)).filter(Boolean) as Service[],
+    () =>
+      selectedServiceIds
+        .map((id) => services.find((service) => service.id === id))
+        .filter(Boolean) as Service[],
     [services, selectedServiceIds],
   );
   const selectedTotalDuration = useMemo(() => {
-    const variablePrimaryDuration = selectedServiceDetails?.durationMode === 'variable' && durationMinutes
-      ? Number(durationMinutes)
-      : undefined;
+    const variablePrimaryDuration =
+      selectedServiceDetails?.durationMode === 'variable' && durationMinutes
+        ? Number(durationMinutes)
+        : undefined;
     return selectedServiceDetailsList.reduce((total, service, index) => {
-      if (index === 0 && variablePrimaryDuration !== undefined) return total + variablePrimaryDuration;
-      return total + (service.durationMode === 'variable'
-        ? service.minDurationMinutes ?? service.durationMinutes
-        : service.durationMinutes);
+      if (index === 0 && variablePrimaryDuration !== undefined)
+        return total + variablePrimaryDuration;
+      return (
+        total +
+        (service.durationMode === 'variable'
+          ? (service.minDurationMinutes ?? service.durationMinutes)
+          : service.durationMinutes)
+      );
     }, 0);
   }, [durationMinutes, selectedServiceDetails, selectedServiceDetailsList]);
 
@@ -333,11 +342,11 @@ export function AvailabilityPage() {
       (bounds, service, index) => {
         const min =
           service.durationMode === 'variable'
-            ? service.minDurationMinutes ?? service.durationMinutes
+            ? (service.minDurationMinutes ?? service.durationMinutes)
             : service.durationMinutes;
         const max =
           service.durationMode === 'variable'
-            ? service.maxDurationMinutes ?? service.durationMinutes
+            ? (service.maxDurationMinutes ?? service.durationMinutes)
             : service.durationMinutes;
         return { min: bounds.min + min, max: bounds.max + max };
       },
@@ -421,16 +430,17 @@ export function AvailabilityPage() {
         ({
           bookingWindowDays: value,
           bookingStartOffsetDays: startOffset = 0,
+          timezone: timezoneFromPolicy,
           workMode: mode,
           locationTypes: supported,
         }) => {
           setBookingWindowDays(value);
           setBookingStartOffsetDays(startOffset);
+          if (timezoneFromPolicy) setSalonTimezone(timezoneFromPolicy);
           if (mode) setWorkMode(mode);
-          const nextTypes =
-            supported?.filter((item): item is 'salon' | 'customer' =>
-              item === 'salon' || item === 'customer',
-            ) ?? ['salon'];
+          const nextTypes = supported?.filter(
+            (item): item is 'salon' | 'customer' => item === 'salon' || item === 'customer',
+          ) ?? ['salon'];
           setLocationTypes(nextTypes.length > 0 ? nextTypes : ['salon']);
           setLocationType((current) =>
             nextTypes.includes(current) ? current : (nextTypes[0] ?? 'salon'),
@@ -552,8 +562,10 @@ export function AvailabilityPage() {
       date: patch.date ?? date,
       staffId: patch.staffId ?? selectedStaff,
       locationType: patch.locationType ?? locationType,
-      durationMinutes: patch.durationMinutes ?? (durationMinutes ? Number(durationMinutes) : undefined),
+      durationMinutes:
+        patch.durationMinutes ?? (durationMinutes ? Number(durationMinutes) : undefined),
       startAt: startAt || undefined,
+      timezone: patch.timezone ?? salonTimezone,
     });
   };
 
@@ -575,7 +587,7 @@ export function AvailabilityPage() {
       startAt: undefined,
       durationMinutes:
         nextService?.durationMode === 'variable'
-          ? nextService.minDurationMinutes ?? nextService.durationMinutes
+          ? (nextService.minDurationMinutes ?? nextService.durationMinutes)
           : undefined,
     });
   };
@@ -611,9 +623,11 @@ export function AvailabilityPage() {
         // "any" so the scheduler is free to assign).
         preferredStaffId: selectedStaff || undefined,
         locationType,
-        durationMinutes: selectedServiceDetails?.durationMode === 'variable' && durationMinutes
-          ? Number(durationMinutes)
-          : undefined,
+        timezone: salonTimezone,
+        durationMinutes:
+          selectedServiceDetails?.durationMode === 'variable' && durationMinutes
+            ? Number(durationMinutes)
+            : undefined,
       },
     });
   };
@@ -638,7 +652,7 @@ export function AvailabilityPage() {
     let state: SlotState = 'available';
     if (new Date(slot.startAt).getTime() < now) state = 'past';
     if (slot.startAt === selectedStartAt) state = 'selected';
-    return { id: slot.startAt, label: slotLabel(slot.startAt), state };
+    return { id: slot.startAt, label: slotLabel(slot.startAt, salonTimezone), state };
   });
 
   // Compute the stepper's active step index based on user progress:
@@ -766,7 +780,9 @@ export function AvailabilityPage() {
               onChange={(event) => {
                 const next = normalizeDigits(event.target.value).replace(/\D/g, '');
                 setDurationMinutes(next);
-                const min = selectedServiceDetails.minDurationMinutes ?? selectedServiceDetails.durationMinutes;
+                const min =
+                  selectedServiceDetails.minDurationMinutes ??
+                  selectedServiceDetails.durationMinutes;
                 const max = selectedServiceDetails.maxDurationMinutes ?? min;
                 const parsed = Number(next);
                 setDurationError(
@@ -778,7 +794,11 @@ export function AvailabilityPage() {
               inputMode="numeric"
               dir="ltr"
               error={durationError}
-              helperText={!durationError ? `بین ${selectedServiceDetails.minDurationMinutes ?? selectedServiceDetails.durationMinutes} تا ${selectedServiceDetails.maxDurationMinutes ?? selectedServiceDetails.durationMinutes} دقیقه` : undefined}
+              helperText={
+                !durationError
+                  ? `بین ${selectedServiceDetails.minDurationMinutes ?? selectedServiceDetails.durationMinutes} تا ${selectedServiceDetails.maxDurationMinutes ?? selectedServiceDetails.durationMinutes} دقیقه`
+                  : undefined
+              }
             />
           </section>
         )}

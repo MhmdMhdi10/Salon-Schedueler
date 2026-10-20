@@ -27,7 +27,7 @@ const env = {
   TS_NODE_EXPERIMENTAL_RESOLVER: process.env.TS_NODE_EXPERIMENTAL_RESOLVER ?? 'true',
   DEV_OTP_AUTO_FILL: process.env.DEV_OTP_AUTO_FILL ?? 'true',
   CUCUMBER_JSON: process.env.CUCUMBER_JSON ?? join(artifactsDir, 'cucumber-results.json'),
-  E2E_REGISTRATION_IP_LIMIT: process.env.E2E_REGISTRATION_IP_LIMIT ?? '500',
+  E2E_REGISTRATION_IP_LIMIT: process.env.E2E_REGISTRATION_IP_LIMIT ?? '100000',
   // Auth rate-limit buckets are shared in PostgreSQL across Cucumber runs.
   // Keep the E2E IP ceilings high enough for the full business + controller
   // suite, including repeated local runs inside the ten-minute auth window.

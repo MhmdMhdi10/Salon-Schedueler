@@ -57,6 +57,7 @@ export interface PendingManualReceipt {
   appointmentStatus: string;
   startAt: Date;
   endAt: Date;
+  timezone?: string;
   serviceName: string;
   customerName: string | null;
   customerPhone: string;
@@ -393,6 +394,7 @@ export class PaymentService {
             startAt: true,
             endAt: true,
             status: true,
+            salon: { select: { timezone: true } },
             service: { select: { name: true } },
             customer: { select: { fullName: true, phone: true } },
             staffMember: { select: { fullName: true } },
@@ -409,6 +411,7 @@ export class PaymentService {
       appointmentStatus: receipt.appointment.status,
       startAt: receipt.appointment.startAt,
       endAt: receipt.appointment.endAt,
+      timezone: receipt.appointment.salon.timezone,
       serviceName: receipt.appointment.service.name,
       customerName: receipt.appointment.customer.fullName,
       customerPhone: receipt.appointment.customer.phone,

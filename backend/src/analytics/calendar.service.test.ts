@@ -258,6 +258,7 @@ describe('CalendarService', () => {
         include: {
           service: { select: { name: true } },
           staffMember: { select: { fullName: true } },
+          salon: { select: { timezone: true } },
         },
         orderBy: { startAt: 'desc' },
         take: 30,

@@ -45,8 +45,8 @@ export const PLAN_DURATION_DAYS: Record<Exclude<SubscriptionPlanKind, 'trial'>, 
   annual: 365,
 };
 
-/** Maximum distance between now and a subscription expiry. */
-export const MAX_SUBSCRIPTION_WINDOW_DAYS = PLAN_DURATION_DAYS.quarterly;
+/** Maximum distance between now and a subscription expiry: four 30-day months. */
+export const MAX_SUBSCRIPTION_WINDOW_DAYS = 4 * PLAN_DURATION_DAYS.monthly;
 
 /** Reminder checkpoints used by the subscription maintenance task. */
 export const SUBSCRIPTION_REMINDER_DAYS = [7, 3, 1] as const;

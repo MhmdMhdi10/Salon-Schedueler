@@ -31,6 +31,7 @@ export interface AppointmentRecord {
   durationMinOverride?: number | null;
   /** Optional display fields used by the customer's own dashboard. */
   salonName?: string;
+  timezone?: string;
   serviceName?: string;
   staffName?: string;
   depositRequired?: boolean;

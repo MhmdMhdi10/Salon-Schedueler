@@ -428,4 +428,65 @@ describe('AnalyticsService', () => {
       expect(result.hourly.find((row) => row.hour === 13)?.bookings).toBe(1);
     });
   });
+
+  describe('listTransactions', () => {
+    it('does not expose pending appointment or subscription payments to salon users', async () => {
+      const pendingAppointmentPayment = {
+        id: 'payment-pending',
+        amountRial: 500_000n,
+        status: 'pending',
+        gateway: 'zarinpal',
+        refId: null,
+        createdAt: new Date('2024-03-15T12:00:00Z'),
+        appointment: { service: { name: 'کوتاهی مو' } },
+      };
+      const paidAppointmentPayment = {
+        ...pendingAppointmentPayment,
+        id: 'payment-paid',
+        status: 'paid',
+        createdAt: new Date('2024-03-15T11:00:00Z'),
+      };
+      const pendingSubscriptionPayment = {
+        id: 'subscription-pending',
+        amountRial: 2_000_000n,
+        status: 'pending',
+        gateway: 'zarinpal',
+        refId: null,
+        createdAt: new Date('2024-03-15T10:00:00Z'),
+        planKind: 'monthly',
+      };
+      const paidSubscriptionPayment = {
+        ...pendingSubscriptionPayment,
+        id: 'subscription-paid',
+        status: 'paid',
+        createdAt: new Date('2024-03-15T09:00:00Z'),
+      };
+      const mockPrisma = {
+        payment: {
+          findMany: jest.fn().mockResolvedValue([
+            pendingAppointmentPayment,
+            paidAppointmentPayment,
+          ]),
+        },
+        subscriptionPayment: {
+          findMany: jest.fn().mockResolvedValue([
+            pendingSubscriptionPayment,
+            paidSubscriptionPayment,
+          ]),
+        },
+      } as any;
+
+      const service = new AnalyticsService(mockPrisma);
+      const result = await service.listTransactions('salon-1');
+
+      expect(result.map((transaction) => transaction.id)).toEqual([
+        'payment-paid',
+        'subscription-paid',
+      ]);
+      expect(mockPrisma.payment.findMany.mock.calls[0][0].where.status).toEqual({ not: 'pending' });
+      expect(mockPrisma.subscriptionPayment.findMany.mock.calls[0][0].where.status).toEqual({
+        not: 'pending',
+      });
+    });
+  });
 });

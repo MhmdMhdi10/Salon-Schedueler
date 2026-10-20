@@ -21,6 +21,7 @@ import {
   toPersianDigits,
 } from '../components/ui';
 import { easings } from '../lib/motion-variants';
+import { formatClockTime } from '../utils/date-time';
 
 /**
  * Display-only booking summary handed over from the confirm step via router
@@ -37,6 +38,7 @@ interface BookingSuccessState {
   serviceName?: string;
   /** When — the appointment start as an ISO instant (rendered Jalali + time). */
   startAt?: string;
+  timezone?: string;
   /** Where — the salon name. */
   salonName?: string;
   locationType?: 'salon' | 'customer';
@@ -68,9 +70,8 @@ function writePersistedBooking(state: BookingSuccessState): void {
 }
 
 /** Formats an ISO instant to an `HH:mm` label; digits are localized for display. */
-function timeLabel(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+function timeLabel(iso: string, timeZone?: string): string {
+  return formatClockTime(iso, timeZone) ?? '';
 }
 
 /**
@@ -176,7 +177,8 @@ export function BookingSuccessPage() {
   const details: BookingSuccessState = routed?.status ? routed : (readPersistedBooking() ?? {});
   if (routed?.status) writePersistedBooking(routed);
 
-  const { serviceName, startAt, salonName, locationType, locationAddress } = details;
+  const { serviceName, startAt, timezone, salonName, locationType, locationAddress } = details;
+  const displayTimezone = timezone ?? 'Asia/Tehran';
   const hasSummary = Boolean(serviceName || startAt || salonName || locationAddress);
   // The receipt presents two server-decided outcomes: an auto-approved booking
   // (confirmed — success green + check) or one awaiting admin approval (pending —
@@ -306,7 +308,7 @@ export function BookingSuccessPage() {
                         {t('booking.dateLabel')}
                       </dt>
                       <dd className="text-sm font-medium text-text">
-                        <JalaliDate value={startAt} withWeekday />
+                        <JalaliDate value={startAt} withWeekday timeZone={displayTimezone} />
                       </dd>
                     </div>
 
@@ -316,7 +318,9 @@ export function BookingSuccessPage() {
                         {t('booking.timeLabel')}
                       </dt>
                       <dd className="text-sm font-medium text-text">
-                        {t('booking.timeAt', { time: toPersianDigits(timeLabel(startAt)) })}
+                        {t('booking.timeAt', {
+                          time: toPersianDigits(timeLabel(startAt, displayTimezone)),
+                        })}
                       </dd>
                     </div>
                   </>

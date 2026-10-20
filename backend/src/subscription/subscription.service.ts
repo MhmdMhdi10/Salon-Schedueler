@@ -559,7 +559,7 @@ export function computeRenewedExpiry(
   return addDays(base, durationDays);
 }
 
-/** Return null when a renewal would pass the rolling three-month ceiling. */
+/** Return null when a renewal would pass the rolling four-month ceiling. */
 export function computeRenewedExpiryWithinLimit(
   currentExpiresAt: Date,
   durationDays: number,

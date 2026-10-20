@@ -11,11 +11,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import { APPOINTMENT_RESCHEDULING_ENABLED } from '../../config/features';
-import {
-  ApiError,
-  adminApi,
-  type AppointmentCustomerOverview,
-} from '../../api/client';
+import { ApiError, adminApi, type AppointmentCustomerOverview } from '../../api/client';
 import {
   Button,
   Dialog,
@@ -33,12 +29,15 @@ import {
   TextField,
   cn,
   Num,
+  toPersianDigits,
 } from '../../components/ui';
+import { formatClockTime } from '../../utils/date-time';
 
 export interface CalendarAppointmentLike {
   id: string;
   startAt?: string;
   endAt?: string;
+  timezone?: string;
   serviceId?: string;
   serviceName?: string;
   customerName?: string;
@@ -58,22 +57,30 @@ export interface CalendarAppointmentLike {
   depositPaymentStatus?: string | null;
 }
 
-function timeLabel(iso?: string): string {
+function timeLabel(iso?: string, timeZone?: string): string {
   if (!iso) return '—';
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+  const time = formatClockTime(iso, timeZone);
+  return time ? toPersianDigits(time) : '—';
 }
 
-function dateLabel(iso?: string): string {
+function dateLabel(iso?: string, timeZone?: string): string {
   if (!iso) return '—';
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleDateString('fa-IR', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
+  try {
+    return new Intl.DateTimeFormat('fa-IR', {
+      timeZone,
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+    }).format(date);
+  } catch {
+    return date.toLocaleDateString('fa-IR', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+    });
+  }
 }
 
 function statusLabel(status?: string): string {
@@ -257,9 +264,7 @@ export function AppointmentDetailsSheet({
     try {
       const result = await adminApi.addCustomerNote(appointment.id, body);
       setOverview((current) =>
-        current
-          ? { ...current, notes: [result.note, ...current.notes] }
-          : current,
+        current ? { ...current, notes: [result.note, ...current.notes] } : current,
       );
       setNoteDraft('');
     } catch {
@@ -325,7 +330,8 @@ export function AppointmentDetailsSheet({
                     </strong>
                     <span className="mt-1 flex items-center gap-1.5 text-xs text-muted">
                       <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
-                      {dateLabel(appointment.startAt)} · <Num value={timeLabel(appointment.startAt)} />
+                      {dateLabel(appointment.startAt, appointment.timezone)} ·{' '}
+                      <Num value={timeLabel(appointment.startAt, appointment.timezone)} />
                     </span>
                   </div>
                   <span className="shrink-0 rounded-full bg-success/10 px-2 py-1 text-[0.68rem] font-bold text-success">
@@ -350,14 +356,16 @@ export function AppointmentDetailsSheet({
                   disabled={
                     !APPOINTMENT_RESCHEDULING_ENABLED ||
                     !canMoveAppointment ||
-                    ['cancelled', 'rejected', 'no_show', 'completed'].includes(appointment.status ?? '')
+                    ['cancelled', 'rejected', 'no_show', 'completed'].includes(
+                      appointment.status ?? '',
+                    )
                   }
                 >
                   {!APPOINTMENT_RESCHEDULING_ENABLED
                     ? 'تغییر زمان غیرفعال'
                     : appointment.pendingReschedule?.startAt
-                    ? 'در انتظار پاسخ مشتری'
-                    : 'تغییر زمان نوبت'}
+                      ? 'در انتظار پاسخ مشتری'
+                      : 'تغییر زمان نوبت'}
                 </Button>
                 {!APPOINTMENT_RESCHEDULING_ENABLED && (
                   <p className="m-0 mt-1 text-center text-xs text-muted">
@@ -373,22 +381,28 @@ export function AppointmentDetailsSheet({
                   className="mt-2 w-full"
                   startIcon={<CalendarPlus className="h-4 w-4" />}
                   onClick={() => onRebook(appointment)}
-                  disabled={!phone || ['cancelled', 'rejected', 'no_show'].includes(appointment.status || '')}
+                  disabled={
+                    !phone ||
+                    ['cancelled', 'rejected', 'no_show'].includes(appointment.status || '')
+                  }
                 >
                   رزرو مجدد
                 </Button>
-                {onCancel && ['pending', 'held', 'confirmed', 'approved'].includes(appointment.status ?? '') && (
-                  <Button
-                    type="button"
-                    variant="danger"
-                    size="md"
-                    className="mt-2 w-full"
-                    startIcon={<TriangleAlert className="h-4 w-4" />}
-                    onClick={() => onCancel(appointment)}
-                  >
-                    {appointment.status === 'pending' ? 'رد و لغو درخواست' : 'لغو نوبت'}
-                  </Button>
-                )}
+                {onCancel &&
+                  ['pending', 'held', 'confirmed', 'approved'].includes(
+                    appointment.status ?? '',
+                  ) && (
+                    <Button
+                      type="button"
+                      variant="danger"
+                      size="md"
+                      className="mt-2 w-full"
+                      startIcon={<TriangleAlert className="h-4 w-4" />}
+                      onClick={() => onCancel(appointment)}
+                    >
+                      {appointment.status === 'pending' ? 'رد و لغو درخواست' : 'لغو نوبت'}
+                    </Button>
+                  )}
                 {onReportCustomer && appointment.customerId && (
                   <Button
                     type="button"
@@ -431,7 +445,11 @@ export function AppointmentDetailsSheet({
                 در حال دریافت سابقه مشتری…
               </p>
             )}
-            {loadError && <p role="alert" className="mt-4 text-sm text-danger">{loadError}</p>}
+            {loadError && (
+              <p role="alert" className="mt-4 text-sm text-danger">
+                {loadError}
+              </p>
+            )}
             {overview && (
               <>
                 {overview.deposit?.required && (
@@ -451,7 +469,8 @@ export function AppointmentDetailsSheet({
                           'rounded-full px-2 py-1 text-[0.68rem] font-bold',
                           overview.deposit.receiptStatus === 'approved'
                             ? 'bg-success/10 text-success'
-                            : overview.deposit.receiptStatus === 'rejected' || overview.deposit.receiptStatus === 'expired'
+                            : overview.deposit.receiptStatus === 'rejected' ||
+                                overview.deposit.receiptStatus === 'expired'
                               ? 'bg-danger/10 text-danger'
                               : 'bg-warning/15 text-warning',
                         )}
@@ -473,7 +492,9 @@ export function AppointmentDetailsSheet({
                     {overview.deposit.method === 'card_transfer' && (
                       <p className="m-0 mt-2 text-xs text-muted">روش: کارت‌به‌کارت</p>
                     )}
-                    {receiptLoading && <p className="m-0 mt-3 text-xs text-muted">در حال دریافت تصویر رسید…</p>}
+                    {receiptLoading && (
+                      <p className="m-0 mt-3 text-xs text-muted">در حال دریافت تصویر رسید…</p>
+                    )}
                     {receipt && (
                       <div className="mt-3 overflow-hidden rounded-lg border border-border bg-bg">
                         <img
@@ -481,7 +502,9 @@ export function AppointmentDetailsSheet({
                           alt="رسید واریز بیعانه مشتری"
                           className="max-h-72 w-full object-contain"
                         />
-                        <p className="m-0 border-t border-border px-2.5 py-2 text-xs text-muted">{receipt.fileName}</p>
+                        <p className="m-0 border-t border-border px-2.5 py-2 text-xs text-muted">
+                          {receipt.fileName}
+                        </p>
                       </div>
                     )}
                     {overview.deposit.receiptStatus === 'pending' && (
@@ -520,7 +543,11 @@ export function AppointmentDetailsSheet({
                         </div>
                       </>
                     )}
-                    {receiptError && <p role="alert" className="m-0 mt-2 text-xs text-danger">{receiptError}</p>}
+                    {receiptError && (
+                      <p role="alert" className="m-0 mt-2 text-xs text-danger">
+                        {receiptError}
+                      </p>
+                    )}
                   </section>
                 )}
                 <section className="mt-4 grid grid-cols-2 gap-2">
@@ -550,13 +577,19 @@ export function AppointmentDetailsSheet({
                   ) : (
                     <ul className="mt-2 flex flex-col gap-1.5" role="list">
                       {history.map((item) => (
-                        <li key={item.id} className="rounded-lg border border-border bg-surface p-2.5">
+                        <li
+                          key={item.id}
+                          className="rounded-lg border border-border bg-surface p-2.5"
+                        >
                           <div className="flex items-center justify-between gap-2 text-xs">
-                            <strong className="truncate text-text">{item.serviceName || 'خدمت'}</strong>
+                            <strong className="truncate text-text">
+                              {item.serviceName || 'خدمت'}
+                            </strong>
                             <span className="shrink-0 text-muted">{statusLabel(item.status)}</span>
                           </div>
                           <p className="m-0 mt-1 text-[0.68rem] text-muted">
-                            {dateLabel(item.startAt)} · <Num value={timeLabel(item.startAt)} />
+                            {dateLabel(item.startAt, item.timezone)} ·{' '}
+                            <Num value={timeLabel(item.startAt, item.timezone)} />
                           </p>
                         </li>
                       ))}
@@ -567,9 +600,14 @@ export function AppointmentDetailsSheet({
                 <section className="mt-4">
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="text-sm font-bold text-text">یادداشت‌ها</h3>
-                    <span className="text-xs text-muted"><Num value={String(overview.notes.length)} /> یادداشت</span>
+                    <span className="text-xs text-muted">
+                      <Num value={String(overview.notes.length)} /> یادداشت
+                    </span>
                   </div>
-                  <form onSubmit={(event) => void addNote(event)} className="mt-2 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
+                  <form
+                    onSubmit={(event) => void addNote(event)}
+                    className="mt-2 rounded-lg border border-primary/20 bg-primary/5 p-2.5"
+                  >
                     <textarea
                       value={noteDraft}
                       onChange={(event) => {
@@ -584,7 +622,9 @@ export function AppointmentDetailsSheet({
                       className="w-full resize-none rounded-md border border-border bg-bg px-2.5 py-2 text-xs text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
                     />
                     <div className="mt-2 flex items-center justify-between gap-2">
-                      <span className="text-[0.68rem] text-muted"><Num value={String(noteDraft.length)} /> / <Num value="1000" /></span>
+                      <span className="text-[0.68rem] text-muted">
+                        <Num value={String(noteDraft.length)} /> / <Num value="1000" />
+                      </span>
                       <Button
                         type="submit"
                         size="md"
@@ -596,7 +636,11 @@ export function AppointmentDetailsSheet({
                       </Button>
                     </div>
                   </form>
-                  {noteError && <p role="alert" className="mt-2 text-xs text-danger">{noteError}</p>}
+                  {noteError && (
+                    <p role="alert" className="mt-2 text-xs text-danger">
+                      {noteError}
+                    </p>
+                  )}
                   {overview.notes.length === 0 ? (
                     <p className="mt-2 rounded-lg border border-border bg-bg p-3 text-xs text-muted">
                       هنوز یادداشتی ثبت نشده است.
@@ -604,7 +648,10 @@ export function AppointmentDetailsSheet({
                   ) : (
                     <ul className="mt-2 flex flex-col gap-1.5" role="list">
                       {overview.notes.slice(0, 4).map((note) => (
-                        <li key={note.id} className="rounded-lg border border-border bg-bg p-2.5 text-xs text-text">
+                        <li
+                          key={note.id}
+                          className="rounded-lg border border-border bg-bg p-2.5 text-xs text-text"
+                        >
                           {note.body}
                         </li>
                       ))}
@@ -661,7 +708,9 @@ export function MoveAppointmentDialog({
     }
     const currentStart = appointment.startAt ? new Date(appointment.startAt) : null;
     if (
-      (currentStart && !Number.isNaN(currentStart.getTime()) && currentStart.getTime() <= Date.now()) ||
+      (currentStart &&
+        !Number.isNaN(currentStart.getTime()) &&
+        currentStart.getTime() <= Date.now()) ||
       nextStart.getTime() <= Date.now()
     ) {
       setError('مهلت تغییر زمان گذشته است؛ نوبت‌های رسیده قابل جابه‌جایی نیستند.');
@@ -694,7 +743,10 @@ export function MoveAppointmentDialog({
   const [startDate, startTime] = startAt.split('T');
 
   return (
-    <Dialog open={open && Boolean(appointment)} onOpenChange={(next) => !saving && onOpenChange(next)}>
+    <Dialog
+      open={open && Boolean(appointment)}
+      onOpenChange={(next) => !saving && onOpenChange(next)}
+    >
       <DialogContent>
         <DialogTitle className="flex items-center gap-2">
           <Move className="h-5 w-5 text-primary" aria-hidden="true" />
@@ -716,13 +768,15 @@ export function MoveAppointmentDialog({
                   <div className="rounded-lg bg-surface p-2">
                     <dt className="text-muted">زمان فعلی</dt>
                     <dd className="m-0 mt-1 font-bold text-text">
-                      {dateLabel(appointment?.startAt)} · <Num value={timeLabel(appointment?.startAt)} />
+                      {dateLabel(appointment?.startAt)} ·{' '}
+                      <Num value={timeLabel(appointment?.startAt)} />
                     </dd>
                   </div>
                   <div className="rounded-lg bg-surface p-2">
                     <dt className="text-muted">زمان پیشنهادی</dt>
                     <dd className="m-0 mt-1 font-bold text-text">
-                      {dateLabel(new Date(startAt).toISOString())} · <Num value={timeLabel(new Date(startAt).toISOString())} />
+                      {dateLabel(new Date(startAt).toISOString())} ·{' '}
+                      <Num value={timeLabel(new Date(startAt).toISOString())} />
                     </dd>
                   </div>
                 </dl>
@@ -731,7 +785,10 @@ export function MoveAppointmentDialog({
                 </p>
               </div>
               {error && (
-                <div role="alert" className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/5 p-3 text-sm text-danger">
+                <div
+                  role="alert"
+                  className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/5 p-3 text-sm text-danger"
+                >
                   <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                   <div className="flex flex-col gap-1">
                     <strong className="font-semibold">انتقال انجام نشد</strong>
@@ -741,10 +798,21 @@ export function MoveAppointmentDialog({
                 </div>
               )}
               <div className="mt-2 flex justify-end gap-2">
-                <Button type="button" variant="ghost" disabled={saving} onClick={() => setReviewing(false)}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={saving}
+                  onClick={() => setReviewing(false)}
+                >
                   بازگشت
                 </Button>
-                <Button type="button" variant="primary" loading={saving} disabled={saving} onClick={() => void confirmMove()}>
+                <Button
+                  type="button"
+                  variant="primary"
+                  loading={saving}
+                  disabled={saving}
+                  onClick={() => void confirmMove()}
+                >
                   تأیید نهایی تغییر زمان
                 </Button>
               </div>
@@ -784,7 +852,10 @@ export function MoveAppointmentDialog({
                 </p>
               )}
               {error && (
-                <div role="alert" className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/5 p-3 text-sm text-danger">
+                <div
+                  role="alert"
+                  className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/5 p-3 text-sm text-danger"
+                >
                   <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                   <div className="flex flex-col gap-1">
                     <strong className="font-semibold">انتقال انجام نشد</strong>
@@ -795,9 +866,16 @@ export function MoveAppointmentDialog({
               )}
               <div className="mt-2 flex justify-end gap-2">
                 <DialogClose asChild>
-                  <Button type="button" variant="ghost" disabled={saving}>انصراف</Button>
+                  <Button type="button" variant="ghost" disabled={saving}>
+                    انصراف
+                  </Button>
                 </DialogClose>
-                <Button type="submit" variant="primary" loading={saving} disabled={saving || !startAt}>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  loading={saving}
+                  disabled={saving || !startAt}
+                >
                   بررسی تغییر زمان
                 </Button>
               </div>

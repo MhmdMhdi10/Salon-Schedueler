@@ -114,10 +114,7 @@ export class CalendarService {
         status: 'pending',
         ...(staffMemberId
           ? {
-              OR: [
-                { staffMemberId },
-                { service: { approvalStaffId: staffMemberId } },
-              ],
+              OR: [{ staffMemberId }, { service: { approvalStaffId: staffMemberId } }],
             }
           : {}),
       },
@@ -125,6 +122,7 @@ export class CalendarService {
         service: { select: { name: true, approvalStaffId: true } },
         customer: { select: { fullName: true, phone: true } },
         staffMember: { select: { fullName: true } },
+        salon: { select: { timezone: true } },
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -167,21 +165,35 @@ export class CalendarService {
       include: {
         service: { select: { name: true } },
         staffMember: { select: { fullName: true } },
+        salon: { select: { timezone: true } },
       },
       orderBy: { startAt: 'desc' },
       take: 30,
     });
 
-    const isSalonClient = appointments.length > 0 || (!staffMemberId && await (
-      this.prisma as PrismaClient & {
-        salonClient: { findUnique(args: unknown): Promise<unknown> };
-      }
-    ).salonClient.findUnique({
-      where: { salonId_customerId: { salonId, customerId } },
-      select: { customerId: true },
-    }));
+    const isSalonClient =
+      appointments.length > 0 ||
+      (!staffMemberId &&
+        (await (
+          this.prisma as PrismaClient & {
+            salonClient: { findUnique(args: unknown): Promise<unknown> };
+          }
+        ).salonClient.findUnique({
+          where: { salonId_customerId: { salonId, customerId } },
+          select: { customerId: true },
+        })));
     if (!isSalonClient) return null;
 
-    return { customer, appointments };
+    return {
+      customer,
+      appointments: appointments.map((appointment) => {
+        const row = appointment as typeof appointment & {
+          salon?: { timezone: string } | null;
+        };
+        if (!row.salon) return appointment;
+        const { salon, ...rest } = row;
+        return { ...rest, timezone: salon.timezone };
+      }),
+    };
   }
 }

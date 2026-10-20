@@ -118,6 +118,13 @@ describe('BookingConfirmPage — summary', () => {
     expect(screen.getByText(/پرداخت از درگاه امن انجام می‌شود/)).toBeInTheDocument();
   });
 
+  it('renders the selected instant in the salon timezone', async () => {
+    renderPage({ ...SELECTION, timezone: 'Asia/Tehran' });
+
+    expect(await screen.findByText('کوتاهی مو')).toBeInTheDocument();
+    expect(screen.getByText(/۱۳:۰۰/)).toBeInTheDocument();
+  });
+
   it('shows a retry error state when the service detail fails to load', async () => {
     getServices.mockReset();
     getServices.mockRejectedValueOnce({}).mockResolvedValueOnce({ services: SERVICES });

@@ -374,12 +374,12 @@ describe('SubscriptionService.initiatePurchase (R3.4, R3.6)', () => {
     ).toBe('failed');
   });
 
-  it('rejects renewals that would exceed the rolling three-month ceiling', async () => {
+  it('rejects renewals that would exceed the rolling four-month ceiling', async () => {
     const { prisma, service } = makeService();
     const subscription = await service.startTrial('salon-1', NOW);
     prisma._setSubscription({
       ...subscription,
-      expiresAt: new Date(NOW.getTime() + 70 * MS_PER_DAY),
+      expiresAt: new Date(NOW.getTime() + 100 * MS_PER_DAY),
     });
 
     await expect(service.initiatePurchase('salon-1', 'monthly', NOW)).rejects.toMatchObject({
@@ -390,7 +390,7 @@ describe('SubscriptionService.initiatePurchase (R3.4, R3.6)', () => {
     });
   });
 
-  it('allows capacity exactly up to three months, then blocks another purchase', async () => {
+  it('allows capacity exactly up to four months, then blocks another purchase', async () => {
     const { prisma, service } = makeService(
       createMockPrisma(),
       createMockPaymentService({ verifyOk: true }),
@@ -398,12 +398,12 @@ describe('SubscriptionService.initiatePurchase (R3.4, R3.6)', () => {
     const subscription = await service.startTrial('salon-1', NOW);
     prisma._setSubscription({
       ...subscription,
-      expiresAt: new Date(NOW.getTime() + 60 * MS_PER_DAY),
+      expiresAt: new Date(NOW.getTime() + 90 * MS_PER_DAY),
     });
 
     await service.initiatePurchase('salon-1', 'monthly', NOW);
     const renewed = await service.activateFromPayment('pay-1', NOW);
-    expect(renewed.expiresAt.getTime()).toBe(NOW.getTime() + 90 * MS_PER_DAY);
+    expect(renewed.expiresAt.getTime()).toBe(NOW.getTime() + 120 * MS_PER_DAY);
     await expect(service.initiatePurchase('salon-1', 'monthly', NOW)).rejects.toMatchObject({
       code: 'SUBSCRIPTION_WINDOW_LIMIT_REACHED',
     });
@@ -535,17 +535,17 @@ describe('computeRenewedExpiry renewal accumulation (R3.11, Property 5)', () => 
     expect(renewed.getTime()).toBe(NOW.getTime() + 30 * MS_PER_DAY);
   });
 
-  it('returns no eligible renewal when the three-month ceiling would be crossed', () => {
-    const expiresAt = new Date(NOW.getTime() + 70 * MS_PER_DAY);
+  it('returns no eligible renewal when the four-month ceiling would be crossed', () => {
+    const expiresAt = new Date(NOW.getTime() + 100 * MS_PER_DAY);
     expect(computeRenewedExpiryWithinLimit(expiresAt, 30, NOW)).toBeNull();
-    expect(computeRenewedExpiryWithinLimit(new Date(NOW.getTime() + 60 * MS_PER_DAY), 30, NOW))
-      .toEqual(new Date(NOW.getTime() + 90 * MS_PER_DAY));
+    expect(computeRenewedExpiryWithinLimit(new Date(NOW.getTime() + 90 * MS_PER_DAY), 30, NOW))
+      .toEqual(new Date(NOW.getTime() + 120 * MS_PER_DAY));
   });
 
-  it('caps already-created legacy/concurrent extensions at three months', () => {
-    const expiresAt = new Date(NOW.getTime() + 70 * MS_PER_DAY);
+  it('caps already-created legacy/concurrent extensions at four months', () => {
+    const expiresAt = new Date(NOW.getTime() + 100 * MS_PER_DAY);
     expect(computeCappedRenewedExpiry(expiresAt, 30, NOW)).toEqual(
-      new Date(NOW.getTime() + 90 * MS_PER_DAY),
+      new Date(NOW.getTime() + 120 * MS_PER_DAY),
     );
   });
 });

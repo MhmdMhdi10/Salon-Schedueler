@@ -84,6 +84,7 @@ function makeServices() {
       setBookingWindowDays: jest.fn().mockResolvedValue(undefined),
       getBookingStartOffsetDays: jest.fn().mockResolvedValue(0),
       setBookingStartOffsetDays: jest.fn().mockResolvedValue(undefined),
+      getSalonTimezone: jest.fn().mockResolvedValue('Asia/Tehran'),
       getHolidays: jest.fn().mockResolvedValue([]),
       addHoliday: jest.fn().mockResolvedValue({ id: 'holiday-1', onDate: new Date('2026-07-15') }),
       setSalonBrandAccent: jest.fn().mockResolvedValue(undefined),
@@ -112,9 +113,11 @@ function makeServices() {
         phone: '09120000000',
         fullName: null,
       }),
-      updateProfile: jest.fn().mockImplementation((id: string, fullName: string) =>
-        Promise.resolve({ id, phone: '09120000000', fullName }),
-      ),
+      updateProfile: jest
+        .fn()
+        .mockImplementation((id: string, fullName: string) =>
+          Promise.resolve({ id, phone: '09120000000', fullName }),
+        ),
       getHistory: jest.fn().mockResolvedValue([]),
     },
     authorizer: new Authorizer(),
@@ -124,7 +127,7 @@ function makeServices() {
 type FakeServices = ReturnType<typeof makeServices>;
 
 function joinedSetCookieHeader(value: string | string[] | undefined): string {
-  return Array.isArray(value) ? value.join('; ') : value ?? '';
+  return Array.isArray(value) ? value.join('; ') : (value ?? '');
 }
 
 function buildTestApp(fake: FakeServices) {
@@ -160,16 +163,13 @@ describe('HTTP routes', () => {
     it('returns the four-digit OTP length without exposing the code', async () => {
       fake.authService.requestOtpWithDetails.mockResolvedValue({ otpLength: 4 });
 
-      const res = await request(app)
-        .post('/api/auth/otp/request')
-        .send({ phone: '+989120000000' });
+      const res = await request(app).post('/api/auth/otp/request').send({ phone: '+989120000000' });
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true, otpLength: 4 });
-      expect(fake.authService.requestOtpWithDetails).toHaveBeenCalledWith(
-        '+989120000000',
-        { exposeCode: true },
-      );
+      expect(fake.authService.requestOtpWithDetails).toHaveBeenCalledWith('+989120000000', {
+        exposeCode: true,
+      });
     });
   });
 
@@ -443,7 +443,10 @@ describe('HTTP routes', () => {
     });
 
     it('returns 200 { brandAccent: null } when the salon has no configured accent', async () => {
-      fake.salonRegistration.getSalonPublicBrand.mockResolvedValue({ name: null, brandAccent: null });
+      fake.salonRegistration.getSalonPublicBrand.mockResolvedValue({
+        name: null,
+        brandAccent: null,
+      });
       const res = await request(app).get('/api/salons/salon-2/brand');
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ brandAccent: null, name: null });
@@ -623,7 +626,10 @@ describe('HTTP routes', () => {
         salonId: 'salon-1',
         canApproveOwnAppointments: true,
       });
-      fake.bookingFlow.approve.mockResolvedValue({ id: pendingAppointment.id, status: 'confirmed' });
+      fake.bookingFlow.approve.mockResolvedValue({
+        id: pendingAppointment.id,
+        status: 'confirmed',
+      });
 
       const res = await request(app)
         .post(`/api/appointments/${pendingAppointment.id}/approve`)
@@ -642,7 +648,10 @@ describe('HTTP routes', () => {
         ...pendingAppointment,
         staffMemberId: 'staff-Stylist-2',
       });
-      fake.bookingFlow.approve.mockResolvedValue({ id: pendingAppointment.id, status: 'confirmed' });
+      fake.bookingFlow.approve.mockResolvedValue({
+        id: pendingAppointment.id,
+        status: 'confirmed',
+      });
 
       const res = await request(app)
         .post(`/api/appointments/${pendingAppointment.id}/approve`)
@@ -853,6 +862,18 @@ describe('HTTP routes', () => {
         .send({ bookingWindowDays: 0 });
       expect(res.status).toBe(200);
       expect(fake.availabilityConfig.setBookingWindowDays).toHaveBeenCalledWith('salon-1', 0);
+    });
+
+    it('returns the salon timezone with the public booking policy', async () => {
+      const res = await request(app).get('/api/salons/salon-1/booking-policy');
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        bookingWindowDays: 14,
+        bookingStartOffsetDays: 0,
+        timezone: 'Asia/Tehran',
+      });
+      expect(fake.availabilityConfig.getSalonTimezone).toHaveBeenCalledWith('salon-1');
     });
 
     it('stores a tomorrow-only booking policy', async () => {

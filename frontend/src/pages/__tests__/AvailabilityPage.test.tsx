@@ -189,6 +189,22 @@ describe('AvailabilityPage — slot grid states', () => {
     expect(await screen.findByText('confirm-page')).toBeInTheDocument();
     expect(lastConfirmState).toMatchObject({ serviceId: 'svc-1', startAt: SLOTS[0].startAt });
   });
+
+  it('renders slot labels in the salon timezone', async () => {
+    getServices.mockResolvedValue({ services: SERVICES });
+    getBookingPolicy.mockResolvedValue({
+      bookingWindowDays: 400000,
+      bookingStartOffsetDays: 0,
+      timezone: 'Asia/Tehran',
+    });
+    getAvailability.mockResolvedValue({ slots: [SLOTS[0]] });
+    renderPage();
+
+    (await screen.findByText('کوتاهی مو')).click();
+    await pickToday();
+
+    expect(await screen.findByRole('gridcell', { name: /۱۲:۳۰/ })).toBeInTheDocument();
+  });
 });
 
 describe('AvailabilityPage — selection state on back', () => {

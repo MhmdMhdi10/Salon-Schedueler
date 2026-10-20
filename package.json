@@ -25,6 +25,7 @@
     "test:frontend": "npm run test --workspace @salon/web",
     "test:e2e": "npm run e2e:cucumber:backend",
     "test:e2e:cov": "npm run e2e:cucumber:coverage",
+    "test:e2e:bdd:cov": "npm run test:e2e:backend:cov",
     "test:e2e:typecheck": "npm run e2e:cucumber:typecheck:backend",
     "test:e2e:business": "npm run e2e:cucumber:business",
     "test:e2e:backend": "npm run e2e:cucumber:backend",

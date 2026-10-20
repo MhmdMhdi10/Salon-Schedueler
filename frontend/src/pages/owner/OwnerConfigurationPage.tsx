@@ -760,9 +760,9 @@ function ServicesSection({
     bufferMinutes: number;
     priceRial: number;
     requiresDeposit: boolean;
-    depositRial: number | null;
+    depositRial?: number | null;
     depositType: 'fixed' | 'percentage';
-    depositPercent: number | null;
+    depositPercent?: number | null;
     approvalStaffId: string | null;
   }) => Promise<void>;
   onRemove: (id: string) => void;
@@ -895,9 +895,9 @@ function ServicesSection({
         bufferMinutes: 0,
         priceRial,
         requiresDeposit,
-        depositRial: requiresDeposit && depositType === 'fixed' ? depositRial : null,
+        ...(requiresDeposit && depositType === 'fixed' ? { depositRial } : {}),
         depositType,
-        depositPercent: requiresDeposit && depositType === 'percentage' ? percent : null,
+        ...(requiresDeposit && depositType === 'percentage' ? { depositPercent: percent } : {}),
         approvalStaffId: approvalStaffId === 'auto' ? null : approvalStaffId,
       });
       setName('');

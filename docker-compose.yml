@@ -240,6 +240,13 @@ services:
       # The browser calls same-origin /api; the Vite dev server proxies it to the
       # backend over the compose network (see frontend/vite.config.ts).
       VITE_PROXY_TARGET: "http://backend:3000"
+      VITE_FIREBASE_API_KEY: "${VITE_FIREBASE_API_KEY-}"
+      VITE_FIREBASE_AUTH_DOMAIN: "${VITE_FIREBASE_AUTH_DOMAIN-}"
+      VITE_FIREBASE_PROJECT_ID: "${VITE_FIREBASE_PROJECT_ID-}"
+      VITE_FIREBASE_STORAGE_BUCKET: "${VITE_FIREBASE_STORAGE_BUCKET-}"
+      VITE_FIREBASE_MESSAGING_SENDER_ID: "${VITE_FIREBASE_MESSAGING_SENDER_ID-}"
+      VITE_FIREBASE_APP_ID: "${VITE_FIREBASE_APP_ID-}"
+      VITE_FIREBASE_MEASUREMENT_ID: "${VITE_FIREBASE_MEASUREMENT_ID-}"
       # Live edits: the source is bind-mounted, but native fs events aren't
       # reliably delivered into the container, so Vite would never see host edits
       # and HMR would go silent. Poll for changes instead (mirrors the mobile

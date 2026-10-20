@@ -41,9 +41,9 @@ export const AdminServiceDto = z
     bufferMinutes: z.coerce.number().int().min(0).max(120).optional(),
     priceRial: z.coerce.number().int().min(0).optional(),
     requiresDeposit: bool.optional(),
-    depositRial: z.coerce.number().int().min(0).optional(),
+    depositRial: z.coerce.number().int().min(0).nullable().optional(),
     depositType: z.enum(['fixed', 'percentage']).optional(),
-    depositPercent: z.coerce.number().int().min(1).max(100).optional(),
+    depositPercent: z.coerce.number().int().min(1).max(100).nullable().optional(),
     approvalStaffId: z.string().uuid().nullable().optional(),
   })
   .passthrough();

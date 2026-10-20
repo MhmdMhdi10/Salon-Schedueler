@@ -68,7 +68,7 @@ import { easings } from '../../lib/motion-variants';
 
 /** The paid plans the owner can buy/renew with, in ascending duration order. */
 const PAID_PLAN_ORDER: SubscriptionPlanKind[] = ['monthly', 'quarterly'];
-const MAX_SUBSCRIPTION_WINDOW_DAYS = 90;
+const MAX_SUBSCRIPTION_WINDOW_DAYS = 120;
 const MS_PER_DAY = 86_400_000;
 
 type LoadStatus = 'loading' | 'success' | 'error';
@@ -107,7 +107,7 @@ function daysRemaining(expiresAt: string, status: SubscriptionStatus): string {
   return status === 'grace' ? `${remaining.toLocaleString('fa-IR')} روز مهلت تمدید` : `${remaining.toLocaleString('fa-IR')} روز تا پایان`;
 }
 
-/** A renewal is available only when its resulting expiry stays within ۹۰ days. */
+/** A renewal is available only when its resulting expiry stays within ۱۲۰ days. */
 function isPlanWithinRenewalWindow(plan: SubscriptionPlan, expiresAt: string): boolean {
   const now = Date.now();
   const parsedExpiry = Date.parse(expiresAt);

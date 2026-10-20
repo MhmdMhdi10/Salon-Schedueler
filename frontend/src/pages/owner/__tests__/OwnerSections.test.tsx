@@ -42,6 +42,7 @@ const getAdminStaff = vi.fn();
 const updateStaff = vi.fn();
 const getSalonServices = vi.fn();
 const setServiceStaff = vi.fn();
+const createService = vi.fn();
 const updateService = vi.fn();
 
 vi.mock('../../../api/client', () => {
@@ -70,6 +71,7 @@ vi.mock('../../../api/client', () => {
       getAnalytics: vi.fn().mockResolvedValue({ utilization: {}, revenue: 0, busiestWindows: [] }),
       getStaff: (...args: unknown[]) => getAdminStaff(...args),
       getChairs: vi.fn().mockResolvedValue({ chairs: [] }),
+      createService: (...args: unknown[]) => createService(...args),
       setServiceStaff: (...args: unknown[]) => setServiceStaff(...args),
       updateService: (...args: unknown[]) => updateService(...args),
     },
@@ -172,6 +174,24 @@ beforeEach(() => {
   updateStaff.mockResolvedValue({ staff: {} });
   getSalonServices.mockResolvedValue({ services: [] });
   setServiceStaff.mockResolvedValue({ ok: true });
+  createService.mockResolvedValue({
+    service: {
+      id: 'service-new',
+      name: 'خدمت جدید',
+      durationMinutes: 30,
+      durationMode: 'fixed',
+      minDurationMinutes: null,
+      maxDurationMinutes: null,
+      bufferMinutes: 0,
+      priceRial: 0,
+      requiresDeposit: false,
+      depositRial: null,
+      depositType: 'fixed',
+      depositPercent: null,
+      approvalStaffId: null,
+      staffIds: [],
+    },
+  });
   updateService.mockResolvedValue({ service: {} });
 });
 
@@ -438,6 +458,44 @@ describe('Owner panel — reused admin pages (R2.1, R7.1)', () => {
     const patch = updateService.mock.calls[0]?.[2] as Record<string, unknown>;
     expect(patch).not.toHaveProperty('minDurationMinutes');
     expect(patch).not.toHaveProperty('maxDurationMinutes');
+  });
+
+  it('does not send the inactive earnest field when creating a fixed-amount service', async () => {
+    renderOwnerApp('Owner', '/owner/services');
+
+    fireEvent.change(await screen.findByLabelText('نام خدمت'), {
+      target: { value: 'خدمت با بیعانه' },
+    });
+    fireEvent.click(screen.getByRole('switch', { name: 'دریافت بیعانه برای رزرو' }));
+    fireEvent.change(await screen.findByLabelText('مبلغ بیعانه (تومان)'), {
+      target: { value: '100000' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /افزودن خدمت/ }));
+
+    await waitFor(() => expect(createService).toHaveBeenCalled());
+    const body = createService.mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(body.depositRial).toBe(1_000_000);
+    expect(body).not.toHaveProperty('depositPercent');
+  });
+
+  it('does not send the inactive earnest field when creating a percentage service', async () => {
+    renderOwnerApp('Owner', '/owner/services');
+
+    fireEvent.change(await screen.findByLabelText('نام خدمت'), {
+      target: { value: 'خدمت درصدی' },
+    });
+    fireEvent.click(screen.getByRole('switch', { name: 'دریافت بیعانه برای رزرو' }));
+    fireEvent.click(await screen.findByRole('combobox', { name: 'نوع بیعانه' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'درصدی از هزینه' }));
+    fireEvent.change(await screen.findByLabelText('درصد بیعانه'), {
+      target: { value: '20' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /افزودن خدمت/ }));
+
+    await waitFor(() => expect(createService).toHaveBeenCalled());
+    const body = createService.mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(body.depositPercent).toBe(20);
+    expect(body).not.toHaveProperty('depositRial');
   });
 
   it('deactivates a staff member through the owner API and keeps the row recoverable', async () => {

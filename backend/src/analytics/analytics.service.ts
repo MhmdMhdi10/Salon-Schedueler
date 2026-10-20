@@ -61,7 +61,6 @@ export interface AnalyticsSummary {
   retainedRial: number;
   collectedRial: number;
   refundedRial: number;
-  pendingPaymentRial: number;
   failedPaymentRial: number;
   cancellationRate: number;
   noShowRate: number;
@@ -447,6 +446,7 @@ export class AnalyticsService {
           startAt: { lt: to },
           endAt: { gt: from },
         },
+        status: { not: 'pending' },
       },
       select: { amountRial: true, status: true },
     });
@@ -478,7 +478,6 @@ export class AnalyticsService {
     let paidRial = 0;
     let retainedRial = 0;
     let refundedRial = 0;
-    let pendingPaymentRial = 0;
     let failedPaymentRial = 0;
     for (const payment of payments) {
       const amount = Number(payment.amountRial);
@@ -486,7 +485,6 @@ export class AnalyticsService {
       if (payment.status === 'paid') paidRial += amount;
       else if (payment.status === 'retained') retainedRial += amount;
       else if (payment.status === 'refunded') refundedRial += amount;
-      else if (payment.status === 'pending') pendingPaymentRial += amount;
       else if (payment.status === 'failed') failedPaymentRial += amount;
     }
 
@@ -514,7 +512,6 @@ export class AnalyticsService {
       retainedRial,
       collectedRial: paidRial + retainedRial - refundedRial,
       refundedRial,
-      pendingPaymentRial,
       failedPaymentRial,
       cancellationRate: (statusCounts.get('cancelled') ?? 0) / cancellationDenominator,
       noShowRate: completedOrNoShow ? (statusCounts.get('no_show') ?? 0) / completedOrNoShow : 0,
@@ -978,7 +975,7 @@ export class AnalyticsService {
   }[]> {
     const [payments, subPayments] = await Promise.all([
       this.prisma.payment.findMany({
-        where: { appointment: { salonId } },
+        where: { appointment: { salonId }, status: { not: 'pending' } },
         include: {
           appointment: {
             include: { service: { select: { name: true } } },
@@ -988,14 +985,14 @@ export class AnalyticsService {
         take: 200,
       }),
       this.prisma.subscriptionPayment.findMany({
-        where: { subscription: { salonId } },
+        where: { subscription: { salonId }, status: { not: 'pending' } },
         orderBy: { createdAt: 'desc' },
         take: 200,
       }),
     ]);
 
     const tx = [
-      ...payments.map((p) => ({
+      ...payments.filter((p) => p.status !== 'pending').map((p) => ({
         id: p.id,
         kind: 'appointment' as const,
         amountRial: Number(p.amountRial),
@@ -1005,7 +1002,7 @@ export class AnalyticsService {
         createdAt: p.createdAt.toISOString(),
         label: p.appointment?.service?.name ?? null,
       })),
-      ...subPayments.map((p) => ({
+      ...subPayments.filter((p) => p.status !== 'pending').map((p) => ({
         id: p.id,
         kind: 'subscription' as const,
         amountRial: Number(p.amountRial),

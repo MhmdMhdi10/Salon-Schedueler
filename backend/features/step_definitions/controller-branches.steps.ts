@@ -787,6 +787,9 @@ async function exerciseAdminBranches(): Promise<void> {
     locationAddress: null,
     depositReceipt: { status: 'pending' },
     payments: [{ status: 'pending' }],
+    pendingRescheduleStartAt: new Date('2030-01-01T10:00:00Z'),
+    pendingRescheduleEndAt: new Date('2030-01-01T10:30:00Z'),
+    pendingRescheduleRequestedAt: new Date('2029-12-31T12:00:00Z'),
   };
   const ownerStaff: any = {
     id: 'staff-owner-1',
@@ -1099,7 +1102,11 @@ async function exerciseAdminBranches(): Promise<void> {
   await hit(app, 'POST', '/salons/salon-1/staff', {});
   await hit(app, 'POST', '/salons/salon-1/staff', { fullName: 'X', role: 'Bad' });
   await hit(app, 'POST', '/salons/salon-1/staff', { fullName: 'X', role: 'Stylist', phone: 'bad' });
-  await hit(app, 'POST', '/salons/salon-1/staff', { fullName: 'Admin', role: 'Admin' });
+  await hit(app, 'POST', '/salons/salon-1/staff', {
+    fullName: 'Admin',
+    role: 'Admin',
+    phone: '09123334451',
+  });
   await hit(app, 'POST', '/salons/salon-1/staff', {
     fullName: 'New',
     role: 'Stylist',
@@ -1139,6 +1146,62 @@ async function exerciseAdminBranches(): Promise<void> {
     fullName: 'Owner invite',
     role: 'Owner',
     phone: '09123334458',
+  });
+  const failedInvitationApp = appFor(
+    adminRouter(
+      {
+        ...services,
+        notificationService: {
+          ...services.notificationService,
+          sendTeamInvitation: async () => {
+            throw new Error('invitation delivery failure');
+          },
+        },
+      } as Services,
+      allowRole,
+    ),
+    OWNER,
+  );
+  await hit(failedInvitationApp, 'POST', '/salons/salon-1/staff', {
+    fullName: 'Failed invite',
+    role: 'Stylist',
+    phone: '09123334459',
+  });
+  const queuedInvitationApp = appFor(
+    adminRouter(
+      {
+        ...services,
+        notificationService: {
+          ...services.notificationService,
+          sendTeamInvitation: async () => ({ ok: true, queued: true }),
+        },
+      } as Services,
+      allowRole,
+    ),
+    OWNER,
+  );
+  await hit(queuedInvitationApp, 'POST', '/salons/salon-1/staff', {
+    fullName: 'Queued invite',
+    role: 'Stylist',
+    phone: '09123334468',
+  });
+  const rejectedInvitationApp = appFor(
+    adminRouter(
+      {
+        ...services,
+        notificationService: {
+          ...services.notificationService,
+          sendTeamInvitation: async () => ({ ok: false, queued: false }),
+        },
+      } as Services,
+      allowRole,
+    ),
+    OWNER,
+  );
+  await hit(rejectedInvitationApp, 'POST', '/salons/salon-1/staff', {
+    fullName: 'Rejected invite',
+    role: 'Stylist',
+    phone: '09123334469',
   });
   uniqueMode = 'register';
   await hit(app, 'POST', '/salons/salon-1/staff', { fullName: 'Duplicate', role: 'Stylist' });
@@ -1901,6 +1964,7 @@ async function exerciseAdminBranches(): Promise<void> {
   await hit(noSourceRegistrationApp, 'POST', '/salons/salon-1/staff', {
     fullName: 'No source',
     role: 'Stylist',
+    phone: '09123334461',
   });
 
   const emptyHoursRegistrationApp = appFor(
@@ -1926,6 +1990,7 @@ async function exerciseAdminBranches(): Promise<void> {
   await hit(emptyHoursRegistrationApp, 'POST', '/salons/salon-1/staff', {
     fullName: 'Empty hours',
     role: 'Stylist',
+    phone: '09123334462',
   });
 
   const mobileRegistrationApp = appFor(
@@ -1944,6 +2009,7 @@ async function exerciseAdminBranches(): Promise<void> {
   await hit(mobileRegistrationApp, 'POST', '/salons/salon-1/staff', {
     fullName: 'Mobile stylist',
     role: 'Stylist',
+    phone: '09123334463',
   });
   const emptyNameMobileRegistrationApp = appFor(
     adminRouter(
@@ -1970,6 +2036,7 @@ async function exerciseAdminBranches(): Promise<void> {
   await hit(emptyNameMobileRegistrationApp, 'POST', '/salons/salon-1/staff', {
     fullName: 'Input name',
     role: 'Stylist',
+    phone: '09123334464',
   });
   const emptyNamePhysicalRegistrationApp = appFor(
     adminRouter(
@@ -1996,6 +2063,7 @@ async function exerciseAdminBranches(): Promise<void> {
   await hit(emptyNamePhysicalRegistrationApp, 'POST', '/salons/salon-1/staff', {
     fullName: 'Input name',
     role: 'Stylist',
+    phone: '09123334465',
   });
   const rentedRegistrationApp = appFor(
     adminRouter(
@@ -2013,6 +2081,7 @@ async function exerciseAdminBranches(): Promise<void> {
   await hit(rentedRegistrationApp, 'POST', '/salons/salon-1/staff', {
     fullName: 'Rented stylist',
     role: 'Stylist',
+    phone: '09123334466',
   });
   const legacyRegistrationApp = appFor(
     adminRouter(
@@ -2027,11 +2096,13 @@ async function exerciseAdminBranches(): Promise<void> {
   await hit(legacyRegistrationApp, 'POST', '/salons/salon-1/staff', {
     fullName: 'Legacy stylist',
     role: 'Stylist',
+    phone: '09123334467',
   });
   uniqueMode = 'register-error';
   await hit(app, 'POST', '/salons/salon-1/staff', {
     fullName: 'Registration error',
     role: 'Stylist',
+    phone: '09123334460',
   });
   uniqueMode = 'none';
 

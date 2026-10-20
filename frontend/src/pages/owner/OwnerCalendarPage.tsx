@@ -57,7 +57,11 @@ import { APPOINTMENT_RESCHEDULING_ENABLED } from '../../config/features';
 import { usePagination } from '../../hooks/usePagination';
 import { useHashScroll } from '../../hooks/useHashScroll';
 import { useInboxWs } from '../../hooks/useInboxWs';
-import { gregorianToJalali, getJalaliMonthName, normalizeDigits as normalizeContactDigits } from '@salon/shared';
+import {
+  gregorianToJalali,
+  getJalaliMonthName,
+  normalizeDigits as normalizeContactDigits,
+} from '@salon/shared';
 import {
   Button,
   Dialog,
@@ -145,13 +149,7 @@ interface Appointment {
   } | null;
 }
 
-type SalonWorkMode =
-  | 'fixed_salon'
-  | 'rented_chair'
-  | 'home'
-  | 'mobile'
-  | 'hybrid'
-  | 'not_decided';
+type SalonWorkMode = 'fixed_salon' | 'rented_chair' | 'home' | 'mobile' | 'hybrid' | 'not_decided';
 
 type ManualCustomerPrefill = {
   phone?: string;
@@ -313,10 +311,7 @@ function minutesOf(iso: string | undefined, timezone?: string): number | null {
 }
 
 /** Preserve appointment duration while moving its start time locally. */
-function movedEndAt(
-  appointment: CalendarAppointmentLike,
-  nextStart: Date,
-): string | undefined {
+function movedEndAt(appointment: CalendarAppointmentLike, nextStart: Date): string | undefined {
   if (!appointment.startAt || !appointment.endAt) return undefined;
   const previousStart = new Date(appointment.startAt);
   const previousEnd = new Date(appointment.endAt);
@@ -340,7 +335,10 @@ interface PositionedAppointment {
 }
 
 /** Assign overlapping appointments to lanes so dense days never stack cards on top of each other. */
-function layoutAppointmentLanes(appointments: Appointment[], timezone?: string): PositionedAppointment[] {
+function layoutAppointmentLanes(
+  appointments: Appointment[],
+  timezone?: string,
+): PositionedAppointment[] {
   const scheduled = appointments
     .map((appt, index) => {
       const appointmentTimezone = appt.timezone || timezone;
@@ -358,7 +356,7 @@ function layoutAppointmentLanes(appointments: Appointment[], timezone?: string):
     .sort((a, b) => a.startMin - b.startMin || a.index - b.index);
 
   const groups: (typeof scheduled)[] = [];
-  let group: (typeof scheduled) = [];
+  let group: typeof scheduled = [];
   let groupEnd = -1;
 
   for (const item of scheduled) {
@@ -437,11 +435,12 @@ function toAppointment(appt: unknown, fallbackId: string): Appointment {
         typeof rec.durationMinOverride === 'number' ? rec.durationMinOverride : null,
       depositReceiptStatus: str(rec.depositReceiptStatus) ?? null,
       depositPaymentStatus: str(rec.depositPaymentStatus) ?? null,
-      depositAmountRial: typeof rec.amountRial === 'number'
-        ? rec.amountRial
-        : typeof rec.depositAmountRial === 'number'
-          ? rec.depositAmountRial
-          : null,
+      depositAmountRial:
+        typeof rec.amountRial === 'number'
+          ? rec.amountRial
+          : typeof rec.depositAmountRial === 'number'
+            ? rec.depositAmountRial
+            : null,
       depositReceiptUploadedAt: str(rec.uploadedAt) ?? str(rec.depositReceiptUploadedAt) ?? null,
       depositReceiptId: str(rec.receiptId) ?? str(rec.depositReceiptId) ?? null,
       pendingReschedule:
@@ -449,7 +448,8 @@ function toAppointment(appt: unknown, fallbackId: string): Appointment {
           ? {
               startAt: str((rec.pendingReschedule as Record<string, unknown>).startAt) ?? '',
               endAt: str((rec.pendingReschedule as Record<string, unknown>).endAt) ?? null,
-              requestedAt: str((rec.pendingReschedule as Record<string, unknown>).requestedAt) ?? null,
+              requestedAt:
+                str((rec.pendingReschedule as Record<string, unknown>).requestedAt) ?? null,
             }
           : null,
     };
@@ -633,8 +633,10 @@ function AppointmentBlock({
   const service = appt.serviceName ?? '—';
   const customer = appt.customerName;
   const { icon: statusIcon, label: statusLabel, ariaState } = statusIndicator(appt.status);
-  const compactLong = positioned && Boolean(appt.startAt && appt.endAt) &&
-    (new Date(appt.endAt!).getTime() - new Date(appt.startAt!).getTime()) >= 90 * 60_000;
+  const compactLong =
+    positioned &&
+    Boolean(appt.startAt && appt.endAt) &&
+    new Date(appt.endAt!).getTime() - new Date(appt.startAt!).getTime() >= 90 * 60_000;
   // Keep appointment content readable while collapsing only the actions when
   // a short timeline block cannot accommodate two text labels.
   const compact = compactView || (positioned && (height ?? 0) < 70);
@@ -673,44 +675,45 @@ function AppointmentBlock({
   const shortPositioned = positioned && (height ?? 0) < 120;
   const showShortLayout = shortPositioned && !hasStatusExtras;
   const actionButtonSize = shortPositioned ? 'h-11 w-11' : 'h-10 w-10';
-  const appointmentActions = compactActions && (canNoShow || canCancel) ? (
-    <span className="flex shrink-0 items-center gap-0.5">
-      {canNoShow && onNoShow && (
-        <button
-          type="button"
-          className={cn(
-            'flex items-center justify-center rounded-md border border-warning/25 bg-bg text-warning hover:bg-warning/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus',
-            actionButtonSize,
-          )}
-          aria-label={`ثبت عدم حضور ${customer ?? service}`}
-          title="ثبت عدم حضور"
-          onClick={(event) => {
-            event.stopPropagation();
-            onNoShow(appt);
-          }}
-        >
-          <UserX className="h-4 w-4" aria-hidden="true" />
-        </button>
-      )}
-      {canCancel && onCancel && (
-        <button
-          type="button"
-          className={cn(
-            'flex items-center justify-center rounded-md border border-danger/25 bg-bg text-danger hover:bg-danger/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus',
-            actionButtonSize,
-          )}
-          aria-label={`لغو نوبت ${customer ?? service}`}
-          title="لغو نوبت"
-          onClick={(event) => {
-            event.stopPropagation();
-            onCancel(appt);
-          }}
-        >
-          <X className="h-4 w-4" aria-hidden="true" />
-        </button>
-      )}
-    </span>
-  ) : null;
+  const appointmentActions =
+    compactActions && (canNoShow || canCancel) ? (
+      <span className="flex shrink-0 items-center gap-0.5">
+        {canNoShow && onNoShow && (
+          <button
+            type="button"
+            className={cn(
+              'flex items-center justify-center rounded-md border border-warning/25 bg-bg text-warning hover:bg-warning/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus',
+              actionButtonSize,
+            )}
+            aria-label={`ثبت عدم حضور ${customer ?? service}`}
+            title="ثبت عدم حضور"
+            onClick={(event) => {
+              event.stopPropagation();
+              onNoShow(appt);
+            }}
+          >
+            <UserX className="h-4 w-4" aria-hidden="true" />
+          </button>
+        )}
+        {canCancel && onCancel && (
+          <button
+            type="button"
+            className={cn(
+              'flex items-center justify-center rounded-md border border-danger/25 bg-bg text-danger hover:bg-danger/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus',
+              actionButtonSize,
+            )}
+            aria-label={`لغو نوبت ${customer ?? service}`}
+            title="لغو نوبت"
+            onClick={(event) => {
+              event.stopPropagation();
+              onCancel(appt);
+            }}
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        )}
+      </span>
+    ) : null;
 
   const positionStyle = positioned
     ? {
@@ -720,9 +723,7 @@ function AppointmentBlock({
         // needs one extra compact row; keep that content inside the card
         // instead of clipping its bottom edge with overflow-hidden.
         height: `${
-          positioned && hasStatusExtras && (height ?? 0) < 120
-            ? Math.max(height ?? 0, 104)
-            : height
+          positioned && hasStatusExtras && (height ?? 0) < 120 ? Math.max(height ?? 0, 104) : height
         }px`,
         insetInlineStart: `calc(${(lane / laneCount) * 100}% + 7px)`,
         insetInlineEnd: `calc(${((laneCount - lane - 1) / laneCount) * 100}% + 7px)`,
@@ -731,12 +732,8 @@ function AppointmentBlock({
 
   useEffect(() => {
     const element = draggableRef.current;
-    if (
-      !APPOINTMENT_RESCHEDULING_ENABLED ||
-      !element ||
-      !draggableId ||
-      hasPendingReschedule
-    ) return;
+    if (!APPOINTMENT_RESCHEDULING_ENABLED || !element || !draggableId || hasPendingReschedule)
+      return;
 
     return draggable({
       element,
@@ -787,7 +784,11 @@ function AppointmentBlock({
               <span className="shrink-0 rounded-full bg-bg px-1.5 py-0.5 text-[0.62rem] tabular-nums text-muted">
                 <Clock className="me-0.5 inline-block h-2.5 w-2.5" aria-hidden="true" />
                 <Num value={start} />
-                {end && <>–<Num value={end} /></>}
+                {end && (
+                  <>
+                    –<Num value={end} />
+                  </>
+                )}
               </span>
             )}
             {appointmentActions}
@@ -1055,9 +1056,7 @@ function DayView({
     () =>
       appointments
         .filter(
-          (a) =>
-            a.startAt &&
-            localDateKey(a.startAt, a.timezone || calendarTimezone) === anchorKey,
+          (a) => a.startAt && localDateKey(a.startAt, a.timezone || calendarTimezone) === anchorKey,
         )
         .sort((a, b) => {
           const ta = a.startAt ? new Date(a.startAt).getTime() : 0;
@@ -1087,25 +1086,39 @@ function DayView({
 
   // Fold only the interior of long bookings. Keep every appointment's start,
   // end and first hour visible, including bookings that overlap another one.
-  const foldedSlots = useMemo(() => TIME_SLOTS.map((slot) => {
-    const start = slot.hour * 60 + slot.minute;
-    const end = start + 30;
-    return positionedAppointments.some((item) =>
-      item.endMin - item.startMin >= 90 && start >= item.startMin + 60 && end <= item.endMin,
-    ) && positionedAppointments.every((item) =>
-      item.endMin <= start || item.startMin >= end ||
-      (item.startMin + 60 <= start && item.endMin >= end),
-    );
-  }), [positionedAppointments]);
+  const foldedSlots = useMemo(
+    () =>
+      TIME_SLOTS.map((slot) => {
+        const start = slot.hour * 60 + slot.minute;
+        const end = start + 30;
+        return (
+          positionedAppointments.some(
+            (item) =>
+              item.endMin - item.startMin >= 90 &&
+              start >= item.startMin + 60 &&
+              end <= item.endMin,
+          ) &&
+          positionedAppointments.every(
+            (item) =>
+              item.endMin <= start ||
+              item.startMin >= end ||
+              (item.startMin + 60 <= start && item.endMin >= end),
+          )
+        );
+      }),
+    [positionedAppointments],
+  );
   const slotHeights = foldedSlots.map((folded, index) =>
     folded ? (foldedSlots[index - 1] ? 0 : 16) : SLOT_HEIGHT,
   );
-  const visibleSlotIndices = TIME_SLOTS.flatMap((_, index) => foldedSlots[index] ? [] : [index]);
+  const visibleSlotIndices = TIME_SLOTS.flatMap((_, index) => (foldedSlots[index] ? [] : [index]));
   const timelineOffset = (minute: number) => {
     const offset = Math.max(0, minute - gridStartMin);
     const index = Math.floor(offset / 30);
-    return slotHeights.slice(0, index).reduce((sum, height) => sum + height, 0) +
-      (offset % 30) / 30 * (slotHeights[index] ?? SLOT_HEIGHT);
+    return (
+      slotHeights.slice(0, index).reduce((sum, height) => sum + height, 0) +
+      ((offset % 30) / 30) * (slotHeights[index] ?? SLOT_HEIGHT)
+    );
   };
 
   /** RTL vertical grid nav: ArrowUp/ArrowDown for time rows */
@@ -1184,7 +1197,9 @@ function DayView({
               <Num value={uniqueCustomerCount(dayAppts)} />
             </strong>
             <span className="text-sm font-bold text-text">مشتری</span>
-            <span className="text-xs text-muted">· <Num value={dayAppts.length} /> نوبت</span>
+            <span className="text-xs text-muted">
+              · <Num value={dayAppts.length} /> نوبت
+            </span>
           </div>
         </div>
         <div className="min-w-0 border-t border-primary/20 pt-2 sm:border-s sm:border-t-0 sm:ps-4 sm:pt-0">
@@ -1209,12 +1224,15 @@ function DayView({
             <span className="mt-1 block text-xs text-muted">برای این روز نوبت بعدی ثبت نشده</span>
           )}
         </div>
-        <span className="text-xs text-muted sm:ms-auto">برای جابه‌جایی، نوبت را بکش و روی ساعت جدید رها کن.</span>
+        <span className="text-xs text-muted sm:ms-auto">
+          برای جابه‌جایی، نوبت را بکش و روی ساعت جدید رها کن.
+        </span>
       </div>
       {dayAppts.length > 12 && (
         <div className="owner-calendar-day-overflow mb-2 flex flex-col gap-2 rounded-lg border border-primary/25 bg-primary/5 p-2.5 sm:flex-row sm:items-center sm:justify-between">
           <p className="m-0 text-xs text-muted">
-            این روز <Num value={dayAppts.length} /> نوبت دارد؛ برای بررسی سریع، فهرست کامل را باز کن.
+            این روز <Num value={dayAppts.length} /> نوبت دارد؛ برای بررسی سریع، فهرست کامل را باز
+            کن.
           </p>
           <Button
             type="button"
@@ -1242,13 +1260,20 @@ function DayView({
           {TIME_SLOTS.map((slot, idx) => {
             const rowHeight = slotHeights[idx];
             if (rowHeight === 0) return null;
-            if (foldedSlots[idx]) return (
-              <div key={`folded-${idx}`} role="row" aria-label="زمان میانی رزرو طولانی جمع شده"
-                className="flex items-center border-b border-dashed border-primary/25 bg-primary/5"
-                style={{ height: rowHeight }}>
-                <span className="w-16 text-center text-xs text-muted" aria-hidden="true">···</span>
-              </div>
-            );
+            if (foldedSlots[idx])
+              return (
+                <div
+                  key={`folded-${idx}`}
+                  role="row"
+                  aria-label="زمان میانی رزرو طولانی جمع شده"
+                  className="flex items-center border-b border-dashed border-primary/25 bg-primary/5"
+                  style={{ height: rowHeight }}
+                >
+                  <span className="w-16 text-center text-xs text-muted" aria-hidden="true">
+                    ···
+                  </span>
+                </div>
+              );
             const timeStr = `${String(slot.hour).padStart(2, '0')}:${String(slot.minute).padStart(2, '0')}`;
             const isHour = slot.minute === 0;
             const isFocused = focusedRow === idx;
@@ -1386,6 +1411,10 @@ function WeekView({
 }) {
   const { t } = useTranslation();
   const weekStart = useMemo(() => startOfIranianWeek(anchor), [anchor]);
+  const calendarTimezone = useMemo(
+    () => appointments.find((item) => item.timezone)?.timezone,
+    [appointments],
+  );
   const cellRefs = useRef<(HTMLElement | null)[]>([]);
   const [focusedIdx, setFocusedIdx] = useState<number | null>(null);
 
@@ -1396,7 +1425,7 @@ function WeekView({
       const iso = dateKey(date);
       const jalali = jalaliDayDisplay(date);
       const items = appointments
-        .filter((a) => a.startAt && localDateKey(a.startAt) === iso)
+        .filter((a) => a.startAt && localDateKey(a.startAt, a.timezone || calendarTimezone) === iso)
         .sort((a, b) => {
           const ta = a.startAt ? new Date(a.startAt).getTime() : 0;
           const tb = b.startAt ? new Date(b.startAt).getTime() : 0;
@@ -1404,9 +1433,9 @@ function WeekView({
         });
       return { date, iso, jalali, items, dayIndex: i };
     });
-  }, [appointments, weekStart]);
+  }, [appointments, calendarTimezone, weekStart]);
 
-  const todayKey = dateKey(new Date());
+  const todayKey = dateKeyAt(new Date(), calendarTimezone);
 
   /** RTL grid keyboard navigation: ArrowLeft = forward (next cell), ArrowRight = back */
   const handleGridKeyDown = useCallback(
@@ -1448,10 +1477,10 @@ function WeekView({
     >
       <div role="row" className="contents">
         {days.map((day, idx) => {
-        const isToday = day.iso === todayKey;
-        const isFocused = focusedIdx === idx;
-        const dayClosures = closures.filter((item) => item.onDate === day.iso);
-        const dayStaffBlocks = staffBlocks.filter((item) => item.onDate === day.iso);
+          const isToday = day.iso === todayKey;
+          const isFocused = focusedIdx === idx;
+          const dayClosures = closures.filter((item) => item.onDate === day.iso);
+          const dayStaffBlocks = staffBlocks.filter((item) => item.onDate === day.iso);
           return (
             <section
               key={day.iso}
@@ -1474,77 +1503,80 @@ function WeekView({
                 'transition-colors duration-fast ease-standard hover:bg-elevated/30',
                 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
                 isToday ? 'border-primary/60 bg-primary/5' : 'border-border bg-surface',
-                dayClosures.some((item) => item.startTime === null) && 'border-danger/40 bg-danger/5',
+                dayClosures.some((item) => item.startTime === null) &&
+                  'border-danger/40 bg-danger/5',
               )}
             >
-            {/* Day header */}
-            <header className="flex items-center gap-2 border-b border-border/50 pb-2 sm:flex-col sm:gap-0.5">
-              <span className="text-xs font-medium text-muted">
-                {PERSIAN_WEEKDAYS[day.dayIndex]}
-              </span>
-              <span
-                className={cn(
-                  'flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold tabular-nums',
-                  isToday ? 'bg-primary text-primary-contrast' : 'text-text',
-                )}
-              >
-                <Num value={day.jalali.jd} />
-              </span>
-              <span className="ms-auto rounded-full bg-primary/10 px-2 py-1 text-[0.68rem] font-bold text-primary sm:ms-0">
-                <Num value={uniqueCustomerCount(day.items)} /> مشتری
-              </span>
-              <span className="ms-auto text-[0.68rem] text-muted sm:hidden">
-                {day.items.length > 0
-                  ? `${toPersianDigits(String(day.items.length))} نوبت`
-                  : 'بدون نوبت'}
-              </span>
-            </header>
-
-            {dayClosures.length > 0 && (
-              <span className="rounded-md bg-danger/10 px-2 py-1 text-center text-[0.68rem] font-bold text-danger">
-                {dayClosures.some((item) => item.startTime === null)
-                  ? 'تعطیل کامل'
-                  : `${toPersianDigits(String(dayClosures.length))} بازه بسته`}
-              </span>
-            )}
-            {dayStaffBlocks.length > 0 && (
-              <span className="rounded-md bg-warning/10 px-2 py-1 text-center text-[0.68rem] font-bold text-warning">
-                {toPersianDigits(String(new Set(dayStaffBlocks.map((item) => item.staffId)).size))}{' '}
-                عضو تیم محدودیت دارد
-              </span>
-            )}
-
-            {/* Appointment list */}
-            <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden">
-              {day.items.length === 0 && (
-                <p className="hidden py-4 text-center text-xs text-muted/50 sm:block">—</p>
-              )}
-              {day.items.slice(0, 3).map((appt) => (
-                <div key={appt.id} onClick={(event) => event.stopPropagation()}>
-                  <AppointmentBlock
-                    appt={appt}
-                    compactView
-                    onCancel={onCancel}
-                    onNoShow={onNoShow}
-                    onOpen={onOpenAppointment}
-                  />
-                </div>
-              ))}
-              {day.items.length > 3 && (
-                <button
-                  type="button"
-                  className="min-h-10 rounded-md px-2 text-start text-xs font-semibold text-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onViewAppointments(day.date);
-                  }}
-                  onKeyDown={(event) => event.stopPropagation()}
-                  aria-label={`مشاهده همه ${day.items.length} نوبت ${PERSIAN_WEEKDAYS[day.dayIndex]}`}
+              {/* Day header */}
+              <header className="flex items-center gap-2 border-b border-border/50 pb-2 sm:flex-col sm:gap-0.5">
+                <span className="text-xs font-medium text-muted">
+                  {PERSIAN_WEEKDAYS[day.dayIndex]}
+                </span>
+                <span
+                  className={cn(
+                    'flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold tabular-nums',
+                    isToday ? 'bg-primary text-primary-contrast' : 'text-text',
+                  )}
                 >
-                  +<Num value={day.items.length - 3} /> نوبت دیگر · مشاهده همه
-                </button>
+                  <Num value={day.jalali.jd} />
+                </span>
+                <span className="ms-auto rounded-full bg-primary/10 px-2 py-1 text-[0.68rem] font-bold text-primary sm:ms-0">
+                  <Num value={uniqueCustomerCount(day.items)} /> مشتری
+                </span>
+                <span className="ms-auto text-[0.68rem] text-muted sm:hidden">
+                  {day.items.length > 0
+                    ? `${toPersianDigits(String(day.items.length))} نوبت`
+                    : 'بدون نوبت'}
+                </span>
+              </header>
+
+              {dayClosures.length > 0 && (
+                <span className="rounded-md bg-danger/10 px-2 py-1 text-center text-[0.68rem] font-bold text-danger">
+                  {dayClosures.some((item) => item.startTime === null)
+                    ? 'تعطیل کامل'
+                    : `${toPersianDigits(String(dayClosures.length))} بازه بسته`}
+                </span>
               )}
-            </div>
+              {dayStaffBlocks.length > 0 && (
+                <span className="rounded-md bg-warning/10 px-2 py-1 text-center text-[0.68rem] font-bold text-warning">
+                  {toPersianDigits(
+                    String(new Set(dayStaffBlocks.map((item) => item.staffId)).size),
+                  )}{' '}
+                  عضو تیم محدودیت دارد
+                </span>
+              )}
+
+              {/* Appointment list */}
+              <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden">
+                {day.items.length === 0 && (
+                  <p className="hidden py-4 text-center text-xs text-muted/50 sm:block">—</p>
+                )}
+                {day.items.slice(0, 3).map((appt) => (
+                  <div key={appt.id} onClick={(event) => event.stopPropagation()}>
+                    <AppointmentBlock
+                      appt={appt}
+                      compactView
+                      onCancel={onCancel}
+                      onNoShow={onNoShow}
+                      onOpen={onOpenAppointment}
+                    />
+                  </div>
+                ))}
+                {day.items.length > 3 && (
+                  <button
+                    type="button"
+                    className="min-h-10 rounded-md px-2 text-start text-xs font-semibold text-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onViewAppointments(day.date);
+                    }}
+                    onKeyDown={(event) => event.stopPropagation()}
+                    aria-label={`مشاهده همه ${day.items.length} نوبت ${PERSIAN_WEEKDAYS[day.dayIndex]}`}
+                  >
+                    +<Num value={day.items.length - 3} /> نوبت دیگر · مشاهده همه
+                  </button>
+                )}
+              </div>
             </section>
           );
         })}
@@ -1582,6 +1614,10 @@ function MonthView({
   onNoShow?: (appointment: Appointment) => void;
 }) {
   const { t } = useTranslation();
+  const calendarTimezone = useMemo(
+    () => appointments.find((item) => item.timezone)?.timezone,
+    [appointments],
+  );
   const year = anchor.getFullYear();
   const month = anchor.getMonth();
   const daysCount = daysInMonth(anchor);
@@ -1600,7 +1636,7 @@ function MonthView({
     rows.push(cells.slice(index, index + 7));
   }
 
-  const todayKey = dateKey(new Date());
+  const todayKey = dateKeyAt(new Date(), calendarTimezone);
 
   return (
     <div
@@ -1641,7 +1677,10 @@ function MonthView({
               const iso = dateKey(cell);
               const jalali = jalaliDayDisplay(cell);
               const dayAppts = appointments
-                .filter((a) => a.startAt && localDateKey(a.startAt) === iso)
+                .filter(
+                  (a) =>
+                    a.startAt && localDateKey(a.startAt, a.timezone || calendarTimezone) === iso,
+                )
                 .sort((a, b) => {
                   const ta = a.startAt ? new Date(a.startAt).getTime() : 0;
                   const tb = b.startAt ? new Date(b.startAt).getTime() : 0;
@@ -1679,12 +1718,16 @@ function MonthView({
                   </div>
                   {dayClosures.length > 0 && (
                     <span className="truncate rounded bg-danger/10 px-1 py-0.5 text-[0.58rem] font-bold text-danger">
-                      {dayClosures.some((item) => item.startTime === null) ? 'تعطیل' : 'محدودیت ساعت'}
+                      {dayClosures.some((item) => item.startTime === null)
+                        ? 'تعطیل'
+                        : 'محدودیت ساعت'}
                     </span>
                   )}
                   {dayStaffBlocks.length > 0 && (
                     <span className="truncate rounded bg-warning/10 px-1 py-0.5 text-[0.58rem] font-bold text-warning">
-                      {toPersianDigits(String(new Set(dayStaffBlocks.map((item) => item.staffId)).size))}{' '}
+                      {toPersianDigits(
+                        String(new Set(dayStaffBlocks.map((item) => item.staffId)).size),
+                      )}{' '}
                       عدم حضور
                     </span>
                   )}
@@ -1702,7 +1745,7 @@ function MonthView({
                     ))}
                     {dayAppts.length > 3 && (
                       <span className="rounded px-1 text-[0.6rem] font-semibold text-primary">
-                        +<Num value={dayAppts.length - 3} />{' '}نوبت دیگر · مشاهده همه
+                        +<Num value={dayAppts.length - 3} /> نوبت دیگر · مشاهده همه
                       </span>
                     )}
                   </div>
@@ -1779,7 +1822,9 @@ function AppointmentListDialog({
               pageSize={pagination.pageSize}
               total={pagination.total}
               onPageChange={pagination.goToPage}
-              ariaLabel={t('owner.calendar.dayPagination', { defaultValue: 'صفحه‌بندی نوبت‌های روز' })}
+              ariaLabel={t('owner.calendar.dayPagination', {
+                defaultValue: 'صفحه‌بندی نوبت‌های روز',
+              })}
               testId="owner-calendar-appointments-dialog-pagination"
               compact
               className="mt-3"
@@ -1789,7 +1834,9 @@ function AppointmentListDialog({
 
         <div className="mt-3 flex justify-end border-t border-border pt-3">
           <DialogClose asChild>
-            <Button variant="ghost" className="w-full sm:w-auto">بستن</Button>
+            <Button variant="ghost" className="w-full sm:w-auto">
+              بستن
+            </Button>
           </DialogClose>
         </div>
       </DialogContent>
@@ -1854,16 +1901,30 @@ function AgendaDay({
   );
 }
 
-function ListView({ appointments, anchor, onCancel, onNoShow }: { appointments: Appointment[]; anchor: Date; onCancel: (appointment: Appointment) => void; onNoShow?: (appointment: Appointment) => void }) {
+function ListView({
+  appointments,
+  anchor,
+  onCancel,
+  onNoShow,
+}: {
+  appointments: Appointment[];
+  anchor: Date;
+  onCancel: (appointment: Appointment) => void;
+  onNoShow?: (appointment: Appointment) => void;
+}) {
   const { t } = useTranslation();
+  const calendarTimezone = useMemo(
+    () => appointments.find((item) => item.timezone)?.timezone,
+    [appointments],
+  );
 
-  // Group appointments by their local date, sorted ascending.
+  // Group appointments by salon date, sorted ascending.
   const grouped = useMemo(() => {
-    const anchorKey = dateKey(anchor);
+    const anchorKey = dateKeyAt(anchor, calendarTimezone);
     const map = new Map<string, Appointment[]>();
     for (const a of appointments) {
       if (!a.startAt) continue;
-      const key = localDateKey(a.startAt);
+      const key = localDateKey(a.startAt, a.timezone || calendarTimezone);
       if (!key || key < anchorKey) continue;
       const list = map.get(key) ?? [];
       list.push(a);
@@ -1877,7 +1938,7 @@ function ListView({ appointments, anchor, onCancel, onNoShow }: { appointments: 
       });
     }
     return Array.from(map.entries()).sort((a, b) => (a[0] < b[0] ? -1 : 1));
-  }, [appointments, anchor]);
+  }, [appointments, anchor, calendarTimezone]);
   const pagination = usePagination(grouped, 7);
 
   if (grouped.length === 0) {
@@ -1902,7 +1963,13 @@ function ListView({ appointments, anchor, onCancel, onNoShow }: { appointments: 
         className="flex flex-col gap-3"
       >
         {pagination.pageItems.map(([dayKey, items]) => (
-          <AgendaDay key={dayKey} dayKey={dayKey} items={items} onCancel={onCancel} onNoShow={onNoShow} />
+          <AgendaDay
+            key={dayKey}
+            dayKey={dayKey}
+            items={items}
+            onCancel={onCancel}
+            onNoShow={onNoShow}
+          />
         ))}
       </ol>
       <Pagination
@@ -1970,9 +2037,7 @@ function CalendarFilters({
     return searchable.includes(normalizedQuery);
   }).length;
   const activeCount =
-    (query.trim() ? 1 : 0) +
-    (staffId !== 'all' ? 1 : 0) +
-    (statusFilter !== 'all' ? 1 : 0);
+    (query.trim() ? 1 : 0) + (staffId !== 'all' ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0);
 
   return (
     <section
@@ -1994,7 +2059,13 @@ function CalendarFilters({
           )}
         </div>
         {activeCount > 0 && (
-          <Button type="button" variant="ghost" size="md" onClick={onClear} className="!px-2 text-xs">
+          <Button
+            type="button"
+            variant="ghost"
+            size="md"
+            onClick={onClear}
+            className="!px-2 text-xs"
+          >
             پاک کردن فیلترها
           </Button>
         )}
@@ -2267,26 +2338,34 @@ export function WeeklySchedulePage({
       data-testid="owner-weekly-schedule"
       className="overflow-hidden rounded-2xl border border-border bg-elevated shadow-1"
     >
-        <header className="relative overflow-hidden border-b border-border bg-gradient-to-l from-primary/20 via-primary/10 to-transparent px-4 py-4 sm:px-8 sm:py-6">
-          <div className="absolute -start-12 -top-20 h-44 w-44 rounded-full bg-primary/15 blur-3xl" aria-hidden="true" />
-          <div className="relative flex items-start gap-3 sm:gap-4">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-contrast shadow-2 sm:h-12 sm:w-12 sm:rounded-2xl">
-              <CalendarClock className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
+      <header className="relative overflow-hidden border-b border-border bg-gradient-to-l from-primary/20 via-primary/10 to-transparent px-4 py-4 sm:px-8 sm:py-6">
+        <div
+          className="absolute -start-12 -top-20 h-44 w-44 rounded-full bg-primary/15 blur-3xl"
+          aria-hidden="true"
+        />
+        <div className="relative flex items-start gap-3 sm:gap-4">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-contrast shadow-2 sm:h-12 sm:w-12 sm:rounded-2xl">
+            <CalendarClock className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <span className="mb-0.5 block text-[0.7rem] font-bold text-primary sm:mb-1 sm:text-xs">
+              تنظیمات تقویم سالن
             </span>
-            <div className="min-w-0">
-              <span className="mb-0.5 block text-[0.7rem] font-bold text-primary sm:mb-1 sm:text-xs">تنظیمات تقویم سالن</span>
-              <h1 className="text-xl font-black text-text sm:text-3xl">برنامه کاری هفتگی</h1>
-              <p className="mt-1 max-w-2xl text-xs leading-5 text-muted sm:text-sm sm:leading-6">
-                {focusWeekday === undefined
-                  ? 'روزهای کاری و ساعت رزرو مشتری را تنظیم کن.'
-                  : `ساعت‌های ${PERSIAN_WEEKDAYS[focusWeekday]} را از ردیف مشخص‌شده تغییر بده؛ این برنامه هر هفته تکرار می‌شود.`}
-              </p>
-            </div>
+            <h1 className="text-xl font-black text-text sm:text-3xl">برنامه کاری هفتگی</h1>
+            <p className="mt-1 max-w-2xl text-xs leading-5 text-muted sm:text-sm sm:leading-6">
+              {focusWeekday === undefined
+                ? 'روزهای کاری و ساعت رزرو مشتری را تنظیم کن.'
+                : `ساعت‌های ${PERSIAN_WEEKDAYS[focusWeekday]} را از ردیف مشخص‌شده تغییر بده؛ این برنامه هر هفته تکرار می‌شود.`}
+            </p>
           </div>
-        </header>
-        <div className="p-3 sm:p-6">
-          <div className="flex flex-col gap-5">
-          <section aria-label="تنظیمات اصلی" className="grid gap-4 rounded-2xl border border-border bg-surface p-4 shadow-1 sm:grid-cols-2 sm:p-5">
+        </div>
+      </header>
+      <div className="p-3 sm:p-6">
+        <div className="flex flex-col gap-5">
+          <section
+            aria-label="تنظیمات اصلی"
+            className="grid gap-4 rounded-2xl border border-border bg-surface p-4 shadow-1 sm:grid-cols-2 sm:p-5"
+          >
             <Select
               label="برنامه برای"
               value={target}
@@ -2346,13 +2425,22 @@ export function WeeklySchedulePage({
               helperText="در حالت سیار، رزروها روی مسیر اختصاصی همان عضو تیم ثبت می‌شوند."
             />
           </section>
-          <section className={cn('rounded-2xl border p-4 transition-colors sm:p-5', breakEnabled ? 'border-warning/40 bg-warning/5' : 'border-border bg-surface')}>
+          <section
+            className={cn(
+              'rounded-2xl border p-4 transition-colors sm:p-5',
+              breakEnabled ? 'border-warning/40 bg-warning/5' : 'border-border bg-surface',
+            )}
+          >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning/15 text-warning"><Coffee className="h-5 w-5" aria-hidden="true" /></span>
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning/15 text-warning">
+                  <Coffee className="h-5 w-5" aria-hidden="true" />
+                </span>
                 <div>
                   <strong className="block text-sm text-text">زمان استراحت تکرارشونده</strong>
-                  <p className="mt-1 text-xs text-muted">مثلاً هر روز زمان ناهار رزرو جدید گرفته نشود.</p>
+                  <p className="mt-1 text-xs text-muted">
+                    مثلاً هر روز زمان ناهار رزرو جدید گرفته نشود.
+                  </p>
                 </div>
               </div>
               <ScheduleSwitch
@@ -2373,7 +2461,10 @@ export function WeeklySchedulePage({
           {loading ? (
             <Skeleton variant="rect" className="h-72 rounded-lg" />
           ) : (
-            <section aria-label="روزهای هفته" className="overflow-hidden rounded-2xl border border-border bg-surface shadow-1">
+            <section
+              aria-label="روزهای هفته"
+              className="overflow-hidden rounded-2xl border border-border bg-surface shadow-1"
+            >
               <header className="flex items-center justify-between border-b border-border bg-bg/60 px-4 py-3 sm:px-5">
                 <strong className="text-sm text-text">ساعت فعالیت روزها</strong>
                 <span className="text-xs text-muted">برای تغییر روی ساعت بزن</span>
@@ -2409,8 +2500,16 @@ export function WeeklySchedulePage({
                     />
                     {row && (
                       <>
-                        <TimeWheelField label="شروع" value={row.startTime} onChange={(value) => setDay(weekday, { startTime: value })} />
-                        <TimeWheelField label="پایان" value={row.endTime} onChange={(value) => setDay(weekday, { endTime: value })} />
+                        <TimeWheelField
+                          label="شروع"
+                          value={row.startTime}
+                          onChange={(value) => setDay(weekday, { startTime: value })}
+                        />
+                        <TimeWheelField
+                          label="پایان"
+                          value={row.endTime}
+                          onChange={(value) => setDay(weekday, { endTime: value })}
+                        />
                       </>
                     )}
                   </div>
@@ -2418,27 +2517,39 @@ export function WeeklySchedulePage({
               })}
             </section>
           )}
-          {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-          </div>
+          {error && (
+            <p role="alert" className="text-sm text-danger">
+              {error}
+            </p>
+          )}
         </div>
-          <footer className="flex items-center justify-between gap-3 border-t border-border bg-elevated/95 px-3 py-3 shadow-[0_-10px_30px_rgba(0,0,0,0.08)] backdrop-blur sm:px-6 sm:py-4">
-            <span className="hidden text-xs text-muted sm:block">تغییرات بعد از ذخیره روی رزرو مشتری اعمال می‌شوند.</span>
-            <div className="ms-auto grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
-            <Button type="button" variant="ghost" disabled={saving} onClick={onCancel} className="w-full sm:w-auto">
-              انصراف
-            </Button>
-            <Button
-              type="button"
-              variant="primary"
-              loading={saving}
-              disabled={saving || loading}
-              onClick={() => void save()}
-              className="w-full sm:w-auto"
-            >
-              ذخیره برنامه هفتگی
-            </Button>
-            </div>
-          </footer>
+      </div>
+      <footer className="flex items-center justify-between gap-3 border-t border-border bg-elevated/95 px-3 py-3 shadow-[0_-10px_30px_rgba(0,0,0,0.08)] backdrop-blur sm:px-6 sm:py-4">
+        <span className="hidden text-xs text-muted sm:block">
+          تغییرات بعد از ذخیره روی رزرو مشتری اعمال می‌شوند.
+        </span>
+        <div className="ms-auto grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={saving}
+            onClick={onCancel}
+            className="w-full sm:w-auto"
+          >
+            انصراف
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            loading={saving}
+            disabled={saving || loading}
+            onClick={() => void save()}
+            className="w-full sm:w-auto"
+          >
+            ذخیره برنامه هفتگی
+          </Button>
+        </div>
+      </footer>
     </section>
   );
 }
@@ -2564,7 +2675,8 @@ function AvailabilityDialog({
           <h3 className="m-0 text-lg font-bold text-text">برنامه حضور این روز</h3>
           <p className="mt-1 text-sm leading-6 text-muted">
             {PERSIAN_WEEKDAYS[iranianDayIndex(date)]}، {toPersianDigits(String(jalali.jd))}{' '}
-            {getJalaliMonthName(jalali.jm)} — ساعت‌های معمول سالن باز می‌مانند؛ فقط تعطیلی‌ها را مشخص کن.
+            {getJalaliMonthName(jalali.jm)} — ساعت‌های معمول سالن باز می‌مانند؛ فقط تعطیلی‌ها را
+            مشخص کن.
           </p>
         </div>
       ) : (
@@ -2572,111 +2684,130 @@ function AvailabilityDialog({
           <DialogTitle>برنامه حضور این روز</DialogTitle>
           <DialogDescription>
             {PERSIAN_WEEKDAYS[iranianDayIndex(date)]}، {toPersianDigits(String(jalali.jd))}{' '}
-            {getJalaliMonthName(jalali.jm)} — ساعت‌های معمول سالن باز می‌مانند؛ فقط تعطیلی‌ها را مشخص کن.
+            {getJalaliMonthName(jalali.jm)} — ساعت‌های معمول سالن باز می‌مانند؛ فقط تعطیلی‌ها را
+            مشخص کن.
           </DialogDescription>
         </>
       )}
 
-        <div className="mt-4">
-          <Select
-            label="این محدودیت برای"
-            value={target}
-            onValueChange={(value) => {
-              setTarget(value);
-              setError('');
-            }}
-            options={[
-              { value: 'salon', label: 'کل سالن' },
-              ...staff
-                .filter((item) => item.active && item.role !== 'Admin')
-                .map((item) => ({ value: item.id, label: item.fullName || 'عضو تیم بدون نام' })),
-            ]}
-            helperText={
-              target === 'salon'
-                ? 'در این زمان هیچ عضو تیمی نوبت نمی‌گیرد.'
-                : 'فقط همین عضو تیم از رزرو خارج می‌شود و سالن باز می‌ماند.'
-            }
-          />
+      <div className="mt-4">
+        <Select
+          label="این محدودیت برای"
+          value={target}
+          onValueChange={(value) => {
+            setTarget(value);
+            setError('');
+          }}
+          options={[
+            { value: 'salon', label: 'کل سالن' },
+            ...staff
+              .filter((item) => item.active && item.role !== 'Admin')
+              .map((item) => ({ value: item.id, label: item.fullName || 'عضو تیم بدون نام' })),
+          ]}
+          helperText={
+            target === 'salon'
+              ? 'در این زمان هیچ عضو تیمی نوبت نمی‌گیرد.'
+              : 'فقط همین عضو تیم از رزرو خارج می‌شود و سالن باز می‌ماند.'
+          }
+        />
+      </div>
+
+      {!blocksLoading && dayClosures.length > 0 && (
+        <div className="mt-4 flex flex-col gap-2 rounded-lg border border-border bg-bg p-3">
+          <strong className="text-sm text-text">محدودیت‌های همین روز</strong>
+          {dayClosures.map((item) => (
+            <div
+              key={item.id}
+              className="flex items-center justify-between gap-3 rounded-md bg-surface px-3 py-2"
+            >
+              <span className="text-sm text-text">
+                {item.startTime === null ? 'تعطیل کامل' : `${item.startTime} تا ${item.endTime}`}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="md"
+                disabled={busy}
+                onClick={() => void removeClosure(item.id)}
+              >
+                باز کردن دوباره
+              </Button>
+            </div>
+          ))}
         </div>
+      )}
 
-        {!blocksLoading && dayClosures.length > 0 && (
-          <div className="mt-4 flex flex-col gap-2 rounded-lg border border-border bg-bg p-3">
-            <strong className="text-sm text-text">محدودیت‌های همین روز</strong>
-            {dayClosures.map((item) => (
-              <div key={item.id} className="flex items-center justify-between gap-3 rounded-md bg-surface px-3 py-2">
-                <span className="text-sm text-text">
-                  {item.startTime === null ? 'تعطیل کامل' : `${item.startTime} تا ${item.endTime}`}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="md"
-                  disabled={busy}
-                  onClick={() => void removeClosure(item.id)}
-                >
-                  باز کردن دوباره
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="mt-4 grid grid-cols-2 gap-2" role="group" aria-label="نوع محدودیت">
-          <button
-            type="button"
-            aria-pressed={mode === 'full'}
-            onClick={() => setMode('full')}
-            className={cn(
-              'min-h-12 rounded-md border px-3 text-sm font-bold',
-              mode === 'full' ? 'border-danger bg-danger/10 text-danger' : 'border-border bg-surface text-text',
-            )}
-          >
-            {target === 'salon' ? 'کل سالن تعطیل' : 'کل روز حضور ندارد'}
-          </button>
-          <button
-            type="button"
-            aria-pressed={mode === 'range'}
-            onClick={() => setMode('range')}
-            className={cn(
-              'min-h-12 rounded-md border px-3 text-sm font-bold',
-              mode === 'range' ? 'border-warning bg-warning/10 text-warning' : 'border-border bg-surface text-text',
-            )}
-          >
-            {target === 'salon' ? 'بستن یک بازه سالن' : 'فقط یک بازه حضور ندارد'}
-          </button>
-        </div>
-
-        {mode === 'range' && (
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <TimeWheelField label="از ساعت" value={start} onChange={setStart} />
-            <TimeWheelField label="تا ساعت" value={end} onChange={setEnd} />
-          </div>
-        )}
-        {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
-        <div className="mt-5 flex justify-end gap-2">
-          {inline ? (
-            <Button type="button" variant="ghost" disabled={busy} onClick={() => onOpenChange(false)}>
-              بازگشت
-            </Button>
-          ) : (
-            <DialogClose asChild>
-              <Button type="button" variant="ghost" disabled={busy}>انصراف</Button>
-            </DialogClose>
+      <div className="mt-4 grid grid-cols-2 gap-2" role="group" aria-label="نوع محدودیت">
+        <button
+          type="button"
+          aria-pressed={mode === 'full'}
+          onClick={() => setMode('full')}
+          className={cn(
+            'min-h-12 rounded-md border px-3 text-sm font-bold',
+            mode === 'full'
+              ? 'border-danger bg-danger/10 text-danger'
+              : 'border-border bg-surface text-text',
           )}
-          <Button
-            type="button"
-            variant="primary"
-            loading={busy}
-            disabled={busy}
-            onClick={() => void addClosure()}
-          >
-            اعمال در تقویم
-          </Button>
+        >
+          {target === 'salon' ? 'کل سالن تعطیل' : 'کل روز حضور ندارد'}
+        </button>
+        <button
+          type="button"
+          aria-pressed={mode === 'range'}
+          onClick={() => setMode('range')}
+          className={cn(
+            'min-h-12 rounded-md border px-3 text-sm font-bold',
+            mode === 'range'
+              ? 'border-warning bg-warning/10 text-warning'
+              : 'border-border bg-surface text-text',
+          )}
+        >
+          {target === 'salon' ? 'بستن یک بازه سالن' : 'فقط یک بازه حضور ندارد'}
+        </button>
+      </div>
+
+      {mode === 'range' && (
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <TimeWheelField label="از ساعت" value={start} onChange={setStart} />
+          <TimeWheelField label="تا ساعت" value={end} onChange={setEnd} />
         </div>
+      )}
+      {error && (
+        <p role="alert" className="mt-3 text-sm text-danger">
+          {error}
+        </p>
+      )}
+      <div className="mt-5 flex justify-end gap-2">
+        {inline ? (
+          <Button type="button" variant="ghost" disabled={busy} onClick={() => onOpenChange(false)}>
+            بازگشت
+          </Button>
+        ) : (
+          <DialogClose asChild>
+            <Button type="button" variant="ghost" disabled={busy}>
+              انصراف
+            </Button>
+          </DialogClose>
+        )}
+        <Button
+          type="button"
+          variant="primary"
+          loading={busy}
+          disabled={busy}
+          onClick={() => void addClosure()}
+        >
+          اعمال در تقویم
+        </Button>
+      </div>
     </>
   );
 
-  if (inline) return <div className="mt-4" data-testid="owner-calendar-availability-inline">{content}</div>;
+  if (inline)
+    return (
+      <div className="mt-4" data-testid="owner-calendar-availability-inline">
+        {content}
+      </div>
+    );
 
   return (
     <Dialog open={open} onOpenChange={(next) => !busy && onOpenChange(next)}>
@@ -2912,7 +3043,6 @@ function DateNav({
       <Button variant="ghost" size="md" onClick={() => onNavigate(0)} className="ms-1">
         {t('owner.calendar.today', { defaultValue: 'امروز' })}
       </Button>
-
     </nav>
   );
 }
@@ -3055,8 +3185,8 @@ function ApprovalQueue({
   if (pending.length === 0 && !actionError) return null;
 
   const renderPendingRow = (appt: Appointment) => {
-    const start = clockTime(appt.startAt);
-    const dateKey = appt.startAt ? localDateKey(appt.startAt) : null;
+    const start = clockTime(appt.startAt, appt.timezone);
+    const dateKey = appt.startAt ? localDateKey(appt.startAt, appt.timezone) : null;
     let dateLabel = '';
     if (dateKey) {
       try {
@@ -3151,7 +3281,10 @@ function ApprovalQueue({
   return (
     <div className={cn('flex flex-col gap-3', className)}>
       {actionError && (
-        <p role="alert" className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
+        <p
+          role="alert"
+          className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger"
+        >
           {actionError}
         </p>
       )}
@@ -3164,100 +3297,95 @@ function ApprovalQueue({
           })}
           className="scroll-mt-24 rounded-xl border border-warning/40 bg-warning/5 p-3 sm:p-4"
         >
-      <header className="flex items-center gap-2">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning">
-          <Hourglass className="h-4 w-4" aria-hidden="true" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-sm font-bold text-text">
-              {t('owner.calendar.approvalQueue', { defaultValue: 'نوبت‌های در انتظار تأیید' })}
-            </h2>
-            <span
-              aria-live="polite"
-              className="rounded-full bg-warning/15 px-2 py-0.5 text-xs font-bold text-warning tabular-nums"
-            >
-              <Num value={pending.length} />
+          <header className="flex items-center gap-2">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning">
+              <Hourglass className="h-4 w-4" aria-hidden="true" />
             </span>
-          </div>
-          <p className="mt-0.5 truncate text-xs text-muted">
-            {canApproveOwnAppointments
-              ? t('owner.calendar.approvalBody', {
-                  defaultValue: 'این رزروها منتظر تأیید شما هستند',
-                })
-              : t('owner.calendar.approvalOwnerOnly', {
-                  defaultValue: 'این رزروها برای تأیید مالک یا مدیر ارسال شده‌اند.',
-                })}
-          </p>
-        </div>
-      </header>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-sm font-bold text-text">
+                  {t('owner.calendar.approvalQueue', { defaultValue: 'نوبت‌های در انتظار تأیید' })}
+                </h2>
+                <span
+                  aria-live="polite"
+                  className="rounded-full bg-warning/15 px-2 py-0.5 text-xs font-bold text-warning tabular-nums"
+                >
+                  <Num value={pending.length} />
+                </span>
+              </div>
+              <p className="mt-0.5 truncate text-xs text-muted">
+                {canApproveOwnAppointments
+                  ? t('owner.calendar.approvalBody', {
+                      defaultValue: 'این رزروها منتظر تأیید شما هستند',
+                    })
+                  : t('owner.calendar.approvalOwnerOnly', {
+                      defaultValue: 'این رزروها برای تأیید مالک یا مدیر ارسال شده‌اند.',
+                    })}
+              </p>
+            </div>
+          </header>
 
-        <div id="owner-approval-queue-list" className="mt-3">
-        <ul role="list" className="flex flex-col gap-1.5">
-          {previewPending.map(renderPendingRow)}
-        </ul>
-        {pending.length > 1 && canApproveOwnAppointments && (
-          <div className="mt-3 flex flex-col gap-2 rounded-lg border border-border/70 bg-bg/40 p-2.5 sm:flex-row sm:items-center sm:justify-between">
-            <p className="m-0 text-xs text-muted">
-              و <Num value={pending.length - 1} /> نوبت دیگر هم منتظر تأیید هستند.
-            </p>
-            <Button
-              variant="ghost"
-              size="md"
-              className="w-full shrink-0 text-xs sm:w-auto"
-              onClick={openApprovalDialog}
-              aria-haspopup="dialog"
-              aria-expanded={approvalDialogOpen}
-              data-testid="owner-approval-queue-toggle"
-            >
-              مشاهده و مدیریت همه
-            </Button>
-          </div>
-        )}
-      </div>
-
-      <Sheet open={approvalDialogOpen} onOpenChange={setApprovalDialogOpen}>
-        <SheetContent
-          side="inline-end"
-          className="!p-4 sm:!p-5 md:!w-[min(38rem,100vw)]"
-        >
-          <div className="pe-10">
-            <SheetTitle className="text-base sm:text-lg">
-              مدیریت نوبت‌های در انتظار تأیید
-              <span className="ms-2 rounded-full bg-warning/15 px-2 py-0.5 text-xs font-bold text-warning tabular-nums">
-                <Num value={pending.length} />
-              </span>
-            </SheetTitle>
-            <SheetDescription>
-              هر نوبت را بررسی کن و تأیید یا ردش کن.
-            </SheetDescription>
-          </div>
-          <div className="mt-4">
+          <div id="owner-approval-queue-list" className="mt-3">
             <ul role="list" className="flex flex-col gap-1.5">
-              {pendingPagination.pageItems.map(renderPendingRow)}
+              {previewPending.map(renderPendingRow)}
             </ul>
-            <Pagination
-              page={pendingPagination.page}
-              pageSize={pendingPagination.pageSize}
-              total={pendingPagination.total}
-              onPageChange={pendingPagination.goToPage}
-              ariaLabel="صفحه‌بندی نوبت‌های در انتظار تأیید"
-              testId="owner-approval-queue-pagination"
-              compact
-              className="mt-3"
-            />
+            {pending.length > 1 && canApproveOwnAppointments && (
+              <div className="mt-3 flex flex-col gap-2 rounded-lg border border-border/70 bg-bg/40 p-2.5 sm:flex-row sm:items-center sm:justify-between">
+                <p className="m-0 text-xs text-muted">
+                  و <Num value={pending.length - 1} /> نوبت دیگر هم منتظر تأیید هستند.
+                </p>
+                <Button
+                  variant="ghost"
+                  size="md"
+                  className="w-full shrink-0 text-xs sm:w-auto"
+                  onClick={openApprovalDialog}
+                  aria-haspopup="dialog"
+                  aria-expanded={approvalDialogOpen}
+                  data-testid="owner-approval-queue-toggle"
+                >
+                  مشاهده و مدیریت همه
+                </Button>
+              </div>
+            )}
           </div>
-          <div className="mt-3 flex justify-end border-t border-border pt-3">
-            <Button
-              variant="ghost"
-              className="w-full sm:w-auto"
-              onClick={() => setApprovalDialogOpen(false)}
-            >
-              بستن
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
+
+          <Sheet open={approvalDialogOpen} onOpenChange={setApprovalDialogOpen}>
+            <SheetContent side="inline-end" className="!p-4 sm:!p-5 md:!w-[min(38rem,100vw)]">
+              <div className="pe-10">
+                <SheetTitle className="text-base sm:text-lg">
+                  مدیریت نوبت‌های در انتظار تأیید
+                  <span className="ms-2 rounded-full bg-warning/15 px-2 py-0.5 text-xs font-bold text-warning tabular-nums">
+                    <Num value={pending.length} />
+                  </span>
+                </SheetTitle>
+                <SheetDescription>هر نوبت را بررسی کن و تأیید یا ردش کن.</SheetDescription>
+              </div>
+              <div className="mt-4">
+                <ul role="list" className="flex flex-col gap-1.5">
+                  {pendingPagination.pageItems.map(renderPendingRow)}
+                </ul>
+                <Pagination
+                  page={pendingPagination.page}
+                  pageSize={pendingPagination.pageSize}
+                  total={pendingPagination.total}
+                  onPageChange={pendingPagination.goToPage}
+                  ariaLabel="صفحه‌بندی نوبت‌های در انتظار تأیید"
+                  testId="owner-approval-queue-pagination"
+                  compact
+                  className="mt-3"
+                />
+              </div>
+              <div className="mt-3 flex justify-end border-t border-border pt-3">
+                <Button
+                  variant="ghost"
+                  className="w-full sm:w-auto"
+                  onClick={() => setApprovalDialogOpen(false)}
+                >
+                  بستن
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
         </section>
       )}
 
@@ -3288,9 +3416,17 @@ function ApprovalQueue({
             disabled={Boolean(busy)}
             className="mt-4"
           />
-          {rejectError && <p role="alert" className="mt-3 text-sm text-danger">{rejectError}</p>}
+          {rejectError && (
+            <p role="alert" className="mt-3 text-sm text-danger">
+              {rejectError}
+            </p>
+          )}
           <div className="mt-5 flex justify-end gap-2">
-            <DialogClose asChild><Button variant="ghost" disabled={Boolean(busy)}>انصراف</Button></DialogClose>
+            <DialogClose asChild>
+              <Button variant="ghost" disabled={Boolean(busy)}>
+                انصراف
+              </Button>
+            </DialogClose>
             <Button variant="danger" loading={Boolean(busy)} onClick={() => void confirmReject()}>
               رد درخواست
             </Button>
@@ -3342,9 +3478,14 @@ function PendingDepositReceiptQueue({
       .getPendingDepositReceipts(salonId)
       .then((response) => {
         if (!active) return;
-        setReceipts((response.receipts ?? []).map((receipt, index) =>
-          toAppointment(receipt, receipt.appointmentId || receipt.receiptId || `receipt-${index}`),
-        ));
+        setReceipts(
+          (response.receipts ?? []).map((receipt, index) =>
+            toAppointment(
+              receipt,
+              receipt.appointmentId || receipt.receiptId || `receipt-${index}`,
+            ),
+          ),
+        );
       })
       .catch(() => {
         if (!active) return;
@@ -3363,8 +3504,10 @@ function PendingDepositReceiptQueue({
   if (receipts.length === 0 && !loadError) return null;
 
   const renderReceiptRow = (appointment: Appointment) => {
-    const start = clockTime(appointment.startAt);
-    const dateKey = appointment.startAt ? localDateKey(appointment.startAt) : null;
+    const start = clockTime(appointment.startAt, appointment.timezone);
+    const dateKey = appointment.startAt
+      ? localDateKey(appointment.startAt, appointment.timezone)
+      : null;
     const dateText = dateKey
       ? (() => {
           const date = new Date(dateKey + 'T00:00:00');
@@ -3391,10 +3534,16 @@ function PendingDepositReceiptQueue({
             )}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
-            <span><Num value={dateText} /> · <Num value={start ?? '—'} /></span>
+            <span>
+              <Num value={dateText} /> · <Num value={start ?? '—'} />
+            </span>
             {appointment.staffName && <span>با {appointment.staffName}</span>}
             {appointment.depositAmountRial != null && (
-              <Money amountRial={appointment.depositAmountRial} unit="toman" className="font-semibold text-primary" />
+              <Money
+                amountRial={appointment.depositAmountRial}
+                unit="toman"
+                className="font-semibold text-primary"
+              />
             )}
           </div>
         </div>
@@ -3415,7 +3564,10 @@ function PendingDepositReceiptQueue({
   return (
     <div className={cn('flex flex-col gap-3', className)}>
       {loadError && (
-        <p role="alert" className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
+        <p
+          role="alert"
+          className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger"
+        >
           {loadError}
         </p>
       )}
@@ -3433,11 +3585,16 @@ function PendingDepositReceiptQueue({
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-sm font-bold text-text">رسیدهای بیعانه در انتظار بررسی</h2>
-                <span aria-live="polite" className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-bold text-primary tabular-nums">
+                <span
+                  aria-live="polite"
+                  className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-bold text-primary tabular-nums"
+                >
                   <Num value={receipts.length} />
                 </span>
               </div>
-              <p className="mt-0.5 text-xs text-muted">رسید را ببین و بعد نوبت را تأیید یا رد کن.</p>
+              <p className="mt-0.5 text-xs text-muted">
+                رسید را ببین و بعد نوبت را تأیید یا رد کن.
+              </p>
             </div>
           </header>
           <ul role="list" className="mt-3 flex flex-col gap-1.5">
@@ -3474,14 +3631,18 @@ function PendingDepositReceiptQueue({
             pageSize={pagination.pageSize}
             total={pagination.total}
             onPageChange={pagination.goToPage}
-            ariaLabel={t('owner.calendar.depositReceiptPagination', { defaultValue: 'صفحه‌بندی رسیدهای بیعانه' })}
+            ariaLabel={t('owner.calendar.depositReceiptPagination', {
+              defaultValue: 'صفحه‌بندی رسیدهای بیعانه',
+            })}
             testId="owner-deposit-receipt-pagination"
             compact
             className="mt-3"
           />
           <div className="mt-3 flex justify-end border-t border-border pt-3">
             <DialogClose asChild>
-              <Button variant="ghost" className="w-full sm:w-auto">بستن</Button>
+              <Button variant="ghost" className="w-full sm:w-auto">
+                بستن
+              </Button>
             </DialogClose>
           </div>
         </DialogContent>
@@ -3597,12 +3758,14 @@ function OwnerWaitlistCard({
       </header>
 
       {loadError ? (
-        <p role="alert" className="m-0 mt-3 text-xs text-danger">{loadError}</p>
+        <p role="alert" className="m-0 mt-3 text-xs text-danger">
+          {loadError}
+        </p>
       ) : (
         <ul role="list" className="mt-3 flex flex-col gap-2">
           {entries.slice(0, 5).map((entry) => {
             const phone = entry.customerPhone
-              ? normalizeIranianMobile(entry.customerPhone) ?? entry.customerPhone
+              ? (normalizeIranianMobile(entry.customerPhone) ?? entry.customerPhone)
               : '';
             return (
               <li
@@ -3614,8 +3777,10 @@ function OwnerWaitlistCard({
                     {entry.customerName || 'مشتری بدون نام'}
                   </strong>
                   <span className="mt-1 block truncate text-xs text-muted">
-                    {entry.serviceName || 'خدمت انتخاب نشده'} · {waitlistDateLabel(entry.windowStart)} ·{' '}
-                    <Num value={clockTime(entry.windowStart) ?? '—'} /> تا <Num value={clockTime(entry.windowEnd) ?? '—'} />
+                    {entry.serviceName || 'خدمت انتخاب نشده'} ·{' '}
+                    {waitlistDateLabel(entry.windowStart)} ·{' '}
+                    <Num value={clockTime(entry.windowStart) ?? '—'} /> تا{' '}
+                    <Num value={clockTime(entry.windowEnd) ?? '—'} />
                   </span>
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
@@ -3746,7 +3911,9 @@ function QuickApprovalPolicy({ salonId, className }: { salonId: string; classNam
               className={cn(
                 'min-h-10 rounded-lg px-4 text-sm font-medium transition-colors',
                 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus',
-                selected ? 'bg-primary text-primary-contrast shadow-1' : 'text-muted hover:text-text',
+                selected
+                  ? 'bg-primary text-primary-contrast shadow-1'
+                  : 'text-muted hover:text-text',
                 'disabled:cursor-not-allowed disabled:opacity-60',
               )}
             >
@@ -3802,7 +3969,9 @@ export function OwnerCalendarPage() {
   const [view, setView] = useState<CalendarView>(() =>
     new URLSearchParams(location.search).get('view') === 'day' ? 'day' : initialCalendarView(),
   );
-  const [anchor, setAnchor] = useState<Date>(() => calendarDateFromSearch(location.search) ?? new Date());
+  const [anchor, setAnchor] = useState<Date>(
+    () => calendarDateFromSearch(location.search) ?? new Date(),
+  );
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [approvalReloadToken, setApprovalReloadToken] = useState(0);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -3850,13 +4019,11 @@ export function OwnerCalendarPage() {
     setView('day');
   }, [location.search]);
 
-
   useEffect(() => {
     if (!inboxEvent && resumeVersion === 0) return;
     setReloadToken((value) => value + 1);
     setApprovalReloadToken((value) => value + 1);
   }, [inboxEvent?.id, resumeVersion]);
-
 
   // Track direction for animations
   const [viewDirection, setViewDirection] = useState(0);
@@ -3899,7 +4066,7 @@ export function OwnerCalendarPage() {
   const openRebookAppointment = useCallback((appointment: CalendarAppointmentLike) => {
     setManualCustomer({
       phone: appointment.customerPhone
-        ? normalizeIranianMobile(appointment.customerPhone) ?? appointment.customerPhone
+        ? (normalizeIranianMobile(appointment.customerPhone) ?? appointment.customerPhone)
         : undefined,
       fullName: appointment.customerName,
       serviceId: appointment.serviceId,
@@ -3922,47 +4089,39 @@ export function OwnerCalendarPage() {
     [],
   );
 
-  const applyMove = useCallback(
-    async (appointment: CalendarAppointmentLike, startAt: string) => {
-      if (!APPOINTMENT_RESCHEDULING_ENABLED) return;
-      const nextStart = new Date(startAt);
-      if (Number.isNaN(nextStart.getTime())) throw new Error('Invalid appointment time');
-      if (
-        appointment.startAt &&
-        new Date(appointment.startAt).getTime() === nextStart.getTime()
-      ) {
-        return;
-      }
+  const applyMove = useCallback(async (appointment: CalendarAppointmentLike, startAt: string) => {
+    if (!APPOINTMENT_RESCHEDULING_ENABLED) return;
+    const nextStart = new Date(startAt);
+    if (Number.isNaN(nextStart.getTime())) throw new Error('Invalid appointment time');
+    if (appointment.startAt && new Date(appointment.startAt).getTime() === nextStart.getTime()) {
+      return;
+    }
 
-      const nextStartAt = nextStart.toISOString();
-      const nextEndAt = movedEndAt(appointment, nextStart);
+    const nextStartAt = nextStart.toISOString();
+    const nextEndAt = movedEndAt(appointment, nextStart);
 
-      setMoveError('');
-      const result = await adminApi.rescheduleAppointment(
-        appointment.id,
-        nextStartAt,
-        appointment.staffMemberId,
-      );
-      const pendingReschedule = result.pendingReschedule ?? {
-        startAt: nextStartAt,
-        endAt: nextEndAt ?? nextStartAt,
-        requestedAt: new Date().toISOString(),
-        requestedBy: null,
-      };
-      setAppointments((current) =>
-        current.map((item) =>
-          item.id === appointment.id ? { ...item, pendingReschedule } : item,
-        ),
-      );
-      setApprovalReloadToken((value) => value + 1);
-      setMoveNotice('درخواست تغییر زمان برای مشتری ارسال شد؛ تا تأیید او زمان فعلی برقرار است.');
+    setMoveError('');
+    const result = await adminApi.rescheduleAppointment(
+      appointment.id,
+      nextStartAt,
+      appointment.staffMemberId,
+    );
+    const pendingReschedule = result.pendingReschedule ?? {
+      startAt: nextStartAt,
+      endAt: nextEndAt ?? nextStartAt,
+      requestedAt: new Date().toISOString(),
+      requestedBy: null,
+    };
+    setAppointments((current) =>
+      current.map((item) => (item.id === appointment.id ? { ...item, pendingReschedule } : item)),
+    );
+    setApprovalReloadToken((value) => value + 1);
+    setMoveNotice('درخواست تغییر زمان برای مشتری ارسال شد؛ تا تأیید او زمان فعلی برقرار است.');
 
-      setSelectedAppointment(null);
-      setMoveAppointment(null);
-      setMoveInitialStartAt(undefined);
-    },
-    [],
-  );
+    setSelectedAppointment(null);
+    setMoveAppointment(null);
+    setMoveInitialStartAt(undefined);
+  }, []);
 
   const handleGridMove = useCallback(
     (appointment: Appointment, date: Date, time: string) => {
@@ -3974,7 +4133,6 @@ export function OwnerCalendarPage() {
     },
     [openMoveDialog],
   );
-
 
   const filteredAppointments = useMemo(() => {
     const normalizedQuery = normalizeContactDigits(calendarQuery.trim()).toLocaleLowerCase();
@@ -4002,13 +4160,15 @@ export function OwnerCalendarPage() {
     const start = new Date(entry.windowStart);
     setManualCustomer({
       phone: entry.customerPhone
-        ? normalizeIranianMobile(entry.customerPhone) ?? entry.customerPhone
+        ? (normalizeIranianMobile(entry.customerPhone) ?? entry.customerPhone)
         : undefined,
       fullName: entry.customerName ?? undefined,
       serviceId: entry.serviceId,
     });
     setManualDate(Number.isNaN(start.getTime()) ? new Date() : start);
-    setManualStart(Number.isNaN(start.getTime()) ? undefined : clockTime(entry.windowStart) ?? undefined);
+    setManualStart(
+      Number.isNaN(start.getTime()) ? undefined : (clockTime(entry.windowStart) ?? undefined),
+    );
     setManualOpen(true);
   }, []);
 
@@ -4018,9 +4178,14 @@ export function OwnerCalendarPage() {
 
   const appointmentListItems = useMemo(() => {
     if (!appointmentListDate) return [];
-    const selectedKey = dateKey(appointmentListDate);
+    const calendarTimezone = filteredAppointments.find((item) => item.timezone)?.timezone;
+    const selectedKey = dateKeyAt(appointmentListDate, calendarTimezone);
     return filteredAppointments
-      .filter((item) => item.startAt && localDateKey(item.startAt) === selectedKey)
+      .filter(
+        (item) =>
+          item.startAt &&
+          localDateKey(item.startAt, item.timezone || calendarTimezone) === selectedKey,
+      )
       .sort((a, b) => {
         const ta = a.startAt ? new Date(a.startAt).getTime() : 0;
         const tb = b.startAt ? new Date(b.startAt).getTime() : 0;
@@ -4309,7 +4474,10 @@ export function OwnerCalendarPage() {
       />
 
       {moveNotice && (
-        <p role="status" className="owner-calendar-move-notice m-0 rounded-xl border border-success/25 bg-success/10 px-3 py-2 text-sm text-success">
+        <p
+          role="status"
+          className="owner-calendar-move-notice m-0 rounded-xl border border-success/25 bg-success/10 px-3 py-2 text-sm text-success"
+        >
           {moveNotice}
         </p>
       )}
@@ -4321,11 +4489,7 @@ export function OwnerCalendarPage() {
         </div>
         <div className="owner-calendar-nav-actions flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
           <div className="owner-calendar-date-nav">
-            <DateNav
-              view={view}
-              anchor={anchor}
-              onNavigate={handleNavigate}
-            />
+            <DateNav view={view} anchor={anchor} onNavigate={handleNavigate} />
           </div>
           <div className="owner-calendar-mobile-manage">
             <section
@@ -4373,7 +4537,9 @@ export function OwnerCalendarPage() {
                 <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" aria-hidden="true" />
                 <div className="pe-10">
                   <SheetTitle className="text-xl font-bold">مدیریت ساعت و تعطیلی</SheetTitle>
-                  <SheetDescription>ساعت کاری، تعطیلی و روش تأیید رزرو را از اینجا مدیریت کن.</SheetDescription>
+                  <SheetDescription>
+                    ساعت کاری، تعطیلی و روش تأیید رزرو را از اینجا مدیریت کن.
+                  </SheetDescription>
                 </div>
                 {mobileAvailabilityOpen ? (
                   <AvailabilityDialog
@@ -4390,7 +4556,8 @@ export function OwnerCalendarPage() {
                 ) : (
                   <>
                     <p className="mt-3 text-xs leading-5 text-muted">
-                      ساعت‌های هر هفته را از گزینه اول؛ تعطیلی فقط همین تاریخ را از گزینه دوم تنظیم کن.
+                      ساعت‌های هر هفته را از گزینه اول؛ تعطیلی فقط همین تاریخ را از گزینه دوم تنظیم
+                      کن.
                     </p>
                     <div className="owner-calendar-mobile-manage-date mt-2 flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5">
                       <CalendarClock className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
@@ -4408,7 +4575,9 @@ export function OwnerCalendarPage() {
                             <Clock className="h-5 w-5" />
                           </span>
                         }
-                        endIcon={<ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
+                        endIcon={
+                          <ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />
+                        }
                         onClick={() => {
                           setMobileManageOpen(false);
                           navigate(
@@ -4422,7 +4591,9 @@ export function OwnerCalendarPage() {
                         <span className="owner-calendar-mobile-manage-copy">
                           <span className="text-sm font-extrabold">تغییر ساعت کاری</span>
                           <span className="owner-calendar-mobile-manage-scope owner-calendar-mobile-manage-scope-weekly">
-                            <span className="owner-calendar-mobile-manage-scope-badge">هر هفته</span>
+                            <span className="owner-calendar-mobile-manage-scope-badge">
+                              هر هفته
+                            </span>
                             <span>همه‌ی {PERSIAN_WEEKDAYS[iranianDayIndex(anchor)]}‌ها</span>
                           </span>
                         </span>
@@ -4436,7 +4607,9 @@ export function OwnerCalendarPage() {
                             <CalendarOff className="h-5 w-5" />
                           </span>
                         }
-                        endIcon={<ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
+                        endIcon={
+                          <ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />
+                        }
                         onClick={() => {
                           setAvailabilityDate(new Date(anchor));
                           setAvailabilityStart(undefined);
@@ -4449,7 +4622,9 @@ export function OwnerCalendarPage() {
                         <span className="owner-calendar-mobile-manage-copy">
                           <span className="text-sm font-extrabold">تعطیلی یا بستن ساعت</span>
                           <span className="owner-calendar-mobile-manage-scope owner-calendar-mobile-manage-scope-date">
-                            <span className="owner-calendar-mobile-manage-scope-badge">فقط همین روز</span>
+                            <span className="owner-calendar-mobile-manage-scope-badge">
+                              فقط همین روز
+                            </span>
                             <span>تعطیلی کامل یا بخشی از ساعت</span>
                           </span>
                         </span>
@@ -4466,7 +4641,9 @@ export function OwnerCalendarPage() {
                               <CheckCircle2 className="h-5 w-5" />
                             </span>
                           }
-                          endIcon={<ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />}
+                          endIcon={
+                            <ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />
+                          }
                           onClick={() => {
                             setMobileManageOpen(false);
                             setApprovalPolicyOpen(true);
@@ -4477,7 +4654,9 @@ export function OwnerCalendarPage() {
                         >
                           <span className="owner-calendar-mobile-manage-copy">
                             <span className="text-sm font-extrabold">تنظیم تأیید رزروهای جدید</span>
-                            <span className="text-xs font-medium text-muted">انتخاب تأیید خودکار یا دستی</span>
+                            <span className="text-xs font-medium text-muted">
+                              انتخاب تأیید خودکار یا دستی
+                            </span>
                           </span>
                         </Button>
                       </div>
@@ -4571,7 +4750,10 @@ export function OwnerCalendarPage() {
       />
 
       {/* Calendar content with animated transitions */}
-      <div id="owner-calendar-content" className="owner-calendar-content relative min-h-[20rem] scroll-mt-24">
+      <div
+        id="owner-calendar-content"
+        className="owner-calendar-content relative min-h-[20rem] scroll-mt-24"
+      >
         {status === 'loading' && <CalendarSkeleton view={view} />}
 
         {status === 'error' && (
@@ -4647,7 +4829,14 @@ export function OwnerCalendarPage() {
                       onOpenAppointment={openAppointment}
                     />
                   )}
-                  {view === 'list' && <ListView appointments={filteredAppointments} anchor={anchor} onCancel={openCancelAppointment} onNoShow={setNoShowAppointment} />}
+                  {view === 'list' && (
+                    <ListView
+                      appointments={filteredAppointments}
+                      anchor={anchor}
+                      onCancel={openCancelAppointment}
+                      onNoShow={setNoShowAppointment}
+                    />
+                  )}
                 </motion.div>
               </AnimatePresence>
             </motion.div>
@@ -4729,11 +4918,14 @@ export function OwnerCalendarPage() {
         <DialogContent>
           <DialogTitle>لغو این نوبت؟</DialogTitle>
           <DialogDescription>
-            نوبت {cancelAppointment?.customerName ?? 'مشتری'} لغو می‌شود، زمان آزاد خواهد شد و پیامک به مشتری می‌رسد.
+            نوبت {cancelAppointment?.customerName ?? 'مشتری'} لغو می‌شود، زمان آزاد خواهد شد و پیامک
+            به مشتری می‌رسد.
           </DialogDescription>
           {cancelAppointment?.status !== 'pending' && (
             <p className="mt-4 rounded-lg border border-border bg-bg p-3 text-xs leading-6 text-muted">
-              سیاست بیعانه: اگر سالن نوبت را لغو کند یا درخواست را رد کند، بیعانهٔ پرداخت‌شده بازگردانده می‌شود. در لغو از طرف مشتری، بیش از ۶۰ دقیقه مانده به شروع بازپرداخت می‌شود و در ۶۰ دقیقهٔ پایانی نزد سالن می‌ماند. پیامک لغو برای مشتری ثبت می‌شود.
+              سیاست بیعانه: اگر سالن نوبت را لغو کند یا درخواست را رد کند، بیعانهٔ پرداخت‌شده
+              بازگردانده می‌شود. در لغو از طرف مشتری، بیش از ۶۰ دقیقه مانده به شروع بازپرداخت می‌شود
+              و در ۶۰ دقیقهٔ پایانی نزد سالن می‌ماند. پیامک لغو برای مشتری ثبت می‌شود.
             </p>
           )}
           <Textarea
@@ -4750,10 +4942,22 @@ export function OwnerCalendarPage() {
             helperText="این دلیل برای پیگیری و اطلاع‌رسانی ذخیره می‌شود."
             className="mt-4"
           />
-          {cancelError && <p role="alert" className="mt-3 text-sm text-danger">{cancelError}</p>}
+          {cancelError && (
+            <p role="alert" className="mt-3 text-sm text-danger">
+              {cancelError}
+            </p>
+          )}
           <div className="mt-5 flex justify-end gap-2">
-            <DialogClose asChild><Button variant="ghost" disabled={cancelBusy}>انصراف</Button></DialogClose>
-            <Button variant="danger" loading={cancelBusy} onClick={() => void confirmCancelAppointment()}>
+            <DialogClose asChild>
+              <Button variant="ghost" disabled={cancelBusy}>
+                انصراف
+              </Button>
+            </DialogClose>
+            <Button
+              variant="danger"
+              loading={cancelBusy}
+              onClick={() => void confirmCancelAppointment()}
+            >
               بله، لغو شود
             </Button>
           </div>
@@ -4771,7 +4975,8 @@ export function OwnerCalendarPage() {
         <DialogContent>
           <DialogTitle>گزارش مشتری</DialogTitle>
           <DialogDescription>
-            اگر رسید یا مدرک نامرتبط ارسال شده، دلیل را ثبت کن. در صورت نیاز دسترسی مشتری به رزرو این سالن هم مسدود می‌شود.
+            اگر رسید یا مدرک نامرتبط ارسال شده، دلیل را ثبت کن. در صورت نیاز دسترسی مشتری به رزرو
+            این سالن هم مسدود می‌شود.
           </DialogDescription>
           <Textarea
             label="دلیل گزارش"
@@ -4795,10 +5000,22 @@ export function OwnerCalendarPage() {
             />
             مسدود کردن این مشتری برای رزروهای بعدی این سالن
           </label>
-          {reportError && <p role="alert" className="mt-3 text-sm text-danger">{reportError}</p>}
+          {reportError && (
+            <p role="alert" className="mt-3 text-sm text-danger">
+              {reportError}
+            </p>
+          )}
           <div className="mt-5 flex justify-end gap-2">
-            <DialogClose asChild><Button variant="ghost" disabled={reportBusy}>انصراف</Button></DialogClose>
-            <Button variant="danger" loading={reportBusy} onClick={() => void confirmReportCustomer()}>
+            <DialogClose asChild>
+              <Button variant="ghost" disabled={reportBusy}>
+                انصراف
+              </Button>
+            </DialogClose>
+            <Button
+              variant="danger"
+              loading={reportBusy}
+              onClick={() => void confirmReportCustomer()}
+            >
               ثبت گزارش
             </Button>
           </div>
@@ -4818,9 +5035,17 @@ export function OwnerCalendarPage() {
           <DialogDescription>
             این نوبت به‌عنوان عدم حضور ثبت می‌شود و در سابقه مشتری اثر می‌گذارد.
           </DialogDescription>
-          {noShowError && <p role="alert" className="mt-3 text-sm text-danger">{noShowError}</p>}
+          {noShowError && (
+            <p role="alert" className="mt-3 text-sm text-danger">
+              {noShowError}
+            </p>
+          )}
           <div className="mt-5 flex justify-end gap-2">
-            <DialogClose asChild><Button variant="ghost" disabled={noShowBusy}>انصراف</Button></DialogClose>
+            <DialogClose asChild>
+              <Button variant="ghost" disabled={noShowBusy}>
+                انصراف
+              </Button>
+            </DialogClose>
             <Button variant="danger" loading={noShowBusy} onClick={() => void confirmNoShow()}>
               ثبت عدم حضور
             </Button>

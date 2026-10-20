@@ -14,10 +14,7 @@ import type {
   BotChatRef,
   BotRecipient,
 } from '../notifications/bot-channel.js';
-import type {
-  SmsProvider,
-  SmsTemplateProvider,
-} from '../auth/sms-provider.interface.js';
+import type { SmsProvider, SmsTemplateProvider } from '../auth/sms-provider.interface.js';
 import { MELLI_PAYAMAK_TEMPLATE_BODY_IDS } from '../notifications/melipayamak-template-body-ids.js';
 import type {
   WaitlistRepository,
@@ -124,7 +121,8 @@ export class PrismaNotificationRepository implements NotificationRepository {
     });
     const settings = settingsRow ?? { ...DEFAULT_SMS_SETTINGS };
     const ownerEnabled = settings[`owner${capitalize(event)}` as keyof typeof settings] === true;
-    const stylistEnabled = settings[`stylist${capitalize(event)}` as keyof typeof settings] === true;
+    const stylistEnabled =
+      settings[`stylist${capitalize(event)}` as keyof typeof settings] === true;
     const recipients: string[] = [];
 
     if (ownerEnabled) {
@@ -260,11 +258,7 @@ export class PrismaNotificationRepository implements NotificationRepository {
     return Boolean(row);
   }
 
-  async registerDeviceToken(
-    customerId: string,
-    token: string,
-    platform: string,
-  ): Promise<void> {
+  async registerDeviceToken(customerId: string, token: string, platform: string): Promise<void> {
     await this.prisma.deviceToken.create({
       data: { customerId, token, platform },
     });
@@ -372,11 +366,7 @@ export class PrismaWaitlistRepository implements WaitlistRepository {
     return toWaitlistEntry(row);
   }
 
-  async findWaiting(
-    salonId: string,
-    windowStart: Date,
-    windowEnd: Date,
-  ): Promise<WaitlistEntry[]> {
+  async findWaiting(salonId: string, windowStart: Date, windowEnd: Date): Promise<WaitlistEntry[]> {
     // Overlap: entry.windowStart < windowEnd AND entry.windowEnd > windowStart.
     const rows = await this.prisma.waitlistEntry.findMany({
       where: {
@@ -418,10 +408,7 @@ export class PrismaWaitlistRepository implements WaitlistRepository {
     return rows.map(toWaitlistEntry);
   }
 
-  async updateStatus(
-    id: string,
-    status: WaitlistEntry['status'],
-  ): Promise<WaitlistEntry> {
+  async updateStatus(id: string, status: WaitlistEntry['status']): Promise<WaitlistEntry> {
     const row = await this.prisma.waitlistEntry.update({
       where: { id },
       data: { status },
@@ -461,11 +448,9 @@ export class PrismaWaitlistNotifier implements WaitlistNotifier {
   async notifyWaitlistCustomer(phone: string, salonName: string): Promise<void> {
     const message = `نوبت شما در سالن ${salonName} آزاد شد. برای رزرو اقدام کنید.`;
     if (this.templateProvider) {
-      await this.templateProvider.sendTemplate(
-        phone,
-        MELLI_PAYAMAK_TEMPLATE_BODY_IDS.waitlist,
-        [salonName],
-      );
+      await this.templateProvider.sendTemplate(phone, MELLI_PAYAMAK_TEMPLATE_BODY_IDS.waitlist, [
+        salonName,
+      ]);
       return;
     }
     await this.smsProvider.send(phone, message);
@@ -509,7 +494,7 @@ export class PrismaCustomerRepository implements CustomerRepository {
       where: { customerId },
       include: {
         service: { select: { name: true, requiresDeposit: true, depositRial: true } },
-        salon: { select: { name: true, depositMethod: true } },
+        salon: { select: { name: true, depositMethod: true, timezone: true } },
         staffMember: { select: { fullName: true } },
         depositReceipt: { select: { status: true } },
         payments: { orderBy: { createdAt: 'desc' }, take: 1, select: { status: true } },
@@ -548,15 +533,16 @@ export class PrismaCustomerRepository implements CustomerRepository {
       customerNote: appt.customerNote,
       durationMinOverride: appt.durationMinOverride,
       salonName: appt.salon.name,
+      timezone: appt.salon.timezone,
       serviceName: appt.service.name,
       staffName: appt.staffMember.fullName,
       depositRequired: appt.service.requiresDeposit,
       depositMethod: appt.service.requiresDeposit
-        ? (appt.salon.depositMethod === 'cash'
-            ? 'cash'
-            : appt.salon.depositMethod === 'card_transfer'
-              ? 'card_transfer'
-              : 'gateway')
+        ? appt.salon.depositMethod === 'cash'
+          ? 'cash'
+          : appt.salon.depositMethod === 'card_transfer'
+            ? 'card_transfer'
+            : 'gateway'
         : null,
       depositAmountRial: appt.service.depositRial == null ? null : Number(appt.service.depositRial),
       paymentStatus: appt.payments[0]?.status ?? null,

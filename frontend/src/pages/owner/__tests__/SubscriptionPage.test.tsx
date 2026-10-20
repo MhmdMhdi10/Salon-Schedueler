@@ -259,11 +259,11 @@ describe('OwnerSubscriptionPage — purchase redirect (R3.6)', () => {
     expect(screen.queryByTestId('subscription-redirecting')).not.toBeInTheDocument();
   });
 
-  it('disables plans that would move expiry beyond three months', async () => {
+  it('disables plans that would move expiry beyond four months', async () => {
     getStatus.mockResolvedValue({
       status: 'active',
       planKind: 'monthly',
-      expiresAt: new Date(Date.now() + 70 * 86_400_000).toISOString(),
+      expiresAt: new Date(Date.now() + 100 * 86_400_000).toISOString(),
     });
     renderPage();
 
@@ -272,11 +272,11 @@ describe('OwnerSubscriptionPage — purchase redirect (R3.6)', () => {
     expect(screen.getByRole('radio', { name: /سه‌ماهه/ })).toBeDisabled();
     expect(screen.getByTestId('subscription-purchase')).toBeDisabled();
     expect(screen.getByTestId('subscription-window-hint')).toHaveTextContent(
-      'سقف ۳ ماه آینده',
+      'سقف ۴ ماه آینده',
     );
   });
 
-  it('keeps only a plan that fits remaining capacity in the three-month window', async () => {
+  it('keeps only a plan that fits remaining capacity in the four-month window', async () => {
     getStatus.mockResolvedValue({
       status: 'active',
       planKind: 'monthly',
