@@ -1,3 +1,11 @@
+[data-calendar-appointment-id].owner-calendar-notification-target {
+  outline: 3px solid color-mix(in srgb, var(--color-primary) 82%, transparent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-primary) 18%, transparent);
+  transition: outline-color 180ms ease, box-shadow 180ms ease;
+  z-index: 30;
+}
+
 /* Keep desktop date controls and calendar actions grouped together. */
 .owner-calendar-actions {
   display: flex;

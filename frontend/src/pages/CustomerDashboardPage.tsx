@@ -564,7 +564,7 @@ function AppointmentRow({
                   تغییر زمان
                 </Button>
               )
-            ))}
+            )}
           <Button
             type="button"
             variant="danger"

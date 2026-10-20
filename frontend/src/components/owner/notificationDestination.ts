@@ -22,9 +22,17 @@ function calendarDate(payload: SalonNotification['payload']): string | null {
 }
 
 function calendarDestination(section: string, payload: SalonNotification['payload']): string {
+  const params = new URLSearchParams();
   const date = calendarDate(payload);
-  const dateQuery = date ? `?date=${date}&view=day` : '';
-  return `${CALENDAR}${dateQuery}#${section}`;
+  if (date) {
+    params.set('date', date);
+    params.set('view', 'day');
+  }
+  if (typeof payload?.appointmentId === 'string' && payload.appointmentId.trim()) {
+    params.set('appointmentId', payload.appointmentId);
+  }
+  const query = params.toString();
+  return `${CALENDAR}${query ? `?${query}` : ''}#${section}`;
 }
 
 /**
@@ -37,6 +45,9 @@ export function getNotificationDestination(
 ): string {
   const type = notification.type.trim().toLowerCase();
 
+  if (notification.payload?.appointmentId) {
+    return calendarDestination('owner-calendar-content', notification.payload);
+  }
   if (type.includes('deposit') || type.includes('receipt')) {
     return calendarDestination('owner-deposit-receipt-queue', notification.payload);
   }

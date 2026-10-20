@@ -77,7 +77,7 @@ export function AppShell({ children, className, headerVariant }: AppShellProps) 
         : 'default';
   const variant = headerVariant ?? derived;
   const isBare = variant === 'bare';
-  const hideFooter = pathname === '/account';
+  const hideFooter = pathname === '/account' || pathname === '/support';
   const fixedViewport = pathname === '/auth' || pathname === '/business/register';
 
   return (

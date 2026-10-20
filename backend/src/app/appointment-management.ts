@@ -398,7 +398,7 @@ export class AppointmentManagementService {
         payload: {
           appointmentId: appointment.id,
           customerId: appointment.customerId,
-          date: proposedStartAt.toISOString(),
+          date: appointment.startAt.toISOString(),
         },
       });
     } catch {

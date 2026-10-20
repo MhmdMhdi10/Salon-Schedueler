@@ -593,6 +593,7 @@ export function adminRouter(services: Services, requireRole: RequireRole): Route
         return;
       }
       const response: Record<string, unknown> = {
+        appointment: { id: appointment.id, startAt: appointment.startAt.toISOString() },
         customer,
         appointments: profile?.appointments ?? [],
         notes,

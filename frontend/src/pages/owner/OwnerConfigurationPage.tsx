@@ -12,6 +12,7 @@ import {
   Clock,
   CreditCard,
   Plus,
+  Pencil,
   Search,
   Scissors,
   Trash2,
@@ -54,6 +55,7 @@ import {
   Select,
   Skeleton,
   Sheet,
+  SheetClose,
   SheetContent,
   SheetDescription,
   SheetTitle,
@@ -67,7 +69,7 @@ import {
  * Redesigned Owner Configuration Page (Task 7.6; Req 8.4, 8.6, 8.7, 3.5, 11.4, 11.5).
  *
  * Card-based sections for Staff, Services, Chairs/Resources with:
- * - Static team/service surfaces with dialog-based record editing
+ * - Static team/service surfaces with bottom-sheet record editing
  * - Expand/collapse via AnimatePresence + motion.div for secondary settings
  * - Rotate-chevron expand indicator for collapsible settings
  * - Add/remove item animations (slide in/out)
@@ -238,7 +240,7 @@ interface CollapsibleSectionProps {
 
 /**
  * A card section with optional expand/collapse animation. The team and service
- * sections stay open so their existing records can open in a dialog instead.
+ * sections stay open so their existing records can open in a bottom sheet.
  * Respects prefers-reduced-motion by skipping transform animations.
  */
 function CollapsibleSection({
@@ -390,6 +392,7 @@ function StaffSection({
   const [phone, setPhone] = useState('');
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const {
     page,
@@ -432,6 +435,7 @@ function StaffSection({
       setFullName('');
       setRole('Stylist');
       setPhone('');
+      setAddOpen(false);
       onStaffAdded();
       window.dispatchEvent(new Event('salon-config-changed'));
       if (invitationStatus === 'sent') {
@@ -528,6 +532,20 @@ function StaffSection({
   return (
     <>
       <CollapsibleSection id="staff" icon={Users} title={t('admin.staff')} collapsible={false}>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-bg p-3">
+        <p className="m-0 text-sm text-muted"><strong className="text-text">{staff.length.toLocaleString('fa-IR')}</strong> عضو تیم</p>
+      <Button
+        type="button"
+        startIcon={<Plus className="h-4 w-4" />}
+        onClick={() => {
+          setFormError('');
+          setAddOpen(true);
+        }}
+        size="md"
+      >
+        {t('admin.config.staff.addCta')}
+      </Button>
+      </div>
       {staff.length === 0 ? (
         <>
           <ul data-testid="staff-list" className="sr-only" aria-hidden="true" />
@@ -546,7 +564,7 @@ function StaffSection({
             return (
               <AnimatedListItem
                 key={member.id}
-                className="relative overflow-hidden rounded-xl border border-border bg-elevated px-3 py-3 shadow-1 transition-colors duration-fast hover:border-primary/50 sm:px-4"
+                className="relative overflow-hidden rounded-2xl border border-border bg-elevated px-4 py-4 shadow-1 transition-colors duration-fast hover:border-primary/60 hover:shadow-2 sm:px-5"
               >
                 <button
                   type="button"
@@ -558,11 +576,12 @@ function StaffSection({
                 />
                 <div className="pointer-events-none relative z-10 flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className="inline-flex min-h-10 items-center text-start text-sm font-medium text-text">
+                    <span className="inline-flex items-center gap-2 text-start text-base font-semibold text-text">
                       {name}
+                      <Pencil className="h-3.5 w-3.5 text-muted" aria-hidden="true" />
                     </span>
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted">
-                      <span>{t(`app.role.${member.role}`)}</span>
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">{t(`app.role.${member.role}`)}</span>
                       {member.phone ? (
                         <span dir="ltr" className="tabular-nums">
                           {member.phone}
@@ -571,7 +590,7 @@ function StaffSection({
                         <span>{t('admin.config.staff.noLogin')}</span>
                       )}
                       {!member.active && (
-                        <span className="text-danger">{t('admin.config.staff.inactive')}</span>
+                        <span className="rounded-full bg-danger/10 px-2 py-0.5 font-medium text-danger">{t('admin.config.staff.inactive')}</span>
                       )}
                     </span>
                   </div>
@@ -616,67 +635,104 @@ function StaffSection({
         </>
       )}
 
-      {/* Add form */}
-      <form onSubmit={handleAdd} className="flex flex-col gap-3 border-t border-border pt-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <TextField
-            label={t('admin.config.staff.addLabel')}
-            placeholder={t('admin.config.staff.addPlaceholder')}
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            containerClassName="sm:flex-1"
-          />
-          <Select
-            label={t('admin.config.staff.roleLabel')}
-            value={role}
-            onValueChange={(v) => setRole(v as StaffRole)}
-            options={roleOptions}
-            containerClassName="sm:w-48"
-          />
-        </div>
-        <TextField
-          label={t('admin.config.staff.phoneLabel')}
-          helperText={t('admin.config.staff.phoneHelper')}
-          placeholder="09xxxxxxxxx"
-          type="tel"
-          inputMode="tel"
-          dir="ltr"
-          autoComplete="off"
-          maxLength={14}
-          value={phone}
-          onChange={(e) => setPhone(filterPhoneInput(e.target.value))}
-          required
-        />
-        {formError && (
-          <p role="alert" className="text-sm text-danger">
-            {formError}
-          </p>
-        )}
-        <Button
-          type="submit"
-          startIcon={<Plus className="h-4 w-4" />}
-          loading={saving}
-          disabled={saving}
-          className="self-start"
-        >
-          {t('admin.config.staff.addCta')}
-        </Button>
-      </form>
+
       </CollapsibleSection>
 
-    <Dialog
+      <Sheet
+        open={addOpen}
+        onOpenChange={(open) => {
+          if (saving) return;
+          setAddOpen(open);
+          if (!open) {
+            setFullName('');
+            setRole('Stylist');
+            setPhone('');
+            setFormError('');
+          }
+        }}
+      >
+        <SheetContent
+          side="bottom"
+          onOpenAutoFocus={(event) => event.preventDefault()}
+          className="!mx-auto !w-[min(100%,34rem)] !max-w-none !rounded-t-2xl"
+          closeLabel={t('common.cancel')}
+        >
+          <div className="pe-10">
+            <SheetTitle>{t('admin.config.staff.addCta')}</SheetTitle>
+            <SheetDescription>نام، نقش و شماره موبایل عضو جدید را ثبت کن.</SheetDescription>
+          </div>
+          <form onSubmit={handleAdd} className="mt-5 flex flex-col gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <TextField
+                label={t('admin.config.staff.addLabel')}
+                placeholder={t('admin.config.staff.addPlaceholder')}
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                containerClassName="sm:flex-1"
+              />
+              <Select
+                label={t('admin.config.staff.roleLabel')}
+                value={role}
+                onValueChange={(v) => setRole(v as StaffRole)}
+                options={roleOptions}
+                containerClassName="sm:w-48"
+              />
+            </div>
+            <TextField
+              label={t('admin.config.staff.phoneLabel')}
+              helperText={t('admin.config.staff.phoneHelper')}
+              placeholder="09xxxxxxxxx"
+              type="tel"
+              inputMode="tel"
+              dir="ltr"
+              autoComplete="off"
+              maxLength={14}
+              value={phone}
+              onChange={(e) => setPhone(filterPhoneInput(e.target.value))}
+              required
+            />
+            {formError && (
+              <p role="alert" className="text-sm text-danger">
+                {formError}
+              </p>
+            )}
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <SheetClose asChild>
+                <Button type="button" variant="secondary" disabled={saving}>انصراف</Button>
+              </SheetClose>
+              <Button
+                type="submit"
+                startIcon={<Plus className="h-4 w-4" />}
+                loading={saving}
+                disabled={saving}
+              >
+                {t('admin.config.staff.addCta')}
+              </Button>
+            </div>
+          </form>
+        </SheetContent>
+      </Sheet>
+
+    <Sheet
       open={editingMember !== null}
       onOpenChange={(open) => {
         if (!open) setEditingId(null);
       }}
     >
       {editingMember && (
-        <DialogContent className="max-w-lg" closeLabel={t('common.cancel')}>
-          <DialogTitle>ویرایش عضو تیم</DialogTitle>
-          <DialogDescription>
-            تنظیمات «{editingMember.fullName ?? editingMember.id}» را از این پنجره مدیریت کن.
-            تغییرات هر گزینه بلافاصله ذخیره می‌شود.
-          </DialogDescription>
+        <SheetContent
+          side="bottom"
+          onOpenAutoFocus={(event) => event.preventDefault()}
+          className="!mx-auto !w-[min(100%,34rem)] !max-w-none !rounded-t-2xl"
+          closeLabel={t('common.cancel')}
+        >
+          <div className="pe-10">
+            <SheetTitle>ویرایش عضو تیم</SheetTitle>
+            <SheetDescription>
+              تنظیمات «{editingMember.fullName ?? editingMember.id}» را اینجا مدیریت کن.
+              تغییرات هر گزینه بلافاصله ذخیره می‌شود.
+            </SheetDescription>
+          </div>
           <div className="mt-5 flex flex-col gap-3">
             <Select
               label={t('admin.config.staff.roleSelectLabel', { name: editingMember.fullName ?? editingMember.id })}
@@ -724,14 +780,14 @@ function StaffSection({
               />
             )}
             <div className="mt-2 flex justify-end">
-              <DialogClose asChild>
+              <SheetClose asChild>
                 <Button variant="secondary">بستن</Button>
-              </DialogClose>
+              </SheetClose>
             </div>
           </div>
-        </DialogContent>
+        </SheetContent>
       )}
-      </Dialog>
+      </Sheet>
     </>
   );
 }
@@ -783,6 +839,8 @@ function ServicesSection({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, ServiceDraft>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [savingAdd, setSavingAdd] = useState(false);
   const [formError, setFormError] = useState('');
   const [staffPickerServiceId, setStaffPickerServiceId] = useState<string | null>(null);
   const [staffPickerIds, setStaffPickerIds] = useState<string[]>([]);
@@ -855,6 +913,21 @@ function ServicesSection({
     }
   };
 
+  const resetAddForm = () => {
+    setName('');
+    setDuration('30');
+    setDurationMode('fixed');
+    setMinDuration('');
+    setMaxDuration('');
+    setPrice('');
+    setRequiresDeposit(false);
+    setDeposit('');
+    setDepositType('fixed');
+    setDepositPercent('');
+    setApprovalStaffId('auto');
+    setFormError('');
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const trimmed = name.trim();
@@ -885,6 +958,7 @@ function ServicesSection({
       return;
     }
     setFormError('');
+    setSavingAdd(true);
     try {
       await onAdd({
         name: trimmed,
@@ -900,19 +974,12 @@ function ServicesSection({
         ...(requiresDeposit && depositType === 'percentage' ? { depositPercent: percent } : {}),
         approvalStaffId: approvalStaffId === 'auto' ? null : approvalStaffId,
       });
-      setName('');
-      setDuration('30');
-      setDurationMode('fixed');
-      setMinDuration('');
-      setMaxDuration('');
-      setPrice('');
-      setRequiresDeposit(false);
-      setDeposit('');
-      setDepositType('fixed');
-      setDepositPercent('');
-      setApprovalStaffId('auto');
+      resetAddForm();
+      setAddOpen(false);
     } catch {
       // Parent owns the server error toast; keep values so retry is possible.
+    } finally {
+      setSavingAdd(false);
     }
   };
 
@@ -985,6 +1052,8 @@ function ServicesSection({
         approvalStaffId: draft.approvalStaffId === 'auto' ? null : draft.approvalStaffId,
       });
       setEditingId(null);
+    } catch {
+      // Parent shows the server error; keep the editor open for correction.
     } finally {
       setSavingId(null);
     }
@@ -1000,6 +1069,20 @@ function ServicesSection({
         title={t('admin.services')}
         collapsible={false}
       >
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-bg p-3">
+        <p className="m-0 text-sm text-muted"><strong className="text-text">{services.length.toLocaleString('fa-IR')}</strong> خدمت</p>
+      <Button
+        type="button"
+        startIcon={<Plus className="h-4 w-4" />}
+        onClick={() => {
+          setFormError('');
+          setAddOpen(true);
+        }}
+        size="md"
+      >
+        {t('admin.config.services.addCta')}
+      </Button>
+      </div>
       <div className="flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/10 p-3">
         <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-contrast">
           <Users className="h-5 w-5" aria-hidden="true" />
@@ -1026,7 +1109,7 @@ function ServicesSection({
             {pageItems.map((service) => (
             <AnimatedListItem
               key={service.id}
-              className="relative overflow-hidden rounded-xl border border-border bg-elevated px-3 py-3 shadow-1 transition-colors duration-fast hover:border-primary/50 sm:px-4"
+              className="relative overflow-hidden rounded-2xl border border-border bg-elevated px-4 py-4 shadow-1 transition-colors duration-fast hover:border-primary/60 hover:shadow-2 sm:px-5"
             >
               <button
                 type="button"
@@ -1037,8 +1120,9 @@ function ServicesSection({
                 aria-expanded={editingId === service.id}
               />
               <div className="pointer-events-none relative z-10 flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="inline-flex min-h-10 items-center text-start text-sm font-medium text-text">
+                <span className="inline-flex items-center gap-2 text-start text-base font-semibold text-text">
                   {service.name}
+                  <Pencil className="h-3.5 w-3.5 text-muted" aria-hidden="true" />
                 </span>
                 <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted">
                   <span className="inline-flex items-center gap-1">
@@ -1113,130 +1197,167 @@ function ServicesSection({
         </>
       )}
 
-      {/* Add form */}
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3 border-t border-border pt-4">
-        <TextField
-          label={t('admin.config.services.nameLabel')}
-          placeholder={t('admin.config.services.namePlaceholder')}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <DurationStepper
-            label={t('admin.config.services.durationLabel')}
-            ariaLabel={t('admin.config.services.durationLabel')}
-            value={duration}
-            onChange={setDuration}
-            step={15}
-            className="sm:flex-1"
-          />
-          <TextField
-            label={t('admin.config.services.priceLabel')}
-            placeholder={t('admin.config.services.pricePlaceholder')}
-            inputMode="numeric"
-            dir="ltr"
-            value={price}
-            onChange={(e) => setPrice(formatPriceInput(e.target.value))}
-            className="min-h-14"
-            containerClassName="sm:flex-1"
-          />
-        </div>
-        <Select
-          label="نوع زمان‌بندی"
-          value={durationMode}
-          onValueChange={(value) => setDurationMode(value as 'fixed' | 'variable')}
-          options={[
-            { value: 'fixed', label: 'زمان ثابت' },
-            { value: 'variable', label: 'زمان متغیر' },
-          ]}
-        />
-        {durationMode === 'variable' && (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <TextField
-              label="حداقل زمان (دقیقه)"
-              inputMode="numeric"
-              dir="ltr"
-              value={minDuration}
-              onChange={(event) => setMinDuration(event.target.value)}
-              placeholder={duration || '۳۰'}
-            />
-            <TextField
-              label="حداکثر زمان (دقیقه)"
-              inputMode="numeric"
-              dir="ltr"
-              value={maxDuration}
-              onChange={(event) => setMaxDuration(event.target.value)}
-              placeholder="۱۲۰"
-            />
-          </div>
-        )}
-        <Switch
-          checked={requiresDeposit}
-          onCheckedChange={setRequiresDeposit}
-          label={t('admin.config.services.depositToggleLabel', {
-            defaultValue: 'دریافت بیعانه برای رزرو',
-          })}
-          helperText={t('admin.config.services.depositToggleHelper', {
-            defaultValue: 'مشتری قبل از نهایی‌شدن نوبت به پرداخت بیعانه هدایت می‌شود.',
-          })}
-        />
-        {requiresDeposit && (
-          <>
-            <Select
-              label="نوع بیعانه"
-              value={depositType}
-              onValueChange={(value) => setDepositType(value as 'fixed' | 'percentage')}
-              options={[
-                { value: 'fixed', label: 'مبلغ ثابت (تومان)' },
-                { value: 'percentage', label: 'درصدی از هزینه' },
-              ]}
-            />
-            {depositType === 'percentage' ? (
-              <TextField
-                label="درصد بیعانه"
-                inputMode="numeric"
-                dir="ltr"
-                value={depositPercent}
-                onChange={(e) => setDepositPercent(e.target.value)}
-                helperText="بین ۱ تا ۱۰۰ درصد"
-              />
-            ) : (
-              <TextField
-                label="مبلغ بیعانه (تومان)"
-                placeholder="۱۰۰۰۰۰"
-                inputMode="numeric"
-                dir="ltr"
-                value={deposit}
-                onChange={(e) => setDeposit(formatPriceInput(e.target.value))}
-              />
-            )}
-          </>
-        )}
-        <Select
-          label="مسئول تأیید رزرو این خدمت"
-          value={approvalStaffId}
-          onValueChange={setApprovalStaffId}
-          options={approvalOptions}
-          helperText="برای رزروهای در انتظار، پیامک به این عضو تیم می‌رسد."
-        />
-        <Button type="submit" startIcon={<Plus className="h-4 w-4" />} className="self-start">
-          {t('admin.config.services.addCta')}
-        </Button>
-      </form>
+
       </CollapsibleSection>
 
-      <Dialog
+      <Sheet
+        open={addOpen}
+        onOpenChange={(open) => {
+          if (savingAdd) return;
+          setAddOpen(open);
+          if (!open) resetAddForm();
+        }}
+      >
+        <SheetContent
+          side="bottom"
+          onOpenAutoFocus={(event) => event.preventDefault()}
+          className="!mx-auto !w-[min(100%,42rem)] !max-w-none !rounded-t-2xl"
+          closeLabel={t('common.cancel')}
+        >
+          <div className="pe-10">
+            <SheetTitle>{t('admin.config.services.addCta')}</SheetTitle>
+            <SheetDescription>مشخصات خدمت جدید را وارد کن و ذخیره کن.</SheetDescription>
+          </div>
+          <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-3">
+            <TextField
+              label={t('admin.config.services.nameLabel')}
+              placeholder={t('admin.config.services.namePlaceholder')}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <DurationStepper
+                label={t('admin.config.services.durationLabel')}
+                ariaLabel={t('admin.config.services.durationLabel')}
+                value={duration}
+                onChange={setDuration}
+                step={15}
+                className="sm:flex-1"
+              />
+              <TextField
+                label={t('admin.config.services.priceLabel')}
+                placeholder={t('admin.config.services.pricePlaceholder')}
+                inputMode="numeric"
+                dir="ltr"
+                value={price}
+                onChange={(e) => setPrice(formatPriceInput(e.target.value))}
+                className="min-h-14"
+                containerClassName="sm:flex-1"
+              />
+            </div>
+            <Select
+              label="نوع زمان‌بندی"
+              value={durationMode}
+              onValueChange={(value) => setDurationMode(value as 'fixed' | 'variable')}
+              options={[
+                { value: 'fixed', label: 'زمان ثابت' },
+                { value: 'variable', label: 'زمان متغیر' },
+              ]}
+            />
+            {durationMode === 'variable' && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <TextField
+                  label="حداقل زمان (دقیقه)"
+                  inputMode="numeric"
+                  dir="ltr"
+                  value={minDuration}
+                  onChange={(event) => setMinDuration(event.target.value)}
+                  placeholder={duration || '۳۰'}
+                />
+                <TextField
+                  label="حداکثر زمان (دقیقه)"
+                  inputMode="numeric"
+                  dir="ltr"
+                  value={maxDuration}
+                  onChange={(event) => setMaxDuration(event.target.value)}
+                  placeholder="۱۲۰"
+                />
+              </div>
+            )}
+            <Switch
+              checked={requiresDeposit}
+              onCheckedChange={setRequiresDeposit}
+              label={t('admin.config.services.depositToggleLabel', {
+                defaultValue: 'دریافت بیعانه برای رزرو',
+              })}
+              helperText={t('admin.config.services.depositToggleHelper', {
+                defaultValue: 'مشتری قبل از نهایی‌شدن نوبت به پرداخت بیعانه هدایت می‌شود.',
+              })}
+            />
+            {requiresDeposit && (
+              <>
+                <Select
+                  label="نوع بیعانه"
+                  value={depositType}
+                  onValueChange={(value) => setDepositType(value as 'fixed' | 'percentage')}
+                  options={[
+                    { value: 'fixed', label: 'مبلغ ثابت (تومان)' },
+                    { value: 'percentage', label: 'درصدی از هزینه' },
+                  ]}
+                />
+                {depositType === 'percentage' ? (
+                  <TextField
+                    label="درصد بیعانه"
+                    inputMode="numeric"
+                    dir="ltr"
+                    value={depositPercent}
+                    onChange={(e) => setDepositPercent(e.target.value)}
+                    helperText="بین ۱ تا ۱۰۰ درصد"
+                  />
+                ) : (
+                  <TextField
+                    label="مبلغ بیعانه (تومان)"
+                    placeholder="۱۰۰۰۰۰"
+                    inputMode="numeric"
+                    dir="ltr"
+                    value={deposit}
+                    onChange={(e) => setDeposit(formatPriceInput(e.target.value))}
+                  />
+                )}
+              </>
+            )}
+            <Select
+              label="مسئول تأیید رزرو این خدمت"
+              value={approvalStaffId}
+              onValueChange={setApprovalStaffId}
+              options={approvalOptions}
+              helperText="برای رزروهای در انتظار، پیامک به این عضو تیم می‌رسد."
+            />
+            {formError && <p role="alert" className="m-0 text-sm text-danger">{formError}</p>}
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <SheetClose asChild>
+                <Button type="button" variant="secondary" disabled={savingAdd}>انصراف</Button>
+              </SheetClose>
+              <Button
+                type="submit"
+                startIcon={<Plus className="h-4 w-4" />}
+                loading={savingAdd}
+                disabled={savingAdd}
+              >
+                {t('admin.config.services.addCta')}
+              </Button>
+            </div>
+          </form>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet
         open={editingService !== null}
         onOpenChange={(open) => {
-          if (!open) setEditingId(null);
+          if (!open && savingId === null) setEditingId(null);
         }}
       >
         {editingService && (
-          <DialogContent className="max-w-2xl" closeLabel={t('common.cancel')}>
-            <DialogTitle>ویرایش خدمت «{editingService.name}»</DialogTitle>
-            <DialogDescription>
-              مشخصات خدمت را تغییر بده و سپس ذخیره کن. این فرم دیگر داخل فهرست باز نمی‌شود.
-            </DialogDescription>
+          <SheetContent
+            side="bottom"
+            onOpenAutoFocus={(event) => event.preventDefault()}
+            className="!mx-auto !w-[min(100%,42rem)] !max-w-none !rounded-t-2xl"
+            closeLabel={t('common.cancel')}
+          >
+            <div className="pe-10">
+              <SheetTitle>ویرایش خدمت «{editingService.name}»</SheetTitle>
+              <SheetDescription>مشخصات خدمت را تغییر بده و سپس ذخیره کن.</SheetDescription>
+            </div>
             <div className="mt-5 flex flex-col gap-3">
               <div className="grid gap-3 sm:grid-cols-2">
                 <TextField
@@ -1343,11 +1464,11 @@ function ServicesSection({
               />
               {formError && <p className="m-0 text-sm text-danger" role="alert">{formError}</p>}
               <div className="mt-2 flex flex-wrap justify-end gap-2">
-                <DialogClose asChild>
+                <SheetClose asChild>
                   <Button type="button" variant="secondary" disabled={savingId !== null}>
                     انصراف
                   </Button>
-                </DialogClose>
+                </SheetClose>
                 <Button
                   type="button"
                   loading={savingId === editingService.id}
@@ -1359,9 +1480,9 @@ function ServicesSection({
                 </Button>
               </div>
             </div>
-          </DialogContent>
+          </SheetContent>
         )}
-      </Dialog>
+      </Sheet>
 
       <Sheet
         open={Boolean(staffPickerService)}
@@ -1371,6 +1492,7 @@ function ServicesSection({
       >
         <SheetContent
           side="inline-end"
+          onOpenAutoFocus={(event) => event.preventDefault()}
           data-testid="service-staff-picker"
           className="flex flex-col gap-0"
         >

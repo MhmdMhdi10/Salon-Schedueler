@@ -187,7 +187,11 @@ export class BookingFlow {
           type: 'booking.approved',
           title: 'نوبت تأیید شد',
           body: 'رزرو توسط مدیر تأیید شد.',
-          payload: { appointmentId: appointment.id, staffMemberId: appointment.staffMemberId },
+          payload: {
+            appointmentId: appointment.id,
+            staffMemberId: appointment.staffMemberId,
+            date: appointment.startAt.toISOString(),
+          },
         }),
       );
     }
@@ -217,7 +221,11 @@ export class BookingFlow {
           type: 'booking.rejected',
           title: 'نوبت رد شد',
           body: 'رزرو توسط مدیر رد شد.',
-          payload: { appointmentId: appointment.id, staffMemberId: appointment.staffMemberId },
+          payload: {
+            appointmentId: appointment.id,
+            staffMemberId: appointment.staffMemberId,
+            date: appointment.startAt.toISOString(),
+          },
         }),
       );
     }

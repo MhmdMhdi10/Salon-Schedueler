@@ -938,6 +938,7 @@ export interface SalonCustomerProfile {
 }
 
 export interface AppointmentCustomerOverview {
+  appointment?: { id: string; startAt: string };
   customer: {
     id: string;
     phone: string;

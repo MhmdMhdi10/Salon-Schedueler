@@ -120,6 +120,22 @@ function calendarDateFromSearch(search: string): Date | null {
     : null;
 }
 
+function calendarDateForInstant(value: string): string | null {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Tehran',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const part = (type: string) => parts.find((item) => item.type === type)?.value;
+  const year = part('year');
+  const month = part('month');
+  const day = part('day');
+  return year && month && day ? `${year}-${month}-${day}` : null;
+}
+
 interface Appointment {
   id: string;
   startAt?: string;
@@ -761,6 +777,7 @@ function AppointmentBlock({
         role="article"
         aria-label={`${service} — ${customer ?? ''} — ${statusLabel}${hasPendingReschedule ? ' — تغییر زمان در انتظار تأیید مشتری' : ''}`}
         data-status={ariaState}
+        data-calendar-appointment-id={appt.id}
       >
         <div
           className={cn(
@@ -857,6 +874,7 @@ function AppointmentBlock({
         role="article"
         aria-label={`${service} — ${customer ?? ''} — ${start ?? ''} — ${statusLabel}`}
         data-status={ariaState}
+        data-calendar-appointment-id={appt.id}
       >
         <span className="flex min-w-0 items-center gap-1.5">
           <Scissors className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
@@ -905,6 +923,7 @@ function AppointmentBlock({
       role="article"
       aria-label={`${service} — ${customer ?? ''} — ${statusLabel}${hasPendingReschedule ? ' — تغییر زمان در انتظار تأیید مشتری' : ''}`}
       data-status={ariaState}
+      data-calendar-appointment-id={appt.id}
     >
       <span className="flex min-w-0 items-center gap-1.5">
         <Scissors className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
@@ -4007,6 +4026,38 @@ export function OwnerCalendarPage() {
   }, [location.search]);
 
   useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const appointmentId = params.get('appointmentId');
+    if (calendarDateFromSearch(location.search) || !appointmentId) return;
+
+    let active = true;
+    adminApi
+      .getAppointmentCustomer(appointmentId)
+      .then((overview) => {
+        if (!active) return;
+        const date = overview.appointment?.startAt
+          ? calendarDateForInstant(overview.appointment.startAt)
+          : null;
+        if (!date) return;
+        params.set('date', date);
+        params.set('view', 'day');
+        navigate(
+          {
+            pathname: location.pathname,
+            search: `?${params.toString()}`,
+            hash: location.hash,
+          },
+          { replace: true },
+        );
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+    };
+  }, [location.hash, location.pathname, location.search, navigate]);
+
+  useEffect(() => {
     if (!inboxEvent && resumeVersion === 0) return;
     setReloadToken((value) => value + 1);
     setApprovalReloadToken((value) => value + 1);
@@ -4252,6 +4303,38 @@ export function OwnerCalendarPage() {
   }, [handleViewChange, handleNavigate]);
 
   // ─── Data Fetch ──────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    const appointmentId = new URLSearchParams(location.search).get('appointmentId');
+    if (!appointmentId || status !== 'success' || view !== 'day') return;
+
+    let appointmentElement: HTMLElement | null = null;
+    let clearTimer: number | undefined;
+    const scrollTimer = window.setTimeout(() => {
+      const calendar = document.getElementById('owner-calendar-content');
+      appointmentElement = Array.from(
+        calendar?.querySelectorAll<HTMLElement>('[data-calendar-appointment-id]') ?? [],
+      ).find((element) => element.dataset.calendarAppointmentId === appointmentId) ?? null;
+      if (!appointmentElement) return;
+
+      appointmentElement.classList.add('owner-calendar-notification-target');
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      appointmentElement.scrollIntoView({
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        block: 'center',
+        inline: 'nearest',
+      });
+      clearTimer = window.setTimeout(() => {
+        appointmentElement?.classList.remove('owner-calendar-notification-target');
+      }, 4500);
+    }, 160);
+
+    return () => {
+      window.clearTimeout(scrollTimer);
+      if (clearTimer !== undefined) window.clearTimeout(clearTimer);
+      appointmentElement?.classList.remove('owner-calendar-notification-target');
+    };
+  }, [appointments, location.search, status, view]);
 
   useEffect(() => {
     let active = true;
