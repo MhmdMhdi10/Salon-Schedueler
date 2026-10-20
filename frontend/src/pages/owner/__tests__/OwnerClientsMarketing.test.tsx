@@ -173,22 +173,34 @@ describe('OwnerClientsPage', () => {
 });
 
 describe('OwnerMarketingPage', () => {
-  it('shows the booking link and keeps QR tools inside a compact disclosure', async () => {
+  it('keeps the booking link compact and opens QR and campaign tools in drawers', async () => {
     renderPage(<OwnerMarketingPage />, '/owner/marketing');
 
     const pageHeading = await screen.findByRole('heading', { name: 'بازاریابی' });
-    const bookingHeading = screen.getByRole('heading', { name: 'رزرو آنلاین آرا' });
+    const bookingHeading = screen.getByRole('heading', { name: 'رزرو آنلاین سالن آرا' });
+    expect(screen.getByTestId('owner-marketing-page')).toHaveClass('owner-marketing-page');
     expect(screen.getByText('https://book.salon.app/s/salon-1?utm_source=qr')).toBeInTheDocument();
-    const qr = screen.getByTestId('owner-marketing-qr');
+    const qr = screen.getByTestId('owner-marketing-featured-qr');
     expect(qr).toHaveAttribute('alt', 'کد QR رزرو سالن آرا');
-    expect(qr).toHaveClass('size-12');
-    expect(bookingHeading.compareDocumentPosition(qr) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByText('کد QR و ابزارهای چاپ').closest('details')).not.toHaveAttribute('open');
+    expect(qr).toHaveClass('size-16');
+    expect(qr.compareDocumentPosition(bookingHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(pageHeading.compareDocumentPosition(bookingHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByRole('combobox', { name: 'کانال انتشار' })).toBeInTheDocument();
-    expect(screen.getByText('پیش‌نمایش پیام آماده').closest('details')).not.toHaveAttribute('open');
-    expect(screen.getByRole('link', { name: /دعوت از مشتری‌ها/ })).toHaveAttribute('href', '/owner/clients');
-    expect(screen.getByRole('link', { name: /تنظیم خدمات و ساعت کاری/ })).toHaveAttribute('href', '/owner/config');
+    expect(screen.queryByTestId('owner-campaign-kit')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('qr-card')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'ساخت لینک کمپین' }));
+    const campaignDrawer = await screen.findByRole('dialog', { name: 'لینک کمپین' });
+    expect(within(campaignDrawer).getByRole('combobox', { name: 'کانال انتشار' })).toBeInTheDocument();
+    expect(within(campaignDrawer).getByText('پیش‌نمایش پیام آماده').closest('details')).not.toHaveAttribute('open');
+    fireEvent.click(within(campaignDrawer).getByRole('button', { name: 'بستن' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'کد QR و ابزار چاپ' }));
+    const qrDrawer = await screen.findByRole('dialog', { name: 'کد QR و ابزار چاپ' });
+    expect(await within(qrDrawer).findByTestId('qr-card')).toBeInTheDocument();
+    expect(await within(qrDrawer).findByRole('button', { name: /شخصی‌سازی QR/ })).toHaveAttribute('aria-expanded', 'false');
+
+    const quickStart = screen.getByText('برای شروع').closest('details');
+    expect(quickStart).not.toHaveAttribute('open');
     expect(getSalonQr).toHaveBeenCalledWith('salon-1');
   });
 });

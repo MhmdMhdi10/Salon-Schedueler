@@ -90,6 +90,7 @@ export function OwnerShell({
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const { pathname } = location;
+  const hideBottomTabs = pathname === '/owner/marketing';
   const routeKey = `${location.pathname}${location.search}`;
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const contentRef = useRef<HTMLElement | null>(null);
@@ -215,7 +216,8 @@ export function OwnerShell({
             isDesktop && 'w-full',
             // On mobile, reserve the rendered tab bar plus a generous breathing
             // room so the last card and its actions scroll completely above fixed nav.
-            !isDesktop && 'pb-[calc(8rem+env(safe-area-inset-bottom))]',
+            !isDesktop && !hideBottomTabs && 'pb-[calc(8rem+env(safe-area-inset-bottom))]',
+            !isDesktop && hideBottomTabs && 'pb-[calc(2rem+env(safe-area-inset-bottom))]',
           )}
         >
           <div className="min-w-0 w-full">
@@ -228,7 +230,7 @@ export function OwnerShell({
       </div>
 
       {/* Mobile bottom tabs — visible only below lg */}
-      {!isDesktop && <OwnerBottomTabs role={role} />}
+      {!isDesktop && !hideBottomTabs && <OwnerBottomTabs role={role} />}
     </ThemeScope>
   );
 }

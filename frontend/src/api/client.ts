@@ -18,7 +18,7 @@ let bootstrapInFlight: Promise<boolean> | null = null;
 /** User-facing explanations for stable backend error codes. */
 const API_ERROR_MESSAGES: Record<string, string> = {
   VALIDATION_ERROR: 'اطلاعات واردشده معتبر نیست؛ موارد مشخص‌شده را بررسی کن.',
-  PHONE_TAKEN: 'این شماره قبلاً برای عضو دیگری در همین سالن ثبت شده است.',
+  PHONE_TAKEN: 'این شماره قبلاً به یک سالن وصل شده است.',
   INVALID_STAFF_ASSIGNMENT: 'عضو انتخاب‌شده در این سالن فعال نیست یا این خدمت را انجام نمی‌دهد.',
   INVALID_APPROVAL_STAFF: 'مسئول انتخاب‌شده دسترسی تأیید رزرو ندارد یا به این سالن تعلق ندارد.',
   LAST_OWNER_REQUIRED: 'برای سالن باید حداقل یک مالک فعال باقی بماند.',

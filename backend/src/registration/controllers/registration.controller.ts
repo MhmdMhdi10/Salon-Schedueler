@@ -10,7 +10,7 @@ import {
 
 /**
  * True when an error is a Prisma unique-constraint violation (P2002). Kept for
- * compatibility with older database clients; phone is no longer globally unique.
+ * compatibility with older database clients.
  */
 const isUniqueViolation = (err: unknown): boolean =>
   typeof err === 'object' &&
@@ -29,8 +29,8 @@ const isUniqueViolation = (err: unknown): boolean =>
  *   POST /register/salon  -> 201 { salonId, salonName }
  *
  * The only required inputs are `salonName`, `ownerName` and `phone`; every other
- * answer is optional so the questionnaire can be skipped. A phone may belong to
- * another salon; invalid input yields 400.
+ * answer is optional so the questionnaire can be skipped. Active staff phones
+ * are limited to one salon while multi-salon membership is disabled.
  */
 export function registrationRouter(
   services: Services,

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { PrismaClient } from '@prisma/client';
+import { MULTI_SALON_MEMBERSHIPS_ENABLED } from '../features.js';
 
 export interface PlatformListQuery {
   page?: number;
@@ -846,6 +847,13 @@ export class PlatformAdminService {
     }
     const phone = input.phone ? normalizePhone(input.phone) : null;
     if (phone) assertPhone(phone);
+    if (phone && !MULTI_SALON_MEMBERSHIPS_ENABLED) {
+      const existing = await this.prisma.staffMember.findFirst({
+        where: { phone, active: true },
+        select: { id: true },
+      });
+      if (existing) throw new PlatformAdminError('INVALID_STATE', 'PHONE_TAKEN');
+    }
     const staff = await this.prisma.staffMember.create({
       data: {
         id: randomUUID(),
@@ -867,7 +875,7 @@ export class PlatformAdminService {
     patch: { fullName?: string; role?: string; phone?: string | null; active?: boolean },
     adminId: string,
   ) {
-    const current = await this.prisma.staffMember.findUnique({ where: { id }, select: { salonId: true, role: true, active: true, deletedAt: true } });
+    const current = await this.prisma.staffMember.findUnique({ where: { id }, select: { salonId: true, role: true, active: true, deletedAt: true, phone: true } });
     if (!current) throw new PlatformAdminError('NOT_FOUND', 'Staff member not found');
     if (patch.role !== undefined && !PLATFORM_STAFF_ROLES.includes(patch.role as PlatformStaffRole)) {
       throw new PlatformAdminError('INVALID_STATE', 'Invalid staff role');
@@ -879,6 +887,22 @@ export class PlatformAdminService {
     }
     const phone = patch.phone === undefined ? undefined : patch.phone ? normalizePhone(patch.phone) : null;
     if (phone) assertPhone(phone);
+    const nextPhone = phone === undefined ? current.phone : phone;
+    const nextActiveForPhone = patch.active ?? current.active;
+    const phoneChanged = phone !== undefined && current.phone !== phone;
+    const beingReactivated = patch.active === true && !current.active;
+    if (
+      nextPhone &&
+      nextActiveForPhone &&
+      (phoneChanged || beingReactivated) &&
+      !MULTI_SALON_MEMBERSHIPS_ENABLED
+    ) {
+      const existing = await this.prisma.staffMember.findFirst({
+        where: { phone: nextPhone, active: true, id: { not: id } },
+        select: { id: true },
+      });
+      if (existing) throw new PlatformAdminError('INVALID_STATE', 'PHONE_TAKEN');
+    }
     const staff = await this.prisma.staffMember.update({
       where: { id },
       data: {

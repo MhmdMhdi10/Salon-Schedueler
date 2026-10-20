@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { cn } from '../ui/cn';
+import { MULTI_SALON_MEMBERSHIPS_ENABLED } from '../../config/features';
 
 export type WorkspaceSurface = 'owner';
 export type WorkspaceSwitcherVariant = 'header' | 'card';
@@ -95,7 +96,7 @@ export function WorkspaceSwitcher({
           {destination.label}
         </span>
       </Link>
-      {isStaffSurface && staffContexts.length > 1 && (
+      {MULTI_SALON_MEMBERSHIPS_ENABLED && isStaffSurface && staffContexts.length > 1 && (
         <select
           aria-label="انتخاب سالن"
           value={principal?.staffMemberId ?? ''}

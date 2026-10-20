@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, Check, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { normalizeDigits } from '@salon/shared';
 import {
+  ApiError,
   authApi,
   customerApi,
   registrationApi,
@@ -470,11 +471,13 @@ function RegisterSalonContent() {
         // A profile update must not delay entry after OTP verification.
       }
       navigate('/owner');
-    } catch {
+    } catch (error) {
       setOtpError(
-        identityVerified
-          ? t('business.register.errors.generic')
-          : t('business.register.errors.invalidOtp'),
+        error instanceof ApiError && error.code === 'PHONE_TAKEN'
+          ? t('business.register.errors.phoneTaken')
+          : identityVerified
+            ? t('business.register.errors.generic')
+            : t('business.register.errors.invalidOtp'),
       );
     } finally {
       setOtpLoading(false);

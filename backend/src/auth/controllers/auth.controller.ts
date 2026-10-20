@@ -31,7 +31,8 @@ function isMobileClient(req: { get(name: string): string | undefined }): boolean
  * - POST /auth/logout                            -> 204
  *
  * Error mapping (via mapDomainError): OTP_EXPIRED -> 401 OTP_EXPIRED;
- * OTP_MISMATCH / NO_OTP -> 401 OTP_INVALID; INVALID_TOKEN -> 401 INVALID_TOKEN.
+ * OTP_MISMATCH / NO_OTP -> 401 OTP_INVALID; INVALID_TOKEN -> 401 INVALID_TOKEN;
+ * FEATURE_DISABLED -> 503 FEATURE_DISABLED.
  */
 export function authRouter(services: Services): Router {
   const router = Router();
@@ -177,7 +178,7 @@ export function authRouter(services: Services): Router {
   return router;
 }
 
-/** Protected salon-membership switch used when one phone belongs to several salons. */
+/** Protected context endpoints; cross-salon switching is gated in AuthService. */
 export function authContextRouter(services: Services): Router {
   const router = Router();
   router.get(

@@ -1,7 +1,8 @@
 import type { PrismaClient, StaffMember, Chair, Equipment } from '@prisma/client';
 import type { StaffRole } from '@salon/shared';
+import { MULTI_SALON_MEMBERSHIPS_ENABLED } from '../features.js';
 
-/** Stable domain error used when a login phone is already used in this salon. */
+/** Stable domain error used when a login phone already has a staff membership. */
 export class StaffPhoneTakenError extends Error {
   public readonly code = 'PHONE_TAKEN';
 
@@ -42,7 +43,9 @@ export class ResourceRegistration {
   ): Promise<StaffMember> {
     if (phone) {
       const existing = await this.prisma.staffMember.findFirst({
-        where: { salonId, phone },
+        where: MULTI_SALON_MEMBERSHIPS_ENABLED
+          ? { salonId, phone }
+          : { phone, active: true },
       });
       if (existing) throw new StaffPhoneTakenError();
     }
@@ -65,8 +68,8 @@ export class ResourceRegistration {
   /**
    * Update a staff member's identity / role / login / active flag (owner-guarded
    * at the route layer). Only provided fields are changed. Passing `phone: null`
-   * clears the login; a non-empty `phone` sets it. A person may share this phone
-   * across salons, but not twice in the same salon. Changing `role` is how an
+   * clears the login; a non-empty `phone` sets it. Cross-salon phone reuse stays
+   * disabled until multi-salon membership is ready. Changing `role` is how an
    * owner promotes/demotes a person (e.g. Stylist → Admin).
    */
   async updateStaffMember(
@@ -79,14 +82,20 @@ export class ResourceRegistration {
       assignedChairId?: string | null;
     },
   ): Promise<StaffMember> {
-    if (patch.phone) {
+    if (patch.phone || patch.active === true) {
       const current = await this.prisma.staffMember.findUnique({
         where: { id },
-        select: { salonId: true, phone: true },
+        select: { salonId: true, phone: true, active: true },
       });
-      const existing = current
+      const nextPhone = patch.phone === undefined ? current?.phone : patch.phone;
+      const nextActive = patch.active ?? current?.active;
+      const phoneChanged = patch.phone !== undefined && current?.phone !== patch.phone;
+      const beingReactivated = patch.active === true && current?.active === false;
+      const existing = current && nextPhone && nextActive && (phoneChanged || beingReactivated)
         ? await this.prisma.staffMember.findFirst({
-            where: { salonId: current.salonId, phone: patch.phone, id: { not: id } },
+            where: MULTI_SALON_MEMBERSHIPS_ENABLED
+              ? { salonId: current.salonId, phone: nextPhone, id: { not: id } }
+              : { phone: nextPhone, active: true, id: { not: id } },
           })
         : null;
       if (existing) throw new StaffPhoneTakenError();

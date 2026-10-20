@@ -23,6 +23,7 @@ STAMP_FILE=node_modules/.salon-web-deps-stamp
 CURRENT_FINGERPRINT="$(deps_fingerprint)"
 if [ ! -x node_modules/.bin/vite ] \
   || [ ! -e node_modules/tailwindcss/package.json ] \
+  || [ ! -e frontend/node_modules/firebase/package.json ] \
   || [ "$(cat "$STAMP_FILE" 2>/dev/null)" != "$CURRENT_FINGERPRINT" ]; then
   echo "[web] installing dependencies (manifest change or fresh volume)..."
   npm install

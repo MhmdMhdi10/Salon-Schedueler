@@ -620,7 +620,8 @@ function AppointmentBlock({
   const draggableRef = useRef<HTMLDivElement>(null);
   const dragHandleRef = useRef<HTMLSpanElement>(null);
   const isPending = appt.status === 'pending';
-  const hasPendingReschedule = Boolean(appt.pendingReschedule?.startAt);
+  const hasPendingReschedule =
+    APPOINTMENT_RESCHEDULING_ENABLED && Boolean(appt.pendingReschedule?.startAt);
   const isCancelled = appt.status === 'cancelled' || appt.status === 'rejected';
   const colorClass = isPending
     ? 'border-s-warning'
@@ -631,7 +632,7 @@ function AppointmentBlock({
   const start = clockTime(appt.startAt, appointmentTimezone);
   const end = clockTime(appt.endAt, appointmentTimezone);
   const service = appt.serviceName ?? '—';
-  const customer = appt.customerName;
+  const customer = appt.customerName?.trim() || appt.customerPhone?.trim();
   const { icon: statusIcon, label: statusLabel, ariaState } = statusIndicator(appt.status);
   const compactLong =
     positioned &&
@@ -843,7 +844,7 @@ function AppointmentBlock({
       <div
         ref={draggableRef}
         className={cn(
-          'flex flex-col justify-start gap-1 overflow-hidden rounded-lg border border-border border-s-4 bg-surface px-2.5 py-2 text-text shadow-1',
+          'flex items-center gap-1 overflow-hidden rounded-lg border border-border border-s-4 bg-surface px-2 py-1.5 text-text shadow-1',
           'transition-all duration-fast ease-standard',
           'hover:-translate-y-px hover:border-primary/40 hover:shadow-2',
           colorClass,
@@ -854,7 +855,7 @@ function AppointmentBlock({
         style={positionStyle}
         onClick={() => onOpen?.(appt)}
         role="article"
-        aria-label={`${service} — ${customer ?? ''} — ${statusLabel}`}
+        aria-label={`${service} — ${customer ?? ''} — ${start ?? ''} — ${statusLabel}`}
         data-status={ariaState}
       >
         <span className="flex min-w-0 items-center gap-1.5">
@@ -870,31 +871,17 @@ function AppointmentBlock({
             </span>
           )}
           <strong className="min-w-0 flex-1 truncate text-xs leading-tight">{service}</strong>
-          {appointmentActions}
-        </span>
-        <span className="flex min-w-0 items-center justify-between gap-2">
-          {customer ? (
-            <span className="min-w-0 flex-1 truncate text-[0.68rem] leading-tight text-muted">
-              <User className="inline-block h-2.5 w-2.5 shrink-0 opacity-60" aria-hidden="true" />{' '}
-              {customer}
+          {customer && (
+            <span
+              className="inline-flex min-w-0 max-w-[38%] shrink items-center gap-0.5 text-xs font-medium leading-tight text-text"
+              title={customer}
+            >
+              <User className="h-2.5 w-2.5 shrink-0 opacity-60" aria-hidden="true" />
+              <span className="min-w-0 truncate">{customer}</span>
             </span>
-          ) : (
-            <span className="min-w-0 flex-1" aria-hidden="true" />
           )}
-          <span className="flex shrink-0 items-center gap-1">
-            {statusBadge}
-            {start && (
-              <span className="shrink-0 rounded-full bg-bg px-1.5 py-0.5 text-[0.62rem] tabular-nums text-muted">
-                <Clock className="me-0.5 inline-block h-2.5 w-2.5" aria-hidden="true" />
-                <Num value={start} />
-                {end && (
-                  <>
-                    –<Num value={end} />
-                  </>
-                )}
-              </span>
-            )}
-          </span>
+          {statusBadge}
+          {appointmentActions}
         </span>
       </div>
     );
@@ -945,7 +932,7 @@ function AppointmentBlock({
         )}
         {appointmentActions}
       </span>
-      {customer && !compact && (
+      {customer && (!compact || positioned) && (
         <span className="truncate text-[0.68rem] leading-tight text-muted">
           <User className="inline-block h-2.5 w-2.5 shrink-0 opacity-60" aria-hidden="true" />{' '}
           {customer}

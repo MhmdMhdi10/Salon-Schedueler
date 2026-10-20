@@ -3,6 +3,7 @@ import * as jwt from 'jsonwebtoken';
 import type { PrismaClient } from '@prisma/client';
 import type { OtpProvider } from './otp-provider.interface.js';
 import type { SmsProvider } from './sms-provider.interface.js';
+import { MULTI_SALON_MEMBERSHIPS_ENABLED } from '../features.js';
 
 /**
  * JWT token pair returned on successful authentication.
@@ -10,7 +11,7 @@ import type { SmsProvider } from './sms-provider.interface.js';
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
-  /** Staff memberships available to this phone, used by the panel switcher. */
+  /** Available staff membership context(s); multi-salon selection is gated. */
   staffContexts?: StaffContext[];
 }
 
@@ -381,9 +382,9 @@ export class AuthService {
   }
 
   /**
-   * Mint a new session scoped to one of the salons linked to the current
-   * customer's phone. The membership is checked against the same phone before
-   * any role claim is issued, so a client cannot select another user's salon.
+   * Mint a session scoped to an active salon membership for the current
+   * customer's phone. Multi-salon selection is rejected while the feature is
+   * disabled, so clients cannot switch to another membership.
    */
   async selectStaffContext(subjectId: string, staffMemberId: string): Promise<AuthTokens> {
     const customer = await this.findCustomerById(subjectId);
@@ -413,6 +414,12 @@ export class AuthService {
     }
 
     const staffContexts = await this.findStaffContextsByPhone(customer.phone);
+    if (
+      !MULTI_SALON_MEMBERSHIPS_ENABLED &&
+      staffContexts[0]?.staffMemberId !== staffMemberId
+    ) {
+      throw new AuthError('FEATURE_DISABLED', 'Selecting another salon is temporarily disabled');
+    }
     const tokens = await this.issueTokens(customer.id, {
       role: staff.role,
       staffMemberId: staff.id,
@@ -424,7 +431,7 @@ export class AuthService {
     };
   }
 
-  /** Return all active salon memberships for the authenticated subject. */
+  /** Return available active salon memberships for the authenticated subject. */
   async getStaffContexts(subjectId: string): Promise<StaffContext[]> {
     const customer = await this.findCustomerById(subjectId);
     return customer ? this.findStaffContextsByPhone(customer.phone) : [];
@@ -676,7 +683,7 @@ export class AuthService {
       : undefined;
   }
 
-  /** Resolve every active salon membership for a phone. */
+  /** Resolve active memberships, exposing only the first while multi-salon is disabled. */
   private async findStaffContextsByPhone(phone: string): Promise<StaffContext[]> {
     const delegate = (
       this.prisma as unknown as {
@@ -705,6 +712,7 @@ export class AuthService {
       const rows = await delegate.findMany({
         where: { phone, active: true },
         orderBy: { salonId: 'asc' },
+        ...(!MULTI_SALON_MEMBERSHIPS_ENABLED ? { take: 1 } : {}),
         select: {
           id: true,
           fullName: true,
@@ -713,13 +721,14 @@ export class AuthService {
           salon: { select: { name: true } },
         },
       });
-      return rows.map((row) => ({
+      const contexts = rows.map((row) => ({
         staffMemberId: row.id,
         salonId: row.salonId,
         salonName: row.salon?.name,
         fullName: row.fullName,
         role: row.role,
       }));
+      return MULTI_SALON_MEMBERSHIPS_ENABLED ? contexts : contexts.slice(0, 1);
     }
 
     if (!delegate.findFirst) return [];
@@ -846,7 +855,8 @@ export class AuthError extends Error {
       | 'OTP_MISMATCH'
       | 'OTP_DELIVERY_FAILED'
       | 'CUSTOMER_BLOCKED'
-      | 'INVALID_TOKEN',
+      | 'INVALID_TOKEN'
+      | 'FEATURE_DISABLED',
     message: string,
   ) {
     super(message);

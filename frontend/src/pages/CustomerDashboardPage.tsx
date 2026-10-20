@@ -411,7 +411,7 @@ function AppointmentRow({
             )}
           </div>
         )}
-      {pendingStart && onAcceptReschedule && onRejectReschedule && (
+      {reschedulingEnabled && pendingStart && onAcceptReschedule && onRejectReschedule && (
         <div
           className="flex flex-col gap-3 rounded-xl border border-warning/30 bg-warning/10 p-3"
           data-testid={`customer-reschedule-proposal-${appointment.id}`}
@@ -436,11 +436,7 @@ function AppointmentRow({
               · {clockTime(appointment.pendingReschedule?.startAt, appointment.timezone) || '—'}
             </p>
           </div>
-          {!reschedulingEnabled ? (
-            <p className="m-0 text-xs leading-6 text-muted">
-              تغییر زمان فعلاً در نسخهٔ اولیه غیرفعال است؛ نوبت در زمان فعلی باقی می‌ماند.
-            </p>
-          ) : pendingExpired ? (
+          {pendingExpired ? (
             <p className="m-0 text-xs leading-6 text-danger">
               مهلت این پیشنهاد گذشته است. برای پاک‌کردن آن می‌توانی ردش کنی.
             </p>
@@ -452,7 +448,7 @@ function AppointmentRow({
               type="button"
               variant="danger"
               size="md"
-              disabled={actionBusy || !reschedulingEnabled}
+              disabled={actionBusy}
               onClick={() => onRejectReschedule(appointment)}
             >
               رد زمان جدید
@@ -461,7 +457,7 @@ function AppointmentRow({
               type="button"
               size="md"
               loading={actionBusy}
-              disabled={actionBusy || pendingExpired || !reschedulingEnabled}
+              disabled={actionBusy || pendingExpired}
               onClick={() => onAcceptReschedule(appointment)}
             >
               تأیید زمان جدید
@@ -469,10 +465,12 @@ function AppointmentRow({
           </div>
         </div>
       )}
-      {canManage && onCancel && onStartReschedule && (
+      {canManage && onCancel && (
         <div className="flex w-full flex-wrap items-center justify-end gap-2 border-t border-border/50 pt-3">
-          {rescheduleValue !== undefined && reschedulingEnabled ? (
-            rescheduleReview ? (
+          {reschedulingEnabled &&
+            onStartReschedule &&
+            (rescheduleValue !== undefined ? (
+              rescheduleReview ? (
               <div
                 className="flex w-full flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3"
                 data-testid={`customer-reschedule-review-${appointment.id}`}
@@ -555,34 +553,28 @@ function AppointmentRow({
                 </Button>
               </>
             )
-          ) : (
-            <>
-              <Button
-                type="button"
-                variant="secondary"
-                size="md"
-                disabled={actionBusy || !reschedulingEnabled}
-                onClick={() => onStartReschedule(appointment)}
-              >
-                تغییر زمان
-              </Button>
-              {!reschedulingEnabled && (
-                <span className="w-full text-end text-xs text-muted">
-                  تغییر زمان فعلاً در دسترس نیست.
-                </span>
-              )}
-              <Button
-                type="button"
-                variant="danger"
-                size="md"
-                loading={actionBusy}
-                disabled={actionBusy}
-                onClick={() => onCancel(appointment)}
-              >
-                لغو نوبت
-              </Button>
-            </>
-          )}
+              ) : (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="md"
+                  disabled={actionBusy}
+                  onClick={() => onStartReschedule(appointment)}
+                >
+                  تغییر زمان
+                </Button>
+              )
+            ))}
+          <Button
+            type="button"
+            variant="danger"
+            size="md"
+            loading={actionBusy}
+            disabled={actionBusy}
+            onClick={() => onCancel(appointment)}
+          >
+            لغو نوبت
+          </Button>
         </div>
       )}
     </article>

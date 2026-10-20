@@ -640,7 +640,7 @@ export function OwnerQrPage({
 
                 <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-border bg-surface px-3 text-sm text-text focus-within:outline focus-within:outline-2 focus-within:outline-focus">
                   <input
-                    className="peer sr-only"
+                    className="size-4 shrink-0 accent-primary"
                     type="checkbox"
                     checked={showBrand}
                     onChange={(e) => setShowBrand(e.target.checked)}
@@ -910,7 +910,7 @@ export function OwnerQrPage({
               </div>
               <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-text focus-within:outline focus-within:outline-2 focus-within:outline-focus">
                 <input
-                  className="peer sr-only"
+                  className="size-4 shrink-0 accent-primary"
                   type="checkbox"
                   checked={orderDoubleSided}
                   onChange={(event) => setOrderDoubleSided(event.target.checked)}

@@ -109,12 +109,17 @@ export function mapDomainError(err: unknown): MappedError {
         return { status: 403, code: 'CUSTOMER_BLOCKED' };
       case 'INVALID_TOKEN':
         return { status: 401, code: 'INVALID_TOKEN' };
+      case 'FEATURE_DISABLED':
+        return { status: 503, code: 'FEATURE_DISABLED' };
       default:
         return { status: 401, code: 'UNAUTHORIZED' };
     }
   }
 
   if (err instanceof RegistrationError) {
+    if (err.code === 'PHONE_TAKEN') {
+      return { status: 409, code: 'PHONE_TAKEN' };
+    }
     if (err.code === 'QR_MALFORMED') {
       return { status: 400, code: 'QR_MALFORMED' };
     }

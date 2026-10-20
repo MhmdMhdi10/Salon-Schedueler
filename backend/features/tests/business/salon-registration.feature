@@ -104,18 +104,18 @@ Feature: Salon owner registration
     And response field "code" should equal "AUTOMATION_BLOCKED"
 
   @registration @happy-path
-  Scenario: Phone preflight allows a person to join another salon
+  Scenario: Phone preflight rejects an existing member and allows a fresh phone
     Given I have a controller fixture
     And I have a fresh test phone stored as "freshPhone"
     When I make a "GET" request to "/api/register/check-phone?phone={{ownerPhone}}"
     Then the response status should be 200
-    And response field "available" should equal "true"
+    And response field "available" should equal "false"
     When I make a "GET" request to "/api/register/check-phone?phone={{freshPhone}}"
     Then the response status should be 200
     And response field "available" should equal "true"
 
   @registration @conflict
-  Scenario: The same verified owner can register a second salon
+  Scenario: The same verified owner cannot register a second salon
     Given I have a controller fixture
     When I make a "POST" request to "/api/register/salon" with JSON body:
       """
@@ -128,6 +128,5 @@ Feature: Salon owner registration
         "chairCount": 1
       }
       """
-    Then the response status should be 201
-    And response field "salonName" should equal "Duplicate Owner Salon"
-    And response field "salonId" should not equal "{{salonId}}"
+    Then the response status should be 409
+    And response field "code" should equal "PHONE_TAKEN"

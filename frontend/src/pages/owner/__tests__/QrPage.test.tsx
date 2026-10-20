@@ -246,6 +246,47 @@ describe('OwnerQrPage — print action + standee (R4.3)', () => {
 });
 
 describe('OwnerQrPage — printed card order', () => {
+  it('shows a visible and toggleable double-sided print checkbox', async () => {
+    getSalonQr.mockResolvedValue(QR_RESPONSE);
+    renderPage();
+
+    const doubleSided = await screen.findByRole('checkbox', { name: 'چاپ دوطرفه با QR سالن' });
+    expect(doubleSided).not.toHaveClass('sr-only');
+    expect(doubleSided).toBeChecked();
+
+    fireEvent.click(doubleSided);
+    expect(doubleSided).not.toBeChecked();
+  });
+
+  it('keeps the brand toggle visible and the QR preview in place after changing it', async () => {
+    getSalonQr.mockResolvedValue(QR_RESPONSE);
+    renderPage();
+
+    const preview = await screen.findByTestId('qr-asset-preview');
+    const showBrand = screen.getByRole('checkbox', { name: 'نمایش نشان آرا روی طرح' });
+    expect(showBrand).not.toHaveClass('sr-only');
+    expect(showBrand).toBeChecked();
+
+    fireEvent.click(showBrand);
+    expect(showBrand).not.toBeChecked();
+    expect(preview).toBeInTheDocument();
+  });
+
+  it('keeps image upload associated with its visible button and reports invalid files', async () => {
+    getSalonQr.mockResolvedValue(QR_RESPONSE);
+    renderPage();
+
+    const upload = (await screen.findByTestId('qr-logo-upload')) as HTMLInputElement;
+    expect(upload).toHaveAttribute('type', 'file');
+    expect(upload.closest('label')).toHaveClass('owner-qr-upload__button');
+
+    fireEvent.change(upload, {
+      target: { files: [new File(['not an image'], 'notes.txt', { type: 'text/plain' })] },
+    });
+    expect(await screen.findByText('تصویر معتبر با حجم حداکثر ۲ مگابایت انتخاب کنید.')).toBeInTheDocument();
+    expect(upload.value).toBe('');
+  });
+
   it('shows validation feedback when required delivery fields are missing', async () => {
     getSalonQr.mockResolvedValue(QR_RESPONSE);
     renderPage();

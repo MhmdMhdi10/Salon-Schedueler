@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import type { PrismaClient, Salon, StaffMember } from '@prisma/client';
 import { encodeSalonQr, parseSalonQr } from '@salon/shared';
 import { RegistrationError } from './registration-error';
+import { MULTI_SALON_MEMBERSHIPS_ENABLED } from '../features.js';
 
 /**
  * SalonRegistration handles salon creation with QR token generation,
@@ -60,8 +61,8 @@ export class SalonRegistration {
    * salon with no owner) is never persisted. The caller starts the free trial
    * (SubscriptionService.startTrial) after this resolves.
    *
-   * A phone may already belong to staff in another salon. Salon membership is
-   * tenant-scoped, so the same person can create or join multiple salons.
+   * A phone already assigned to an active staff membership cannot create a
+   * second salon while multi-salon memberships are disabled.
    *
    * @returns the created salon and the id of its Owner staff member.
    */
@@ -88,6 +89,14 @@ export class SalonRegistration {
     const services = (input.services ?? []).slice(0, 50);
 
     return this.prisma.$transaction(async (tx) => {
+      if (!MULTI_SALON_MEMBERSHIPS_ENABLED) {
+        const existingStaff = await tx.staffMember.findFirst({
+          where: { phone: input.phone, active: true },
+          select: { id: true },
+        });
+        if (existingStaff) throw new RegistrationError('PHONE_TAKEN');
+      }
+
       const salon = await tx.salon.create({
         data: {
           name: input.salonName,
@@ -343,9 +352,13 @@ export class SalonRegistration {
     };
   }
 
-  /** Kept for older clients; phone numbers are no longer globally taken. */
+  /** Check whether an active staff membership already uses this phone. */
   async isPhoneTaken(phone: string): Promise<boolean> {
-    void phone;
-    return false;
+    if (MULTI_SALON_MEMBERSHIPS_ENABLED) return false;
+    const existing = await this.prisma.staffMember.findFirst({
+      where: { phone, active: true },
+      select: { id: true },
+    });
+    return Boolean(existing);
   }
 }

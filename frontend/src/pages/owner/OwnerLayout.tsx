@@ -23,7 +23,7 @@ type OwnerAuthState =
   | { phase: 'unauthenticated' }
   | { phase: 'customer' }
   | { phase: 'unprovisioned' }
-  | { phase: 'platform-admin'; salonId: string };
+  | { phase: 'platform-admin'; salonId: string; staffMemberId?: string };
 
 /**
  * Owner panel layout + auth guard (task 5.1; R2.1, R2.2, R2.3).
@@ -86,6 +86,7 @@ export function OwnerLayout() {
           setState({
             phase: 'platform-admin',
             salonId: principal.salonId ?? DEFAULT_SALON_ID,
+            staffMemberId: principal.staffMemberId,
           });
           return;
         }
@@ -177,7 +178,10 @@ export function OwnerLayout() {
   const outletContext = {
     role,
     salonId: state.salonId,
-    staffMemberId: state.phase === 'authenticated' ? state.staffMemberId : undefined,
+    staffMemberId:
+      state.phase === 'authenticated' || state.phase === 'platform-admin'
+        ? state.staffMemberId
+        : undefined,
     onSignOut: handleSignOut,
   };
   const paymentResult = new URLSearchParams(location.search).get('payment');

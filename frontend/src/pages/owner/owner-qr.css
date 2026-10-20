@@ -228,6 +228,8 @@
   gap: 8px;
 }
 .owner-qr-upload__button {
+  position: relative;
+  overflow: hidden;
   display: inline-flex;
   min-block-size: 44px;
   align-items: center;
@@ -251,10 +253,12 @@
 }
 .owner-qr-upload__button input {
   position: absolute;
-  inline-size: 1px;
-  block-size: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
+  inset: 0;
+  z-index: 1;
+  inline-size: 100%;
+  block-size: 100%;
+  opacity: 0;
+  cursor: pointer;
 }
 
 /* ── The branded asset artwork (card / banner / standee) ─────────────────── */
@@ -798,6 +802,42 @@
   body > *:not(#root) {
     display: none !important;
   }
+  /* The QR studio lives in a Radix drawer on the marketing page. Keep its
+     portal in normal print flow while dropping the modal overlay. */
+  body > *:not(#root):has([data-qr-print-sheet]),
+  body > [data-qr-print-sheet] {
+    display: block !important;
+  }
+  body:has([data-qr-print-sheet]) > .z-overlay {
+    display: none !important;
+  }
+  [data-qr-print-sheet] {
+    position: static !important;
+    inset: auto !important;
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+  [data-qr-print-sheet] > h2,
+  [data-qr-print-sheet] > p,
+  [data-qr-print-sheet] > button {
+    display: none !important;
+  }
+  [data-qr-print-sheet] > div {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
 
   [data-shell='owner'] {
     display: block !important;
@@ -811,12 +851,13 @@
   [data-shell='owner'] > header,
   [data-shell='owner'] > nav,
   [data-shell='owner'] > div > aside,
-  [data-shell='owner'] > div > main > :not(.owner-qr-page) {
+  [data-shell='owner'] > div > main > div > :not(.owner-qr-page):not(.owner-marketing-page) {
     display: none !important;
   }
 
   [data-shell='owner'] > div,
   [data-shell='owner'] > div > main,
+  [data-shell='owner'] > div > main > div,
   .owner-qr-page {
     display: block !important;
     width: 100% !important;
@@ -826,6 +867,22 @@
     margin: 0 !important;
     padding: 0 !important;
     overflow: visible !important;
+  }
+
+  /* Keep the marketing route shell empty; its QR studio prints from the
+     drawer portal above. */
+  .owner-marketing-page {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  .owner-marketing-page > * {
+    display: none !important;
   }
 
   /* Only the selected print surface survives. This also prevents hidden

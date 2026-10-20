@@ -155,9 +155,9 @@ export function buildAssetSvg(options: AssetDownloadOptions): string {
     content = [
       brand,
       logo,
-      `<text x="100" y="430" fill="#ffffff" font-size="76" font-weight="700" direction="rtl" unicode-bidi="plaintext">${name}</text>`,
-      `<text x="100" y="515" fill="#ffffff" fill-opacity="0.92" font-size="34" direction="rtl" unicode-bidi="plaintext">${tagline}</text>`,
-      `<text x="100" y="900" fill="#ffffff" fill-opacity="0.9" font-size="28" font-weight="600" direction="rtl" unicode-bidi="plaintext">${footer}</text>`,
+      `<text x="1050" y="430" fill="#ffffff" font-size="76" font-weight="700" direction="rtl" unicode-bidi="plaintext">${name}</text>`,
+      `<text x="1050" y="515" fill="#ffffff" fill-opacity="0.92" font-size="34" direction="rtl" unicode-bidi="plaintext">${tagline}</text>`,
+      `<text x="1050" y="900" fill="#ffffff" fill-opacity="0.9" font-size="28" font-weight="600" direction="rtl" unicode-bidi="plaintext">${footer}</text>`,
       qr,
       `<text x="1300" y="650" fill="#ffffff" font-size="28" font-weight="700" text-anchor="middle" direction="rtl" unicode-bidi="plaintext">${cta}</text>`,
     ].join('');
