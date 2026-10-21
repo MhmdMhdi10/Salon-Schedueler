@@ -59,4 +59,14 @@ describe('OwnerSetupAlert', () => {
     await waitFor(() => expect(getSalonHours).toHaveBeenCalled());
     expect(container).toBeEmptyDOMElement();
   });
+
+  it('keeps the sticky retry alert opaque while content scrolls underneath it', async () => {
+    getStaff.mockRejectedValue(new Error('temporary health-check failure'));
+
+    renderAlert();
+
+    const alert = await screen.findByRole('status');
+    expect(alert).toHaveClass('bg-surface');
+    expect(alert).not.toHaveClass('bg-warning/10');
+  });
 });

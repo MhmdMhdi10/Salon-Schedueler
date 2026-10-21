@@ -119,7 +119,7 @@ export function OwnerSetupAlert({ salonId, refreshKey }: { salonId: string; refr
   if (loadError && issues.length === 0) {
     return (
       <aside
-        className="static z-sticky mb-3 flex items-center justify-between gap-2 rounded-xl border border-warning/35 bg-warning/10 px-3 py-2 shadow-2 sm:sticky sm:top-0 sm:mb-4 sm:gap-3 sm:px-4 sm:py-3"
+        className="static z-sticky mb-3 flex items-center justify-between gap-2 rounded-xl border border-warning/35 bg-surface px-3 py-2 shadow-2 sm:sticky sm:top-0 sm:mb-4 sm:gap-3 sm:px-4 sm:py-3"
         role="status"
       >
         <span className="text-xs font-bold text-warning sm:text-sm">
@@ -143,7 +143,7 @@ export function OwnerSetupAlert({ salonId, refreshKey }: { salonId: string; refr
   return (
     <aside
       data-testid="owner-setup-alert"
-      className="static z-sticky mb-3 overflow-hidden rounded-xl border border-danger/40 bg-danger/10 shadow-2 backdrop-blur sm:sticky sm:top-0 sm:mb-4 sm:rounded-2xl"
+      className="static z-sticky mb-3 overflow-hidden rounded-xl border border-danger/40 bg-surface shadow-2 backdrop-blur sm:sticky sm:top-0 sm:mb-4 sm:rounded-2xl"
       aria-labelledby="owner-setup-alert-title"
     >
       <div className="flex items-start gap-2 p-3 sm:items-center sm:gap-3 sm:p-4">
