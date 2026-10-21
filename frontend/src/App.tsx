@@ -15,6 +15,7 @@ import { PageTransition } from './components/ui/Motion';
 import { ToastProvider } from './components/ui/Toast';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { PwaInstallPrompt } from './pwa/PwaInstallPrompt';
+import { NotificationPermissionPrompt } from './pwa/NotificationPermissionPrompt';
 import { PullToRefresh } from './pwa/PullToRefresh';
 
 /**
@@ -496,6 +497,7 @@ export function App() {
                   </Routes>
                 </Suspense>
                 <AppPwaInstallPrompt />
+                <NotificationPermissionPrompt />
               </div>
             </ToastProvider>
           </AuthProvider>

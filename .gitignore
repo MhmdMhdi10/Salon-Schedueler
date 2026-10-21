@@ -5,6 +5,8 @@ coverage/
 .env
 .env.*
 !.env.example
+*firebase-admin*.json
+*service-account*.json
 
 # Generated at build time by frontend/scripts/generate-sitemap.mjs
 frontend/public/sitemap.xml

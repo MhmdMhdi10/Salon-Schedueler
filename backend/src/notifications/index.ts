@@ -34,3 +34,4 @@ export { MelliPayamakSimpleAdapter } from './melipayamak-simple.adapter';
 export { MELLI_PAYAMAK_TEMPLATE_BODY_IDS } from './melipayamak-template-body-ids';
 export { PusheAdapter } from './pushe.adapter';
 export { NajvaAdapter } from './najva.adapter';
+export { FirebaseCloudMessagingAdapter, hasFirebaseAdminCredentials } from './firebase.adapter';

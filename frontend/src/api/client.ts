@@ -480,6 +480,15 @@ export const referralApi = {
     request<{ referral: SalonReferral }>('/referrals/' + id + '/redeem', { method: 'POST' }),
 };
 
+/** Register the authenticated browser's FCM token for server-side reminders. */
+export const deviceApi = {
+  registerToken: (token: string, platform = 'web') =>
+    request<{ ok: boolean }>('/devices/token', {
+      method: 'POST',
+      body: { token, platform },
+    }),
+};
+
 // ─── Salon registration (public onboarding) ─────────────────────────────────
 // Self-service salon sign-up from the marketing landing. The backend requires
 // an OTP-authenticated session for the same phone before creating the salon,

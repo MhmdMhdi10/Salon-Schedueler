@@ -62,6 +62,14 @@ export interface AppConfig {
   najvaApiKey?: string;
   /** Najva API base URL override (optional). */
   najvaBaseUrl?: string;
+  /** Firebase project id used by the Admin SDK for web push. */
+  firebaseProjectId?: string;
+  /** Firebase Admin service-account client email (optional when ADC is used). */
+  firebaseClientEmail?: string;
+  /** Firebase Admin service-account private key (optional when ADC is used). */
+  firebasePrivateKey?: string;
+  /** Path used by Google Application Default Credentials. */
+  firebaseCredentialsPath?: string;
   /** Telegram bot token (optional — absence disables the Telegram channel). */
   telegramBotToken?: string;
   /** Bale bot token (optional — absence disables the Bale channel). */
@@ -221,6 +229,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     pusheAppId: env.PUSHE_APP_ID,
     najvaApiKey: env.NAJVA_API_KEY,
     najvaBaseUrl: env.NAJVA_BASE_URL,
+    firebaseProjectId: env.FIREBASE_PROJECT_ID,
+    firebaseClientEmail: env.FIREBASE_CLIENT_EMAIL,
+    firebasePrivateKey: env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    firebaseCredentialsPath: env.GOOGLE_APPLICATION_CREDENTIALS,
     telegramBotToken: env.TELEGRAM_BOT_TOKEN,
     baleBotToken: env.BALE_BOT_TOKEN,
     botWebhookSecret: env.BOT_WEBHOOK_SECRET,

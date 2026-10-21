@@ -38,6 +38,9 @@ export const firebaseApp: FirebaseApp | null = hasRequiredConfig
     : initializeApp(firebaseConfig)
   : null;
 
+/** Public Web Push certificate used to create browser FCM registration tokens. */
+export const firebaseVapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY?.trim() || null;
+
 /**
  * Analytics is opt-in at runtime and unsupported browsers are ignored. The
  * promise also prevents an analytics capability error from blocking app boot.

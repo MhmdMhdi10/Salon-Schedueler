@@ -26,6 +26,8 @@ import {
   MelliPayamakSimpleAdapter,
   PusheAdapter,
   NajvaAdapter,
+  FirebaseCloudMessagingAdapter,
+  hasFirebaseAdminCredentials,
   BotChannel,
 } from './notifications/index.js';
 import {
@@ -221,20 +223,54 @@ export function selectDeliverySmsProvider(config: AppConfig): SmsProvider {
  * selected so the system still runs locally (Requirement 5.5).
  */
 function selectPushProvider(config: AppConfig): PushProvider {
+  let fallback: PushProvider;
   if (config.pusheApiKey) {
-    return new PusheAdapter({
+    fallback = new PusheAdapter({
       apiKey: config.pusheApiKey,
       baseUrl: config.pusheBaseUrl,
       appId: config.pusheAppId,
     });
-  }
-  if (config.najvaApiKey) {
-    return new NajvaAdapter({
+  } else if (config.najvaApiKey) {
+    fallback = new NajvaAdapter({
       apiKey: config.najvaApiKey,
       baseUrl: config.najvaBaseUrl,
     });
+  } else {
+    fallback = new DevLogPushProvider();
   }
-  return new DevLogPushProvider();
+
+  if (!hasFirebaseAdminCredentials({
+    projectId: config.firebaseProjectId,
+    clientEmail: config.firebaseClientEmail,
+    privateKey: config.firebasePrivateKey,
+    credentialsPath: config.firebaseCredentialsPath,
+  })) {
+    return fallback;
+  }
+
+  return new PlatformRoutingPushProvider(
+    new FirebaseCloudMessagingAdapter({
+      projectId: config.firebaseProjectId,
+      clientEmail: config.firebaseClientEmail,
+      privateKey: config.firebasePrivateKey,
+      credentialsPath: config.firebaseCredentialsPath,
+    }),
+    fallback,
+  );
+}
+
+/** Route web registration tokens to FCM and keep existing mobile providers intact. */
+class PlatformRoutingPushProvider implements PushProvider {
+  constructor(
+    private readonly webProvider: PushProvider,
+    private readonly fallbackProvider: PushProvider,
+  ) {}
+
+  send(token: string, payload: Parameters<PushProvider['send']>[1], platform?: string) {
+    return platform === 'web'
+      ? this.webProvider.send(token, payload, platform)
+      : this.fallbackProvider.send(token, payload, platform);
+  }
 }
 
 /**

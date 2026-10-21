@@ -259,6 +259,19 @@ export class PrismaNotificationRepository implements NotificationRepository {
   }
 
   async registerDeviceToken(customerId: string, token: string, platform: string): Promise<void> {
+    const existing = await this.prisma.deviceToken.findFirst({
+      where: { customerId, token },
+      select: { id: true },
+    });
+
+    if (existing) {
+      await this.prisma.deviceToken.update({
+        where: { id: existing.id },
+        data: { platform, pushEnabled: true },
+      });
+      return;
+    }
+
     await this.prisma.deviceToken.create({
       data: { customerId, token, platform },
     });

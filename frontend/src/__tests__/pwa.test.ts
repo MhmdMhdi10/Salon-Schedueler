@@ -46,6 +46,8 @@ describe('PWA Configuration', () => {
 
       expect(swContent).toContain("addEventListener('install'");
       expect(swContent).toContain("addEventListener('activate'");
+      expect(swContent).toContain("addEventListener('push'");
+      expect(swContent).toContain("addEventListener('notificationclick'");
       expect(swContent).toContain("addEventListener('fetch'");
     });
 

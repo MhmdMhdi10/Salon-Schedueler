@@ -491,7 +491,7 @@ export class NotificationService {
         };
 
         for (const dt of enabledTokens) {
-          const pushResult = await this.pushProvider.send(dt.token, pushPayload);
+          const pushResult = await this.pushProvider.send(dt.token, pushPayload, dt.platform);
 
           await this.repository.logNotification({
             appointmentId,

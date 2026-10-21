@@ -24,7 +24,8 @@ export interface PushProvider {
    * Send a push notification to the given device token.
    * @param token - The device token for the target device
    * @param payload - The notification title and body
+   * @param platform - Optional client platform used by multi-provider routers
    * @returns a delivery result indicating success or failure
    */
-  send(token: string, payload: PushPayload): Promise<PushDeliveryResult>;
+  send(token: string, payload: PushPayload, platform?: string): Promise<PushDeliveryResult>;
 }

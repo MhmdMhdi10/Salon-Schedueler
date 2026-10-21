@@ -120,6 +120,54 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// FCM sends Web Push events to the same service worker used by the PWA. The
+// backend includes a notification payload; render it here so it also works
+// when the page is closed or backgrounded.
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+
+  let payload;
+  try {
+    payload = event.data.json();
+  } catch {
+    payload = { notification: { body: event.data.text() } };
+  }
+
+  const notification = payload?.notification || {};
+  const data = payload?.data || {};
+  const title = String(notification.title || 'آرا');
+  const body = notification.body ? String(notification.body) : '';
+  const rawLink =
+    notification.click_action || notification.link || data.link || payload?.link || '/account';
+  const link = new URL(String(rawLink), self.location.origin).href;
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: '/brand/ara-app-icon-source.png',
+      badge: '/brand/ara-app-icon-source.png',
+      data: { link },
+      dir: 'rtl',
+      lang: 'fa',
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = event.notification.data?.link || new URL('/account', self.location.origin).href;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      const existing = clients.find((client) => new URL(client.url).origin === self.location.origin);
+      if (existing) {
+        return existing.focus().then(() => existing.navigate(target));
+      }
+      return self.clients.openWindow(target);
+    })
+  );
+});
+
 // Fetch: route each request to the safe strategy; never cache authed/private.
 self.addEventListener('fetch', (event) => {
   const { request } = event;

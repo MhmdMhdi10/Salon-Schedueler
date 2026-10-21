@@ -7,8 +7,11 @@
 set -euo pipefail
 cd /app
 
-# Seed deps only if the node_modules volume is empty (first run on a fresh volume).
-if [ ! -x node_modules/.bin/tsc ]; then
+# Seed deps on a fresh node_modules volume and refresh older volumes when a
+# runtime dependency was added to the workspace after the volume was created.
+if [ ! -x node_modules/.bin/tsc ] \
+  || ! node -e "require.resolve('firebase-admin/app')" >/dev/null 2>&1 \
+  || ! node -e "process.exit(require('firebase-admin').SDK_VERSION.startsWith('13.') ? 0 : 1)" >/dev/null 2>&1; then
   echo "[backend] installing dependencies..."
   npm install
 fi
